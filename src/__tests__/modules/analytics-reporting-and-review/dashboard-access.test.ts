@@ -456,6 +456,58 @@ describe("analytics dashboard access", () => {
     );
   });
 
+  it("normalizes Faculty course overview year levels and sections", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-1",
+      activeRole: ROLES.FACULTY,
+      roles: [ROLES.FACULTY],
+    });
+    prismaMock.facultyProgramAffiliation.findFirst.mockResolvedValue({
+      program: { code: "BSIT", name: "Information Technology" },
+    });
+    prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([]);
+    prismaMock.courseAssignment.findMany.mockResolvedValue([
+      {
+        id: "assignment-first",
+        year_level: "FIRST_YEAR",
+        section: "MORNING",
+        course: { code: "GE101", title: "First course" },
+        memberships: [],
+      },
+      {
+        id: "assignment-second",
+        year_level: "SECOND_YEAR",
+        section: "AFTERNOON",
+        course: { code: "GE102", title: "Second course" },
+        memberships: [],
+      },
+      {
+        id: "assignment-third",
+        year_level: "THIRD_YEAR",
+        section: "EVENING",
+        course: { code: "GE103", title: "Third course" },
+        memberships: [],
+      },
+      {
+        id: "assignment-fourth",
+        year_level: "FOURTH_YEAR",
+        section: "MORNING",
+        course: { code: "GE104", title: "Fourth course" },
+        memberships: [],
+      },
+    ]);
+    countEligibleMock.mockResolvedValue(0);
+
+    const result = await getFacultyDashboardMetrics("faculty-1");
+
+    expect(result?.courseOverview.map((item) => item.contextLabel)).toEqual([
+      "1st Year · Morning",
+      "2nd Year · Afternoon",
+      "3rd Year · Evening",
+      "4th Year · Morning",
+    ]);
+  });
+
   it("returns no-period Faculty data without leaking historical evidence", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "faculty-1",

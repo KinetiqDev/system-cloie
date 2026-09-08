@@ -282,21 +282,19 @@ export function CourseForm({
         </div>
       )}
 
-      <div className="border-border bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
+      <div className="md:border-border md:bg-surface-alt grid gap-4 md:grid-cols-3 md:rounded-lg md:border md:p-4">
         <div className="space-y-2">
-          <Label htmlFor={`year-level-${defaultValues?.id ?? "new"}`}>
-            Year Level <span className="text-text-muted text-xs font-normal">(default)</span>
-          </Label>
+          <Label htmlFor={`year-level-${defaultValues?.id ?? "new"}`}>Default year level</Label>
           <Select value={yearLevel} onValueChange={(value) => setYearLevel(value as YearLevel)}>
             <SelectTrigger id={`year-level-${defaultValues?.id ?? "new"}`} className="w-full">
               <SelectValue>
                 {yearLevel
-                  ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevel)?.label ?? "None")
-                  : "None"}
+                  ? (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevel)?.label ?? "No default")
+                  : "No default"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="">No default</SelectItem>
               {YEAR_LEVEL_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -307,9 +305,7 @@ export function CourseForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`semester-${defaultValues?.id ?? "new"}`}>
-            Semester <span className="text-text-muted text-xs font-normal">(default)</span>
-          </Label>
+          <Label htmlFor={`semester-${defaultValues?.id ?? "new"}`}>Default semester</Label>
           <Select
             value={semester}
             onValueChange={(value) => {
@@ -323,12 +319,12 @@ export function CourseForm({
             <SelectTrigger id={`semester-${defaultValues?.id ?? "new"}`} className="w-full">
               <SelectValue>
                 {semester
-                  ? (SEMESTER_OPTIONS.find((o) => o.value === semester)?.label ?? "None")
-                  : "None"}
+                  ? (SEMESTER_OPTIONS.find((o) => o.value === semester)?.label ?? "No default")
+                  : "No default"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="">No default</SelectItem>
               {SEMESTER_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -339,9 +335,7 @@ export function CourseForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`term-${defaultValues?.id ?? "new"}`}>
-            Term <span className="text-text-muted text-xs font-normal">(default)</span>
-          </Label>
+          <Label htmlFor={`term-${defaultValues?.id ?? "new"}`}>Default term</Label>
           <Select
             value={isSummer ? "" : term}
             onValueChange={(value) => setTerm(value as AcademicTerm)}
@@ -350,18 +344,18 @@ export function CourseForm({
             <SelectTrigger id={`term-${defaultValues?.id ?? "new"}`} className="w-full">
               <SelectValue>
                 {isSummer
-                  ? "N/A"
+                  ? "Not applicable"
                   : term
-                    ? (TERM_OPTIONS.find((o) => o.value === term)?.label ?? "Select term")
-                    : "Select term"}
+                    ? (TERM_OPTIONS.find((o) => o.value === term)?.label ?? "No default")
+                    : "No default"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {isSummer ? (
-                <SelectItem value="">N/A</SelectItem>
+                <SelectItem value="">Not applicable</SelectItem>
               ) : (
                 <>
-                  <SelectItem value="">Select term</SelectItem>
+                  <SelectItem value="">No default</SelectItem>
                   <SelectItem value={AcademicTerm.FIRST_TERM}>1st Term</SelectItem>
                   <SelectItem value={AcademicTerm.SECOND_TERM}>2nd Term</SelectItem>
                 </>

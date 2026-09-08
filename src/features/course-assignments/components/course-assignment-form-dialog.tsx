@@ -41,7 +41,7 @@ import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 
 interface Program {
   id: string;

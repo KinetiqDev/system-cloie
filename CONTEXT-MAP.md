@@ -18,6 +18,13 @@
 - [Dean Oversight](./src/features/dean/CONTEXT.md) - defines the Dean's period-scoped oversight read model: readiness KPIs, risk buckets, mapping gaps, archived outcome display, and roster paging.
 - [Legal](./src/features/legal/CONTEXT.md) - defines privacy/terms document versioning, the signed acknowledgement ticket gate before role selection, and the non-anonymity disclosure.
 
+## Supporting modules (no `CONTEXT.md`)
+
+Presentation or read-model code that owns no domain invariants. Rules stay in the listed owning context:
+
+- `src/features/portals/` - role selection portal shell and entry UI; owned rules stay in Identity and Access.
+- `src/features/secretary/` - Secretary dashboard read model and services; account rules stay in Users, academic lifecycle guards stay in Academic Structure.
+
 ## Relationships
 
 - **Identity and Access -> Users**: Identity and Access owns account role and access-state language; Users owns profile/admin-user management screens and services that operate on those accounts.
@@ -41,3 +48,5 @@
 - **Enrollments -> Academic Calendar**: ledger rows scope to AcademicTermInstances; Term rollover creates ROLLOVER-source enrollments in the target term.
 - **Legal -> Identity and Access**: the signed acknowledgement ticket gates the OAuth callback before Google code exchange and role selection.
 - **Dean Oversight -> Outcomes**: the oversight read model consumes period readiness snapshots and typed mapping-gap vocabulary defined by Outcomes.
+- **Secretary -> Users**: the Secretary dashboard operates on provisioned accounts; provisioning and role rules are owned by Users.
+- **Secretary -> Academic Structure**: the Secretary dashboard surfaces programs and courses; lifecycle and deletion guards are owned by Academic Structure.

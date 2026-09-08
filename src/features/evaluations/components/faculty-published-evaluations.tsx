@@ -56,6 +56,8 @@ function sanitizeInitialFilters(
       initial.periodId !== null && periodIds.has(initial.periodId) ? initial.periodId : null,
     courseId:
       initial.courseId !== null && courseIds.has(initial.courseId) ? initial.courseId : null,
+    // Faculty rows carry no audience facet; a stale `target` URL key must not filter.
+    target: null,
   };
 }
 

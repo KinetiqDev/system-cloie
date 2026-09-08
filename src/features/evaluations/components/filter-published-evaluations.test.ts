@@ -4,6 +4,7 @@ import type { PublishedEvaluationFilters } from "@/features/instruments/componen
 import {
   distinctCourseOptions,
   distinctPeriodOptions,
+  distinctTargetOptions,
   filterPublishedEvaluations,
   hasActivePublishedFilters,
   type FilterablePublishedEvaluation,
@@ -29,10 +30,10 @@ function makeItem(
     ...overrides,
   };
 }
-
 const BASE_FILTERS: PublishedEvaluationFilters = {
   periodId: null,
   courseId: null,
+  target: null,
   query: "",
   status: "ALL",
 };
@@ -66,7 +67,6 @@ describe("filterPublishedEvaluations", () => {
 
     expect(filtered.map((item) => item.evaluationId)).toEqual(["old"]);
   });
-
   it("narrows by course", () => {
     const items = [
       makeItem(),
@@ -76,6 +76,17 @@ describe("filterPublishedEvaluations", () => {
     const filtered = filterPublishedEvaluations(items, { ...BASE_FILTERS, courseId: COURSE_IT });
 
     expect(filtered.map((item) => item.evaluationId)).toEqual(["itres"]);
+  });
+
+  it("narrows by target stakeholder", () => {
+    const items = [
+      makeItem({ evaluationId: "alumni", targetStakeholder: "ALUMNI" }),
+      makeItem({ evaluationId: "industry", targetStakeholder: "INDUSTRY_PARTNER" }),
+    ];
+
+    const filtered = filterPublishedEvaluations(items, { ...BASE_FILTERS, target: "ALUMNI" });
+
+    expect(filtered.map((item) => item.evaluationId)).toEqual(["alumni"]);
   });
 
   it("matches search text against name, course, and period", () => {
@@ -117,11 +128,25 @@ describe("filterPublishedEvaluations", () => {
     const filtered = filterPublishedEvaluations(items, {
       periodId: PERIOD_NEW,
       courseId: COURSE_IT,
+      target: null,
       query: "review",
       status: "CLOSED",
     });
 
     expect(filtered.map((item) => item.evaluationId)).toEqual(["match"]);
+  });
+
+  it("matches search text against the target stakeholder label", () => {
+    const items = [
+      makeItem({ evaluationId: "alumni", targetStakeholder: "ALUMNI" }),
+      makeItem({ evaluationId: "industry", targetStakeholder: "INDUSTRY_PARTNER" }),
+    ];
+
+    expect(
+      filterPublishedEvaluations(items, { ...BASE_FILTERS, query: "alumni" }).map(
+        (item) => item.evaluationId
+      )
+    ).toEqual(["alumni"]);
   });
 
   it("normalizes an overlength query the same way before and after URL parsing", () => {
@@ -181,6 +206,22 @@ describe("distinctCourseOptions", () => {
   });
 });
 
+describe("distinctTargetOptions", () => {
+  it("dedupes targets and orders by label", () => {
+    const items = [
+      makeItem({ targetStakeholder: "STUDENT" }),
+      makeItem({ evaluationId: "alumni", targetStakeholder: "ALUMNI" }),
+      makeItem({ evaluationId: "dup-student", targetStakeholder: "STUDENT" }),
+      makeItem({ evaluationId: "no-target" }),
+    ];
+
+    expect(distinctTargetOptions(items)).toEqual([
+      { id: "ALUMNI", label: "Alumni" },
+      { id: "STUDENT", label: "Student" },
+    ]);
+  });
+});
+
 describe("hasActivePublishedFilters", () => {
   it("reports defaults as inactive and any selection as active", () => {
     expect(hasActivePublishedFilters(BASE_FILTERS)).toBe(false);
@@ -188,6 +229,7 @@ describe("hasActivePublishedFilters", () => {
     expect(hasActivePublishedFilters({ ...BASE_FILTERS, status: "CLOSED" })).toBe(true);
     expect(hasActivePublishedFilters({ ...BASE_FILTERS, periodId: PERIOD_NEW })).toBe(true);
     expect(hasActivePublishedFilters({ ...BASE_FILTERS, courseId: COURSE_CS })).toBe(true);
+    expect(hasActivePublishedFilters({ ...BASE_FILTERS, target: "ALUMNI" })).toBe(true);
     expect(hasActivePublishedFilters({ ...BASE_FILTERS, query: "capstone" })).toBe(true);
   });
 });

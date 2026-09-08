@@ -21,7 +21,7 @@ import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { showToast } from "@/components/ui/toast";
 import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { updateCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { CourseAssignmentItem, AssignableCourse } from "@/features/course-assignments/types";
 

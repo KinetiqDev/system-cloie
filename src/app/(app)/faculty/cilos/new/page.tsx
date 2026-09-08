@@ -12,13 +12,20 @@ export const metadata = {
   title: "Add CILOs | Faculty | CLOIE",
 };
 
-export default async function FacultyAddCiloPage() {
+export default async function FacultyAddCiloPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ course?: string; returnTo?: string }>;
+}) {
   const session = await resolveAuthSession();
 
   if (!session) {
     redirect("/portal/respondents");
   }
 
+  const params = (await searchParams) ?? {};
+  const returnTo =
+    params.returnTo && params.returnTo.startsWith("/faculty/cilos") ? params.returnTo : undefined;
   const result = await listFacultyCoursesWithCilos();
 
   if (!result.success) {
@@ -35,6 +42,8 @@ export default async function FacultyAddCiloPage() {
   return (
     <AddCiloForm
       courses={JSON.parse(JSON.stringify(result.data.courses))}
+      initialCourseId={params.course}
+      returnTo={returnTo}
       saveAction={saveCilosForCourseAction}
       loadCilosAction={loadCilosForCourseAction}
     />

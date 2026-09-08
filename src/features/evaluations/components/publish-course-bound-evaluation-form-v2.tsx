@@ -363,8 +363,11 @@ export function PublishCourseBoundEvaluationFormV2({
         </Alert>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="border-border bg-card space-y-4 rounded-xl border p-5">
+      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+        <section
+          aria-label="Template and CILO bindings"
+          className="border-border bg-card order-2 space-y-4 rounded-xl border p-5 lg:order-2"
+        >
           <div className="space-y-1">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               Template
@@ -407,44 +410,51 @@ export function PublishCourseBoundEvaluationFormV2({
               )}
             </div>
 
-            <ol className="space-y-3">
-              {selectedPublicationContext.cilos.map((cilo, index) => {
-                const binding = bindingByCiloId.get(cilo.id);
+            <details className="border-border rounded-lg border">
+              <summary className="cursor-pointer p-4 text-sm font-medium">
+                View all {selectedPublicationContext.cilos.length} CILO{" "}
+                {selectedPublicationContext.cilos.length === 1 ? "binding" : "bindings"}
+              </summary>
+              <ol className="space-y-3 border-t p-4">
+                {selectedPublicationContext.cilos.map((cilo, index) => {
+                  const binding = bindingByCiloId.get(cilo.id);
 
-                return (
-                  <li key={cilo.id} className="border-border rounded-lg border p-4">
-                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                      CILO {index + 1}
-                    </p>
-                    <p className="text-foreground mt-2 text-sm">{cilo.description}</p>
-                    {binding &&
-                      (() => {
-                        const location = questionLocationMap.get(
-                          `${binding.sectionKey}:${binding.itemKey}`
-                        );
-                        return (
-                          <div className="bg-muted mt-3 rounded-md p-3">
-                            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                              {location
-                                ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
-                                : "Bound Likert Question"}
-                            </p>
-                            <p className="text-foreground mt-1 text-sm">
-                              {binding.questionPromptSnapshot}
-                            </p>
-                          </div>
-                        );
-                      })()}
-                  </li>
-                );
-              })}
-            </ol>
+                  return (
+                    <li key={cilo.id} className="border-border rounded-lg border p-4">
+                      <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                        CILO {index + 1}
+                      </p>
+                      <p className="text-foreground mt-2 text-sm">{cilo.description}</p>
+                      {binding &&
+                        (() => {
+                          const location = questionLocationMap.get(
+                            `${binding.sectionKey}:${binding.itemKey}`
+                          );
+                          return (
+                            <div className="bg-muted mt-3 rounded-md p-3">
+                              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                                {location
+                                  ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
+                                  : "Bound Likert Question"}
+                              </p>
+                              <p className="text-foreground mt-1 text-sm">
+                                {binding.questionPromptSnapshot}
+                              </p>
+                            </div>
+                          );
+                        })()}
+                    </li>
+                  );
+                })}
+              </ol>
+            </details>
           </div>
         </section>
 
         {step === "configure" ? (
           <form
-            className="border-border bg-card space-y-6 rounded-xl border p-5"
+            aria-label="Publication configuration"
+            className="border-border bg-card order-1 space-y-6 rounded-xl border p-5 lg:order-1"
             onSubmit={handlePreview}
           >
             <div className="space-y-2">
@@ -527,7 +537,10 @@ export function PublishCourseBoundEvaluationFormV2({
             </Button>
           </form>
         ) : (
-          <div className="border-border bg-card space-y-6 rounded-xl border p-5">
+          <div
+            aria-label="Respondent preview"
+            className="border-border bg-card order-1 space-y-6 rounded-xl border p-5 lg:order-1"
+          >
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Respondent Preview</h3>
               <p className="text-muted-foreground text-sm">

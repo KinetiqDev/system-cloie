@@ -4,12 +4,14 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import { createCourseAction } from "@/lib/actions/management-foundation-actions";
 import type { ProgramFilterOption } from "@/features/academic-structure/services/list-management-courses-summary";
@@ -50,18 +52,17 @@ export function CourseCreateDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(85vh,720px)] sm:max-w-xl">
-        <DialogHeader className="px-5 pt-5 pr-12 pb-1">
-          <DialogTitle>Add New Course</DialogTitle>
-          <DialogDescription>
-            Register a new general education, program-wide, or major-specific course for downstream
-            publishing flows.
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Add New Course</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            Register a general education, program-wide, or major-specific course.
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div
-          className="min-h-0 overflow-y-auto px-5 py-4"
+        <ResponsiveDialogBody
+          className="px-4 py-4 md:p-0"
           onSubmitCapture={() => {
             submittingRef.current = true;
           }}
@@ -84,17 +85,22 @@ export function CourseCreateDialog({
               router.refresh();
             }}
           />
-        </div>
+        </ResponsiveDialogBody>
 
-        <div className="bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" disabled={pending} onClick={() => handleOpenChange(false)}>
+        <ResponsiveDialogFooter>
+          <Button
+            variant="outline"
+            className="w-full md:w-auto"
+            disabled={pending}
+            onClick={() => handleOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button form={FORM_ID} type="submit" disabled={pending}>
-            {pending ? "Creating..." : "Create Course"}
+          <Button form={FORM_ID} type="submit" className="w-full md:w-auto" loading={pending}>
+            Create Course
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

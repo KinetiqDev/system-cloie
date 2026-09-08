@@ -5,7 +5,6 @@ import OldProgramsPage from "../../app/(app)/dean/programs/page";
 import OldCoursesPage from "../../app/(app)/dean/courses/page";
 import OldAssignmentsPage from "../../app/(app)/dean/course-assignments/page";
 import OldInstrumentsPage from "../../app/(app)/dean/instruments/page";
-import OldProgramEditPage from "../../app/(app)/dean/programs/[id]/edit/page";
 import OldCourseEditPage from "../../app/(app)/dean/courses/[id]/edit/page";
 import OldInstrumentEditPage from "../../app/(app)/dean/instruments/[id]/edit/page";
 import OldProgramNewPage from "../../app/(app)/dean/programs/new/page";
@@ -66,9 +65,6 @@ describe("Dean canonical routes", () => {
     await expect(Promise.resolve().then(() => OldInstrumentNewPage())).rejects.toThrow(
       "PERMANENT:/dean/academic-structure/instruments/new"
     );
-    await expect(
-      OldProgramEditPage({ params: Promise.resolve({ id: "program-1" }) })
-    ).rejects.toThrow("PERMANENT:/dean/academic-structure/programs/program-1/edit");
     await expect(
       OldCourseEditPage({ params: Promise.resolve({ id: "course-1" }) })
     ).rejects.toThrow("PERMANENT:/dean/academic-structure/courses/course-1/edit");

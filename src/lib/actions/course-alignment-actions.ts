@@ -5,7 +5,6 @@ import { z } from "zod";
 import {
   commitCourseAlignmentWrite,
   prepareCourseAlignmentWrite,
-  saveDraftCourseAlignment,
   type CourseAlignmentReview,
 } from "@/features/outcomes/services/manage-course-alignment";
 
@@ -25,17 +24,6 @@ const desiredAlignmentSchema = z.object({
         mappings: z.array(mappingSchema),
       })
       .strict()
-  ),
-  freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
-});
-
-const draftSchema = z.object({
-  courseId: z.string().uuid("Invalid Course ID."),
-  cells: z.array(
-    z.object({
-      ciloId: z.string().uuid("Invalid CILO ID."),
-      mappings: z.array(mappingSchema),
-    })
   ),
   freshnessToken: z.string().min(1, "Alignment is stale. Reload and review the latest mappings."),
 });
@@ -105,27 +93,6 @@ export async function commitCourseAlignmentAction(
   }
 
   const result = await commitCourseAlignmentWrite(parsed.data, confirmedResult.data);
-  if (!result.success) return result;
-
-  revalidatePath(`/faculty/cilos/${parsed.data.courseId}/alignment`);
-  revalidatePath("/faculty/cilos");
-  return {
-    success: true,
-    changed: result.data.changed,
-    freshnessToken: result.data.freshnessToken,
-  };
-}
-
-export async function saveDraftCourseAlignmentAction(
-  input: unknown
-): Promise<
-  { success: true; changed: number; freshnessToken: string } | { success: false; error: string }
-> {
-  const parsed = draftSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid alignment draft." };
-  }
-  const result = await saveDraftCourseAlignment(parsed.data);
   if (!result.success) return result;
 
   revalidatePath(`/faculty/cilos/${parsed.data.courseId}/alignment`);

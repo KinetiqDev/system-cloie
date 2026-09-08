@@ -87,7 +87,9 @@ function DrawerSwipeHandle({ className, ...props }: React.ComponentProps<"div">)
         className
       )}
       {...props}
-    />
+    >
+      <div className="bg-muted-foreground/40 h-1 w-10 rounded-full group-data-[swipe-axis=x]/drawer-popup:h-10 group-data-[swipe-axis=x]/drawer-popup:w-1" />
+    </div>
   );
 }
 

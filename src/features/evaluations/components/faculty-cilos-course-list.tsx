@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRightLeft, Eye, MoreVertical, Plus, Search, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ArrowRightLeft, ClipboardList, Eye, MoreVertical, Plus, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -48,6 +48,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Pagination } from "@/components/ui/pagination";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ToolsViewSelector,
+  type ToolsViewMode,
+} from "@/features/instruments/components/tools-view-selector";
 
 import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
@@ -91,6 +96,9 @@ type FacultyCilosCourseListProps = {
   courses: FacultyCourseWithCiloCount[];
   termInstances: TermInstanceItem[];
   selectedTermId?: string;
+  initialTypeFilter?: string;
+  initialSearch?: string;
+  initialView?: ToolsViewMode;
   loadCilosAction: ViewEditCilosModalProps["loadCilosAction"];
   saveCilosAction: ViewEditCilosModalProps["saveCilosAction"];
 };
@@ -279,6 +287,7 @@ function ViewEditCilosModal({
                   </span>
                   <Textarea
                     value={cilo.description}
+                    aria-label={`CILO ${index + 1} description`}
                     onChange={(e) => handleUpdateCilo(cilo.id, e.target.value)}
                     className="min-h-12 min-w-0 flex-1 text-sm"
                     disabled={needsReconcile}
@@ -291,7 +300,7 @@ function ViewEditCilosModal({
                     onClick={() => handleRemoveCilo(cilo.id)}
                     disabled={needsReconcile}
                   >
-                    <Trash2 className="size-4" />
+                    <span aria-hidden="true">Remove</span>
                   </Button>
                 </div>
               ))}
@@ -300,13 +309,22 @@ function ViewEditCilosModal({
 
           {/* Add new CILO */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <Textarea
-              placeholder="Type a new CILO description..."
-              value={newCiloText}
-              onChange={(e) => setNewCiloText(e.target.value)}
-              className="max-h-56 min-w-0"
-              disabled={needsReconcile}
-            />
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor={`new-cilo-${course.id}`}
+                className="text-label-md mb-1 block font-medium"
+              >
+                New CILO description
+              </label>
+              <Textarea
+                id={`new-cilo-${course.id}`}
+                placeholder="Type a new CILO description..."
+                value={newCiloText}
+                onChange={(e) => setNewCiloText(e.target.value)}
+                className="max-h-56 min-w-0"
+                disabled={needsReconcile}
+              />
+            </div>
             <Button
               variant="outline"
               onClick={handleAddCilo}
@@ -374,101 +392,508 @@ function ViewEditCilosModal({
 }
 
 // ---------------------------------------------------------------------------
+// Preparation status
+// ---------------------------------------------------------------------------
+function readinessLabel(course: FacultyCourseWithCiloCount): string {
+  if (course.readiness === "ready") return "Ready";
+  if (course.readiness === "missing-cilos") return "Missing CILOs";
+  return `Incomplete mapping ${course.coveredCiloCount} of ${course.ciloCount}`;
+}
+
+function nextActionFor(course: FacultyCourseWithCiloCount, returnTo: string) {
+  const encodedReturn = encodeURIComponent(returnTo);
+  if (course.ciloCount === 0) {
+    return {
+      label: "Add CILOs",
+      href: `/faculty/cilos/new?course=${course.id}&returnTo=${encodedReturn}`,
+    };
+  }
+  if (course.readiness !== "ready") {
+    return {
+      label: "Map CILOs",
+      href: `/faculty/cilos/${course.id}/alignment?returnTo=${encodedReturn}`,
+    };
+  }
+  return { label: "Prepare questions", href: "/faculty/tools" };
+}
+
+function mapHrefFor(course: FacultyCourseWithCiloCount, returnTo: string): string | null {
+  if (course.ciloCount === 0) return null;
+  return `/faculty/cilos/${course.id}/alignment?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+function CourseKebab({
+  course,
+  mapHref,
+  onView,
+}: {
+  course: FacultyCourseWithCiloCount;
+  mapHref: string | null;
+  onView: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${course.code}`} />}
+      >
+        <MoreVertical className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="bottom">
+        <DropdownMenuItem onClick={onView}>
+          <Eye className="size-4" />
+          View CILOs
+        </DropdownMenuItem>
+        {mapHref && (
+          <DropdownMenuItem render={<Link href={mapHref} />}>
+            <ArrowRightLeft className="size-4" />
+            Map CILOs
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem render={<Link href="/faculty/tools" />}>
+          <ClipboardList className="size-4" />
+          Prepare questions
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+type FacultyCilosUrlUpdate = {
+  term?: string | null;
+  type?: string;
+  q?: string;
+  view?: ToolsViewMode;
+};
+
+function updateFacultyCilosUrlParams(params: URLSearchParams, next: FacultyCilosUrlUpdate): void {
+  const updates: Array<[string, string | null | undefined, string]> = [
+    ["term", next.term, ""],
+    ["type", next.type, "__all__"],
+    ["q", next.q?.trim(), ""],
+    ["view", next.view, "card"],
+  ];
+
+  for (const [key, value, defaultValue] of updates) {
+    if (value === undefined) continue;
+    if (!value || value === defaultValue) params.delete(key);
+    else params.set(key, value);
+  }
+  params.delete("page");
+}
+
+function filterFacultyCourses(
+  courses: FacultyCourseWithCiloCount[],
+  typeFilter: string,
+  searchTerm: string
+): FacultyCourseWithCiloCount[] {
+  let result = courses;
+
+  if (typeFilter === "program_specific") {
+    result = result.filter(
+      (course) => course.courseScope === "PROGRAM_SPECIFIC" && !course.majorId
+    );
+  } else if (typeFilter === "general_education") {
+    result = result.filter((course) => course.courseScope === "GENERAL_EDUCATION");
+  }
+
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  if (normalizedSearch) {
+    result = result.filter(
+      (course) =>
+        course.code.toLowerCase().includes(normalizedSearch) ||
+        course.title.toLowerCase().includes(normalizedSearch)
+    );
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
+type FacultyCilosCourseResultsProps = {
+  courses: FacultyCourseWithCiloCount[];
+  totalCourseCount: number;
+  filteredCourseCount: number;
+  view: ToolsViewMode;
+  returnTo: string;
+  isFiltered: boolean;
+  onClearFilters: () => void;
+  onViewCourse: (course: FacultyCourseWithCiloCount) => void;
+};
+
+function EmptyCourseState({
+  totalCourseCount,
+  returnTo,
+  isFiltered,
+  onClearFilters,
+}: Pick<
+  FacultyCilosCourseResultsProps,
+  "totalCourseCount" | "returnTo" | "isFiltered" | "onClearFilters"
+>) {
+  return (
+    <div className="border-border rounded-xl border border-dashed p-8 text-center">
+      <h2 className="text-title-md">
+        {totalCourseCount === 0 ? "No assigned courses yet" : "No courses found"}
+      </h2>
+      <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
+        {totalCourseCount === 0
+          ? "CILOs belong to a course. Ask the department office to assign you a course for the current term."
+          : "Try a different search, or clear the course type and search filters."}
+      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {isFiltered && (
+          <Button variant="outline" onClick={onClearFilters}>
+            Clear filters
+          </Button>
+        )}
+        <Button
+          render={<Link href={`/faculty/cilos/new?returnTo=${encodeURIComponent(returnTo)}`} />}
+        >
+          Add New CILO
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CourseCardGrid({
+  courses,
+  returnTo,
+  onViewCourse,
+}: Pick<FacultyCilosCourseResultsProps, "courses" | "returnTo" | "onViewCourse">) {
+  return (
+    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {courses.map((course) => {
+        const next = nextActionFor(course, returnTo);
+        const mapHref = mapHrefFor(course, returnTo);
+        return (
+          <li key={course.id}>
+            <Card className="flex h-full flex-col">
+              <CardHeader>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{course.courseScopeLabel}</Badge>
+                  <Badge variant={course.readiness === "ready" ? "default" : "outline"}>
+                    {readinessLabel(course)}
+                  </Badge>
+                </div>
+                <CardTitle className="mt-3 leading-snug">
+                  {course.code} — {course.title}
+                </CardTitle>
+                <p className="text-muted-foreground text-sm">
+                  {[course.programCode, course.majorName].filter(Boolean).join(" · ") ||
+                    "General Education"}
+                  {" · "}
+                  {course.ciloCount} {course.ciloCount === 1 ? "CILO" : "CILOs"}
+                </p>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <p className="text-sm">
+                  {course.ciloCount === 0
+                    ? "Start by adding the first outcome for this course."
+                    : course.readiness === "ready"
+                      ? "Outcomes and alignment are complete. Continue to questions."
+                      : "Some outcomes still need alignment before publication."}
+                </p>
+              </CardContent>
+              <CardFooter className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewCourse(course)}
+                  aria-label={`View CILOs for ${course.code}`}
+                >
+                  View CILOs
+                </Button>
+                {mapHref ? (
+                  <Button
+                    size="sm"
+                    variant={course.readiness === "ready" ? "outline" : "default"}
+                    render={<Link href={mapHref} />}
+                    aria-label={`Map CILOs for ${course.code}`}
+                  >
+                    Map CILOs
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    render={<Link href={next.href} />}
+                    aria-label={`${next.label} for ${course.code}`}
+                  >
+                    {next.label}
+                  </Button>
+                )}
+                {course.readiness === "ready" && (
+                  <Button
+                    size="sm"
+                    render={<Link href="/faculty/tools" />}
+                    aria-label={`Prepare questions for ${course.code}`}
+                  >
+                    Prepare questions
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function CourseListViews({
+  courses,
+  returnTo,
+  onViewCourse,
+}: Pick<FacultyCilosCourseResultsProps, "courses" | "returnTo" | "onViewCourse">) {
+  return (
+    <>
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Course</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">CILOs</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {courses.map((course) => {
+              const next = nextActionFor(course, returnTo);
+              const mapHref = mapHrefFor(course, returnTo);
+              return (
+                <TableRow key={course.id}>
+                  <TableCell>
+                    <p className="font-bold">{course.code}</p>
+                    <p className="text-muted-foreground text-sm">{course.title}</p>
+                    <p className="mt-1">
+                      <Badge variant="outline">{course.courseScopeLabel}</Badge>
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={course.readiness === "ready" ? "default" : "outline"}>
+                      {readinessLabel(course)}
+                    </Badge>
+                    {course.majorName && (
+                      <p className="text-muted-foreground mt-1 text-xs">{course.majorName}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">{course.ciloCount}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm"
+                        render={<Link href={next.href} />}
+                        aria-label={`${next.label} for ${course.code}`}
+                      >
+                        {next.label}
+                      </Button>
+                      <CourseKebab
+                        course={course}
+                        mapHref={mapHref}
+                        onView={() => onViewCourse(course)}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <ul className="flex flex-col gap-3 md:hidden">
+        {courses.map((course) => {
+          const next = nextActionFor(course, returnTo);
+          const mapHref = mapHrefFor(course, returnTo);
+          return (
+            <li
+              key={course.id}
+              className="border-border bg-card flex flex-col gap-3 rounded-xl border p-4"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{course.courseScopeLabel}</Badge>
+                <Badge variant={course.readiness === "ready" ? "default" : "outline"}>
+                  {readinessLabel(course)}
+                </Badge>
+              </div>
+              <div>
+                <p className="font-bold">{course.code}</p>
+                <p className="text-muted-foreground text-sm">{course.title}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {course.ciloCount} {course.ciloCount === 1 ? "CILO" : "CILOs"}
+                  {course.majorName ? ` · ${course.majorName}` : ""}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => onViewCourse(course)}
+                  aria-label={`View CILOs for ${course.code}`}
+                >
+                  View
+                </Button>
+                {mapHref ? (
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    variant={course.readiness === "ready" ? "outline" : "default"}
+                    render={<Link href={mapHref} />}
+                    aria-label={`Map CILOs for ${course.code}`}
+                  >
+                    Map CILOs
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    render={<Link href={next.href} />}
+                    aria-label={`${next.label} for ${course.code}`}
+                  >
+                    {next.label}
+                  </Button>
+                )}
+              </div>
+              {course.readiness === "ready" && (
+                <Button
+                  size="sm"
+                  className="w-full"
+                  render={<Link href="/faculty/tools" />}
+                  aria-label={`Prepare questions for ${course.code}`}
+                >
+                  Prepare questions
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+function FacultyCilosCourseResults({
+  courses,
+  totalCourseCount,
+  view,
+  returnTo,
+  isFiltered,
+  onClearFilters,
+  onViewCourse,
+}: FacultyCilosCourseResultsProps) {
+  if (courses.length === 0) {
+    return (
+      <EmptyCourseState
+        totalCourseCount={totalCourseCount}
+        returnTo={returnTo}
+        isFiltered={isFiltered}
+        onClearFilters={onClearFilters}
+      />
+    );
+  }
+  return view === "card" ? (
+    <CourseCardGrid courses={courses} returnTo={returnTo} onViewCourse={onViewCourse} />
+  ) : (
+    <CourseListViews courses={courses} returnTo={returnTo} onViewCourse={onViewCourse} />
+  );
+}
 export function FacultyCilosCourseList({
   courses,
   termInstances,
   selectedTermId,
+  initialTypeFilter = "__all__",
+  initialSearch = "",
+  initialView = "card",
   loadCilosAction,
   saveCilosAction,
 }: FacultyCilosCourseListProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [typeFilter, setTypeFilter] = useState<string>("__all__");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [view, setView] = useState<ToolsViewMode>(initialView);
   const [currentPage, setCurrentPage] = useState(1);
   const [modalCourse, setModalCourse] = useState<FacultyCourseWithCiloCount | null>(null);
 
-  const handleTermChange = (value: string) => {
-    const termId = value || null;
-    const params = new URLSearchParams(searchParams);
-    if (termId) {
-      params.set("term", termId);
-    } else {
-      params.delete("term");
-    }
-    router.push(`?${params.toString()}`);
+  const updateUrl = (next: FacultyCilosUrlUpdate) => {
+    const params = new URLSearchParams(searchParams.toString());
+    updateFacultyCilosUrlParams(params, next);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
   };
-
-  // ---- Filtered courses ----------------------------------------------------
-  // fallow-ignore-next-line code-duplication
-  const filteredCourses = useMemo(() => {
-    let result = courses;
-
-    if (typeFilter === "program_specific") {
-      result = result.filter((c) => c.courseScope === "PROGRAM_SPECIFIC" && !c.majorId);
-    } else if (typeFilter === "general_education") {
-      result = result.filter((c) => c.courseScope === "GENERAL_EDUCATION");
-    }
-
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase().trim();
-      result = result.filter(
-        (c) => c.code.toLowerCase().includes(term) || c.title.toLowerCase().includes(term)
-      );
-    }
-
-    return result;
-  }, [courses, typeFilter, searchTerm]);
-
-  // ---- Pagination ----------------------------------------------------------
+  const handleTermChange = (value: string) => {
+    updateUrl({ term: value || null });
+    setCurrentPage(1);
+  };
+  const filteredCourses = useMemo(
+    () => filterFacultyCourses(courses, typeFilter, searchTerm),
+    [courses, typeFilter, searchTerm]
+  );
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
   const handleTypeChange = (value: string | null) => {
-    setTypeFilter(value ?? "__all__");
+    const next = value ?? "__all__";
+    setTypeFilter(next);
     setCurrentPage(1);
+    updateUrl({ type: next });
   };
-
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
+    updateUrl({ q: value });
   };
+  const handleViewChange = (next: ToolsViewMode) => {
+    setView(next);
+    updateUrl({ view: next });
+  };
+  const handleClearFilters = () => {
+    setTypeFilter("__all__");
+    setSearchTerm("");
+    setCurrentPage(1);
+    updateUrl({ type: "__all__", q: "" });
+  };
+  const returnTo = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+  const isFiltered = typeFilter !== "__all__" || searchTerm.trim().length > 0;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-heading-lg">Manage CILOs</h1>
           <p className="text-body-md text-muted-foreground">
-            View and manage Course-Intended Learning Outcomes for your affiliated program courses.
+            Choose a course to continue its evaluation preparation. Outcomes, alignment, and
+            questions stay connected.
           </p>
         </div>
-        <Button render={<Link href="/faculty/cilos/new" />} className="shrink-0">
+        <Button
+          render={<Link href={`/faculty/cilos/new?returnTo=${encodeURIComponent(returnTo)}`} />}
+          className="shrink-0"
+        >
           <Plus className="mr-2 size-4" />
           Add New CILO
         </Button>
       </div>
-
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-72 shrink-0">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-full min-w-0 sm:w-auto sm:min-w-72 sm:shrink-0">
           <TermInstancePicker
             termInstances={termInstances}
             value={selectedTermId ?? ""}
             onChange={handleTermChange}
-            placeholder="All Terms"
-            label=""
+            placeholder="Select period"
+            label="Academic period"
           />
         </div>
-
-        <div className="w-48 shrink-0">
+        <div className="w-full sm:w-48 sm:shrink-0">
+          <label htmlFor="cilo-type-filter" className="text-label-md mb-2 block font-medium">
+            Course type
+          </label>
           <Select value={typeFilter} onValueChange={handleTypeChange}>
-            <SelectTrigger className="w-full">
+            <SelectTrigger id="cilo-type-filter" aria-label="Course type" className="w-full">
               <SelectValue>
                 {typeFilter === "__all__"
                   ? "All Course Types"
@@ -477,88 +902,46 @@ export function FacultyCilosCourseList({
                     : "General Education"}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
               <SelectItem value="__all__">All Course Types</SelectItem>
               <SelectItem value="program_specific">Program-Specific</SelectItem>
               <SelectItem value="general_education">General Education</SelectItem>
             </SelectContent>
           </Select>
         </div>
-
-        <div className="relative ml-auto w-full max-w-xs">
+        <div className="relative w-full sm:ml-auto sm:max-w-xs">
+          <label htmlFor="cilo-search" className="sr-only">
+            Search by code or title
+          </label>
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input
+            id="cilo-search"
             placeholder="Search by code or title..."
+            aria-label="Search by code or title"
             value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(event) => handleSearchChange(event.target.value)}
             className="pl-8"
           />
         </div>
+        <div className="flex w-full justify-end sm:w-auto">
+          <ToolsViewSelector label="Courses" value={view} onValueChange={handleViewChange} />
+        </div>
       </div>
-
-      {/* Data table */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Course Code</TableHead>
-            <TableHead>Course Title</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Major</TableHead>
-            <TableHead className="text-right">CILOs</TableHead>
-            <TableHead className="w-12">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {paginatedCourses.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
-                No courses found.
-              </TableCell>
-            </TableRow>
-          ) : (
-            paginatedCourses.map((course) => (
-              <TableRow key={course.id}>
-                <TableCell className="font-bold">{course.code}</TableCell>
-                <TableCell>{course.title}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{course.courseScopeLabel}</Badge>
-                </TableCell>
-                <TableCell>{course.majorName ?? "—"}</TableCell>
-                <TableCell className="text-right">{course.ciloCount}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Actions for ${course.code}`}
-                        />
-                      }
-                    >
-                      <MoreVertical className="size-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setModalCourse(course)}>
-                        <Eye className="size-4" />
-                        View CILOs
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
-                      >
-                        <ArrowRightLeft className="size-4" />
-                        Map CILOs
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-
-      {/* Pagination */}
+      <p className="text-muted-foreground text-sm" role="status">
+        {filteredCourses.length === 0
+          ? "No courses match the current filters."
+          : `${filteredCourses.filter((course) => course.readiness === "ready").length} of ${filteredCourses.length} courses ready`}
+      </p>
+      <FacultyCilosCourseResults
+        courses={paginatedCourses}
+        totalCourseCount={courses.length}
+        filteredCourseCount={filteredCourses.length}
+        view={view}
+        returnTo={returnTo}
+        isFiltered={isFiltered}
+        onClearFilters={handleClearFilters}
+        onViewCourse={setModalCourse}
+      />
       {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2">
           <span className="text-muted-foreground text-xs">
@@ -572,12 +955,10 @@ export function FacultyCilosCourseList({
           />
         </div>
       )}
-
-      {/* View/Edit CILOs Modal */}
       {modalCourse && (
         <ViewEditCilosModal
           course={modalCourse}
-          open={!!modalCourse}
+          open
           onOpenChange={(open) => {
             if (!open) setModalCourse(null);
           }}

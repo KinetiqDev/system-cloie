@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
@@ -110,11 +111,17 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
           <FieldError id="create-plo-description-error" errors={[errors.description]} />
         </FieldContent>
       </Field>
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full md:w-auto"
+          onClick={onClose}
+          disabled={isPending}
+        >
           Cancel
         </Button>
-        <Button type="submit" loading={isPending}>
+        <Button type="submit" className="w-full md:w-auto" loading={isPending}>
           {isPending ? "Saving..." : "Create PLO"}
         </Button>
       </div>
@@ -201,11 +208,17 @@ function EditForm({
           <FieldError id="edit-plo-description-error" errors={[errors.description]} />
         </FieldContent>
       </Field>
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full md:w-auto"
+          onClick={onClose}
+          disabled={isPending}
+        >
           Cancel
         </Button>
-        <Button type="submit" loading={isPending}>
+        <Button type="submit" className="w-full md:w-auto" loading={isPending}>
           {isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
@@ -219,24 +232,26 @@ export function PLOFormDialog({ mode, programId, plo, open, onOpenChange }: PLOF
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
+    <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
             {mode === "create" ? "Add Program Learning Outcome" : "Edit Program Learning Outcome"}
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {mode === "create"
-              ? "Create a new Program Learning Outcome for your program."
+              ? "Create a Program Learning Outcome for your program."
               : "Update Program Learning Outcome details."}
-          </DialogDescription>
-        </DialogHeader>
-        {mode === "create" ? (
-          <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
-        ) : (
-          <EditForm programId={programId} plo={plo} onClose={() => onOpenChange(false)} />
-        )}
-      </DialogContent>
-    </Dialog>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-0">
+          {mode === "create" ? (
+            <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
+          ) : (
+            <EditForm programId={programId} plo={plo} onClose={() => onOpenChange(false)} />
+          )}
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

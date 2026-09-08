@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MoreVertical } from "lucide-react";
+import { BookOpen, MoreVertical } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,9 @@ export type TemplateCollectionItem = {
   /** Optional extra source detail, e.g. the owning Program code. */
   secondaryMeta?: string;
   facultyAccessible: boolean;
+  /** Bound course display values; null when the template has no course selected. */
+  boundCourseCode?: string | null;
+  boundCourseTitle?: string | null;
   /** Omitted when the source cannot report a version count (e.g. baselines). */
   versionCount?: number;
   /** Whether the role may publish this template (renders the Publish action). */
@@ -90,6 +93,43 @@ function OriginMarker({ item }: { item: TemplateCollectionItem }) {
         <span className="text-muted-foreground text-xs">· {item.secondaryMeta}</span>
       )}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bound-course badge
+// ---------------------------------------------------------------------------
+
+function CourseBadge({ item }: { item: TemplateCollectionItem }) {
+  if (item.boundCourseCode) {
+    const fullLabel = item.boundCourseTitle
+      ? `${item.boundCourseCode} — ${item.boundCourseTitle}`
+      : item.boundCourseCode;
+    return (
+      <Badge
+        variant="information"
+        className="max-w-[10rem] text-xs"
+        title={`Bound course: ${fullLabel}`}
+        aria-label={`Bound course: ${fullLabel}`}
+      >
+        <BookOpen aria-hidden="true" />
+        <span className="truncate">{item.boundCourseCode}</span>
+      </Badge>
+    );
+  }
+
+  if (item.origin !== "faculty-copy") return null;
+
+  return (
+    <Badge
+      variant="warning"
+      className="max-w-[12rem] text-xs"
+      title="No course selected yet. Edit this template to choose a course."
+      aria-label="No course selected yet. Edit this template to choose a course."
+    >
+      <BookOpen aria-hidden="true" />
+      <span className="truncate">No course selected</span>
+    </Badge>
   );
 }
 
@@ -164,9 +204,12 @@ function TemplateCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {item.description && (
-          <p className="text-muted-foreground line-clamp-2 text-sm">{item.description}</p>
+          <p className="text-muted-foreground line-clamp-2 text-sm" title={item.description}>
+            {item.description}
+          </p>
         )}
         <div className="flex flex-wrap items-center gap-2">
+          <CourseBadge item={item} />
           <OriginMarker item={item} />
           <Badge variant="outline" className="text-xs">
             {templateTypeLabel(item)}
@@ -221,8 +264,16 @@ function TemplateTable({
               <TableRow key={item.id} className="hover:bg-muted/30">
                 <TableCell>
                   <span className="block font-medium">{item.name}</span>
+                  {(item.boundCourseCode || item.origin === "faculty-copy") && (
+                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <CourseBadge item={item} />
+                    </span>
+                  )}
                   {item.description && (
-                    <span className="text-muted-foreground line-clamp-1 block max-w-[36rem]">
+                    <span
+                      className="text-muted-foreground mt-1 line-clamp-2 block max-w-[36rem]"
+                      title={item.description}
+                    >
                       {item.description}
                     </span>
                   )}

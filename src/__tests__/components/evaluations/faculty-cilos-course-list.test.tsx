@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -31,6 +31,8 @@ const courses: FacultyCourseWithCiloCount[] = [
     majorId: null,
     majorName: null,
     ciloCount: 1,
+    readiness: "incomplete-mapping",
+    coveredCiloCount: 0,
   },
 ];
 
@@ -66,8 +68,7 @@ async function openModal() {
     success: true,
     cilos: [{ id: "cilo-1", description: "Apply core concepts" }],
   });
-  fireEvent.click(screen.getByRole("button", { name: "Actions for CS101" }));
-  fireEvent.click(await screen.findByRole("menuitem", { name: "View CILOs" }));
+  fireEvent.click(screen.getByRole("button", { name: "View CILOs for CS101" }));
   await screen.findByRole("dialog");
   await waitFor(() => expect(loadCilosAction).toHaveBeenCalledWith("course-1"));
   expect(screen.getByDisplayValue("Apply core concepts")).toBeInTheDocument();
@@ -78,16 +79,14 @@ describe("FacultyCilosCourseList", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the course table with scope badges and CILO counts", () => {
+  it("renders course cards with scope badges and preparation status", () => {
     renderList();
 
     expect(screen.getByRole("heading", { name: "Manage CILOs" })).toBeInTheDocument();
-    expect(screen.getByText("CS101")).toBeInTheDocument();
-    expect(screen.getByText("Intro to Computing")).toBeInTheDocument();
+    expect(screen.getByText("CS101 — Intro to Computing")).toBeInTheDocument();
     expect(screen.getByText("Program-Specific")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText(/Incomplete mapping/)).toBeInTheDocument();
   });
-
   it("loads and displays CILOs when the modal opens", async () => {
     renderList();
     await openModal();
@@ -156,6 +155,8 @@ describe("FacultyCilosCourseList", () => {
             majorId: null,
             majorName: null,
             ciloCount: 3,
+            readiness: "incomplete-mapping",
+            coveredCiloCount: 1,
           },
         ]}
         termInstances={[]}
@@ -165,11 +166,76 @@ describe("FacultyCilosCourseList", () => {
       />
     );
 
-    // DropdownMenuContent renders via Portal only after the trigger opens it.
-    const trigger = screen.getByRole("button", { name: "Actions for GESTECH" });
-    fireEvent.click(trigger);
+    const alignLink = screen.getByRole("button", { name: "Map CILOs for GESTECH" });
+    expect(alignLink.getAttribute("href")).toContain("/faculty/cilos/course-ge/alignment");
+  });
 
-    const alignLink = await screen.findByText("Map CILOs");
-    expect(alignLink).toHaveAttribute("href", "/faculty/cilos/course-ge/alignment");
+  it("keeps Map CILOs alongside Prepare questions once a course is ready", () => {
+    render(
+      <FacultyCilosCourseList
+        courses={[
+          {
+            id: "course-ready",
+            code: "ITRES2",
+            title: "Capstone Project 2",
+            courseScope: "PROGRAM_SPECIFIC",
+            courseScopeLabel: "Program-Specific",
+            programId: "program-1",
+            programCode: "BSIT",
+            programName: "BS Information Technology",
+            majorId: null,
+            majorName: null,
+            ciloCount: 4,
+            readiness: "ready",
+            coveredCiloCount: 4,
+          },
+        ]}
+        termInstances={[]}
+        selectedTermId={undefined}
+        loadCilosAction={loadCilosAction}
+        saveCilosAction={saveCilosAction}
+      />
+    );
+
+    const mapLink = screen.getByRole("button", { name: "Map CILOs for ITRES2" });
+    expect(mapLink.getAttribute("href")).toContain("/faculty/cilos/course-ready/alignment");
+    const prepareLink = screen.getByRole("button", { name: "Prepare questions for ITRES2" });
+    expect(prepareLink.getAttribute("href")).toBe("/faculty/tools");
+  });
+
+  it("exposes View, Map, and Prepare actions in the list view kebab", async () => {
+    render(
+      <FacultyCilosCourseList
+        courses={[
+          {
+            id: "course-ge",
+            code: "GESTECH",
+            title: "Science, Technology and Society",
+            courseScope: "GENERAL_EDUCATION",
+            courseScopeLabel: "General Education",
+            programId: null,
+            programCode: null,
+            programName: null,
+            majorId: null,
+            majorName: null,
+            ciloCount: 3,
+            readiness: "incomplete-mapping",
+            coveredCiloCount: 1,
+          },
+        ]}
+        termInstances={[]}
+        selectedTermId={undefined}
+        initialView="list"
+        loadCilosAction={loadCilosAction}
+        saveCilosAction={saveCilosAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Actions for GESTECH" }));
+    const menu = await screen.findByRole("menu");
+    const mapItem = within(menu).getByRole("menuitem", { name: "Map CILOs" });
+    expect(mapItem.getAttribute("href")).toContain("/faculty/cilos/course-ge/alignment");
+    expect(within(menu).getByRole("menuitem", { name: "View CILOs" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Prepare questions" })).toBeInTheDocument();
   });
 });

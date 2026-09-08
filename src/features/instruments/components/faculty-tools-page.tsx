@@ -67,6 +67,8 @@ function toTemplateItem(template: FacultyTemplateItem): TemplateCollectionItem {
     originLabel: origin.originLabel,
     secondaryMeta: template.programCode ?? undefined,
     facultyAccessible: template.is_faculty_accessible,
+    boundCourseCode: template.boundCourseCode,
+    boundCourseTitle: template.boundCourseTitle,
     versionCount: template.versionCount,
     canPublish: Boolean(template.facultyOwnerId),
   };

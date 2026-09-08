@@ -89,7 +89,13 @@ export function FacultyPublishedFilterBar({
           variant="ghost"
           size="sm"
           onClick={() =>
-            onFiltersChange({ periodId: null, courseId: null, query: "", status: "ALL" })
+            onFiltersChange({
+              periodId: null,
+              courseId: null,
+              target: null,
+              query: "",
+              status: "ALL",
+            })
           }
           disabled={!hasActive}
           className="shrink-0 gap-1.5"

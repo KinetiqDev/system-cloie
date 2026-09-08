@@ -34,7 +34,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { showToast } from "@/components/ui/toast";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
   confirmPLOImportAction,
   previewPLOImportAction,

@@ -6,7 +6,6 @@ import { readCourseAlignment } from "@/features/outcomes/services/manage-course-
 import {
   commitCourseAlignmentAction,
   prepareCourseAlignmentAction,
-  saveDraftCourseAlignmentAction,
 } from "@/lib/actions/course-alignment-actions";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
@@ -16,21 +15,24 @@ export const metadata = {
 
 export default async function CourseAlignmentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseId: string }>;
+  searchParams?: Promise<{ returnTo?: string }>;
 }) {
   const session = await resolveAuthSession();
   if (!session) redirect("/portal/respondents");
 
   const { courseId } = await params;
+  const { returnTo } = (await searchParams) ?? {};
+  const backHref = returnTo && returnTo.startsWith("/faculty/cilos") ? returnTo : "/faculty/cilos";
   const result = await readCourseAlignment(courseId);
   if (!result.success) notFound();
-
   return (
     <div className="mx-auto w-full max-w-6xl">
       <Link
-        href="/faculty/cilos"
-        className="text-link inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-ring focus-visible:ring-3 focus-visible:outline-none"
+        href={backHref}
+        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
       >
         <ArrowLeft className="size-4" />
         Back to Manage CILOs
@@ -42,7 +44,6 @@ export default async function CourseAlignmentPage({
         alignment={result.data}
         prepareAction={prepareCourseAlignmentAction}
         commitAction={commitCourseAlignmentAction}
-        saveDraftAction={saveDraftCourseAlignmentAction}
       />
     </div>
   );

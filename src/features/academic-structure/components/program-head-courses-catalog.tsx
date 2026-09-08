@@ -38,12 +38,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -170,13 +172,10 @@ function CourseScheduleFields({
   onTermChange: (value: AcademicTerm | "") => void;
 }) {
   const isSummer = semester === AcademicSemester.SUMMER;
-
   return (
-    <div className="border-border bg-surface-alt grid gap-4 rounded-lg border p-4 md:grid-cols-3">
+    <div className="md:border-border md:bg-surface-alt grid gap-4 md:grid-cols-3 md:rounded-lg md:border md:p-4">
       <div className="space-y-2">
-        <Label htmlFor="year-level">
-          Year Level <span className="text-text-muted text-xs font-normal">(default)</span>
-        </Label>
+        <Label htmlFor="year-level">Default year level</Label>
         <Select value={yearLevel} onValueChange={(value) => onYearLevelChange(value as YearLevel)}>
           <SelectTrigger id="year-level">
             <SelectValue placeholder="Select year level">
@@ -198,9 +197,7 @@ function CourseScheduleFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="semester">
-          Semester <span className="text-text-muted text-xs font-normal">(default)</span>
-        </Label>
+        <Label htmlFor="semester">Default semester</Label>
         <Select
           value={semester}
           onValueChange={(value) => onSemesterChange(value as AcademicSemester)}
@@ -225,18 +222,16 @@ function CourseScheduleFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="term">
-          Term <span className="text-text-muted text-xs font-normal">(default)</span>
-        </Label>
+        <Label htmlFor="term">Default term</Label>
         <Select
           value={isSummer ? "" : term}
           onValueChange={(value) => onTermChange(value as AcademicTerm)}
           disabled={isSummer}
         >
           <SelectTrigger id="term">
-            <SelectValue placeholder={isSummer ? "N/A" : "Select term"}>
+            <SelectValue placeholder={isSummer ? "Not applicable" : "No default"}>
               {term
-                ? (TERM_OPTIONS.find((option) => option.value === term)?.label ?? "Select term")
+                ? (TERM_OPTIONS.find((option) => option.value === term)?.label ?? "No default")
                 : null}
             </SelectValue>
           </SelectTrigger>
@@ -258,12 +253,12 @@ function CourseScheduleFields({
 function CourseDialogHeader({ mode }: { mode: CourseFormMode }) {
   const isCreate = mode === "create";
   return (
-    <DialogHeader>
-      <DialogTitle>{isCreate ? "Add New Course" : "Edit Course"}</DialogTitle>
-      <DialogDescription>
-        {isCreate ? "Create a new course within your program scope." : "Update course details."}
-      </DialogDescription>
-    </DialogHeader>
+    <ResponsiveDialogHeader>
+      <ResponsiveDialogTitle>{isCreate ? "Add New Course" : "Edit Course"}</ResponsiveDialogTitle>
+      <ResponsiveDialogDescription>
+        {isCreate ? "Create a course within your program." : "Update course details."}
+      </ResponsiveDialogDescription>
+    </ResponsiveDialogHeader>
   );
 }
 
@@ -287,14 +282,14 @@ function CourseDialogFooter({
   onCancel: () => void;
 }) {
   return (
-    <div className="flex justify-end gap-2 pt-2">
-      <Button type="button" variant="outline" onClick={onCancel}>
+    <ResponsiveDialogFooter>
+      <Button type="button" variant="outline" className="w-full md:w-auto" onClick={onCancel}>
         Cancel
       </Button>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : mode === "create" ? "Create Course" : "Save Changes"}
+      <Button type="submit" className="w-full md:w-auto" loading={isPending}>
+        {mode === "create" ? "Create Course" : "Save Changes"}
       </Button>
-    </div>
+    </ResponsiveDialogFooter>
   );
 }
 
@@ -425,80 +420,81 @@ function CourseFormDialog({
   }
 
   return (
-    <Dialog key={open ? "open" : "closed"} open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+    <ResponsiveDialog key={open ? "open" : "closed"} open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-lg">
         <CourseDialogHeader mode={mode} />
-        <form action={handleSubmit} className="space-y-4">
-          {mode === "edit" && course && <input type="hidden" name="id" value={course.id} />}
-          <CourseDialogStatus error={error} />
+        <form action={handleSubmit} className="contents">
+          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+            {mode === "edit" && course && <input type="hidden" name="id" value={course.id} />}
+            <CourseDialogStatus error={error} />
 
-          {majors.length > 0 && (
+            {majors.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="major_id">
+                  Major <span className="text-text-muted text-xs font-normal">(optional)</span>
+                </Label>
+                <Select value={majorId} onValueChange={(value) => setMajorId(value ?? "")}>
+                  <SelectTrigger id="major_id">
+                    <SelectValue placeholder="None — Program-Wide">
+                      {majorId
+                        ? (majors.find((m) => m.id === majorId)?.name ?? "Select major")
+                        : "None — Program-Wide"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None — Program-Wide</SelectItem>
+                    {majors.map((major) => (
+                      <SelectItem key={major.id} value={major.id}>
+                        {major.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="major_id">
-                Major <span className="text-text-muted text-xs font-normal">(optional)</span>
-              </Label>
-              <Select value={majorId} onValueChange={(value) => setMajorId(value ?? "")}>
-                <SelectTrigger id="major_id">
-                  <SelectValue placeholder="None — Program-Wide">
-                    {majorId
-                      ? (majors.find((m) => m.id === majorId)?.name ?? "Select major")
-                      : "None — Program-Wide"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">None — Program-Wide</SelectItem>
-                  {majors.map((major) => (
-                    <SelectItem key={major.id} value={major.id}>
-                      {major.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="code">Course Code</Label>
+              <Input
+                id="code"
+                name="code"
+                placeholder="e.g. IT-204"
+                defaultValue={course?.code ?? ""}
+                required
+              />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="code">Course Code</Label>
-            <Input
-              id="code"
-              name="code"
-              placeholder="e.g. IT-204"
-              defaultValue={course?.code ?? ""}
-              required
+            <div className="space-y-2">
+              <Label htmlFor="title">Course Title</Label>
+              <Input
+                id="title"
+                name="title"
+                placeholder="e.g. Data Structures & Algorithms"
+                defaultValue={course?.title ?? ""}
+                required
+              />
+            </div>
+
+            <CourseScheduleFields
+              yearLevel={yearLevel}
+              semester={semester}
+              term={term}
+              onYearLevelChange={setYearLevel}
+              onSemesterChange={(nextSemester) => {
+                setSemester(nextSemester);
+                if (nextSemester === AcademicSemester.SUMMER) setTerm("");
+              }}
+              onTermChange={setTerm}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="title">Course Title</Label>
-            <Input
-              id="title"
-              name="title"
-              placeholder="e.g. Data Structures & Algorithms"
-              defaultValue={course?.title ?? ""}
-              required
-            />
-          </div>
-
-          <CourseScheduleFields
-            yearLevel={yearLevel}
-            semester={semester}
-            term={term}
-            onYearLevelChange={setYearLevel}
-            onSemesterChange={(nextSemester) => {
-              setSemester(nextSemester);
-              if (nextSemester === AcademicSemester.SUMMER) setTerm("");
-            }}
-            onTermChange={setTerm}
-          />
-
+          </ResponsiveDialogBody>
           <CourseDialogFooter
             mode={mode}
             isPending={isPending}
             onCancel={() => onOpenChange(false)}
           />
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

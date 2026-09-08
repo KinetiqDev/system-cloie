@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import SecretaryDashboardLoading from "@/app/(app)/secretary/dashboard/loading";
 import SecretaryCoursesLoading from "@/app/(app)/secretary/courses/loading";
 import SecretaryProgramsLoading from "@/app/(app)/secretary/programs/loading";
-import SecretaryProgramEditLoading from "@/app/(app)/secretary/programs/[id]/edit/loading";
 import SecretaryUsersLoading from "@/app/(app)/secretary/users/loading";
 import SecretaryUsersNewLoading from "@/app/(app)/secretary/users/new/loading";
 import SecretaryInstrumentsLoading from "@/app/(app)/secretary/instruments/loading";
@@ -39,7 +38,6 @@ import ProgramHeadToolsPublishLoading from "@/app/(app)/program-head/tools/publi
 import DeanEditCourseLoading from "@/app/(app)/dean/academic-structure/courses/[id]/edit/loading";
 import DeanCreateInstrumentLoading from "@/app/(app)/dean/academic-structure/instruments/new/loading";
 import DeanEditInstrumentLoading from "@/app/(app)/dean/academic-structure/instruments/[id]/edit/loading";
-import DeanEditProgramLoading from "@/app/(app)/dean/academic-structure/programs/[id]/edit/loading";
 import DeanDashboardLoading from "@/app/(app)/dean/dashboard/loading";
 import DeanAcademicStructureLoading from "@/app/(app)/dean/academic-structure/loading";
 import DeanCollegeOversightLoading from "@/app/(app)/dean/college-oversight/loading";
@@ -71,7 +69,6 @@ const loadingRoutes = [
   [SecretaryDashboardLoading, "Loading dashboard"],
   [SecretaryCoursesLoading, "Loading records"],
   [SecretaryProgramsLoading, "Loading records"],
-  [SecretaryProgramEditLoading, "Loading form"],
   [SecretaryUsersLoading, "Loading users"],
   [SecretaryUsersNewLoading, "Loading form"],
   [SecretaryInstrumentsLoading, "Loading records"],
@@ -106,7 +103,6 @@ const loadingRoutes = [
   [DeanEditCourseLoading, "Loading form"],
   [DeanCreateInstrumentLoading, "Loading form"],
   [DeanEditInstrumentLoading, "Loading form"],
-  [DeanEditProgramLoading, "Loading form"],
   [DeanDashboardLoading, "Loading dashboard"],
   [DeanAcademicStructureLoading, "Loading records"],
   [DeanCollegeOversightLoading, "Loading records"],

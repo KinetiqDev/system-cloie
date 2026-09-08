@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, ClipboardList, UserPlus, UsersRound } from "l
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { cn } from "@/lib/utils";
 import type { SecretaryDashboardData } from "../services/read-secretary-dashboard";
 
@@ -20,30 +21,29 @@ const inventoryItems = [
 const quickActions = [
   {
     href: "/secretary/users/new",
-    title: "Add User",
-    description: "Provision an internal or stakeholder account",
+    label: "Add User",
+    detail: "Provision an internal or stakeholder account.",
     icon: UserPlus,
   },
   {
     href: "/secretary/school-years",
-    title: "Manage School Years",
-    description: "Control the Academic Period lifecycle",
+    label: "Manage School Years",
+    detail: "Control the Academic Period lifecycle.",
     icon: CalendarDays,
   },
   {
     href: "/secretary/course-assignments",
-    title: "Find a Course Roster",
-    description: "Open an assignment and manage its Student roster",
+    label: "Find a Course Roster",
+    detail: "Open an assignment and manage its Student roster.",
     icon: UsersRound,
   },
   {
     href: "/secretary/course-assignments",
-    title: "View Course Assignments",
-    description: "Review assignments across all Programs",
+    label: "View Course Assignments",
+    detail: "Review assignments across all Programs.",
     icon: ClipboardList,
   },
 ] as const;
-
 export function SecretaryDashboard({ data }: { data: SecretaryDashboardData }) {
   const attentionItems = [
     {
@@ -90,7 +90,10 @@ export function SecretaryDashboard({ data }: { data: SecretaryDashboardData }) {
             </div>
             <Link
               href="/secretary/school-years"
-              className={cn(buttonVariants({ variant: data.activePeriod ? "outline" : "default" }), "w-full sm:w-auto")}
+              className={cn(
+                buttonVariants({ variant: data.activePeriod ? "outline" : "default" }),
+                "w-full sm:w-auto"
+              )}
             >
               Manage Calendar
               <ArrowRight aria-hidden="true" data-icon="inline-end" />
@@ -117,8 +120,13 @@ export function SecretaryDashboard({ data }: { data: SecretaryDashboardData }) {
                       <span className="bg-warning-soft text-warning flex size-9 shrink-0 items-center justify-center rounded-lg font-semibold tabular-nums">
                         {item.count}
                       </span>
-                      <span className="min-w-0 flex-1 text-sm font-medium text-pretty">{item.label}</span>
-                      <ArrowRight aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
+                      <span className="min-w-0 flex-1 text-sm font-medium text-pretty">
+                        {item.label}
+                      </span>
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="text-muted-foreground size-4 shrink-0"
+                      />
                     </Link>
                   </li>
                 ))}
@@ -134,34 +142,17 @@ export function SecretaryDashboard({ data }: { data: SecretaryDashboardData }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common Secretary workflows.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-            {quickActions.map(({ href, title, description, icon: Icon }) => (
-              <Link
-                key={title}
-                href={href}
-                className="border-border focus-visible:ring-ring hover:border-primary/40 hover:bg-primary-soft/40 flex min-h-24 min-w-0 flex-col gap-2 rounded-xl border p-3 transition-colors focus-visible:ring-3 focus-visible:outline-none lg:min-h-0 lg:flex-row lg:items-start"
-              >
-                <Icon aria-hidden="true" className="text-primary size-5 shrink-0" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-pretty">{title}</span>
-                  <span className="text-muted-foreground mt-0.5 hidden text-xs text-pretty sm:block">
-                    {description}
-                  </span>
-                </span>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
+        <DashboardQuickActions
+          description="Common Secretary workflows."
+          actions={[...quickActions]}
+        />
       </div>
 
       <section aria-labelledby="inventory-heading" className="flex flex-col gap-3">
         <div>
-          <h2 id="inventory-heading" className="text-heading-md">Institution at a Glance</h2>
+          <h2 id="inventory-heading" className="text-heading-md">
+            Institution at a Glance
+          </h2>
           <p className="text-body-sm text-text-secondary">Current institutional records.</p>
         </div>
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -174,14 +165,15 @@ export function SecretaryDashboard({ data }: { data: SecretaryDashboardData }) {
               <Card className="hover:border-primary/40 hover:bg-surface-hover h-full transition-colors">
                 <CardHeader className="gap-1 p-4">
                   <CardDescription className="text-pretty">{item.label}</CardDescription>
-                  <CardTitle className="text-heading-xl tabular-nums">{data.inventory[item.key]}</CardTitle>
+                  <CardTitle className="text-heading-xl tabular-nums">
+                    {data.inventory[item.key]}
+                  </CardTitle>
                 </CardHeader>
               </Card>
             </Link>
           ))}
         </div>
       </section>
-
     </div>
   );
 }

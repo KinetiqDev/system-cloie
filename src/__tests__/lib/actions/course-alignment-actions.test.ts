@@ -1,14 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  prepareWriteMock,
-  commitWriteMock,
-  saveDraftMock,
-  revalidatePathMock,
-} = vi.hoisted(() => ({
+const { prepareWriteMock, commitWriteMock, revalidatePathMock } = vi.hoisted(() => ({
   prepareWriteMock: vi.fn(),
   commitWriteMock: vi.fn(),
-  saveDraftMock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
 
@@ -16,7 +10,6 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/features/outcomes/services/manage-course-alignment", () => ({
   prepareCourseAlignmentWrite: prepareWriteMock,
   commitCourseAlignmentWrite: commitWriteMock,
-  saveDraftCourseAlignment: saveDraftMock,
 }));
 
 const COURSE_ID = "11111111-1111-4111-8111-111111111111";
@@ -47,14 +40,6 @@ function validReview() {
   };
 }
 
-function validPspDraft() {
-  return {
-    courseId: COURSE_ID,
-    cells: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "LEARNING" }] }],
-    freshnessToken: "fresh",
-  };
-}
-
 describe("Course alignment actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,16 +60,10 @@ describe("Course alignment actions", () => {
         signature: "a".repeat(64),
       },
     });
-    saveDraftMock.mockResolvedValue({
-      success: true,
-      data: { changed: 2, freshnessToken: "fresh" },
-    });
   });
 
   it("revalidates the Faculty alignment surfaces after a commit", async () => {
-    const { commitCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
     const review = validReview();
 
     await expect(commitCourseAlignmentAction(review, true)).resolves.toEqual({
@@ -100,9 +79,7 @@ describe("Course alignment actions", () => {
   });
 
   it("requires explicit confirmation before opening a write", async () => {
-    const { commitCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(commitCourseAlignmentAction(validReview(), false)).resolves.toEqual({
       success: false,
@@ -113,9 +90,7 @@ describe("Course alignment actions", () => {
   });
 
   it("rejects a malformed review without opening a write", async () => {
-    const { commitCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(commitCourseAlignmentAction({}, true)).resolves.toEqual({
       success: false,
@@ -126,9 +101,7 @@ describe("Course alignment actions", () => {
   });
 
   it("rejects a Program-specific review with an invalid manifestation", async () => {
-    const { commitCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(
       commitCourseAlignmentAction(
@@ -136,9 +109,7 @@ describe("Course alignment actions", () => {
           scope: "PROGRAM_SPECIFIC",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
-          after: [
-            { ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "L" }] },
-          ],
+          after: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "L" }] }],
           additions: [],
           updates: [],
           removals: [],
@@ -156,9 +127,7 @@ describe("Course alignment actions", () => {
       success: false,
       error: "Course alignment changed after review. Reload and review the latest mappings.",
     });
-    const { commitCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(commitCourseAlignmentAction(validReview(), true)).resolves.toEqual({
       success: false,
@@ -168,9 +137,7 @@ describe("Course alignment actions", () => {
   });
 
   it("prepares a valid alignment draft through the shared write service", async () => {
-    const { prepareCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { prepareCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(
       prepareCourseAlignmentAction({
@@ -197,9 +164,7 @@ describe("Course alignment actions", () => {
   });
 
   it("forwards manifestation-shaped desired items to the write service", async () => {
-    const { prepareCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { prepareCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(
       prepareCourseAlignmentAction({
@@ -226,20 +191,16 @@ describe("Course alignment actions", () => {
   });
 
   it("rejects a malformed alignment draft before calling the write service", async () => {
-    const { prepareCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+    const { prepareCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
-    await expect(prepareCourseAlignmentAction({ courseId: "not-a-uuid" })).resolves.toMatchObject(
-      { success: false }
-    );
+    await expect(prepareCourseAlignmentAction({ courseId: "not-a-uuid" })).resolves.toMatchObject({
+      success: false,
+    });
     expect(prepareWriteMock).not.toHaveBeenCalled();
   });
 
-  it("rejects manifestations outside the enum for prepare and draft saves", async () => {
-    const { prepareCourseAlignmentAction, saveDraftCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
+  it("rejects manifestations outside the enum for prepare", async () => {
+    const { prepareCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
     const invalidManifestations = ["L", "learning", "NONE", null, 7, "INTERNSHIP"];
 
     for (const manifestation of invalidManifestations) {
@@ -255,49 +216,7 @@ describe("Course alignment actions", () => {
           freshnessToken: "fresh",
         })
       ).resolves.toMatchObject({ success: false });
-      await expect(
-        saveDraftCourseAlignmentAction({
-          courseId: COURSE_ID,
-          cells: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation }] }],
-          freshnessToken: "fresh",
-        })
-      ).resolves.toMatchObject({ success: false });
     }
     expect(prepareWriteMock).not.toHaveBeenCalled();
-    expect(saveDraftMock).not.toHaveBeenCalled();
-  });
-
-  it("saves a draft and revalidates the Faculty alignment surfaces", async () => {
-    const { saveDraftCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
-    const draft = validPspDraft();
-
-    await expect(saveDraftCourseAlignmentAction(draft)).resolves.toEqual({
-      success: true,
-      changed: 2,
-      freshnessToken: "fresh",
-    });
-    expect(saveDraftMock).toHaveBeenCalledWith(draft);
-    expect(revalidatePathMock.mock.calls).toEqual([
-      [`/faculty/cilos/${COURSE_ID}/alignment`],
-      ["/faculty/cilos"],
-    ]);
-  });
-
-  it("surfaces draft-save failures without revalidating", async () => {
-    saveDraftMock.mockResolvedValue({
-      success: false,
-      error: "Course alignment changed. Reload and review the latest mappings.",
-    });
-    const { saveDraftCourseAlignmentAction } = await import(
-      "@/lib/actions/course-alignment-actions"
-    );
-
-    await expect(saveDraftCourseAlignmentAction(validPspDraft())).resolves.toEqual({
-      success: false,
-      error: "Course alignment changed. Reload and review the latest mappings.",
-    });
-    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

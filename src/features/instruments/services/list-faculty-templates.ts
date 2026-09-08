@@ -9,6 +9,8 @@ import { EvaluationTemplateType } from "@prisma/client";
 
 export type FacultyTemplateItem = {
   boundCourseId: string | null;
+  boundCourseCode: string | null;
+  boundCourseTitle: string | null;
   boundMajorId: string | null;
   boundProgramId: string | null;
   id: string;
@@ -91,15 +93,17 @@ export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult
       ],
     },
     include: {
+      bound_course: { select: { code: true, title: true } },
       program: { select: { code: true, name: true } },
       template_cilo_question_bindings: true,
       _count: { select: { versions: true } },
     },
     orderBy: { updated_at: "desc" },
   });
-
   const templates: FacultyTemplateItem[] = rawTemplates.map((t) => ({
     boundCourseId: t.bound_course_id,
+    boundCourseCode: t.bound_course?.code ?? null,
+    boundCourseTitle: t.bound_course?.title ?? null,
     boundMajorId: t.bound_major_id,
     boundProgramId: t.bound_program_id,
     id: t.id,
@@ -160,6 +164,7 @@ export async function getFacultyTemplate(
     },
     select: {
       bound_course_id: true,
+      bound_course: { select: { code: true, title: true } },
       bound_major_id: true,
       bound_program_id: true,
       faculty_owner_id: true,
@@ -180,9 +185,10 @@ export async function getFacultyTemplate(
   if (!template) {
     return { success: false, error: "Template not found or unavailable." };
   }
-
   const mappedTemplate: FacultyTemplateItem = {
     boundCourseId: template.bound_course_id,
+    boundCourseCode: template.bound_course?.code ?? null,
+    boundCourseTitle: template.bound_course?.title ?? null,
     boundMajorId: template.bound_major_id,
     boundProgramId: template.bound_program_id,
     id: template.id,

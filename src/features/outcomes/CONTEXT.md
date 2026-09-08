@@ -61,7 +61,7 @@ The URL-backed Faculty surface for one Course where active CILOs are staged agai
 _Avoid_: Mapping form, quick mapping picker
 
 **Course alignment review**:
-The staged, exact before/after diff of a Course's complete typed mapping set, confirmed before atomic commit; stale reviews are rejected after another writer changes the Course mappings.
+The staged, exact before/after diff of a Course's typed mapping set, confirmed before atomic commit; incomplete progress may be reviewed and saved, while publication remains blocked until every required mapping is complete; stale reviews are rejected after another writer changes the Course mappings.
 _Avoid_: Immediate write, silent save
 
 **Active mapping target**:

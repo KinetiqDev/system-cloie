@@ -18,7 +18,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { createProgramAction } from "@/lib/actions/admin-program-actions";
 import { ProgramForm } from "./program-form";
 
@@ -66,9 +66,7 @@ export function CreateProgramDialog({ open, onOpenChange }: CreateProgramDialogP
     <div
       className={cn(
         "bg-muted/50 flex flex-col-reverse gap-2 border-t px-5 py-4 sm:flex-row sm:justify-end",
-        isDesktop
-          ? "rounded-b-xl"
-          : "pb-[max(1rem,env(safe-area-inset-bottom))]"
+        isDesktop ? "rounded-b-xl" : "pb-[max(1rem,env(safe-area-inset-bottom))]"
       )}
     >
       <Button variant="outline" onClick={() => onOpenChange(false)}>

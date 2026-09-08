@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Info } from "lucide-react";
@@ -74,17 +75,16 @@ export function SetActiveTermDialog({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Set Active Term</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to make this the active term? This will affect
-            the default term used throughout the system.
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-[425px]">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Set Active Term</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            Make this the default term used throughout System CLOIE.
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div className="space-y-4 py-4">
+        <ResponsiveDialogBody className="flex flex-col gap-4 px-4 py-4 md:p-0">
           <Alert variant="information">
             <Info className="h-4 w-4" />
             <AlertDescription>
@@ -99,9 +99,9 @@ export function SetActiveTermDialog({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-        </div>
+        </ResponsiveDialogBody>
 
-        <DialogFooter>
+        <ResponsiveDialogFooter>
           <Button
             type="button"
             variant="outline"
@@ -118,8 +118,8 @@ export function SetActiveTermDialog({
           >
             {isSubmitting ? "Setting…" : "Set as Active"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

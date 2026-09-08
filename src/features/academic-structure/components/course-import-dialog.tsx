@@ -15,14 +15,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogClose,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -653,27 +654,28 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
   }
 
   return (
-    <Dialog open={open} onOpenChange={close}>
-      <DialogContent
+    <ResponsiveDialog open={open} onOpenChange={close}>
+      <ResponsiveDialogContent
         showCloseButton={false}
-        className="flex max-h-[calc(100dvh-1rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl"
+        className="gap-0 p-0"
+        desktopClassName="sm:max-h-[calc(100dvh-2rem)] sm:max-w-4xl"
       >
-        <DialogHeader className="border-border shrink-0 border-b px-4 py-4 sm:px-6">
+        <ResponsiveDialogHeader className="border-border shrink-0 border-b px-4 py-4 sm:px-6">
           <CourseImportSteps current={step} />
           <div className="mt-4 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <DialogTitle>Import Courses</DialogTitle>
-              <DialogDescription className="mt-1">
+              <ResponsiveDialogTitle>Import Courses</ResponsiveDialogTitle>
+              <ResponsiveDialogDescription className="mt-1">
                 {COURSE_IMPORT_MODE_LABELS[mode]}
-              </DialogDescription>
+              </ResponsiveDialogDescription>
             </div>
-            <DialogClose render={<Button size="icon" variant="ghost" />}>
+            <ResponsiveDialogClose render={<Button size="icon" variant="ghost" />}>
               <X />
               <span className="sr-only">Close</span>
-            </DialogClose>
+            </ResponsiveDialogClose>
           </div>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="px-4 py-5 sm:px-6">
           {step === "file" && (
             <FileStep
               config={config}
@@ -760,8 +762,8 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
               <ResultsRows result={result} />
             </div>
           )}
-        </div>
-        <DialogFooter className="border-border bg-background mx-0 mb-0 shrink-0 flex-col border-t px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:px-6">
+        </ResponsiveDialogBody>
+        <ResponsiveDialogFooter className="border-border bg-background mx-0 mb-0 shrink-0 flex-col border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:px-6">
           {step === "file" && (
             <Button
               type="button"
@@ -816,8 +818,8 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
               </Button>
             </>
           )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

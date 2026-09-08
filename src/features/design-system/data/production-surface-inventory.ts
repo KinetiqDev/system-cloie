@@ -256,18 +256,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/dean/academic-structure/programs/[id]/edit/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/academic-structure/programs/[id]/edit/page.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/dean/academic-structure/programs/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -439,12 +427,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/app/(app)/dean/profile/page.tsx",
     disposition: "task",
     taskId: 18,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/programs/[id]/edit/page.tsx",
-    disposition: "task",
-    taskId: 14,
     category: "route",
   },
   {
@@ -1307,18 +1289,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "layout",
   },
   {
-    path: "src/app/(app)/secretary/programs/[id]/edit/loading.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/secretary/programs/[id]/edit/page.tsx",
-    disposition: "task",
-    taskId: 14,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/secretary/programs/loading.tsx",
     disposition: "task",
     taskId: 14,
@@ -1744,6 +1714,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/components/dashboard-quick-actions.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "layout",
+  },
+  {
     path: "src/components/error-boundary.tsx",
     disposition: "task",
     taskId: 25,
@@ -1954,6 +1930,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/responsive-dialog.tsx",
+    disposition: "task",
+    taskId: 6,
+    category: "ui_primitive",
+  },
+  {
     path: "src/components/ui/select.tsx",
     disposition: "task",
     taskId: 4,
@@ -2120,6 +2102,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/academic-structure/components/program-form.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/edit-program-dialog.tsx",
     disposition: "task",
     taskId: 14,
     category: "feature_component",
@@ -2708,6 +2696,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/evaluations/components/faculty-published-filter-bar.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/evaluations/components/program-head-published-filter-bar.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",

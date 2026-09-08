@@ -3,5 +3,5 @@ import { SecretaryProgramsList } from "@/features/academic-structure/components/
 
 export default async function DeanProgramsPage() {
   const { programs, kpi } = await listSecretaryProgramsSummary();
-  return <SecretaryProgramsList programs={programs} kpi={kpi} basePath="/dean/academic-structure/programs" />;
+  return <SecretaryProgramsList programs={programs} kpi={kpi} />;
 }

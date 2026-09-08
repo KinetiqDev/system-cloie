@@ -6,12 +6,14 @@ import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import {
@@ -86,17 +88,22 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-h-[min(85vh,720px)] sm:max-w-xl">
-        <DialogHeader className="px-5 pt-5 pr-12 pb-1">
-          <DialogTitle>Edit Course</DialogTitle>
-          <DialogDescription>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!pending) onOpenChange(nextOpen);
+      }}
+    >
+      <ResponsiveDialogContent desktopClassName="sm:max-w-xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Edit Course</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Update details for {data?.course.code ?? displayCourse?.code} –{" "}
             {data?.course.title ?? displayCourse?.title}.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-5 py-4">
+        <ResponsiveDialogBody className="px-4 py-4 md:p-0">
           {status === "loading" && (
             <div className="flex items-center justify-center py-10">
               <Spinner size="lg" label="Loading course details" />
@@ -145,19 +152,29 @@ export function CourseEditDialog({ open, onOpenChange, course }: CourseEditDialo
               onSuccess={handleSuccess}
             />
           )}
-        </div>
+        </ResponsiveDialogBody>
 
-        <div className="bg-muted/50 flex flex-col-reverse gap-2 rounded-b-xl border-t px-5 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <ResponsiveDialogFooter>
+          <Button
+            variant="outline"
+            className="w-full md:w-auto"
+            disabled={pending}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           {status === "ready" && (
-            <Button form="course-edit-form" type="submit" disabled={pending}>
-              {pending ? "Updating..." : "Update Course"}
+            <Button
+              form="course-edit-form"
+              type="submit"
+              className="w-full md:w-auto"
+              loading={pending}
+            >
+              Update Course
             </Button>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

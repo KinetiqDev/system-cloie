@@ -50,7 +50,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showToast } from "@/components/ui/toast";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
   addRosterMembershipAction,
   confirmRosterResolutionAction,
@@ -646,6 +646,13 @@ function ReviewPreviewBlock({
             ? "This confirmation will add or restore 1 Student."
             : `This confirmation will add or restore ${confirmCount} Students.`}
       </p>
+      {counts.review + counts.resolve > 0 && (
+        <p className="text-body-sm text-muted-foreground">
+          {counts.review + counts.resolve}{" "}
+          {counts.review + counts.resolve === 1 ? "row needs" : "rows need"} attention. Start with
+          the Review and Resolve filters below.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Preview filters">
         {PREVIEW_FILTERS.map((item) => (
           <Button
