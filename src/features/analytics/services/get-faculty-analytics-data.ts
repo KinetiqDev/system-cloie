@@ -17,7 +17,9 @@ import {
 } from "@/features/evaluations/services/course-info-snapshot";
 import { groupRatingsByScale } from "../aggregators/quantitative";
 import {
+  buildScaleIdentities,
   describeScale,
+  extractDistinctScales,
   ratingBelongsToScale,
   resolveItemScaleIdentity,
   type ScaleIdentity,
@@ -533,11 +535,26 @@ function toScaleDistribution(
 }
 
 function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
-  const rows = evaluations.map((evaluation) => {
-    const submitted = evaluation.assignments.flatMap((assignment) =>
-      assignment.response?.status === "SUBMITTED" ? [assignment.response] : []
+  const byCoursePeriod = new Map<string, EvaluationRow[]>();
+  for (const evaluation of evaluations) {
+    const key = `${evaluation.course_assignment.course.id}:${evaluation.term_instance.id}`;
+    const group = byCoursePeriod.get(key);
+    if (group) group.push(evaluation);
+    else byCoursePeriod.set(key, [evaluation]);
+  }
+
+  const periods = [...byCoursePeriod.values()].map((group) => {
+    const first = group[0];
+    const courseId = first.course_assignment.course.id;
+    const termInstanceId = first.term_instance.id;
+    const submitted = group.flatMap((evaluation) =>
+      evaluation.assignments.flatMap((assignment) =>
+        assignment.response?.status === "SUBMITTED"
+          ? [{ evaluation, response: assignment.response }]
+          : []
+      )
     );
-    const entries = submitted.flatMap((response) =>
+    const entries = submitted.flatMap(({ evaluation, response }) =>
       response.quant_items.flatMap((item) => {
         const scale = resolveItemScaleIdentity(
           evaluation.instrument.structure_snapshot,
@@ -550,38 +567,101 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
       })
     );
     const groups = groupRatingsByScale(entries);
-    return { evaluation, submitted, groups };
-  });
-
-  const previousByCourse = new Map<string, { instrumentId: string; scaleKey: string | null }>();
-  // Trend comparability (same course + instrument + scale with stated breaks) is one
-  // no-cross-course-join contract; splitting the row projection would scatter it.
-  // fallow-ignore-next-line complexity
-  return rows.map(({ evaluation, submitted, groups }) => {
-    const courseId = evaluation.course_assignment.course.id;
-    const scaleKey = groups.length === 1 ? (groups[0].scale?.key ?? null) : null;
-    const previous = previousByCourse.get(courseId);
-    const sameInstrument = previous?.instrumentId === evaluation.instrument.id;
-    const sameScale = previous?.scaleKey === scaleKey;
-    const comparableWithPrevious = previous ? sameInstrument && sameScale : true;
-    const breakReason = previous
-      ? !sameInstrument
-        ? "The published instrument version changed."
-        : !sameScale
-          ? "The rating scale changed."
-          : null
-      : null;
-    previousByCourse.set(courseId, { instrumentId: evaluation.instrument.id, scaleKey });
+    const ratedInstrumentIds = new Set<string>();
+    for (const { evaluation, response } of submitted) {
+      const contributes = response.quant_items.some((item) => {
+        const scale = resolveItemScaleIdentity(
+          evaluation.instrument.structure_snapshot,
+          item.section_key,
+          item.item_key
+        );
+        return scale !== null && ratingBelongsToScale(scale, item.rating_value);
+      });
+      if (contributes) ratedInstrumentIds.add(evaluation.instrument.id);
+    }
+    const snapshotByInstrument = new Map(
+      group.map((evaluation) => [evaluation.instrument.id, evaluation.instrument.structure_snapshot] as const)
+    );
+    const scaleIdentities = buildScaleIdentities(
+      [...ratedInstrumentIds].flatMap((id) => extractDistinctScales(snapshotByInstrument.get(id)))
+    );
+    const instrumentVersions = [...ratedInstrumentIds].sort();
+    const mean = groups.length === 1 ? groups[0].metric.mean : null;
     return {
-      key: evaluation.id,
+      key: `${courseId}:${termInstanceId}`,
       courseId,
-      courseCode: courseCode(evaluation),
-      periodLabel: periodLabel(evaluation),
-      mean: groups.length === 1 ? groups[0].metric.mean : null,
+      courseCode: courseCode(first),
+      periodLabel: periodLabel(first),
+      sortTime: (() => {
+        const startDate = first.term_instance.start_date as unknown as Date | string | null;
+        if (startDate instanceof Date) return startDate.getTime();
+        if (startDate) return new Date(startDate).getTime();
+        return 0;
+      })(),
+      mean,
       responseCount: submitted.length,
       ratingCount: groups.length === 1 ? groups[0].metric.ratingCount : 0,
       scaleLabel:
         groups.length === 1 && groups[0].scale ? describeScale(groups[0].scale.descriptors) : null,
+      instrumentVersions,
+      scaleIdentities,
+    };
+  });
+
+  periods.sort(
+    (left, right) =>
+      left.sortTime - right.sortTime ||
+      left.periodLabel.localeCompare(right.periodLabel) ||
+      left.key.localeCompare(right.key)
+  );
+
+  const previousByCourse = new Map<
+    string,
+    { instrumentVersions: string[]; scaleIdentities: string[]; mean: number | null }
+  >();
+  // Trend comparability (same course + instrument + scale with stated breaks) is one
+  // no-cross-course-join contract; splitting the row projection would scatter it.
+  // Unrated periods never fabricate a break: they break the drawable run without a reason.
+  // fallow-ignore-next-line complexity
+  return periods.map((period) => {
+    const previous = previousByCourse.get(period.courseId);
+    const instrumentsEqual =
+      previous !== undefined &&
+      previous.instrumentVersions.length === period.instrumentVersions.length &&
+      previous.instrumentVersions.every((value, index) => value === period.instrumentVersions[index]);
+    const scalesEqual =
+      previous !== undefined &&
+      previous.scaleIdentities.length === period.scaleIdentities.length &&
+      previous.scaleIdentities.every((value, index) => value === period.scaleIdentities[index]);
+    let comparableWithPrevious: boolean;
+    let breakReason: string | null = null;
+    if (!previous) {
+      comparableWithPrevious = period.mean !== null;
+    } else if (previous.mean === null || period.mean === null) {
+      comparableWithPrevious = false;
+    } else if (!instrumentsEqual) {
+      comparableWithPrevious = false;
+      breakReason = "The published instrument version changed.";
+    } else if (!scalesEqual) {
+      comparableWithPrevious = false;
+      breakReason = "The rating scale changed.";
+    } else {
+      comparableWithPrevious = true;
+    }
+    previousByCourse.set(period.courseId, {
+      instrumentVersions: period.instrumentVersions,
+      scaleIdentities: period.scaleIdentities,
+      mean: period.mean,
+    });
+    return {
+      key: period.key,
+      courseId: period.courseId,
+      courseCode: period.courseCode,
+      periodLabel: period.periodLabel,
+      mean: period.mean,
+      responseCount: period.responseCount,
+      ratingCount: period.ratingCount,
+      scaleLabel: period.scaleLabel,
       comparableWithPrevious,
       breakReason,
     };

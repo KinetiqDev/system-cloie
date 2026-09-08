@@ -1307,7 +1307,7 @@ function TrendTable({ data }: { data: FacultyAnalyticsData }) {
                 {point.mean?.toFixed(2) ?? "—"}
               </TableCell>
               <TableCell className="text-right tabular-nums">{point.responseCount}</TableCell>
-              <TableCell>{point.comparableWithPrevious ? "Yes" : point.breakReason}</TableCell>
+              <TableCell>{point.comparableWithPrevious ? "Yes" : (point.breakReason ?? "—")}</TableCell>
             </TableRow>
           ))}
         </TableBody>
