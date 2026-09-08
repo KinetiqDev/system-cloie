@@ -41,6 +41,8 @@ const facultyCopy: FacultyTemplateItem = {
   templateCiloQuestionBindings: [],
   versionCount: 1,
   boundCourseId: "course-1",
+  boundCourseCode: "GESTECH",
+  boundCourseTitle: "Ethics",
   boundMajorId: null,
   boundProgramId: "program-1",
 };
@@ -61,6 +63,8 @@ const institutional: FacultyTemplateItem = {
   templateCiloQuestionBindings: [],
   versionCount: 1,
   boundCourseId: null,
+  boundCourseCode: null,
+  boundCourseTitle: null,
   boundMajorId: null,
   boundProgramId: null,
 };
@@ -129,7 +133,50 @@ describe("FacultyToolsPage", () => {
     expect(screen.getByRole("table", { name: "My Templates" })).toBeInTheDocument();
     expect(screen.getByRole("table", { name: "Available Templates" })).toBeInTheDocument();
   });
+  test("shows the bound course code on owned copies in card and list views", () => {
+    const { unmount } = renderPage({ initialView: "card" });
+    expect(screen.getByTitle("Bound course: GESTECH — Ethics")).toHaveTextContent("GESTECH");
+    unmount();
 
+    renderPage({ initialView: "list" });
+    expect(screen.getByTitle("Bound course: GESTECH — Ethics")).toHaveTextContent("GESTECH");
+  });
+
+  test("warns on unbound owned copies without flagging baselines", () => {
+    renderPage({
+      templates: [
+        {
+          ...facultyCopy,
+          id: "copy-unbound",
+          boundCourseId: null,
+          boundCourseCode: null,
+          boundCourseTitle: null,
+        },
+        institutional,
+      ],
+    });
+
+    const ownedSection = screen.getByRole("heading", { name: "My Templates" }).closest("section");
+    const availableSection = screen
+      .getByRole("heading", { name: "Available Templates" })
+      .closest("section");
+
+    expect(within(ownedSection!).getByText("No course selected")).toBeInTheDocument();
+    expect(within(availableSection!).queryByText("No course selected")).not.toBeInTheDocument();
+  });
+
+  test("exposes the full description text in both views", () => {
+    const longDescription =
+      "The morning sun cast a golden glow through the tall pine trees. A cool breeze rustled the green leaves overhead.";
+    const templates = [{ ...facultyCopy, description: longDescription }, institutional];
+
+    const { unmount } = renderPage({ templates, initialView: "card" });
+    expect(screen.getByTitle(longDescription)).toHaveTextContent(longDescription);
+    unmount();
+
+    renderPage({ templates, initialView: "list" });
+    expect(screen.getByTitle(longDescription)).toHaveTextContent(longDescription);
+  });
   test("right-aligns the shared view selector on templates and published tabs", () => {
     renderPage();
 

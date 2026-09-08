@@ -1,10 +1,16 @@
-import { DeploymentStatus, ResponseStatus } from "@prisma/client";
+import {
+  DeploymentStatus,
+  ResponseStatus,
+  type StudentSection,
+  type YearLevel,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { countEligibleCourseBoundEvaluationAssignments } from "@/features/course-assignments/services/course-assignment-roster";
 import { ROLES } from "@/lib/constants/roles";
 import { FACULTY_ANONYMIZED_EVIDENCE_MINIMUM_RESPONDENTS } from "./get-faculty-analytics-data";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { groupRatingsByScale } from "../aggregators/quantitative";
 import {
@@ -389,8 +395,8 @@ function buildUpcomingEvaluations(evaluations: EvaluationRow[]): FacultyUpcoming
 function buildCourseOverview(
   courseAssignments: Array<{
     id: string;
-    year_level: string;
-    section: string;
+    year_level: YearLevel;
+    section: StudentSection;
     course: { code: string; title: string };
     memberships: Array<{ id: string }>;
   }>,
@@ -400,7 +406,7 @@ function buildCourseOverview(
     const evaluation = evaluationByAssignment.get(assignment.id);
     return {
       assignmentId: assignment.id,
-      contextLabel: `${assignment.year_level.replaceAll("_", " ")} · ${assignment.section.replaceAll("_", " ")}`,
+      contextLabel: `${getYearLevelDisplay(assignment.year_level)} · ${getSectionLabel(assignment.section)}`,
       courseCode: assignment.course.code,
       courseTitle: assignment.course.title,
       rosterCount: assignment.memberships.length,
