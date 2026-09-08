@@ -19,7 +19,8 @@ import {
   listCILOILOMappingsForGE,
   type GECourseCILOMappings,
 } from "@/features/outcomes/services/manage-gen-ed-outcomes";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ListChecks } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ListChecks } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 
 type GECilo = GECourseCILOMappings["cilos"][number];
 
@@ -113,14 +114,7 @@ export default async function GenEdOutcomesMappingPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="max-w-3xl">
-        <Button
-          render={<Link href={buildGenEdOutcomesPath()} />}
-          variant="ghost"
-          className="mb-4 inline-flex items-center gap-2 px-0"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Institutional Learning Outcomes
-        </Button>
+        <BackLink href={buildGenEdOutcomesPath()}>Back to Institutional Learning Outcomes</BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-muted-foreground mt-2 text-pretty">
           Review the college-wide alignment between General Education CILOs and Institutional

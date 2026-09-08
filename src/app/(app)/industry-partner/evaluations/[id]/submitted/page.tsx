@@ -1,7 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BackLink } from "@/components/ui/back-link";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { getCentralDeploymentEvaluationSession } from "@/features/responses/services/get-central-deployment-evaluation-session";
 import { getCentralDeploymentSubmittedReview } from "@/features/responses/services/get-central-deployment-submitted-review";
@@ -36,9 +34,7 @@ export default async function IndustryPartnerSubmittedPage({
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-6 motion-safe:duration-500">
-      <Button render={<Link href="/industry-partner/evaluations" />} variant="ghost" size="sm" className="-ml-2">
-        <ArrowLeft className="mr-2 size-4" /> Back to Evaluations
-      </Button>
+      <BackLink href="/industry-partner/evaluations">Back to Evaluations</BackLink>
 
       <SubmittedResponseReview
         evaluationTitle={review.evaluationTitle}

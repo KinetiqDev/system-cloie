@@ -139,7 +139,7 @@ describe("FacultyEvaluationDetailView – DTO contract", () => {
   it("renders back navigation to Evaluation Tools and lifecycle badge", () => {
     render(<FacultyEvaluationDetailView detail={makeDetail()} />);
 
-    const backLink = screen.getByRole("link", { name: /back to evaluation tools/i });
+    const backLink = screen.getByRole("button", { name: /back to evaluation tools/i });
     expect(backLink).toHaveAttribute("href", "/faculty/tools?tab=published");
 
     const breadcrumbsLink = screen.getByRole("link", { name: /^evaluation tools$/i });

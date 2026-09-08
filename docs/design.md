@@ -299,6 +299,7 @@ Rules:
 - Routine destructive controls use soft danger; filled danger is confirmation-only.
 - Async actions disable duplicate submission and show loading.
 - Keep existing size names in `button.tsx`.
+- Upward navigation uses `BackLink` (`src/components/ui/back-link.tsx`): ghost `sm`, `-ml-2`, muted-to-foreground, `ArrowLeft` leading. `href` for plain leaves, `onClick` only for a leave guard. Label `Back to {ParentList}` in Title Case. Step controls (`Previous`, `Back to editing`) and error-recovery CTAs are not upward navigation and keep their own variants.
 
 ### 8.3 Form Controls
 

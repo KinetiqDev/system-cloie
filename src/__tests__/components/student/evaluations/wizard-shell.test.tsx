@@ -310,9 +310,10 @@ describe("WizardShell", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /back to dashboard/i }));
-
-    expect(pushMock).toHaveBeenCalledWith("/student/dashboard");
+    expect(screen.getByRole("button", { name: /back to dashboard/i })).toHaveAttribute(
+      "href",
+      "/student/dashboard"
+    );
   });
 
   test("marks completed sections in the section mini-map", () => {

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useState, useTransition } from "react";
 import {
-  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   ChevronLeft,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BackLink } from "@/components/ui/back-link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -620,12 +620,7 @@ export function CourseRosterDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <Link
-          href={backHref}
-          className="focus-visible:ring-ring text-link inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-        >
-          <ArrowLeft aria-hidden="true" /> {backLabel}
-        </Link>
+        <BackLink href={backHref}>{backLabel}</BackLink>
         <p className="text-label-md text-muted-foreground font-medium tracking-wide uppercase">
           Course roster
         </p>

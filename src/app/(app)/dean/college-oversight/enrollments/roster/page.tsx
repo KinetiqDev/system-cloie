@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,13 +88,11 @@ export default async function DeanEnrollmentRosterPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <Link
+        <BackLink
           href={`/dean/college-oversight/enrollments?period=${encodeURIComponent(period)}`}
-          className="text-link focus-visible:ring-ring inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
-          <ArrowLeft aria-hidden="true" />
           Back to Enrollments
-        </Link>
+        </BackLink>
         <div className="flex flex-col gap-2">
           <h1 className="text-heading-lg">Class Roster</h1>
           <p className="text-body-md text-text-secondary max-w-2xl">

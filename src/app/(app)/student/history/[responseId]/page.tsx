@@ -1,9 +1,7 @@
 import { SubmittedResponseReview } from "@/features/responses/components/submitted-response-review";
 import { getStudentSubmittedResponseReview } from "@/features/responses/services/get-student-submitted-response-review";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 
 export default async function StudentSubmittedResponseReviewPage({
   params,
@@ -19,17 +17,7 @@ export default async function StudentSubmittedResponseReviewPage({
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-6 motion-safe:duration-500">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          render={<Link href="/student/history" />}
-          className="inline-flex items-center gap-2"
-        >
-          <ArrowLeft className="size-4" />
-          <span>Back to History</span>
-        </Button>
-      </div>
+      <BackLink href="/student/history">Back to History</BackLink>
 
       <SubmittedResponseReview
         evaluationTitle={review.evaluationTitle}

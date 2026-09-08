@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 
 import { cn } from "@/lib/utils";
 
@@ -159,13 +160,7 @@ export function AddCiloForm({
 
   const pageChrome = (
     <>
-      <Link
-        href={backHref}
-        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Manage CILOs
-      </Link>
+      <BackLink href={backHref}>Back to Manage CILOs</BackLink>
       <nav className="text-caption text-muted-foreground">Manage CILOs &gt; Add New CILO</nav>
     </>
   );

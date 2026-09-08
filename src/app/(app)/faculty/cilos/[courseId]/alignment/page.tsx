@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound, redirect } from "next/navigation";
 import { CourseAlignmentEditor } from "@/features/outcomes/components/course-alignment-editor";
 import { readCourseAlignment } from "@/features/outcomes/services/manage-course-alignment";
@@ -30,13 +29,7 @@ export default async function CourseAlignmentPage({
   if (!result.success) notFound();
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <Link
-        href={backHref}
-        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
-      >
-        <ArrowLeft className="size-4" />
-        Back to Manage CILOs
-      </Link>
+      <BackLink href={backHref}>Back to Manage CILOs</BackLink>
       <nav className="text-caption text-muted-foreground">
         Manage CILOs &gt; {result.data.course.code}: {result.data.course.title} &gt; Alignment
       </nav>

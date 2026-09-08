@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
@@ -548,14 +549,7 @@ export function WizardShell({
       {/* Sticky Wizard Header */}
       <div className="bg-background border-border sticky top-0 z-20 mb-4 border-b pb-3 sm:mb-6 sm:pb-4">
         <div className="mb-3 flex items-center justify-between sm:mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(returnRoute)}
-            className="-ml-2"
-          >
-            <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
-          </Button>
+          <BackLink href={returnRoute}>Back to Dashboard</BackLink>
           <div className="text-text-muted text-label-sm flex items-center gap-2 font-bold tracking-wider uppercase">
             <Save className="size-4" /> {isSaving ? "Saving..." : savedTimeText}
           </div>

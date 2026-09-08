@@ -640,7 +640,7 @@ describe("course roster pages", () => {
       />
     );
 
-    expect(screen.getByRole("link", { name: /back to my course rosters/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /back to my course rosters/i })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/course-assignments"
     );
