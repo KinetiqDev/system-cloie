@@ -29,6 +29,8 @@ export function normalizePublishedQuery(query: string): string {
 export type PublishedEvaluationFilters = {
   periodId: string | null;
   courseId: string | null;
+  /** Central-deployment audience facet (program-head Published tab); null means all. */
+  target: string | null;
   query: string;
   status: PublishedStatusFilter;
 };
@@ -36,6 +38,7 @@ export type PublishedEvaluationFilters = {
 export const DEFAULT_PUBLISHED_FILTERS: PublishedEvaluationFilters = {
   periodId: null,
   courseId: null,
+  target: null,
   query: "",
   status: "ALL",
 };
@@ -60,10 +63,19 @@ function parseStatusParam(value: string | string[] | undefined): PublishedStatus
   return match ? (match.toUpperCase() as PublishedStatusFilter) : "ALL";
 }
 
+const PUBLISHED_TARGETS = ["student", "alumni", "industry_partner"] as const;
+
+function parseTargetParam(value: string | string[] | undefined): string | null {
+  const candidate = firstParam(value)?.trim().toLowerCase() ?? "";
+  const match = PUBLISHED_TARGETS.find((target) => target === candidate);
+  return match ? match.toUpperCase() : null;
+}
+
 /**
  * Derive the Published-tab filter defaults from the URL. Canonical URLs omit
- * defaults, so anything missing or unrecognized falls back to "All". Faculty
- * route only; the program-head tools route ignores these keys.
+ * defaults, so anything missing or unrecognized falls back to "All". Shared by
+ * the faculty and program-head tools routes; each route only reads the facet
+ * keys its deployments carry (course vs target).
  */
 export function parsePublishedEvaluationFilters(
   searchParams: ToolsRouteSearchParams
@@ -71,6 +83,7 @@ export function parsePublishedEvaluationFilters(
   return {
     periodId: parseUuidParam(searchParams.period),
     courseId: parseUuidParam(searchParams.course),
+    target: parseTargetParam(searchParams.target),
     query: parseQueryParam(searchParams.q),
     status: parseStatusParam(searchParams.status),
   };
@@ -95,6 +108,7 @@ export function updatePublishedFiltersUrl(
   const url = new URL(window.location.href);
   setFilterParam(url, "period", filters.periodId);
   setFilterParam(url, "course", filters.courseId);
+  setFilterParam(url, "target", filters.target === null ? null : filters.target.toLowerCase());
   setFilterParam(url, "q", normalizePublishedQuery(filters.query));
   setFilterParam(url, "status", filters.status === "ALL" ? null : filters.status.toLowerCase());
   const next = `${url.pathname}${url.search}${url.hash}`;

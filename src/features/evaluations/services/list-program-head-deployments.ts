@@ -16,6 +16,7 @@ export type ProgramHeadDeploymentItem = {
   yearLevelName: string | null;
   target_stakeholder: TargetStakeholder;
   status: DeploymentStatus;
+  termInstanceId: string | null;
   termInstanceLabel: string | null;
   activation_at: Date | null;
   deadline_at: Date | null;
@@ -31,9 +32,9 @@ export type ListProgramHeadDeploymentsResult = {
 
 // ─── Main Service ────────────────────────────────────────────────────────────
 
-export async function listProgramHeadDeployments(programId: string): Promise<
-  ServiceResult<ListProgramHeadDeploymentsResult>
-> {
+export async function listProgramHeadDeployments(
+  programId: string
+): Promise<ServiceResult<ListProgramHeadDeploymentsResult>> {
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) return contextResult;
   const selectedProgram = contextResult.data.selectedProgram;
@@ -51,7 +52,7 @@ export async function listProgramHeadDeployments(programId: string): Promise<
   // 4. Query CentralDeployment only for the selected Program.
   const rawDeployments = await prisma.centralDeployment.findMany({
     where: {
-        program_id: selectedProgram.id,
+      program_id: selectedProgram.id,
     },
     include: {
       instrument: {
@@ -108,6 +109,7 @@ export async function listProgramHeadDeployments(programId: string): Promise<
       yearLevelName: d.year_level ? getYearLevelDisplay(d.year_level) : null,
       target_stakeholder: d.target_stakeholder,
       status: d.status,
+      termInstanceId: d.term_instance?.id ?? null,
       termInstanceLabel,
       activation_at: d.activation_at,
       deadline_at: d.deadline_at,

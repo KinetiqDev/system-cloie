@@ -6,6 +6,10 @@ import {
   publishCentralDeployment,
   closeCentralDeployment,
 } from "@/features/evaluations/services/publish-central-deployment";
+import {
+  reopenCentralDeployment,
+  type ReopenCentralDeploymentResult,
+} from "@/features/evaluations/services/reopen-central-deployment";
 import { buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 import { previewCentralDeploymentRespondents } from "@/features/evaluations/services/preview-central-deployment-respondents";
 import type { PreviewCentralDeploymentInput } from "@/features/evaluations/types";
@@ -101,4 +105,23 @@ export async function closeCentralDeploymentAction(
 
   revalidatePath(buildProgramHeadToolsPath(programId));
   return { success: true };
+}
+
+export async function reopenCentralDeploymentAction(
+  programId: string,
+  deploymentId: string,
+  deadlineAt: Date
+): Promise<ReopenCentralDeploymentResult> {
+  if (!deploymentId || typeof deploymentId !== "string") {
+    return { success: false, error: "Deployment ID is required." };
+  }
+
+  const result = await reopenCentralDeployment(programId, deploymentId, deadlineAt);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  revalidatePath(buildProgramHeadToolsPath(programId));
+  return { success: true, data: result.data };
 }

@@ -2713,6 +2713,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/evaluations/components/program-head-published-filter-bar.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
     path: "src/features/evaluations/components/late-include-dialog.tsx",
     disposition: "task",
     taskId: 22,

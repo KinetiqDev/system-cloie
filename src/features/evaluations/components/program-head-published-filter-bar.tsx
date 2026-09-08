@@ -16,23 +16,23 @@ import {
 import type { PublishedEvaluationFilters } from "@/features/instruments/components/tools-view-state";
 import {
   hasActivePublishedFilters,
-  type CourseFilterOption,
   type PeriodFilterOption,
+  type TargetFilterOption,
 } from "./filter-published-evaluations";
 
-type FacultyPublishedFilterBarProps = {
+type ProgramHeadPublishedFilterBarProps = {
   filters: PublishedEvaluationFilters;
   periods: PeriodFilterOption[];
-  courses: CourseFilterOption[];
+  targets: TargetFilterOption[];
   onFiltersChange: (next: PublishedEvaluationFilters, navigation?: "push" | "replace") => void;
 };
 
-export function FacultyPublishedFilterBar({
+export function ProgramHeadPublishedFilterBar({
   filters,
   periods,
-  courses,
+  targets,
   onFiltersChange,
-}: FacultyPublishedFilterBarProps) {
+}: ProgramHeadPublishedFilterBarProps) {
   const [searchDraft, setSearchDraft] = useState(filters.query);
   const [previousQuery, setPreviousQuery] = useState(filters.query);
 
@@ -42,7 +42,7 @@ export function FacultyPublishedFilterBar({
   }
 
   // Latest committed filters for the pending search timer: reading through a
-  // ref keeps a period/course/status change made mid-debounce from being
+  // ref keeps a period/target/status change made mid-debounce from being
   // overwritten by the older snapshot closed over when typing started.
   const latestFilters = useRef(filters);
   useEffect(() => {
@@ -61,11 +61,11 @@ export function FacultyPublishedFilterBar({
 
   const hasActive = hasActivePublishedFilters(filters);
   const selectedPeriod = periods.find((period) => period.id === filters.periodId);
-  const selectedCourse = courses.find((course) => course.id === filters.courseId);
+  const selectedTarget = targets.find((target) => target.id === filters.target);
 
   return (
     <section
-      aria-labelledby="published-filter-title"
+      aria-labelledby="program-head-published-filter-title"
       className="bg-card flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 shadow-xs sm:p-5"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -77,8 +77,8 @@ export function FacultyPublishedFilterBar({
             <ListFilter className="size-4" />
           </span>
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 id="published-filter-title" className="text-title-sm leading-tight">
-              Filter evaluations
+            <h2 id="program-head-published-filter-title" className="text-title-sm leading-tight">
+              Filter deployments
             </h2>
             <p className="text-muted-foreground text-xs leading-normal break-words">
               Search or combine filters to narrow the published list.
@@ -107,15 +107,15 @@ export function FacultyPublishedFilterBar({
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(13rem,1fr)_minmax(12rem,1fr)_minmax(14rem,1.25fr)]">
         <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor="published-search">Search evaluations</Label>
+          <Label htmlFor="program-head-published-search">Search deployments</Label>
           <div className="relative">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
-              id="published-search"
-              placeholder="Search name or course"
+              id="program-head-published-search"
+              placeholder="Search name or target"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
               className="pl-9 pointer-coarse:h-11"
@@ -125,7 +125,7 @@ export function FacultyPublishedFilterBar({
         </div>
 
         <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor="published-period-filter">Academic Period</Label>
+          <Label htmlFor="program-head-published-period-filter">Academic Period</Label>
           <Select
             value={
               periods.some((period) => period.id === filters.periodId)
@@ -137,7 +137,7 @@ export function FacultyPublishedFilterBar({
             }
           >
             <SelectTrigger
-              id="published-period-filter"
+              id="program-head-published-period-filter"
               className="w-full min-w-0 pointer-coarse:h-11"
             >
               <SelectValue
@@ -159,30 +159,33 @@ export function FacultyPublishedFilterBar({
         </div>
 
         <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
-          <Label htmlFor="published-course-filter">Course</Label>
+          <Label htmlFor="program-head-published-target-filter">Target stakeholder</Label>
           <Select
             value={
-              courses.some((course) => course.id === filters.courseId)
-                ? (filters.courseId ?? "all")
+              targets.some((target) => target.id === filters.target)
+                ? (filters.target ?? "all")
                 : "all"
             }
             onValueChange={(value) =>
-              onFiltersChange({ ...filters, courseId: value === "all" ? null : value })
+              onFiltersChange({ ...filters, target: value === "all" ? null : value })
             }
           >
             <SelectTrigger
-              id="published-course-filter"
+              id="program-head-published-target-filter"
               className="w-full min-w-0 pointer-coarse:h-11"
             >
-              <SelectValue placeholder="All Courses" className="block min-w-0 truncate text-left">
-                {selectedCourse ? selectedCourse.label : "All Courses"}
+              <SelectValue
+                placeholder="All Target Stakeholders"
+                className="block min-w-0 truncate text-left"
+              >
+                {selectedTarget ? selectedTarget.label : "All Target Stakeholders"}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Courses</SelectItem>
-              {courses.map((course) => (
-                <SelectItem key={course.id} value={course.id}>
-                  {course.label}
+              <SelectItem value="all">All Target Stakeholders</SelectItem>
+              {targets.map((target) => (
+                <SelectItem key={target.id} value={target.id}>
+                  {target.label}
                 </SelectItem>
               ))}
             </SelectContent>

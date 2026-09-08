@@ -21,6 +21,10 @@ interface ReopenEvaluationDialogProps {
   onConfirm: (deadlineAt: Date) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  /** Entity noun shown in title and confirm button; defaults to "Evaluation". */
+  entityLabel?: string;
+  /** Who the reopened deployment serves; defaults to "existing assigned students". */
+  audienceLabel?: string;
 }
 
 export function ReopenEvaluationDialog({
@@ -29,6 +33,8 @@ export function ReopenEvaluationDialog({
   onConfirm,
   onOpenChange,
   open,
+  entityLabel = "Evaluation",
+  audienceLabel = "existing assigned students",
 }: ReopenEvaluationDialogProps) {
   const [deadline, setDeadline] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,11 +67,11 @@ export function ReopenEvaluationDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RotateCcw className="text-primary size-5" />
-              Reopen Evaluation
+              Reopen {entityLabel}
             </DialogTitle>
             <DialogDescription>
-              Reopen <span className="font-semibold">{deploymentName}</span> for existing assigned
-              students. Their saved drafts and submitted responses will remain unchanged.
+              Reopen <span className="font-semibold">{deploymentName}</span> for {audienceLabel}.
+              Their saved drafts and submitted responses will remain unchanged.
             </DialogDescription>
           </DialogHeader>
 
@@ -99,7 +105,7 @@ export function ReopenEvaluationDialog({
               Cancel
             </Button>
             <Button type="submit" loading={isPending}>
-              Reopen Evaluation
+              Reopen {entityLabel}
             </Button>
           </DialogFooter>
         </form>

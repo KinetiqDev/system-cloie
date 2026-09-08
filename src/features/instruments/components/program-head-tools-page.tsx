@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,8 +10,7 @@ import {
   buildProgramHeadPublishToolPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import { Copy, Eye, Pencil, Plus, Send, Trash2, XCircle } from "lucide-react";
-
+import { Copy, Eye, Pencil, Plus, RotateCcw, Send, Trash2, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -29,9 +28,28 @@ import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
+  type PublishedStatusFilter,
 } from "@/features/evaluations/components/published-deployments-collection";
 import { CloseEvaluationDialog } from "@/features/evaluations/components/close-evaluation-dialog";
-import { closeCentralDeploymentAction } from "@/lib/actions/central-deployment-actions";
+import { ReopenEvaluationDialog } from "@/features/evaluations/components/reopen-evaluation-dialog";
+import {
+  closeCentralDeploymentAction,
+  reopenCentralDeploymentAction,
+} from "@/lib/actions/central-deployment-actions";
+import {
+  distinctPeriodOptions,
+  distinctTargetOptions,
+  filterPublishedEvaluations,
+  formatTargetStakeholder,
+  hasActivePublishedFilters,
+} from "@/features/evaluations/components/filter-published-evaluations";
+import { ProgramHeadPublishedFilterBar } from "@/features/evaluations/components/program-head-published-filter-bar";
+import {
+  DEFAULT_PUBLISHED_FILTERS,
+  normalizePublishedQuery,
+  updatePublishedFiltersUrl,
+  type PublishedEvaluationFilters,
+} from "./tools-view-state";
 import {
   deleteTemplateAction,
   duplicateTemplateAction,
@@ -55,14 +73,8 @@ type ProgramHeadToolsPageProps = {
   program: { id: string; code: string; name: string };
   initialTab?: EvaluationToolsTab;
   initialView?: ToolsViewMode;
+  initialPublishedFilters?: PublishedEvaluationFilters;
 };
-
-function formatStakeholder(stakeholder: string): string {
-  return stakeholder
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
 
 function toTemplateItem(template: ProgramHeadTemplateItem): TemplateCollectionItem {
   return {
@@ -101,6 +113,7 @@ export function ProgramHeadToolsPage({
   program,
   initialTab = "templates",
   initialView = "card",
+  initialPublishedFilters = DEFAULT_PUBLISHED_FILTERS,
 }: ProgramHeadToolsPageProps) {
   const router = useRouter();
   const [view, setView] = useState<ToolsViewMode>(initialView);
@@ -214,6 +227,7 @@ export function ProgramHeadToolsPage({
             deployments={deployments}
             programId={program.id}
             view={view}
+            initialFilters={initialPublishedFilters}
           />
         }
       />
@@ -328,31 +342,52 @@ function BaselineActions({ item, programId }: { item: TemplateCollectionItem; pr
 // Published deployments (Program Head capabilities)
 // ---------------------------------------------------------------------------
 
+function sanitizeProgramHeadFilters(
+  initial: PublishedEvaluationFilters,
+  deployments: ProgramHeadDeploymentItem[]
+): PublishedEvaluationFilters {
+  const periodIds = new Set(deployments.map((item) => item.termInstanceId));
+  const targets = new Set<string>(deployments.map((item) => item.target_stakeholder));
+  return {
+    ...initial,
+    query: normalizePublishedQuery(initial.query),
+    periodId:
+      initial.periodId !== null && periodIds.has(initial.periodId) ? initial.periodId : null,
+    // Program-head rows carry no course facet; a stale `course` URL key must not filter.
+    courseId: null,
+    target: initial.target !== null && targets.has(initial.target) ? initial.target : null,
+  };
+}
+
 function ProgramHeadPublishedDeployments({
   deployments,
   programId,
   view,
+  initialFilters = DEFAULT_PUBLISHED_FILTERS,
 }: {
   deployments: ProgramHeadDeploymentItem[];
   programId: string;
   view: ToolsViewMode;
+  initialFilters?: PublishedEvaluationFilters;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [closeTargetId, setCloseTargetId] = useState<string | null>(null);
+  const [reopenTargetId, setReopenTargetId] = useState<string | null>(null);
+  const [filters, setFilters] = useState(() =>
+    sanitizeProgramHeadFilters(initialFilters, deployments)
+  );
   const [optimisticDeployments, updateDeployment] = useOptimistic(
     deployments,
-    (currentDeployments, closedDeploymentId: string) =>
+    (currentDeployments, update: { id: string; status: "CLOSED" | "ACTIVE" }) =>
       currentDeployments.map((deployment) =>
-        deployment.id === closedDeploymentId
-          ? { ...deployment, status: "CLOSED" as const }
-          : deployment
+        deployment.id === update.id ? { ...deployment, status: update.status } : deployment
       )
   );
 
   function handleClose(deploymentId: string) {
     startTransition(async () => {
-      updateDeployment(deploymentId);
+      updateDeployment({ id: deploymentId, status: "CLOSED" });
       const result = await closeCentralDeploymentAction(programId, deploymentId);
       if (!result.success) {
         showToast(result.error, "error");
@@ -365,107 +400,206 @@ function ProgramHeadPublishedDeployments({
     });
   }
 
+  function handleConfirmReopen(deadlineAt: Date) {
+    if (!reopenTargetId) return;
+    const deploymentId = reopenTargetId;
+    startTransition(async () => {
+      updateDeployment({ id: deploymentId, status: "ACTIVE" });
+      const result = await reopenCentralDeploymentAction(programId, deploymentId, deadlineAt);
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+      showToast("Deployment reopened successfully.");
+      setReopenTargetId(null);
+      router.refresh();
+    });
+  }
+
+  function handleFiltersChange(
+    next: PublishedEvaluationFilters,
+    navigation: "push" | "replace" = "push"
+  ) {
+    const normalized = { ...next, query: normalizePublishedQuery(next.query) };
+    setFilters(normalized);
+    updatePublishedFiltersUrl(normalized, navigation);
+  }
+
+  function handleStatusChange(status: PublishedStatusFilter) {
+    handleFiltersChange({ ...filters, status });
+  }
+
   const byId = new Map(optimisticDeployments.map((d) => [d.id, d]));
 
-  const items: PublishedDeploymentItem[] = optimisticDeployments.map((deployment) => ({
-    id: deployment.id,
-    name: deployment.templateName,
-    targetLabel: formatStakeholder(deployment.target_stakeholder),
-    periodLabel: deployment.termInstanceLabel,
-    status: deployment.status,
-    responseCount: deployment.responseCount,
-    totalCount: deployment.assignmentCount,
-    publishedDate: deployment.created_at,
-    canClose: deployment.status === "ACTIVE" || deployment.status === "SCHEDULED",
-  }));
+  const filterableDeployments = useMemo(
+    () =>
+      optimisticDeployments.map((deployment) => ({
+        evaluationId: deployment.id,
+        deploymentName: deployment.templateName,
+        termInstanceId: deployment.termInstanceId,
+        termInstanceLabel: deployment.termInstanceLabel,
+        status: deployment.status,
+        targetStakeholder: deployment.target_stakeholder,
+      })),
+    [optimisticDeployments]
+  );
+  const periodOptions = useMemo(
+    () => distinctPeriodOptions(filterableDeployments),
+    [filterableDeployments]
+  );
+  const targetOptions = useMemo(
+    () => distinctTargetOptions(filterableDeployments),
+    [filterableDeployments]
+  );
+  const visibleIds = useMemo(
+    () =>
+      new Set(
+        filterPublishedEvaluations(filterableDeployments, filters).map((d) => d.evaluationId)
+      ),
+    [filterableDeployments, filters]
+  );
+
+  const items: PublishedDeploymentItem[] = optimisticDeployments
+    .filter((deployment) => visibleIds.has(deployment.id))
+    .map((deployment) => ({
+      id: deployment.id,
+      name: deployment.templateName,
+      targetLabel: formatTargetStakeholder(deployment.target_stakeholder),
+      periodLabel: deployment.termInstanceLabel,
+      status: deployment.status,
+      responseCount: deployment.responseCount,
+      totalCount: deployment.assignmentCount,
+      publishedDate: deployment.created_at,
+      canClose: deployment.status === "ACTIVE" || deployment.status === "SCHEDULED",
+    }));
 
   return (
     <>
-      <PublishedDeploymentsCollection
-        view={view}
-        items={items}
-        label="Published deployments"
-        empty={
-          <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
-            <p className="text-muted-foreground">No published tools yet.</p>
-          </div>
-        }
-        renderExpanded={(item) => (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <dl className="grid min-w-0 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
-              <div>
-                <dt className="text-muted-foreground text-caption">Target</dt>
-                <dd className="mt-1 font-medium">{item.targetLabel ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-caption">Academic period</dt>
-                <dd className="mt-1 font-medium">{item.periodLabel ?? "Not specified"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-caption">Responses</dt>
-                <dd className="mt-1 font-medium tabular-nums">
-                  {item.responseCount} of {item.totalCount} submitted
-                </dd>
-              </div>
-            </dl>
-            <Button
-              render={
-                <Link
-                  href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
-                />
-              }
-              variant="outline"
-              size="sm"
-              className="shrink-0 self-start sm:self-center"
-            >
-              <Eye data-icon="inline-start" aria-hidden="true" />
-              View evaluation details
-            </Button>
-          </div>
+      <div className="flex min-w-0 flex-col gap-4">
+        {deployments.length > 0 && (
+          <ProgramHeadPublishedFilterBar
+            filters={filters}
+            periods={periodOptions}
+            targets={targetOptions}
+            onFiltersChange={handleFiltersChange}
+          />
         )}
-        renderMenuItems={(item, ctx) => (
-          <>
-            {ctx.view === "list" && (
-              <DropdownMenuItem
+        <PublishedDeploymentsCollection
+          view={view}
+          items={items}
+          label="Published deployments"
+          statusFilter={filters.status}
+          onStatusFilterChange={handleStatusChange}
+          empty={
+            hasActivePublishedFilters(filters) ? (
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
+                <p className="text-muted-foreground text-sm">No deployments match these filters.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS)}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            ) : (
+              <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
+                <p className="text-muted-foreground">No published tools yet.</p>
+              </div>
+            )
+          }
+          renderExpanded={(item) => (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <dl className="grid min-w-0 gap-x-8 gap-y-3 text-sm sm:grid-cols-3">
+                <div>
+                  <dt className="text-muted-foreground text-caption">Target</dt>
+                  <dd className="mt-1 font-medium">{item.targetLabel ?? "Not specified"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-caption">Academic period</dt>
+                  <dd className="mt-1 font-medium">{item.periodLabel ?? "Not specified"}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-caption">Responses</dt>
+                  <dd className="mt-1 font-medium tabular-nums">
+                    {item.responseCount} of {item.totalCount} submitted
+                  </dd>
+                </div>
+              </dl>
+              <Button
                 render={
                   <Link
                     href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
                   />
                 }
+                variant="outline"
+                size="sm"
+                className="shrink-0 self-start sm:self-center"
+              >
+                <Eye data-icon="inline-start" aria-hidden="true" />
+                View evaluation details
+              </Button>
+            </div>
+          )}
+          renderMenuItems={(item, ctx) => (
+            <>
+              {ctx.view === "list" && (
+                <DropdownMenuItem
+                  render={
+                    <Link
+                      href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
+                    />
+                  }
+                >
+                  <Eye data-icon="inline-start" aria-hidden="true" />
+                  View Details
+                </DropdownMenuItem>
+              )}
+              {item.canClose && (
+                <>
+                  {ctx.view === "list" && <DropdownMenuSeparator />}
+                  <DropdownMenuItem variant="destructive" onClick={() => setCloseTargetId(item.id)}>
+                    <XCircle className="mr-2 size-4" />
+                    Close Deployment
+                  </DropdownMenuItem>
+                </>
+              )}
+              {item.status === "CLOSED" && (
+                <>
+                  {ctx.view === "list" && <DropdownMenuSeparator />}
+                  <DropdownMenuItem onClick={() => setReopenTargetId(item.id)}>
+                    <RotateCcw className="mr-2 size-4" />
+                    Reopen Deployment
+                  </DropdownMenuItem>
+                </>
+              )}
+            </>
+          )}
+          renderCardActions={(item) => (
+            <>
+              <Link
+                href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
                 <Eye data-icon="inline-start" aria-hidden="true" />
                 View Details
-              </DropdownMenuItem>
-            )}
-            {item.canClose && (
-              <>
-                {ctx.view === "list" && <DropdownMenuSeparator />}
-                <DropdownMenuItem variant="destructive" onClick={() => setCloseTargetId(item.id)}>
-                  <XCircle className="mr-2 size-4" />
+              </Link>
+              {item.canClose && (
+                <Button variant="destructive" size="sm" onClick={() => setCloseTargetId(item.id)}>
+                  <XCircle data-icon="inline-start" />
                   Close Deployment
-                </DropdownMenuItem>
-              </>
-            )}
-          </>
-        )}
-        renderCardActions={(item) => (
-          <>
-            <Link
-              href={`${buildProgramHeadResponsesProgramWideDeploymentPath(programId, item.id)}?from=tools`}
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-            >
-              <Eye data-icon="inline-start" aria-hidden="true" />
-              View Details
-            </Link>
-            {item.canClose && (
-              <Button variant="destructive" size="sm" onClick={() => setCloseTargetId(item.id)}>
-                <XCircle data-icon="inline-start" />
-                Close Deployment
-              </Button>
-            )}
-          </>
-        )}
-      />
+                </Button>
+              )}
+              {item.status === "CLOSED" && (
+                <Button variant="outline" size="sm" onClick={() => setReopenTargetId(item.id)}>
+                  <RotateCcw data-icon="inline-start" />
+                  Reopen Deployment
+                </Button>
+              )}
+            </>
+          )}
+        />
+      </div>
 
       <CloseEvaluationDialog
         entityLabel="Deployment"
@@ -477,6 +611,20 @@ function ProgramHeadPublishedDeployments({
         }}
         isPending={isPending}
       />
+
+      {reopenTargetId && (
+        <ReopenEvaluationDialog
+          deploymentName={byId.get(reopenTargetId)?.templateName ?? ""}
+          open={reopenTargetId !== null}
+          onOpenChange={(open) => {
+            if (!open) setReopenTargetId(null);
+          }}
+          onConfirm={handleConfirmReopen}
+          isPending={isPending}
+          entityLabel="Deployment"
+          audienceLabel="existing assigned respondents"
+        />
+      )}
     </>
   );
 }
