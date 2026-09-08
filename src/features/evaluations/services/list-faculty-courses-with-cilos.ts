@@ -8,6 +8,8 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 // Types
 // ---------------------------------------------------------------------------
 
+export type FacultyCourseReadiness = "missing-cilos" | "incomplete-mapping" | "ready";
+
 export type FacultyCourseWithCiloCount = {
   id: string;
   code: string;
@@ -20,6 +22,8 @@ export type FacultyCourseWithCiloCount = {
   majorId: string | null;
   majorName: string | null;
   ciloCount: number;
+  readiness: FacultyCourseReadiness;
+  coveredCiloCount: number;
 };
 
 export type FacultyCourseWithCilosResult = ServiceResult<{
@@ -60,18 +64,53 @@ export async function listFacultyCoursesWithCilos(
   }
 
   // Fetch full course details with CILO counts
-  const rawCourses = await prisma.course.findMany({
-    where: {
-      id: { in: courseIds },
-      is_active: true,
-    },
-    include: {
-      program: { select: { id: true, code: true, name: true } },
-      major: { select: { id: true, name: true } },
-      _count: { select: { cilos: { where: { is_active: true } } } },
-    },
-    orderBy: { code: "asc" },
-  });
+  const [rawCourses, activeIloIds, activePlos, ciloRows] = await Promise.all([
+    prisma.course.findMany({
+      where: {
+        id: { in: courseIds },
+        is_active: true,
+      },
+      include: {
+        program: { select: { id: true, code: true, name: true } },
+        major: { select: { id: true, name: true } },
+        _count: { select: { cilos: { where: { is_active: true } } } },
+      },
+      orderBy: { code: "asc" },
+    }),
+    prisma.institutionalOutcome.findMany({
+      where: { is_active: true },
+      select: { id: true },
+    }),
+    prisma.pLO.findMany({
+      where: { is_active: true },
+      select: { id: true, program_id: true },
+    }),
+    prisma.cILO.findMany({
+      where: { course_id: { in: courseIds }, is_active: true },
+      select: {
+        id: true,
+        course_id: true,
+        cilo_mappings: { select: { plo_id: true, manifestation: true } },
+        cilo_institutional_outcome_mappings: {
+          select: { institutional_outcome_id: true, manifestation: true },
+        },
+      },
+    }),
+  ]);
+
+  const activeIloIdSet = new Set(activeIloIds.map((row) => row.id));
+  const plosByProgram = new Map<string, Set<string>>();
+  for (const plo of activePlos) {
+    const set = plosByProgram.get(plo.program_id) ?? new Set<string>();
+    set.add(plo.id);
+    plosByProgram.set(plo.program_id, set);
+  }
+  const cilosByCourse = new Map<string, typeof ciloRows>();
+  for (const row of ciloRows) {
+    const list = cilosByCourse.get(row.course_id) ?? [];
+    list.push(row);
+    cilosByCourse.set(row.course_id, list);
+  }
 
   // Build unique programs list
   const programsMap = new Map<string, { id: string; code: string; name: string }>();
@@ -89,6 +128,37 @@ export async function listFacultyCoursesWithCilos(
       scopeLabel = "Major-Specific";
     }
 
+    const courseCilos = cilosByCourse.get(c.id) ?? [];
+    let readiness: FacultyCourseReadiness = "missing-cilos";
+    let coveredCiloCount = 0;
+    if (courseCilos.length > 0) {
+      if (c.course_scope === CourseScope.GENERAL_EDUCATION) {
+        coveredCiloCount = courseCilos.filter((cilo) =>
+          cilo.cilo_institutional_outcome_mappings.some(
+            (mapping) =>
+              mapping.manifestation !== null && activeIloIdSet.has(mapping.institutional_outcome_id)
+          )
+        ).length;
+        readiness = coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping";
+      } else {
+        const programPlos = c.program?.id
+          ? (plosByProgram.get(c.program.id) ?? new Set<string>())
+          : new Set<string>();
+        if (programPlos.size > 0) {
+          coveredCiloCount = courseCilos.filter((cilo) =>
+            [...programPlos].every((ploId) =>
+              cilo.cilo_mappings.some(
+                (mapping) => mapping.plo_id === ploId && mapping.manifestation !== null
+              )
+            )
+          ).length;
+          readiness = coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping";
+        } else {
+          readiness = "incomplete-mapping";
+        }
+      }
+    }
+
     return {
       id: c.id,
       code: c.code,
@@ -101,6 +171,8 @@ export async function listFacultyCoursesWithCilos(
       majorId: c.major?.id ?? null,
       majorName: c.major?.name ?? null,
       ciloCount: c._count.cilos,
+      readiness,
+      coveredCiloCount,
     };
   });
 

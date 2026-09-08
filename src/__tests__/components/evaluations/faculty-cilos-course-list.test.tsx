@@ -31,6 +31,8 @@ const courses: FacultyCourseWithCiloCount[] = [
     majorId: null,
     majorName: null,
     ciloCount: 1,
+    readiness: "incomplete-mapping",
+    coveredCiloCount: 0,
   },
 ];
 
@@ -66,8 +68,7 @@ async function openModal() {
     success: true,
     cilos: [{ id: "cilo-1", description: "Apply core concepts" }],
   });
-  fireEvent.click(screen.getByRole("button", { name: "Actions for CS101" }));
-  fireEvent.click(await screen.findByRole("menuitem", { name: "View CILOs" }));
+  fireEvent.click(screen.getByRole("button", { name: "View CILOs for CS101" }));
   await screen.findByRole("dialog");
   await waitFor(() => expect(loadCilosAction).toHaveBeenCalledWith("course-1"));
   expect(screen.getByDisplayValue("Apply core concepts")).toBeInTheDocument();
@@ -78,16 +79,14 @@ describe("FacultyCilosCourseList", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the course table with scope badges and CILO counts", () => {
+  it("renders course cards with scope badges and preparation status", () => {
     renderList();
 
     expect(screen.getByRole("heading", { name: "Manage CILOs" })).toBeInTheDocument();
-    expect(screen.getByText("CS101")).toBeInTheDocument();
-    expect(screen.getByText("Intro to Computing")).toBeInTheDocument();
+    expect(screen.getByText("CS101 — Intro to Computing")).toBeInTheDocument();
     expect(screen.getByText("Program-Specific")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText(/Incomplete mapping/)).toBeInTheDocument();
   });
-
   it("loads and displays CILOs when the modal opens", async () => {
     renderList();
     await openModal();
@@ -156,6 +155,8 @@ describe("FacultyCilosCourseList", () => {
             majorId: null,
             majorName: null,
             ciloCount: 3,
+            readiness: "incomplete-mapping",
+            coveredCiloCount: 1,
           },
         ]}
         termInstances={[]}
@@ -165,11 +166,7 @@ describe("FacultyCilosCourseList", () => {
       />
     );
 
-    // DropdownMenuContent renders via Portal only after the trigger opens it.
-    const trigger = screen.getByRole("button", { name: "Actions for GESTECH" });
-    fireEvent.click(trigger);
-
-    const alignLink = await screen.findByText("Map CILOs");
-    expect(alignLink).toHaveAttribute("href", "/faculty/cilos/course-ge/alignment");
+    const alignLink = screen.getByRole("button", { name: "Map CILOs for GESTECH" });
+    expect(alignLink.getAttribute("href")).toContain("/faculty/cilos/course-ge/alignment");
   });
 });

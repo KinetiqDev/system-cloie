@@ -36,6 +36,8 @@ const courses: FacultyCourseWithCiloCount[] = [
     majorId: null,
     majorName: null,
     ciloCount: 0,
+    readiness: "missing-cilos",
+    coveredCiloCount: 0,
   },
   {
     id: "course-2",
@@ -49,6 +51,8 @@ const courses: FacultyCourseWithCiloCount[] = [
     majorId: null,
     majorName: null,
     ciloCount: 0,
+    readiness: "missing-cilos",
+    coveredCiloCount: 0,
   },
 ];
 

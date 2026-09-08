@@ -6,7 +6,13 @@ import { ListChecks, RotateCcw, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,14 +55,7 @@ type Props = {
     review: unknown,
     confirmed: boolean
   ) => Promise<
-    | { success: true; changed: number; freshnessToken: string }
-    | { success: false; error: string }
-  >;
-  saveDraftAction?: (
-    input: unknown
-  ) => Promise<
-    | { success: true; changed: number; freshnessToken: string }
-    | { success: false; error: string }
+    { success: true; changed: number; freshnessToken: string } | { success: false; error: string }
   >;
 };
 
@@ -226,8 +225,8 @@ function AlignmentContent({
       {alignment.course.scope === "GENERAL_EDUCATION" && (
         <Alert>
           <AlertDescription>
-            This is a General Education Course. Mapping changes apply to every active assignment using
-            this shared Course, not just one section.
+            This is a General Education Course. Mapping changes apply to every active assignment
+            using this shared Course, not just one section.
           </AlertDescription>
         </Alert>
       )}
@@ -280,7 +279,7 @@ function AlignmentDialogs({
                 : "These changes apply to every active teaching assignment for this Program-specific Course. Confirm the complete before and after mapping."}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex max-h-64 flex-col gap-3 overflow-y-auto text-body-sm">
+          <div className="text-body-sm flex max-h-64 flex-col gap-3 overflow-y-auto">
             {review &&
               renderReviewLines({
                 alignment,
@@ -289,7 +288,14 @@ function AlignmentDialogs({
                 activeTargetIds,
               })}
           </div>
+          <p className="text-muted-foreground text-sm">
+            Saved mappings take effect for every active assignment using this Course. Incomplete
+            mappings remain blocked from publication until all required pairs are classified.
+          </p>
           <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={onCloseReview} disabled={pending}>
+              Back to editing
+            </Button>
             <Button type="button" onClick={onCommitReview} disabled={pending}>
               {pending ? "Saving..." : "Confirm and save"}
             </Button>
@@ -426,7 +432,6 @@ export function CourseAlignmentEditor({
   emptyStateAction = { href: "/faculty/cilos", label: "Manage CILOs" },
   prepareAction,
   commitAction,
-  saveDraftAction,
 }: Props) {
   const isProgramSpecific = alignment.course.scope === "PROGRAM_SPECIFIC";
   const { activeTargetIds } = indexAlignmentTargets(alignment);
@@ -503,30 +508,6 @@ export function CourseAlignmentEditor({
     }
   };
 
-  const saveProgress = async () => {
-    if (!saveDraftAction) return;
-    setPending(true);
-    setError(null);
-    try {
-      const result = await saveDraftAction({
-        courseId: alignment.course.id,
-        cells: desiredFromDraft(alignment, draft),
-        freshnessToken,
-      });
-      if (result.success) {
-        setSavedCells(draft);
-        setFreshnessToken(result.freshnessToken);
-        setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
-      } else {
-        setError(result.error);
-      }
-    } catch {
-      setError("Could not save the alignment draft.");
-    } finally {
-      setPending(false);
-    }
-  };
-
   const commitReview = async () => {
     if (!review) return;
     const reviewToCommit = review;
@@ -580,7 +561,7 @@ export function CourseAlignmentEditor({
           <h1 className="text-heading-lg">
             {alignment.course.code}: {alignment.course.title}
           </h1>
-          <p className="text-muted-foreground mt-1 text-body-sm">
+          <p className="text-muted-foreground text-body-sm mt-1">
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "Classify each CILO against at least one active Institutional Outcome from the college-wide catalog."
               : `Classify each CILO against every active Program Learning Outcome owned by ${alignment.course.program?.code ?? "the program"}.`}
@@ -624,6 +605,13 @@ export function CourseAlignmentEditor({
         onChangeCell={changeCell}
       />
 
+      {!mappingComplete && alignment.cilos.length > 0 && (
+        <p className="text-muted-foreground text-sm" role="status">
+          Incomplete mappings can be reviewed and saved. Publication stays blocked until every
+          required mapping is complete.
+        </p>
+      )}
+
       <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-end">
         <Button
           type="button"
@@ -634,23 +622,10 @@ export function CourseAlignmentEditor({
           <RotateCcw data-icon="inline-start" />
           Discard changes
         </Button>
-        {saveDraftAction && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={saveProgress}
-            disabled={!isDirty || editingLocked}
-          >
-            <Save data-icon="inline-start" />
-            {pending ? "Saving..." : "Save progress"}
-          </Button>
-        )}
         <Button
           type="button"
           onClick={prepareReview}
-          disabled={
-            !isDirty || editingLocked || alignment.cilos.length === 0 || !mappingComplete
-          }
+          disabled={!isDirty || editingLocked || alignment.cilos.length === 0}
         >
           <Save data-icon="inline-start" />
           {pending

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -64,6 +63,7 @@ import {
 } from "@/lib/actions/admin-program-actions";
 import { showToast } from "@/components/ui/toast";
 import { CreateProgramDialog } from "./create-program-dialog";
+import { EditProgramDialog } from "./edit-program-dialog";
 import { ManageMajorsDialog } from "./manage-majors-dialog";
 import type { ProgramDeletionPreflight } from "../services/manage-programs";
 import { useTableSelection } from "@/hooks/use-table-selection";
@@ -86,18 +86,13 @@ const PAGE_SIZE = 15;
 type SecretaryProgramsListProps = {
   programs: SecretaryProgramSummaryItem[];
   kpi: SecretaryProgramsKPI;
-  basePath?: string;
 };
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function SecretaryProgramsList({
-  programs,
-  kpi,
-  basePath = "/secretary/programs",
-}: SecretaryProgramsListProps) {
+export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListProps) {
   // ---- Filter state -------------------------------------------------------
   const [statusFilter, setStatusFilter] = useState<string>("__all__");
   const [searchTerm, setSearchTerm] = useState("");
@@ -119,6 +114,9 @@ export function SecretaryProgramsList({
 
   // ---- Create Program dialog state ----------------------------------------
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // ---- Edit Program dialog state ------------------------------------------
+  const [editDialogProgram, setEditDialogProgram] =
+    useState<SecretaryProgramSummaryItem | null>(null);
 
   // ---- Filtered programs ---------------------------------------------------
   const filteredPrograms = useMemo(() => {
@@ -258,7 +256,7 @@ export function SecretaryProgramsList({
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem render={<Link href={`${basePath}/${program.id}/edit`} />}>
+          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>
             Edit
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
@@ -558,6 +556,21 @@ export function SecretaryProgramsList({
           open={createDialogOpen}
           onOpenChange={(open) => {
             setCreateDialogOpen(open);
+          }}
+        />
+      )}
+
+      {/* Edit Program Dialog */}
+      {editDialogProgram && (
+        <EditProgramDialog
+          program={{
+            id: editDialogProgram.id,
+            code: editDialogProgram.code,
+            name: editDialogProgram.name,
+          }}
+          open={!!editDialogProgram}
+          onOpenChange={(open) => {
+            if (!open) setEditDialogProgram(null);
           }}
         />
       )}

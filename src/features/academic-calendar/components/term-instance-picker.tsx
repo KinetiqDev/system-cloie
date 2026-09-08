@@ -103,7 +103,7 @@ export function TermInstancePicker({
                 : null}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
           {allowAll && <SelectItem value="all">All Academic Periods</SelectItem>}
           {allowClear && <SelectItem value="">Clear selection</SelectItem>}
           {sortedInstances.map((instance) => (

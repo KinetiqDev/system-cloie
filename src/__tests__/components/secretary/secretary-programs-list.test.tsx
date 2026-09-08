@@ -6,6 +6,7 @@ const preflightMock = vi.hoisted(() => vi.fn());
 const deleteMock = vi.hoisted(() => vi.fn());
 const toggleMock = vi.hoisted(() => vi.fn());
 const createMock = vi.hoisted(() => vi.fn());
+const updateMock = vi.hoisted(() => vi.fn());
 const refreshMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/actions/admin-program-actions", () => ({
@@ -13,6 +14,7 @@ vi.mock("@/lib/actions/admin-program-actions", () => ({
   deleteProgramAction: deleteMock,
   toggleProgramActiveAction: toggleMock,
   createProgramAction: createMock,
+  updateProgramAction: updateMock,
 }));
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
@@ -42,6 +44,7 @@ describe("SecretaryProgramsList", () => {
     deleteMock.mockResolvedValue({ success: true, data: { id: "prog-2" } });
     toggleMock.mockResolvedValue({ success: true, data: undefined });
     createMock.mockResolvedValue({ success: true });
+    updateMock.mockResolvedValue({ success: true });
   });
   const mockPrograms = [
     {
@@ -245,6 +248,62 @@ describe("SecretaryProgramsList", () => {
     await waitFor(() =>
       expect(within(dialog).getByRole("alert")).toHaveTextContent(
         'A program with code "BSIT" already exists.'
+      )
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("opens the edit dialog from a row action with current values", async () => {
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[0]);
+    fireEvent.click(await screen.findByText("Edit"));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Edit Program" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Program Code")).toHaveValue("BSCE");
+    expect(within(dialog).getByLabelText("Program Name")).toHaveValue(
+      "Bachelor of Science in Civil Engineering"
+    );
+  });
+
+  it("updates a program from the dialog and refreshes the list", async () => {
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[0]);
+    fireEvent.click(await screen.findByText("Edit"));
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.change(within(dialog).getByLabelText("Program Name"), {
+      target: { value: "Bachelor of Science in Civil Engineering (Revised)" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Update Program" }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    const formData = updateMock.mock.calls[0][0] as FormData;
+    expect(formData.get("id")).toBe("prog-1");
+    expect(formData.get("code")).toBe("BSCE");
+    expect(formData.get("name")).toBe("Bachelor of Science in Civil Engineering (Revised)");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(refreshMock).toHaveBeenCalled();
+  });
+
+  it("keeps the edit dialog open and shows the error when update fails", async () => {
+    updateMock.mockResolvedValue({
+      success: false,
+      error: 'A program with code "BSCE" already exists.',
+    });
+    render(<SecretaryProgramsList programs={mockPrograms} kpi={mockKPI} />);
+    fireEvent.click(screen.getAllByRole("button", { name: /Actions for/ })[0]);
+    fireEvent.click(await screen.findByText("Edit"));
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Update Program" }));
+
+    await waitFor(() =>
+      expect(within(dialog).getByRole("alert")).toHaveTextContent(
+        'A program with code "BSCE" already exists.'
       )
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();

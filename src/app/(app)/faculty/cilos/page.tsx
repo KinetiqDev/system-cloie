@@ -11,13 +11,13 @@ import {
 } from "@/lib/actions/faculty-cilo-actions";
 
 interface FacultyCilosPageProps {
-  searchParams: Promise<{ term?: string }>;
+  searchParams: Promise<{ term?: string; type?: string; q?: string; view?: string }>;
 }
 
 // fallow-ignore-next-line complexity
 export default async function FacultyCilosPage({ searchParams }: FacultyCilosPageProps) {
   const session = await resolveAuthSession();
-  const { term: termInstanceId } = await searchParams;
+  const { term: termInstanceId, type, q, view } = await searchParams;
 
   if (!session) {
     redirect("/portal/respondents");
@@ -53,6 +53,9 @@ export default async function FacultyCilosPage({ searchParams }: FacultyCilosPag
       courses={JSON.parse(JSON.stringify(coursesResult.data.courses))}
       termInstances={termInstances}
       selectedTermId={effectiveTermInstanceId}
+      initialTypeFilter={type ?? "__all__"}
+      initialSearch={q ?? ""}
+      initialView={view === "list" ? "list" : "card"}
       loadCilosAction={loadCilosForCourseAction}
       saveCilosAction={saveCilosForCourseAction}
     />

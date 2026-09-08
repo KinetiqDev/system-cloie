@@ -2,7 +2,10 @@ import * as React from "react";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { DevRoleSwitcherDesktop } from "@/features/auth/components/dev-role-switcher";
+import {
+  DevRoleSwitcher,
+  DevRoleSwitcherDesktop,
+} from "@/features/auth/components/dev-role-switcher";
 import {
   DemoRoleSwitcher,
   DemoRoleSwitcherDesktop,
@@ -78,6 +81,7 @@ export function AppShell({
               activeProgramId={initialSelectedProgramId}
             />
           )}
+          <DevRoleSwitcher activeEmail={user?.email} />
           <DemoRoleSwitcher enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
           <DevRoleSwitcherDesktop activeEmail={user?.email} />
           <DemoRoleSwitcherDesktop

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Plus, Trash2 } from "lucide-react";
 
@@ -44,6 +44,8 @@ import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services
 
 type AddCiloFormProps = {
   courses: FacultyCourseWithCiloCount[];
+  initialCourseId?: string;
+  returnTo?: string;
   saveAction: (
     courseId: string,
     cilos: Array<{ id?: string; description: string }>
@@ -57,18 +59,22 @@ type AddCiloFormProps = {
 
 const courseLabel = (course: FacultyCourseWithCiloCount) => `${course.code} — ${course.title}`;
 
-
 function MapCilosButton({
   course,
   variant = "outline",
+  returnTo,
 }: {
   course: FacultyCourseWithCiloCount;
   variant?: "outline" | "default";
+  returnTo?: string;
 }) {
+  const href = returnTo
+    ? `/faculty/cilos/${course.id}/alignment?returnTo=${encodeURIComponent(returnTo)}`
+    : `/faculty/cilos/${course.id}/alignment`;
   // Plain anchor keeps link semantics; Button's Base UI wrapper would force role="button".
   return (
     <Link
-      href={`/faculty/cilos/${course.id}/alignment`}
+      href={href}
       className={cn(buttonVariants({ variant, size: "sm", className: "max-sm:w-full" }))}
     >
       Map CILOs to {course.courseScope === "PROGRAM_SPECIFIC" ? "PLOs" : "ILOs"}
@@ -82,10 +88,21 @@ function MapCilosButton({
 // ---------------------------------------------------------------------------
 
 // fallow-ignore-next-line complexity
-export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFormProps) {
+export function AddCiloForm({
+  courses,
+  initialCourseId,
+  returnTo,
+  saveAction,
+  loadCilosAction,
+}: AddCiloFormProps) {
   const [isPending, startTransition] = useTransition();
 
-  const [selectedCourse, setSelectedCourse] = useState<FacultyCourseWithCiloCount | null>(null);
+  const initialCourse = initialCourseId
+    ? (courses.find((c) => c.id === initialCourseId) ?? null)
+    : null;
+  const [selectedCourse, setSelectedCourse] = useState<FacultyCourseWithCiloCount | null>(
+    initialCourse
+  );
   const [ciloText, setCiloText] = useState("");
   const [ciloList, setCiloList] = useState<string[]>([]);
   // Locally tracks CILOs saved during this session so counts stay truthful without a refetch.
@@ -94,13 +111,15 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
   const [fieldErrors, setFieldErrors] = useState<{ course?: string; cilos?: string }>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // CILOs already on file for the selected course, loaded on selection.
-  const [existingCilos, setExistingCilos] = useState<Array<{ id: string; description: string }>>([]);
+  const [existingCilos, setExistingCilos] = useState<Array<{ id: string; description: string }>>(
+    []
+  );
   const [existingCilosLoading, setExistingCilosLoading] = useState(false);
   const [existingCilosError, setExistingCilosError] = useState<string | null>(null);
   const loadSeqRef = useRef(0);
   // Latest selected course for async callbacks (post-save reload must only
   // refresh the course that is still selected).
-  const selectedCourseRef = useRef<FacultyCourseWithCiloCount | null>(null);
+  const selectedCourseRef = useRef<FacultyCourseWithCiloCount | null>(initialCourse);
 
   const loadExistingCilos = (courseId: string) => {
     const seq = ++loadSeqRef.current;
@@ -124,14 +143,25 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
       });
   };
 
+  useEffect(() => {
+    if (initialCourse) {
+      queueMicrotask(() => {
+        loadExistingCilos(initialCourse.id);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const countOnFile = (course: FacultyCourseWithCiloCount) =>
     course.ciloCount + (addedCounts[course.id] ?? 0);
+
+  const backHref = returnTo && returnTo.startsWith("/faculty/cilos") ? returnTo : "/faculty/cilos";
 
   const pageChrome = (
     <>
       <Link
-        href="/faculty/cilos"
-        className="text-link inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-ring focus-visible:ring-3 focus-visible:outline-none"
+        href={backHref}
+        className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none"
       >
         <ArrowLeft className="size-4" />
         Back to Manage CILOs
@@ -156,10 +186,7 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Link
-              href="/faculty/cilos"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
+            <Link href="/faculty/cilos" className={cn(buttonVariants({ variant: "outline" }))}>
               Back to Manage CILOs
             </Link>
           </EmptyContent>
@@ -261,7 +288,7 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
               <AlertDescription>
                 <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <span>{successMessage}</span>
-                  <MapCilosButton course={selectedCourse} variant="default" />
+                  <MapCilosButton course={selectedCourse} variant="default" returnTo={returnTo} />
                 </span>
               </AlertDescription>
             </Alert>
@@ -353,16 +380,14 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
                     Aligns to{" "}
                     {selectedCourse.courseScope === "PROGRAM_SPECIFIC"
                       ? `PLOs of ${
-                          selectedCourse.programName ??
-                          selectedCourse.programCode ??
-                          "the program"
+                          selectedCourse.programName ?? selectedCourse.programCode ?? "the program"
                         }`
                       : "Institutional Learning Outcomes"}{" "}
                     · {countOnFile(selectedCourse)} CILO
                     {countOnFile(selectedCourse) === 1 ? "" : "s"} on file
                   </p>
                 </div>
-                <MapCilosButton course={selectedCourse} />
+                <MapCilosButton course={selectedCourse} returnTo={returnTo} />
               </div>
             )}
           </FieldGroup>
@@ -471,7 +496,7 @@ export function AddCiloForm({ courses, saveAction, loadCilosAction }: AddCiloFor
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="-mt-1 -mr-1 min-h-11 min-w-11 shrink-0 text-destructive hover:bg-destructive/10"
+                        className="text-destructive hover:bg-destructive/10 -mt-1 -mr-1 min-h-11 min-w-11 shrink-0"
                         aria-label={`Remove CILO ${index + 1}`}
                         onClick={() => handleRemoveCilo(index)}
                       >

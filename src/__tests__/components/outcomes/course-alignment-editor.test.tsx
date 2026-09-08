@@ -53,9 +53,7 @@ const review: CourseAlignmentReview = {
   scope: "GENERAL_EDUCATION",
   courseId: COURSE_ID,
   before: [{ ciloId: CILO_ID, mappings: [] }],
-  after: [
-    { ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }] },
-  ],
+  after: [{ ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }] }],
   additions: [{ ciloId: CILO_ID, targetId: ILO_ID, manifestation: "LEARNING" }],
   updates: [],
   removals: [],
@@ -100,7 +98,9 @@ function stageTarget() {
 describe("CourseAlignmentEditor", () => {
   it("stages an ILO manifestation, reviews the exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
-    const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
+    const commitAction = vi
+      .fn()
+      .mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
     renderEditor({ prepareAction, commitAction });
 
     expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
@@ -133,7 +133,9 @@ describe("CourseAlignmentEditor", () => {
 
   it("reviews and commits a manifestation change from the desktop matrix", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
-    const commitAction = vi.fn().mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
+    const commitAction = vi
+      .fn()
+      .mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh" });
     render(
       <CourseAlignmentEditor
         alignment={pspAlignment}
@@ -171,19 +173,14 @@ describe("CourseAlignmentEditor", () => {
           ],
         },
       ],
-      unavailableTargets: [
-        { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
-      ],
+      unavailableTargets: [{ id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" }],
     };
-    const saveDraftAction = vi
-      .fn()
-      .mockResolvedValue({ success: true, changed: 1, freshnessToken: "fresh-2" });
+    const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
     render(
       <CourseAlignmentEditor
         alignment={archivedAlignment}
-        prepareAction={vi.fn()}
+        prepareAction={prepareAction}
         commitAction={vi.fn()}
-        saveDraftAction={saveDraftAction}
       />
     );
 
@@ -192,22 +189,18 @@ describe("CourseAlignmentEditor", () => {
     expect(within(archivedBlock).getByText("GO-9")).toBeInTheDocument();
     expect(within(archivedBlock).getByText("Archived")).toBeInTheDocument();
     expect(within(archivedBlock).getByText("Practice (P)")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /GO-9/i })
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /GO-9/i })).toBeNull();
 
-    // Draft saves submit only the active-pair state; the archived pair is never written.
+    // Review submits only the active-pair state; the archived pair is never written.
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
       within(matrix).getByRole("button", { name: "CILO 1, PLO 1, manifestation: Practice" })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Save progress" }));
+    fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     await waitFor(() =>
-      expect(saveDraftAction).toHaveBeenCalledWith({
+      expect(prepareAction).toHaveBeenCalledWith({
         courseId: COURSE_ID,
-        cells: [
-          { ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] },
-        ],
+        desired: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] }],
         freshnessToken: "freshness",
       })
     );
@@ -290,13 +283,9 @@ describe("CourseAlignmentEditor", () => {
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("GO-9 (archived): Practice (P) — read-only")
-    ).toBeInTheDocument();
+    expect(screen.getByText("GO-9 (archived): Practice (P) — read-only")).toBeInTheDocument();
     // A CILO with no staged changes still reports its archived context read-only.
-    expect(
-      screen.getByText("GO-8 (archived): Opportunity (O) — read-only")
-    ).toBeInTheDocument();
+    expect(screen.getByText("GO-8 (archived): Opportunity (O) — read-only")).toBeInTheDocument();
   });
 
   it("reports a first-time assignment as Set to in the review dialog", async () => {
@@ -314,7 +303,12 @@ describe("CourseAlignmentEditor", () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: additionReview });
     render(
       <CourseAlignmentEditor
-        alignment={{ ...pspAlignment, cilos: [{ ...pspAlignment.cilos[0], mappings: [{ targetId: GO_ID, manifestation: null }] }] }}
+        alignment={{
+          ...pspAlignment,
+          cilos: [
+            { ...pspAlignment.cilos[0], mappings: [{ targetId: GO_ID, manifestation: null }] },
+          ],
+        }}
         prepareAction={prepareAction}
         commitAction={vi.fn()}
       />
@@ -328,9 +322,7 @@ describe("CourseAlignmentEditor", () => {
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/GO-1: Set to Opportunity \(O\)/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/GO-1: Set to Opportunity \(O\)/)).toBeInTheDocument();
   });
 
   it("keeps the exact-diff review open while saving", async () => {
@@ -366,11 +358,7 @@ describe("CourseAlignmentEditor", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
     const { unmount } = render(
-      <CourseAlignmentEditor
-        alignment={alignment}
-        prepareAction={vi.fn()}
-        commitAction={vi.fn()}
-      />
+      <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
     );
 
     try {
@@ -482,19 +470,16 @@ describe("CourseAlignmentEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
 
     expect(
-      await screen.findByText("Course alignment changed after review. Reload and review the latest mappings.")
+      await screen.findByText(
+        "Course alignment changed after review. Reload and review the latest mappings."
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
   });
 
   it("shows Institutional Outcome columns and a shared-impact warning for General Education", () => {
     render(
-      <CourseAlignmentEditor
-        alignment={alignment}
-        prepareAction={vi.fn()}
-        commitAction={vi.fn()}
-        saveDraftAction={vi.fn()}
-      />
+      <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
     );
 
     expect(
@@ -512,18 +497,22 @@ describe("CourseAlignmentEditor", () => {
       })
     ).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: /PLO 1/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Save progress" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
 
     stageTarget();
     expect(screen.getByText("1 of 1 CILOs covered")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save progress" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Review 1 change/i })).toBeEnabled();
   });
 
   it("renders the desktop matrix and mobile cards from the same draft", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -573,8 +562,16 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
-        { id: CILO_2_ID, description: "Design systems", mappings: [{ targetId: GO_ID, manifestation: null }] },
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
+        {
+          id: CILO_2_ID,
+          description: "Design systems",
+          mappings: [{ targetId: GO_ID, manifestation: null }],
+        },
       ],
       targets: [
         { id: GO_ID, code: "GO-1", description: "Think critically" },
@@ -594,7 +591,9 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/1 of 4 relationships classified/)).toBeInTheDocument();
     expect(screen.getByText(/3 remaining/)).toBeInTheDocument();
     expect(
-      screen.getByText("Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment.")
+      screen.getByText(
+        "Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment."
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
   });
@@ -603,7 +602,11 @@ describe("CourseAlignmentEditor", () => {
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -636,14 +639,19 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/3 remaining/)).toBeInTheDocument();
   });
 
-  it("saves progress at any time and persists the classified cells", async () => {
-    const saveDraftAction = vi
+  it("reviews incomplete progress and commits through the review dialog", async () => {
+    const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
+    const commitAction = vi
       .fn()
       .mockResolvedValue({ success: true, changed: 2, freshnessToken: "fresh-2" });
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -655,9 +663,8 @@ describe("CourseAlignmentEditor", () => {
     render(
       <CourseAlignmentEditor
         alignment={matrixAlignment}
-        prepareAction={vi.fn()}
-        commitAction={vi.fn()}
-        saveDraftAction={saveDraftAction}
+        prepareAction={prepareAction}
+        commitAction={commitAction}
       />
     );
 
@@ -665,66 +672,27 @@ describe("CourseAlignmentEditor", () => {
     fireEvent.click(
       within(matrix).getByRole("button", { name: "CILO 2, PLO 1, manifestation: Practice" })
     );
-    fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, PLO 2, manifestation: Opportunity" })
-    );
 
-    fireEvent.click(screen.getByRole("button", { name: "Save progress" }));
-    await waitFor(() =>
-      expect(saveDraftAction).toHaveBeenCalledWith({
-        courseId: COURSE_ID,
-        cells: [
-          { ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
-          {
-            ciloId: CILO_2_ID,
-            mappings: [
-              { targetId: GO_ID, manifestation: "PRACTICE" },
-              { targetId: GO_2_ID, manifestation: "OPPORTUNITY" },
-            ],
-          },
-        ],
-        freshnessToken: "freshness",
-      })
-    );
-    expect(await screen.findByText("2 mapping changes saved.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
-  });
-
-  it("keeps the draft and offers reload when a stale draft save is rejected", async () => {
-    const saveDraftAction = vi.fn().mockResolvedValue({
-      success: false,
-      error: "Course alignment changed. Reload and review the latest mappings.",
-    });
-    render(
-      <CourseAlignmentEditor
-        alignment={pspAlignment}
-        prepareAction={vi.fn()}
-        commitAction={vi.fn()}
-        saveDraftAction={saveDraftAction}
-      />
-    );
-
-    const matrix = screen.getByTestId("manifestation-matrix");
-    fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, PLO 1, manifestation: Practice" })
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Save progress" }));
-
+    fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     expect(
-      await screen.findByText(
-        "Course alignment changed. Reload and review the latest mappings."
-      )
+      await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Back to editing" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
+    await waitFor(() => expect(commitAction).toHaveBeenCalled());
+    expect(await screen.findByText("2 mapping changes saved.")).toBeInTheDocument();
   });
 
-  it("blocks review until every required pair is classified and unlocks when complete", async () => {
+  it("allows review of incomplete progress with a publication warning", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
     const matrixAlignment: CourseAlignment = {
       ...pspAlignment,
       cilos: [
-        { id: CILO_ID, description: "Apply core concepts", mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] },
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
@@ -741,7 +709,38 @@ describe("CourseAlignmentEditor", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
+    const matrix = screen.getByTestId("manifestation-matrix");
+    fireEvent.click(
+      within(matrix).getByRole("button", { name: "CILO 2, PLO 1, manifestation: Practice" })
+    );
+    expect(screen.getByRole("button", { name: /Review 1 change/i })).toBeEnabled();
+    expect(screen.getByText(/Publication stays blocked/)).toBeInTheDocument();
+  });
+  it("reviews a complete alignment", async () => {
+    const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
+    const matrixAlignment: CourseAlignment = {
+      ...pspAlignment,
+      cilos: [
+        {
+          id: CILO_ID,
+          description: "Apply core concepts",
+          mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
+        },
+        { id: CILO_2_ID, description: "Design systems", mappings: [] },
+      ],
+      targets: [
+        { id: GO_ID, code: "GO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+      ],
+      readiness: "incomplete-mapping",
+    };
+    render(
+      <CourseAlignmentEditor
+        alignment={matrixAlignment}
+        prepareAction={prepareAction}
+        commitAction={vi.fn()}
+      />
+    );
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
       within(matrix).getByRole("button", { name: "CILO 1, PLO 2, manifestation: Opportunity" })
@@ -755,7 +754,9 @@ describe("CourseAlignmentEditor", () => {
 
     expect(screen.getByRole("button", { name: /Review 3 changes/i })).toBeEnabled();
     expect(
-      screen.queryByText("Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment.")
+      screen.queryByText(
+        "Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment."
+      )
     ).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Review 3 changes/i }));
