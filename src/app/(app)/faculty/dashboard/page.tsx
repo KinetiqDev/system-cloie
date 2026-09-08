@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { Progress } from "@/components/ui/progress";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
@@ -299,35 +300,36 @@ function MetricCard({
 }
 
 function QuickActions() {
-  const actions = [
-    { href: "/faculty/course-rosters", label: "Review my course rosters", icon: UsersRound },
-    { href: "/faculty/cilo-evaluations/new", label: "Publish an evaluation", icon: ClipboardList },
-    { href: "/faculty/cilos", label: "Manage CILOs", icon: BookOpenCheck },
-    { href: "/faculty/analytics", label: "Open Faculty analytics", icon: BarChart3 },
-  ];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick actions</CardTitle>
-        <CardDescription>Continue common Faculty work</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-2">
-        {actions.map(({ href, label, icon: Icon }, index) => (
-          <Button
-            key={href}
-            variant={index === 0 ? "default" : "outline"}
-            className="h-auto min-h-11 justify-between py-2 text-left whitespace-normal"
-            render={<Link href={href} />}
-          >
-            <span className="flex items-center gap-2">
-              <Icon aria-hidden="true" />
-              {label}
-            </span>
-            <ArrowRight aria-hidden="true" />
-          </Button>
-        ))}
-      </CardContent>
-    </Card>
+    <DashboardQuickActions
+      description="Continue common Faculty work"
+      actions={[
+        {
+          href: "/faculty/course-rosters",
+          label: "Review my course rosters",
+          detail: "Open rosters and manage students.",
+          icon: UsersRound,
+        },
+        {
+          href: "/faculty/cilo-evaluations/new",
+          label: "Publish an evaluation",
+          detail: "Create and publish a CILO evaluation.",
+          icon: ClipboardList,
+        },
+        {
+          href: "/faculty/cilos",
+          label: "Manage CILOs",
+          detail: "Maintain the course outcome catalog.",
+          icon: BookOpenCheck,
+        },
+        {
+          href: "/faculty/analytics",
+          label: "Open Faculty analytics",
+          detail: "Compare outcomes, stakeholders, and feedback.",
+          icon: BarChart3,
+        },
+      ]}
+    />
   );
 }
 

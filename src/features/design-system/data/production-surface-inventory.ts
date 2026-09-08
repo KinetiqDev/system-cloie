@@ -1714,6 +1714,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/components/dashboard-quick-actions.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "layout",
+  },
+  {
     path: "src/components/error-boundary.tsx",
     disposition: "task",
     taskId: 25,
@@ -2090,6 +2096,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/academic-structure/components/program-form.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/academic-structure/components/edit-program-dialog.tsx",
     disposition: "task",
     taskId: 14,
     category: "feature_component",

@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { cn } from "@/lib/utils";
 import {
   getGenEdDashboard,
@@ -418,37 +419,10 @@ function QuickActions() {
   ];
 
   return (
-    <section aria-labelledby="quick-actions-heading" className="flex flex-col gap-3">
-      <SectionHeading
-        id="quick-actions-heading"
-        title="Quick actions"
-        description="Open the General Education workflows you own."
-      />
-      <div className="grid grid-cols-2 gap-3">
-        {actions.map(({ label, detail, href, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="border-border bg-card hover:bg-surface-hover focus-visible:ring-ring group relative flex min-h-24 min-w-0 flex-col items-start gap-3 rounded-xl border p-3 pr-8 shadow-sm transition-colors focus-visible:ring-3 focus-visible:outline-none sm:min-h-24 sm:flex-row sm:p-4 sm:pr-10 xl:min-h-28 pointer-coarse:min-h-28"
-            aria-label={label}
-          >
-            <span className="bg-primary-soft text-selected-fg flex size-9 shrink-0 items-center justify-center rounded-lg">
-              <Icon aria-hidden="true" className="size-4" />
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="leading-snug font-medium text-pretty">{label}</span>
-              <span className="text-text-secondary hidden text-xs leading-relaxed text-pretty sm:inline">
-                {detail}
-              </span>
-            </span>
-            <ArrowRight
-              aria-hidden="true"
-              className="text-text-secondary absolute top-4 right-3 size-4 transition-transform group-hover:translate-x-0.5 sm:right-4"
-            />
-          </Link>
-        ))}
-      </div>
-    </section>
+    <DashboardQuickActions
+      description="Open the General Education workflows you own."
+      actions={actions}
+    />
   );
 }
 
