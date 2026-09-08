@@ -147,6 +147,7 @@ export type PreviewCourseBoundRespondentsResult =
 // ============================================================================
 
 export type FacultyPublishedEvaluationItem = {
+  termInstanceId: string;
   termInstanceLabel: string;
   activationAt: Date | null;
   courseCode: string;
@@ -167,6 +168,9 @@ export type FacultyPublishedEvaluationItem = {
   targetYearLevels: YearLevel[];
   totalAssignments: number;
 };
+
+/** Lifecycle pills for published-deployment collections. */
+export type PublishedStatusFilter = "ALL" | "ACTIVE" | "SCHEDULED" | "CLOSED" | "ARCHIVED";
 
 export type FacultyPublishedEvaluationCiloBinding = {
   ciloDescriptionSnapshot: string;

@@ -122,6 +122,7 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
     );
     const ca = evalItem.course_assignment;
     return {
+      termInstanceId: evalItem.term_instance_id,
       termInstanceLabel,
       activationAt: evalItem.activation_at,
       courseCode: courseInfo?.courseCode ?? ca.course.code,

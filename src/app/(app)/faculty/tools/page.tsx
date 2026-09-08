@@ -1,5 +1,8 @@
 import { FacultyToolsPage } from "@/features/instruments/components/faculty-tools-page";
-import { parseToolsViewState } from "@/features/instruments/components/tools-view-state";
+import {
+  parsePublishedEvaluationFilters,
+  parseToolsViewState,
+} from "@/features/instruments/components/tools-view-state";
 import { listFacultyTemplates } from "@/features/instruments/services/list-faculty-templates";
 import { listFacultyPublishedEvaluations } from "@/features/evaluations/services/list-faculty-published-evaluations";
 
@@ -25,8 +28,8 @@ export default async function FacultyToolsRoute({
 
   // Evaluations may fail independently (e.g., no evaluations yet), so we handle gracefully
   const evaluations = evaluationsResult.success ? evaluationsResult.data.evaluations : [];
-
   const { initialTab, initialView } = parseToolsViewState(rawSearchParams);
+  const initialPublishedFilters = parsePublishedEvaluationFilters(rawSearchParams);
 
   return (
     <FacultyToolsPage
@@ -35,6 +38,7 @@ export default async function FacultyToolsRoute({
       evaluations={evaluations}
       initialTab={initialTab}
       initialView={initialView}
+      initialPublishedFilters={initialPublishedFilters}
     />
   );
 }

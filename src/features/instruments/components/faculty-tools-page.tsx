@@ -26,6 +26,8 @@ import {
 import type { FacultyPublishedEvaluationItem } from "@/features/evaluations/types";
 import { FacultyPublishedEvaluations } from "@/features/evaluations/components/faculty-published-evaluations";
 import type { FacultyTemplateItem } from "../services/list-faculty-templates";
+import type { PublishedEvaluationFilters } from "./tools-view-state";
+
 import {
   EvaluationToolsTabs,
   updateToolsUrl,
@@ -40,6 +42,7 @@ type FacultyToolsPageProps = {
   templates: FacultyTemplateItem[];
   initialTab?: EvaluationToolsTab;
   initialView?: ToolsViewMode;
+  initialPublishedFilters?: PublishedEvaluationFilters;
 };
 
 function templateOrigin(
@@ -75,6 +78,7 @@ export function FacultyToolsPage({
   templates,
   initialTab = "templates",
   initialView = "card",
+  initialPublishedFilters,
 }: FacultyToolsPageProps) {
   const router = useRouter();
   const [view, setView] = useState<ToolsViewMode>(initialView);
@@ -172,7 +176,13 @@ export function FacultyToolsPage({
             }
           />
         }
-        published={<FacultyPublishedEvaluations evaluations={evaluations} view={view} />}
+        published={
+          <FacultyPublishedEvaluations
+            evaluations={evaluations}
+            view={view}
+            initialFilters={initialPublishedFilters}
+          />
+        }
       />
 
       {/* Delete Confirmation AlertDialog */}

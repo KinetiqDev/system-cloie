@@ -1,6 +1,9 @@
 import type { EvaluationToolsTab } from "./evaluation-tools-tabs";
 import type { ToolsViewMode } from "./tools-view-selector";
 
+export type { PublishedStatusFilter } from "@/features/evaluations/types";
+import type { PublishedStatusFilter } from "@/features/evaluations/types";
+
 type ToolsRouteSearchParams = Record<string, string | string[] | undefined>;
 
 /**
@@ -16,4 +19,89 @@ export function parseToolsViewState(searchParams: ToolsRouteSearchParams): {
     initialTab: searchParams.tab === "published" ? "published" : "templates",
     initialView: searchParams.view === "list" ? "list" : "card",
   };
+}
+
+export const PUBLISHED_FILTER_QUERY_KEYS = ["period", "course", "q", "status"] as const;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const MAX_PUBLISHED_QUERY_LENGTH = 100;
+
+const PUBLISHED_STATUSES = ["active", "scheduled", "closed", "archived"] as const;
+
+export type PublishedEvaluationFilters = {
+  periodId: string | null;
+  courseId: string | null;
+  query: string;
+  status: PublishedStatusFilter;
+};
+
+export const DEFAULT_PUBLISHED_FILTERS: PublishedEvaluationFilters = {
+  periodId: null,
+  courseId: null,
+  query: "",
+  status: "ALL",
+};
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value.find((entry) => entry.trim().length > 0);
+  return value;
+}
+
+function parseUuidParam(value: string | string[] | undefined): string | null {
+  const candidate = firstParam(value)?.trim() ?? "";
+  return UUID_PATTERN.test(candidate) ? candidate : null;
+}
+
+function parseQueryParam(value: string | string[] | undefined): string {
+  const candidate = firstParam(value)?.trim() ?? "";
+  return candidate.slice(0, MAX_PUBLISHED_QUERY_LENGTH);
+}
+
+function parseStatusParam(value: string | string[] | undefined): PublishedStatusFilter {
+  const candidate = firstParam(value)?.trim().toLowerCase() ?? "";
+  const match = PUBLISHED_STATUSES.find((status) => status === candidate);
+  return match ? (match.toUpperCase() as PublishedStatusFilter) : "ALL";
+}
+
+/**
+ * Derive the Published-tab filter defaults from the URL. Canonical URLs omit
+ * defaults, so anything missing or unrecognized falls back to "All". Faculty
+ * route only; the program-head tools route ignores these keys.
+ */
+export function parsePublishedEvaluationFilters(
+  searchParams: ToolsRouteSearchParams
+): PublishedEvaluationFilters {
+  return {
+    periodId: parseUuidParam(searchParams.period),
+    courseId: parseUuidParam(searchParams.course),
+    query: parseQueryParam(searchParams.q),
+    status: parseStatusParam(searchParams.status),
+  };
+}
+
+function setFilterParam(url: URL, key: string, value: string | null) {
+  if (value === null || value === "") url.searchParams.delete(key);
+  else url.searchParams.set(key, value);
+}
+
+/**
+ * Persist Published-tab filters to the URL without navigating, so filtering
+ * stays client-side (no server round-trip) while remaining shareable.
+ * Discrete selects push history; typing passes `"replace"` to avoid spam.
+ */
+export function updatePublishedFiltersUrl(
+  filters: PublishedEvaluationFilters,
+  navigation: "push" | "replace" = "push"
+) {
+  if (typeof window === "undefined") return;
+
+  const url = new URL(window.location.href);
+  setFilterParam(url, "period", filters.periodId);
+  setFilterParam(url, "course", filters.courseId);
+  setFilterParam(url, "q", filters.query.trim());
+  setFilterParam(url, "status", filters.status === "ALL" ? null : filters.status.toLowerCase());
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  if (navigation === "replace") window.history.replaceState(null, "", next);
+  else window.history.pushState(null, "", next);
 }

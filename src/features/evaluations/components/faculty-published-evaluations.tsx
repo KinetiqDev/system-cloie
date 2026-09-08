@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Eye, RotateCcw, XCircle } from "lucide-react";
 import { YearLevel } from "@prisma/client";
 
@@ -13,21 +13,49 @@ import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { cn } from "@/lib/utils";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
 import {
+  DEFAULT_PUBLISHED_FILTERS,
+  updatePublishedFiltersUrl,
+  type PublishedEvaluationFilters,
+} from "@/features/instruments/components/tools-view-state";
+import {
   closeFacultyEvaluationAction,
   reopenFacultyEvaluationAction,
 } from "@/lib/actions/faculty-evaluation-actions";
 import { CloseEvaluationDialog } from "./close-evaluation-dialog";
 import { ReopenEvaluationDialog } from "./reopen-evaluation-dialog";
 import {
+  distinctCourseOptions,
+  distinctPeriodOptions,
+  filterPublishedEvaluations,
+} from "./filter-published-evaluations";
+import { FacultyPublishedFilterBar } from "./faculty-published-filter-bar";
+import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
+  type PublishedStatusFilter,
 } from "./published-deployments-collection";
 import type { FacultyPublishedEvaluationItem } from "../types";
 
 type FacultyPublishedEvaluationsProps = {
   evaluations: FacultyPublishedEvaluationItem[];
   view: ToolsViewMode;
+  initialFilters?: PublishedEvaluationFilters;
 };
+
+function sanitizeInitialFilters(
+  initial: PublishedEvaluationFilters,
+  evaluations: FacultyPublishedEvaluationItem[]
+): PublishedEvaluationFilters {
+  const periodIds = new Set(evaluations.map((item) => item.termInstanceId));
+  const courseIds = new Set(evaluations.map((item) => item.courseId));
+  return {
+    ...initial,
+    periodId:
+      initial.periodId !== null && periodIds.has(initial.periodId) ? initial.periodId : null,
+    courseId:
+      initial.courseId !== null && courseIds.has(initial.courseId) ? initial.courseId : null,
+  };
+}
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "--";
@@ -49,8 +77,10 @@ function getScopeLabel(scope: string): string {
 export function FacultyPublishedEvaluations({
   evaluations,
   view,
+  initialFilters = DEFAULT_PUBLISHED_FILTERS,
 }: FacultyPublishedEvaluationsProps) {
   const [localEvaluations, setLocalEvaluations] = useState(evaluations);
+  const [filters, setFilters] = useState(() => sanitizeInitialFilters(initialFilters, evaluations));
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [evaluationToClose, setEvaluationToClose] = useState<FacultyPublishedEvaluationItem | null>(
     null
@@ -60,7 +90,26 @@ export function FacultyPublishedEvaluations({
     useState<FacultyPublishedEvaluationItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const items: PublishedDeploymentItem[] = localEvaluations.map((evalItem) => ({
+  const periodOptions = useMemo(() => distinctPeriodOptions(localEvaluations), [localEvaluations]);
+  const courseOptions = useMemo(() => distinctCourseOptions(localEvaluations), [localEvaluations]);
+  const visibleEvaluations = useMemo(
+    () => filterPublishedEvaluations(localEvaluations, filters),
+    [localEvaluations, filters]
+  );
+
+  function handleFiltersChange(
+    next: PublishedEvaluationFilters,
+    navigation: "push" | "replace" = "push"
+  ) {
+    setFilters(next);
+    updatePublishedFiltersUrl(next, navigation);
+  }
+
+  function handleStatusChange(status: PublishedStatusFilter) {
+    handleFiltersChange({ ...filters, status });
+  }
+
+  const items: PublishedDeploymentItem[] = visibleEvaluations.map((evalItem) => ({
     id: evalItem.evaluationId,
     name: evalItem.deploymentName,
     courseLabel: `${evalItem.courseCode} · ${evalItem.courseTitle}`,
@@ -151,15 +200,37 @@ export function FacultyPublishedEvaluations({
 
   return (
     <div className="space-y-4">
+      {evaluations.length > 0 && (
+        <FacultyPublishedFilterBar
+          filters={filters}
+          periods={periodOptions}
+          courses={courseOptions}
+          onFiltersChange={handleFiltersChange}
+        />
+      )}
       <PublishedDeploymentsCollection
         view={view}
         items={items}
         label="Published evaluations"
+        statusFilter={filters.status}
+        onStatusFilterChange={handleStatusChange}
         empty={
           <div className="border-muted rounded-xl border-2 border-dashed py-16 text-center">
             <p className="text-muted-foreground text-sm">
               No published evaluations yet. Publish an evaluation from a template to get started.
             </p>
+          </div>
+        }
+        filteredEmpty={
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
+            <p className="text-muted-foreground text-sm">No evaluations match these filters.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS)}
+            >
+              Clear filters
+            </Button>
           </div>
         }
         renderExpanded={(item) => {

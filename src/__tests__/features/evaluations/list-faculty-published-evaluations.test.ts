@@ -33,6 +33,7 @@ const publishedEvaluation = {
   deployment_name: "Capstone CILO Evaluation",
   published_at: new Date("2026-07-01T00:00:00.000Z"),
   status: "ACTIVE",
+  term_instance_id: "term-instance-1",
   course_info_snapshot: null,
   cilos_snapshot: null,
   course_assignment: {
@@ -100,11 +101,11 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
     prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([v2Evaluation] as never);
 
     const result = await listFacultyPublishedEvaluations();
-
     expect(result.success).toBe(true);
     expect(result.success && result.data.evaluations[0]).toMatchObject({
       courseCode: "IT-401-PREV",
       courseTitle: "Capstone 1 (previous edition)",
+      termInstanceId: "term-instance-1",
       termInstanceLabel: "2024-2025 — 2nd Semester — 2nd Term",
     });
   });
