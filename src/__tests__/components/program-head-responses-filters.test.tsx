@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const { pushMock, navState } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   navState: { isPending: false },
@@ -11,7 +13,6 @@ vi.mock("@/features/analytics/components/program-head-responses-workspace", () =
 }));
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProgramHeadResponsesFilters } from "@/features/analytics/components/program-head-responses-filters";
 
 const options = {

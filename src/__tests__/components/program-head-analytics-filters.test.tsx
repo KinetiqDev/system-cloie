@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
@@ -8,7 +10,6 @@ vi.mock("@/features/analytics/components/program-head-analytics-workspace", () =
 }));
 
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProgramHeadAnalyticsFilters } from "@/features/analytics/components/program-head-analytics-filters";
 import type { ProgramHeadAnalyticsPeriodOptions } from "@/features/analytics/program-head-analytics-types";
 

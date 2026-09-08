@@ -1,9 +1,10 @@
+import { describe, expect, it, vi } from "vitest";
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 import SelectedProgramResponsesLoading from "@/app/(app)/program-head/programs/[programId]/responses/loading";
 import { ProgramHeadResponsesContentFallback } from "@/features/analytics/components/program-head-responses-content-fallback";
 import { ProgramHeadResponsesWorkspace } from "@/features/analytics/components/program-head-responses-workspace";
