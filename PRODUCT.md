@@ -32,7 +32,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 
 ## Operating Context
 
-- **Academic structures:** school years / semesters / terms with an active period; programs and majors; versioned curricula; course catalog and class-section teaching assignments whose membership rosters are authoritative for evaluation scope.
+- **Academic structures:** school years / semesters / terms with an active period; programs and majors; course catalog with advisory defaults plus per-assignment overrides whose membership rosters are authoritative for evaluation scope.
 - **Outcome catalogs:** ILO (college-wide, `GEN_ED_COORDINATOR`-owned), PLO (program-owned), CILO (course-level); typed alignment relations; readiness semantics per academic period.
 - **Evaluation lifecycle:** instrument templates with immutable frozen versions; Course-bound and Central deployments; server-side publication alignment gate; roster exclusions and reversals; availability windows.
 - **Responses:** one-response invariant per deployment; eligibility gating; section-scoped drafts; atomic submission completeness.
@@ -64,7 +64,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 - Approved design spec: `docs/design.md`; numerical tokens in `src/styles/tokens.css` and `src/app/globals.css`.
 - Theme companion boards: `docs/assets/system-cloie-design-system-light.png`, `docs/assets/system-cloie-design-system-dark.png`.
 - Protected design-system showcase route in-app (`src/features/design-system/`, ADR 0010).
-- Domain truth: `CONTEXT-MAP.md` + 16 feature `CONTEXT.md` files + 19 ADRs under `docs/adr/`.
+- Domain truth: `CONTEXT-MAP.md` + 15 feature `CONTEXT.md` files (plus `portals` and `secretary` supporting modules without contracts) + 22 ADR files under `docs/adr/`.
 - Demo seed data exists for development/demonstration; production contains real institutional data.
 - **Absence to respect:** no marketing testimonials, case studies, or customer evidence exist. This is an internal institutional platform — never fabricate such content.
 

@@ -2,7 +2,7 @@
 title: System CLOIE Architecture Overview
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-08
 ---
 
 # Architecture Overview
@@ -11,9 +11,11 @@ System CLOIE is a college-wide Outcome-Based Education evaluation, monitoring, a
 
 ## Modular monolith layout
 
-Feature modules live under `src/features/<domain>/`, split by domain responsibility and cohesion. Domains currently present (each with a `CONTEXT.md` where the domain's terminology and invariants are defined — see [CONTEXT-MAP.md](../../CONTEXT-MAP.md) for the index):
+Feature modules live under `src/features/<domain>/`, split by domain responsibility and cohesion. Fifteen bounded domains carry a `CONTEXT.md` where the domain's terminology and invariants are defined (see [CONTEXT-MAP.md](../../CONTEXT-MAP.md) for the index):
 
-`users`, `auth`, `legal`, `course-assignments`, `outcomes`, `academic-calendar`, `academic-structure`, `enrollments`, `instruments`, `evaluations`, `responses`, `response-review`, `analytics`, `secretary`, `dean`, `portals`, `design-system`.
+`users`, `auth`, `legal`, `course-assignments`, `outcomes`, `academic-calendar`, `academic-structure`, `enrollments`, `instruments`, `evaluations`, `responses`, `response-review`, `analytics`, `dean`, `design-system`.
+
+Two supporting modules carry no `CONTEXT.md` and own no invariants: `portals` (role selection entry UI; rules owned by Identity and Access) and `secretary` (Secretary dashboard read model; rules owned by Users and Academic Structure).
 
 Shared code lives in `src/lib/` (including `src/lib/db/` for Prisma access and the table-access-disposition registry, `src/lib/forms/` for the Zod resolver, `src/lib/actions/` for Server Actions, `src/lib/supabase/` for Auth clients). UI primitives live in `src/components/ui/`.
 
@@ -72,12 +74,12 @@ The retired Depot CI workflows remain locally under `.depot/workflows/` (gitigno
 
 ## ADR index
 
-All decisions live in `docs/adr/`. Where a design introduces or reverses a cross-cutting constraint, record a new ADR (rule owned by [AGENTS.md](../../AGENTS.md)).
+All decisions live in `docs/adr/` — 22 files numbered 0001–0021 (number 0001 exists twice; 0013 is superseded by 0021). Where a design introduces or reverses a cross-cutting constraint, record a new ADR (rule owned by [AGENTS.md](../../AGENTS.md)).
 
 | ADR                                                                                     | Title                                                           | Decision (one line)                                                                                                                                                                                                      |
 | --------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [0001](../adr/0001-single-role-accounts.md)                                             | Single-Role Accounts                                            | Accounts carry exactly one role; constrain `user_roles` to a single assignment rather than allowing multi-role accumulation.                                                                                             |
-| [0001](../adr/0001-complete-secretary-created-accounts.md)                              | Complete Secretary-Created Accounts                             | Secretary-created accounts are complete for their selected role at creation time; Google OAuth is the only primary Production authentication.                                                                            |
+| [0001-single-role](../adr/0001-single-role-accounts.md)                                 | Single-Role Accounts                                            | Accounts carry exactly one role; constrain `user_roles` to a single assignment rather than allowing multi-role accumulation.                                                                                             |
+| [0001-secretary-created](../adr/0001-complete-secretary-created-accounts.md)            | Complete Secretary-Created Accounts                             | Secretary-created accounts are complete for their selected role at creation time; Google OAuth is the only primary Production authentication.                                                                            |
 | [0002](../adr/0002-separate-domain-users-from-auth-identities.md)                       | Separate Domain Users from Auth Identities                      | Keep a stable domain `User` id and link Google identities through a nullable unique `auth_user_id` matched by normalized email — Supabase Auth UUIDs are not used as `User.id`.                                          |
 | [0003](../adr/0003-course-catalog-and-assignment-refactor.md)                           | Course Catalog and Assignment Refactor                          | Course catalog stores default year level/semester/term; assignments override per program; every assignment binds to exactly one program with a required section and one faculty member.                                  |
 | [0004](../adr/0004-strict-program-deletion.md)                                          | Strict Program Deletion                                         | Permanent deletion only by Secretary/Dean after a program is inactive with no linked records; relationships are `RESTRICT`-protected and deactivation is the reversible path.                                            |

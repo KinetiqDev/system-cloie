@@ -2,7 +2,7 @@
 title: System CLOIE Documentation Index
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-08
 ---
 
 # Documentation Index
@@ -11,13 +11,15 @@ Front door for System CLOIE documentation. Orientation starts at [AGENTS.md](../
 
 ## Current Domain Contracts
 
-One `CONTEXT.md` per bounded domain, indexed with relationships in [CONTEXT-MAP.md](../CONTEXT-MAP.md):
+Fifteen bounded domains carry one `CONTEXT.md` each, indexed with relationships in [CONTEXT-MAP.md](../CONTEXT-MAP.md):
 
-[auth](../src/features/auth/CONTEXT.md) · [users](../src/features/users/CONTEXT.md) · [academic-calendar](../src/features/academic-calendar/CONTEXT.md) · [academic-structure](../src/features/academic-structure/CONTEXT.md) · [course-assignments](../src/features/course-assignments/CONTEXT.md) · [outcomes](../src/features/outcomes/CONTEXT.md) · [instruments](../src/features/instruments/CONTEXT.md) · [evaluations](../src/features/evaluations/CONTEXT.md) · [responses](../src/features/responses/CONTEXT.md) · [response-review](../src/features/response-review/CONTEXT.md) · [analytics](../src/features/analytics/CONTEXT.md) · [enrollments](../src/features/enrollments/CONTEXT.md) · [dean](../src/features/dean/CONTEXT.md) · [legal](../src/features/legal/CONTEXT.md)
+[auth](../src/features/auth/CONTEXT.md) · [users](../src/features/users/CONTEXT.md) · [academic-calendar](../src/features/academic-calendar/CONTEXT.md) · [academic-structure](../src/features/academic-structure/CONTEXT.md) · [course-assignments](../src/features/course-assignments/CONTEXT.md) · [outcomes](../src/features/outcomes/CONTEXT.md) · [instruments](../src/features/instruments/CONTEXT.md) · [evaluations](../src/features/evaluations/CONTEXT.md) · [responses](../src/features/responses/CONTEXT.md) · [response-review](../src/features/response-review/CONTEXT.md) · [analytics](../src/features/analytics/CONTEXT.md) · [enrollments](../src/features/enrollments/CONTEXT.md) · [dean](../src/features/dean/CONTEXT.md) · [legal](../src/features/legal/CONTEXT.md) · [design-system](../src/features/design-system/CONTEXT.md)
+
+Supporting modules without contracts: `src/features/portals/` (entry UI) and `src/features/secretary/` (dashboard read model) — see [CONTEXT-MAP.md](../CONTEXT-MAP.md).
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 22 numbered ADRs. Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — 22 files numbered 0001–0021 (number 0001 exists twice; 0013 superseded by 0021). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 
@@ -25,6 +27,12 @@ One `CONTEXT.md` per bounded domain, indexed with relationships in [CONTEXT-MAP.
 - [roles-and-access.md](product/roles-and-access.md) — role inventory and scope highlights.
 - [workflows.md](product/workflows.md) — primary end-to-end workflows.
 - [system-cloie-user-journeys.md](system-cloie-user-journeys.md) — detailed journey walkthroughs.
+
+## Implementation Specs and Audits
+
+- [program-head-dashboard-analytics-responses-spec.md](program-head-dashboard-analytics-responses-spec.md) — draft Program Head dashboard/analytics/responses behavior and calculation contracts.
+- [initial-capstone-ux-audit.md](initial-capstone-ux-audit.md) + [evidence ledger](initial-capstone-ux-audit-evidence/evidence-ledger.md) — Week 1 capstone UX audit (2026-09-07).
+- [ChatGPT-Analytics brainstorming-20260908-0950.md](ChatGPT-Analytics%20brainstorming-20260908-0950.md) — unreviewed exported AI-chat transcript on analytics charts; research input only, not a decision source.
 
 ## Architecture
 

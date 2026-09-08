@@ -2,7 +2,7 @@
 title: "Historical material index"
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-08
 ---
 
 # Historical Material Index
@@ -22,7 +22,7 @@ Every file here carries the frontmatter `kind: historical-project-source` /
 ## Where current truth lives
 
 - Domain behavior: `src/features/<domain>/CONTEXT.md` (one per domain).
-- Architecture decisions: `docs/adr/`, 21 ADR files numbered 0001–0020 (number 0001 exists twice: single-role accounts and complete secretary-created accounts).
+- Architecture decisions: `docs/adr/`, 22 ADR files numbered 0001–0021 (number 0001 exists twice: single-role accounts and complete secretary-created accounts; 0013 superseded by 0021).
 - Repo-wide conventions: `AGENTS.md`; schema in `prisma/`; behavior proven by
   tests under `src/__tests__/`.
 
