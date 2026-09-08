@@ -2,7 +2,8 @@
 
 import { CourseScope } from "@prisma/client";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Table,
   TableBody,
@@ -63,6 +64,9 @@ import {
   BookOpen,
   CalendarDays,
   ExternalLink,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { showToast } from "@/components/ui/toast";
@@ -77,6 +81,7 @@ import { EditCourseAssignmentDialog } from "./edit-course-assignment-dialog";
 import type {
   CourseAssignmentDeletionPreflight,
   CourseAssignmentItem,
+  CourseAssignmentSortField,
   AssignableCourse,
 } from "@/features/course-assignments/types";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
@@ -84,6 +89,7 @@ import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import { buildProgramHeadCourseRosterPath } from "@/lib/constants/program-head-routes";
 import { useTableSelection } from "@/hooks/use-table-selection";
+import { parseCourseAssignmentSortField } from "../course-assignment-list-state";
 
 interface Program {
   id: string;
@@ -376,6 +382,49 @@ function CourseAssignmentsRow({
   );
 }
 
+function SortableColumnHeader({
+  field,
+  label,
+  activeSort,
+  activeDir,
+  isPending,
+  onSort,
+}: {
+  field: CourseAssignmentSortField;
+  label: string;
+  activeSort: CourseAssignmentSortField | null;
+  activeDir: "asc" | "desc";
+  isPending: boolean;
+  onSort: (field: CourseAssignmentSortField) => void;
+}) {
+  const isActive = activeSort === field;
+  return (
+    <TableHead
+      aria-sort={isActive ? (activeDir === "asc" ? "ascending" : "descending") : "none"}
+      className="text-xs font-semibold tracking-widest uppercase"
+    >
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        aria-label={`Sort by ${label}, currently ${isActive ? activeDir : "unsorted"}`}
+        aria-busy={isPending || undefined}
+        className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold uppercase focus-visible:ring-3 focus-visible:outline-none"
+      >
+        {label}
+        {isActive ? (
+          activeDir === "asc" ? (
+            <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
+          ) : (
+            <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
+          )
+        ) : (
+          <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 // Desktop and mobile presentations intentionally share mutation state and confirmation workflows.
 // fallow-ignore-next-line complexity
 export function CourseAssignmentsTable({
@@ -406,6 +455,27 @@ export function CourseAssignmentsTable({
   const [deletionError, setDeletionError] = useState<string | null>(null);
   const [confirmationLabel, setConfirmationLabel] = useState("");
   const deletionRequest = useRef(0);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isSortPending, startSortTransition] = useTransition();
+  const activeSort = parseCourseAssignmentSortField(searchParams.get("sort")) ?? null;
+  const activeDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
+
+  const handleSort = (field: CourseAssignmentSortField) => {
+    const nextDir = activeSort === field ? (activeDir === "asc" ? "desc" : "asc") : "asc";
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort", field);
+    // Ascending is the canonical default, so an explicit dir=asc would only
+    // trigger a canonicalizing redirect. Omit it like the URL state serializer.
+    if (nextDir === "asc") params.delete("dir");
+    else params.set("dir", nextDir);
+    params.delete("page");
+    const query = params.toString();
+    startSortTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    });
+  };
 
   const totalPages = Math.ceil(total / pageSize);
   const manageableAssignments = useMemo(
@@ -798,29 +868,64 @@ export function CourseAssignmentsTable({
                     onCheckedChange={(checked) => selection.toggleAllVisible(Boolean(checked))}
                   />
                 </TableHead>
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Course
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Faculty
-                </TableHead>
+                <SortableColumnHeader
+                  field="course"
+                  label="Course"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
+                <SortableColumnHeader
+                  field="faculty"
+                  label="Faculty"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
                 {mode !== "program-head" && (
-                  <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                    Program
-                  </TableHead>
+                  <SortableColumnHeader
+                    field="program"
+                    label="Program"
+                    activeSort={activeSort}
+                    activeDir={activeDir}
+                    isPending={isSortPending}
+                    onSort={handleSort}
+                  />
                 )}
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Class
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Term
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Scope
-                </TableHead>
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Status
-                </TableHead>
+                <SortableColumnHeader
+                  field="class"
+                  label="Class"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
+                <SortableColumnHeader
+                  field="term"
+                  label="Term"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
+                <SortableColumnHeader
+                  field="scope"
+                  label="Scope"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
+                <SortableColumnHeader
+                  field="status"
+                  label="Status"
+                  activeSort={activeSort}
+                  activeDir={activeDir}
+                  isPending={isSortPending}
+                  onSort={handleSort}
+                />
                 <TableHead className="text-xs font-semibold tracking-widest uppercase">
                   Roster
                 </TableHead>

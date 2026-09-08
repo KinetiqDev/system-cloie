@@ -147,4 +147,36 @@ describe("course assignment list URL state", () => {
     expect(state).toEqual({ page: 1, filters: { isActive: true } });
     expect(isCanonicalCourseAssignmentListState({}, state, "all-program")).toBe(true);
   });
+
+  it("round-trips column sorting and forwards it to service options", () => {
+    const state = parseCourseAssignmentListState(
+      { sort: "faculty", dir: "desc" },
+      "all-program"
+    );
+
+    expect(state).toMatchObject({ sort: "faculty", dir: "desc" });
+    expect(serializeCourseAssignmentListState(state, "all-program").toString()).toBe(
+      "sort=faculty&dir=desc"
+    );
+    expect(isCanonicalCourseAssignmentListState({ sort: "faculty", dir: "desc" }, state, "all-program")).toBe(
+      true
+    );
+    expect(toCourseAssignmentListOptions(state)).toEqual({
+      page: 0,
+      sortBy: "faculty",
+      sortDir: "desc",
+    });
+  });
+
+  it("defaults a sorted column to ascending and drops meaningless sort input", () => {
+    const asc = parseCourseAssignmentListState({ sort: "course" }, "program-head");
+
+    expect(asc).toMatchObject({ sort: "course", dir: "asc" });
+    expect(serializeCourseAssignmentListState(asc, "program-head").toString()).toBe("sort=course");
+
+    expect(
+      parseCourseAssignmentListState({ sort: "roster", dir: "desc" }, "all-program").sort
+    ).toBeUndefined();
+    expect(parseCourseAssignmentListState({ dir: "desc" }, "all-program").sort).toBeUndefined();
+  });
 });

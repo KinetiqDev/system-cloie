@@ -21,14 +21,16 @@ import type {
   CourseRosterPreviewRow,
 } from "@/features/course-assignments/types";
 
-const { replaceMock, refreshMock, showToastMock } = vi.hoisted(() => ({
+const { replaceMock, refreshMock, showToastMock, useSearchParamsMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   refreshMock: vi.fn(),
   showToastMock: vi.fn(),
+  useSearchParamsMock: vi.fn(() => new URLSearchParams()),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, refresh: refreshMock }),
+  useSearchParams: () => useSearchParamsMock(),
 }));
 vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 
@@ -541,7 +543,10 @@ describe("course roster pages", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it("provides a name sort control that preserves roster filters and route scope", () => {
+  it("provides a name sort control in the table header that preserves roster filters and route scope", () => {
+    useSearchParamsMock.mockReturnValue(
+      new URLSearchParams({ search: "grace", removed: "1", sort: "desc" })
+    );
     render(
       <CourseRosterDetailPage
         data={{ ...detail, search: "grace", includeRemoved: true, sortDirection: "desc" }}
@@ -550,8 +555,7 @@ describe("course roster pages", () => {
       />
     );
 
-    const sort = screen.getByRole("button", { name: /name z→a/i });
-    expect(sort).toHaveAttribute("aria-pressed", "true");
+    const sort = screen.getByRole("button", { name: /sort by student name/i });
     fireEvent.click(sort);
     expect(replaceMock).toHaveBeenCalledWith(
       "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
@@ -595,14 +599,12 @@ describe("course roster pages", () => {
     expect(replaceMock).toHaveBeenCalledWith("/course-rosters/assignment-1?search=grace&sort=asc");
   });
 
-  it("applies the removed-students filter immediately and preserves search", () => {
+  it("removes standalone sort and removed-students filter controls", () => {
     render(<CourseRosterDetailPage data={{ ...detail, search: "grace" }} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /include removed students/i }));
-
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
-    );
+    expect(screen.queryByRole("checkbox", { name: /include removed students/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /name a→z/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /name z→a/i })).not.toBeInTheDocument();
   });
 
   it("preserves selected Program roster navigation and action scope", async () => {

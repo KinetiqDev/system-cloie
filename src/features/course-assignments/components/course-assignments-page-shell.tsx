@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import type {
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import {
   courseAssignmentListPath,
+  parseCourseAssignmentSortDirection,
+  parseCourseAssignmentSortField,
   type CourseAssignmentListRole,
 } from "../course-assignment-list-state";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
@@ -189,9 +191,14 @@ export function CourseAssignmentsPageShell({
 }: CourseAssignmentsPageShellProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [filters, setFilters] = useState<AssignmentFiltersState>(initialFilters);
   const role: CourseAssignmentListRole = mode;
+  // Sorting is owned by the table's column headers via URL params; filter and
+  // page navigations carry the active sort so it survives those transitions.
+  const activeSort = parseCourseAssignmentSortField(searchParams.get("sort"));
+  const activeDir = parseCourseAssignmentSortDirection(searchParams.get("dir")) ?? "asc";
   const assignments = initialData?.items ?? [];
   const total = initialData?.total ?? 0;
   const page = initialData?.page ?? initialPage - 1;
@@ -231,10 +238,11 @@ export function CourseAssignmentsPageShell({
         nextFilters.isActive === null
           ? { isActiveMode: "all" as const }
           : {}),
+        ...(activeSort !== undefined && { sort: activeSort, dir: activeDir }),
       };
       router[navigation](courseAssignmentListPath(pathname, nextState, role));
     },
-    [pathname, role, router]
+    [activeDir, activeSort, pathname, role, router]
   );
 
   const handleFiltersChange = useCallback(

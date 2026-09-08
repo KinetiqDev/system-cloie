@@ -12,10 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SystemRole } from "@prisma/client";
-import type {
-  SecretaryUsersSortDirection,
-  SecretaryUsersSortField,
-} from "../../schemas/secretary-users-list";
 import { formatRole } from "@/features/users/lib/role-visuals";
 
 const ALL_ROLES: SystemRole[] = [
@@ -41,10 +37,6 @@ interface UsersFilterBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onClearFilters: () => void;
-  sort: SecretaryUsersSortField;
-  direction: SecretaryUsersSortDirection;
-  onSortChange: (value: string | null) => void;
-  onDirectionChange: (value: string | null) => void;
   programs: Array<{
     id: string;
     code: string;
@@ -65,10 +57,6 @@ export function UsersFilterBar({
   searchTerm,
   onSearchChange,
   onClearFilters,
-  sort,
-  direction,
-  onSortChange,
-  onDirectionChange,
   programs,
 }: UsersFilterBarProps) {
   const selectedProgramMajors = useMemo(() => {
@@ -157,29 +145,6 @@ export function UsersFilterBar({
           <SelectItem value="__all__">All Attention States</SelectItem>
           <SelectItem value="awaiting-term-placement">Awaiting Term Placement</SelectItem>
           <SelectItem value="pending-verification">Pending Verification</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select value={sort} onValueChange={onSortChange}>
-        <SelectTrigger aria-label="Sort users" className="w-full md:w-[160px]">
-          <SelectValue>
-            Sort: {sort === "name" ? "Name" : sort === "email" ? "Email" : "Status"}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="name">Sort: Name</SelectItem>
-          <SelectItem value="email">Sort: Email</SelectItem>
-          <SelectItem value="isActive">Sort: Status</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select value={direction} onValueChange={onDirectionChange}>
-        <SelectTrigger aria-label="Sort direction" className="w-full md:w-[130px]">
-          <SelectValue>{direction === "asc" ? "Ascending" : "Descending"}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="asc">Ascending</SelectItem>
-          <SelectItem value="desc">Descending</SelectItem>
         </SelectContent>
       </Select>
 

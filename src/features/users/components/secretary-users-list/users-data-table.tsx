@@ -1,7 +1,19 @@
 "use client";
 
+import { useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SystemRole } from "@prisma/client";
-import { MoreVertical, Mail, Building2, GraduationCap, Power, Users } from "lucide-react";
+import {
+  MoreVertical,
+  Mail,
+  Building2,
+  GraduationCap,
+  Power,
+  Users,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -156,6 +168,54 @@ export function UsersDataTable({
   onClearSelection,
   onBulkStatus,
 }: UsersDataTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [, startSortTransition] = useTransition();
+
+  const rawSort = searchParams.get("sort");
+  const activeSort: "name" | "email" | "isActive" =
+    rawSort === "email" || rawSort === "isActive" ? rawSort : "name";
+  const activeDir: "asc" | "desc" = searchParams.get("dir") === "desc" ? "desc" : "asc";
+
+  const handleSort = (field: "name" | "email" | "isActive") => {
+    const nextDir = field === activeSort ? (activeDir === "asc" ? "desc" : "asc") : "asc";
+    const params = new URLSearchParams(searchParams.toString());
+    // Keep the URL canonical: the default sort (name/asc) omits both params,
+    // matching serializeSecretaryUsersListQuery.
+    if (field === "name" && nextDir === "asc") {
+      params.delete("sort");
+    } else {
+      params.set("sort", field);
+    }
+    if (nextDir === "asc") {
+      params.delete("dir");
+    } else {
+      params.set("dir", nextDir);
+    }
+    // Reset pagination on sort change.
+    params.delete("page");
+    const qs = params.toString();
+    startSortTransition(() => {
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    });
+  };
+
+  const renderSortIcon = (field: "name" | "email" | "isActive") => {
+    if (field !== activeSort) {
+      return <ArrowUpDown aria-hidden="true" className="size-4 text-muted-foreground/60" />;
+    }
+    return activeDir === "asc" ? (
+      <ArrowUp aria-hidden="true" className="size-4" />
+    ) : (
+      <ArrowDown aria-hidden="true" className="size-4" />
+    );
+  };
+
+  const ariaSortFor = (field: "name" | "email" | "isActive"): "ascending" | "descending" | "none" => {
+    if (field !== activeSort) return "none";
+    return activeDir === "asc" ? "ascending" : "descending";
+  };
   if (users.length === 0) {
     return (
       <Empty className="py-12">
@@ -202,13 +262,40 @@ export function UsersDataTable({
                   onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
                 />
               </TableHead>
-              <TableHead className="w-[200px]">Name</TableHead>
+              <TableHead aria-sort={ariaSortFor("name")} className="w-[200px]">
+                <button
+                  type="button"
+                  onClick={() => handleSort("name")}
+                  aria-label={`Sort by name, currently ${ariaSortFor("name") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  Name
+                  {renderSortIcon("name")}
+                </button>
+              </TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Program</TableHead>
               <TableHead>Major</TableHead>
               <TableHead>Section</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead aria-sort={ariaSortFor("email")}>
+                <button
+                  type="button"
+                  onClick={() => handleSort("email")}
+                  aria-label={`Sort by email, currently ${ariaSortFor("email") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  Email
+                  {renderSortIcon("email")}
+                </button>
+              </TableHead>
+              <TableHead aria-sort={ariaSortFor("isActive")}>
+                <button
+                  type="button"
+                  onClick={() => handleSort("isActive")}
+                  aria-label={`Sort by status, currently ${ariaSortFor("isActive") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
+                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  Status
+                  {renderSortIcon("isActive")}
+                </button>
+              </TableHead>
               <TableHead className="w-[60px]">Actions</TableHead>
             </TableRow>
           </TableHeader>

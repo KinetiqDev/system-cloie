@@ -1,6 +1,10 @@
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { z } from "zod";
-import type { ListCourseAssignmentsFilter } from "./types";
+import type {
+  CourseAssignmentSortDirection,
+  CourseAssignmentSortField,
+  ListCourseAssignmentsFilter,
+} from "./types";
 
 export type CourseAssignmentListRole = "all-program" | "program-head" | "general-education";
 
@@ -9,6 +13,8 @@ export type CourseAssignmentListUrlState = {
   filters: ListCourseAssignmentsFilter;
   isActiveMode?: "all";
   termInstanceMode?: "all";
+  sort?: CourseAssignmentSortField;
+  dir?: CourseAssignmentSortDirection;
 };
 
 export function toAssignmentFiltersState(state: CourseAssignmentListUrlState): {
@@ -53,6 +59,8 @@ const queryKeys = [
   "isActive",
   "roster",
   "q",
+  "sort",
+  "dir",
 ] as const;
 
 const uuidSchema = z.string().uuid();
@@ -69,6 +77,31 @@ const sectionSchema = z.enum([
   StudentSection.EVENING,
 ]);
 const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROGRAM_SPECIFIC]);
+const courseAssignmentSortFields = [
+  "course",
+  "faculty",
+  "program",
+  "class",
+  "term",
+  "scope",
+  "status",
+] as const satisfies readonly CourseAssignmentSortField[];
+
+export function parseCourseAssignmentSortField(
+  value: string | string[] | null | undefined
+): CourseAssignmentSortField | undefined {
+  if (typeof value !== "string") return undefined;
+  const candidate = value.trim();
+  return (courseAssignmentSortFields as readonly string[]).includes(candidate)
+    ? (candidate as CourseAssignmentSortField)
+    : undefined;
+}
+
+export function parseCourseAssignmentSortDirection(
+  value: string | string[] | null | undefined
+): CourseAssignmentSortDirection | undefined {
+  return value === "asc" || value === "desc" ? value : undefined;
+}
 
 function firstNonEmptyValue(value: string | string[] | undefined): string | undefined {
   const values = Array.isArray(value) ? value : [value];
@@ -135,6 +168,11 @@ export function parseCourseAssignmentListState(
   const isActiveCandidate = firstNonEmptyValue(rawSearchParams.isActive);
   const q = parseQuery(rawSearchParams.q);
   const roster = firstNonEmptyValue(rawSearchParams.roster);
+  const sort = parseCourseAssignmentSortField(rawSearchParams.sort);
+  // Direction without a valid sort field is meaningless; a valid field without a
+  // direction sorts ascending.
+  const dir =
+    sort !== undefined ? (parseCourseAssignmentSortDirection(rawSearchParams.dir) ?? "asc") : undefined;
   const effectiveCourseScope = effectiveCourseScopeForRole(role, courseScope);
 
   const filters: ListCourseAssignmentsFilter = {
@@ -160,7 +198,13 @@ export function parseCourseAssignmentListState(
       : undefined;
 
   if (isAllProgramLikeRole(role) && isActiveCandidate === "all") {
-    return { page, filters, isActiveMode: "all", ...(termInstanceMode && { termInstanceMode }) };
+    return {
+      page,
+      filters,
+      isActiveMode: "all",
+      ...(termInstanceMode && { termInstanceMode }),
+      ...(sort !== undefined && { sort, dir }),
+    };
   }
 
   const defaultIsActive = roleDefaultIsActive(role);
@@ -168,7 +212,12 @@ export function parseCourseAssignmentListState(
     filters.isActive = defaultIsActive;
   }
 
-  return { page, filters, ...(termInstanceMode && { termInstanceMode }) };
+  return {
+    page,
+    filters,
+    ...(termInstanceMode && { termInstanceMode }),
+    ...(sort !== undefined && { sort, dir }),
+  };
 }
 
 // fallow-ignore-next-line complexity
@@ -199,6 +248,10 @@ export function serializeCourseAssignmentListState(
   if (isAllProgramLikeRole(role) && filters.hasActiveRosterMembers === false) {
     params.set("roster", "empty");
   }
+  if (state.sort !== undefined) {
+    params.set("sort", state.sort);
+    if (state.dir !== undefined && state.dir !== "asc") params.set("dir", state.dir);
+  }
 
   return params;
 }
@@ -226,7 +279,10 @@ export function getCourseAssignmentListQueryKeys(): readonly string[] {
 }
 
 export function toCourseAssignmentListOptions(state: CourseAssignmentListUrlState) {
-  return { page: state.page - 1 };
+  return {
+    page: state.page - 1,
+    ...(state.sort !== undefined && { sortBy: state.sort, sortDir: state.dir ?? "asc" }),
+  };
 }
 
 export function courseAssignmentListPath(

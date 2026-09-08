@@ -10,7 +10,8 @@ const refreshMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/secretary/course-assignments",
-  useRouter: () => ({ push: pushMock, refresh: refreshMock }),
+  useRouter: () => ({ push: pushMock, replace: vi.fn(), refresh: refreshMock }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
