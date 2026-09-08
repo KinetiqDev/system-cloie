@@ -1,5 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+vi.mock("@/features/analytics/components/program-head-analytics-workspace", () => ({
+  useProgramHeadAnalyticsNavigation: () => ({ isPending: false, navigate: pushMock }),
+}));
+
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
 import { ProgramHeadAnalyticsFilters } from "@/features/analytics/components/program-head-analytics-filters";
 import type { ProgramHeadAnalyticsPeriodOptions } from "@/features/analytics/program-head-analytics-types";
 
@@ -22,6 +32,10 @@ const options: ProgramHeadAnalyticsPeriodOptions = {
 const baseFilters = { tab: "outcomes" as const };
 
 describe("ProgramHeadAnalyticsFilters", () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+  });
+
   it("keeps evidence-scope controls when no period options exist", () => {
     render(
       <ProgramHeadAnalyticsFilters
@@ -66,7 +80,7 @@ describe("ProgramHeadAnalyticsFilters", () => {
     expect(screen.getByText("2 active")).toBeInTheDocument();
   });
 
-  it("submits the canonical analytics URL and preserves the active tab", () => {
+  it("preserves the active tab in each filter form", () => {
     const { container } = render(
       <ProgramHeadAnalyticsFilters
         programId="program-bsed"
@@ -78,13 +92,27 @@ describe("ProgramHeadAnalyticsFilters", () => {
     const forms = container.querySelectorAll("form");
     expect(forms.length).toBeGreaterThanOrEqual(1);
     for (const form of forms) {
-      expect((form as HTMLFormElement).getAttribute("action")).toBe(
-        "/program-head/programs/program-bsed/analytics"
-      );
       const tab = form.querySelector('input[name="tab"]') as HTMLInputElement | null;
       expect(tab).not.toBeNull();
       expect(tab!.value).toBe("trends");
     }
+  });
+  it("applies selected filters through canonical App Router navigation", async () => {
+    render(
+      <ProgramHeadAnalyticsFilters
+        programId="program-bsed"
+        filters={{ ...baseFilters, tab: "trends", evidenceSource: "ALUMNI" }}
+        options={options}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Apply filters" })[0]);
+
+    await waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith(
+        "/program-head/programs/program-bsed/analytics?tab=trends&evidenceSource=ALUMNI"
+      )
+    );
   });
 
   it("keeps the Reset link on the active tab without other filters", () => {
@@ -124,5 +152,34 @@ describe("ProgramHeadAnalyticsFilters", () => {
     expect(within(dialog).getByLabelText("Academic Term")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /Apply/ })).toBeInTheDocument();
     expect(within(dialog).getByRole("link", { name: "Reset" })).toBeInTheDocument();
+  });
+  it("keeps mounted selects controlled when soft navigation delivers new filters", () => {
+    const errors: unknown[][] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+      errors.push(args);
+    });
+    try {
+      const view = render(
+        <ProgramHeadAnalyticsFilters
+          programId="program-bsed"
+          filters={baseFilters}
+          options={options}
+        />
+      );
+      view.rerender(
+        <ProgramHeadAnalyticsFilters
+          programId="program-bsed"
+          filters={{ ...baseFilters, evidenceSource: "COURSE" }}
+          options={options}
+        />
+      );
+      expect(
+        errors.filter((args) =>
+          String(args[0] ?? "").includes("changing the default value state of an uncontrolled")
+        )
+      ).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

@@ -2289,6 +2289,20 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/program-head-responses-workspace.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Narrow client transition boundary preserving responses controls while the evaluation evidence region reloads",
+  },
+  {
+    path: "src/features/analytics/components/program-head-responses-content-fallback.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Accessible Suspense fallback preserving evaluation evidence card and table geometry while responses reload",
+  },
+  {
     path: "src/features/analytics/components/program-head-dashboard-kpis.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2355,6 +2369,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes: "New server component using semantic tokens, no client boundary needed",
+  },
+  {
+    path: "src/features/analytics/components/program-head-analytics-workspace.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Narrow client transition boundary preserving analytics controls while the active evidence region reloads",
   },
   {
     path: "src/features/analytics/components/program-head-analytics-content-fallback.tsx",
@@ -2686,6 +2707,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/evaluations/components/faculty-published-filter-bar.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
     path: "src/features/evaluations/components/late-include-dialog.tsx",
     disposition: "task",
     taskId: 22,
@@ -2705,6 +2732,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/evaluations/components/published-deployments-collection.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/evaluations/components/reopen-evaluation-dialog.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",

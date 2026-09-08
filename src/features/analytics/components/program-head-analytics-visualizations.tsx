@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentProps } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AnalyticsChartSkeleton } from "./program-head-analytics-content-fallback";
 import type { ProgramHeadComparisonChart as ComparisonChartComponent } from "./program-head-comparison-chart";
 import type { ProgramHeadInstrumentBreakdownChart as InstrumentChartComponent } from "./program-head-instrument-breakdown-chart";
 import type { ProgramHeadOutcomeRankingChart as OutcomeChartComponent } from "./program-head-outcome-ranking-chart";
@@ -13,7 +13,7 @@ import type { QualitativeWordCloud as WordCloudComponent } from "./qualitative-w
 function VisualizationFallback({ label }: { label: string }) {
   return (
     <div role="status" aria-live="polite" aria-busy="true" aria-label={label}>
-      <Skeleton aria-hidden="true" className="h-72 w-full rounded-xl" />
+      <AnalyticsChartSkeleton />
       <span className="sr-only">{label}</span>
     </div>
   );

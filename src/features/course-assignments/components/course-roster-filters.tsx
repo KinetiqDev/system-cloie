@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import type { CourseRosterViewMode } from "./course-roster-view-selector";
-
 type CourseRosterDiscoveryFiltersProps = {
   initialSearch: string;
   initialHistory: boolean;
-  view: CourseRosterViewMode;
   onNavigate: (search: string, history: boolean) => void;
   pending: boolean;
 };
@@ -20,7 +18,6 @@ type CourseRosterDiscoveryFiltersProps = {
 export function CourseRosterDiscoveryFilters({
   initialSearch,
   initialHistory,
-  view,
   onNavigate,
   pending,
 }: CourseRosterDiscoveryFiltersProps) {
@@ -136,13 +133,16 @@ export function CourseRosterMemberFilters({
   const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignmentId}`;
   const nextSort: "asc" | "desc" = sortDirection === "asc" ? "desc" : "asc";
 
-  const navigate = (search: string, removed: boolean, sort: "asc" | "desc") => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (removed) params.set("removed", "1");
-    params.set("sort", sort);
-    startTransition(() => router.replace(`${basePath}?${params.toString()}`));
-  };
+  const navigate = useCallback(
+    (search: string, removed: boolean, sort: "asc" | "desc") => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (removed) params.set("removed", "1");
+      params.set("sort", sort);
+      startTransition(() => router.replace(`${basePath}?${params.toString()}`));
+    },
+    [basePath, router]
+  );
 
   // Search streams in after a quiet pause while typing; the removed checkbox
   // and the sort toggle apply immediately. Both preserve route scope.
@@ -150,19 +150,17 @@ export function CourseRosterMemberFilters({
     if (searchDraft === initialSearch) return;
     const timer = setTimeout(() => navigate(searchDraft, includeRemoved, sortDirection), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeRemoved, sortDirection]);
+  }, [searchDraft, includeRemoved, sortDirection, initialSearch, navigate]);
 
   return (
-    <div
+    <FieldGroup
       role="search"
       aria-label="Search roster members"
       aria-busy={isPending || undefined}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <label htmlFor="member-search" className="text-sm font-medium">
-          Search students
-        </label>
+      <Field>
+        <FieldLabel htmlFor="member-search">Search students</FieldLabel>
         <Input
           id="member-search"
           type="search"
@@ -171,31 +169,34 @@ export function CourseRosterMemberFilters({
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
         />
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
+      </Field>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
-        <label className="flex min-h-11 items-center gap-3 text-sm">
-          <input
-            type="checkbox"
+        <Field orientation="horizontal" className="min-h-11 w-fit">
+          <Checkbox
+            id="member-removed"
             checked={includeRemoved}
-            onChange={(event) => {
-              const checked = event.target.checked;
+            onCheckedChange={(checked) => {
               setIncludeRemoved(checked);
               navigate(searchDraft, checked, sortDirection);
             }}
-            className="accent-primary size-4"
           />
-          Include removed students
-        </label>
+          <FieldLabel htmlFor="member-removed">Include removed students</FieldLabel>
+        </Field>
         <button
           type="button"
-          aria-label={`Sort by name ${nextSort === "asc" ? "ascending" : "descending"}`}
-          className="focus-visible:ring-ring text-link inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          aria-pressed={sortDirection === "desc"}
+          className="focus-visible:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium focus-visible:ring-3 focus-visible:outline-none"
           onClick={() => navigate(searchDraft, includeRemoved, nextSort)}
         >
-          Sort by name {nextSort === "asc" ? "ascending" : "descending"}
+          {sortDirection === "asc" ? (
+            <ArrowDownAZ aria-hidden="true" className="size-4" />
+          ) : (
+            <ArrowUpAZ aria-hidden="true" className="size-4" />
+          )}
+          Name {sortDirection === "asc" ? "A→Z" : "Z→A"}
         </button>
       </div>
-    </div>
+    </FieldGroup>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Pagination } from "@/components/ui/pagination";
 import { buildProgramHeadResponsesPageUrl } from "@/features/analytics/services/program-head-responses-state";
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
+import { useProgramHeadResponsesNavigation } from "./program-head-responses-workspace";
 
 export function ProgramHeadResponsesPagination({
   programId,
@@ -14,12 +14,12 @@ export function ProgramHeadResponsesPagination({
   state: ProgramHeadResponsesFilterState;
   totalPages: number;
 }) {
-  const router = useRouter();
+  const { navigate } = useProgramHeadResponsesNavigation();
   return (
     <Pagination
       currentPage={state.page}
       totalPages={totalPages}
-      onPageChange={(page) => router.push(buildProgramHeadResponsesPageUrl(programId, state, page))}
+      onPageChange={(page) => navigate(buildProgramHeadResponsesPageUrl(programId, state, page))}
     />
   );
 }

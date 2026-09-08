@@ -95,7 +95,7 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
 
   await loginAs(page, fx.demoFaculty.email);
   await page.goto(`/course-rosters/${fx.gestechBsba.id}`);
-  await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
   const manageButton = page.getByRole("button", { name: "Manage roster" });
   await manageButton.click();

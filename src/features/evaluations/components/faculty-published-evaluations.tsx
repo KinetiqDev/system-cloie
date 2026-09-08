@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { Eye, XCircle } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
+import { Eye, RotateCcw, XCircle } from "lucide-react";
 import { YearLevel } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
@@ -12,18 +12,52 @@ import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { cn } from "@/lib/utils";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
-import { closeFacultyEvaluationAction } from "@/lib/actions/faculty-evaluation-actions";
+import {
+  DEFAULT_PUBLISHED_FILTERS,
+  normalizePublishedQuery,
+  updatePublishedFiltersUrl,
+  type PublishedEvaluationFilters,
+} from "@/features/instruments/components/tools-view-state";
+import {
+  closeFacultyEvaluationAction,
+  reopenFacultyEvaluationAction,
+} from "@/lib/actions/faculty-evaluation-actions";
 import { CloseEvaluationDialog } from "./close-evaluation-dialog";
+import { ReopenEvaluationDialog } from "./reopen-evaluation-dialog";
+import {
+  distinctCourseOptions,
+  distinctPeriodOptions,
+  filterPublishedEvaluations,
+} from "./filter-published-evaluations";
+import { FacultyPublishedFilterBar } from "./faculty-published-filter-bar";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
+  type PublishedStatusFilter,
 } from "./published-deployments-collection";
 import type { FacultyPublishedEvaluationItem } from "../types";
 
 type FacultyPublishedEvaluationsProps = {
   evaluations: FacultyPublishedEvaluationItem[];
   view: ToolsViewMode;
+  initialFilters?: PublishedEvaluationFilters;
 };
+
+function sanitizeInitialFilters(
+  initial: PublishedEvaluationFilters,
+  evaluations: FacultyPublishedEvaluationItem[]
+): PublishedEvaluationFilters {
+  const periodIds = new Set(evaluations.map((item) => item.termInstanceId));
+  const courseIds = new Set(evaluations.map((item) => item.courseId));
+  return {
+    ...initial,
+    query: normalizePublishedQuery(initial.query),
+    periodId:
+      initial.periodId !== null && periodIds.has(initial.periodId) ? initial.periodId : null,
+    courseId:
+      initial.courseId !== null && courseIds.has(initial.courseId) ? initial.courseId : null,
+  };
+}
 
 function formatDate(date: Date | string | null): string {
   if (!date) return "--";
@@ -45,15 +79,39 @@ function getScopeLabel(scope: string): string {
 export function FacultyPublishedEvaluations({
   evaluations,
   view,
+  initialFilters = DEFAULT_PUBLISHED_FILTERS,
 }: FacultyPublishedEvaluationsProps) {
   const [localEvaluations, setLocalEvaluations] = useState(evaluations);
+  const [filters, setFilters] = useState(() => sanitizeInitialFilters(initialFilters, evaluations));
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [evaluationToClose, setEvaluationToClose] = useState<FacultyPublishedEvaluationItem | null>(
     null
   );
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [evaluationToReopen, setEvaluationToReopen] =
+    useState<FacultyPublishedEvaluationItem | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const items: PublishedDeploymentItem[] = localEvaluations.map((evalItem) => ({
+  const periodOptions = useMemo(() => distinctPeriodOptions(localEvaluations), [localEvaluations]);
+  const courseOptions = useMemo(() => distinctCourseOptions(localEvaluations), [localEvaluations]);
+  const visibleEvaluations = useMemo(
+    () => filterPublishedEvaluations(localEvaluations, filters),
+    [localEvaluations, filters]
+  );
+  function handleFiltersChange(
+    next: PublishedEvaluationFilters,
+    navigation: "push" | "replace" = "push"
+  ) {
+    const normalized = { ...next, query: normalizePublishedQuery(next.query) };
+    setFilters(normalized);
+    updatePublishedFiltersUrl(normalized, navigation);
+  }
+
+  function handleStatusChange(status: PublishedStatusFilter) {
+    handleFiltersChange({ ...filters, status });
+  }
+
+  const items: PublishedDeploymentItem[] = visibleEvaluations.map((evalItem) => ({
     id: evalItem.evaluationId,
     name: evalItem.deploymentName,
     courseLabel: `${evalItem.courseCode} · ${evalItem.courseTitle}`,
@@ -72,6 +130,15 @@ export function FacultyPublishedEvaluations({
     if (target) {
       setEvaluationToClose(target);
       setCloseDialogOpen(true);
+    }
+  }
+
+  function handleRequestReopen(evaluationId: string) {
+    const target = localEvaluations.find((evaluation) => evaluation.evaluationId === evaluationId);
+
+    if (target) {
+      setEvaluationToReopen(target);
+      setReopenDialogOpen(true);
     }
   }
 
@@ -100,17 +167,72 @@ export function FacultyPublishedEvaluations({
     });
   }
 
+  function handleConfirmReopen(deadlineAt: Date) {
+    if (!evaluationToReopen) return;
+
+    startTransition(async () => {
+      const result = await reopenFacultyEvaluationAction(
+        evaluationToReopen.evaluationId,
+        deadlineAt
+      );
+
+      if (!result.success) {
+        showToast(result.error, "error");
+        return;
+      }
+
+      setLocalEvaluations((previous) =>
+        previous.map((evaluation) =>
+          evaluation.evaluationId === evaluationToReopen.evaluationId
+            ? {
+                ...evaluation,
+                activationAt: result.data.activationAt,
+                deadlineAt: result.data.deadlineAt,
+                status: "ACTIVE" as const,
+              }
+            : evaluation
+        )
+      );
+
+      showToast("Evaluation reopened successfully.");
+      setReopenDialogOpen(false);
+      setEvaluationToReopen(null);
+    });
+  }
+
   return (
     <div className="space-y-4">
+      {evaluations.length > 0 && (
+        <FacultyPublishedFilterBar
+          filters={filters}
+          periods={periodOptions}
+          courses={courseOptions}
+          onFiltersChange={handleFiltersChange}
+        />
+      )}
       <PublishedDeploymentsCollection
         view={view}
         items={items}
         label="Published evaluations"
+        statusFilter={filters.status}
+        onStatusFilterChange={handleStatusChange}
         empty={
           <div className="border-muted rounded-xl border-2 border-dashed py-16 text-center">
             <p className="text-muted-foreground text-sm">
               No published evaluations yet. Publish an evaluation from a template to get started.
             </p>
+          </div>
+        }
+        filteredEmpty={
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
+            <p className="text-muted-foreground text-sm">No evaluations match these filters.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS)}
+            >
+              Clear filters
+            </Button>
           </div>
         }
         renderExpanded={(item) => {
@@ -133,6 +255,15 @@ export function FacultyPublishedEvaluations({
                 </DropdownMenuItem>
               </>
             )}
+            {item.status === "CLOSED" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleRequestReopen(item.id)}>
+                  <RotateCcw className="mr-2 size-4" />
+                  Reopen Evaluation
+                </DropdownMenuItem>
+              </>
+            )}
           </>
         )}
         renderCardActions={(item) => (
@@ -150,6 +281,12 @@ export function FacultyPublishedEvaluations({
                 Close Evaluation
               </Button>
             )}
+            {item.status === "CLOSED" && (
+              <Button variant="outline" size="sm" onClick={() => handleRequestReopen(item.id)}>
+                <RotateCcw data-icon="inline-start" />
+                Reopen Evaluation
+              </Button>
+            )}
           </>
         )}
       />
@@ -164,6 +301,19 @@ export function FacultyPublishedEvaluations({
         onConfirm={handleConfirmClose}
         isPending={isPending}
       />
+
+      {evaluationToReopen && (
+        <ReopenEvaluationDialog
+          deploymentName={evaluationToReopen.deploymentName}
+          open={reopenDialogOpen}
+          onOpenChange={(open) => {
+            setReopenDialogOpen(open);
+            if (!open) setEvaluationToReopen(null);
+          }}
+          onConfirm={handleConfirmReopen}
+          isPending={isPending}
+        />
+      )}
     </div>
   );
 }

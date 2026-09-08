@@ -136,11 +136,7 @@ export type RosterEligibilityProjection = {
   reason: RosterEligibilityReason | null;
 };
 
-export type RosterState =
-  | "ACTIVE"
-  | "INACTIVE_ASSIGNMENT"
-  | "INACTIVE_ACADEMIC_PERIOD"
-  | "PUBLISHED_EVALUATION_LOCK";
+export type RosterState = "ACTIVE" | "INACTIVE_ASSIGNMENT" | "INACTIVE_ACADEMIC_PERIOD";
 
 export type CourseRosterAssignmentSummary = {
   assignmentId: string;
@@ -204,10 +200,7 @@ export type CourseRosterDetail = {
   sortDirection: "asc" | "desc";
 };
 
-export type RosterMutabilityReason =
-  | "INACTIVE_ASSIGNMENT"
-  | "INACTIVE_ACADEMIC_PERIOD"
-  | "PUBLISHED_EVALUATION_LOCK";
+export type RosterMutabilityReason = "INACTIVE_ASSIGNMENT" | "INACTIVE_ACADEMIC_PERIOD";
 
 export type CourseRosterPreviewResolution =
   | { status: "EXACT_MATCH"; reason: "EXACT"; candidateIds: string[] }

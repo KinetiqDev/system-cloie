@@ -84,19 +84,19 @@ The role-owned Faculty route for viewing and managing Course-assignment rosters 
 _Avoid_: Faculty dashboard roster widget, all-program roster page
 
 **Course roster detail**:
-The shared, server-authorized, paginated, and searchable view of Students in one Course-assignment roster. Invalid and unauthorized Course-assignment URLs are indistinguishable as not found. It shows name, email, program, major, year level, section, membership-added date, and inactive-account status. It distinguishes roster membership count from evaluation-eligible count. An authorized, default-off filter exposes removed memberships, removal time, and removal actor without including them in active counts or evaluation eligibility. Inactive assignments, completed academic periods, and published Course-bound evaluations are read-only and show a lifecycle-specific banner instead of write controls. Faculty reach it from My Course Rosters; Secretary, Dean, and Program Head reach it from an authorized Course assignment row.
+The shared, server-authorized, paginated, and searchable view of Students in one Course-assignment roster. Invalid and unauthorized Course-assignment URLs are indistinguishable as not found. It shows name, email, program, major, year level, section, membership-added date, and inactive-account status. It distinguishes roster membership count from evaluation-eligible count. An authorized, default-off filter exposes removed memberships, removal time, and removal actor without including them in active counts or evaluation eligibility. Inactive assignments and completed academic periods are read-only and show a lifecycle-specific banner instead of write controls. Published evaluations do not lock an otherwise active roster: adding or restoring an eligible Student during an open evaluation creates their EvaluationAssignment automatically. Faculty reach it from My Course Rosters; Secretary, Dean, and Program Head use their role-owned routes.
 _Avoid_: Separate administrator roster page, all-program student list
 
 **RosterState**:
-The lifecycle state behind the roster page's read-only banners: `ACTIVE`, `INACTIVE_ASSIGNMENT`, `INACTIVE_ACADEMIC_PERIOD`, or `PUBLISHED_EVALUATION_LOCK`.
+The lifecycle state behind the roster page's write availability and read-only banners: `ACTIVE`, `INACTIVE_ASSIGNMENT`, or `INACTIVE_ACADEMIC_PERIOD`. Publication is displayed through `hasPublishedEvaluation` but does not create a read-only roster state.
 _Avoid_: Free-text banner reason, client-side roster state
 
 **Faculty roster management**:
-Faculty management of Course-assignment memberships for an active Course assignment they own. It permits scoped Student search, preview-first name-roster reconciliation, and soft removal after confirmation that states its roster-only and future-evaluation effect; it does not permit changing Student profiles or term placement.
+Faculty management of Course-assignment memberships for an active Course assignment they own. It permits scoped Student search, preview-first name-roster reconciliation, and soft removal after confirmation that states its roster-only, evaluation-access, and submitted-response effects; it does not permit changing Student profiles or term placement. When an evaluation is already published and open, an eligible Student added or restored to the roster receives an EvaluationAssignment automatically.
 _Avoid_: Student administration, term enrollment administration
 
 **Course roster manager**:
-A Faculty owner, Secretary, Dean, or Program Head authorized to manage Course-assignment memberships through their active role's role-owned route. Secretary and Dean manage all programs; a Program Head manages only active program-specific Course assignments in their assigned-program scope. Membership changes require an active Course assignment in an active academic period.
+A Faculty owner, Secretary, Dean, or Program Head authorized to manage Course-assignment memberships through their active role's role-owned route. Secretary and Dean manage all programs; a Program Head manages only active program-specific Course assignments in their assigned-program scope. Membership changes require an active Course assignment in an active academic period; publication does not remove this capability.
 _Avoid_: Roster administrator, unrestricted faculty access
 
 **Roster eligibility**:
@@ -156,7 +156,7 @@ A predefined shift (Morning, Afternoon, Evening) during which a course assignmen
 _Avoid_: Section code, free-text section
 
 **Course-bound evaluation**:
-A single term-scoped evaluation of course learning outcomes (CILOs) deployed exactly once per Course assignment. Publication requires at least one active Student to receive an assignment, creates assignments for every active Student in that Course-assignment roster except explicitly excluded Students with a recorded reason, and locks the roster against membership changes. Current account, profile, and term-placement eligibility dynamically controls unsubmitted participation and pending counts. An ineligible Student cannot begin or continue pending participation, but their already submitted response remains counted. Any existing incomplete draft remains uncounted and becomes accessible again only if eligibility returns before the evaluation closes. A published evaluation blocks permanent Course assignment deletion. Development seed data creates memberships explicitly.
+A single term-scoped evaluation of course learning outcomes (CILOs) deployed exactly once per Course assignment. Publication requires at least one active Student to receive an assignment and creates assignments for every active Student in that Course-assignment roster except explicitly excluded Students with a recorded reason. While the evaluation remains open, later eligible roster additions and restorations receive an EvaluationAssignment automatically. Current account, profile, term-placement, and roster-membership eligibility dynamically controls unsubmitted participation and pending counts. An ineligible or removed Student cannot begin or continue pending participation, but their already submitted response remains counted. Any existing incomplete draft remains uncounted and becomes accessible again only if eligibility returns before the evaluation closes.
 _Avoid_: CILO evaluation, survey, exam
 
 **Course-bound evaluation exclusion**:

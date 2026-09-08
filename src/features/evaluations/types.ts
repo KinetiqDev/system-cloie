@@ -147,6 +147,7 @@ export type PreviewCourseBoundRespondentsResult =
 // ============================================================================
 
 export type FacultyPublishedEvaluationItem = {
+  termInstanceId: string;
   termInstanceLabel: string;
   activationAt: Date | null;
   courseCode: string;
@@ -167,6 +168,9 @@ export type FacultyPublishedEvaluationItem = {
   targetYearLevels: YearLevel[];
   totalAssignments: number;
 };
+
+/** Lifecycle pills for published-deployment collections. */
+export type PublishedStatusFilter = "ALL" | "ACTIVE" | "SCHEDULED" | "CLOSED" | "ARCHIVED";
 
 export type FacultyPublishedEvaluationCiloBinding = {
   ciloDescriptionSnapshot: string;
@@ -262,6 +266,10 @@ export type ListFacultyPublishedEvaluationsResult = ServiceResult<{
 export type GetFacultyEvaluationDetailResult = ServiceResult<FacultyEvaluationDetail>;
 
 export type CloseFacultyEvaluationResult = ServiceResult;
+export type ReopenFacultyEvaluationResult = ServiceResult<{
+  activationAt: Date;
+  deadlineAt: Date;
+}>;
 
 // ============================================================================
 // Preview Central Deployment Respondents (Program Head publish flow)

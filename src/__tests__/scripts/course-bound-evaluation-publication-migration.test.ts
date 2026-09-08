@@ -33,7 +33,7 @@ function parenthesesOutsideSqlStrings(sql: string) {
 }
 
 describe("course-bound evaluation publication migration", () => {
-  it("keeps exclusions scoped, audited, and protected by the roster lock", async () => {
+  it("keeps exclusions scoped, audited, and permits later roster mutation", async () => {
     const migration = await readFile(
       path.join(
         process.cwd(),
@@ -50,9 +50,21 @@ describe("course-bound evaluation publication migration", () => {
     );
     expect(migration).toContain('FOREIGN KEY ("excluded_by") REFERENCES "users"("id")');
     expect(migration).toContain("ENABLE ROW LEVEL SECURITY");
-    expect(migration).toContain("FOR UPDATE");
-    expect(migration).toContain("Course-assignment roster is locked after evaluation publication");
     expect(migration).toContain("disciplinary|discipline");
+
+    const rosterUnlockMigration = await readFile(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260907234625_allow_post_publication_course_roster_mutation.sql"
+      ),
+      "utf8"
+    );
+    expect(rosterUnlockMigration).toContain(
+      "DROP TRIGGER IF EXISTS published_course_assignment_roster_lock"
+    );
+    expect(rosterUnlockMigration).toContain(
+      "DROP FUNCTION IF EXISTS public.prevent_published_course_assignment_roster_mutation"
+    );
 
     const reversalMigration = await readFile(
       path.join(

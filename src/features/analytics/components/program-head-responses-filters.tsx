@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/drawer";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -41,9 +42,12 @@ import {
 } from "@/features/analytics/program-head-responses-labels";
 import type { ResponseFilterOptions } from "@/features/analytics/services/list-program-head-response-deployments";
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
-import { buildProgramHeadResponsesUrl } from "@/features/analytics/services/program-head-responses-state";
-import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadResponsesUrl,
+  parseProgramHeadResponsesSearchParams,
+} from "@/features/analytics/services/program-head-responses-state";
 import { cn } from "@/lib/utils";
+import { useProgramHeadResponsesNavigation } from "./program-head-responses-workspace";
 
 type FilterOption = ResponseFilterOption;
 
@@ -54,9 +58,20 @@ type Props = {
 };
 
 export function ProgramHeadResponsesFilters({ programId, state, options }: Props) {
+  const { isPending, navigate } = useProgramHeadResponsesNavigation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const activeCount = countActiveFilters(state);
   const clearHref = buildProgramHeadResponsesUrl(programId, { tab: state.tab, page: 1 });
 
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const entries = [...new FormData(event.currentTarget).entries()].filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string"
+    );
+    const parsed = parseProgramHeadResponsesSearchParams(Object.fromEntries(entries));
+    setDrawerOpen(false);
+    navigate(buildProgramHeadResponsesUrl(programId, { ...parsed, tab: state.tab, page: 1 }));
+  }
   return (
     <section
       aria-labelledby="response-filters-heading"
@@ -93,11 +108,13 @@ export function ProgramHeadResponsesFilters({ programId, state, options }: Props
           state={state}
           options={options}
           idPrefix="desktop"
+          isPending={isPending}
+          onSubmit={applyFilters}
         />
       </div>
 
       <div className="border-border border-t p-3 lg:hidden">
-        <Drawer showSwipeHandle>
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
           <DrawerTrigger render={<Button variant="outline" className="w-full justify-between" />}>
             <span>Filters</span>
             <span className="text-muted-foreground font-normal">
@@ -118,6 +135,8 @@ export function ProgramHeadResponsesFilters({ programId, state, options }: Props
                 state={state}
                 options={options}
                 idPrefix="mobile"
+                isPending={isPending}
+                onSubmit={applyFilters}
                 mobile
               />
             </div>
@@ -134,13 +153,20 @@ function FilterForm({
   options,
   idPrefix,
   mobile = false,
-}: Props & { idPrefix: string; mobile?: boolean }) {
+  isPending,
+  onSubmit,
+}: Props & {
+  idPrefix: string;
+  mobile?: boolean;
+  isPending: boolean;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
   const activeCount = countActiveFilters(state);
   const clearHref = buildProgramHeadResponsesUrl(programId, { tab: state.tab, page: 1 });
   const advancedCount = countAdvancedFilters(state);
 
   return (
-    <form method="get" action={buildProgramHeadProgramPath(programId, "responses")}>
+    <form onSubmit={onSubmit} aria-busy={isPending || undefined}>
       {state.schoolYearId ? (
         <input type="hidden" name="schoolYearId" value={state.schoolYearId} />
       ) : null}
@@ -197,7 +223,12 @@ function FilterForm({
           </div>
         </details>
 
-        <FilterActions activeCount={activeCount} clearHref={clearHref} mobile={mobile} />
+        <FilterActions
+          activeCount={activeCount}
+          clearHref={clearHref}
+          mobile={mobile}
+          isPending={isPending}
+        />
       </FieldGroup>
     </form>
   );
@@ -207,17 +238,23 @@ function FilterActions({
   activeCount,
   clearHref,
   mobile,
+  isPending,
 }: {
   activeCount: number;
   clearHref: string;
   mobile: boolean;
+  isPending: boolean;
 }) {
   return (
     <div
-      className={cn("flex items-center gap-2", mobile && "bg-popover sticky bottom-0 -mx-1 py-2")}
+      className={cn(
+        "flex items-center justify-end gap-2",
+        mobile && "bg-popover sticky bottom-0 -mx-1 py-2"
+      )}
     >
-      <Button type="submit" className={cn(mobile && "flex-1")}>
-        Apply filters
+      <Button type="submit" disabled={isPending} className={cn(mobile && "flex-1")}>
+        {isPending ? <Spinner data-icon="inline-start" /> : null}
+        {isPending ? "Applying filters" : "Apply filters"}
       </Button>
       {activeCount > 0 ? (
         <Link

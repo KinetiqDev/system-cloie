@@ -35,7 +35,7 @@ describe("Program Head profile route", () => {
     });
   });
 
-  it("shows every active assignment and returns management selection to entry", async () => {
+  it("shows every active assignment without a management selection link", async () => {
     const { default: Page } = await import("@/app/(app)/program-head/profile/page");
 
     render(await Page());
@@ -51,10 +51,9 @@ describe("Program Head profile route", () => {
         }),
       })
     );
-    expect(screen.getByRole("link", { name: "Choose a Program to manage" })).toHaveAttribute(
-      "href",
-      "/program-head"
-    );
+    expect(
+      screen.queryByRole("link", { name: "Choose a Program to manage" })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Open (BEED|BSED)/ })).not.toBeInTheDocument();
   });
 });

@@ -36,6 +36,42 @@ const outputSchema = z.object({
   trends: sectionInsightSchema,
   qualitative: sectionInsightSchema.nullable(),
 });
+const sectionInsightJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    summary: { type: "string", minLength: 1, maxLength: 400 },
+    implication: { type: "string", minLength: 1, maxLength: 400 },
+    sentiment: { type: "string", enum: AI_SENTIMENT_STATUSES },
+    watchPoints: {
+      type: "array",
+      maxItems: 3,
+      items: { type: "string", minLength: 1, maxLength: 200 },
+    },
+  },
+  required: ["summary", "implication", "sentiment", "watchPoints"],
+} as const;
+
+const facultyInsightResponseFormat = {
+  type: "json_schema" as const,
+  json_schema: {
+    name: "faculty_analytics_insight",
+    strict: true,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        participation: sectionInsightJsonSchema,
+        ratings: sectionInsightJsonSchema,
+        cilos: sectionInsightJsonSchema,
+        questions: sectionInsightJsonSchema,
+        trends: sectionInsightJsonSchema,
+        qualitative: { anyOf: [sectionInsightJsonSchema, { type: "null" }] },
+      },
+      required: ["participation", "ratings", "cilos", "questions", "trends", "qualitative"],
+    },
+  },
+};
 
 export type FacultyAISectionInsight = z.infer<typeof sectionInsightSchema>;
 export type FacultyAIInsight = z.infer<typeof outputSchema> & {
@@ -187,7 +223,7 @@ async function requestFacultyInsight(
       ...(usesCompletionTokens
         ? { max_completion_tokens: AI_MAX_OUTPUT_TOKENS }
         : { max_tokens: AI_MAX_OUTPUT_TOKENS, temperature: 0.2 }),
-      response_format: { type: "json_object" },
+      response_format: facultyInsightResponseFormat,
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION },
         {

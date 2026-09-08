@@ -48,6 +48,14 @@ type PublishedDeploymentsCollectionProps = {
   items: PublishedDeploymentItem[];
   /** Rendered when there are no deployments at all. */
   empty: ReactNode;
+  /**
+   * Rendered when deployments exist but the active filters match none.
+   * Falls back to `empty` when omitted.
+   */
+  filteredEmpty?: ReactNode;
+  /** Controlled status filter. Omit to keep the collection uncontrolled. */
+  statusFilter?: StatusFilter;
+  onStatusFilterChange?: (filter: StatusFilter) => void;
   /** Detail panel shown when a list row expands. */
   renderExpanded?: (item: PublishedDeploymentItem) => ReactNode;
   /** Role-specific dropdown items. `ctx.view` lets callers hide list-only actions
@@ -66,7 +74,9 @@ type PublishedDeploymentsCollectionProps = {
   label?: string;
 };
 
-type StatusFilter = "ALL" | DeploymentStatus;
+export type { PublishedStatusFilter } from "../types";
+
+type StatusFilter = import("../types").PublishedStatusFilter;
 
 const STATUS_FILTERS: StatusFilter[] = ["ALL", "ACTIVE", "SCHEDULED", "CLOSED", "ARCHIVED"];
 
@@ -93,12 +103,16 @@ export function PublishedDeploymentsCollection({
   view,
   items,
   empty,
+  filteredEmpty,
+  statusFilter: controlledStatusFilter,
+  onStatusFilterChange,
   renderExpanded,
   renderMenuItems,
   renderCardActions,
   label = "Published evaluations",
 }: PublishedDeploymentsCollectionProps) {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [internalStatusFilter, setInternalStatusFilter] = useState<StatusFilter>("ALL");
+  const statusFilter = controlledStatusFilter ?? internalStatusFilter;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -114,9 +128,9 @@ export function PublishedDeploymentsCollection({
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedItems = filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
   function handleFilterChange(filter: StatusFilter) {
-    setStatusFilter(filter);
+    if (controlledStatusFilter === undefined) setInternalStatusFilter(filter);
+    onStatusFilterChange?.(filter);
     setCurrentPage(1);
   }
 
@@ -149,15 +163,16 @@ export function PublishedDeploymentsCollection({
           </Button>
         ))}
       </div>
-
       {filteredItems.length === 0 ? (
-        <div className="rounded-lg border border-dashed py-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            {statusFilter === "ALL"
-              ? "No deployments match the selected filter."
-              : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
-          </p>
-        </div>
+        (filteredEmpty ?? (
+          <div className="rounded-lg border border-dashed py-8 text-center">
+            <p className="text-muted-foreground text-sm">
+              {statusFilter === "ALL"
+                ? "No deployments match the selected filter."
+                : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
+            </p>
+          </div>
+        ))
       ) : view === "card" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {paginatedItems.map((item) => (

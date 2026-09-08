@@ -37,8 +37,8 @@ _Avoid_: One request per chart, manual first-generation button, TTL-only freshne
 ## Program Head analytics surface (shipped contract)
 
 **Program Head analytics tabs**:
-Six canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative`, `ai` — encoded in URL state by `program-head-analytics-state.ts`. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change.
-_Avoid_: Legacy seven-tab vocabulary, overview as a landing tab, client-side tab authorization
+Six canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative`, `ai` — encoded in URL state by `program-head-analytics-state.ts`. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. Filter submission uses App Router navigation: the analytics frame and selected controls remain mounted while only the active evidence region presents its tab-shaped loading geometry. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change. The Program Head responses view (`course`, `program-wide` tabs in `program-head-responses-state.ts`) follows the same submission contract: filter and page changes navigate through a transition workspace that preserves the header, tabs, and filter controls while only the evaluation evidence region reloads.
+_Avoid_: Legacy seven-tab vocabulary, overview as a landing tab, client-side tab authorization, document reload on filter application, whole-workspace loading replacement
 
 **AI insight freshness**:
 The AI insight is a non-persisted, fingerprint-tagged result of the single re-authorizing Server Action; it is recomputed when the filter fingerprint changes and never cached across requests.

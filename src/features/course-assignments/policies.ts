@@ -14,7 +14,6 @@ export type CourseRosterPolicyContext = {
 export type CourseRosterMutabilityContext = {
   isActive: boolean;
   periodStatus: AcademicPeriodStatus;
-  hasPublishedEvaluation: boolean;
 };
 
 /**
@@ -79,7 +78,7 @@ export function canMutateCourseRoster(context: CourseRosterMutabilityContext):
   | { allowed: true }
   | {
       allowed: false;
-      reason: "INACTIVE_ASSIGNMENT" | "INACTIVE_ACADEMIC_PERIOD" | "PUBLISHED_EVALUATION_LOCK";
+      reason: "INACTIVE_ASSIGNMENT" | "INACTIVE_ACADEMIC_PERIOD";
     } {
   if (!context.isActive) {
     return { allowed: false, reason: "INACTIVE_ASSIGNMENT" };
@@ -87,10 +86,6 @@ export function canMutateCourseRoster(context: CourseRosterMutabilityContext):
 
   if (context.periodStatus !== "ACTIVE") {
     return { allowed: false, reason: "INACTIVE_ACADEMIC_PERIOD" };
-  }
-
-  if (context.hasPublishedEvaluation) {
-    return { allowed: false, reason: "PUBLISHED_EVALUATION_LOCK" };
   }
 
   return { allowed: true };

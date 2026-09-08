@@ -29,7 +29,11 @@ const {
   resolveProgramHeadContextMock: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
+vi.mock("next/navigation", () => ({
+  notFound: notFoundMock,
+  redirect: redirectMock,
+  useRouter: () => ({ push: vi.fn() }),
+}));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalyticsFrame: analyticsFrameMock,
   getProgramHeadAnalytics: analyticsMock,

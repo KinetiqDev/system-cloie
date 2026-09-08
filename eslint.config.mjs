@@ -13,6 +13,10 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".agent/**",
+    // Vendored skill runtimes and generated design-review reports: upstream
+    // formatting and lint state is not product code.
+    ".agents/**",
+    ".impeccable/**",
   ]),
 ]);
 

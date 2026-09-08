@@ -27,7 +27,7 @@ A deployment is answerable only while ACTIVE or SCHEDULED and activation time <=
 _Avoid_: Open period, active-only check
 
 **Eligibility gate**:
-Course-bound answering additionally requires active Course Assignment membership resolved from the authoritative roster; without it the evaluation is not available to that student.
+Course-bound answering additionally requires active Course Assignment membership resolved from the authoritative roster; without it the evaluation is not available to that student. Removing a Student after publication therefore revokes unsubmitted access without deleting their EvaluationAssignment, draft, or submitted response. Restoring eligibility before the evaluation closes restores access.
 _Avoid_: Enrollment check, deployment-wide availability
 
 ## Draft and submission

@@ -3,7 +3,11 @@ import { CourseScope } from "@prisma/client";
 
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { canManageCourseRoster, canMutateCourseRoster, canViewCourseRoster } from "@/features/course-assignments/policies";
+import {
+  canManageCourseRoster,
+  canMutateCourseRoster,
+  canViewCourseRoster,
+} from "@/features/course-assignments/policies";
 
 const assignment = {
   facultyId: "faculty-1",
@@ -22,8 +26,18 @@ describe("course roster policies", () => {
   });
 
   it("allows only the assigned Faculty member", () => {
-    expect(canViewCourseRoster(createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] }), assignment)).toEqual({ allowed: true });
-    expect(canViewCourseRoster(createAuthSessionSnapshot({ userId: "faculty-2", roles: [ROLES.FACULTY] }), assignment)).toEqual({
+    expect(
+      canViewCourseRoster(
+        createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] }),
+        assignment
+      )
+    ).toEqual({ allowed: true });
+    expect(
+      canViewCourseRoster(
+        createAuthSessionSnapshot({ userId: "faculty-2", roles: [ROLES.FACULTY] }),
+        assignment
+      )
+    ).toEqual({
       allowed: false,
       reason: "Course assignment not found.",
     });
@@ -32,17 +46,28 @@ describe("course roster policies", () => {
   it("lets Program Heads view in-scope rosters but not manage General Education", () => {
     const session = createAuthSessionSnapshot({ roles: [ROLES.PROGRAM_HEAD] });
     expect(canViewCourseRoster(session, assignment, ["program-1"])).toEqual({ allowed: true });
-    expect(canManageCourseRoster(session, { ...assignment, courseScope: CourseScope.GENERAL_EDUCATION }, ["program-1"])).toEqual({
+    expect(
+      canManageCourseRoster(
+        session,
+        { ...assignment, courseScope: CourseScope.GENERAL_EDUCATION },
+        ["program-1"]
+      )
+    ).toEqual({
       allowed: false,
       reason: "Program Heads cannot manage General Education assignments.",
     });
   });
 
   it.each([
-    ["inactive assignment", { isActive: false, periodStatus: "ACTIVE", hasPublishedEvaluation: false }, "INACTIVE_ASSIGNMENT"],
-    ["inactive period", { isActive: true, periodStatus: "COMPLETED", hasPublishedEvaluation: false }, "INACTIVE_ACADEMIC_PERIOD"],
-    ["published evaluation", { isActive: true, periodStatus: "ACTIVE", hasPublishedEvaluation: true }, "PUBLISHED_EVALUATION_LOCK"],
+    ["inactive assignment", { isActive: false, periodStatus: "ACTIVE" }, "INACTIVE_ASSIGNMENT"],
+    ["inactive period", { isActive: true, periodStatus: "COMPLETED" }, "INACTIVE_ACADEMIC_PERIOD"],
   ])("rejects writes for %s", (_, context, reason) => {
     expect(canMutateCourseRoster(context as never)).toEqual({ allowed: false, reason });
+  });
+
+  it("allows writes after evaluation publication while the assignment period is active", () => {
+    expect(canMutateCourseRoster({ isActive: true, periodStatus: "ACTIVE" })).toEqual({
+      allowed: true,
+    });
   });
 });

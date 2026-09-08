@@ -16,7 +16,6 @@ import {
   BookOpen,
   Edit,
   FileSpreadsheet,
-  GraduationCap,
   Layers,
   Plus,
   Power,
@@ -26,7 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
@@ -140,16 +139,14 @@ function StatCard({
     <Card size="sm">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardDescription className="text-label-sm truncate tracking-wider uppercase">
-            {label}
-          </CardDescription>
+          <p className="text-label-md text-muted-foreground tracking-wider uppercase">{label}</p>
           {icon}
         </div>
-        <CardTitle
+        <p
           className={`text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
         >
           {value.toLocaleString()}
-        </CardTitle>
+        </p>
       </CardHeader>
     </Card>
   );
@@ -614,7 +611,7 @@ export function ProgramHeadCoursesCatalog({
             Manage program-wide and major-specific courses for <span>{programLabel}</span>.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <FileSpreadsheet aria-hidden="true" className="size-4" />
             Import CSV
@@ -626,7 +623,7 @@ export function ProgramHeadCoursesCatalog({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <StatCard
           label="Active Courses"
           value={summary.total}
@@ -638,11 +635,6 @@ export function ProgramHeadCoursesCatalog({
           icon={<Layers aria-hidden="true" className="text-muted-foreground size-5" />}
         />
         <StatCard
-          label="Major-Specific"
-          value={summary.majorSpecific}
-          icon={<GraduationCap aria-hidden="true" className="text-muted-foreground size-5" />}
-        />
-        <StatCard
           label="Archived"
           value={summary.archived}
           icon={<Archive aria-hidden="true" className="text-muted-foreground size-5" />}
@@ -651,7 +643,7 @@ export function ProgramHeadCoursesCatalog({
       </div>
 
       {/* Filter bar */}
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         {/* Status filter */}
         <Select
           value={statusFilter}
@@ -873,7 +865,7 @@ export function ProgramHeadCoursesCatalog({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-end gap-2 px-4 py-4">
+        <div className="flex items-center justify-end gap-3">
           <span className="text-text-muted text-xs">
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}

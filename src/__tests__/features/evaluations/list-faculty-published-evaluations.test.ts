@@ -33,6 +33,7 @@ const publishedEvaluation = {
   deployment_name: "Capstone CILO Evaluation",
   published_at: new Date("2026-07-01T00:00:00.000Z"),
   status: "ACTIVE",
+  term_instance_id: "term-instance-1",
   course_info_snapshot: null,
   cilos_snapshot: null,
   course_assignment: {
@@ -100,11 +101,11 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
     prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([v2Evaluation] as never);
 
     const result = await listFacultyPublishedEvaluations();
-
     expect(result.success).toBe(true);
     expect(result.success && result.data.evaluations[0]).toMatchObject({
       courseCode: "IT-401-PREV",
       courseTitle: "Capstone 1 (previous edition)",
+      termInstanceId: "term-instance-1",
       termInstanceLabel: "2024-2025 — 2nd Semester — 2nd Term",
     });
   });
@@ -154,6 +155,50 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
       courseCode: "IT-401-LEGACY",
       courseTitle: "Legacy Capstone",
     });
+  });
+
+  it("reports a scheduled evaluation as active once its activation time has passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-08T01:00:00.000Z"));
+
+    try {
+      prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+      prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+        {
+          ...publishedEvaluation,
+          activation_at: new Date("2026-09-08T00:00:00.000Z"),
+          status: "SCHEDULED",
+        },
+      ] as never);
+
+      const result = await listFacultyPublishedEvaluations();
+
+      expect(result.success && result.data.evaluations[0]?.status).toBe("ACTIVE");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reports an evaluation as closed once its deadline has passed", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-08T01:00:00.000Z"));
+
+    try {
+      prismaMocks.courseAssignmentFindMany.mockResolvedValue([{ id: "assignment-1" }]);
+      prismaMocks.courseBoundEvaluationFindMany.mockResolvedValue([
+        {
+          ...publishedEvaluation,
+          deadline_at: new Date("2026-09-08T00:00:00.000Z"),
+          status: "ACTIVE",
+        },
+      ] as never);
+
+      const result = await listFacultyPublishedEvaluations();
+
+      expect(result.success && result.data.evaluations[0]?.status).toBe("CLOSED");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

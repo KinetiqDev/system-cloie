@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/drawer";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { showToast } from "@/components/ui/toast";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
@@ -78,8 +79,16 @@ import {
 import { WizardStepper } from "./shared/wizard-stepper";
 import { ScopedRosterStudentSearch } from "./scoped-roster-student-search";
 
-function MutationMessage({ message }: { message: string | null }) {
+function MutationMessage({ message, error }: { message: string | null; error?: boolean }) {
   if (!message) return null;
+  if (error) {
+    return (
+      <Alert variant="destructive" role="alert">
+        <AlertTitle>Could not update roster</AlertTitle>
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <Alert aria-live="polite">
       <AlertTitle>Roster update</AlertTitle>
@@ -1404,21 +1413,32 @@ function AddRosterMember({
   programId?: string;
 }) {
   const [selectedCandidate, setSelectedCandidate] = useState<ScopedRosterCandidate | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function toggleCandidate(candidate: ScopedRosterCandidate) {
+    setSelectedCandidate((current) => (current?.userId === candidate.userId ? null : candidate));
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedCandidate) return;
-    setMessage(null);
+    const addedName = selectedCandidate.name;
+    setErrorMessage(null);
     startTransition(async () => {
       const result = await addRosterMembershipAction({
         assignmentId,
         programId,
         studentUserId: selectedCandidate.userId,
       });
-      setMessage(resultMessage(result));
-      if (result.success) setSelectedCandidate(null);
+      if (result.success) {
+        showToast(result.data.message.replace(/^Student/, addedName), "success");
+        setSelectedCandidate(null);
+        return;
+      }
+      const message = result.error ?? "The roster request could not be completed.";
+      setErrorMessage(message);
+      showToast(message, "error");
     });
   }
 
@@ -1427,8 +1447,8 @@ function AddRosterMember({
       <div className="flex flex-col gap-1">
         <h2 className="text-title-md">Add one Student</h2>
         <p className="text-body-sm text-muted-foreground">
-          Search students by enrolled name. Only students who can join this class appear. Choosing a
-          name selects it below — nothing is added until you select Add Student.
+          Search by enrolled name. Only students who can join this class appear. Nothing is added
+          until you choose Add Student.
         </p>
       </div>
       <form className="flex flex-col gap-3" onSubmit={submit}>
@@ -1441,32 +1461,31 @@ function AddRosterMember({
             programId={programId}
             selectedUserId={selectedCandidate?.userId}
             onQueryChange={() => setSelectedCandidate(null)}
-            onSelect={setSelectedCandidate}
+            onSelect={toggleCandidate}
           />
         </div>
-        {selectedCandidate && (
+        {selectedCandidate ? (
           <div
-            className="border-primary-border bg-primary-soft rounded-lg border p-3"
+            className="bg-muted flex items-center justify-between gap-2 rounded-lg px-3 py-2"
             aria-live="polite"
           >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-label-md font-semibold">Selected Student</p>
-                <div className="min-w-0 break-words">
-                  <CandidateContext candidate={selectedCandidate} />
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="shrink-0 self-start"
-                onClick={() => setSelectedCandidate(null)}
-              >
-                Clear selection
-              </Button>
-            </div>
+            <p className="text-body-sm min-w-0 flex-1 truncate" title={selectedCandidate.name}>
+              Ready to add: <span className="font-medium">{selectedCandidate.name}</span>
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setSelectedCandidate(null)}
+            >
+              Clear selection
+            </Button>
           </div>
+        ) : (
+          <p className="text-body-sm text-muted-foreground">
+            Choose a student from the search results to enable Add Student.
+          </p>
         )}
         <Button
           type="submit"
@@ -1477,13 +1496,8 @@ function AddRosterMember({
           <UserPlus data-icon="inline-start" />
           {isPending ? "Adding..." : "Add Student"}
         </Button>
-        {!selectedCandidate && (
-          <p className="text-body-sm text-muted-foreground">
-            Choose a student from the search results to enable Add Student.
-          </p>
-        )}
       </form>
-      <MutationMessage message={message} />
+      <MutationMessage message={errorMessage} error />
     </div>
   );
 }
@@ -1629,15 +1643,16 @@ function CsvImportMethod({
 export function RemoveRosterMember({
   assignment,
   member,
+  hasPublishedEvaluation,
   programId,
 }: {
   assignment: CourseRosterAssignmentSummary;
   member: CourseRosterMember;
+  hasPublishedEvaluation: boolean;
   programId?: string;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const assignmentLabel = `${assignment.courseCode} - ${assignment.courseTitle} (${assignment.programCode}, ${getYearLevelDisplay(assignment.yearLevel)}, ${getSectionLabel(assignment.section)}, ${assignment.termLabel})`;
 
   function remove() {
     setMessage(null);
@@ -1664,10 +1679,12 @@ export function RemoveRosterMember({
           <AlertDialogHeader>
             <AlertDialogTitle>Remove {member.studentName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Remove {member.studentName} from Course assignment {assignmentLabel} roster only. This
-              does not affect the Student account or term placement. This excludes the Student from
-              future Course-bound evaluation eligibility for this assignment while membership is
-              removed.
+              Only the {assignment.courseCode} roster changes. {member.studentName}&apos;s student
+              account and other classes are not affected. Their submitted response, if any, is kept.
+              {hasPublishedEvaluation
+                ? " They lose access to this evaluation while removed."
+                : " They will not receive evaluations for this class while removed."}{" "}
+              They can be added back later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

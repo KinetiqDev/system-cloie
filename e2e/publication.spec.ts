@@ -3,17 +3,14 @@ import { fixture } from "./support/fixture";
 import { expectNoAxeViolations, loginAs } from "./support/helpers";
 
 /**
- * §34/§35/§36 (issue #546): Course-bound publication and roster locking end
- * to end, one workflow chain. A seeded Faculty Member opens an owned active
- * Course Assignment and publishes a Course-bound evaluation through a
- * Faculty-owned template bound to the assignment's course. The real service
- * rechecks the active period, ownership, template version, typed CILO
- * alignment, question bindings, roster eligibility, and the
+ * §34/§35/§36 (issue #546): Course-bound publication end to end, one workflow
+ * chain. A seeded Faculty Member publishes through a Faculty-owned template.
+ * The real service rechecks the active period, ownership, template version,
+ * typed CILO alignment, question bindings, roster eligibility, and the
  * one-evaluation-per-assignment rule; the browser proves the deployment
- * snapshots and one Evaluation Assignment per included Student were created.
- * The published roster becomes read-only (lock banner, no manage controls),
- * a duplicate publish attempt is rejected by the server, and a fresh Student
- * read shows the new evaluation with its instrument snapshot.
+ * snapshots and initial Evaluation Assignments were created. The roster stays
+ * manageable for late additions, a duplicate publish attempt is rejected, and
+ * a fresh Student read shows the new evaluation with its instrument snapshot.
  *
  * The journey owns the GESTECH BSBA EVENING assignment (issue #546 fixture);
  * no other e2e journey mutates it, so the write stays isolated.
@@ -24,7 +21,7 @@ const CILO_PROMPTS = [
   "I achieved the third course intended learning outcome.",
 ];
 
-test("Faculty publishes an owned Course-bound evaluation; roster locks; Student receives it", async ({
+test("Faculty publishes an owned Course-bound evaluation; roster stays open; Student receives it", async ({
   page,
 }) => {
   const fx = fixture();
@@ -85,14 +82,15 @@ test("Faculty publishes an owned Course-bound evaluation; roster locks; Student 
   await page.getByRole("tab", { name: "Published" }).click();
   await expect(page.getByText(fx.publicationDeploymentName, { exact: true })).toBeVisible();
 
-  // ── Fresh read: the published roster is review-only ─────────────────────
+  // ── Fresh read: publication preserves roster management ─────────────────
   await page.goto(`/course-rosters/${fx.publicationTarget.id}`);
-  await expect(page.getByRole("heading", { name: "Course roster" })).toBeVisible();
-  await expect(page.getByText("Published evaluation lock", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("The roster is locked for review", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Manage roster" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
+  await expect(
+    page.getByText(/eligible students added while the evaluation is open receive it automatically/i)
+  ).toBeVisible();
 
-  // Stable roster state is axe-clean (no serious/critical WCAG A/AA).
   await expectNoAxeViolations(page);
 
   // ── Duplicate publication is rejected (one deployment per assignment) ───

@@ -5,10 +5,13 @@
 
 import { existingFiles, getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
 
+const NON_LINTABLE_PREFIXES = [".agents/", ".impeccable/"];
+const LINTABLE_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
+
 function isLintableFile(file) {
-  if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) return false;
   if (file === "src/types/supabase-database.ts") return false;
-  return true;
+  if (NON_LINTABLE_PREFIXES.some((prefix) => file.startsWith(prefix))) return false;
+  return LINTABLE_PATTERN.test(file);
 }
 
 // fallow-ignore-next-line complexity

@@ -17,7 +17,14 @@ function main() {
     return;
   }
 
-  const excludedPrefixes = [".next/", "node_modules/", "playwright-report/", "test-results/"];
+  const excludedPrefixes = [
+    ".next/",
+    "node_modules/",
+    "playwright-report/",
+    "test-results/",
+    ".agents/",
+    ".impeccable/",
+  ];
   const filtered = existingFiles(
     changed.filter((f) => !excludedPrefixes.some((prefix) => f.startsWith(prefix)))
   );

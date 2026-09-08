@@ -21,14 +21,16 @@ import type {
   CourseRosterPreviewRow,
 } from "@/features/course-assignments/types";
 
-const { replaceMock, refreshMock } = vi.hoisted(() => ({
+const { replaceMock, refreshMock, showToastMock } = vi.hoisted(() => ({
   replaceMock: vi.fn(),
   refreshMock: vi.fn(),
+  showToastMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock, refresh: refreshMock }),
 }));
+vi.mock("@/components/ui/toast", () => ({ showToast: showToastMock }));
 
 function mockMatchMedia(matches: boolean) {
   vi.stubGlobal(
@@ -454,32 +456,32 @@ describe("course roster pages", () => {
       screen.getByText(/review and manage active Course assignments you own/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /historical, inactive, completed-period, and published-evaluation-locked rosters remain review-only/i
-      )
+      screen.getByText(/inactive assignments and completed Academic Periods remain review-only/i)
     ).toBeInTheDocument();
-    expect(screen.queryByText(/read-only Course roster/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/published-evaluation-locked/i)).not.toBeInTheDocument();
   });
 
-  it("renders read-only lifecycle banners and default-off removed filter", () => {
+  it("keeps a published roster open and explains automatic evaluation inclusion", () => {
     render(
       <CourseRosterDetailPage
         data={{
           ...detail,
           assignment: {
             ...detail.assignment,
-            rosterState: "PUBLISHED_EVALUATION_LOCK",
+            hasPublishedEvaluation: true,
           },
         }}
       />
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/published evaluation lock/i);
-    expect(screen.getByRole("searchbox", { name: "Search students" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /include removed students/i })).not.toBeChecked();
-    expect(screen.getByText(/course roster members and current eligibility/i)).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Student" })).toBeInTheDocument();
-    expect(screen.queryByText(/student id/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Open roster", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /manage roster/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /eligible students added while the evaluation is open receive it automatically/i
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/published evaluation lock/i)).not.toBeInTheDocument();
   });
 
   it("renders safe error output without technical details", () => {
@@ -508,8 +510,52 @@ describe("course roster pages", () => {
       />
     );
 
-    expect(screen.getByText("Removed from active roster")).toBeInTheDocument();
-    expect(screen.queryByText("Evaluation-eligible")).not.toBeInTheDocument();
+    expect(screen.getByText("Removed", { selector: '[data-slot="badge"]' })).toBeInTheDocument();
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+  });
+
+  it("presents the course identity header, context strip, and readiness counts", () => {
+    render(
+      <CourseRosterDetailPage
+        data={{
+          ...detail,
+          activeRosterCount: 3,
+          evaluationEligibleCount: 2,
+        }}
+      />
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "CS101 · Computing", level: 1 })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Course roster", { selector: "p" })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Computer Science · 2nd Year · Morning · 2026-2027 - 1st Semester - 1st Term/
+      )
+    ).toBeInTheDocument();
+    for (const label of ["On roster", "Ready for evaluation", "Need attention"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+  });
+
+  it("provides a name sort control that preserves roster filters and route scope", () => {
+    render(
+      <CourseRosterDetailPage
+        data={{ ...detail, search: "grace", includeRemoved: true, sortDirection: "desc" }}
+        programId="program-1"
+        rosterBasePath="/program-head/programs/program-1/course-rosters"
+      />
+    );
+
+    const sort = screen.getByRole("button", { name: /name z→a/i });
+    expect(sort).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(sort);
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
+    );
   });
 
   it("shows management controls only for mutable authorized rosters", () => {
@@ -528,46 +574,6 @@ describe("course roster pages", () => {
     const action = screen.getByRole("button", { name: /manage roster/i }).parentElement;
     expect(action).toHaveAttribute("data-slot", "card-action");
     expect(action).toHaveClass("sm:justify-self-end");
-  });
-
-  it("presents labelled assignment context and distinct prepared counts", () => {
-    render(
-      <CourseRosterDetailPage
-        data={{
-          ...detail,
-          activeRosterCount: 3,
-          evaluationEligibleCount: 2,
-        }}
-      />
-    );
-
-    for (const label of [
-      "Course code",
-      "Course title",
-      "Program",
-      "Year level",
-      "Class section",
-      "Academic Period",
-    ]) {
-      expect(screen.getByText(label, { selector: "dt" })).toBeInTheDocument();
-    }
-    expect(screen.getByText("3", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
-  });
-
-  it("provides a name sort control that preserves roster filters and route scope", () => {
-    render(
-      <CourseRosterDetailPage
-        data={{ ...detail, search: "grace", includeRemoved: true, sortDirection: "desc" }}
-        programId="program-1"
-        rosterBasePath="/program-head/programs/program-1/course-rosters"
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Sort by name ascending" }));
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/program-head/programs/program-1/course-rosters/assignment-1?search=grace&removed=1&sort=asc"
-    );
   });
 
   it("streams member search results after a debounce and drops the Search button", () => {
@@ -679,14 +685,29 @@ describe("course roster pages", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /remove/i }));
 
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("Grace Hopper");
-    expect(screen.getByRole("alertdialog")).toHaveTextContent("CS101 - Computing");
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      /does not affect the Student account or term placement/i
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Grace Hopper");
+    expect(dialog).toHaveTextContent(/only the CS101 roster changes/i);
+    expect(dialog).toHaveTextContent(/student account and other classes are not affected/i);
+    expect(dialog).toHaveTextContent(/will not receive evaluations for this class/i);
+    expect(dialog).toHaveTextContent(/can be added back later/i);
+  });
+
+  it("preserves submitted responses when removing from a published roster", () => {
+    render(
+      <CourseRosterDetailPage
+        data={{
+          ...detail,
+          assignment: { ...detail.assignment, hasPublishedEvaluation: true },
+        }}
+      />
     );
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(
-      /future Course-bound evaluation eligibility/i
-    );
+
+    fireEvent.click(screen.getByRole("button", { name: /remove/i }));
+
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent(/submitted response, if any, is kept/i);
+    expect(dialog).toHaveTextContent(/lose access to this evaluation while removed/i);
   });
 
   it("hides write controls for read-only or unauthorized detail data", () => {
@@ -702,22 +723,21 @@ describe("course roster pages", () => {
     expect(screen.getByText(/Review parsed rows before anyone is added/i)).toBeInTheDocument();
   });
 
-  it.each([
-    "INACTIVE_ASSIGNMENT",
-    "INACTIVE_ACADEMIC_PERIOD",
-    "PUBLISHED_EVALUATION_LOCK",
-  ] as const)("hides management entry for %s rosters", (rosterState) => {
-    render(
-      <CourseRosterDetailPage
-        data={{
-          ...detail,
-          assignment: { ...detail.assignment, rosterState },
-        }}
-      />
-    );
+  it.each(["INACTIVE_ASSIGNMENT", "INACTIVE_ACADEMIC_PERIOD"] as const)(
+    "hides management entry for %s rosters",
+    (rosterState) => {
+      render(
+        <CourseRosterDetailPage
+          data={{
+            ...detail,
+            assignment: { ...detail.assignment, rosterState },
+          }}
+        />
+      );
 
-    expect(screen.queryByRole("button", { name: /manage roster/i })).not.toBeInTheDocument();
-  });
+      expect(screen.queryByRole("button", { name: /manage roster/i })).not.toBeInTheDocument();
+    }
+  );
 
   it("provides accessible CSV import, template download, and the review phase", async () => {
     vi.spyOn(rosterActions, "previewCourseRosterAction").mockResolvedValue({
@@ -2238,11 +2258,19 @@ describe("course roster confirmation results", () => {
         ],
       },
     });
-    const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction");
+    const addSpy = vi.spyOn(rosterActions, "addRosterMembershipAction").mockResolvedValue({
+      success: true,
+      data: { outcome: "CREATED", message: "Student added to Course roster." },
+    });
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
     fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
-    expect(screen.getByText("Selected Student")).toBeInTheDocument();
-    expect(screen.getAllByText("Education").length).toBeGreaterThan(0);
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
+    expect(screen.getByText(/ready to add:/i).closest("div")).toHaveTextContent("Maria Santos");
+    fireEvent.click(screen.getByRole("button", { name: /maria santos/i }));
+    expect(screen.queryByText(/ready to add:/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add student/i })).toBeDisabled();
+    fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
     fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
     await waitFor(() =>
       expect(addSpy).toHaveBeenCalledWith({
@@ -2250,6 +2278,48 @@ describe("course roster confirmation results", () => {
         studentUserId: "student-9",
       })
     );
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Maria Santos added to Course roster.", "success")
+    );
+    expect(screen.queryByText(/ready to add:/i)).not.toBeInTheDocument();
+  });
+  it("keeps the selection and reports a failed single-add inline and as an error toast", async () => {
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /add one student/i }));
+    vi.spyOn(rosterActions, "searchScopedRosterStudentsAction").mockResolvedValue({
+      success: true,
+      data: {
+        assignmentId: "assignment-1",
+        candidates: [
+          {
+            userId: "student-9",
+            name: "Maria Santos",
+            email: "maria.santos@acd.edu.ph",
+            programId: "program-1",
+            programCode: "BSED",
+            programName: "Education",
+            yearLevel: null,
+            section: null,
+            majorName: null,
+            selectable: true,
+            reason: null,
+          },
+        ],
+      },
+    });
+    vi.spyOn(rosterActions, "addRosterMembershipAction").mockResolvedValue({
+      success: false,
+      error: "Course assignment not found.",
+    });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Maria" } });
+    fireEvent.click(await screen.findByRole("button", { name: /maria santos/i }));
+    fireEvent.submit(screen.getByRole("button", { name: /add student/i }).closest("form")!);
+    await waitFor(() =>
+      expect(showToastMock).toHaveBeenCalledWith("Course assignment not found.", "error")
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Course assignment not found.");
+    expect(screen.getByText(/ready to add:/i)).toBeInTheDocument();
   });
 
   it("shows informational already-active results when nothing needs writing", async () => {

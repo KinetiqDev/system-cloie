@@ -40,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
+import { ProgramHeadResponsesWorkspace } from "./program-head-responses-workspace";
 
 type Deployment = ResponseDeploymentList["items"][number];
 
@@ -54,7 +55,6 @@ export function ProgramHeadResponsesLanding({
   state: ProgramHeadResponsesFilterState;
   data: ResponseDeploymentList;
 }) {
-  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
   const isCourse = state.tab === "course";
   const rootHref = buildProgramHeadResponsesUrl(programId, {
     tab: state.tab,
@@ -94,71 +94,94 @@ export function ProgramHeadResponsesLanding({
         </Tab>
       </nav>
 
-      <ProgramHeadResponsesFilters programId={programId} state={state} options={data.options} />
+      <ProgramHeadResponsesWorkspace
+        tab={state.tab}
+        filters={
+          <ProgramHeadResponsesFilters programId={programId} state={state} options={data.options} />
+        }
+      >
+        <EvaluationEvidence programId={programId} state={state} data={data} isCourse={isCourse} />
+      </ProgramHeadResponsesWorkspace>
+    </div>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Evaluation evidence</CardTitle>
-          <CardDescription aria-live="polite">
-            {data.total.toLocaleString()} {data.total === 1 ? "evaluation" : "evaluations"} in this
-            view
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data.items.length === 0 ? (
-            <Empty>
-              <EmptyMedia variant="icon">
-                <ClipboardList aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>No matching evaluations</EmptyTitle>
-              <EmptyDescription>
-                No evaluations match the filters in this view. Clear the filters to see every
-                available evaluation.
-              </EmptyDescription>
-              <EmptyContent>
-                <Link
-                  href={buildProgramHeadResponsesUrl(programId, { tab: state.tab, page: 1 })}
-                  className="text-link focus-visible:ring-ring rounded-lg px-3 py-2.5 font-semibold underline underline-offset-4 focus-visible:ring-3 focus-visible:outline-none"
-                >
-                  Clear filters
-                </Link>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            <>
-              <div className="flex flex-col gap-3 lg:hidden">
-                {data.items.map((item) => (
-                  <ResponseCard
-                    key={item.id}
-                    item={item}
-                    programId={programId}
-                    isCourse={isCourse}
-                    state={state}
-                  />
-                ))}
-              </div>
-              <div className="hidden lg:block">
-                <ResponseTable
-                  items={data.items}
+function EvaluationEvidence({
+  programId,
+  state,
+  data,
+  isCourse,
+}: {
+  programId: string;
+  state: ProgramHeadResponsesFilterState;
+  data: ResponseDeploymentList;
+  isCourse: boolean;
+}) {
+  const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Evaluation evidence</CardTitle>
+        <CardDescription aria-live="polite">
+          {data.total.toLocaleString()} {data.total === 1 ? "evaluation" : "evaluations"} in this
+          view
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {data.items.length === 0 ? (
+          <Empty>
+            <EmptyMedia variant="icon">
+              <ClipboardList aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>No matching evaluations</EmptyTitle>
+            <EmptyDescription>
+              No evaluations match the filters in this view. Clear the filters to see every
+              available evaluation.
+            </EmptyDescription>
+            <EmptyContent>
+              <Link
+                href={buildProgramHeadResponsesUrl(programId, { tab: state.tab, page: 1 })}
+                className="text-link focus-visible:ring-ring rounded-lg px-3 py-2.5 font-semibold underline underline-offset-4 focus-visible:ring-3 focus-visible:outline-none"
+              >
+                Clear filters
+              </Link>
+            </EmptyContent>
+          </Empty>
+        ) : (
+          <>
+            <div className="flex flex-col gap-3 lg:hidden">
+              {data.items.map((item) => (
+                <ResponseCard
+                  key={item.id}
+                  item={item}
                   programId={programId}
                   isCourse={isCourse}
                   state={state}
                 />
-              </div>
-            </>
-          )}
-          {data.total > data.pageSize ? (
-            <div className="border-border mt-4 border-t pt-4">
-              <ProgramHeadResponsesPagination
+              ))}
+            </div>
+            <div className="hidden lg:block">
+              <ResponseTable
+                items={data.items}
                 programId={programId}
+                isCourse={isCourse}
                 state={state}
-                totalPages={totalPages}
               />
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
-    </div>
+          </>
+        )}
+        {data.total > data.pageSize ? (
+          <div className="border-border mt-4 border-t pt-4">
+            <ProgramHeadResponsesPagination
+              programId={programId}
+              state={state}
+              totalPages={totalPages}
+            />
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
