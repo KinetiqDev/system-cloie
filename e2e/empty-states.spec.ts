@@ -31,7 +31,7 @@ test("empty states differentiate the reason", async ({ page }) => {
   await page.getByRole("option", { name: "No responses" }).click();
   await page.getByRole("button", { name: "Apply filters" }).click();
   const emptyEvaluationRow = page.getByRole("row", {
-    name: /GESTECH Post-Term CILO Evaluation.*First year.*Morning/i,
+    name: /GESTECH Post-Term CILO Evaluation.*1st Year.*Morning/i,
   });
   await expect(emptyEvaluationRow).toBeVisible();
   await expect(emptyEvaluationRow.getByText("None", { exact: true })).toBeVisible();
