@@ -5,8 +5,9 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { CourseRosterDetailPage } from "@/features/course-assignments/components/course-roster-pages";
 import { getCourseRosterDetail } from "@/features/course-assignments/services/read-course-rosters";
 import { ROLES } from "@/lib/constants/roles";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Course Roster | CLOIE" };
+export const metadata = { title: buildPageTitle("Course Roster") };
 
 const searchParamsSchema = z.object({
   search: z.string().trim().max(100).optional(),

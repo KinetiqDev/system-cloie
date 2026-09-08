@@ -10,6 +10,9 @@ import {
   type DeanReadState,
 } from "@/features/dean/services/read-dean-oversight";
 import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Dashboard", "Dean") };
 
 const risks = [
   {
@@ -21,7 +24,8 @@ const risks = [
   {
     key: "incomplete-mappings",
     label: "Incomplete typed mappings",
-    description: "Contexts with active CILOs that have no valid active target for their Course scope.",
+    description:
+      "Contexts with active CILOs that have no valid active target for their Course scope.",
     dataKey: "incompleteMappings" as const,
   },
   {

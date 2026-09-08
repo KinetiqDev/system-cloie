@@ -12,6 +12,10 @@ import {
   buildProgramHeadAnalyticsPath,
   buildProgramHeadResponsesCourseResponsePath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation Responses", "Program Head") };
+
 export default async function CourseEvaluationDetailPage({
   params,
   searchParams,

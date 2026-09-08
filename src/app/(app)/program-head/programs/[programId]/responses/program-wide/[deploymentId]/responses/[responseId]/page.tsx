@@ -16,6 +16,9 @@ import {
   buildProgramHeadResponsesProgramWideDeploymentPath,
   buildProgramHeadToolsPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Response", "Program Head") };
 
 export default async function CentralResponseDetailPage({
   params,

@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Course Assignments — Dean | CLOIE" };
+export const metadata = { title: buildPageTitle("Course Assignments", "Dean") };
 
 export default async function DeanCourseAssignmentsPage({
   searchParams,

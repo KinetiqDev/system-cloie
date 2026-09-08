@@ -7,9 +7,10 @@ import {
   prepareCourseAlignmentAction,
 } from "@/lib/actions/course-alignment-actions";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Course Alignment | Faculty | CLOIE",
+  title: buildPageTitle("Course Alignment", "Faculty"),
 };
 
 export default async function CourseAlignmentPage({

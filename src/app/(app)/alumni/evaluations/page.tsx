@@ -1,6 +1,9 @@
 import { TargetStakeholder } from "@prisma/client";
 import { EvaluationListBrowser } from "@/features/users/components/evaluation-list-browser";
 import { listStakeholderEvaluations } from "@/features/responses/services/list-stakeholder-evaluations";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluations", "Alumni") };
 
 export default async function AlumniEvaluationsPage() {
   const { active, submitted } = await listStakeholderEvaluations(

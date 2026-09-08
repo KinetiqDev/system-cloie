@@ -14,6 +14,7 @@ import {
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listStudentAssignedEvaluations } from "@/features/responses/services/list-student-assigned-evaluations";
+import { buildPageTitle } from "@/lib/page-title";
 
 type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
 
@@ -25,6 +26,8 @@ const formatDate = (date: Date | null) => {
     year: "numeric",
   });
 };
+
+export const metadata = { title: buildPageTitle("History", "Student") };
 
 export default function StudentHistoryPage() {
   // Start the read before rendering so the static heading paints immediately.

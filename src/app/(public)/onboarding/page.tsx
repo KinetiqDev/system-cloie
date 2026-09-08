@@ -14,6 +14,9 @@ import { IndustryPartnerOnboardingForm } from "@/features/users/components/indus
 import { FacultyOnboardingForm } from "@/features/users/components/faculty-onboarding-form";
 import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Complete Your Profile") };
 
 export default async function OnboardingPage({
   searchParams,

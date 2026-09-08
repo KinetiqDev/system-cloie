@@ -2,6 +2,9 @@ import { SubmittedResponseReview } from "@/features/responses/components/submitt
 import { getStudentSubmittedResponseReview } from "@/features/responses/services/get-student-submitted-response-review";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/ui/back-link";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Response", "Student") };
 
 export default async function StudentSubmittedResponseReviewPage({
   params,

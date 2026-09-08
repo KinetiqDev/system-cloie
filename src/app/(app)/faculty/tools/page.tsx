@@ -5,6 +5,9 @@ import {
 } from "@/features/instruments/components/tools-view-state";
 import { listFacultyTemplates } from "@/features/instruments/services/list-faculty-templates";
 import { listFacultyPublishedEvaluations } from "@/features/evaluations/services/list-faculty-published-evaluations";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation Tools", "Faculty") };
 
 export default async function FacultyToolsRoute({
   searchParams,

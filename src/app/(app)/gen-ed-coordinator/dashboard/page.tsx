@@ -25,9 +25,10 @@ import { loadAllProgramCourseAssignmentsPageData } from "@/features/course-assig
 import { GenEdDashboardLoading } from "@/features/course-assignments/components/gen-ed-dashboard-loading";
 import { GenEdDashboardAssignmentLauncher } from "@/features/course-assignments/components/gen-ed-dashboard-assignment-launcher";
 import { CourseScope } from "@prisma/client";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Dashboard — Gen Ed Coordinator | System CLOIE",
+  title: buildPageTitle("Dashboard", "Gen Ed Coordinator"),
 };
 export default function GenEdCoordinatorDashboardPage() {
   const dashboardPromise = getGenEdDashboard();

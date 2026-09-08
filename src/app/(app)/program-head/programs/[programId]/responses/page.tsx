@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ProgramHeadResponsesLanding } from "@/features/analytics/components/program-head-responses-landing";
 import { loadProgramHeadResponsesPage } from "@/features/analytics/services/load-program-head-responses-page";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: { absolute: "Responses | Program Head | System CLOIE" } };
+export const metadata = { title: buildPageTitle("Responses", "Program Head") };
 
 export default async function SelectedProgramResponsesPage({
   params,

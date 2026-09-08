@@ -3,9 +3,10 @@ import { resolveProgramHeadContext } from "@/features/auth/services/resolve-prog
 import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
 import { loadProgramHeadCourseAssignmentsPageData } from "@/features/course-assignments/services/load-all-program-course-assignments-page";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Course Assignments | Program Head | CLOIE",
+  title: buildPageTitle("Course Assignments", "Program Head"),
 };
 
 export default async function SelectedProgramCourseAssignmentsPage({

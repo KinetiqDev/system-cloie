@@ -6,8 +6,9 @@ import {
   parseGeneralEducationAnalyticsSearchParams,
   rawGeneralEducationAnalyticsSearchParamsToQueryString,
 } from "@/features/analytics/services/general-education-analytics-state";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Analytics | Gen Ed Coordinator | System CLOIE" };
+export const metadata = { title: buildPageTitle("Analytics", "Gen Ed Coordinator") };
 
 const BASE_PATH = "/gen-ed-coordinator/analytics";
 

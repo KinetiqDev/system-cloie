@@ -10,6 +10,9 @@ import {
 } from "@/features/analytics/services/program-head-responses-state";
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Response", "Program Head") };
 
 export default async function CourseResponseDetailPage({
   params,

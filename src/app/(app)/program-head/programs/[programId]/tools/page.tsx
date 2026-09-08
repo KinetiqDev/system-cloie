@@ -7,8 +7,9 @@ import {
 import { listInstitutionalBaselines } from "@/features/instruments/services/list-institutional-baselines";
 import { listProgramHeadTemplates } from "@/features/instruments/services/manage-program-head-templates";
 import { listProgramHeadDeployments } from "@/features/evaluations/services/list-program-head-deployments";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Evaluation Tools | Program Head | CLOIE" };
+export const metadata = { title: buildPageTitle("Evaluation Tools", "Program Head") };
 
 export default async function SelectedProgramToolsPage({
   params,

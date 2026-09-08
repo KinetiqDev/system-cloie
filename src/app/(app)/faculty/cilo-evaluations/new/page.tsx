@@ -14,6 +14,9 @@ import { prisma } from "@/lib/db/prisma";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { AssignmentOption } from "@/features/evaluations/components/assignment-picker";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("New CILO Evaluation", "Faculty") };
 
 type SearchParams = {
   templateId?: string;
@@ -53,7 +56,7 @@ export default async function NewFacultyCiloEvaluationPage({
 
   // Fetch faculty's course assignments
   const assignmentsResult = await listCourseAssignmentsForFaculty();
-  
+
   if (!assignmentsResult.success) {
     redirect("/faculty/tools");
   }
@@ -62,10 +65,10 @@ export default async function NewFacultyCiloEvaluationPage({
   // Only include assignments for the template's course
   const templateCourseId = publicationContext.data.course.id;
   const assignmentOptions: AssignmentOption[] = [];
-  
+
   for (const group of assignmentsResult.data) {
     if (group.courseId !== templateCourseId) continue;
-    
+
     for (const assignment of group.assignments) {
       assignmentOptions.push({
         id: assignment.id,
@@ -85,7 +88,7 @@ export default async function NewFacultyCiloEvaluationPage({
 
   // Fetch full assignment details to get term_instance_id, program_id, and faculty info
   if (assignmentOptions.length > 0) {
-    const assignmentIds = assignmentOptions.map(a => a.id);
+    const assignmentIds = assignmentOptions.map((a) => a.id);
     const fullAssignments = await prisma.courseAssignment.findMany({
       where: { id: { in: assignmentIds } },
       select: {
@@ -101,9 +104,9 @@ export default async function NewFacultyCiloEvaluationPage({
         },
       },
     });
-    
-    const assignmentMap = new Map(fullAssignments.map(a => [a.id, a]));
-    
+
+    const assignmentMap = new Map(fullAssignments.map((a) => [a.id, a]));
+
     for (const option of assignmentOptions) {
       const full = assignmentMap.get(option.id);
       if (full) {
@@ -120,13 +123,10 @@ export default async function NewFacultyCiloEvaluationPage({
     include: {
       school_year: true,
     },
-    orderBy: [
-      { school_year: { start_date: "desc" } },
-      { semester: "asc" },
-    ],
+    orderBy: [{ school_year: { start_date: "desc" } }, { semester: "asc" }],
   });
 
-  const termInstances: TermInstanceItem[] = termInstancesData.map(ti => ({
+  const termInstances: TermInstanceItem[] = termInstancesData.map((ti) => ({
     id: ti.id,
     schoolYearId: ti.school_year_id,
     schoolYearCode: ti.school_year.code,
@@ -140,7 +140,7 @@ export default async function NewFacultyCiloEvaluationPage({
   }));
 
   // Add term instance labels to assignment options
-  const termMap = new Map(termInstances.map(t => [t.id, t]));
+  const termMap = new Map(termInstances.map((t) => [t.id, t]));
   for (const option of assignmentOptions) {
     const term = termMap.get(option.termInstanceId);
     if (term) {

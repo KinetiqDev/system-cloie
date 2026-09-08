@@ -2,6 +2,9 @@ import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/db/prisma";
 import { AddUserForm } from "@/features/users/components/secretary-add-user-form";
 import { createUserBySecretaryAction } from "@/lib/actions/secretary-user-crud-actions";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("New User", "Secretary") };
 
 export default async function AddNewUserPage() {
   const programs = await prisma.program.findMany({

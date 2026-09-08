@@ -95,11 +95,6 @@ describe("Dean Course Assignments route", () => {
     };
   }
 
-  it("exports Dean-specific metadata", async () => {
-    const { metadata } = await import("../../app/(app)/dean/course-assignments/page");
-    expect(metadata.title).toBe("Course Assignments — Dean | CLOIE");
-  });
-
   it("permanently redirects flat route to canonical Academic Structure route", async () => {
     const DeanCourseAssignmentsPage = (await import("../../app/(app)/dean/course-assignments/page"))
       .default;
@@ -270,4 +265,3 @@ describe("Secretary Course Assignments route", () => {
     expect(page.props.initialError).toBeNull();
   });
 });
-

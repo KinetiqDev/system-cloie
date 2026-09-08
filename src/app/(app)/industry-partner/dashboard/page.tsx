@@ -9,6 +9,9 @@ import { EvaluationListCard } from "@/features/users/components/evaluation-list-
 import { HeroCard } from "@/features/portals/components/hero-card";
 import { StatCards } from "@/features/users/components/stat-cards";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Dashboard", "Industry Partner") };
 
 export default async function IndustryPartnerDashboardPage() {
   const session = await resolveAuthSession();

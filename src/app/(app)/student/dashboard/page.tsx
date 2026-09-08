@@ -12,6 +12,9 @@ import { StatCards } from "@/features/users/components/stat-cards";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Dashboard", "Student") };
 
 type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
 type StudentEvaluation = StudentEvaluations["active"][number];

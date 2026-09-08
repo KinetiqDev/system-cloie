@@ -4,6 +4,9 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { getCentralDeploymentEvaluationSession } from "@/features/responses/services/get-central-deployment-evaluation-session";
 import { getCentralDeploymentSubmittedReview } from "@/features/responses/services/get-central-deployment-submitted-review";
 import { SubmittedResponseReview } from "@/features/responses/components/submitted-response-review";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation Submitted", "Industry Partner") };
 
 export default async function IndustryPartnerSubmittedPage({
   params,

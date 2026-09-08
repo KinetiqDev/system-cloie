@@ -18,9 +18,10 @@ import {
   runTermRolloverAction,
 } from "@/lib/actions/admin-rollover-actions";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Term Rollover — Admin | CLOIE",
+  title: buildPageTitle("Term Rollover", "Secretary"),
 };
 
 interface PageProps {

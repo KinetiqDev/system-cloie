@@ -25,8 +25,9 @@ import {
   buildProgramHeadDashboardPath,
   buildProgramHeadProgramPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Analytics | Program Head | System CLOIE" };
+export const metadata = { title: buildPageTitle("Analytics", "Program Head") };
 
 type ResolvedTabContent = { children: ReactNode; ploCode?: string };
 

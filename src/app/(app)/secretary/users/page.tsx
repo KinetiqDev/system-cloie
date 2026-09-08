@@ -8,6 +8,9 @@ import {
   rawSecretaryUsersSearchParamsToQueryString,
   serializeSecretaryUsersListQuery,
 } from "@/features/users/schemas/secretary-users-list";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("User Management", "Secretary") };
 
 /**
  * Transient client-consumed query params (toast feedback) that are not list

@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import { updateCourseAction } from "@/lib/actions/management-foundation-actions";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Course", "Dean") };
 
 export default async function DeanEditCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const id = (await params).id;

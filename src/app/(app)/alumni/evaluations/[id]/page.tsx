@@ -7,6 +7,9 @@ import {
   saveCentralDeploymentDraftAction,
   submitCentralDeploymentResponseAction,
 } from "@/lib/actions/stakeholder-evaluation-actions";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation", "Alumni") };
 
 export default async function AlumniEvaluationPage({
   params,

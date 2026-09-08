@@ -14,6 +14,9 @@ import {
   type DeanLearningOutcomesData,
 } from "@/features/dean/services/read-dean-oversight";
 import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Learning Outcomes", "Dean") };
 
 type SearchParams = { period?: string; risk?: string; program?: string };
 const validRisks = new Set<NonNullable<DeanLearningOutcomesData["risk"]>>([
@@ -162,7 +165,11 @@ export function LearningOutcomesContent({
       ) : (
         <div className="flex flex-col gap-3">
           {programs.map((program) => (
-            <ProgramDetail key={program.id} program={program} open={selectedProgram === program.id} />
+            <ProgramDetail
+              key={program.id}
+              program={program}
+              open={selectedProgram === program.id}
+            />
           ))}
         </div>
       )}
@@ -229,8 +236,8 @@ function ProgramDetail({
         <span className="flex min-w-0 flex-col gap-1">
           <span className="truncate font-medium">{program.name}</span>
           <span className="text-text-secondary text-xs tabular-nums">
-            {program.ploCount} Program Learning Outcomes · {institutionalGaps.length}{" "}
-            Institutional Outcome gaps · {ploGaps.length} Program Learning Outcome gaps
+            {program.ploCount} Program Learning Outcomes · {institutionalGaps.length} Institutional
+            Outcome gaps · {ploGaps.length} Program Learning Outcome gaps
           </span>
           <span className="text-text-secondary text-xs">
             {program.activeContexts} active · {program.readyContexts} ready ·{" "}
@@ -258,11 +265,7 @@ function ProgramDetail({
         <p className="text-text-secondary mt-4 text-sm">
           {coverage}% coverage from {program.readyContexts} of {program.activeContexts} contexts.
         </p>
-        <ProgramContent
-          program={program}
-          institutionalGaps={institutionalGaps}
-          ploGaps={ploGaps}
-        />
+        <ProgramContent program={program} institutionalGaps={institutionalGaps} ploGaps={ploGaps} />
       </div>
     </details>
   );
@@ -321,7 +324,9 @@ function CatalogList({
   className?: string;
 }) {
   return (
-    <ul className={["flex flex-col divide-y rounded-lg border", className].filter(Boolean).join(" ")}>
+    <ul
+      className={["flex flex-col divide-y rounded-lg border", className].filter(Boolean).join(" ")}
+    >
       {outcomes.map((outcome) => (
         <li
           key={outcome.id}
@@ -336,11 +341,7 @@ function CatalogList({
   );
 }
 
-function GapList({
-  gaps,
-}: {
-  gaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
-}) {
+function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"] }) {
   return (
     <ul className="mt-2 flex flex-col gap-2">
       {gaps.map((gap, index) => (

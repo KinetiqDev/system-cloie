@@ -4,6 +4,7 @@ import { Manrope, Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { SITE_NAME } from "@/lib/page-title";
 import { ToastProvider } from "@/components/ui/toast";
 import { AppearanceBootstrapScript } from "@/features/design-system/components/appearance-bootstrap-script";
 import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
@@ -25,12 +26,12 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "CLOIE — Assumption College of Davao",
-    template: "%s | CLOIE",
+    default: `${SITE_NAME} — Assumption College of Davao`,
+    template: `%s | ${SITE_NAME}`,
   },
   description:
     "Comprehensive Learning Outcomes and Instructional Evaluation platform for Assumption College of Davao.",
-  applicationName: "CLOIE",
+  applicationName: SITE_NAME,
   keywords: [
     "CLOIE",
     "Assumption College of Davao",
@@ -63,9 +64,7 @@ export default function RootLayout({
       className={cn("h-full", manrope.variable, inter.variable, "font-sans")}
       suppressHydrationWarning
     >
-      <head>
-        {appearanceEnabled ? <AppearanceBootstrapScript /> : null}
-      </head>
+      <head>{appearanceEnabled ? <AppearanceBootstrapScript /> : null}</head>
       <body suppressHydrationWarning className="flex min-h-full flex-col antialiased">
         <AppearanceProvider enabled={appearanceEnabled}>{children}</AppearanceProvider>
         <Suspense fallback={null}>

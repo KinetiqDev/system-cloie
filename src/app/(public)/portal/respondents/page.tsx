@@ -3,9 +3,10 @@ import { PortalShell } from "@/features/portals";
 import { ROLE_CARDS_RESPONDENT } from "@/features/portals/lib/role-card-config";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Respondent Portal | System CLOIE",
+  title: buildPageTitle("Respondent Portal"),
   description: "Sign in as a Student, Alumni, or Industry Partner",
 };
 

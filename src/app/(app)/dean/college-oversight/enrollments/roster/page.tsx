@@ -20,6 +20,9 @@ import {
   listDeanEligiblePeriods,
 } from "@/features/dean/services/read-dean-oversight";
 import { z } from "zod";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Enrollment Roster", "Dean") };
 
 type SearchParams = { period?: string; assignment?: string; query?: string; page?: string };
 const searchParamsSchema = z.object({
@@ -88,9 +91,7 @@ export default async function DeanEnrollmentRosterPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <BackLink
-          href={`/dean/college-oversight/enrollments?period=${encodeURIComponent(period)}`}
-        >
+        <BackLink href={`/dean/college-oversight/enrollments?period=${encodeURIComponent(period)}`}>
           Back to Enrollments
         </BackLink>
         <div className="flex flex-col gap-2">

@@ -9,6 +9,9 @@ import {
 } from "@/features/analytics/services/get-faculty-analytics-data";
 import type { FacultyAnalyticsFilters } from "@/features/analytics/types";
 import { ROLES } from "@/lib/constants/roles";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Analytics", "Faculty") };
 
 // Route shells session/role guards, filter normalization, and parallel authorized reads;
 // the guard checks are the route's authorization contract.

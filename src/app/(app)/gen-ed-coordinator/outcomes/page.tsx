@@ -3,9 +3,10 @@ import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listInstitutionalOutcomes } from "@/features/outcomes/services/manage-gen-ed-outcomes";
 import { GenEdOutcomesPage } from "@/features/outcomes/components/gen-ed-outcomes-page";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Institutional Learning Outcomes — Gen Ed Coordinator | System CLOIE",
+  title: buildPageTitle("Institutional Learning Outcomes", "Gen Ed Coordinator"),
 };
 
 export default async function GenEdCoordinatorOutcomesPage() {

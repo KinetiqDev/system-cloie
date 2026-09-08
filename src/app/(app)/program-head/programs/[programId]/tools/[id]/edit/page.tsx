@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { ProgramHeadTemplateBuilder } from "@/features/instruments/components/program-head-template-builder";
 import { getProgramHeadTemplate } from "@/features/instruments/services/manage-program-head-templates";
 import type { TemplateStructure } from "@/features/instruments/types";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Tool", "Program Head") };
 
 export default async function EditSelectedProgramToolPage({
   params,

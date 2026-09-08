@@ -21,6 +21,9 @@ import {
 } from "@/features/outcomes/services/manage-gen-ed-outcomes";
 import { AlertTriangle, CheckCircle2, ListChecks } from "lucide-react";
 import { BackLink } from "@/components/ui/back-link";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("CILO Mapping", "Gen Ed Coordinator") };
 
 type GECilo = GECourseCILOMappings["cilos"][number];
 

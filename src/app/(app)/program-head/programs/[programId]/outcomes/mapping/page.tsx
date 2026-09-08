@@ -19,9 +19,10 @@ import {
   type CourseCILOMappings,
 } from "@/features/outcomes/services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "CILO Mapping Review | Program Head | System CLOIE",
+  title: buildPageTitle("CILO Mapping Review", "Program Head"),
 };
 
 function manifestationLabel(value: CILOMappingManifestation | null): string {

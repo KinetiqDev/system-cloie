@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Profile", "Student") };
 
 export default async function StudentProfilePage() {
   const session = await resolveAuthSession();
@@ -143,10 +146,10 @@ export default async function StudentProfilePage() {
               <div className="space-y-2">
                 <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
                 <p className="text-text-secondary text-sm leading-relaxed">
-                  Your evaluation responses are handled confidentially. Authorized Program Heads
-                  may review submitted responses for quality assurance and accreditation purposes.
-                  Once an evaluation is finalized and submitted, it cannot be modified to protect
-                  the integrity of results.
+                  Your evaluation responses are handled confidentially. Authorized Program Heads may
+                  review submitted responses for quality assurance and accreditation purposes. Once
+                  an evaluation is finalized and submitted, it cannot be modified to protect the
+                  integrity of results.
                 </p>
               </div>
             </div>

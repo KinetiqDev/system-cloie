@@ -252,6 +252,12 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 Theme selection must not change the page pattern.
 
+### Document Titles (browser tab)
+
+- Every route sets its document title via `buildPageTitle` (`src/lib/page-title.ts`); the root template appends `| System CLOIE`, so titles never hand-type the brand.
+- Order is `{Page} | {Role}` (e.g. `Dashboard | Program Head`); omit the role only on unique public pages (e.g. `Respondent Portal`). The landing route uses the default `System CLOIE — Assumption College of Davao`.
+- The tab page segment matches the on-page H1. Separators are always `|`; never em dashes, hyphens, or `title.absolute`.
+
 ### System States
 
 - **Empty:** icon, title, explanation, recovery CTA

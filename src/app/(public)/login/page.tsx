@@ -3,6 +3,9 @@ import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Sign In") };
 
 export default async function LoginPage({
   searchParams,
@@ -38,8 +41,8 @@ export default async function LoginPage({
             priority
           />
         </div>
-        <h1 className="text-display-md font-bold tracking-tight text-primary">System CLOIE</h1>
-        <p className="mt-2 text-center text-muted-foreground">
+        <h1 className="text-display-md text-primary font-bold tracking-tight">System CLOIE</h1>
+        <p className="text-muted-foreground mt-2 text-center">
           System for Comprehensive Learning Outcomes and Instructional Evaluation
         </p>
       </div>
@@ -59,16 +62,17 @@ export default async function LoginPage({
 
       {/* Back to portal link */}
       <Card className="border-border bg-surface shadow-sm">
-        <CardHeader className="space-y-3 pb-6 pt-8 text-center">
-          <CardTitle className="text-heading-lg font-bold text-foreground">Welcome Back</CardTitle>
-          <CardDescription className="text-body-md mx-auto max-w-[280px] text-muted-foreground">
+        <CardHeader className="space-y-3 pt-8 pb-6 text-center">
+          <CardTitle className="text-heading-lg text-foreground font-bold">Welcome Back</CardTitle>
+          <CardDescription className="text-body-md text-muted-foreground mx-auto max-w-[280px]">
             Return to the portal selection to choose your role.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <p className="text-center text-body-sm text-muted-foreground">
-            Choose a role from the public portal to review the legal documents before Google sign-in.
+          <p className="text-body-sm text-muted-foreground text-center">
+            Choose a role from the public portal to review the legal documents before Google
+            sign-in.
           </p>
 
           <div className="text-center">
