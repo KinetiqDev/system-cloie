@@ -19,7 +19,7 @@ export function parseToolsViewState(searchParams: ToolsRouteSearchParams): {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const MAX_PUBLISHED_QUERY_LENGTH = 100;
+const MAX_PUBLISHED_QUERY_LENGTH = 100;
 const PUBLISHED_STATUSES = ["active", "scheduled", "closed", "archived"] as const;
 
 export function normalizePublishedQuery(query: string): string {
