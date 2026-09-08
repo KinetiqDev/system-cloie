@@ -270,6 +270,7 @@ html {
 }
 
 body {
+  position: relative;
   background-color: var(--surface-secondary);
   color: var(--text-primary);
   font-family: var(--font-body);

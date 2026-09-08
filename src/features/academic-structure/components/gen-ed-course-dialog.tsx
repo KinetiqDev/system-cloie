@@ -2,15 +2,18 @@
 
 import { CourseScope } from "@prisma/client";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import type { GenEdCourseItem } from "@/features/academic-structure/services/resolve-gen-ed-courses";
 import {
@@ -28,53 +31,68 @@ export function GenEdCourseDialog({
   course?: GenEdCourseItem;
 }) {
   const router = useRouter();
+  const [pending, setPending] = useState(false);
   const formId = course ? `edit-gen-ed-course-${course.id}` : "create-gen-ed-course";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!pending) onOpenChange(nextOpen);
+      }}
+    >
+      <ResponsiveDialogContent desktopClassName="sm:max-w-xl">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>
             {course ? "Edit General Education Course" : "Add General Education Course"}
-          </DialogTitle>
-          <DialogDescription>
+          </ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             {course
               ? `Update ${course.code}. Its scope remains college-wide General Education.`
               : "Create a college-wide General Education course."}
-          </DialogDescription>
-        </DialogHeader>
-        <CourseForm
-          action={course ? updateGenEdCourseAction : createGenEdCourseAction}
-          programs={[]}
-          majors={[]}
-          fixedScope={CourseScope.GENERAL_EDUCATION}
-          formId={formId}
-          submitLabel={course ? "Save Changes" : "Create Course"}
-          defaultValues={
-            course
-              ? {
-                  id: course.id,
-                  code: course.code,
-                  title: course.title,
-                  course_scope: CourseScope.GENERAL_EDUCATION,
-                  updated_at: course.updated_at.toISOString(),
-                }
-              : { course_scope: CourseScope.GENERAL_EDUCATION }
-          }
-          onSuccess={() => {
-            onOpenChange(false);
-            router.refresh();
-          }}
-        />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+          <CourseForm
+            action={course ? updateGenEdCourseAction : createGenEdCourseAction}
+            programs={[]}
+            majors={[]}
+            fixedScope={CourseScope.GENERAL_EDUCATION}
+            formId={formId}
+            submitLabel={course ? "Save Changes" : "Create Course"}
+            defaultValues={
+              course
+                ? {
+                    id: course.id,
+                    code: course.code,
+                    title: course.title,
+                    course_scope: CourseScope.GENERAL_EDUCATION,
+                    updated_at: course.updated_at.toISOString(),
+                  }
+                : { course_scope: CourseScope.GENERAL_EDUCATION }
+            }
+            onPendingChange={setPending}
+            onSuccess={() => {
+              onOpenChange(false);
+              router.refresh();
+            }}
+          />
+        </ResponsiveDialogBody>
+        <ResponsiveDialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full md:w-auto"
+            disabled={pending}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-          <Button type="submit" form={formId}>
+          <Button type="submit" form={formId} className="w-full md:w-auto" loading={pending}>
             {course ? "Save Changes" : "Create Course"}
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

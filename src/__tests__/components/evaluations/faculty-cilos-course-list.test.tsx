@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -168,5 +168,74 @@ describe("FacultyCilosCourseList", () => {
 
     const alignLink = screen.getByRole("button", { name: "Map CILOs for GESTECH" });
     expect(alignLink.getAttribute("href")).toContain("/faculty/cilos/course-ge/alignment");
+  });
+
+  it("keeps Map CILOs alongside Prepare questions once a course is ready", () => {
+    render(
+      <FacultyCilosCourseList
+        courses={[
+          {
+            id: "course-ready",
+            code: "ITRES2",
+            title: "Capstone Project 2",
+            courseScope: "PROGRAM_SPECIFIC",
+            courseScopeLabel: "Program-Specific",
+            programId: "program-1",
+            programCode: "BSIT",
+            programName: "BS Information Technology",
+            majorId: null,
+            majorName: null,
+            ciloCount: 4,
+            readiness: "ready",
+            coveredCiloCount: 4,
+          },
+        ]}
+        termInstances={[]}
+        selectedTermId={undefined}
+        loadCilosAction={loadCilosAction}
+        saveCilosAction={saveCilosAction}
+      />
+    );
+
+    const mapLink = screen.getByRole("button", { name: "Map CILOs for ITRES2" });
+    expect(mapLink.getAttribute("href")).toContain("/faculty/cilos/course-ready/alignment");
+    const prepareLink = screen.getByRole("button", { name: "Prepare questions for ITRES2" });
+    expect(prepareLink.getAttribute("href")).toBe("/faculty/tools");
+  });
+
+  it("exposes View, Map, and Prepare actions in the list view kebab", async () => {
+    render(
+      <FacultyCilosCourseList
+        courses={[
+          {
+            id: "course-ge",
+            code: "GESTECH",
+            title: "Science, Technology and Society",
+            courseScope: "GENERAL_EDUCATION",
+            courseScopeLabel: "General Education",
+            programId: null,
+            programCode: null,
+            programName: null,
+            majorId: null,
+            majorName: null,
+            ciloCount: 3,
+            readiness: "incomplete-mapping",
+            coveredCiloCount: 1,
+          },
+        ]}
+        termInstances={[]}
+        selectedTermId={undefined}
+        initialView="list"
+        loadCilosAction={loadCilosAction}
+        saveCilosAction={saveCilosAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Actions for GESTECH" }));
+    const menu = await screen.findByRole("menu");
+    const mapItem = within(menu).getByRole("menuitem", { name: "Map CILOs" });
+    expect(mapItem.getAttribute("href")).toContain("/faculty/cilos/course-ge/alignment");
+    expect(within(menu).getByRole("menuitem", { name: "View CILOs" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Prepare questions" })).toBeInTheDocument();
   });
 });

@@ -3,10 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus, Search } from "lucide-react";
+import { ArrowRightLeft, ClipboardList, Eye, MoreVertical, Plus, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { Button } from "@/components/ui/button";
 import {
@@ -388,7 +394,6 @@ function ViewEditCilosModal({
 // ---------------------------------------------------------------------------
 // Preparation status
 // ---------------------------------------------------------------------------
-
 function readinessLabel(course: FacultyCourseWithCiloCount): string {
   if (course.readiness === "ready") return "Ready";
   if (course.readiness === "missing-cilos") return "Missing CILOs";
@@ -410,6 +415,47 @@ function nextActionFor(course: FacultyCourseWithCiloCount, returnTo: string) {
     };
   }
   return { label: "Prepare questions", href: "/faculty/tools" };
+}
+
+function mapHrefFor(course: FacultyCourseWithCiloCount, returnTo: string): string | null {
+  if (course.ciloCount === 0) return null;
+  return `/faculty/cilos/${course.id}/alignment?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+function CourseKebab({
+  course,
+  mapHref,
+  onView,
+}: {
+  course: FacultyCourseWithCiloCount;
+  mapHref: string | null;
+  onView: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${course.code}`} />}
+      >
+        <MoreVertical className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="bottom">
+        <DropdownMenuItem onClick={onView}>
+          <Eye className="size-4" />
+          View CILOs
+        </DropdownMenuItem>
+        {mapHref && (
+          <DropdownMenuItem render={<Link href={mapHref} />}>
+            <ArrowRightLeft className="size-4" />
+            Map CILOs
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem render={<Link href="/faculty/tools" />}>
+          <ClipboardList className="size-4" />
+          Prepare questions
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -598,7 +644,7 @@ export function FacultyCilosCourseList({
           />
         </div>
 
-        <div className="flex w-full justify-start sm:w-auto sm:justify-end">
+        <div className="flex w-full justify-end sm:w-auto">
           <ToolsViewSelector label="Courses" value={view} onValueChange={handleViewChange} />
         </div>
       </div>
@@ -637,6 +683,7 @@ export function FacultyCilosCourseList({
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {paginatedCourses.map((course) => {
             const next = nextActionFor(course, returnTo);
+            const mapHref = mapHrefFor(course, returnTo);
             return (
               <li key={course.id}>
                 <Card className="flex h-full flex-col">
@@ -675,13 +722,33 @@ export function FacultyCilosCourseList({
                     >
                       View CILOs
                     </Button>
-                    <Button
-                      size="sm"
-                      render={<Link href={next.href} />}
-                      aria-label={`${next.label} for ${course.code}`}
-                    >
-                      {next.label}
-                    </Button>
+                    {mapHref ? (
+                      <Button
+                        size="sm"
+                        variant={course.readiness === "ready" ? "outline" : "default"}
+                        render={<Link href={mapHref} />}
+                        aria-label={`Map CILOs for ${course.code}`}
+                      >
+                        Map CILOs
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        render={<Link href={next.href} />}
+                        aria-label={`${next.label} for ${course.code}`}
+                      >
+                        {next.label}
+                      </Button>
+                    )}
+                    {course.readiness === "ready" && (
+                      <Button
+                        size="sm"
+                        render={<Link href="/faculty/tools" />}
+                        aria-label={`Prepare questions for ${course.code}`}
+                      >
+                        Prepare questions
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </li>
@@ -703,6 +770,7 @@ export function FacultyCilosCourseList({
               <TableBody>
                 {paginatedCourses.map((course) => {
                   const next = nextActionFor(course, returnTo);
+                  const mapHref = mapHrefFor(course, returnTo);
                   return (
                     <TableRow key={course.id}>
                       <TableCell>
@@ -722,15 +790,7 @@ export function FacultyCilosCourseList({
                       </TableCell>
                       <TableCell className="text-right">{course.ciloCount}</TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setModalCourse(course)}
-                            aria-label={`View CILOs for ${course.code}`}
-                          >
-                            View
-                          </Button>
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             size="sm"
                             render={<Link href={next.href} />}
@@ -738,6 +798,11 @@ export function FacultyCilosCourseList({
                           >
                             {next.label}
                           </Button>
+                          <CourseKebab
+                            course={course}
+                            mapHref={mapHref}
+                            onView={() => setModalCourse(course)}
+                          />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -749,6 +814,7 @@ export function FacultyCilosCourseList({
           <ul className="flex flex-col gap-3 md:hidden">
             {paginatedCourses.map((course) => {
               const next = nextActionFor(course, returnTo);
+              const mapHref = mapHrefFor(course, returnTo);
               return (
                 <li
                   key={course.id}
@@ -778,15 +844,37 @@ export function FacultyCilosCourseList({
                     >
                       View
                     </Button>
+                    {mapHref ? (
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        variant={course.readiness === "ready" ? "outline" : "default"}
+                        render={<Link href={mapHref} />}
+                        aria-label={`Map CILOs for ${course.code}`}
+                      >
+                        Map CILOs
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        render={<Link href={next.href} />}
+                        aria-label={`${next.label} for ${course.code}`}
+                      >
+                        {next.label}
+                      </Button>
+                    )}
+                  </div>
+                  {course.readiness === "ready" && (
                     <Button
                       size="sm"
-                      className="flex-1"
-                      render={<Link href={next.href} />}
-                      aria-label={`${next.label} for ${course.code}`}
+                      className="w-full"
+                      render={<Link href="/faculty/tools" />}
+                      aria-label={`Prepare questions for ${course.code}`}
                     >
-                      {next.label}
+                      Prepare questions
                     </Button>
-                  </div>
+                  )}
                 </li>
               );
             })}

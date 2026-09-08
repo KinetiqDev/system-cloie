@@ -5,13 +5,14 @@ import { RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
@@ -61,41 +62,43 @@ export function ReopenEvaluationDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+    <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-md">
+        <form onSubmit={handleSubmit} className="contents">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="flex items-center gap-2">
               <RotateCcw className="text-primary size-5" />
               Reopen {entityLabel}
-            </DialogTitle>
-            <DialogDescription>
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Reopen <span className="font-semibold">{deploymentName}</span> for {audienceLabel}.
               Their saved drafts and submitted responses will remain unchanged.
-            </DialogDescription>
-          </DialogHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
-          <FieldGroup>
-            <Field data-invalid={Boolean(error)}>
-              <FieldLabel htmlFor="reopen-deadline">New deadline</FieldLabel>
-              <Input
-                id="reopen-deadline"
-                type="datetime-local"
-                value={deadline}
-                onChange={(event) => setDeadline(event.target.value)}
-                aria-invalid={Boolean(error)}
-                aria-describedby="reopen-deadline-description"
-                disabled={isPending}
-                required
-              />
-              <FieldDescription id="reopen-deadline-description">
-                The evaluation becomes active immediately and closes after this date and time.
-              </FieldDescription>
-              <FieldError>{error}</FieldError>
-            </Field>
-          </FieldGroup>
+          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+            <FieldGroup>
+              <Field data-invalid={Boolean(error)}>
+                <FieldLabel htmlFor="reopen-deadline">New deadline</FieldLabel>
+                <Input
+                  id="reopen-deadline"
+                  type="datetime-local"
+                  value={deadline}
+                  onChange={(event) => setDeadline(event.target.value)}
+                  aria-invalid={Boolean(error)}
+                  aria-describedby="reopen-deadline-description"
+                  disabled={isPending}
+                  required
+                />
+                <FieldDescription id="reopen-deadline-description">
+                  The evaluation becomes active immediately and closes after this date and time.
+                </FieldDescription>
+                <FieldError>{error}</FieldError>
+              </Field>
+            </FieldGroup>
+          </ResponsiveDialogBody>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -107,9 +110,9 @@ export function ReopenEvaluationDialog({
             <Button type="submit" loading={isPending}>
               Reopen {entityLabel}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
