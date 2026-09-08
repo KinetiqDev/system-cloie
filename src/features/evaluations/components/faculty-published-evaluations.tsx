@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
 import {
   DEFAULT_PUBLISHED_FILTERS,
+  normalizePublishedQuery,
   updatePublishedFiltersUrl,
   type PublishedEvaluationFilters,
 } from "@/features/instruments/components/tools-view-state";
@@ -50,6 +51,7 @@ function sanitizeInitialFilters(
   const courseIds = new Set(evaluations.map((item) => item.courseId));
   return {
     ...initial,
+    query: normalizePublishedQuery(initial.query),
     periodId:
       initial.periodId !== null && periodIds.has(initial.periodId) ? initial.periodId : null,
     courseId:
@@ -96,13 +98,13 @@ export function FacultyPublishedEvaluations({
     () => filterPublishedEvaluations(localEvaluations, filters),
     [localEvaluations, filters]
   );
-
   function handleFiltersChange(
     next: PublishedEvaluationFilters,
     navigation: "push" | "replace" = "push"
   ) {
-    setFilters(next);
-    updatePublishedFiltersUrl(next, navigation);
+    const normalized = { ...next, query: normalizePublishedQuery(next.query) };
+    setFilters(normalized);
+    updatePublishedFiltersUrl(normalized, navigation);
   }
 
   function handleStatusChange(status: PublishedStatusFilter) {

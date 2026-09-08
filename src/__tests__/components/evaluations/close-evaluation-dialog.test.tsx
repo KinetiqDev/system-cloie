@@ -20,7 +20,7 @@ describe("CloseEvaluationDialog", () => {
     renderDialog();
     const dialog = screen.getByRole("alertdialog", { name: /close evaluation/i });
     expect(dialog).toHaveTextContent(
-      /are you sure you want to close Intro to CS 2026-2027\? this action cannot be undone/i
+      /are you sure you want to close Intro to CS 2026-2027\? respondents will no longer be able to submit until you reopen it/i
     );
     expect(screen.getByRole("button", { name: /close evaluation/i })).toHaveClass(
       "text-destructive"

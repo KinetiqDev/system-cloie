@@ -1,9 +1,6 @@
 import type { EvaluationToolsTab } from "./evaluation-tools-tabs";
 import type { ToolsViewMode } from "./tools-view-selector";
-
-export type { PublishedStatusFilter } from "@/features/evaluations/types";
 import type { PublishedStatusFilter } from "@/features/evaluations/types";
-
 type ToolsRouteSearchParams = Record<string, string | string[] | undefined>;
 
 /**
@@ -21,13 +18,13 @@ export function parseToolsViewState(searchParams: ToolsRouteSearchParams): {
   };
 }
 
-export const PUBLISHED_FILTER_QUERY_KEYS = ["period", "course", "q", "status"] as const;
-
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const MAX_PUBLISHED_QUERY_LENGTH = 100;
-
+export const MAX_PUBLISHED_QUERY_LENGTH = 100;
 const PUBLISHED_STATUSES = ["active", "scheduled", "closed", "archived"] as const;
+
+export function normalizePublishedQuery(query: string): string {
+  return query.trim().slice(0, MAX_PUBLISHED_QUERY_LENGTH);
+}
 
 export type PublishedEvaluationFilters = {
   periodId: string | null;
@@ -54,8 +51,7 @@ function parseUuidParam(value: string | string[] | undefined): string | null {
 }
 
 function parseQueryParam(value: string | string[] | undefined): string {
-  const candidate = firstParam(value)?.trim() ?? "";
-  return candidate.slice(0, MAX_PUBLISHED_QUERY_LENGTH);
+  return normalizePublishedQuery(firstParam(value) ?? "");
 }
 
 function parseStatusParam(value: string | string[] | undefined): PublishedStatusFilter {
@@ -99,7 +95,7 @@ export function updatePublishedFiltersUrl(
   const url = new URL(window.location.href);
   setFilterParam(url, "period", filters.periodId);
   setFilterParam(url, "course", filters.courseId);
-  setFilterParam(url, "q", filters.query.trim());
+  setFilterParam(url, "q", normalizePublishedQuery(filters.query));
   setFilterParam(url, "status", filters.status === "ALL" ? null : filters.status.toLowerCase());
   const next = `${url.pathname}${url.search}${url.hash}`;
   if (navigation === "replace") window.history.replaceState(null, "", next);

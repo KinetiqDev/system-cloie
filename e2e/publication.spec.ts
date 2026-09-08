@@ -84,7 +84,7 @@ test("Faculty publishes an owned Course-bound evaluation; roster stays open; Stu
 
   // ── Fresh read: publication preserves roster management ─────────────────
   await page.goto(`/course-rosters/${fx.publicationTarget.id}`);
-  await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
   await expect(

@@ -44,15 +44,26 @@ export async function closeFacultyEvaluation(
     };
   }
 
-  await prisma.courseBoundEvaluation.update({
+  const closed = await prisma.courseBoundEvaluation.updateMany({
     where: {
+      course_assignment: {
+        faculty_id: session.userId,
+      },
       id: evaluationId,
+      status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
     },
     data: {
       status: DeploymentStatus.CLOSED,
       updated_at: new Date(),
     },
   });
+
+  if (closed.count !== 1) {
+    return {
+      success: false,
+      error: "This evaluation can no longer be closed. Refresh the page and try again.",
+    };
+  }
 
   return { success: true, data: undefined };
 }

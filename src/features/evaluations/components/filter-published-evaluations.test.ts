@@ -123,6 +123,19 @@ describe("filterPublishedEvaluations", () => {
 
     expect(filtered.map((item) => item.evaluationId)).toEqual(["match"]);
   });
+
+  it("normalizes an overlength query the same way before and after URL parsing", () => {
+    const targetName = "a".repeat(100);
+    const items = [makeItem({ evaluationId: "target", deploymentName: targetName })];
+    const overlength = `${targetName}x`;
+
+    expect(overlength).toHaveLength(101);
+    expect(
+      filterPublishedEvaluations(items, { ...BASE_FILTERS, query: overlength }).map(
+        (item) => item.evaluationId
+      )
+    ).toEqual(["target"]);
+  });
 });
 
 describe("distinctPeriodOptions", () => {

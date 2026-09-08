@@ -1,8 +1,8 @@
 import type { DeploymentStatus } from "@prisma/client";
 
+import { normalizePublishedQuery } from "@/features/instruments/components/tools-view-state";
 import type { PublishedEvaluationFilters } from "@/features/instruments/components/tools-view-state";
 import type { FacultyPublishedEvaluationItem } from "../types";
-
 export type FilterablePublishedEvaluation = Pick<
   FacultyPublishedEvaluationItem,
   | "evaluationId"
@@ -62,7 +62,7 @@ function matchesStatus(
 }
 
 function matchesQuery(item: FilterablePublishedEvaluation, query: string): boolean {
-  const needle = query.trim().toLowerCase();
+  const needle = normalizePublishedQuery(query).toLowerCase();
   if (!needle) return true;
   return [item.deploymentName, item.courseCode, item.courseTitle, item.termInstanceLabel]
     .join(" ")

@@ -12,7 +12,7 @@ export const ANALYTICS_TABS = [
   "ai",
 ] as const;
 const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback"] as const;
-export type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
+type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
 type LegacyAnalyticsTab = (typeof LEGACY_ANALYTICS_TABS)[number];
 export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
   outcomes: "Outcomes",

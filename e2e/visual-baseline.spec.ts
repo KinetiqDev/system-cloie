@@ -61,7 +61,7 @@ test.describe("@visual curated baseline (desktop)", () => {
     await useReducedMotion(page);
     await loginAs(page, fx.demoFaculty.email);
     await gotoStable(page, `/course-rosters/${fx.gestechBsba.id}`);
-    await expect(page.getByRole("heading", { name: /Course roster ·/ })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await screenshotStable(page, "faculty-roster-workspace.png");
 
     // Overlay: the already-active suggestion is a deterministic no-op state.

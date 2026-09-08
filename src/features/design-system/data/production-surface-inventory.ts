@@ -2707,6 +2707,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/evaluations/components/faculty-published-filter-bar.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
     path: "src/features/evaluations/components/late-include-dialog.tsx",
     disposition: "task",
     taskId: 22,
@@ -2726,6 +2732,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/evaluations/components/published-deployments-collection.tsx",
+    disposition: "task",
+    taskId: 22,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/evaluations/components/reopen-evaluation-dialog.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",
