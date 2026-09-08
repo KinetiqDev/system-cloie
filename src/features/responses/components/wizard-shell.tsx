@@ -482,7 +482,7 @@ export function WizardShell({
   if (isSubmitted) {
     const receiptResponseId = submittedReceipt?.responseId;
     const formattedSubmittedAt = formatServerTimestamp(submittedReceipt?.submittedAt);
-    const hasReceiptData = Boolean(receiptResponseId || formattedSubmittedAt);
+    const hasReceiptData = Boolean(formattedSubmittedAt);
     const historyHref =
       submittedReviewHref ??
       (submittedHistoryRoute && receiptResponseId
@@ -506,14 +506,6 @@ export function WizardShell({
               Submission receipt
             </p>
             <dl className="mt-3 space-y-2">
-              {receiptResponseId && (
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-text-secondary text-body-sm shrink-0">Reference</dt>
-                  <dd className="text-text-primary text-body-sm text-right font-semibold break-all tabular-nums">
-                    {receiptResponseId}
-                  </dd>
-                </div>
-              )}
               {formattedSubmittedAt && (
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="text-text-secondary text-body-sm shrink-0">Submitted</dt>

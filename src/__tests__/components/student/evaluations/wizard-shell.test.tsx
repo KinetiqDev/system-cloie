@@ -599,7 +599,7 @@ describe("WizardShell", () => {
     expect(screen.queryByText("How to answer")).not.toBeInTheDocument();
   });
 
-  test("shows a submission receipt with response reference and server timestamp", async () => {
+  test("shows a submission receipt with server timestamp and hides the response reference", async () => {
     await completeAndSubmit({
       onSubmitResponse: vi.fn().mockResolvedValue({
         success: true,
@@ -610,7 +610,8 @@ describe("WizardShell", () => {
 
     expect(await screen.findByText("Evaluation Submitted!")).toBeDefined();
     expect(screen.getByText("Submission receipt")).toBeDefined();
-    expect(screen.getByText("resp-abc-123")).toBeDefined();
+    expect(screen.queryByText("resp-abc-123")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reference")).not.toBeInTheDocument();
     expect(screen.getByText("Submitted")).toBeDefined();
     expect(screen.getByText(/2026/)).toBeDefined();
     expect(screen.getByText(/\d{1,2}:\d{2}/)).toBeDefined();
@@ -628,6 +629,7 @@ describe("WizardShell", () => {
     const viewButton = await screen.findByRole("button", {
       name: /view submitted response/i,
     });
+    expect(screen.queryByText("resp-abc-123")).not.toBeInTheDocument();
     fireEvent.click(viewButton);
 
     expect(pushMock).toHaveBeenCalledWith("/student/history/resp-abc-123");
@@ -642,6 +644,8 @@ describe("WizardShell", () => {
     });
 
     expect(await screen.findByText("Evaluation Submitted!")).toBeDefined();
+    expect(screen.queryByText("resp-abc-123")).not.toBeInTheDocument();
+    expect(screen.queryByText("Submission receipt")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /view submitted response/i })
     ).not.toBeInTheDocument();
