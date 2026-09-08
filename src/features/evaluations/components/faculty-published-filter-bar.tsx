@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ListFilter, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -41,10 +41,16 @@ export function FacultyPublishedFilterBar({
     setSearchDraft(filters.query);
   }
 
+  // Latest committed filters for the pending search timer: reading through a
+  // ref keeps a period/course/status change made mid-debounce from being
+  // overwritten by the older snapshot closed over when typing started.
+  const latestFilters = useRef(filters);
+  latestFilters.current = filters;
+
   useEffect(() => {
-    if (searchDraft === filters.query) return;
+    if (searchDraft === latestFilters.current.query) return;
     const timeout = window.setTimeout(
-      () => onFiltersChange({ ...filters, query: searchDraft }, "replace"),
+      () => onFiltersChange({ ...latestFilters.current, query: searchDraft }, "replace"),
       300
     );
     return () => window.clearTimeout(timeout);
