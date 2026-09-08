@@ -22,25 +22,25 @@ const quickActions = [
   {
     href: "/secretary/users/new",
     label: "Add User",
-    detail: "Provision an internal or stakeholder account",
+    detail: "Provision an internal or stakeholder account.",
     icon: UserPlus,
   },
   {
     href: "/secretary/school-years",
     label: "Manage School Years",
-    detail: "Control the Academic Period lifecycle",
+    detail: "Control the Academic Period lifecycle.",
     icon: CalendarDays,
   },
   {
     href: "/secretary/course-assignments",
     label: "Find a Course Roster",
-    detail: "Open an assignment and manage its Student roster",
+    detail: "Open an assignment and manage its Student roster.",
     icon: UsersRound,
   },
   {
     href: "/secretary/course-assignments",
     label: "View Course Assignments",
-    detail: "Review assignments across all Programs",
+    detail: "Review assignments across all Programs.",
     icon: ClipboardList,
   },
 ] as const;
