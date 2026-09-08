@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
   createMajorAction,
   toggleMajorActiveAction,

@@ -39,7 +39,7 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
   editUserBySecretaryAction,
   getUserEditRecordAction,
@@ -553,12 +553,12 @@ function EditUserDialogBody({
 
               <Field>
                 <FieldLabel>Account</FieldLabel>
-                <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-                  <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <div className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                  <Mail className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate">{loadState.record.email}</span>
                   <LockedChip />
                 </div>
-                <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                <div className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
                   <Badge className={getRoleBadgeClass(loadState.record.role)}>
                     {formatRole(loadState.record.role)}
                   </Badge>
@@ -688,7 +688,9 @@ function EditUserDialogBody({
 
               {loadState.record.role === SystemRole.FACULTY && (
                 <Field>
-                  <FieldLabel htmlFor="edit-user-faculty-program">Primary Program Affiliation</FieldLabel>
+                  <FieldLabel htmlFor="edit-user-faculty-program">
+                    Primary Program Affiliation
+                  </FieldLabel>
                   <Select
                     value={programId}
                     onValueChange={(v) => setProgramId(v ?? "")}
@@ -721,8 +723,8 @@ function EditUserDialogBody({
                   <FieldLegend variant="label">Managed Programs</FieldLegend>
                   <FieldDescription>
                     Select every program this program head manages. Unchecking deactivates the
-                    assignment; checking again restores it from assignment history. Archived programs
-                    cannot be newly selected.
+                    assignment; checking again restores it from assignment history. Archived
+                    programs cannot be newly selected.
                   </FieldDescription>
                   <FieldGroup className="gap-2">
                     {programs.map((program) => {
@@ -820,7 +822,9 @@ function EditUserDialogBody({
                     </Field>
                   )}
                   <Field>
-                    <FieldLabel htmlFor="edit-user-alumni-graduation-year">Graduation Year</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-alumni-graduation-year">
+                      Graduation Year
+                    </FieldLabel>
                     <Input
                       id="edit-user-alumni-graduation-year"
                       type="number"
@@ -833,7 +837,9 @@ function EditUserDialogBody({
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="edit-user-alumni-verification">Verification Status</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-alumni-verification">
+                      Verification Status
+                    </FieldLabel>
                     <Select
                       value={verificationStatus}
                       onValueChange={(value) => setVerificationStatus(value as VerificationStatus)}
@@ -871,7 +877,9 @@ function EditUserDialogBody({
                     />
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor="edit-user-industry-position">Position (optional)</FieldLabel>
+                    <FieldLabel htmlFor="edit-user-industry-position">
+                      Position (optional)
+                    </FieldLabel>
                     <Input
                       id="edit-user-industry-position"
                       value={position}
@@ -1003,13 +1011,11 @@ function EditUserDialogBody({
                   <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                     <div className="text-muted-foreground">Previous:</div>
                     <div>
-                      {confirmationSummary.oldValues.year} •{" "}
-                      {confirmationSummary.oldValues.section}
+                      {confirmationSummary.oldValues.year} • {confirmationSummary.oldValues.section}
                     </div>
                     <div className="text-link font-medium">New:</div>
                     <div className="font-medium">
-                      {confirmationSummary.newValues.year} •{" "}
-                      {confirmationSummary.newValues.section}
+                      {confirmationSummary.newValues.year} • {confirmationSummary.newValues.section}
                     </div>
                   </div>
                 </div>
@@ -1041,7 +1047,9 @@ function EditUserDialogBody({
 
               {confirmationSummary.alumniChanged && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Alumni Academic History and Verification</h4>
+                  <h4 className="text-sm font-semibold">
+                    Alumni Academic History and Verification
+                  </h4>
                   <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                     <div className="text-muted-foreground">Previous:</div>
                     <div>

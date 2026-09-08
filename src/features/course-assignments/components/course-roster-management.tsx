@@ -50,7 +50,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showToast } from "@/components/ui/toast";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
   addRosterMembershipAction,
   confirmRosterResolutionAction,

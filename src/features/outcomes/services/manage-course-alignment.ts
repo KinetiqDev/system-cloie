@@ -51,7 +51,7 @@ export type ManifestationSnapshot = Array<{
 
 // Draft cells for the reviewed Course alignment write. Incomplete progress is
 // permitted through review; the publication alignment gate enforces completeness.
-export type ManifestationDraft = Array<{
+type ManifestationDraft = Array<{
   ciloId: string;
   mappings: Array<{ targetId: string; manifestation: CILOMappingManifestation }>;
 }>;

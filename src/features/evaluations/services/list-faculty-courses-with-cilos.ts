@@ -8,7 +8,7 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 // Types
 // ---------------------------------------------------------------------------
 
-export type FacultyCourseReadiness = "missing-cilos" | "incomplete-mapping" | "ready";
+type FacultyCourseReadiness = "missing-cilos" | "incomplete-mapping" | "ready";
 
 export type FacultyCourseWithCiloCount = {
   id: string;
@@ -121,50 +121,20 @@ export async function listFacultyCoursesWithCilos(
   });
 
   const courses: FacultyCourseWithCiloCount[] = rawCourses.map((c) => {
-    let scopeLabel = "Program-Specific";
-    if (c.course_scope === CourseScope.GENERAL_EDUCATION) {
-      scopeLabel = "General Education";
-    } else if (c.major_id) {
-      scopeLabel = "Major-Specific";
-    }
-
-    const courseCilos = cilosByCourse.get(c.id) ?? [];
-    let readiness: FacultyCourseReadiness = "missing-cilos";
-    let coveredCiloCount = 0;
-    if (courseCilos.length > 0) {
-      if (c.course_scope === CourseScope.GENERAL_EDUCATION) {
-        coveredCiloCount = courseCilos.filter((cilo) =>
-          cilo.cilo_institutional_outcome_mappings.some(
-            (mapping) =>
-              mapping.manifestation !== null && activeIloIdSet.has(mapping.institutional_outcome_id)
-          )
-        ).length;
-        readiness = coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping";
-      } else {
-        const programPlos = c.program?.id
-          ? (plosByProgram.get(c.program.id) ?? new Set<string>())
-          : new Set<string>();
-        if (programPlos.size > 0) {
-          coveredCiloCount = courseCilos.filter((cilo) =>
-            [...programPlos].every((ploId) =>
-              cilo.cilo_mappings.some(
-                (mapping) => mapping.plo_id === ploId && mapping.manifestation !== null
-              )
-            )
-          ).length;
-          readiness = coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping";
-        } else {
-          readiness = "incomplete-mapping";
-        }
-      }
-    }
+    const { readiness, coveredCiloCount } = getCourseReadiness({
+      courseScope: c.course_scope,
+      programId: c.program?.id ?? null,
+      courseCilos: cilosByCourse.get(c.id) ?? [],
+      activeIloIdSet,
+      plosByProgram,
+    });
 
     return {
       id: c.id,
       code: c.code,
       title: c.title,
       courseScope: c.course_scope,
-      courseScopeLabel: scopeLabel,
+      courseScopeLabel: getCourseScopeLabel(c.course_scope, c.major_id),
       programId: c.program?.id ?? null,
       programCode: c.program?.code ?? null,
       programName: c.program?.name ?? null,
@@ -182,5 +152,68 @@ export async function listFacultyCoursesWithCilos(
       courses,
       programs: Array.from(programsMap.values()),
     },
+  };
+}
+
+function getCourseScopeLabel(courseScope: CourseScope, majorId: string | null): string {
+  if (courseScope === CourseScope.GENERAL_EDUCATION) return "General Education";
+  if (majorId) return "Major-Specific";
+  return "Program-Specific";
+}
+
+type FacultyCiloReadinessRow = {
+  cilo_institutional_outcome_mappings: Array<{
+    institutional_outcome_id: string;
+    manifestation: string | null;
+  }>;
+  cilo_mappings: Array<{ plo_id: string; manifestation: string | null }>;
+};
+
+function getCourseReadiness({
+  courseScope,
+  programId,
+  courseCilos,
+  activeIloIdSet,
+  plosByProgram,
+}: {
+  courseScope: CourseScope;
+  programId: string | null;
+  courseCilos: FacultyCiloReadinessRow[];
+  activeIloIdSet: Set<string>;
+  plosByProgram: Map<string, Set<string>>;
+}): Pick<FacultyCourseWithCiloCount, "readiness" | "coveredCiloCount"> {
+  if (courseCilos.length === 0) {
+    return { readiness: "missing-cilos", coveredCiloCount: 0 };
+  }
+
+  if (courseScope === CourseScope.GENERAL_EDUCATION) {
+    const coveredCiloCount = courseCilos.filter((cilo) =>
+      cilo.cilo_institutional_outcome_mappings.some(
+        (mapping) =>
+          mapping.manifestation !== null && activeIloIdSet.has(mapping.institutional_outcome_id)
+      )
+    ).length;
+    return {
+      readiness: coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping",
+      coveredCiloCount,
+    };
+  }
+
+  const programPlos = programId ? (plosByProgram.get(programId) ?? new Set<string>()) : new Set();
+  if (programPlos.size === 0) {
+    return { readiness: "incomplete-mapping", coveredCiloCount: 0 };
+  }
+
+  const coveredCiloCount = courseCilos.filter((cilo) =>
+    [...programPlos].every((ploId) =>
+      cilo.cilo_mappings.some(
+        (mapping) => mapping.plo_id === ploId && mapping.manifestation !== null
+      )
+    )
+  ).length;
+
+  return {
+    readiness: coveredCiloCount === courseCilos.length ? "ready" : "incomplete-mapping",
+    coveredCiloCount,
   };
 }

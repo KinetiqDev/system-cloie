@@ -72,7 +72,7 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Label } from "@/components/ui/label";
 import {
   Select,

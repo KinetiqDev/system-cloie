@@ -81,7 +81,7 @@ import type {
 } from "@/features/course-assignments/types";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { getYearLevelDisplay, getSectionLabel } from "@/lib/constants/academic";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { buildProgramHeadCourseRosterPath } from "@/lib/constants/program-head-routes";
 import { useTableSelection } from "@/hooks/use-table-selection";
 

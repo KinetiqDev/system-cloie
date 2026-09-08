@@ -115,8 +115,9 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
   // ---- Create Program dialog state ----------------------------------------
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   // ---- Edit Program dialog state ------------------------------------------
-  const [editDialogProgram, setEditDialogProgram] =
-    useState<SecretaryProgramSummaryItem | null>(null);
+  const [editDialogProgram, setEditDialogProgram] = useState<SecretaryProgramSummaryItem | null>(
+    null
+  );
 
   // ---- Filtered programs ---------------------------------------------------
   const filteredPrograms = useMemo(() => {
@@ -256,9 +257,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>
-            Edit
-          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>Edit</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
             Manage Majors
           </DropdownMenuItem>

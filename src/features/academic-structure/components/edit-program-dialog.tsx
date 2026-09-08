@@ -18,7 +18,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { updateProgramAction } from "@/lib/actions/admin-program-actions";
 import { ProgramForm } from "./program-form";
 

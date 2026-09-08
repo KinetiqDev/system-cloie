@@ -22,7 +22,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { cn } from "@/lib/utils";
 
 type ResponsiveDialogContextValue = {

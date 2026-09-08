@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { useId, type ComponentType } from "react";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
-export type DashboardQuickAction = {
+type DashboardQuickAction = {
   href: string;
   label: string;
   detail?: string;

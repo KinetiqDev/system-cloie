@@ -19,7 +19,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type { StudentEvaluationSection } from "@/features/responses/types";
 
