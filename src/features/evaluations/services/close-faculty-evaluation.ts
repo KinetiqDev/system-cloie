@@ -23,6 +23,7 @@ export async function closeFacultyEvaluation(
     select: {
       id: true,
       status: true,
+      updated_at: true,
     },
   });
 
@@ -43,7 +44,9 @@ export async function closeFacultyEvaluation(
       error: `Cannot close evaluation with status: ${evaluation.status}. Only ACTIVE or SCHEDULED evaluations can be closed.`,
     };
   }
-
+  // Optimistic concurrency: the write only applies when the row still carries
+  // the state observed above, so a stale close cannot overwrite a reopen (or
+  // any other mutation) that landed after this operation's read.
   const closed = await prisma.courseBoundEvaluation.updateMany({
     where: {
       course_assignment: {
@@ -51,6 +54,7 @@ export async function closeFacultyEvaluation(
       },
       id: evaluationId,
       status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+      updated_at: evaluation.updated_at,
     },
     data: {
       status: DeploymentStatus.CLOSED,

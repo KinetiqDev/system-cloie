@@ -35,8 +35,9 @@ test.describe("Faculty Course roster mutation", () => {
 
     // The mutable roster detail is writable: ACTIVE state, no lock banner,
     // manage card present, seeded members listed.
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByText("GESTECH", { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: new RegExp(fx.gestechBsba.courseCode), level: 1 })
+    ).toBeVisible();
     await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
     const seededMember = page.getByRole("row", {

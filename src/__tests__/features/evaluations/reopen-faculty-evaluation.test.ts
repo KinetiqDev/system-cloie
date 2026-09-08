@@ -43,10 +43,12 @@ describe("reopenFacultyEvaluation", () => {
 
   it("reopens an owned closed evaluation immediately with a new future deadline", async () => {
     const deadlineAt = new Date("2026-09-10T01:00:00.000Z");
+    const observedUpdatedAt = new Date("2026-09-06T01:00:00.000Z");
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       deadline_at: new Date("2026-09-07T01:00:00.000Z"),
       status: DeploymentStatus.CLOSED,
+      updated_at: observedUpdatedAt,
     });
     updateManyEvaluationMock.mockResolvedValue({ count: 1 });
 
@@ -63,11 +65,12 @@ describe("reopenFacultyEvaluation", () => {
           faculty_id: "faculty-1",
         },
         id: "eval-1",
+        updated_at: observedUpdatedAt,
         OR: [
           { status: DeploymentStatus.CLOSED },
           {
             status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-            deadline_at: { lt: new Date("2026-09-08T01:00:00.000Z") },
+            deadline_at: { equals: new Date("2026-09-07T01:00:00.000Z") },
           },
         ],
       },
@@ -126,5 +129,22 @@ describe("reopenFacultyEvaluation", () => {
       error: "Evaluation not found or you do not have access.",
     });
     expect(updateManyEvaluationMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a conflict when the evaluation changed after its read", async () => {
+    findFirstEvaluationMock.mockResolvedValue({
+      id: "eval-1",
+      deadline_at: new Date("2026-09-07T01:00:00.000Z"),
+      status: DeploymentStatus.CLOSED,
+      updated_at: new Date("2026-09-06T01:00:00.000Z"),
+    });
+    updateManyEvaluationMock.mockResolvedValue({ count: 0 });
+
+    await expect(
+      reopenFacultyEvaluation("eval-1", new Date("2026-09-10T01:00:00.000Z"))
+    ).resolves.toEqual({
+      success: false,
+      error: "This evaluation is no longer closed. Refresh the page and try again.",
+    });
   });
 });

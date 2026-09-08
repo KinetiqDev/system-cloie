@@ -62,6 +62,7 @@ describe("closeFacultyEvaluation", () => {
       select: {
         id: true,
         status: true,
+        updated_at: true,
       },
     });
   });
@@ -94,6 +95,7 @@ describe("closeFacultyEvaluation", () => {
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.ACTIVE,
+      updated_at: new Date("2026-09-06T01:00:00.000Z"),
     });
     updateManyEvaluationMock.mockResolvedValue({ count: 1 });
 
@@ -104,6 +106,7 @@ describe("closeFacultyEvaluation", () => {
         course_assignment: { faculty_id: "faculty-1" },
         id: "eval-1",
         status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+        updated_at: new Date("2026-09-06T01:00:00.000Z"),
       },
       data: {
         status: DeploymentStatus.CLOSED,
@@ -121,6 +124,7 @@ describe("closeFacultyEvaluation", () => {
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.SCHEDULED,
+      updated_at: new Date("2026-09-06T01:00:00.000Z"),
     });
     updateManyEvaluationMock.mockResolvedValue({ count: 1 });
 
@@ -131,6 +135,7 @@ describe("closeFacultyEvaluation", () => {
         course_assignment: { faculty_id: "faculty-1" },
         id: "eval-1",
         status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
+        updated_at: new Date("2026-09-06T01:00:00.000Z"),
       },
       data: {
         status: DeploymentStatus.CLOSED,
@@ -148,6 +153,7 @@ describe("closeFacultyEvaluation", () => {
     findFirstEvaluationMock.mockResolvedValue({
       id: "eval-1",
       status: DeploymentStatus.ACTIVE,
+      updated_at: new Date("2026-09-06T01:00:00.000Z"),
     });
     updateManyEvaluationMock.mockResolvedValue({ count: 0 });
 

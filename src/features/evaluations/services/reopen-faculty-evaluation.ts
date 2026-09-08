@@ -31,6 +31,7 @@ export async function reopenFacultyEvaluation(
       id: true,
       deadline_at: true,
       status: true,
+      updated_at: true,
     },
   });
 
@@ -54,18 +55,21 @@ export async function reopenFacultyEvaluation(
       error: `Cannot reopen evaluation with status: ${evaluation.status}. Only closed evaluations can be reopened.`,
     };
   }
-
+  // Optimistic concurrency: the write only applies when the row still carries
+  // the state observed above, so a stale reopen cannot overwrite a close (or
+  // any other mutation) that landed after this operation's read.
   const reopened = await prisma.courseBoundEvaluation.updateMany({
     where: {
       course_assignment: {
         faculty_id: session.userId,
       },
       id: evaluationId,
+      updated_at: evaluation.updated_at,
       OR: [
         { status: DeploymentStatus.CLOSED },
         {
           status: { in: [DeploymentStatus.ACTIVE, DeploymentStatus.SCHEDULED] },
-          deadline_at: { lt: now },
+          deadline_at: evaluation.deadline_at === null ? null : { equals: evaluation.deadline_at },
         },
       ],
     },
