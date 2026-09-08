@@ -386,6 +386,22 @@ async function includeStudentInOpenEvaluation(
   });
   if (existingAssignment) return false;
 
+  // An unreversed exclusion is a recorded decision to withhold this evaluation
+  // from the student. Auto-inclusion must not bypass the reversal workflow
+  // that records the reversal before restoring evaluation access.
+  const activeExclusion = await tx.courseBoundEvaluationExclusion.findFirst({
+    where: {
+      course_bound_evaluation_id: evaluation.id,
+      reversed_at: null,
+      membership: {
+        student_user_id: studentUserId,
+        course_assignment_id: assignment.id,
+      },
+    },
+    select: { id: true },
+  });
+  if (activeExclusion) return false;
+
   await tx.evaluationAssignment.create({
     data: { course_bound_id: evaluation.id, respondent_id: studentUserId },
   });

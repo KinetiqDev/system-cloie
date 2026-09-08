@@ -48,6 +48,7 @@ const prismaMock = vi.hoisted(() => ({
     update: vi.fn(),
   },
   evaluationAssignment: { findFirst: vi.fn(), create: vi.fn() },
+  courseBoundEvaluationExclusion: { findFirst: vi.fn() },
   programHeadAssignment: { findMany: vi.fn() },
   program: { findUnique: vi.fn() },
   user: { findUnique: vi.fn() },
@@ -85,6 +86,7 @@ describe("manage course roster service", () => {
     });
     prismaMock.courseAssignmentMembership.findFirst.mockResolvedValue(null);
     prismaMock.evaluationAssignment.findFirst.mockResolvedValue(null);
+    prismaMock.courseBoundEvaluationExclusion.findFirst.mockResolvedValue(null);
     scopedCandidatesMock.mockResolvedValue({
       success: true,
       data: {
@@ -178,6 +180,46 @@ describe("manage course roster service", () => {
         removed_at: null,
       },
     });
+  });
+
+  it("restores membership without bypassing an unreversed evaluation exclusion", async () => {
+    prismaMock.courseAssignment.findUnique.mockResolvedValue({
+      ...assignment,
+      course_bound_evaluations: [
+        {
+          id: "evaluation-1",
+          published_at: new Date(),
+          status: "ACTIVE",
+          deadline_at: null,
+        },
+      ],
+    } as never);
+    prismaMock.courseAssignmentMembership.findUnique.mockResolvedValueOnce({
+      id: "membership-1",
+      course_assignment_id: "assignment-1",
+      student_user_id: "student-1",
+      is_active: false,
+      created_by: "original-creator",
+      created_at: new Date("2026-07-01T00:00:00Z"),
+    } as never);
+    prismaMock.user.findUnique.mockResolvedValue(student as never);
+    prismaMock.courseBoundEvaluationExclusion.findFirst.mockResolvedValueOnce({
+      id: "exclusion-1",
+    } as never);
+
+    await expect(restoreRosterMembership("assignment-1", "membership-1")).resolves.toEqual({
+      success: true,
+      data: { outcome: "RESTORED", message: "Student membership restored." },
+    });
+    expect(prismaMock.courseBoundEvaluationExclusion.findFirst).toHaveBeenCalledWith({
+      where: {
+        course_bound_evaluation_id: "evaluation-1",
+        reversed_at: null,
+        membership: { student_user_id: "student-1", course_assignment_id: "assignment-1" },
+      },
+      select: { id: true },
+    });
+    expect(prismaMock.evaluationAssignment.create).not.toHaveBeenCalled();
   });
 
   it("soft-removes membership with removal audit fields", async () => {
