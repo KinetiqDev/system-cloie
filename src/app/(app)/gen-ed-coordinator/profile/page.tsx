@@ -20,7 +20,9 @@ export default async function GenEdCoordinatorProfilePage() {
     <div className="motion-safe:animate-in motion-safe:fade-in max-w-4xl space-y-8 motion-safe:duration-500">
       <div>
         <h1 className="text-heading-lg">Profile</h1>
-        <p className="text-text-muted text-sm">Review your account information and coordinator scope.</p>
+        <p className="text-text-muted text-sm">
+          Review your account information and coordinator scope.
+        </p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-border shadow-sm">
@@ -35,11 +37,15 @@ export default async function GenEdCoordinatorProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-1">
-              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Full Name</p>
+              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
+                Full Name
+              </p>
               <p className="text-sm font-semibold">{fullName}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Email Address</p>
+              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
+                Email Address
+              </p>
               {/* fallow-ignore-next-line code-duplication */}
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Mail aria-hidden="true" className="text-text-muted size-4" />
@@ -72,10 +78,14 @@ export default async function GenEdCoordinatorProfilePage() {
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Authority</p>
+              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
+                Authority
+              </p>
               <p>General Education CourseAssignments across all active programs</p>
             </div>
-            <p className="text-text-muted text-xs font-normal">College-wide General Education scope. No portfolio assignment.</p>
+            <p className="text-text-muted text-xs font-normal">
+              College-wide General Education scope. No portfolio assignment.
+            </p>
           </CardContent>
         </Card>
       </div>

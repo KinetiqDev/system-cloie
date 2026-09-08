@@ -6,6 +6,7 @@
 import { existingFiles, getBaseRef, getChangedFiles, runCheck } from "./lib/changed-files.mjs";
 
 function isLintableFile(file) {
+  if (file.startsWith(".agents/") || file.startsWith(".impeccable/")) return false;
   if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(file)) return false;
   if (file === "src/types/supabase-database.ts") return false;
   return true;

@@ -51,7 +51,9 @@ describe("Program Head profile route", () => {
         }),
       })
     );
-    expect(screen.queryByRole("link", { name: "Choose a Program to manage" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Choose a Program to manage" })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Open (BEED|BSED)/ })).not.toBeInTheDocument();
   });
 });

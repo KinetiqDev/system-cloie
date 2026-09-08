@@ -262,7 +262,6 @@ export function CourseRosterDiscoveryPage({
           <CourseRosterDiscoveryFilters
             initialSearch={data.search}
             initialHistory={data.includeHistory}
-            view={activeView}
             onNavigate={navigate}
             pending={isPending}
           />

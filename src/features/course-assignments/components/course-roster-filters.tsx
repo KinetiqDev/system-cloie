@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 
@@ -8,12 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import type { CourseRosterViewMode } from "./course-roster-view-selector";
-
 type CourseRosterDiscoveryFiltersProps = {
   initialSearch: string;
   initialHistory: boolean;
-  view: CourseRosterViewMode;
   onNavigate: (search: string, history: boolean) => void;
   pending: boolean;
 };
@@ -21,7 +18,6 @@ type CourseRosterDiscoveryFiltersProps = {
 export function CourseRosterDiscoveryFilters({
   initialSearch,
   initialHistory,
-  view,
   onNavigate,
   pending,
 }: CourseRosterDiscoveryFiltersProps) {
@@ -137,13 +133,16 @@ export function CourseRosterMemberFilters({
   const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignmentId}`;
   const nextSort: "asc" | "desc" = sortDirection === "asc" ? "desc" : "asc";
 
-  const navigate = (search: string, removed: boolean, sort: "asc" | "desc") => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (removed) params.set("removed", "1");
-    params.set("sort", sort);
-    startTransition(() => router.replace(`${basePath}?${params.toString()}`));
-  };
+  const navigate = useCallback(
+    (search: string, removed: boolean, sort: "asc" | "desc") => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (removed) params.set("removed", "1");
+      params.set("sort", sort);
+      startTransition(() => router.replace(`${basePath}?${params.toString()}`));
+    },
+    [basePath, router]
+  );
 
   // Search streams in after a quiet pause while typing; the removed checkbox
   // and the sort toggle apply immediately. Both preserve route scope.
@@ -151,7 +150,7 @@ export function CourseRosterMemberFilters({
     if (searchDraft === initialSearch) return;
     const timer = setTimeout(() => navigate(searchDraft, includeRemoved, sortDirection), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeRemoved, sortDirection]);
+  }, [searchDraft, includeRemoved, sortDirection, initialSearch, navigate]);
 
   return (
     <FieldGroup
