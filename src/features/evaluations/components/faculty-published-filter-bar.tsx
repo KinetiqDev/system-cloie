@@ -45,7 +45,9 @@ export function FacultyPublishedFilterBar({
   // ref keeps a period/course/status change made mid-debounce from being
   // overwritten by the older snapshot closed over when typing started.
   const latestFilters = useRef(filters);
-  latestFilters.current = filters;
+  useEffect(() => {
+    latestFilters.current = filters;
+  });
 
   useEffect(() => {
     if (searchDraft === latestFilters.current.query) return;
