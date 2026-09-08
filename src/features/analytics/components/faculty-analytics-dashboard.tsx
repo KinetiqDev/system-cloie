@@ -57,6 +57,11 @@ import type {
   FacultyScaleDistribution,
   FacultyTrendPoint,
 } from "../types";
+import type { DeploymentStatus } from "@prisma/client";
+import {
+  formatResponseStatus,
+  responseStatusVariant,
+} from "../program-head-responses-labels";
 import type {
   FacultyAIInsight,
   FacultyAISectionInsight,
@@ -1187,7 +1192,9 @@ function ClassSummary({ data }: { data: FacultyAnalyticsData }) {
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{titleCase(item.status)}</Badge>
+                    <Badge variant={responseStatusVariant(item.status as DeploymentStatus)}>
+                      {formatResponseStatus(item.status as DeploymentStatus)}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1374,9 +1381,6 @@ function analyticsHref(filters: Partial<FacultyAnalyticsFilters>) {
   });
   const query = params.toString();
   return `/faculty/analytics${query ? `?${query}` : ""}`;
-}
-function titleCase(value: string) {
-  return value.toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
 }
 function distributionSummary(groups: FacultyScaleDistribution[]) {
   if (!groups.length) return "No valid ratings are available.";
