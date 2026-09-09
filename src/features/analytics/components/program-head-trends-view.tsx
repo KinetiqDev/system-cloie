@@ -20,14 +20,18 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import type { ProgramHeadTrendsDTO } from "@/features/analytics/program-head-analytics-types";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 import { ProgramHeadTrendChart } from "./program-head-analytics-visualizations";
 
 type ProgramHeadTrendsViewProps = {
+  programId: string;
   data: ProgramHeadTrendsDTO;
   resetHref: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
-export function ProgramHeadTrendsView({ data, resetHref }: ProgramHeadTrendsViewProps) {
+export function ProgramHeadTrendsView({ programId, data, resetHref, aiFilters }: ProgramHeadTrendsViewProps) {
   const { periods, breaks, emptyReason } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
@@ -83,6 +87,15 @@ export function ProgramHeadTrendsView({ data, resetHref }: ProgramHeadTrendsView
       )}
 
       {periods.length > 0 && <TrendsExactValueTable periods={periods} breaks={breaks} />}
+
+      {aiFilters && periods.length > 0 ? (
+        <ProgramHeadInlineAiInsight
+          programId={programId}
+          analyticsView="trends"
+          filters={aiFilters}
+          evidenceBasis={`${periods.reduce((sum, period) => sum + period.submittedResponseCount, 0)} submitted responses across ${periods.length} academic ${periods.length === 1 ? "period" : "periods"}`}
+        />
+      ) : null}
     </div>
   );
 }

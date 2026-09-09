@@ -137,6 +137,11 @@ export type ProgramHeadOutcomeDTO = {
   /** Courses whose course-bound evidence contributed to this row. */
   contributingCourses: Array<{ id: string; code: string; title: string }>;
   /**
+   * Per-CILO contributions behind this row, valid ratings only. Each entry
+   * carries its course, mapping manifestation, mean, and valid rating count.
+   */
+  contributors: ProgramHeadOutcomeContributorDTO[];
+  /**
    * Course-bound evaluations behind this row. Links resolve to the existing
    * selected-Program CILO review route, which independently re-authorizes
    * before exposing any raw response text.
@@ -156,6 +161,26 @@ export type ProgramHeadOutcomeDTO = {
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };
+
+/**
+ * One CILO-level contribution behind a Program PLO row. Mean and valid
+ * rating count pool valid in-scale ratings only; manifestation is the
+ * descriptive label on the CILO-to-PLO mapping (never a filter or weight).
+ */
+export type ProgramHeadOutcomeContributorDTO = {
+  ciloId: string;
+  /** Positional `CILO n` label within the contributor's course. */
+  ciloCode: string;
+  ciloDescription: string;
+  /** Course behind the contribution; null when the course record is gone. */
+  course: { id: string; code: string; title: string } | null;
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  /** Mean of valid in-scale ratings; contributors always have at least one. */
+  meanRating: number;
+  /** Count of valid in-scale ratings from this contributor. */
+  ratingCount: number;
+};
+
 
 /**
  * One program-wide evidence row from a central deployment (student, alumni, or

@@ -12,6 +12,11 @@ import {
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
+  Disclosure,
+  DisclosureContent,
+  DisclosureTrigger,
+} from "@/components/ui/disclosure";
+import {
   Table,
   TableBody,
   TableCell,
@@ -55,11 +60,10 @@ function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum
   const showsLinks = rows.some((row) => (row.links?.length ?? 0) > 0);
 
   return (
-    <details className="group">
-      <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11">
-        <span>View exact values</span>
-      </summary>
-      <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
+    <Disclosure>
+      <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
+      <DisclosureContent>
+        <div className="border-border/80 overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by comparison group">
           <TableHeader>
             <TableRow>
@@ -107,8 +111,9 @@ function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum
             ))}
           </TableBody>
         </Table>
-      </div>
-    </details>
+        </div>
+      </DisclosureContent>
+    </Disclosure>
   );
 }
 
@@ -179,7 +184,7 @@ export function ProgramHeadComparisonChart({
           <BarChart
             data={ranked}
             layout="vertical"
-            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
           >
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />

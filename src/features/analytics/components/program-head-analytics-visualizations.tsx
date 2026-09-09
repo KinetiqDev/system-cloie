@@ -5,8 +5,7 @@ import type { ComponentProps } from "react";
 import { AnalyticsChartSkeleton } from "./program-head-analytics-content-fallback";
 import type { ProgramHeadComparisonChart as ComparisonChartComponent } from "./program-head-comparison-chart";
 import type { ProgramHeadInstrumentBreakdownChart as InstrumentChartComponent } from "./program-head-instrument-breakdown-chart";
-import type { ProgramHeadOutcomeRankingChart as OutcomeChartComponent } from "./program-head-outcome-ranking-chart";
-import type { ProgramHeadResponseCompositionDonut as CompositionChartComponent } from "./program-head-response-composition-donut";
+import type { ProgramHeadPloLollipopChart as LollipopChartComponent } from "./program-head-plo-lollipop-chart";
 import type { ProgramHeadTrendChart as TrendChartComponent } from "./program-head-trend-chart";
 import type { QualitativeWordCloud as WordCloudComponent } from "./qualitative-word-cloud";
 
@@ -41,27 +40,14 @@ export const ProgramHeadInstrumentBreakdownChart = dynamic<
   }
 );
 
-export const ProgramHeadOutcomeRankingChart = dynamic<ComponentProps<typeof OutcomeChartComponent>>(
+export const ProgramHeadPloLollipopChart = dynamic<ComponentProps<typeof LollipopChartComponent>>(
   () =>
-    import("./program-head-outcome-ranking-chart").then(
-      (module) => module.ProgramHeadOutcomeRankingChart
+    import("./program-head-plo-lollipop-chart").then(
+      (module) => module.ProgramHeadPloLollipopChart
     ),
   {
     ssr: false,
-    loading: () => <VisualizationFallback label="Loading outcome ranking chart" />,
-  }
-);
-
-export const ProgramHeadResponseCompositionDonut = dynamic<
-  ComponentProps<typeof CompositionChartComponent>
->(
-  () =>
-    import("./program-head-response-composition-donut").then(
-      (module) => module.ProgramHeadResponseCompositionDonut
-    ),
-  {
-    ssr: false,
-    loading: () => <VisualizationFallback label="Loading response composition chart" />,
+    loading: () => <VisualizationFallback label="Loading outcome chart" />,
   }
 );
 

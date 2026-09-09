@@ -736,13 +736,30 @@ type OutcomeBindingRow = {
   cilo: {
     id: string;
     description: string;
-    course: { id: string; code: string; title: string } | null;
-    cilo_mappings: Array<{ plo: { id: string; code: string; description: string } }>;
+    course: { id: string; code: string; title: string; cilos: Array<{ id: string }> } | null;
+    cilo_mappings: Array<{
+      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+      plo: { id: string; code: string; description: string };
+    }>;
   } | null;
 };
 
-function toPloMapping(mapping: { plo: { id: string; code: string; description: string } }) {
-  return { ploId: mapping.plo.id, code: mapping.plo.code, name: mapping.plo.description };
+function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: string): string {
+  if (!course) return "—";
+  const position = course.cilos.findIndex((cilo) => cilo.id === ciloId);
+  return position < 0 ? "—" : `CILO ${position + 1}`;
+}
+
+function toPloMapping(mapping: {
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  plo: { id: string; code: string; description: string };
+}) {
+  return {
+    ploId: mapping.plo.id,
+    code: mapping.plo.code,
+    name: mapping.plo.description,
+    manifestation: mapping.manifestation,
+  };
 }
 
 function resolveInstrumentSnapshot(
@@ -785,7 +802,14 @@ function toOutcomeEvidenceRow(
       row.response.assignment.course_bound?.instrument_version_id ?? null,
       snapshotById
     ),
-    cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
+    cilo: {
+      id: cilo.id,
+      code: ciloCodeFor(cilo.course, cilo.id),
+      description: cilo.description,
+      course: cilo.course
+        ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
+        : null,
+    },
     ploMappings: cilo.cilo_mappings.map(toPloMapping),
     evaluationId: binding.course_bound_evaluation_id,
     deploymentName: binding.course_bound_evaluation.deployment_name,
@@ -1142,10 +1166,20 @@ export async function getProgramHeadOutcomes(
               select: {
                 id: true,
                 description: true,
-                course: { select: { id: true, code: true, title: true } },
+                course: {
+                  select: {
+                    id: true,
+                    code: true,
+                    title: true,
+                    cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
+                  },
+                },
                 cilo_mappings: {
                   where: { plo: { program_id: selectedProgram.id } },
-                  select: { plo: { select: { id: true, code: true, description: true } } },
+                  select: {
+                    manifestation: true,
+                    plo: { select: { id: true, code: true, description: true } },
+                  },
                 },
               },
             },

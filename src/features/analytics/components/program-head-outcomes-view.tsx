@@ -2,6 +2,7 @@ import { ClipboardList, Inbox, Target } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Empty,
   EmptyContent,
@@ -21,8 +22,11 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
-import { ProgramHeadOutcomeRankingChart } from "./program-head-analytics-visualizations";
+import { ProgramHeadPloLollipopChart } from "./program-head-analytics-visualizations";
+import { ProgramHeadContributorMatrix } from "./program-head-contributor-matrix";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 import { SelectedPloScrollTarget } from "./selected-plo-scroll-target";
 
@@ -45,6 +49,7 @@ type ProgramHeadOutcomesViewProps = {
   resetHref: string;
   /** When set, the matching PLO row is expanded and highlighted (§16.2). */
   selectedPloId?: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
 export function ProgramHeadOutcomesView({
@@ -52,10 +57,13 @@ export function ProgramHeadOutcomesView({
   data,
   resetHref,
   selectedPloId,
+  aiFilters,
 }: ProgramHeadOutcomesViewProps) {
   const { emptyReason, outcomes, currentMappingDisclosure, manyToManyDisclosure } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
   const hasOutcomes = outcomes.length > 0;
+  const totalResponses = outcomes.reduce((sum, outcome) => sum + outcome.submittedResponseCount, 0);
+  const totalRatings = outcomes.reduce((sum, outcome) => sum + outcome.ratingCount, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,10 +165,21 @@ export function ProgramHeadOutcomesView({
             )}
           </div>
 
-          <ProgramHeadOutcomeRankingChart
+          <ProgramHeadPloLollipopChart
             title="Mean Rating by Program Learning Outcome"
             outcomes={outcomes}
           />
+
+          <ProgramHeadContributorMatrix outcomes={outcomes} selectedPloId={selectedPloId} />
+
+          {aiFilters ? (
+            <ProgramHeadInlineAiInsight
+              programId={programId}
+              analyticsView="outcomes"
+              filters={aiFilters}
+              evidenceBasis={`${totalResponses} submitted ${totalResponses === 1 ? "response" : "responses"} and ${totalRatings} valid ${totalRatings === 1 ? "rating" : "ratings"}`}
+            />
+          ) : null}
 
           <OutcomesExactValueTable
             programId={programId}
@@ -252,8 +271,6 @@ function OutcomesExactValueTable({
               <TableHead className="text-right">Mean Rating</TableHead>
               <TableHead className="text-right">Rating Count</TableHead>
               <TableHead className="text-right">Submitted Responses</TableHead>
-              <TableHead>Contributing CILOs</TableHead>
-              <TableHead>Contributing Courses</TableHead>
               <TableHead>Review Evidence</TableHead>
             </TableRow>
           </TableHeader>
@@ -286,22 +303,6 @@ function OutcomesExactValueTable({
                     {outcome.submittedResponseCount}
                   </TableCell>
                   <TableCell className="align-top">
-                    {outcome.contributingCilos.length > 0 ? (
-                      <ul className="flex list-disc flex-col gap-0.5 pl-4">
-                        {outcome.contributingCilos.map((cilo) => (
-                          <li key={cilo.id}>{cilo.description}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    {outcome.contributingCourses.length > 0
-                      ? outcome.contributingCourses.map((course) => course.code).join(", ")
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="align-top">
                     {outcome.evidenceEvaluations.length > 0 ? (
                       <ul className="flex flex-col gap-1">
                         {outcome.evidenceEvaluations.map((evaluation) => (
@@ -324,18 +325,15 @@ function OutcomesExactValueTable({
                   </TableCell>
                 </TableRow>,
                 <TableRow key={`${outcome.ploId}-detail`}>
-                  <TableCell colSpan={7}>
-                    <details open={isSelected} className="group">
-                      <summary
-                        id={detailId}
-                        className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring inline-flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11"
-                      >
+                  <TableCell colSpan={5}>
+                    <Disclosure open={isSelected}>
+                      <DisclosureTrigger variant="link" id={detailId}>
                         Details for {outcome.code}
-                      </summary>
-                      <div className="pt-3">
+                      </DisclosureTrigger>
+                      <DisclosureContent>
                         <ProgramHeadPLODetail outcome={outcome} />
-                      </div>
-                    </details>
+                      </DisclosureContent>
+                    </Disclosure>
                   </TableCell>
                 </TableRow>,
               ];

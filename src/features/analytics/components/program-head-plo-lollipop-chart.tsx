@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import { Bar, CartesianGrid, Cell, ComposedChart, Scatter, XAxis, YAxis, ZAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -10,6 +10,11 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import {
+  Disclosure,
+  DisclosureContent,
+  DisclosureTrigger,
+} from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -20,29 +25,29 @@ import {
 } from "@/components/ui/table";
 import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
 
-type RankedOutcomeDatum = {
-  label: string;
+type LollipopDatum = {
   code: string;
+  label: string;
   value: number;
 };
 
-type ProgramHeadOutcomeRankingChartProps = {
+type ProgramHeadPloLollipopChartProps = {
   title: string;
   outcomes: ProgramHeadOutcomeDTO[];
 };
 
 /**
- * Ranked Program Program Learning Outcome means. The axis domain is derived from the
- * data rather than a universal 1–5 scale, because contributing instruments
- * may legitimately use different frozen scales. Rows without a mean are never
- * drawn (they carry no defensible central tendency).
+ * PLO means as a lollipop/dot plot on the fixed 1–5 rating scale. Stems mark
+ * the distance from the scale floor and dots mark the exact mean, so
+ * outcomes stay comparable at a glance. Rows without a mean carry no
+ * defensible position and are never drawn (they remain in the exact table).
  */
-export function ProgramHeadOutcomeRankingChart({
+export function ProgramHeadPloLollipopChart({
   title,
   outcomes,
-}: ProgramHeadOutcomeRankingChartProps) {
+}: ProgramHeadPloLollipopChartProps) {
   const instanceId = useId().replace(/[:]/g, "");
-  const chartId = `outcome-ranking-${instanceId}`;
+  const chartId = `plo-lollipop-${instanceId}`;
   const titleId = `${chartId}-title`;
   const insightId = `${chartId}-insight`;
 
@@ -52,9 +57,9 @@ export function ProgramHeadOutcomeRankingChart({
         outcome.meanRating !== null
     )
     .map(
-      (outcome): RankedOutcomeDatum => ({
-        label: `${outcome.code} — ${outcome.name}`,
+      (outcome): LollipopDatum => ({
         code: outcome.code,
+        label: `${outcome.code} — ${outcome.name}`,
         value: outcome.meanRating,
       })
     )
@@ -66,25 +71,13 @@ export function ProgramHeadOutcomeRankingChart({
         <h3 id={titleId} className="text-title-sm text-foreground">
           {title}
         </h3>
-        <p className="text-body-sm text-text-secondary">
-          Only Program Learning Outcomes with at least one valid rating can be ranked; rows without
-          a mean carry no defensible central tendency.
-        </p>
         <Empty className="h-64">
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
-          <EmptyDescription>
-            No rated Program Learning Outcome evidence is available for this ranking.
-          </EmptyDescription>
+          <EmptyDescription>No valid ratings are available for these outcomes.</EmptyDescription>
         </Empty>
       </div>
     );
   }
-
-  const values = ranked.map((entry) => entry.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const domain: [number, number] =
-    values.length === 1 ? [min - 0.5, max + 0.5] : [Math.min(0, min - 0.5), max + 0.5];
 
   const insight =
     ranked.length === 1
@@ -97,33 +90,53 @@ export function ProgramHeadOutcomeRankingChart({
         <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
           {title}
         </h3>
-        <span className="text-muted-foreground text-xs font-medium">Ranked by Mean Rating</span>
+        <span className="text-muted-foreground text-xs font-medium">Fixed 1–5 scale</span>
       </div>
-      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
+      <div className="border-border/60 bg-background/50 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"
           aria-labelledby={titleId}
           aria-describedby={insightId}
-          className="aspect-auto h-full w-full"
+          className="aspect-auto w-full"
+          style={{ height: Math.max(240, ranked.length * 56 + 96) }}
         >
-          <BarChart data={ranked} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
+          <ComposedChart data={ranked} layout="vertical" margin={{ bottom: 8, left: 8, right: 24, top: 8 }}>
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="code" tickLine={false} axisLine={false} />
-            <YAxis domain={domain} tickLine={false} axisLine={false} />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+            <XAxis
+              type="number"
+              domain={[1, 5]}
+              ticks={[1, 2, 3, 4, 5]}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="code"
+              width={88}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(code: string) => (code.length > 12 ? `${code.slice(0, 11)}…` : code)}
+            />
+            <ZAxis type="number" range={[140, 140]} />
             <ChartTooltip
               formatter={(_value, _name, item) => {
-                const original = (item?.payload as RankedOutcomeDatum | undefined)?.value;
+                const original = (item?.payload as LollipopDatum | undefined)?.value;
                 return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];
               }}
             />
-            <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive={false}>
+            <Bar dataKey="value" barSize={4} radius={[2, 2, 2, 2]} isAnimationActive={false} tooltipType="none">
+              {ranked.map((entry, index) => (
+                <Cell key={entry.code} fill={chartFill(chartId, index)} fillOpacity={0.45} />
+              ))}
+            </Bar>
+            <Scatter dataKey="value" name="Mean Rating" isAnimationActive={false}>
               {ranked.map((entry, index) => (
                 <Cell key={entry.code} fill={chartFill(chartId, index)} />
               ))}
-            </Bar>
-          </BarChart>
+            </Scatter>
+          </ComposedChart>
         </ChartContainer>
       </div>
       <div
@@ -141,12 +154,11 @@ export function ProgramHeadOutcomeRankingChart({
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
-      <details className="group">
-        <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden">
-          <span>View exact values</span>
-        </summary>
-        <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
-          <Table aria-label="Ranked mean ratings by graduate outcome">
+      <Disclosure>
+        <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
+        <DisclosureContent>
+          <div className="border-border/80 overflow-x-auto rounded-lg border">
+            <Table aria-label="Mean ratings by graduate outcome on the fixed 1–5 scale">
             <TableHeader>
               <TableRow>
                 <TableHead>Program Learning Outcome</TableHead>
@@ -172,9 +184,10 @@ export function ProgramHeadOutcomeRankingChart({
                 );
               })}
             </TableBody>
-          </Table>
-        </div>
-      </details>
+            </Table>
+          </div>
+        </DisclosureContent>
+      </Disclosure>
     </div>
   );
 }

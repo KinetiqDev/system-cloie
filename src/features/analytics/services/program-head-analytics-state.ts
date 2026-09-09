@@ -9,7 +9,6 @@ export const ANALYTICS_TABS = [
   "stakeholders",
   "trends",
   "qualitative",
-  "ai",
 ] as const;
 const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback"] as const;
 type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
@@ -20,7 +19,6 @@ export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
   stakeholders: "Stakeholders",
   trends: "Trends",
   qualitative: "Qualitative",
-  ai: "AI Insights",
 };
 type AnalyticsEvidenceSource = "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
 type AnalyticsStakeholder = "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
@@ -191,4 +189,28 @@ export function buildAnalyticsFilterFingerprint(
     filters.evidenceSource ?? "",
     filters.stakeholder ?? "",
   ].join("|");
+}
+
+/**
+ * Client-submittable AI filter input. Only the keys accepted by the strict
+ * AI action schema travel to the browser; scope decisions and aggregates are
+ * always rebuilt server-side from these validated values.
+ */
+export type ProgramHeadInsightFilters = Pick<
+  AnalyticsFilterState,
+  "tab" | "schoolYearId" | "semester" | "termInstanceId" | "evidenceSource" | "stakeholder"
+>;
+
+/** Narrow full workspace state to the strict AI action input (drops undefined). */
+export function toInsightFilters(filters: AnalyticsFilterState): ProgramHeadInsightFilters {
+  return Object.fromEntries(
+    Object.entries({
+      tab: filters.tab,
+      schoolYearId: filters.schoolYearId,
+      semester: filters.semester,
+      termInstanceId: filters.termInstanceId,
+      evidenceSource: filters.evidenceSource,
+      stakeholder: filters.stakeholder,
+    }).filter(([, value]) => value !== undefined)
+  ) as ProgramHeadInsightFilters;
 }

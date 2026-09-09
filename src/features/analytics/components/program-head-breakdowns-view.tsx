@@ -22,11 +22,14 @@ import {
   ProgramHeadInstrumentBreakdownChart,
 } from "./program-head-analytics-visualizations";
 import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
 type ProgramHeadBreakdownsViewProps = {
   programId: string;
   data: ProgramHeadBreakdownsDTO;
   resetHref: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
 function breakdownRowToDatum(row: ProgramHeadBreakdownRowDTO): ProgramHeadComparisonDatum {
@@ -103,6 +106,7 @@ export function ProgramHeadBreakdownsView({
   programId,
   data,
   resetHref,
+  aiFilters,
 }: ProgramHeadBreakdownsViewProps) {
   const { emptyReason, courseRows, instrumentRows, majorBreakdown, yearLevelBreakdown } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -166,6 +170,15 @@ export function ProgramHeadBreakdownsView({
           attribution to break down.
         </DimensionNote>
       )}
+
+      {aiFilters && courseRows.length > 0 ? (
+        <ProgramHeadInlineAiInsight
+          programId={programId}
+          analyticsView="courses"
+          filters={aiFilters}
+          evidenceBasis={`${courseRows.reduce((sum, row) => sum + row.submittedResponseCount, 0)} submitted responses across ${courseRows.length} ${courseRows.length === 1 ? "course" : "courses"}`}
+        />
+      ) : null}
 
       {instrumentRows.length > 0 ? (
         <section aria-label="Instrument breakdown">

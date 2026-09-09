@@ -265,9 +265,9 @@ export type OutcomeEvidenceRow = {
   /** Frozen structure snapshot of the instrument version that produced the rating. */
   instrumentVersion: { id: string; structureSnapshot: unknown } | null;
   /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
-  cilo: { id: string; description: string; course: { id: string; code: string; title: string } | null } | null;
+  cilo: { id: string; code: string; description: string; course: { id: string; code: string; title: string } | null } | null;
   /** Current CILO-to-PLO mappings for the selected Program only. */
-  ploMappings: Array<{ ploId: string; code: string; name: string }>;
+  ploMappings: Array<{ ploId: string; code: string; name: string; manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null }>;
   evaluationId: string;
   deploymentName: string;
 };
@@ -283,6 +283,8 @@ type OutcomeEvidenceAggregate = {
   cilos: Map<string, string>;
   courses: Map<string, { code: string; title: string }>;
   evaluations: Map<string, string>;
+  /** CILO id -> valid-rating-only contribution behind this PLO row. */
+  contributors: Map<string, { ciloCode: string; ciloDescription: string; course: { id: string; code: string; title: string } | null; manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null; ratingSum: number; ratingCount: number }>;
   /** scaleKey (sorted descriptor JSON) -> per-category counts */
   distributions: Map<string, { descriptors: ScaleDescriptor[]; counts: Map<number, number> }>;
   excludedRatingCount: number;
@@ -311,6 +313,7 @@ function getOrCreateOutcomeAggregate(
       cilos: new Map(),
       courses: new Map(),
       evaluations: new Map(),
+      contributors: new Map(),
       distributions: new Map(),
       excludedRatingCount: 0,
     };
@@ -339,6 +342,7 @@ function accumulateOutcomeRow(
   aggregate: OutcomeEvidenceAggregate,
   row: OutcomeEvidenceRow,
   cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null,
   descriptors: ScaleDescriptor[] | null,
   isValidRating: boolean
 ): void {
@@ -355,10 +359,23 @@ function accumulateOutcomeRow(
     aggregate.excludedRatingCount += 1;
     return;
   }
-
   aggregate.ratingSum += row.ratingValue;
   aggregate.ratingCount += 1;
   aggregate.responseIds.add(row.responseId);
+  let contributor = aggregate.contributors.get(cilo.id);
+  if (!contributor) {
+    contributor = {
+      ciloCode: cilo.code,
+      ciloDescription: cilo.description,
+      course: cilo.course,
+      manifestation,
+      ratingSum: 0,
+      ratingCount: 0,
+    };
+    aggregate.contributors.set(cilo.id, contributor);
+  }
+  contributor.ratingSum += row.ratingValue;
+  contributor.ratingCount += 1;
 
   if (!descriptors) {
     return;
@@ -397,7 +414,7 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
 
     for (const mapping of row.ploMappings) {
       const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
-      accumulateOutcomeRow(aggregate, row, row.cilo, descriptors, isValidRating);
+      accumulateOutcomeRow(aggregate, row, row.cilo, mapping.manifestation, descriptors, isValidRating);
     }
   }
 
@@ -447,6 +464,22 @@ export function buildProgramHeadOutcomeDtos(
       contributingCourses: [...aggregate.courses.entries()]
         .map(([id, course]) => ({ id, code: course.code, title: course.title }))
         .sort((left, right) => left.code.localeCompare(right.code)),
+      contributors: [...aggregate.contributors.entries()]
+        .map(([ciloId, contributor]) => ({
+          ciloId,
+          ciloCode: contributor.ciloCode,
+          ciloDescription: contributor.ciloDescription,
+          course: contributor.course,
+          manifestation: contributor.manifestation,
+          meanRating: contributor.ratingSum / contributor.ratingCount,
+          ratingCount: contributor.ratingCount,
+        }))
+        .sort(
+          (left, right) =>
+            (left.course?.code ?? "").localeCompare(right.course?.code ?? "") ||
+            left.ciloCode.localeCompare(right.ciloCode) ||
+            left.ciloId.localeCompare(right.ciloId)
+        ),
       evidenceEvaluations: [...aggregate.evaluations.entries()]
         .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
         .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),
