@@ -96,8 +96,8 @@ The Stakeholders-view notice that evidence sources use different instruments and
 _Avoid_: Cross-source mean combination
 
 **Trend comparability fingerprint**:
-The period identity that permits adjacent mean-rating points to join only when instrument versions, scale identities, mapped outcomes, and the normalized source composition of rating-bearing responses match. Submitted-response counts still include every submitted response; unrated responses do not define the population behind a plotted mean.
-_Avoid_: All-submitted source mix, cross-population trend, raw-count equality
+The period identity that permits adjacent mean-rating points to join only when instrument versions, each response source's instrument-version mix, scale identities, mapped outcomes, and the normalized source composition of rating-bearing responses match. Submitted-response counts still include every submitted response; unrated responses do not define the population behind a plotted mean.
+_Avoid_: Unrelated source and instrument sets, all-submitted source mix, cross-population trend, raw-count equality
 
 **Qualitative pulse**:
 The dashboard card of aggregate qualitative evidence — respondent, answer, and evaluation counts plus per-source counts — with identifier-redacted word-cloud tokens capped at `QUALITATIVE_TOKEN_CAP = 60`. Raw comments never leave the Responses data.

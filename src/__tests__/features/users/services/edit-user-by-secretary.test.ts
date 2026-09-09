@@ -43,6 +43,7 @@ function makeToken(payload: string, ttlMs = 60_000): string {
 describe("editUserBySecretary service", () => {
   const validInput = {
     id: USER_ID,
+    expectedRole: SystemRole.FACULTY,
     name: "Jane Smith",
     faculty: { program_id: PROG_OLD },
   };
@@ -249,12 +250,38 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.STUDENT,
       name: "Jane Smith",
     });
 
     expect(result).toEqual({
       success: false,
       error: "Student details are required for Student accounts.",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a save when the loaded form role is no longer assigned", async () => {
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+      student_profile: null,
+      enrollments: [],
+      faculty_program_affiliations: [],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await editUserBySecretary({
+      ...validInput,
+      expectedRole: SystemRole.FACULTY,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "The account roles changed since this form was loaded. Please reload and try again.",
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -271,6 +298,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.STUDENT,
       name: "Jane Smith",
       student: {
         program_id: PROG_NEW,
@@ -290,6 +318,7 @@ describe("editUserBySecretary service", () => {
     // Mock: current primary = PROG_OLD, request = PROG_NEW → change detected → token required
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
     });
@@ -314,6 +343,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
@@ -351,6 +381,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
@@ -369,6 +400,7 @@ describe("editUserBySecretary service", () => {
   it("rejects an invalid or expired confirmation token", async () => {
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: "bad-token",
@@ -381,6 +413,7 @@ describe("editUserBySecretary service", () => {
   it("rejects a confirmation token issued for another target user", async () => {
     const result = await editUserBySecretary({
       id: OTHER_USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: makeToken(`FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`),
@@ -463,14 +496,30 @@ describe("editUserBySecretary service", () => {
 
       const input =
         role === SystemRole.STUDENT
-          ? { id: USER_ID, name: "Jane Smith", student: { program_id: PROG_NEW } }
+          ? {
+              id: USER_ID,
+              expectedRole: role,
+              name: "Jane Smith",
+              student: { program_id: PROG_NEW },
+            }
           : role === SystemRole.FACULTY
-            ? { id: USER_ID, name: "Jane Smith", faculty: { program_id: PROG_NEW } }
+            ? {
+                id: USER_ID,
+                expectedRole: role,
+                name: "Jane Smith",
+                faculty: { program_id: PROG_NEW },
+              }
             : role === SystemRole.PROGRAM_HEAD
-              ? { id: USER_ID, name: "Jane Smith", program_head: { program_ids: [PROG_NEW] } }
+              ? {
+                  id: USER_ID,
+                  expectedRole: role,
+                  name: "Jane Smith",
+                  program_head: { program_ids: [PROG_NEW] },
+                }
               : role === SystemRole.ALUMNI
                 ? {
                     id: USER_ID,
+                    expectedRole: role,
                     name: "Jane Smith",
                     alumni: {
                       graduation_year: 2020,
@@ -480,6 +529,7 @@ describe("editUserBySecretary service", () => {
                   }
                 : {
                     id: USER_ID,
+                    expectedRole: role,
                     name: "Jane Smith",
                     industry_partner: {
                       company_name: "CLOIE Labs",
@@ -523,6 +573,7 @@ describe("editUserBySecretary service", () => {
 
     const input = {
       id: USER_ID,
+      expectedRole: SystemRole.STUDENT,
       name: "Jane Smith",
       student: { program_id: PROG_NEW },
     };
@@ -559,6 +610,7 @@ describe("editUserBySecretary service", () => {
   it("rejects a stale Faculty confirmation after an intervening primary-program change", async () => {
     const input = {
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
     };
@@ -618,6 +670,7 @@ describe("editUserBySecretary service", () => {
     // legacy account is a protected change since there's no existing primary)
     const firstResult = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
     });
@@ -627,6 +680,7 @@ describe("editUserBySecretary service", () => {
     // Second request: with token → transaction creates the primary affiliation
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: firstResult.data.token,
@@ -660,6 +714,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
@@ -694,6 +749,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
@@ -730,6 +786,7 @@ describe("editUserBySecretary service", () => {
 
     const result = await editUserBySecretary({
       id: USER_ID,
+      expectedRole: SystemRole.FACULTY,
       name: "Jane Smith",
       faculty: { program_id: PROG_NEW },
       confirmationToken: token,
@@ -752,6 +809,7 @@ describe("editUserBySecretary service", () => {
   describe("Student profile and enrollment", () => {
     const studentInput = {
       id: USER_ID,
+      expectedRole: SystemRole.STUDENT,
       name: "Jane Smith",
       student: {
         program_id: PROG_NEW,
@@ -874,6 +932,7 @@ describe("editUserBySecretary service", () => {
 
     const programHeadSetInput = (programIds: string[]) => ({
       id: USER_ID,
+      expectedRole: SystemRole.PROGRAM_HEAD,
       name: "Jane Smith",
       program_head: { program_ids: programIds },
     });
@@ -1210,6 +1269,7 @@ describe("editUserBySecretary service", () => {
   describe("Alumni profile and verification", () => {
     const alumniInput = {
       id: USER_ID,
+      expectedRole: SystemRole.ALUMNI,
       name: "Jane Smith",
       alumni: {
         graduation_year: 2020,
@@ -1337,6 +1397,7 @@ describe("editUserBySecretary service", () => {
   describe("Industry Partner profile and verification", () => {
     const industryInput = {
       id: USER_ID,
+      expectedRole: SystemRole.INDUSTRY_PARTNER,
       name: "Jane Smith",
       industry_partner: {
         company_name: "CLOIE Labs",
@@ -1439,6 +1500,7 @@ describe("editUserBySecretary service", () => {
 
       const result = await editUserBySecretary({
         id: USER_ID,
+        expectedRole: SystemRole.INDUSTRY_PARTNER,
         name: "Maria Dela Cruz",
         industry_partner: {
           company_name: "CLOIE Labs",

@@ -27,21 +27,20 @@ import type {
 
 /**
  * Identity of a period's evidence for trend comparability. Two periods are
- * comparable only when every dimension matches: the immutable instrument
- * version IDs that produced the ratings (display labels can collide across
- * templates), the Likert scale identities, the mapped Program Learning Outcome
- * codes, and the normalized composition of responses that contribute ratings
- * (`SOURCE:share` entries with shares to the nearest percent, e.g.
- * `CENTRAL:0.38`). Composition matters because the All-sources scope blends
- * central and course-bound ratings into one mean: joining periods whose means
- * come from different source populations would present a population shift as
- * a performance change. All arrays are sorted so equality is order-independent.
+ * comparable only when every dimension matches: immutable instrument version
+ * IDs, the source-to-instrument relation and normalized response share, Likert
+ * scale identities, mapped Program Learning Outcome codes, and normalized
+ * source composition. The relation prevents two sources exchanging instrument
+ * versions from appearing comparable merely because the unordered source and
+ * instrument sets still match. All arrays are sorted for order-independent
+ * equality.
  */
 export type TrendComparabilityFingerprint = {
   instrumentVersions: string[];
   scaleIdentities: string[];
   outcomeCodes: string[];
   sourceComposition: string[];
+  sourceInstrumentComposition: string[];
 };
 function arraysEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
@@ -71,7 +70,8 @@ export function fingerprintsEqual(
     arraysEqual(left.instrumentVersions, right.instrumentVersions) &&
     arraysEqual(left.scaleIdentities, right.scaleIdentities) &&
     arraysEqual(left.outcomeCodes, right.outcomeCodes) &&
-    arraysEqual(left.sourceComposition, right.sourceComposition)
+    arraysEqual(left.sourceComposition, right.sourceComposition) &&
+    arraysEqual(left.sourceInstrumentComposition, right.sourceInstrumentComposition)
   );
 }
 
@@ -92,6 +92,9 @@ function describeFingerprintChange(
   }
   if (!arraysEqual(previous.sourceComposition, current.sourceComposition)) {
     reasons.push("The response source composition changed between these periods.");
+  }
+  if (!arraysEqual(previous.sourceInstrumentComposition, current.sourceInstrumentComposition)) {
+    reasons.push("The source-to-instrument evidence composition changed between these periods.");
   }
   return reasons;
 }

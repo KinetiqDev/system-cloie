@@ -16,6 +16,10 @@ _Avoid_: Role stack, simultaneous authority, primary role
 An assigned role cannot be revoked while its supporting records are active: Program Head requires all program-head assignments deactivated first, Faculty requires all faculty-program affiliations deactivated, Student requires the student academic context removed, and Industry Partner requires the profile removed. ALUMNI revocation carries no such gate.
 _Avoid_: Active role selection, revoking before cleanup
 
+**Secretary role-bound edit**:
+A Secretary edit form is bound to the assigned role whose record populated it. The save carries that expected role, and the service rejects the request as stale if the account's deterministic edit role changed before submission; role-specific validation never retargets the old form to a newly assigned role.
+_Avoid_: Inferring a replacement role at submit time, silently retargeting stale edit data
+
 **Role provisioning category**:
 The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles are pre-provisioned by a Secretary; Faculty additionally appears as a self-service internal option.
 _Avoid_: permission level, access tier

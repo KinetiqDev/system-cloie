@@ -170,7 +170,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, name, student, faculty, program_head, alumni, industry_partner } = parsed.data;
+  const { id, expectedRole, name, student, faculty, program_head, alumni, industry_partner } =
+    parsed.data;
 
   if (id === session.userId) {
     return { success: false, error: "Cannot edit your own account." };
@@ -213,6 +214,13 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
   const existingRole = existing.roles[0]?.role;
   if (!existingRole) {
     return { success: false, error: "User has no assigned CLOIE account role." };
+  }
+
+  if (existingRole !== expectedRole) {
+    return {
+      success: false,
+      error: "The account roles changed since this form was loaded. Please reload and try again.",
+    };
   }
 
   // The complete reviewed before-set: every currently active assignment.

@@ -641,6 +641,9 @@ async function buildTrends(
         scaleIdentities,
         outcomeCodes,
         sourceComposition: ["COURSE_BOUND:1.00"],
+        sourceInstrumentComposition: instrumentVersionIdsSorted.map(
+          (versionId) => `COURSE_BOUND:${versionId}:1.00`
+        ),
       },
     });
   }

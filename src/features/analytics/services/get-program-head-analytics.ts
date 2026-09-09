@@ -561,6 +561,7 @@ type PeriodEvidence = {
   instrumentVersionIds: Set<string>;
   outcomeCodes: Set<string>;
   ratedSourceResponseIds: Map<string, Set<string>>;
+  ratedSourceInstrumentResponseIds: Map<string, Set<string>>;
 };
 
 function ratingRowTermContext(row: TrendRatingRow): {
@@ -592,24 +593,34 @@ function getOrCreateTrendEvidence(
       instrumentVersionIds: new Set(),
       outcomeCodes: new Set(),
       ratedSourceResponseIds: new Map(),
+      ratedSourceInstrumentResponseIds: new Map(),
     };
     periodEvidence.set(termInstanceId, evidence);
   }
   return evidence;
 }
 
-/** Record a rating-bearing response under its deployment source. */
+/** Record a rating-bearing response under its source and instrument version. */
 function trackRatedSourceResponse(
   evidence: PeriodEvidence,
   source: string,
+  instrumentVersionId: string,
   responseId: string
 ): void {
-  let ids = evidence.ratedSourceResponseIds.get(source);
-  if (!ids) {
-    ids = new Set<string>();
-    evidence.ratedSourceResponseIds.set(source, ids);
+  let sourceIds = evidence.ratedSourceResponseIds.get(source);
+  if (!sourceIds) {
+    sourceIds = new Set<string>();
+    evidence.ratedSourceResponseIds.set(source, sourceIds);
   }
-  ids.add(responseId);
+  sourceIds.add(responseId);
+
+  const sourceInstrument = `${source}:${instrumentVersionId}`;
+  let sourceInstrumentIds = evidence.ratedSourceInstrumentResponseIds.get(sourceInstrument);
+  if (!sourceInstrumentIds) {
+    sourceInstrumentIds = new Set<string>();
+    evidence.ratedSourceInstrumentResponseIds.set(sourceInstrument, sourceInstrumentIds);
+  }
+  sourceInstrumentIds.add(responseId);
 }
 
 function collectTrendPeriodEvidence(
@@ -642,7 +653,7 @@ function accumulateRatingRow(
   evidence.ratingCount += 1;
   evidence.responseIds.add(row.response_id);
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
-  trackRatedSourceResponse(evidence, context.source, row.response_id);
+  trackRatedSourceResponse(evidence, context.source, context.instrumentVersionId, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
     evidence.outcomeCodes.add(mapping.plo.code);
   }
@@ -693,6 +704,10 @@ function buildTrendSeriesInputs(
       [...evidence.ratedSourceResponseIds].map(([source, ids]) => [source, ids.size])
     );
     const sourceComposition = buildSourceComposition(sourceCounts);
+    const sourceInstrumentCounts = new Map<string, number>(
+      [...evidence.ratedSourceInstrumentResponseIds].map(([key, ids]) => [key, ids.size])
+    );
+    const sourceInstrumentComposition = buildSourceComposition(sourceInstrumentCounts);
 
     inputs.push({
       termInstanceId,
@@ -714,6 +729,7 @@ function buildTrendSeriesInputs(
         scaleIdentities,
         outcomeCodes,
         sourceComposition,
+        sourceInstrumentComposition,
       },
     });
   }
