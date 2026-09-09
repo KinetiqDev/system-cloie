@@ -356,19 +356,39 @@ export async function GET(request: Request) {
 
   // 3. Role / domain / self-service gates and new-account creation.
   if (dbUser) {
-    const userRole = dbUser.roles[0]?.role;
+    const hasTargetRole = dbUser.roles.some((r) => r.role === targetRole);
+    const hasAnyRole = dbUser.roles.length > 0;
 
-    if (userRole) {
-      if (targetRole && userRole !== targetRole) {
-        await supabase.auth.signOut();
-        return redirectWithClearedTicket(`${siteUrl}/status/role-mismatch`);
-      }
-
-      if (isInternalRole(userRole) && !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
+    if (hasTargetRole) {
+      // Already has the requested role — domain check on any internal role.
+      const hasInternalRole = dbUser.roles.some((r) => isInternalRole(r.role));
+      if (hasInternalRole && !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
         await supabase.auth.signOut();
         return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
       }
-    } else {
+    } else if (hasAnyRole && targetRole) {
+      // Multi-role claim on an already-linked account.
+      const eligibilityFailure = resolveSelfServiceEligibility({
+        email: normalizedEmail,
+        targetRole,
+        intent: intentParam,
+      });
+      if (eligibilityFailure) {
+        await supabase.auth.signOut();
+        return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
+      }
+
+      await prisma.userRole.upsert({
+        where: { user_id_role: { user_id: dbUser.id, role: targetRole } },
+        update: {},
+        create: { user_id: dbUser.id, role: targetRole },
+      });
+
+      dbUser = await prisma.user.findUnique({
+        where: { id: dbUser.id },
+        include: { roles: true },
+      });
+    } else if (!hasAnyRole) {
       if (targetRole) {
         const eligibilityFailure = resolveSelfServiceEligibility({
           email: normalizedEmail,

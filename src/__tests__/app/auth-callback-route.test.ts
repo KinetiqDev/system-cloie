@@ -751,7 +751,7 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/status/inactive");
   });
 
-  it("redirects to role mismatch page when the intent does not match the stored role", async () => {
+  it("allows multi-role claim when the intent does not match the stored role", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -770,6 +770,13 @@ describe("auth callback route", () => {
       is_active: true,
       roles: [{ role: SystemRole.FACULTY }],
     });
+    upsertUserRoleMock.mockResolvedValue({ id: "role-2", user_id: "domain-user-1", role: SystemRole.STUDENT });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: null,
+      roles: ["FACULTY", "STUDENT"],
+      profileGate: { status: "COMPLETE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/select-role");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
@@ -777,8 +784,13 @@ describe("auth callback route", () => {
 
     expect(updateUserMock).not.toHaveBeenCalled();
     expect(updateManyUserMock).not.toHaveBeenCalled();
-    expect(signOutMock).toHaveBeenCalledTimes(1);
-    expect(response.headers.get("location")).toContain("/status/role-mismatch");
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(upsertUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "domain-user-1", role: SystemRole.STUDENT } },
+      update: {},
+      create: { user_id: "domain-user-1", role: SystemRole.STUDENT },
+    });
+    expect(response.headers.get("location")).toContain("/select-role");
   });
 
   it("denies role mismatch on first link before mutation", async () => {
