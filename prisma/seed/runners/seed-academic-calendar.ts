@@ -12,6 +12,12 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   console.log("  → School years...");
   const schoolYearDefinitions = [
     {
+      id: D.SY_2025_2026,
+      startYear: 2025,
+      startDate: new Date("2025-06-01"),
+      endDate: new Date("2026-05-31"),
+    },
+    {
       id: D.SY_2026_2027,
       startYear: 2026,
       startDate: new Date("2026-06-01"),
@@ -152,6 +158,8 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   return {
     termInstance: terms[D.TI_2026_2027_2ND],
     termInstances: {
+      ti2025First: terms[D.TI_2025_2026_1ST],
+      ti2025Second: terms[D.TI_2025_2026_2ND],
       ti2026First: terms[D.TI_2026_2027_1ST],
       ti2026Second: terms[D.TI_2026_2027_2ND],
       ti2027First: terms[D.TI_2027_2028_1ST],
