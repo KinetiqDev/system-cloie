@@ -225,10 +225,10 @@ export async function resetIncompleteRoleClaim(abandoned?: string | FormData) {
     requested && session?.roles.includes(requested) ? requested : (session?.activeRole ?? null);
 
   if (session && target && session.roles.includes(target)) {
+    const targetMayBeIncomplete =
+      target !== session.activeRole || session.profileGate.status !== "COMPLETE";
     const incomplete =
-      target === session.activeRole
-        ? session.profileGate.status !== "COMPLETE"
-        : await isRoleClaimIncomplete(session.userId, target);
+      targetMayBeIncomplete && (await isRoleClaimIncomplete(session.userId, target));
     if (incomplete) {
       await prisma.userRole.delete({
         where: { user_id_role: { user_id: session.userId, role: target } },

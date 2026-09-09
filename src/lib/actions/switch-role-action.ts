@@ -11,6 +11,8 @@ import {
 import { buildAuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
+import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Switch the caller's active role context. The requested role MUST already
@@ -18,6 +20,33 @@ import { resolvePostLoginDestination } from "@/features/auth/services/resolve-po
  * Persists the choice in the `cloie_active_role` cookie, then navigates to
  * the dashboard for the newly activated role.
  */
+
+async function resolveSelectedRoleReadiness(userId: string, role: Role) {
+  if (role === "STUDENT") {
+    const activeTermId = await getActiveTermId();
+    if (!activeTermId) return { hasActiveEnrollment: false };
+    const enrollment = await prisma.studentEnrollment.findUnique({
+      where: {
+        student_user_id_term_instance_id: {
+          student_user_id: userId,
+          term_instance_id: activeTermId,
+        },
+      },
+      select: { is_active: true },
+    });
+    return { hasActiveEnrollment: enrollment?.is_active === true };
+  }
+
+  if (role === "FACULTY") {
+    const affiliation = await prisma.facultyProgramAffiliation.findFirst({
+      where: { faculty_id: userId, is_active: true },
+      select: { id: true },
+    });
+    return { hasFacultyAffiliation: affiliation !== null };
+  }
+
+  return {};
+}
 export async function switchActiveRole(role: string): Promise<void> {
   const session = await resolveAuthSession();
 
@@ -31,6 +60,7 @@ export async function switchActiveRole(role: string): Promise<void> {
 
   const nextRole = role as Role;
 
+  const readiness = await resolveSelectedRoleReadiness(session.userId, nextRole);
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_ROLE_COOKIE_NAME, nextRole, {
     httpOnly: true,
@@ -57,6 +87,7 @@ export async function switchActiveRole(role: string): Promise<void> {
           industryPartnerProfileId: session.industryPartnerProfileId,
           alumniVerificationStatus: session.alumniVerificationStatus,
           industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+          ...readiness,
         }).profileGate;
 
   const destination = resolvePostLoginDestination({

@@ -29,7 +29,7 @@ Surface conflicts explicitly. This file does not define product scope, authoriza
 - **Institution:** Assumption College of Davao
 - **Administrative roles:** `SECRETARY`, `DEAN`, `PROGRAM_HEAD`, `FACULTY`
 - **Respondent roles:** `STUDENT`, `ALUMNI`, `INDUSTRY_PARTNER`
-- **Production identity:** one active account role; dev/demo role switching is environment-only
+- **Production identity:** accounts may hold distinct assigned roles; exactly one server-resolved role is active at a time
 - **Character:** institutional, trustworthy, calm, precise, professional, orderly, analytical, restrained
 
 ### Experience Principles

@@ -1480,7 +1480,7 @@ No LMS or SIS integration is claimed. These systems are outside the System CLOIE
 
 Several decisions in the current architecture address problems discovered during development.
 
-Authentication identity is separated from the CLOIE domain user so that an external Google identity does not become the application's entire authorization model. Single-role accounts simplify the primary authorization path. Program Head program context is explicit rather than inferred from whichever program happens to appear in a request.
+Authentication identity is separated from the System CLOIE domain user so that an external Google identity does not become the application's entire authorization model. Accounts may hold distinct assigned roles, but one server-resolved active role controls authorization and profile gating at a time. Program Head program context is explicit rather than inferred from whichever program happens to appear in a request.
 
 Course assignments are separated from the course catalog because a course definition and a particular offering of that course are different records. CILOs remain course-level records so they are not recreated as faculty-owned outcomes every term.
 

@@ -2,12 +2,12 @@
 title: System CLOIE Roles and Access
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-10
 ---
 
 # System CLOIE Roles and Access
 
-Inventory of the account roles defined in System CLOIE and each role's scope as currently specified in the domain contexts and ADRs. This is a navigation aid, not the rulebook: each role row links the owning `CONTEXT.md`, which holds the authoritative vocabulary and invariants. Per ADR 0001, an account holds exactly **one** active role — there is no role stacking, no role impersonation, and role changes are administrator-controlled ([src/features/auth/CONTEXT.md](../../src/features/auth/CONTEXT.md), [src/features/users/CONTEXT.md](../../src/features/users/CONTEXT.md)).
+Inventory of the account roles defined in System CLOIE and each role's scope as currently specified in the domain contexts and ADRs. This is a navigation aid, not the rulebook: each role row links the owning `CONTEXT.md`, which holds the authoritative vocabulary and invariants. Per ADR 0022, an account may hold multiple distinct assigned roles, but exactly one server-resolved role is active for authorization and profile gating at a time. Active-role selection is not impersonation and does not create or revoke a role ([src/features/auth/CONTEXT.md](../../src/features/auth/CONTEXT.md), [src/features/users/CONTEXT.md](../../src/features/users/CONTEXT.md)).
 
 ## Enforcement model
 
@@ -34,8 +34,8 @@ Authorization is **server-enforced**. Every request passes through the Supabase 
 
 ## Cross-cutting access rules (highlights only)
 
-- **Single active role** — one `UserRole` per account; role changes are revoke-then-assign under gate conditions ([users](../../src/features/users/CONTEXT.md)).
-- **Role entry gates** — profile gate verdicts (onboarding required, inactive, rejected external, deferred enrollment, complete) resolved at sign-in ([users](../../src/features/users/CONTEXT.md)); the legal acknowledgement ticket gates the OAuth callback before role selection ([legal](../../src/features/legal/CONTEXT.md)).
+- **Assigned roles and active context** — one row per `(user_id, role)`; exactly one assigned role is active at a time. Server authorization uses `activeRole`, while `roles` only defines which contexts the person may select ([ADR 0022](../adr/0022-multi-role-accounts-with-active-role-context.md), [users](../../src/features/users/CONTEXT.md)).
+- **Role entry gates** — eligible linked accounts may add a self-service Faculty, Student, Alumni, or Industry Partner role. Profile gates resolve for the active role; cancelling an incomplete claim deletes only that requested role and only while its required profile artifact is absent ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
 - **Course assignment authority matrix** (server-enforced, approved transfer): Secretary read-only; Gen Ed Coordinator mutates General Education only; Program Head mutates Program-specific within scope (read-only GE); Dean all-program; Faculty read-only for own assignments ([course-assignments](../../src/features/course-assignments/CONTEXT.md), [auth](../../src/features/auth/CONTEXT.md)).
 - **Outcome ownership** — ILO catalog: Gen Ed Coordinator; PLOs: owning Program's Program Head; CILOs: Faculty author, Course-owned; mappings: Faculty maintains, Secretary/Dean correction per ADR 0005, Program Head read-only, Dean read-only oversight ([outcomes](../../src/features/outcomes/CONTEXT.md), [docs/adr/0005-outcome-ownership-and-dean-oversight.md](../adr/0005-outcome-ownership-and-dean-oversight.md), [docs/adr/0018-transfer-ilo-ownership-to-gen-ed-coordinator.md](../adr/0018-transfer-ilo-ownership-to-gen-ed-coordinator.md)).
 - **Deployment authorization** — Faculty deploy own assignments; Program Head within assigned programs (never General Education); Dean and Secretary may deploy on behalf of any faculty ([evaluations](../../src/features/evaluations/CONTEXT.md)).

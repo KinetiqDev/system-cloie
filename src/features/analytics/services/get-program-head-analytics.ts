@@ -560,7 +560,7 @@ type PeriodEvidence = {
   responseIds: Set<string>;
   instrumentVersionIds: Set<string>;
   outcomeCodes: Set<string>;
-  sourceResponseIds: Map<string, Set<string>>;
+  ratedSourceResponseIds: Map<string, Set<string>>;
 };
 
 function ratingRowTermContext(row: TrendRatingRow): {
@@ -591,19 +591,23 @@ function getOrCreateTrendEvidence(
       responseIds: new Set(),
       instrumentVersionIds: new Set(),
       outcomeCodes: new Set(),
-      sourceResponseIds: new Map(),
+      ratedSourceResponseIds: new Map(),
     };
     periodEvidence.set(termInstanceId, evidence);
   }
   return evidence;
 }
 
-/** Record one submitted response under its deployment source; ids dedupe across rating and response rows. */
-function trackSourceResponse(evidence: PeriodEvidence, source: string, responseId: string): void {
-  let ids = evidence.sourceResponseIds.get(source);
+/** Record a rating-bearing response under its deployment source. */
+function trackRatedSourceResponse(
+  evidence: PeriodEvidence,
+  source: string,
+  responseId: string
+): void {
+  let ids = evidence.ratedSourceResponseIds.get(source);
   if (!ids) {
     ids = new Set<string>();
-    evidence.sourceResponseIds.set(source, ids);
+    evidence.ratedSourceResponseIds.set(source, ids);
   }
   ids.add(responseId);
 }
@@ -638,7 +642,7 @@ function accumulateRatingRow(
   evidence.ratingCount += 1;
   evidence.responseIds.add(row.response_id);
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
-  trackSourceResponse(evidence, context.source, row.response_id);
+  trackRatedSourceResponse(evidence, context.source, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
     evidence.outcomeCodes.add(mapping.plo.code);
   }
@@ -656,7 +660,6 @@ function accumulateResponseRow(
 
   const evidence = getOrCreateTrendEvidence(periodEvidence, termInstanceId);
   evidence.responseIds.add(row.id);
-  trackSourceResponse(evidence, row.deployment_type, row.id);
 }
 
 function buildTrendSeriesInputs(
@@ -687,7 +690,7 @@ function buildTrendSeriesInputs(
     const scaleIdentities = buildScaleIdentities(scales);
     const outcomeCodes = [...evidence.outcomeCodes].sort();
     const sourceCounts = new Map<string, number>(
-      [...evidence.sourceResponseIds].map(([source, ids]) => [source, ids.size])
+      [...evidence.ratedSourceResponseIds].map(([source, ids]) => [source, ids.size])
     );
     const sourceComposition = buildSourceComposition(sourceCounts);
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bot, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { generateProgramHeadAnalyticsInsightAction } from "@/lib/actions/program-head-analytics-actions";
 import type {
   AnalyticsInsightView,
@@ -124,15 +125,10 @@ export function ProgramHeadInlineAiInsight({
       title="AI-generated insight"
       action={
         retryable ? (
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isPending}
-            className="text-link focus-visible:ring-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-sm text-sm font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <RefreshCw aria-hidden="true" className="size-3.5" />
+          <Button type="button" variant="link" onClick={handleRefresh} loading={isPending}>
+            <RefreshCw data-icon="inline-start" aria-hidden="true" />
             {isPending ? "Retrying…" : "Try again"}
-          </button>
+          </Button>
         ) : undefined
       }
     >
@@ -161,17 +157,18 @@ function InsightCard({
           <Bot aria-hidden="true" className="size-4" />
           <h3 className="text-label-lg">AI-generated insight</h3>
         </div>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={onRefresh}
-          disabled={refreshing}
+          loading={refreshing}
           aria-label="Regenerate AI insight for this view"
           title="Regenerate AI insight for this view"
-          className="text-text-secondary hover:text-foreground focus-visible:ring-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw aria-hidden="true" className="size-3.5" />
+          <RefreshCw data-icon="inline-start" aria-hidden="true" />
           {refreshing ? "Refreshing…" : "Regenerate"}
-        </button>
+        </Button>
       </div>
       <div className="mt-3">
         <p className="text-label-sm font-semibold">Supporting evidence</p>

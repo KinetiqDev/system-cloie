@@ -19,7 +19,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 22 files numbered 0001–0021 (number 0001 exists twice; 0013 superseded by 0021). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — 23 files numbered 0001–0022 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 

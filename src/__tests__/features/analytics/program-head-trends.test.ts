@@ -637,6 +637,39 @@ describe("getProgramHeadTrends", () => {
     expect(result!.breaks).toHaveLength(1);
     expect(result!.breaks[0].reason).toMatch(/source composition/i);
   });
+
+  it("compares source composition from responses that contribute ratings", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-central-rated",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-course-rated",
+        ploCodes: ["GO-1"],
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({ termInstanceId: "term-2024-1st", id: "first-central-rated" }),
+      responseRow({ termInstanceId: "term-2024-1st", id: "first-course-unrated" }),
+      centralResponseRow({ termInstanceId: "term-2025-1st", id: "second-central-unrated" }),
+      responseRow({ termInstanceId: "term-2025-1st", id: "second-course-rated" }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods.map((period) => period.submittedResponseCount)).toEqual([2, 2]);
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
   it("breaks when distinct instrument versions share a display label", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       ratingRow({

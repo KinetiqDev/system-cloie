@@ -30,13 +30,12 @@ import type {
  * comparable only when every dimension matches: the immutable instrument
  * version IDs that produced the ratings (display labels can collide across
  * templates), the Likert scale identities, the mapped Program Learning Outcome
- * codes, and the normalized response source composition (`SOURCE:share`
- * entries with shares to the nearest percent, e.g. `CENTRAL:0.38`).
- * Composition matters because the All-sources scope blends central and
- * course-bound responses into one mean: joining periods with different mixes
- * (or a mixed period with a single-source one) would present a population
- * shift as a performance change. All arrays are sorted so equality is
- * order-independent.
+ * codes, and the normalized composition of responses that contribute ratings
+ * (`SOURCE:share` entries with shares to the nearest percent, e.g.
+ * `CENTRAL:0.38`). Composition matters because the All-sources scope blends
+ * central and course-bound ratings into one mean: joining periods whose means
+ * come from different source populations would present a population shift as
+ * a performance change. All arrays are sorted so equality is order-independent.
  */
 export type TrendComparabilityFingerprint = {
   instrumentVersions: string[];
@@ -49,10 +48,10 @@ function arraysEqual(left: string[], right: string[]): boolean {
 }
 
 /**
- * Normalized per-source response mix for one period, e.g.
- * `["CENTRAL:0.38", "COURSE_BOUND:0.62"]`. Shares round to the nearest
- * percent so trivial count jitter does not break comparability, while a
- * materially shifted mix does. Sorted for order-independent equality.
+ * Normalized per-source mix of distinct rating-bearing responses for one
+ * period, e.g. `["CENTRAL:0.38", "COURSE_BOUND:0.62"]`. Shares round to the
+ * nearest percent so trivial count jitter does not break comparability, while
+ * a materially shifted mix does. Sorted for order-independent equality.
  */
 export function buildSourceComposition(counts: ReadonlyMap<string, number>): string[] {
   let total = 0;

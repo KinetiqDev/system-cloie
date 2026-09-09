@@ -117,6 +117,10 @@ const validAcademicPayload = {
 describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    findUniqueStudentProfileMock.mockResolvedValue(null);
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+    findUniqueAlumniProfileMock.mockResolvedValue(null);
+    findUniqueIndustryPartnerProfileMock.mockResolvedValue(null);
   });
 
   it("deletes user roles when profile status is not complete and redirects to /portal", async () => {
@@ -170,6 +174,27 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves a completed Student role during deferred enrollment", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "student@acd.edu.ph",
+      roles: [ROLES.STUDENT],
+      activeRole: ROLES.STUDENT,
+      profileGate: { status: "DEFERRED_ENROLLMENT" },
+    });
+    findUniqueStudentProfileMock.mockResolvedValue({ id: "completed-student-profile" });
+
+    await expect(resetIncompleteRoleClaim(ROLES.STUDENT)).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
+
+    expect(findUniqueStudentProfileMock).toHaveBeenCalledWith({
+      where: { user_id: "user-123" },
+      select: { id: true },
+    });
+    expect(deleteUserRoleMock).not.toHaveBeenCalled();
   });
 
   it("does not delete user roles when the session has no active role", async () => {
