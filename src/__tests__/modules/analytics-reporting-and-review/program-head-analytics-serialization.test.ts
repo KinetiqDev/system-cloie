@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildAiEvidencePacket,
-  type AiEvidencePacket,
+  buildAnalyticsViewPacket,
+  type AnalyticsViewReads,
+  type ProgramHeadAnalyticsViewInsight,
 } from "@/features/analytics/services/generate-program-head-analytics-insight";
 import type { AiConfiguration } from "@/features/analytics/services/program-head-ai-schema";
 import type {
-  ProgramHeadAIInsightsSuccessDTO,
   ProgramHeadBreakdownsDTO,
   ProgramHeadFeedbackDTO,
   ProgramHeadOutcomesDTO,
@@ -49,7 +49,7 @@ const outcomes: ProgramHeadOutcomesDTO = {
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-      currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
   manyToManyDisclosure: true,
   outcomes: [
     {
@@ -61,6 +61,7 @@ const outcomes: ProgramHeadOutcomesDTO = {
       submittedResponseCount: 2,
       contributingCilos: [{ id: "cilo-1", description: "Analyze evidence" }],
       contributingCourses: [{ id: "course-1", code: "EDUC 101", title: "Education 101" }],
+      contributors: [],
       evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Evaluation" }],
       distributions: [
         {
@@ -167,41 +168,83 @@ const feedback: ProgramHeadFeedbackDTO = {
   evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Evaluation" }],
 };
 
-function buildReads(overrides: Partial<Parameters<typeof buildAiEvidencePacket>[0]> = {}) {
-  return {
+const outcomesReads: AnalyticsViewReads = { view: "outcomes", outcomes };
+const coursesReads: AnalyticsViewReads = { view: "courses", breakdowns };
+const stakeholdersReads: AnalyticsViewReads = { view: "stakeholders", stakeholders };
+const trendsReads: AnalyticsViewReads = { view: "trends", trends };
+const qualitativeReads: AnalyticsViewReads = { view: "qualitative", feedback };
+
+function qualitativePacketFor(
+  reads: ProgramHeadFeedbackDTO,
+  config: AiConfiguration = CONFIG
+) {
+  const { packet } = buildAnalyticsViewPacket(
+    "qualitative",
     overview,
-    outcomes,
-    stakeholders,
-    breakdowns,
-    trends,
-    feedback,
-    ...overrides,
-  };
+    { view: "qualitative", feedback: reads },
+    config
+  );
+  if (!("wordFrequencyTokens" in packet)) throw new Error("expected qualitative packet");
+  return packet;
 }
 
-describe("AI evidence packet privacy bounds", () => {
-  it("serializes a closed aggregate projection without raw text, identifiers, or authorization context", () => {
-    const { packet } = buildAiEvidencePacket(buildReads(), CONFIG);
+describe("view-specific AI evidence packets", () => {
+  it("projects the outcomes view without raw text, identifiers, or authorization context", () => {
+    const { packet } = buildAnalyticsViewPacket("outcomes", overview, outcomesReads, CONFIG);
     const serialized = JSON.stringify(packet);
 
+    expect(packet.view).toBe("outcomes");
+    // Response, respondent, evaluation, and course identifiers stay out. The
+    // outcome code (GO-1) is aggregate labeling; the row id (go-1) must not leak.
+    expect(serialized).not.toContain("go-1");
+    expect(serialized).not.toContain("course-1");
+    expect(serialized).not.toContain("eval-1");
+    expect(serialized).not.toContain("cilo-1");
+    expect(serialized).not.toContain("maria@assumption.edu.ph");
+    expect(serialized).not.toContain("response-");
     // Raw comments and response-level rows never enter the packet.
     expect(serialized).not.toContain("text_content");
     expect(serialized).not.toContain("great teacher");
-    // Response, respondent, evaluation, and course identifiers stay out.
-    expect(serialized).not.toContain("eval-1");
-    expect(serialized).not.toContain("course-1");
-    expect(serialized).not.toContain("go-1");
-    expect(serialized).not.toContain("term-1");
-    expect(serialized).not.toContain("maria@assumption.edu.ph");
-    expect(serialized).not.toContain("response-");
-    expect(serialized).not.toContain("cilo-1");
     // No client-facing navigation or authorization context.
     expect(serialized).not.toContain("evidenceEvaluations");
     expect(serialized).not.toContain("authorizedPrograms");
   });
 
-  it("keeps only bounded token {text, value} entries", () => {
-    const { packet } = buildAiEvidencePacket(buildReads(), CONFIG);
+  it("keeps each view packet free of other views' evidence", () => {
+    const { packet: outcomesPacket } = buildAnalyticsViewPacket(
+      "outcomes",
+      overview,
+      outcomesReads,
+      CONFIG
+    );
+    expect(outcomesPacket).not.toHaveProperty("breakdowns");
+    expect(outcomesPacket).not.toHaveProperty("wordFrequencyTokens");
+    expect(outcomesPacket).not.toHaveProperty("trends");
+
+    const { packet: coursesPacket } = buildAnalyticsViewPacket(
+      "courses",
+      overview,
+      coursesReads,
+      CONFIG
+    );
+    expect(coursesPacket.view).toBe("courses");
+    const serialized = JSON.stringify(coursesPacket);
+    expect(serialized).not.toContain("course-1");
+    expect(serialized).not.toContain("eval-1");
+
+    const { packet: trendsPacket } = buildAnalyticsViewPacket(
+      "trends",
+      overview,
+      trendsReads,
+      CONFIG
+    );
+    expect(trendsPacket.view).toBe("trends");
+    expect(JSON.stringify(trendsPacket)).not.toContain("term-1");
+  });
+
+  it("keeps only bounded token {text, value} entries in the qualitative packet", () => {
+    const packet = qualitativePacketFor(feedback);
+    expect(packet.view).toBe("qualitative");
     expect(packet.wordFrequencyTokens).toEqual([
       { text: "helpful", value: 6 },
       { text: "caring", value: 5 },
@@ -209,12 +252,15 @@ describe("AI evidence packet privacy bounds", () => {
   });
 
   it("clamps long token text and long labels", () => {
-    const { packet } = buildAiEvidencePacket(
-      buildReads({
-        feedback: {
-          ...feedback,
-          tokens: [{ text: "a".repeat(80), value: 2 }],
-        },
+    const packet = qualitativePacketFor({
+      ...feedback,
+      tokens: [{ text: "a".repeat(80), value: 2 }],
+    });
+    const { packet: stakeholderPacket } = buildAnalyticsViewPacket(
+      "stakeholders",
+      overview,
+      {
+        view: "stakeholders",
         stakeholders: {
           ...stakeholders,
           buckets: [
@@ -224,17 +270,18 @@ describe("AI evidence packet privacy bounds", () => {
             },
           ],
         },
-      }),
+      },
       CONFIG
     );
     const packetJson = JSON.stringify(packet);
     expect(packetJson).not.toContain("a".repeat(80));
-    expect(packetJson).not.toContain("x".repeat(500));
-    expect(packet.wordFrequencyTokens[0].text.length).toBeLessThanOrEqual(41);
+    expect(JSON.stringify(stakeholderPacket)).not.toContain("x".repeat(500));
+    expect(packet.wordFrequencyTokens[0].text.length).toBeLessThanOrEqual(40);
   });
 
   it("rounds aggregate means and shares to three decimals", () => {
-    const { packet } = buildAiEvidencePacket(buildReads(), CONFIG);
+    const { packet } = buildAnalyticsViewPacket("outcomes", overview, outcomesReads, CONFIG);
+    if (!("outcomes" in packet)) throw new Error("expected outcomes packet");
     expect(packet.overview.meanRating).toBe(4.188);
     expect(packet.outcomes.rows[0].meanRating).toBe(3.667);
     expect(packet.outcomes.rows[0].distributions[0].categories[0].percentage).toBe(0.333);
@@ -245,8 +292,14 @@ describe("AI evidence packet privacy bounds", () => {
       text: `token-${index}`,
       value: 10 - index,
     }));
-    const { packet, evidenceScope } = buildAiEvidencePacket(
-      buildReads({ feedback: { ...feedback, tokens: manyTokens } }),
+    const packet = qualitativePacketFor(
+      { ...feedback, tokens: manyTokens },
+      { ...CONFIG, maxTokens: 3 }
+    );
+    const { evidenceScope } = buildAnalyticsViewPacket(
+      "qualitative",
+      overview,
+      { view: "qualitative", feedback: { ...feedback, tokens: manyTokens } },
       { ...CONFIG, maxTokens: 3 }
     );
     expect(packet.wordFrequencyTokens).toHaveLength(3);
@@ -269,52 +322,58 @@ describe("AI evidence packet privacy bounds", () => {
     }));
     // Budget = full packet without tokens + room for a small token slice, so the
     // base packet always fits while the 500-token corpus must be truncated.
-    const base = buildAiEvidencePacket(
-      buildReads({ feedback: { ...feedback, tokens: [] } }),
+    const base = qualitativePacketFor(
+      { ...feedback, tokens: [] },
       { ...CONFIG, maxPacketChars: 1_000_000, maxTokens: 500 }
     );
-    const budget = JSON.stringify(base.packet).length + 600;
-    const { packet, evidenceScope } = buildAiEvidencePacket(
-      buildReads({ feedback: { ...feedback, tokens: manyTokens } }),
+    const budget = JSON.stringify(base).length + 600;
+    const packet = qualitativePacketFor(
+      { ...feedback, tokens: manyTokens },
+      { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
+    );
+    const { evidenceScope } = buildAnalyticsViewPacket(
+      "qualitative",
+      overview,
+      { view: "qualitative", feedback: { ...feedback, tokens: manyTokens } },
       { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
     );
     expect(JSON.stringify(packet).length).toBeLessThanOrEqual(budget);
-    expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeGreaterThan(0);
-    expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeLessThan(500);
-    expect(evidenceScope.tokenAnalysis.truncated).toBe(true);
+    expect(evidenceScope.tokenAnalysis?.includedTokenCount).toBeGreaterThan(0);
+    expect(evidenceScope.tokenAnalysis?.includedTokenCount).toBeLessThan(500);
+    expect(evidenceScope.tokenAnalysis?.truncated).toBe(true);
   });
 
   it("never exceeds the packet limit at the token budget boundary", () => {
     // Regression: bracket characters must stay in the base size so a token
     // that exactly fills the limit is accepted and one character over is
     // dropped instead of throwing the size guard.
-    const base = buildAiEvidencePacket(buildReads(), {
+    const base = qualitativePacketFor(feedback, {
       ...CONFIG,
       maxPacketChars: 1_000_000,
       maxTokens: 1,
     });
     const baseWithEmptyTokens = JSON.stringify({
-      ...base.packet,
+      ...base,
       wordFrequencyTokens: [],
     }).length;
     const entrySize = JSON.stringify({ text: "helpful", value: 6 }).length;
     const exactLimit = baseWithEmptyTokens + entrySize;
 
-    const atLimit = buildAiEvidencePacket(buildReads(), {
+    const atLimit = qualitativePacketFor(feedback, {
       ...CONFIG,
       maxPacketChars: exactLimit,
       maxTokens: 1,
     });
-    expect(atLimit.packet.wordFrequencyTokens).toHaveLength(1);
-    expect(JSON.stringify(atLimit.packet).length).toBe(exactLimit);
+    expect(atLimit.wordFrequencyTokens).toHaveLength(1);
+    expect(JSON.stringify(atLimit).length).toBe(exactLimit);
 
-    const oneLess = buildAiEvidencePacket(buildReads(), {
+    const oneLess = qualitativePacketFor(feedback, {
       ...CONFIG,
       maxPacketChars: exactLimit - 1,
       maxTokens: 1,
     });
-    expect(oneLess.packet.wordFrequencyTokens).toHaveLength(0);
-    expect(JSON.stringify(oneLess.packet).length).toBeLessThanOrEqual(exactLimit - 1);
+    expect(oneLess.wordFrequencyTokens).toHaveLength(0);
+    expect(JSON.stringify(oneLess).length).toBeLessThanOrEqual(exactLimit - 1);
   });
 
   it("keeps tokens when the raw corpus alone exceeds the packet budget", () => {
@@ -326,87 +385,125 @@ describe("AI evidence packet privacy bounds", () => {
       value: 1000 - index,
     }));
     const fullCorpusSize = JSON.stringify({ wordFrequencyTokens: manyTokens }).length;
-    const base = buildAiEvidencePacket(
-      buildReads({ feedback: { ...feedback, tokens: [] } }),
+    const base = qualitativePacketFor(
+      { ...feedback, tokens: [] },
       { ...CONFIG, maxPacketChars: 1_000_000, maxTokens: 500 }
     );
-    const budget = JSON.stringify(base.packet).length + 200;
+    const budget = JSON.stringify(base).length + 200;
     expect(budget).toBeLessThan(fullCorpusSize);
 
-    const { packet, evidenceScope } = buildAiEvidencePacket(
-      buildReads({ feedback: { ...feedback, tokens: manyTokens } }),
+    const packet = qualitativePacketFor(
+      { ...feedback, tokens: manyTokens },
       { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
     );
-    expect(evidenceScope.tokenAnalysis.includedTokenCount).toBeGreaterThan(0);
+    const { evidenceScope } = buildAnalyticsViewPacket(
+      "qualitative",
+      overview,
+      { view: "qualitative", feedback: { ...feedback, tokens: manyTokens } },
+      { ...CONFIG, maxPacketChars: budget, maxTokens: 500 }
+    );
+    expect(evidenceScope.tokenAnalysis?.includedTokenCount).toBeGreaterThan(0);
     expect(JSON.stringify(packet).length).toBeLessThanOrEqual(budget);
   });
 
-  it("reports analyzed versus available evidence", () => {
-    const { evidenceScope } = buildAiEvidencePacket(buildReads(), CONFIG);
-    expect(evidenceScope).toEqual({
+  it("reports analyzed versus available evidence per view", () => {
+    const { evidenceScope: outcomesScope } = buildAnalyticsViewPacket(
+      "outcomes",
+      overview,
+      outcomesReads,
+      CONFIG
+    );
+    expect(outcomesScope).toEqual({
+      submittedResponseCount: 24,
+      qualitativeItemCount: null,
+      evaluatedSourceLabels: [],
+      tokenAnalysis: null,
+    });
+
+    const { evidenceScope: qualitativeScope } = buildAnalyticsViewPacket(
+      "qualitative",
+      overview,
+      qualitativeReads,
+      CONFIG
+    );
+    expect(qualitativeScope).toEqual({
       submittedResponseCount: 24,
       qualitativeItemCount: 12,
       evaluatedSourceLabels: ["Course-bound student evidence"],
       tokenAnalysis: { availableTokenCount: 2, includedTokenCount: 2, truncated: false },
     });
+
+    const { evidenceScope: stakeholderScope } = buildAnalyticsViewPacket(
+      "stakeholders",
+      overview,
+      stakeholdersReads,
+      CONFIG
+    );
+    expect(stakeholderScope.evaluatedSourceLabels).toEqual(["Course-bound student evidence"]);
+    expect(stakeholderScope.qualitativeItemCount).toBeNull();
+    expect(stakeholderScope.tokenAnalysis).toBeNull();
+  });
+
+  it("rejects reads backing a different view", () => {
+    expect(() =>
+      buildAnalyticsViewPacket("outcomes", overview, trendsReads, CONFIG)
+    ).toThrow("Outcome evidence reads required");
+    expect(() =>
+      buildAnalyticsViewPacket("qualitative", overview, outcomesReads, CONFIG)
+    ).toThrow("Qualitative evidence reads required");
   });
 });
 
 describe("AI result DTO closure", () => {
-  it("exposes only validated aggregate fields with locally computed counts", () => {
-    const result: ProgramHeadAIInsightsSuccessDTO = {
+  it("exposes only the validated per-view fields with one evidence-bound section", () => {
+    const result: ProgramHeadAnalyticsViewInsight = {
       fingerprint: "||",
       scope: SCOPE,
-      summary: "Summary.",
-      strengths: ["Strength"],
-      areasForReview: ["Area"],
-      themes: [{ name: "Theme", summary: "Theme summary" }],
-      sentimentClassifications: [
-        { evidenceCategory: "Course-bound student evidence", sentiment: "positive", rationale: "R." },
-      ],
-      sentimentCounts: [{ sentiment: "positive", count: 1, percentage: 1 }],
-      questionsForHumanReview: ["Question"],
-      limitations: ["Limitation"],
+      view: "outcomes",
+      insight: {
+        observation: "3 of 8 outcomes averaged below 3.5 on the 1-5 scale.",
+        evidence: ["3 of 8 outcomes averaged below 3.5 on the 1-5 scale."],
+        limitation: "Only 24 submitted responses back these figures.",
+        reviewQuestion: "Which courses contribute most ratings to the lowest outcome?",
+      },
       evidenceScope: {
         submittedResponseCount: 24,
-        qualitativeItemCount: 12,
-        evaluatedSourceLabels: ["Course-bound student evidence"],
-        tokenAnalysis: { availableTokenCount: 2, includedTokenCount: 2, truncated: false },
+        qualitativeItemCount: null,
+        evaluatedSourceLabels: [],
+        tokenAnalysis: null,
       },
     };
     const serialized = JSON.stringify(result);
-    const keys = Object.keys(result).sort();
-    expect(keys).toEqual(
-      [
-        "areasForReview",
-        "evidenceScope",
-        "fingerprint",
-        "limitations",
-        "questionsForHumanReview",
-        "scope",
-        "sentimentClassifications",
-        "sentimentCounts",
-        "strengths",
-        "summary",
-        "themes",
-      ].sort()
+    expect(Object.keys(result).sort()).toEqual(
+      ["evidenceScope", "fingerprint", "insight", "scope", "view"].sort()
+    );
+    expect(Object.keys(result.insight ?? {}).sort()).toEqual(
+      ["evidence", "limitation", "observation", "reviewQuestion"].sort()
     );
     expect(serialized).not.toContain("maria@assumption.edu.ph");
     expect(serialized).not.toContain("text_content");
   });
 
   it("keeps the packet free of provider-instruction escape hatches", () => {
-    const { packet } = buildAiEvidencePacket(buildReads(), CONFIG);
+    const packet = qualitativePacketFor(feedback);
     const serialized = JSON.stringify(packet);
     expect(serialized).not.toContain("<tool");
     expect(serialized).not.toContain("tool_calls");
   });
 
   it("never includes qualitative item rows in the packet", () => {
-    const { packet } = buildAiEvidencePacket(buildReads(), CONFIG);
-    const rows = (packet as unknown as Record<string, unknown>);
-    expect(rows).not.toHaveProperty("qualitativeItems");
-    expect(rows).not.toHaveProperty("responses");
-    expect((packet as AiEvidencePacket).feedback).not.toHaveProperty("items");
+    const { packet } = buildAnalyticsViewPacket(
+      "qualitative",
+      overview,
+      qualitativeReads,
+      CONFIG
+    );
+    expect(packet).not.toHaveProperty("qualitativeItems");
+    expect(packet).not.toHaveProperty("responses");
+    expect(packet).not.toHaveProperty("comments");
+    if ("feedback" in packet) {
+      expect(packet.feedback).not.toHaveProperty("items");
+      expect(packet.feedback).not.toHaveProperty("comments");
+    }
   });
 });

@@ -883,10 +883,13 @@ describe("aggregateOutcomeEvidence", () => {
       instrumentVersion: { id: "iv-cilo-v1", structureSnapshot: ciloStructure },
       cilo: {
         id: "cilo-1",
+        code: "CILO 1",
         description: "Achieve the outcome",
         course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
       },
-      ploMappings: [{ ploId: "go-a", code: "GO-1", name: "Effective communicator" }],
+      ploMappings: [
+        { ploId: "go-a", code: "GO-1", name: "Effective communicator", manifestation: "PRACTICE" },
+      ],
       evaluationId: "eval-1",
       deploymentName: "CILO Evaluation",
       ...overrides,
@@ -907,8 +910,8 @@ describe("aggregateOutcomeEvidence", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({
         ploMappings: [
-          { ploId: "go-a", code: "GO-1", name: "A" },
-          { ploId: "go-b", code: "GO-2", name: "B" },
+          { ploId: "go-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
+          { ploId: "go-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
         ],
       }),
     ]);

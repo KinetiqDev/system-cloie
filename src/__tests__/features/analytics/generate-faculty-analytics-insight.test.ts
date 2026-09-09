@@ -17,37 +17,24 @@ vi.mock("openai", () => ({
   },
 }));
 
+function section(observation: string) {
+  return {
+    observation,
+    evidence: ["5 of 5 invited students submitted responses on the 1-5 scale."],
+    limitation: null,
+    reviewQuestion: null,
+  };
+}
+
 const insight = {
-  participation: {
-    summary: "5 of 5 invited students submitted responses.",
-    implication: "Participation is complete, so the ratings represent the whole class.",
-    sentiment: "positive",
-    watchPoints: [],
+  overview: {
+    ...section("Most ratings were 4 or 5 on the 1-5 scale."),
+    connection: "The same respondents drive both the mean and the distribution shape.",
+    reviewQuestion: "Which class sessions drew the lower ratings?",
   },
-  ratings: {
-    summary: "Most ratings were 4 or 5 on the 1-5 scale.",
-    implication: "Respondents consistently chose the favorable descriptors.",
-    sentiment: "positive",
-    watchPoints: ["Compare distributions across terms."],
-  },
-  cilos: {
-    summary: "CILO ratings are consistent.",
-    implication: "No outcome trails its peers in this scope.",
-    sentiment: "neutral",
-    watchPoints: [],
-  },
-  questions: {
-    summary: "Question ratings are consistent.",
-    implication: "No single item stands apart from the rest.",
-    sentiment: "neutral",
-    watchPoints: ["Check item spread."],
-  },
-  trends: {
-    summary: "No comparable trend periods exist yet.",
-    implication: "Trend interpretation needs another comparable period.",
-    sentiment: "neutral",
-    watchPoints: [],
-  },
+  cilos: section("CILO means sit between 3.8 and 4.4 on the 1-5 scale."),
+  questions: section("Question means sit between 3.9 and 4.3 on the 1-5 scale."),
+  trends: section("No comparable trend periods exist yet."),
   qualitative: null,
 };
 
@@ -215,7 +202,7 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
     const result = await generateFacultyAnalyticsInsight({ view: "overview" });
 
     expect(result.ok).toBe(true);
-    expect(result.ok && result.data.ratings.summary).toContain("4 or 5");
+    expect(result.ok && result.data.overview?.observation).toContain("4 or 5");
   });
 
   it("requires the provider to enforce the complete section schema", async () => {
@@ -228,7 +215,7 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
                 ? JSON.stringify(insight)
                 : JSON.stringify({
                     ...insight,
-                    ratings: "Most ratings were favorable.",
+                    questions: "Most ratings were favorable.",
                   }),
           },
         },
@@ -245,20 +232,30 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
     });
     expect(result.ok).toBe(true);
   });
-  it("rejects output missing the required sentiment signal", async () => {
-    const { participation: _omitted, ...rest } = insight;
+
+  it("rejects output missing a required section", async () => {
+    const { cilos: _omitted, ...rest } = insight;
     void _omitted;
+    createCompletionMock.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(rest) } }],
+    });
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result).toEqual({ ok: false, state: "invalid-output" });
+  });
+
+  it("strips provider-invented sentiment labels from validated sections", async () => {
     createCompletionMock.mockResolvedValue({
       choices: [
         {
           message: {
             content: JSON.stringify({
-              ...rest,
-              participation: {
-                summary: "5 of 5 invited students submitted responses.",
-                implication: "Participation is complete.",
-                watchPoints: [],
-              },
+              ...insight,
+              overview: { ...insight.overview, sentiment: "positive" },
+              cilos: { ...insight.cilos, sentiment: "neutral" },
             }),
           },
         },
@@ -269,7 +266,11 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
 
     const result = await generateFacultyAnalyticsInsight({ view: "overview" });
 
-    expect(result).toEqual({ ok: false, state: "invalid-output" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.overview).not.toHaveProperty("sentiment");
+    expect(result.data.cilos).not.toHaveProperty("sentiment");
+    expect(result.data.overview?.observation).toContain("4 or 5");
   });
 
   it("forces qualitative to null when the evidence is unavailable", async () => {
@@ -280,10 +281,10 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
             content: JSON.stringify({
               ...insight,
               qualitative: {
-                summary: "Common terms recur across answers.",
-                implication: "Written feedback clusters around a few topics.",
-                sentiment: "neutral",
-                watchPoints: [],
+                observation: "Common terms recur across answers.",
+                evidence: ["12 written answers mention 2 recurring terms."],
+                limitation: "Term counts cannot show tone or context.",
+                reviewQuestion: "Which prompts drew the most written answers?",
               },
             }),
           },

@@ -34,6 +34,26 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
           { id: "course-1", code: "EDUC 101", title: "Education 101" },
           { id: "course-2", code: "EDUC 202", title: "Education 202" },
         ],
+        contributors: [
+          {
+            ciloId: "cilo-1",
+            ciloCode: "CILO 1",
+            ciloDescription: "Achieve the outcome",
+            course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
+            manifestation: "PRACTICE",
+            meanRating: 4.5,
+            ratingCount: 2,
+          },
+          {
+            ciloId: "cilo-2",
+            ciloCode: "CILO 1",
+            ciloDescription: "Analyze evidence",
+            course: { id: "course-2", code: "EDUC 202", title: "Education 202" },
+            manifestation: "LEARNING",
+            meanRating: 4,
+            ratingCount: 1,
+          },
+        ],
         evidenceEvaluations: [
           { evaluationId: "eval-1", deploymentName: "CILO Evaluation" },
           { evaluationId: "eval-2", deploymentName: "CILO Evaluation 2" },
@@ -78,6 +98,17 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         submittedResponseCount: 1,
         contributingCilos: [{ id: "cilo-3", description: "Evaluate claims" }],
         contributingCourses: [{ id: "course-3", code: "MATH 101", title: "Math 101" }],
+        contributors: [
+          {
+            ciloId: "cilo-3",
+            ciloCode: "CILO 2",
+            ciloDescription: "Evaluate claims",
+            course: { id: "course-3", code: "MATH 101", title: "Math 101" },
+            manifestation: "OPPORTUNITY",
+            meanRating: 2,
+            ratingCount: 1,
+          },
+        ],
         evidenceEvaluations: [{ evaluationId: "eval-3", deploymentName: "CILO Evaluation 3" }],
         distributions: [],
         spansMultipleScales: false,
@@ -169,20 +200,22 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO({ manyToManyDisclosure: false }));
     expect(screen.queryByText("Multiple Program Learning Outcome mapping")).not.toBeInTheDocument();
   });
-
-  it("exposes code, name, mean, rating count, response count, CILOs, and courses per row", () => {
+  it("exposes a CILO contributor matrix with course, manifestation, mean, and valid count", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getAllByText("GO-1").length).toBeGreaterThan(0);
-    expect(screen.getByText("Effective communicator")).toBeInTheDocument();
-    expect(screen.getAllByText("4.33").length).toBeGreaterThan(0); // rounded display
-    expect(screen.getAllByText("GO-2").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("2.00").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("2").length).toBeGreaterThan(0); // submitted responses
+    expect(screen.getByText("CILO contributor matrix")).toBeInTheDocument();
+    expect(screen.getByText("Manifestation")).toBeInTheDocument();
+    expect(screen.getByText("Valid Ratings")).toBeInTheDocument();
     expect(screen.getByText("Achieve the outcome")).toBeInTheDocument();
     expect(screen.getByText("Analyze evidence")).toBeInTheDocument();
-    expect(screen.getByText("EDUC 101, EDUC 202")).toBeInTheDocument();
+    expect(screen.getByText("Evaluate claims")).toBeInTheDocument();
+    expect(screen.getByText("EDUC 101")).toBeInTheDocument();
+    expect(screen.getByText("EDUC 202")).toBeInTheDocument();
     expect(screen.getByText("MATH 101")).toBeInTheDocument();
+    expect(screen.getByText("Practice")).toBeInTheDocument();
+    expect(screen.getByText("Learning")).toBeInTheDocument();
+    expect(screen.getByText("Opportunity")).toBeInTheDocument();
+    expect(screen.getAllByText("CILO 1")).toHaveLength(2);
   });
 
   it("links review evidence only to existing selected-Program review routes", () => {
@@ -198,7 +231,7 @@ describe("ProgramHeadOutcomesView", () => {
     );
   });
 
-  it("shows the ranking chart insight and exact-value alternative", async () => {
+  it("shows the lollipop chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
     expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
