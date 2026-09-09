@@ -44,7 +44,14 @@ vi.mock("@/components/ui/select", () => {
   function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     const { disabled } = React.useContext(SelectContext);
     return (
-      <button type="button" role="combobox" aria-expanded="false" disabled={disabled} {...props}>
+      <button
+        type="button"
+        role="combobox"
+        aria-controls="edit-user-select-options"
+        aria-expanded="false"
+        disabled={disabled}
+        {...props}
+      >
         {children}
       </button>
     );
@@ -60,12 +67,21 @@ vi.mock("@/components/ui/select", () => {
     return <span>{children ?? placeholder ?? value}</span>;
   }
   function SelectContent({ children }: { children: React.ReactNode }) {
-    return <div role="listbox">{children}</div>;
+    return (
+      <div id="edit-user-select-options" role="listbox">
+        {children}
+      </div>
+    );
   }
   function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
     const ctx = React.useContext(SelectContext);
     return (
-      <div role="option" data-value={value} onClick={() => ctx.onValueChange?.(value)}>
+      <div
+        role="option"
+        aria-selected={ctx.value === value}
+        data-value={value}
+        onClick={() => ctx.onValueChange?.(value)}
+      >
         {children}
       </div>
     );
