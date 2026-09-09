@@ -8,6 +8,7 @@ import {
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
 
 /**
  * Roles that require an ACD institutional email when created by a Secretary.
@@ -242,7 +243,6 @@ export async function createUserBySecretary(
           }
           break;
         }
-
         case SystemRole.INDUSTRY_PARTNER: {
           await tx.industryPartnerProfile.create({
             data: {
@@ -253,6 +253,13 @@ export async function createUserBySecretary(
               verification_status: VerificationStatus.APPROVED,
             },
           });
+          if (program_id) {
+            await backfillCentralAssignmentsForUsers(tx, {
+              programId: program_id,
+              targetStakeholder: "INDUSTRY_PARTNER",
+              userIds: [newUser.id],
+            });
+          }
           break;
         }
 
@@ -265,6 +272,12 @@ export async function createUserBySecretary(
               major_id: activeMajorId,
               verification_status: VerificationStatus.APPROVED,
             },
+          });
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: program_id!,
+            majorId: activeMajorId,
+            targetStakeholder: "ALUMNI",
+            userIds: [newUser.id],
           });
           break;
         }

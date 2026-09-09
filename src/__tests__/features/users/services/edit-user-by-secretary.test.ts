@@ -96,6 +96,13 @@ describe("editUserBySecretary service", () => {
       industryPartnerProfile: {
         upsert: vi.fn(),
       },
+      centralDeployment: {
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      evaluationAssignment: {
+        findMany: vi.fn().mockResolvedValue([]),
+        createMany: vi.fn(),
+      },
       program: {
         findUnique: vi.fn().mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] }),
         findMany: vi.fn().mockResolvedValue([]),
@@ -390,7 +397,10 @@ describe("editUserBySecretary service", () => {
     const result = await editUserBySecretary({
       ...validInput,
       faculty: { program_id: PROG_NEW },
-      confirmationToken: makeToken(`FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`, -1),
+      confirmationToken: makeToken(
+        `FACULTY:id=${USER_ID}:before=${PROG_OLD}:after=${PROG_NEW}`,
+        -1
+      ),
     });
 
     expect(result).toEqual({
@@ -415,56 +425,88 @@ describe("editUserBySecretary service", () => {
       SystemRole.INDUSTRY_PARTNER,
       `INDUSTRY_PARTNER:id=${USER_ID}:before=company=Old Company:position=null:program=null:verificationStatus=PENDING:after=company=CLOIE Labs:position=null:program=null:verificationStatus=APPROVED`,
     ],
-  ])("binds protected %s confirmation to target and exact before/after proposal", async (role, payload) => {
-    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: USER_ID,
-      is_active: true,
-      roles: [{ role }],
-      student_profile: role === SystemRole.STUDENT ? { program_id: PROG_OLD, major_id: null } : null,
-      enrollments: [],
-      faculty_program_affiliations:
-        role === SystemRole.FACULTY ? [{ id: "aff-1", program_id: PROG_OLD }] : [],
-      program_head_assignments:
-        role === SystemRole.PROGRAM_HEAD
-          ? [{ id: "assignment-1", program_id: PROG_OLD, is_active: true }]
-          : [],
-      alumni_profile:
-        role === SystemRole.ALUMNI
-          ? { program_id: PROG_OLD, major_id: null, graduation_year: 2019, verification_status: VerificationStatus.PENDING }
-          : null,
-      industry_partner_profile:
-        role === SystemRole.INDUSTRY_PARTNER
-          ? { company_name: "Old Company", position: null, program_id: null, verification_status: VerificationStatus.PENDING }
-          : null,
-    });
+  ])(
+    "binds protected %s confirmation to target and exact before/after proposal",
+    async (role, payload) => {
+      (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: USER_ID,
+        is_active: true,
+        roles: [{ role }],
+        student_profile:
+          role === SystemRole.STUDENT ? { program_id: PROG_OLD, major_id: null } : null,
+        enrollments: [],
+        faculty_program_affiliations:
+          role === SystemRole.FACULTY ? [{ id: "aff-1", program_id: PROG_OLD }] : [],
+        program_head_assignments:
+          role === SystemRole.PROGRAM_HEAD
+            ? [{ id: "assignment-1", program_id: PROG_OLD, is_active: true }]
+            : [],
+        alumni_profile:
+          role === SystemRole.ALUMNI
+            ? {
+                program_id: PROG_OLD,
+                major_id: null,
+                graduation_year: 2019,
+                verification_status: VerificationStatus.PENDING,
+              }
+            : null,
+        industry_partner_profile:
+          role === SystemRole.INDUSTRY_PARTNER
+            ? {
+                company_name: "Old Company",
+                position: null,
+                program_id: null,
+                verification_status: VerificationStatus.PENDING,
+              }
+            : null,
+      });
 
-    const input =
-      role === SystemRole.STUDENT
-        ? { id: USER_ID, name: "Jane Smith", student: { program_id: PROG_NEW } }
-        : role === SystemRole.FACULTY
-          ? { id: USER_ID, name: "Jane Smith", faculty: { program_id: PROG_NEW } }
-          : role === SystemRole.PROGRAM_HEAD
-            ? { id: USER_ID, name: "Jane Smith", program_head: { program_ids: [PROG_NEW] } }
-            : role === SystemRole.ALUMNI
-              ? { id: USER_ID, name: "Jane Smith", alumni: { graduation_year: 2020, program_id: PROG_NEW, verification_status: VerificationStatus.APPROVED } }
-              : { id: USER_ID, name: "Jane Smith", industry_partner: { company_name: "CLOIE Labs", verification_status: VerificationStatus.APPROVED } };
+      const input =
+        role === SystemRole.STUDENT
+          ? { id: USER_ID, name: "Jane Smith", student: { program_id: PROG_NEW } }
+          : role === SystemRole.FACULTY
+            ? { id: USER_ID, name: "Jane Smith", faculty: { program_id: PROG_NEW } }
+            : role === SystemRole.PROGRAM_HEAD
+              ? { id: USER_ID, name: "Jane Smith", program_head: { program_ids: [PROG_NEW] } }
+              : role === SystemRole.ALUMNI
+                ? {
+                    id: USER_ID,
+                    name: "Jane Smith",
+                    alumni: {
+                      graduation_year: 2020,
+                      program_id: PROG_NEW,
+                      verification_status: VerificationStatus.APPROVED,
+                    },
+                  }
+                : {
+                    id: USER_ID,
+                    name: "Jane Smith",
+                    industry_partner: {
+                      company_name: "CLOIE Labs",
+                      verification_status: VerificationStatus.APPROVED,
+                    },
+                  };
 
-    const first = await editUserBySecretary(input);
-    expect(first.success).toBe(true);
-    if (first.success) {
-      expect(first.data.protectedPayload).toBe(payload);
-      expect(first.data.protectedPayload).toContain(`id=${USER_ID}`);
-      expect(first.data.protectedPayload).toContain("before=");
-      expect(first.data.protectedPayload).toContain("after=");
+      const first = await editUserBySecretary(input);
+      expect(first.success).toBe(true);
+      if (first.success) {
+        expect(first.data.protectedPayload).toBe(payload);
+        expect(first.data.protectedPayload).toContain(`id=${USER_ID}`);
+        expect(first.data.protectedPayload).toContain("before=");
+        expect(first.data.protectedPayload).toContain("after=");
+      }
+
+      const alteredPayload = payload.includes("INDUSTRY_PARTNER")
+        ? payload.replace("CLOIE Labs", "Altered Labs")
+        : payload.replace(PROG_NEW, PROG_OLD);
+      const altered = await editUserBySecretary({
+        ...input,
+        confirmationToken: makeToken(alteredPayload),
+      });
+      expect(altered.success).toBe(false);
+      if (!altered.success) expect(altered.error).toMatch(/invalid or expired confirmation token/i);
     }
-
-    const alteredPayload = payload.includes("INDUSTRY_PARTNER")
-      ? payload.replace("CLOIE Labs", "Altered Labs")
-      : payload.replace(PROG_NEW, PROG_OLD);
-    const altered = await editUserBySecretary({ ...input, confirmationToken: makeToken(alteredPayload) });
-    expect(altered.success).toBe(false);
-    if (!altered.success) expect(altered.error).toMatch(/invalid or expired confirmation token/i);
-  });
+  );
 
   it("rejects a stale Student confirmation after an intervening protected change", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -719,10 +761,7 @@ describe("editUserBySecretary service", () => {
       },
     };
 
-    function setStudentRecord(
-      profile: object | null,
-      enrollments: Array<object>
-    ) {
+    function setStudentRecord(profile: object | null, enrollments: Array<object>) {
       (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: USER_ID,
         is_active: true,
@@ -737,10 +776,9 @@ describe("editUserBySecretary service", () => {
     }
 
     it("synchronizes profile and active enrollment in one transaction", async () => {
-      setStudentRecord(
-        { program_id: PROG_OLD, major_id: null },
-        [{ id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" }]
-      );
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, [
+        { id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" },
+      ]);
       mockTx.studentEnrollment.findFirst.mockResolvedValue({
         id: "active-enrollment",
         year_level: "FIRST_YEAR",
@@ -792,10 +830,9 @@ describe("editUserBySecretary service", () => {
     });
 
     it("rolls back profile and enrollment writes when related update fails", async () => {
-      setStudentRecord(
-        { program_id: PROG_OLD, major_id: null },
-        [{ id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" }]
-      );
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, [
+        { id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" },
+      ]);
       const failingTx = {
         user: { update: vi.fn() },
         academicTermInstance: { findFirst: vi.fn().mockResolvedValue({ id: "active-term" }) },
@@ -862,9 +899,7 @@ describe("editUserBySecretary service", () => {
       });
     }
 
-    function setTxAssignments(
-      rows: Array<{ id: string; program_id: string; is_active: boolean }>
-    ) {
+    function setTxAssignments(rows: Array<{ id: string; program_id: string; is_active: boolean }>) {
       mockTx.programHeadAssignment.findMany.mockResolvedValue(rows);
     }
 
@@ -937,7 +972,11 @@ describe("editUserBySecretary service", () => {
       );
       // PROG_C deactivated, never deleted or recreated
       expect(mockTx.programHeadAssignment.updateMany).toHaveBeenCalledWith({
-        where: { program_head_id: USER_ID, is_active: true, program_id: { notIn: [PROG_A, PROG_B] } },
+        where: {
+          program_head_id: USER_ID,
+          is_active: true,
+          program_id: { notIn: [PROG_A, PROG_B] },
+        },
         data: { is_active: false },
       });
       expect(mockTx.programHeadAssignment.delete).not.toHaveBeenCalled();
@@ -1231,6 +1270,47 @@ describe("editUserBySecretary service", () => {
       );
     });
 
+    it("backfills open program deployments when alumni verification becomes approved", async () => {
+      setAlumniProfile({
+        program_id: PROG_NEW,
+        major_id: null,
+        graduation_year: 2020,
+        verification_status: VerificationStatus.PENDING,
+      });
+      const first = await editUserBySecretary(alumniInput);
+      expect(first.success).toBe(true);
+      if (!first.success || !first.data.token) return;
+
+      const result = await editUserBySecretary({
+        ...alumniInput,
+        confirmationToken: first.data.token,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.centralDeployment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            program_id: PROG_NEW,
+            target_stakeholder: "ALUMNI",
+          }),
+        })
+      );
+    });
+
+    it("does not backfill when an approved alumni profile is saved unchanged", async () => {
+      setAlumniProfile({
+        program_id: PROG_NEW,
+        major_id: null,
+        graduation_year: 2020,
+        verification_status: VerificationStatus.APPROVED,
+      });
+
+      const result = await editUserBySecretary(alumniInput);
+
+      expect(result.success).toBe(true);
+      expect(mockTx.centralDeployment.findMany).not.toHaveBeenCalled();
+    });
+
     it("rejects a major that is not active in selected program", async () => {
       setAlumniProfile({
         program_id: PROG_OLD,
@@ -1412,6 +1492,33 @@ describe("editUserBySecretary service", () => {
           verification_status: VerificationStatus.APPROVED,
         },
       });
+    });
+
+    it("backfills open program deployments when industry verification becomes approved", async () => {
+      setIndustryProfile({
+        company_name: "CLOIE Labs",
+        position: "Hiring Manager",
+        program_id: PROG_NEW,
+        verification_status: VerificationStatus.PENDING,
+      });
+      const first = await editUserBySecretary(industryInput);
+      expect(first.success).toBe(true);
+      if (!first.success || !first.data.token) return;
+
+      const result = await editUserBySecretary({
+        ...industryInput,
+        confirmationToken: first.data.token,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.centralDeployment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            program_id: PROG_NEW,
+            target_stakeholder: "INDUSTRY_PARTNER",
+          }),
+        })
+      );
     });
 
     it("rejects an inactive affiliated program", async () => {

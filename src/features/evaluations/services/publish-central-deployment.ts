@@ -14,12 +14,11 @@ import {
   type TargetStakeholder,
 } from "@prisma/client";
 import { listTemplateLikertQuestions, type TemplateStructure } from "@/features/instruments/types";
+import { listEligibleStakeholderIds } from "./central-stakeholder-eligibility";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-
 
 export type PublishCentralDeploymentResult = ServiceResult<{
   deploymentId: string;
@@ -73,8 +72,7 @@ function validatePublishPloBindings(input: {
     if (!question) {
       return {
         success: false,
-        error:
-          "One or more question–PLO bindings no longer match the template structure.",
+        error: "One or more question–PLO bindings no longer match the template structure.",
       };
     }
 
@@ -140,8 +138,6 @@ async function createPloSnapshotRows(
     })),
   });
 }
-
-
 
 // ─── Main Service ────────────────────────────────────────────────────────────
 
@@ -402,25 +398,19 @@ export async function publishCentralDeployment(
 
       // 8b. Create EvaluationAssignment records for target respondents
       let respondentIds: string[] = [];
-
       if (input.respondent_ids !== undefined) {
         let eligibleRespondentIds = transactionStudentRespondentIds;
         if (input.target_stakeholder === "ALUMNI") {
-          const invites = await tx.externalStakeholderInvite.findMany({
-            where: { role: ROLES.ALUMNI, program_id: programId, status: "ACCEPTED" },
-            select: { email: true },
+          eligibleRespondentIds = await listEligibleStakeholderIds(tx, {
+            programId,
+            majorId: input.major_id,
+            targetStakeholder: "ALUMNI",
           });
-          const users = await tx.user.findMany({
-            where: { email: { in: invites.map((invite) => invite.email) } },
-            select: { id: true },
-          });
-          eligibleRespondentIds = users.map((user) => user.id);
         } else if (input.target_stakeholder === "INDUSTRY_PARTNER") {
-          const [legacyProfiles, affs] = await Promise.all([
-            tx.industryPartnerProfile.findMany({ where: { program_id: programId }, select: { user_id: true } }),
-            tx.industryPartnerProgramAffiliation.findMany({ where: { program_id: programId }, select: { industry_partner_id: true } }),
-          ]);
-          eligibleRespondentIds = [...new Set([...legacyProfiles.map((p) => p.user_id), ...affs.map((a) => a.industry_partner_id)])];
+          eligibleRespondentIds = await listEligibleStakeholderIds(tx, {
+            programId,
+            targetStakeholder: "INDUSTRY_PARTNER",
+          });
         }
         const eligible = new Set(eligibleRespondentIds);
         respondentIds = [...new Set(input.respondent_ids)].filter((id) => eligible.has(id));
@@ -431,30 +421,17 @@ export async function publishCentralDeployment(
           respondentIds = transactionStudentRespondentIds;
         }
       } else if (input.target_stakeholder === "ALUMNI") {
-        // Find accepted alumni invites scoped to this program
-        const invites = await tx.externalStakeholderInvite.findMany({
-          where: {
-            role: ROLES.ALUMNI,
-            program_id: programId,
-            status: "ACCEPTED",
-          },
-          select: { email: true },
+        // Live alumni profiles scoped to this program.
+        respondentIds = await listEligibleStakeholderIds(tx, {
+          programId,
+          majorId: input.major_id,
+          targetStakeholder: "ALUMNI",
         });
-
-        if (invites.length > 0) {
-          const emails = invites.map((i) => i.email);
-          const users = await tx.user.findMany({
-            where: { email: { in: emails } },
-            select: { id: true },
-          });
-          respondentIds = [...new Set(users.map((u) => u.id))];
-        }
       } else if (input.target_stakeholder === "INDUSTRY_PARTNER") {
-        const [legacyProfiles, affs] = await Promise.all([
-          tx.industryPartnerProfile.findMany({ where: { program_id: programId }, select: { user_id: true } }),
-          tx.industryPartnerProgramAffiliation.findMany({ where: { program_id: programId }, select: { industry_partner_id: true } }),
-        ]);
-        respondentIds = [...new Set([...legacyProfiles.map((p) => p.user_id), ...affs.map((a) => a.industry_partner_id)])];
+        respondentIds = await listEligibleStakeholderIds(tx, {
+          programId,
+          targetStakeholder: "INDUSTRY_PARTNER",
+        });
       }
 
       if (respondentIds.length > 0) {
@@ -569,7 +546,8 @@ export async function closeCentralDeployment(
     return true;
   });
 
-  if (!result) return { success: false, error: "You do not have permission to close this deployment." };
+  if (!result)
+    return { success: false, error: "You do not have permission to close this deployment." };
 
   return { success: true, data: undefined };
 }

@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
 import { applyProgramHeadAssignmentSet, lockProgramHeadAssignmentSet } from "./manage-users";
+import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
 import CryptoJS from "crypto-js";
 import { timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
@@ -701,6 +702,20 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             verification_status: alumni.verification_status,
           },
         });
+        const previousAlumni = existing.alumni_profile;
+        if (
+          alumni.verification_status === "APPROVED" &&
+          (previousAlumni?.verification_status !== "APPROVED" ||
+            previousAlumni.program_id !== alumni.program_id ||
+            (previousAlumni.major_id ?? null) !== (alumni.major_id ?? null))
+        ) {
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: alumni.program_id,
+            majorId: alumni.major_id ?? null,
+            targetStakeholder: "ALUMNI",
+            userIds: [id],
+          });
+        }
       } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
         if (industry_partner.program_id) {
           const program = await tx.program.findUnique({
@@ -726,6 +741,19 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             verification_status: industry_partner.verification_status,
           },
         });
+        const previousPartner = existing.industry_partner_profile;
+        if (
+          industry_partner.verification_status === "APPROVED" &&
+          industry_partner.program_id &&
+          (previousPartner?.verification_status !== "APPROVED" ||
+            (previousPartner.program_id ?? null) !== industry_partner.program_id)
+        ) {
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: industry_partner.program_id,
+            targetStakeholder: "INDUSTRY_PARTNER",
+            userIds: [id],
+          });
+        }
       }
     });
   } catch (err: unknown) {
