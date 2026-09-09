@@ -182,10 +182,12 @@ function centralRatingRow(opts: {
   value: number;
   responseId: string;
   ploCodes?: string[];
+  stakeholder?: string;
 }) {
   const central = {
     term_instance_id: opts.termInstanceId,
     instrument_version_id: opts.instrumentVersionId,
+    ...(opts.stakeholder ? { target_stakeholder: opts.stakeholder } : {}),
   };
   return {
     rating_value: opts.value,
@@ -216,13 +218,16 @@ function responseRow(opts: { termInstanceId: string; id: string }) {
   };
 }
 
-function centralResponseRow(opts: { termInstanceId: string; id: string }) {
+function centralResponseRow(opts: { termInstanceId: string; id: string; stakeholder?: string }) {
   return {
     id: opts.id,
     deployment_type: "CENTRAL",
     assignment: {
       course_bound: null,
-      central_deployment: { term_instance_id: opts.termInstanceId },
+      central_deployment: {
+        term_instance_id: opts.termInstanceId,
+        ...(opts.stakeholder ? { target_stakeholder: opts.stakeholder } : {}),
+      },
     },
   };
 }
@@ -685,6 +690,85 @@ describe("getProgramHeadTrends", () => {
     expect(result!.periods[1].comparableWithPrevious).toBe(false);
     expect(result!.breaks).toHaveLength(1);
     expect(result!.breaks[0].reason).toMatch(/source-to-instrument/i);
+  });
+
+  it("breaks when the central stakeholder population changes at the same source mix", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+      centralRatingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-student",
+        ploCodes: ["GO-1"],
+        stakeholder: "STUDENT",
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({
+        termInstanceId: "term-2024-1st",
+        id: "first-alumni",
+        stakeholder: "ALUMNI",
+      }),
+      centralResponseRow({
+        termInstanceId: "term-2025-1st",
+        id: "second-student",
+        stakeholder: "STUDENT",
+      }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
+
+  it("keeps identical central stakeholder mixes comparable", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+      centralRatingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({
+        termInstanceId: "term-2024-1st",
+        id: "first-alumni",
+        stakeholder: "ALUMNI",
+      }),
+      centralResponseRow({
+        termInstanceId: "term-2025-1st",
+        id: "second-alumni",
+        stakeholder: "ALUMNI",
+      }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(true);
+    expect(result!.breaks).toEqual([]);
   });
 
   it("compares source composition from responses that contribute ratings", async () => {

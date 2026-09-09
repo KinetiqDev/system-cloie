@@ -533,7 +533,11 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
               select: { term_instance_id: true; instrument_version_id: true };
             };
             central_deployment: {
-              select: { term_instance_id: true; instrument_version_id: true };
+              select: {
+                term_instance_id: true;
+                instrument_version_id: true;
+                target_stakeholder: true;
+              };
             };
           };
         };
@@ -548,7 +552,9 @@ type TrendResponseRow = Prisma.ResponseGetPayload<{
     assignment: {
       select: {
         course_bound: { select: { term_instance_id: true } };
-        central_deployment: { select: { term_instance_id: true } };
+        central_deployment: {
+          select: { term_instance_id: true; target_stakeholder: true };
+        };
       };
     };
   };
@@ -564,6 +570,17 @@ type PeriodEvidence = {
   ratedSourceInstrumentResponseIds: Map<string, Set<string>>;
 };
 
+/** Canonical per-response evidence key: source plus central stakeholder. */
+function responseEvidenceKey(row: {
+  deployment_type: string;
+  assignment: {
+    central_deployment: { target_stakeholder: string } | null;
+  };
+}): string {
+  const stakeholder = row.assignment.central_deployment?.target_stakeholder;
+  return stakeholder ? `${row.deployment_type}:${stakeholder}` : row.deployment_type;
+}
+
 function ratingRowTermContext(row: TrendRatingRow): {
   termInstanceId: string;
   instrumentVersionId: string;
@@ -576,7 +593,7 @@ function ratingRowTermContext(row: TrendRatingRow): {
   return {
     termInstanceId: source.term_instance_id,
     instrumentVersionId: source.instrument_version_id,
-    source: row.response.deployment_type,
+    source: responseEvidenceKey(row.response),
   };
 }
 
@@ -1357,7 +1374,11 @@ export async function getProgramHeadTrends(
                   select: { term_instance_id: true, instrument_version_id: true },
                 },
                 central_deployment: {
-                  select: { term_instance_id: true, instrument_version_id: true },
+                  select: {
+                    term_instance_id: true,
+                    instrument_version_id: true,
+                    target_stakeholder: true,
+                  },
                 },
               },
             },
@@ -1373,7 +1394,9 @@ export async function getProgramHeadTrends(
         assignment: {
           select: {
             course_bound: { select: { term_instance_id: true } },
-            central_deployment: { select: { term_instance_id: true } },
+            central_deployment: {
+              select: { term_instance_id: true, target_stakeholder: true },
+            },
           },
         },
       },
