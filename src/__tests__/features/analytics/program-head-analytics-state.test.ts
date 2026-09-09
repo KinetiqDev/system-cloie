@@ -69,7 +69,6 @@ describe("labels", () => {
       stakeholders: "Stakeholders",
       trends: "Trends",
       qualitative: "Qualitative",
-      ai: "AI Insights",
     });
   });
 });

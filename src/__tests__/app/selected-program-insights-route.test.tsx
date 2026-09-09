@@ -48,6 +48,9 @@ vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
 vi.mock("@/lib/actions/program-head-analytics-actions", () => ({
   generateProgramHeadAnalyticsInsightAction: generateInsightActionMock,
 }));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
 
 const bsedOverview = {
   scope: {

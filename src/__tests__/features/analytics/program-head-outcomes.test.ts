@@ -126,7 +126,7 @@ function ciloRow(opts: {
   return {
     id: ciloId,
     description: ciloDescription,
-    course: { id: "course-1", code: courseCode, title: "Education 101" },
+    course: { id: "course-1", code: courseCode, title: "Education 101", cilos: [{ id: ciloId }] },
     cilo_mappings: opts.ploMappings ?? [ploA],
   };
 }

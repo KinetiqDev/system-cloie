@@ -204,8 +204,8 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO());
 
     expect(screen.getByText("CILO contributor matrix")).toBeInTheDocument();
-    expect(screen.getByText("Manifestation")).toBeInTheDocument();
-    expect(screen.getByText("Valid Ratings")).toBeInTheDocument();
+    expect(screen.getAllByText("Manifestation")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Valid Ratings")[0]).toBeInTheDocument();
     expect(screen.getByText("Achieve the outcome")).toBeInTheDocument();
     expect(screen.getByText("Analyze evidence")).toBeInTheDocument();
     expect(screen.getByText("Evaluate claims")).toBeInTheDocument();
