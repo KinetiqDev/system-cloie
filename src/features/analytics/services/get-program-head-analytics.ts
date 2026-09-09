@@ -10,6 +10,7 @@ import {
   buildInstrumentBreakdownRows,
   buildProgramHeadOverviewKpi,
   buildProgramHeadOutcomeDtos,
+  buildSourceComposition,
   buildStakeholderBuckets,
   buildTrendSeries,
   majorAttributionOf,
@@ -559,7 +560,7 @@ type PeriodEvidence = {
   responseIds: Set<string>;
   instrumentVersionIds: Set<string>;
   outcomeCodes: Set<string>;
-  sources: Set<string>;
+  sourceResponseIds: Map<string, Set<string>>;
 };
 
 function ratingRowTermContext(row: TrendRatingRow): {
@@ -590,11 +591,21 @@ function getOrCreateTrendEvidence(
       responseIds: new Set(),
       instrumentVersionIds: new Set(),
       outcomeCodes: new Set(),
-      sources: new Set(),
+      sourceResponseIds: new Map(),
     };
     periodEvidence.set(termInstanceId, evidence);
   }
   return evidence;
+}
+
+/** Record one submitted response under its deployment source; ids dedupe across rating and response rows. */
+function trackSourceResponse(evidence: PeriodEvidence, source: string, responseId: string): void {
+  let ids = evidence.sourceResponseIds.get(source);
+  if (!ids) {
+    ids = new Set<string>();
+    evidence.sourceResponseIds.set(source, ids);
+  }
+  ids.add(responseId);
 }
 
 function collectTrendPeriodEvidence(
@@ -627,7 +638,7 @@ function accumulateRatingRow(
   evidence.ratingCount += 1;
   evidence.responseIds.add(row.response_id);
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
-  evidence.sources.add(context.source);
+  trackSourceResponse(evidence, context.source, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
     evidence.outcomeCodes.add(mapping.plo.code);
   }
@@ -645,7 +656,7 @@ function accumulateResponseRow(
 
   const evidence = getOrCreateTrendEvidence(periodEvidence, termInstanceId);
   evidence.responseIds.add(row.id);
-  evidence.sources.add(row.deployment_type);
+  trackSourceResponse(evidence, row.deployment_type, row.id);
 }
 
 function buildTrendSeriesInputs(
@@ -675,7 +686,10 @@ function buildTrendSeriesInputs(
     const instrumentVersionIdsSorted = [...evidence.instrumentVersionIds].sort();
     const scaleIdentities = buildScaleIdentities(scales);
     const outcomeCodes = [...evidence.outcomeCodes].sort();
-    const sources = [...evidence.sources].sort();
+    const sourceCounts = new Map<string, number>(
+      [...evidence.sourceResponseIds].map(([source, ids]) => [source, ids.size])
+    );
+    const sourceComposition = buildSourceComposition(sourceCounts);
 
     inputs.push({
       termInstanceId,
@@ -696,7 +710,7 @@ function buildTrendSeriesInputs(
         instrumentVersions: instrumentVersionIdsSorted,
         scaleIdentities,
         outcomeCodes,
-        sources,
+        sourceComposition,
       },
     });
   }

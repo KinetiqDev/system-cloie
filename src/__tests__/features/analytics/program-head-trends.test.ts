@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getProgramHeadTrends } from "@/features/analytics/services/get-program-head-analytics";
 import {
+  buildSourceComposition,
   buildTrendSeries,
   fingerprintsEqual,
   type TrendComparabilityFingerprint,
@@ -583,6 +584,59 @@ describe("getProgramHeadTrends", () => {
     expect(result!.breaks).toHaveLength(1);
     expect(result!.breaks[0].reason).toMatch(/source composition/i);
   });
+
+  it("marks a shifted source mix as a break while an equal mix stays comparable", async () => {
+    const centralRows = (termInstanceId: string, prefix: string, count: number, value: number) =>
+      Array.from({ length: count }, (_, index) =>
+        centralRatingRow({
+          termInstanceId,
+          instrumentVersionId: "iv-cilo-v2",
+          value,
+          responseId: `${prefix}-c${index}`,
+          ploCodes: ["GO-1"],
+        })
+      );
+    const courseRows = (termInstanceId: string, prefix: string, count: number, value: number) =>
+      Array.from({ length: count }, (_, index) =>
+        ratingRow({
+          termInstanceId,
+          instrumentVersionId: "iv-cilo-v2",
+          value,
+          responseId: `${prefix}-b${index}`,
+          ploCodes: ["GO-1"],
+        })
+      );
+    const responseRows = (
+      termInstanceId: string,
+      prefix: string,
+      central: number,
+      bound: number
+    ) => [
+      ...Array.from({ length: central }, (_, index) =>
+        centralResponseRow({ termInstanceId, id: `${prefix}-c${index}` })
+      ),
+      ...Array.from({ length: bound }, (_, index) =>
+        responseRow({ termInstanceId, id: `${prefix}-b${index}` })
+      ),
+    ];
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      ...centralRows("term-2024-1st", "resp-a", 3, 3),
+      ...courseRows("term-2024-1st", "resp-a", 5, 3),
+      ...centralRows("term-2025-1st", "resp-b", 5, 4),
+      ...courseRows("term-2025-1st", "resp-b", 5, 4),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      ...responseRows("term-2024-1st", "resp-a", 3, 5),
+      ...responseRows("term-2025-1st", "resp-b", 5, 5),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
   it("breaks when distinct instrument versions share a display label", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       ratingRow({
@@ -845,6 +899,35 @@ describe("getProgramHeadTrends", () => {
   });
 });
 
+describe("buildSourceComposition", () => {
+  it("returns an empty mix without responses", () => {
+    expect(buildSourceComposition(new Map())).toEqual([]);
+  });
+
+  it("marks a single source as the whole mix", () => {
+    expect(buildSourceComposition(new Map([["COURSE_BOUND", 7]]))).toEqual(["COURSE_BOUND:1.00"]);
+  });
+
+  it("normalizes shares to the nearest percent independent of insertion order", () => {
+    expect(
+      buildSourceComposition(
+        new Map([
+          ["COURSE_BOUND", 5],
+          ["CENTRAL", 3],
+        ])
+      )
+    ).toEqual(["CENTRAL:0.38", "COURSE_BOUND:0.63"]);
+    expect(
+      buildSourceComposition(
+        new Map([
+          ["CENTRAL", 6],
+          ["COURSE_BOUND", 10],
+        ])
+      )
+    ).toEqual(["CENTRAL:0.38", "COURSE_BOUND:0.63"]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Pure aggregator tests
 // ---------------------------------------------------------------------------
@@ -969,7 +1052,7 @@ describe("trend comparability aggregators", () => {
           instrumentVersions: ["CILO Evaluation v2"],
           scaleIdentities: [],
           outcomeCodes: [],
-          sources: ["CENTRAL", "COURSE_BOUND"],
+          sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
         },
         ...overrides,
       };
@@ -979,13 +1062,13 @@ describe("trend comparability aggregators", () => {
       instrumentVersions: ["CILO Evaluation v2"],
       scaleIdentities: ["s1"],
       outcomeCodes: ["GO-1"],
-      sources: ["CENTRAL", "COURSE_BOUND"],
+      sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
     };
     const fpY: TrendComparabilityFingerprint = {
       instrumentVersions: ["Exit Survey v1"],
       scaleIdentities: ["s2"],
       outcomeCodes: ["GO-1"],
-      sources: ["CENTRAL", "COURSE_BOUND"],
+      sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
     };
 
     it("sorts periods by school year code, semester, then term", () => {
@@ -1029,7 +1112,10 @@ describe("trend comparability aggregators", () => {
     });
 
     it("breaks comparability when only the response source composition changes", () => {
-      const courseOnly: TrendComparabilityFingerprint = { ...fpX, sources: ["COURSE_BOUND"] };
+      const courseOnly: TrendComparabilityFingerprint = {
+        ...fpX,
+        sourceComposition: ["COURSE_BOUND:1.00"],
+      };
       const { periods, breaks, emptyReason } = buildTrendSeries([
         input({ termInstanceId: "a", fingerprint: fpX, periodLabel: "A", meanRating: 3 }),
         input({ termInstanceId: "b", fingerprint: courseOnly, periodLabel: "B", meanRating: 5 }),
@@ -1039,6 +1125,21 @@ describe("trend comparability aggregators", () => {
       expect(breaks).toHaveLength(1);
       expect(breaks[0].reason).toContain("source composition");
       expect(emptyReason).toBe("no-comparable-history");
+    });
+
+    it("breaks comparability when the source mix shifts at equal ratings", () => {
+      const shiftedMix: TrendComparabilityFingerprint = {
+        ...fpX,
+        sourceComposition: ["CENTRAL:0.50", "COURSE_BOUND:0.50"],
+      };
+      const { periods, breaks } = buildTrendSeries([
+        input({ termInstanceId: "a", fingerprint: fpX, periodLabel: "A", meanRating: 4 }),
+        input({ termInstanceId: "b", fingerprint: shiftedMix, periodLabel: "B", meanRating: 4 }),
+      ]);
+
+      expect(periods[1].comparableWithPrevious).toBe(false);
+      expect(breaks).toHaveLength(1);
+      expect(breaks[0].reason).toContain("source composition");
     });
 
     it("reports no-evidence for an empty input", () => {
@@ -1087,17 +1188,22 @@ describe("trend comparability aggregators", () => {
         instrumentVersions: ["a"],
         scaleIdentities: ["s"],
         outcomeCodes: ["GO-1"],
-        sources: ["CENTRAL"],
+        sourceComposition: ["CENTRAL:1.00"],
       };
 
       expect(fingerprintsEqual(base, base)).toBe(true);
       expect(fingerprintsEqual(base, { ...base, instrumentVersions: ["b"] })).toBe(false);
       expect(fingerprintsEqual(base, { ...base, scaleIdentities: [] })).toBe(false);
       expect(fingerprintsEqual(base, { ...base, outcomeCodes: [] })).toBe(false);
-      expect(fingerprintsEqual(base, { ...base, sources: ["COURSE_BOUND"] })).toBe(false);
-      expect(fingerprintsEqual(base, { ...base, sources: ["CENTRAL", "COURSE_BOUND"] })).toBe(
+      expect(fingerprintsEqual(base, { ...base, sourceComposition: ["COURSE_BOUND:1.00"] })).toBe(
         false
       );
+      expect(
+        fingerprintsEqual(base, {
+          ...base,
+          sourceComposition: ["CENTRAL:0.50", "COURSE_BOUND:0.50"],
+        })
+      ).toBe(false);
     });
   });
 });

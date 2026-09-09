@@ -634,13 +634,13 @@ async function buildTrends(
         : null,
       scaleContext: describeScales(scales.flat()),
       outcomeCodes,
-      // GenEd trends read course-bound evidence only, so source composition is
-      // constant; it still participates in the fingerprint for uniformity.
+      // GenEd trends read course-bound evidence only, so the mix is constant
+      // single-source; it still participates in the fingerprint for uniformity.
       fingerprint: {
         instrumentVersions: instrumentVersionIdsSorted,
         scaleIdentities,
         outcomeCodes,
-        sources: ["COURSE_BOUND"],
+        sourceComposition: ["COURSE_BOUND:1.00"],
       },
     });
   }

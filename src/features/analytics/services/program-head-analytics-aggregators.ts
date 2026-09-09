@@ -30,20 +30,39 @@ import type {
  * comparable only when every dimension matches: the immutable instrument
  * version IDs that produced the ratings (display labels can collide across
  * templates), the Likert scale identities, the mapped Program Learning Outcome
- * codes, and the response source composition (CENTRAL and/or COURSE_BOUND).
- * Source composition matters because the All-sources scope blends central and
- * course-bound responses into one mean; a term with both populations must not
- * join a course-only term as though the shift were performance. All arrays
- * are sorted so equality is order-independent.
+ * codes, and the normalized response source composition (`SOURCE:share`
+ * entries with shares to the nearest percent, e.g. `CENTRAL:0.38`).
+ * Composition matters because the All-sources scope blends central and
+ * course-bound responses into one mean: joining periods with different mixes
+ * (or a mixed period with a single-source one) would present a population
+ * shift as a performance change. All arrays are sorted so equality is
+ * order-independent.
  */
 export type TrendComparabilityFingerprint = {
   instrumentVersions: string[];
   scaleIdentities: string[];
   outcomeCodes: string[];
-  sources: string[];
+  sourceComposition: string[];
 };
 function arraysEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+/**
+ * Normalized per-source response mix for one period, e.g.
+ * `["CENTRAL:0.38", "COURSE_BOUND:0.62"]`. Shares round to the nearest
+ * percent so trivial count jitter does not break comparability, while a
+ * materially shifted mix does. Sorted for order-independent equality.
+ */
+export function buildSourceComposition(counts: ReadonlyMap<string, number>): string[] {
+  let total = 0;
+  for (const count of counts.values()) total += count;
+  if (total === 0) return [];
+  const entries: string[] = [];
+  for (const [source, count] of counts) {
+    entries.push(`${source}:${(Math.round((count / total) * 100) / 100).toFixed(2)}`);
+  }
+  return entries.sort();
 }
 export function fingerprintsEqual(
   left: TrendComparabilityFingerprint,
@@ -53,7 +72,7 @@ export function fingerprintsEqual(
     arraysEqual(left.instrumentVersions, right.instrumentVersions) &&
     arraysEqual(left.scaleIdentities, right.scaleIdentities) &&
     arraysEqual(left.outcomeCodes, right.outcomeCodes) &&
-    arraysEqual(left.sources, right.sources)
+    arraysEqual(left.sourceComposition, right.sourceComposition)
   );
 }
 
@@ -72,7 +91,7 @@ function describeFingerprintChange(
   if (!arraysEqual(previous.outcomeCodes, current.outcomeCodes)) {
     reasons.push("The mapped outcomes changed between these periods.");
   }
-  if (!arraysEqual(previous.sources, current.sources)) {
+  if (!arraysEqual(previous.sourceComposition, current.sourceComposition)) {
     reasons.push("The response source composition changed between these periods.");
   }
   return reasons;
