@@ -600,10 +600,10 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         // The save transaction re-verifies that the target still holds the
         // Program Head role; a role revocation racing this save is denied.
         const roleRecord = await tx.userRole.findUnique({
-          where: { user_id: id },
+          where: { user_id_role: { user_id: id, role: SystemRole.PROGRAM_HEAD } },
           select: { role: true },
         });
-        if (!roleRecord || roleRecord.role !== SystemRole.PROGRAM_HEAD) {
+        if (!roleRecord) {
           throw new Error("The target user no longer has the Program Head role.");
         }
 

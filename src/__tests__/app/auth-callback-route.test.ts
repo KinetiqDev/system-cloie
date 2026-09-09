@@ -71,6 +71,13 @@ vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
   resolvePostLoginDestination: resolvePostLoginDestinationMock,
 }));
 
+vi.mock("@/features/auth/services/active-role-cookie", () => ({
+  readActiveRoleCookie: vi.fn().mockResolvedValue(null),
+  setActiveRoleCookie: vi.fn(),
+  clearActiveRoleCookie: vi.fn(),
+  ACTIVE_ROLE_COOKIE_NAME: "cloie_active_role",
+}));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     user: {
@@ -102,10 +109,12 @@ describe("auth callback route", () => {
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
   });
@@ -215,6 +224,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -251,6 +261,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -292,6 +303,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -328,6 +340,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -364,6 +377,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -434,6 +448,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -519,6 +534,7 @@ describe("auth callback route", () => {
       });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -563,6 +579,7 @@ describe("auth callback route", () => {
       });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
@@ -816,6 +833,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -946,6 +964,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -989,6 +1008,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
@@ -1173,6 +1193,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
@@ -1226,6 +1247,7 @@ describe("auth callback route", () => {
       });
       resolveAuthSessionFromUserMock.mockResolvedValue({
         activeRole: "SECRETARY",
+        roles: ["SECRETARY"],
         profileGate: { status: "COMPLETE" },
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
@@ -1318,6 +1340,7 @@ describe("auth callback route", () => {
       updateManyUserMock.mockResolvedValue({ count: 1 });
       resolveAuthSessionFromUserMock.mockResolvedValue({
         activeRole: "SECRETARY",
+        roles: ["SECRETARY"],
         profileGate: { status: "COMPLETE" },
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
@@ -1338,8 +1361,10 @@ describe("auth callback route", () => {
       });
       expect(updateUserMock).not.toHaveBeenCalled();
       expect(upsertUserRoleMock).toHaveBeenCalledWith({
-        where: { user_id: "existing-user-id" },
-        update: { role: SystemRole.SECRETARY },
+        where: {
+          user_id_role: { user_id: "existing-user-id", role: SystemRole.SECRETARY },
+        },
+        update: {},
         create: { user_id: "existing-user-id", role: SystemRole.SECRETARY },
       });
       expect(response.headers.get("location")).toBe("https://cloie.test/secretary/dashboard");

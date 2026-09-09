@@ -22,6 +22,7 @@ export function buildAuthSessionSnapshot(input: {
   email: string | null;
   name?: string | null;
   roles: Role[];
+  activeRole?: Role | null;
   studentProfileId: string | null;
   alumniProfileId?: string | null;
   industryPartnerProfileId?: string | null;
@@ -31,7 +32,7 @@ export function buildAuthSessionSnapshot(input: {
   hasActiveEnrollment?: boolean;
   hasFacultyAffiliation?: boolean;
 }): AuthSessionSnapshot {
-  const activeRole = input.roles[0] ?? null;
+  const activeRole = input.activeRole ?? input.roles[0] ?? null;
   const name = typeof input.name === "string" && input.name.trim().length > 0 ? input.name : null;
 
   return {

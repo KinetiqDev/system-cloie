@@ -8,6 +8,7 @@ const replaceMock = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/secretary/users",
   useRouter: () => ({ replace: replaceMock }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 function mockMatchMedia(matches: boolean = true) {
   vi.stubGlobal(
@@ -160,8 +161,9 @@ describe("SecretaryUsersList", () => {
       />
     );
 
-    expect(screen.getByRole("combobox", { name: "Sort users" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Sort direction" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by name, currently ascending" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by email, currently unsorted" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sort by status, currently unsorted" })).toBeInTheDocument();
   });
 
   it("offers the General Education Coordinator role filter", () => {

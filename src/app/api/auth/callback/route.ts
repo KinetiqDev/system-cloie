@@ -9,6 +9,10 @@ import { SystemRole, type User, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
 import {
+  readActiveRoleCookie,
+  setActiveRoleCookie,
+} from "@/features/auth/services/active-role-cookie";
+import {
   clearLegalAcknowledgementCookie,
   LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME,
   readCookieValue,
@@ -156,8 +160,8 @@ export async function GET(request: Request) {
         }
 
         await tx.userRole.upsert({
-          where: { user_id: existingUser.id },
-          update: { role: SystemRole.SECRETARY },
+          where: { user_id_role: { user_id: existingUser.id, role: SystemRole.SECRETARY } },
+          update: {},
           create: { user_id: existingUser.id, role: SystemRole.SECRETARY },
         });
 
@@ -428,12 +432,26 @@ export async function GET(request: Request) {
     email: normalizedEmail,
   });
 
+  const activeRoleCookie = await readActiveRoleCookie();
+
   const nextUrl = resolvePostLoginDestination({
     requestedPath: searchParams.get("next") ?? "/dashboard",
     intent: intentParam,
     activeRole: session?.activeRole ?? null,
     profileGate: session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" },
   });
+
+  if (session && session.roles.length > 1) {
+    if (!activeRoleCookie || !session.roles.includes(activeRoleCookie as (typeof session.roles)[number])) {
+      return redirectWithClearedTicket(`${siteUrl}/select-role`);
+    }
+  }
+
+  if (session && session.roles.length === 1) {
+    const response = redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
+    setActiveRoleCookie(response, session.roles[0]);
+    return response;
+  }
 
   return redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
 }

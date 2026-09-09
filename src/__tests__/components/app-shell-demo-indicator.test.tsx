@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() })),
+}));
+
 vi.mock("@/components/layout/sidebar", () => ({
   Sidebar: () => null,
 }));

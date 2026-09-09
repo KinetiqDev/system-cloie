@@ -74,7 +74,7 @@ describe("revokeUserRole Program Head gate", () => {
     const result = await revokeUserRole(TARGET_ID, SystemRole.PROGRAM_HEAD);
 
     expect(result.success).toBe(true);
-    expect(mockTx.userRole.delete).toHaveBeenCalledWith({ where: { user_id: TARGET_ID } });
+    expect(mockTx.userRole.delete).toHaveBeenCalledWith({ where: { user_id_role: { user_id: TARGET_ID, role: SystemRole.PROGRAM_HEAD } } });
   });
 
   it("serializes the active-assignment count with assignment-set administration", async () => {

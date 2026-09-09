@@ -1373,6 +1373,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/select-role/page.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/gen-ed-coordinator/analytics/error.tsx",
     disposition: "task",
     taskId: 25,
@@ -2305,6 +2311,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #521 responsive breadcrumb trail: full hierarchy in DOM, middle steps collapse on mobile, aria-current on the current page",
   },
   {
+    path: "src/components/ui/back-link.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes:
+      "Single upward-navigation BackLink primitive: ghost button wrapping a Next.js Link or a guarded onClick action with a leading arrow icon",
+  },
+  {
     path: "src/features/analytics/components/how-calculated-popover.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2472,6 +2485,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes: "New client grouped-bar instrument chart keeping every evidence source separate",
+  },
+  {
+    path: "src/features/auth/components/active-role-switcher.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "feature_component",
   },
   {
     path: "src/features/auth/components/authenticated-app-shell.tsx",

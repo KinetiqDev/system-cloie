@@ -85,11 +85,8 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
     // Role + alumni profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
-        where: { user_id: domainUser.id },
+        where: { user_id_role: { user_id: domainUser.id, role: ROLES.ALUMNI } },
       });
-      if (existingRole && existingRole.role !== ROLES.ALUMNI) {
-        throw new Error("ROLE_MISMATCH_NON_ALUMNI");
-      }
       if (!existingRole) {
         await tx.userRole.create({
           data: {

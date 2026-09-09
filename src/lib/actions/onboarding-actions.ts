@@ -102,11 +102,8 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
     // Role + academic profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
-        where: { user_id: domainUserId },
+        where: { user_id_role: { user_id: domainUserId, role: ROLES.STUDENT } },
       });
-      if (existingRole && existingRole.role !== ROLES.STUDENT) {
-        throw new Error("ROLE_MISMATCH_NON_STUDENT");
-      }
       if (!existingRole) {
         await tx.userRole.create({
           data: {
@@ -167,9 +164,9 @@ export async function registerStudentProfile(data: StudentProfileInput | Deferre
 export async function resetIncompleteRoleClaim() {
   const session = await resolveAuthSession();
 
-  if (session && session.profileGate.status !== "COMPLETE") {
-    await prisma.userRole.deleteMany({
-      where: { user_id: session.userId },
+  if (session && session.profileGate.status !== "COMPLETE" && session.activeRole) {
+    await prisma.userRole.delete({
+      where: { user_id_role: { user_id: session.userId, role: session.activeRole } },
     });
   }
 

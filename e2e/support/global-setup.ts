@@ -87,7 +87,7 @@ async function verifySeededIdentity(
     user?.email === contract.email,
     `seeded user ${contract.email} email drift: got "${user?.email}"`
   );
-  const userRole = await prisma.userRole.findUnique({ where: { user_id: contract.id } });
+  const userRole = await prisma.userRole.findFirst({ where: { user_id: contract.id } });
   assertContract(
     userRole?.role === expectedRole,
     `seeded user ${contract.email} role is not ${expectedRole} (got "${userRole?.role}")`

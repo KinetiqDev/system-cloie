@@ -10,6 +10,7 @@ import {
   DemoRoleSwitcher,
   DemoRoleSwitcherDesktop,
 } from "@/features/auth/components/demo-role-switcher";
+import { ActiveRoleSwitcher } from "@/features/auth/components/active-role-switcher";
 import { ProgramHeadSwitcher } from "@/features/auth/components/program-head-switcher";
 import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher-list";
 import type { Role } from "@/lib/constants/roles";
@@ -75,6 +76,7 @@ export function AppShell({
               Dedicated demo environment
             </div>
           )}
+          <ActiveRoleSwitcher roles={roles ?? []} activeRole={activeRole ?? null} />
           {programHeadPrograms && (
             <ProgramHeadSwitcher
               programs={programHeadPrograms}

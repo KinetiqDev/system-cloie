@@ -99,11 +99,8 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
     // Role + industry partner profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
-        where: { user_id: domainUser.id },
+        where: { user_id_role: { user_id: domainUser.id, role: ROLES.INDUSTRY_PARTNER } },
       });
-      if (existingRole && existingRole.role !== ROLES.INDUSTRY_PARTNER) {
-        throw new Error("ROLE_MISMATCH_NON_INDUSTRY_PARTNER");
-      }
       if (!existingRole) {
         await tx.userRole.create({
           data: {

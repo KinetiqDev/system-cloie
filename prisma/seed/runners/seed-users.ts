@@ -25,7 +25,7 @@ export async function seedUsers(
       create: { id: u.id, email: u.email, name: u.name, is_active: true, auth_user_id: authUserId },
     });
     await prisma.userRole.upsert({
-      where: { user_id: u.id },
+      where: { user_id_role: { user_id: u.id, role: u.role } },
       update: { role: u.role },
       create: { user_id: u.id, role: u.role },
     });

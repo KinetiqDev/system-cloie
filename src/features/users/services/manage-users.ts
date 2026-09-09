@@ -16,11 +16,11 @@ import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 async function userHasRole(userId: string, role: SystemRole) {
   const record = await prisma.userRole.findUnique({
-    where: { user_id: userId },
+    where: { user_id_role: { user_id: userId, role } },
     select: { role: true },
   });
 
-  return record?.role === role;
+  return !!record;
 }
 
 async function ensureProgramMajorRelation(programId: string, majorId?: string) {
@@ -179,7 +179,7 @@ export async function revokeUserRole(userId: string, role: SystemRole): Promise<
   if (userId === session.userId) return { success: false, error: "Cannot modify own account." };
 
   const assignedRole = await prisma.userRole.findUnique({
-    where: { user_id: userId },
+    where: { user_id_role: { user_id: userId, role } },
   });
 
   if (!assignedRole || assignedRole.role !== role) {
@@ -237,7 +237,7 @@ export async function revokeUserRole(userId: string, role: SystemRole): Promise<
         }
 
         await tx.userRole.delete({
-          where: { user_id: programHeadUserId },
+          where: { user_id_role: { user_id: programHeadUserId, role: SystemRole.PROGRAM_HEAD } },
         });
       });
     } catch (error) {
@@ -267,7 +267,7 @@ export async function revokeUserRole(userId: string, role: SystemRole): Promise<
   }
 
   await prisma.userRole.delete({
-    where: { user_id: userId },
+    where: { user_id_role: { user_id: userId, role } },
   });
 
   return { success: true, data: undefined };
@@ -450,10 +450,10 @@ export async function createProgramHeadAssignment(
       // so a concurrent revocation cannot race the activation.
       await lockProgramHeadAssignmentSet(tx, input.program_head_id);
       const roleRecord = await tx.userRole.findUnique({
-        where: { user_id: input.program_head_id },
+        where: { user_id_role: { user_id: input.program_head_id, role: SystemRole.PROGRAM_HEAD } },
         select: { role: true },
       });
-      if (!roleRecord || roleRecord.role !== SystemRole.PROGRAM_HEAD) {
+      if (!roleRecord) {
         throw new MissingProgramHeadRoleError();
       }
 
