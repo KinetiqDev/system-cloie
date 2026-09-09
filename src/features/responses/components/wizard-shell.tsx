@@ -675,8 +675,15 @@ export function WizardShell({
         </div>
       </div>
 
-      {/* Sticky Wizard Footer */}
-      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:left-64">
+      {/* Sticky wizard footer. Hidden while the review modal is open: the bar
+          paints above the mobile drawer overlay and would otherwise intercept
+          taps meant for the drawer's Confirm & Submit button. */}
+      <div
+        className={cn(
+          "bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:left-64",
+          isReviewOpen && "hidden"
+        )}
+      >
         <div className="mx-auto flex max-w-[1600px] items-center justify-between">
           <Button
             variant="outline"

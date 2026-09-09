@@ -686,4 +686,37 @@ describe("WizardShell", () => {
     expect(await within(dialog).findByText(/couldn't submit your response/i)).toBeDefined();
     expect(within(dialog).queryByText(/unique constraint/i)).not.toBeInTheDocument();
   });
+  test("hides the wizard footer navigation while the review dialog is open", async () => {
+    const sections = [
+      {
+        id: "section-1",
+        name: "Section 1 Name",
+        description: "First part",
+        items: [
+          {
+            kind: "quantitative" as const,
+            itemKey: "q1",
+            prompt: "Question 1",
+            scale: [1, 2, 3, 4, 5],
+          },
+        ],
+      },
+    ];
+
+    render(<WizardShell assignmentId="assignment-1" title="Test Eval" sections={sections} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: /4/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review & submit/i }));
+
+    // The open drawer marks the background aria-hidden, which also hides it
+    // from accessible queries — but an aria-hidden footer still intercepts
+    // taps, so pin the footer bar's hidden state instead of query presence.
+    const dialog = await screen.findByRole("dialog", { name: "Review Your Answers" });
+    expect(within(dialog).getByRole("button", { name: /confirm & submit/i })).toBeDefined();
+    const footerButton = screen.queryByRole("button", { name: /review & submit/i, hidden: true });
+    expect(footerButton?.closest("div.fixed")).toHaveClass("hidden");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /go back/i }));
+    expect(await screen.findByRole("button", { name: /review & submit/i })).toBeDefined();
+  });
 });
