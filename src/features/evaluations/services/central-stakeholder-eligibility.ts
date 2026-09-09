@@ -1,6 +1,6 @@
 import { TargetStakeholder, type Prisma } from "@prisma/client";
 
-export type CentralStakeholderStore = {
+type CentralStakeholderStore = {
   alumniProfile: Pick<Prisma.TransactionClient["alumniProfile"], "findMany">;
   centralDeployment: Pick<Prisma.TransactionClient["centralDeployment"], "findMany">;
   evaluationAssignment: Pick<
@@ -14,7 +14,7 @@ export type CentralStakeholderStore = {
   >;
 };
 
-export type EligibleStakeholder = {
+type EligibleStakeholder = {
   email: string;
   majorName: string | null;
   name: string;

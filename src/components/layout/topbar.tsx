@@ -142,7 +142,7 @@ export function Topbar({
               </AlertDialogDescription>
             </AlertDialogHeader>
             {logoutError ? (
-              <p role="alert" className="text-sm text-destructive">
+              <p role="alert" className="text-destructive text-sm">
                 {logoutError}
               </p>
             ) : null}

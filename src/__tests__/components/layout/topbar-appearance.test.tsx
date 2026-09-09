@@ -50,7 +50,10 @@ describe("Topbar appearance integration", () => {
   function renderTopbar(appearanceEnabled: boolean) {
     return render(
       <AppearanceProvider enabled={appearanceEnabled}>
-        <Topbar user={{ name: "Test", email: "test@example.com" }} appearanceEnabled={appearanceEnabled} />
+        <Topbar
+          user={{ name: "Test", email: "test@example.com" }}
+          appearanceEnabled={appearanceEnabled}
+        />
       </AppearanceProvider>
     );
   }
@@ -63,7 +66,9 @@ describe("Topbar appearance integration", () => {
 
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
     expect(screen.queryByRole("menuitemradio")).not.toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: /Appearance settings/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /Appearance settings/i })
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Appearance/i)).not.toBeInTheDocument();
   });
 
@@ -102,7 +107,9 @@ describe("Topbar appearance integration", () => {
       await waitFor(() => expect(screen.getByRole("alertdialog")).toBeInTheDocument());
 
       fireEvent.click(screen.getByRole("button", { name: /^Log out$/ }));
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", { method: "GET" }));
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", { method: "GET" })
+      );
       await waitFor(() => expect(refreshMock).toHaveBeenCalled());
     } finally {
       vi.unstubAllGlobals();
