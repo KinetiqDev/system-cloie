@@ -203,7 +203,7 @@ The domain model is documented through a multi-context layout:
 
 - **`CONTEXT-MAP.md`** — index of domain contexts and their relationships
 - **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants
-- **`docs/adr/`** — architectural decision records (17 ADRs, see list below)
+- **`docs/adr/`** — architectural decision records (23 ADR files, see list below)
 
 Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
@@ -212,7 +212,7 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | ADR  | Title                                                            |
 | ---- | ---------------------------------------------------------------- |
 | 0001 | Complete secretary-created accounts                              |
-| 0001 | Single-role accounts                                             |
+| 0001 | Single-role accounts _(Superseded by ADR 0022)_                  |
 | 0002 | Separate domain users from auth identities                       |
 | 0003 | Course catalog and assignment refactor                           |
 | 0004 | Strict program deletion                                          |
@@ -233,6 +233,7 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0019 | Removing Secretary Course Assignment Mutation                    |
 | 0020 | Self-Hosted Supabase Only — Target-Neutral Backends              |
 | 0021 | Remove Curriculum Versioning                                     |
+| 0022 | Multi-role accounts with active role context                     |
 
 #### Request Flow
 

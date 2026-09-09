@@ -10,13 +10,13 @@ last_verified: 2026-09-06
 
 # **PROJECT CLOIE: The Development of a System for Comprehensive Learning Outcomes and Instructional Evaluation**
 
-A System Proposal Presented to the Faculty of   
+A System Proposal Presented to the Faculty of  
 Information Technology Education Program
 
 Assumption College of Davao  
 J.P., Cabaguio, Agdao, Davao City
 
-In Partial Fulfillment of the   
+In Partial Fulfillment of the  
 Academic Requirements for the Subject:  
 Capstone 2
 
@@ -64,18 +64,18 @@ quality assurance; \[keyword\]
 
 # **LIST OF ABBREVIATIONS AND ACRONYMS**
 
-ACD      Assumption College of Davao  
-CILO     Course Intended Learning Outcome  
-CQI      Continuous Quality Improvement  
-CI       Continuous Integration  
-ICTC     Information and Communications Technology Center  
-ILO      Institutional Learning Outcome  
-OBE      Outcome-Based Education  
-PDCA     Plan-Do-Check-Act  
-PLO      Program Learning Outcome  
-RTM      Requirements Traceability Matrix  
-UAT      User Acceptance Testing  
-UX       User Experience  
+ACD Assumption College of Davao  
+CILO Course Intended Learning Outcome  
+CQI Continuous Quality Improvement  
+CI Continuous Integration  
+ICTC Information and Communications Technology Center  
+ILO Institutional Learning Outcome  
+OBE Outcome-Based Education  
+PDCA Plan-Do-Check-Act  
+PLO Program Learning Outcome  
+RTM Requirements Traceability Matrix  
+UAT User Acceptance Testing  
+UX User Experience  
 \[Add only abbreviations actually used in the manuscript.\]
 
 \==================================================
@@ -118,9 +118,9 @@ Assumption College of Davao needs a more organized mechanism for managing and re
 
 The project addresses the following connected problems:
 
-1. Learning outcomes and their evaluation context need to be represented in a structured form that connects course-level outcomes with the broader outcomes relevant to academic programs.  
-2. ACD's institutional evaluation instruments require respondent workflows that preserve the context of each deployment and response while supporting the appropriate student, graduating-student, alumni, and industry-partner evaluations.  
-3. Quantitative ratings and qualitative feedback need to be organized and summarized so authorized academic stakeholders can examine evaluation evidence across relevant courses, outcomes, respondent groups, and academic periods.  
+1. Learning outcomes and their evaluation context need to be represented in a structured form that connects course-level outcomes with the broader outcomes relevant to academic programs.
+2. ACD's institutional evaluation instruments require respondent workflows that preserve the context of each deployment and response while supporting the appropriate student, graduating-student, alumni, and industry-partner evaluations.
+3. Quantitative ratings and qualitative feedback need to be organized and summarized so authorized academic stakeholders can examine evaluation evidence across relevant courses, outcomes, respondent groups, and academic periods.
 4. Academic personnel need reports and analytics that make collected evidence easier to review for quality assurance, program evaluation, continuous improvement, and accreditation-related documentation without allowing the system itself to make curriculum, accreditation, or academic-policy decisions.
 
 The core problem addressed by CLOIE is therefore the management of learning-outcome evaluation evidence from **response collection to analytics and reporting**. Curriculum revision, instructional intervention, accreditation decisions, and other academic actions remain human and institutional responsibilities.
@@ -249,7 +249,7 @@ The General Education Coordinator benefits from a system scope that follows Gene
 
 This separation is useful because General Education does not fit neatly within the scope of one Program Head. System CLOIE therefore gives the coordinator an appropriate institutional scope while preserving the boundaries of program-specific academic management.
 
-### 
+###
 
 ### **1.5.4 Program Heads**
 
@@ -269,7 +269,7 @@ Students benefit from having a defined channel through which they can provide st
 
 For graduating students, the Graduating Student Exit Survey provides another evaluation context near completion of the program. Their responses contribute to aggregate academic evidence but do not become grades and should not expose individual feedback beyond the confidentiality rules of the system.
 
-### 
+###
 
 ### **1.5.7 Alumni**
 
@@ -301,15 +301,15 @@ The success of Project CLOIE will be determined from evidence rather than from t
 
 The criteria in Table 1.1 define what evidence should demonstrate before an objective is considered achieved. They are acceptance targets for later verification. They are not claims that testing or validation has already produced these results.
 
-#### **Table 1.1 *Project Success Criteria*** 
+#### **Table 1.1 _Project Success Criteria_**
 
-| Objective ID | Success Criterion | Measurement / Evidence | Acceptance Threshold |
-| ----- | ----- | ----- | ----- |
-| OBJ-01 | The system correctly maintains the approved academic, course, learning-outcome, mapping, assignment, and roster context required by evaluation workflows. | RTM coverage, functional and integration tests, database or invariant tests, selected end-to-end workflows, and implementation evidence. | All requirements classified as critical or Must for the OBJ-01 baseline are verified, with no unresolved defect that prevents the required academic or outcome context from being maintained correctly. |
-| OBJ-02 | Intended respondents can complete the approved evaluation workflows through controlled deployments using the applicable institutional instruments. | Functional tests, browser end-to-end tests, deployment and eligibility tests, response-submission tests, duplicate-response or finalization checks, and representative-user validation. | Critical workflows for each baseline evaluation context included in the approved final scope are successfully verified. Any excluded or deferred instrument or workflow is explicitly recorded rather than counted as passed. |
-| OBJ-03 | Quantitative and qualitative responses are processed into analytics that preserve the correct academic, outcome, evaluation, and stakeholder context. | Analytics verification against controlled test data, calculation tests, integration tests, qualitative-processing checks, browser verification, and selected user-validation tasks. | Required analytical outputs reproduce the expected results for verified test datasets and no unresolved high-priority defect materially changes or misattributes the displayed evidence. |
-| OBJ-04 | Authorized academic users can obtain the dashboards and reports required for their approved scope and use them to review evaluation evidence. | Role-based workflow tests, report-generation tests, browser end-to-end tests, output review, and representative stakeholder validation. | All critical approved dashboard and reporting workflows are accessible to the correct roles and complete successfully for the supported scopes. Deferred report formats remain identified as deferred. |
-| OBJ-05 | Academic and evaluation data are protected through the project's approved authentication, authorization, confidentiality, and response-integrity controls. | Positive and negative authorization tests, cross-role and cross-scope tests, response confidentiality checks, one-response and finalization tests, security verification, and defect records. | Critical authorization and confidentiality scenarios pass, unauthorized cross-role or cross-scope access is rejected, and no unresolved high-priority security or privacy defect remains for the final validated build. |
+| Objective ID | Success Criterion                                                                                                                                          | Measurement / Evidence                                                                                                                                                                        | Acceptance Threshold                                                                                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OBJ-01       | The system correctly maintains the approved academic, course, learning-outcome, mapping, assignment, and roster context required by evaluation workflows.  | RTM coverage, functional and integration tests, database or invariant tests, selected end-to-end workflows, and implementation evidence.                                                      | All requirements classified as critical or Must for the OBJ-01 baseline are verified, with no unresolved defect that prevents the required academic or outcome context from being maintained correctly.                       |
+| OBJ-02       | Intended respondents can complete the approved evaluation workflows through controlled deployments using the applicable institutional instruments.         | Functional tests, browser end-to-end tests, deployment and eligibility tests, response-submission tests, duplicate-response or finalization checks, and representative-user validation.       | Critical workflows for each baseline evaluation context included in the approved final scope are successfully verified. Any excluded or deferred instrument or workflow is explicitly recorded rather than counted as passed. |
+| OBJ-03       | Quantitative and qualitative responses are processed into analytics that preserve the correct academic, outcome, evaluation, and stakeholder context.      | Analytics verification against controlled test data, calculation tests, integration tests, qualitative-processing checks, browser verification, and selected user-validation tasks.           | Required analytical outputs reproduce the expected results for verified test datasets and no unresolved high-priority defect materially changes or misattributes the displayed evidence.                                      |
+| OBJ-04       | Authorized academic users can obtain the dashboards and reports required for their approved scope and use them to review evaluation evidence.              | Role-based workflow tests, report-generation tests, browser end-to-end tests, output review, and representative stakeholder validation.                                                       | All critical approved dashboard and reporting workflows are accessible to the correct roles and complete successfully for the supported scopes. Deferred report formats remain identified as deferred.                        |
+| OBJ-05       | Academic and evaluation data are protected through the project's approved authentication, authorization, confidentiality, and response-integrity controls. | Positive and negative authorization tests, cross-role and cross-scope tests, response confidentiality checks, one-response and finalization tests, security verification, and defect records. | Critical authorization and confidentiality scenarios pass, unauthorized cross-role or cross-scope access is rejected, and no unresolved high-priority security or privacy defect remains for the final validated build.       |
 
 The broader project will also consider representative-user validation, usability and accessibility evidence, defect correction and retesting, deployment readiness, and client or stakeholder acceptance where these are completed. Appendix G permits validation through methods such as task performance, observation, questionnaires, interviews, and UAT checklists and requires identified issues to be followed by revision and retesting where applicable.
 
@@ -337,7 +337,7 @@ Final achievement of these criteria will therefore be reported in Chapter 5\. A 
 
 **Program Learning Outcome (PLO).** A learning outcome that describes the broader competencies expected within an academic program. In System CLOIE, PLOs provide the program-level context to which applicable CILOs may be mapped.
 
-**Project CLOIE.** The capstone undertaking titled *Project CLOIE: The Development of a System for Comprehensive Learning Outcomes and Instructional Evaluation*. It includes the project's requirements engineering, design, implementation, testing, validation, documentation, and handover activities.
+**Project CLOIE.** The capstone undertaking titled _Project CLOIE: The Development of a System for Comprehensive Learning Outcomes and Instructional Evaluation_. It includes the project's requirements engineering, design, implementation, testing, validation, documentation, and handover activities.
 
 **Stakeholder Evaluation.** The collection of structured or qualitative evaluation evidence from a stakeholder group whose perspective is relevant to the academic context. Project CLOIE's baseline respondent groups include students, graduating students, alumni, and industry partners.
 
@@ -351,7 +351,7 @@ Final achievement of these criteria will therefore be reported in Chapter 5\. A 
 
 \==================================================
 
-This chapter reviews the academic literature, technical evidence, standards, and existing systems that provide the foundation for Project CLOIE. The review focuses on Outcome-Based Education, learning-outcome assessment and alignment, stakeholder evaluation, quality-assurance evidence, learning analytics, qualitative feedback, privacy, and usable and accessible information systems. These areas are examined in relation to System CLOIE's purpose of collecting stakeholder evaluation responses, preserving their academic context, processing them into interpretable evidence, and presenting analytics and reports for authorized academic personnel. Existing higher-education assessment and feedback systems are also reviewed to identify established approaches and the specific institutional need that Project CLOIE addresses at Assumption College of Davao. 
+This chapter reviews the academic literature, technical evidence, standards, and existing systems that provide the foundation for Project CLOIE. The review focuses on Outcome-Based Education, learning-outcome assessment and alignment, stakeholder evaluation, quality-assurance evidence, learning analytics, qualitative feedback, privacy, and usable and accessible information systems. These areas are examined in relation to System CLOIE's purpose of collecting stakeholder evaluation responses, preserving their academic context, processing them into interpretable evidence, and presenting analytics and reports for authorized academic personnel. Existing higher-education assessment and feedback systems are also reviewed to identify established approaches and the specific institutional need that Project CLOIE addresses at Assumption College of Davao.
 
 ## **2.1 Thematic Review of Literature and Technical Evidence**
 
@@ -446,7 +446,7 @@ Role context should also influence analytical presentation. Faculty Members need
 
 The reviewed literature therefore supports an intentionally restrained analytics model for CLOIE. The system should provide calculations and visualizations that users can understand and verify. More advanced analytics should be added only when they answer a defined academic question and can be validated against the evidence they represent.
 
-### 
+###
 
 ### **2.1.6 Qualitative Feedback Analysis**
 
@@ -482,7 +482,7 @@ Evaluation integrity creates additional security requirements. Controlled deploy
 
 Privacy and security therefore influence CLOIE's authentication, authorization, deployment, response-storage, analytics, reporting, qualitative-feedback, and external-processing requirements. The objective is not to hide all information from all users. It is to expose only the information required for an authorized academic purpose while protecting respondent data and preserving the integrity of evaluation evidence.
 
-### 
+###
 
 ### **2.1.8 Usability, Accessibility, and Adoption of Academic Information Systems**
 
@@ -500,7 +500,7 @@ Usability also affects evidence quality. Respondents who misunderstand a scale, 
 
 The literature and accessibility standards support CLOIE's use of role-specific navigation, responsive evaluation workflows, accessible form controls, clear system feedback, and representative-user validation. These qualities should later be evaluated as part of the project's testing and user-validation process rather than assumed from the visual appearance of the interface.
 
-## 
+##
 
 ## **2.2 Review of Related Systems / Existing Solutions**
 
@@ -508,7 +508,7 @@ Project CLOIE operates within an established category of higher-education softwa
 
 Three systems are particularly relevant to the CLOIE design space: Watermark Planning & Self-Study, Anthology Outcomes, formerly associated with Blackboard's institutional-effectiveness products, and Explorance Blue. These systems were selected because each addresses a substantial part of CLOIE's problem rather than merely sharing superficial features such as dashboards or online forms.
 
-### **2.2.1 Watermark Planning & Self-Study** 
+### **2.2.1 Watermark Planning & Self-Study**
 
 Watermark Planning & Self-Study is an institutional assessment and planning platform used in higher education. Its relevant capabilities include learning-outcome management, outcome mapping, curriculum mapping, assessment measures, organizational hierarchy, historical curriculum-map snapshots, and reporting.
 
@@ -524,7 +524,7 @@ Watermark is considerably broader than System CLOIE. Its product family supports
 
 The main lesson from Watermark is therefore structural. Outcome relationships, academic hierarchy, assessment evidence, and historical context become more useful when they remain explicitly connected. CLOIE adopts this principle within a smaller institution-specific evaluation system.
 
-### **2.2.2 Anthology Outcomes** 
+### **2.2.2 Anthology Outcomes**
 
 Anthology Outcomes is a higher-education outcome-assessment platform that supports learning outcomes, curriculum mapping, assessment evidence, reporting, organizational hierarchy, and integration with learning-management systems. Its curriculum-map reports connect outcomes with courses or institutional units and can indicate the degree of learning associated with a mapping.
 
@@ -538,7 +538,7 @@ The distinction helps clarify CLOIE's system boundary. An outcome-assessment pla
 
 Anthology Outcomes also demonstrates that outcome assessment can coexist with separate products for course evaluation, planning, program review, and accreditation. This supports CLOIE's decision not to absorb every quality-assurance process into a single system. CLOIE can support evaluation evidence and reporting without replacing ACD's LMS, Student Information System, curriculum-governance processes, or formal accreditation activities.
 
-### **2.2.3 Explorance Blue** 
+### **2.2.3 Explorance Blue**
 
 Explorance Blue is a feedback and course-evaluation platform designed for higher education and other organizations. Its relevant capabilities include automated evaluation workflows, configurable questionnaires, institutional hierarchy, personalized evaluation distribution, integration with institutional systems, reporting, trend analysis, and qualitative feedback processing.
 
@@ -552,29 +552,29 @@ The main difference concerns how evaluation evidence is connected to academic ou
 
 Explorance Blue therefore provides a useful reference for controlled evaluation administration, feedback collection, analytics, and qualitative processing. CLOIE applies related ideas within a narrower context in which evaluation evidence is explicitly tied to ACD's academic outcome structures, roles, and quality-assurance needs.
 
-#### 
+####
 
-#### **Table 2.1** *Comparison of Related Systems*
+#### **Table 2.1** _Comparison of Related Systems_
 
-| Criterion | Watermark Planning & Self-Study | Anthology Outcomes | Explorance Blue | System CLOIE |
-| ----- | ----- | ----- | ----- | ----- |
-| Primary purpose | Institutional assessment, planning, outcome management, and accreditation-supporting work | Learning-outcome assessment and evidence management | Course evaluation and feedback analytics | ACD learning-outcome evaluation, stakeholder response analytics, and reporting |
-| Course and program outcomes | Supported | Supported | Not the primary focus | CILOs and PLOs supported within CLOIE's academic model |
-| Institutional-level outcomes | Supported through organizational outcome hierarchy | Supported through organizational hierarchy | Not the primary focus | ILOs supported within ACD's authorized scope |
-| Outcome mapping | Supports mappings across organizational levels | Supports outcome connections and curriculum maps | Limited compared with dedicated outcome-assessment platforms | Supports approved CILO-to-PLO relationships |
-| Mapping degree or manifestation | Supports configurable curriculum-map indicators | Supports degree-of-learning information | Not a core capability | Uses ACD's Learning, Practice, and Opportunity manifestation model |
-| Course evaluation | Available through Watermark's broader product portfolio | Separate from the core Outcomes function | Core capability | Post-Term CILO Evaluation Tool |
-| Graduating-student evaluation | Possible through broader assessment or survey tools | Depends on institutional configuration and related tools | Configurable through feedback initiatives | Graduating Student Exit Survey |
-| Alumni evaluation | Possible through broader institutional tools | Depends on configuration and related tools | Configurable through feedback initiatives | Alumni Evaluation Tool |
-| Industry-partner evaluation | Possible through configurable institutional processes | Depends on configuration | Can support external stakeholder feedback | Industry Partner Internship Evaluation Tool |
-| Controlled evaluation deployment | Available through related evaluation functions | Depends on assessment configuration | Core evaluation-management capability | Required for CLOIE stakeholder evaluations |
-| Quantitative analytics | Supported | Supported | Supported | Response distributions, summaries, and approved outcome-oriented calculations |
-| Qualitative feedback | Supported in relevant Watermark products | Depends on associated evaluation tools | Strong feedback and text-analysis capability | Open-ended feedback and implemented qualitative-processing views |
-| Historical or trend analysis | Supported | Supported | Trend analysis supported | Historical comparison where academic context permits |
-| Role and organizational scope | Supported | Supported through permissions and organizational units | Supports institutional hierarchy and role-sensitive reporting | College, program, General Education, course, and respondent scope |
-| Accreditation support | Broad assessment and accreditation-supporting capabilities | Supports outcome evidence within a broader institutional-effectiveness environment | Feedback can contribute evidence but accreditation is not its primary function | Produces accreditation-supporting evidence but does not perform accreditation |
-| LMS/SIS integration | Supports institutional integrations | Strong LMS integration | Supports LMS, SIS, and other institutional integrations | Limited to approved CLOIE institutional requirements |
-| Main distinction from CLOIE | Broader institutional planning and assessment platform | More closely connected to direct assessment and LMS evidence | Broader configurable feedback platform | Built around ACD's specific stakeholder instruments, outcome mappings, roles, and response-to-analytics workflow |
+| Criterion                        | Watermark Planning & Self-Study                                                           | Anthology Outcomes                                                                 | Explorance Blue                                                                | System CLOIE                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Primary purpose                  | Institutional assessment, planning, outcome management, and accreditation-supporting work | Learning-outcome assessment and evidence management                                | Course evaluation and feedback analytics                                       | ACD learning-outcome evaluation, stakeholder response analytics, and reporting                                   |
+| Course and program outcomes      | Supported                                                                                 | Supported                                                                          | Not the primary focus                                                          | CILOs and PLOs supported within CLOIE's academic model                                                           |
+| Institutional-level outcomes     | Supported through organizational outcome hierarchy                                        | Supported through organizational hierarchy                                         | Not the primary focus                                                          | ILOs supported within ACD's authorized scope                                                                     |
+| Outcome mapping                  | Supports mappings across organizational levels                                            | Supports outcome connections and curriculum maps                                   | Limited compared with dedicated outcome-assessment platforms                   | Supports approved CILO-to-PLO relationships                                                                      |
+| Mapping degree or manifestation  | Supports configurable curriculum-map indicators                                           | Supports degree-of-learning information                                            | Not a core capability                                                          | Uses ACD's Learning, Practice, and Opportunity manifestation model                                               |
+| Course evaluation                | Available through Watermark's broader product portfolio                                   | Separate from the core Outcomes function                                           | Core capability                                                                | Post-Term CILO Evaluation Tool                                                                                   |
+| Graduating-student evaluation    | Possible through broader assessment or survey tools                                       | Depends on institutional configuration and related tools                           | Configurable through feedback initiatives                                      | Graduating Student Exit Survey                                                                                   |
+| Alumni evaluation                | Possible through broader institutional tools                                              | Depends on configuration and related tools                                         | Configurable through feedback initiatives                                      | Alumni Evaluation Tool                                                                                           |
+| Industry-partner evaluation      | Possible through configurable institutional processes                                     | Depends on configuration                                                           | Can support external stakeholder feedback                                      | Industry Partner Internship Evaluation Tool                                                                      |
+| Controlled evaluation deployment | Available through related evaluation functions                                            | Depends on assessment configuration                                                | Core evaluation-management capability                                          | Required for CLOIE stakeholder evaluations                                                                       |
+| Quantitative analytics           | Supported                                                                                 | Supported                                                                          | Supported                                                                      | Response distributions, summaries, and approved outcome-oriented calculations                                    |
+| Qualitative feedback             | Supported in relevant Watermark products                                                  | Depends on associated evaluation tools                                             | Strong feedback and text-analysis capability                                   | Open-ended feedback and implemented qualitative-processing views                                                 |
+| Historical or trend analysis     | Supported                                                                                 | Supported                                                                          | Trend analysis supported                                                       | Historical comparison where academic context permits                                                             |
+| Role and organizational scope    | Supported                                                                                 | Supported through permissions and organizational units                             | Supports institutional hierarchy and role-sensitive reporting                  | College, program, General Education, course, and respondent scope                                                |
+| Accreditation support            | Broad assessment and accreditation-supporting capabilities                                | Supports outcome evidence within a broader institutional-effectiveness environment | Feedback can contribute evidence but accreditation is not its primary function | Produces accreditation-supporting evidence but does not perform accreditation                                    |
+| LMS/SIS integration              | Supports institutional integrations                                                       | Strong LMS integration                                                             | Supports LMS, SIS, and other institutional integrations                        | Limited to approved CLOIE institutional requirements                                                             |
+| Main distinction from CLOIE      | Broader institutional planning and assessment platform                                    | More closely connected to direct assessment and LMS evidence                       | Broader configurable feedback platform                                         | Built around ACD's specific stakeholder instruments, outcome mappings, roles, and response-to-analytics workflow |
 
 The comparison shows that CLOIE does not introduce an entirely new class of academic software. Outcome mapping, institutional assessment, course evaluation, feedback analytics, role-sensitive access, historical reporting, and accreditation-supporting evidence already appear in mature higher-education systems.
 
@@ -618,7 +618,7 @@ Project CLOIE's contribution is the implementation and evaluation of these ideas
 
 # **\==================================================**
 
-This chapter describes how Project CLOIE was planned, refined, implemented, secured, and prepared for verification and stakeholder validation. It documents the engineering process actually reflected in the project's consultation records, requirements documents, use cases, prototypes, repository history, architectural decisions, test infrastructure, and current System CLOIE codebase. The project followed an iterative and incremental development process organized around continuously refined work items rather than fixed Scrum sprints. Requirements and technical decisions changed as the proponents received client and adviser feedback, examined institutional workflows, reviewed prototypes, implemented system capabilities, and discovered technical or scope issues during development. 
+This chapter describes how Project CLOIE was planned, refined, implemented, secured, and prepared for verification and stakeholder validation. It documents the engineering process actually reflected in the project's consultation records, requirements documents, use cases, prototypes, repository history, architectural decisions, test infrastructure, and current System CLOIE codebase. The project followed an iterative and incremental development process organized around continuously refined work items rather than fixed Scrum sprints. Requirements and technical decisions changed as the proponents received client and adviser feedback, examined institutional workflows, reviewed prototypes, implemented system capabilities, and discovered technical or scope issues during development.
 
 ## **3.1 Development Approach and Lifecycle**
 
@@ -634,13 +634,13 @@ The current repository reflects this iterative process more clearly than the pro
 
 In practice, the development lifecycle followed this general flow:
 
-1. A requirement, problem, client request, defect, or technical concern was identified.  
-2. The proponents investigated the affected workflow and existing implementation.  
-3. Larger or ambiguous changes were clarified through specifications, prototypes, design review, or architectural analysis.  
-4. The change was divided into smaller implementation work items where appropriate.  
-5. The affected frontend, service, data, authorization, and test layers were modified.  
-6. The implementation was checked through applicable automated tests, linting, database checks, browser tests, builds, and manual inspection.  
-7. Findings from verification, prototype review, client consultation, or adviser feedback could reopen or alter the requirement.  
+1. A requirement, problem, client request, defect, or technical concern was identified.
+2. The proponents investigated the affected workflow and existing implementation.
+3. Larger or ambiguous changes were clarified through specifications, prototypes, design review, or architectural analysis.
+4. The change was divided into smaller implementation work items where appropriate.
+5. The affected frontend, service, data, authorization, and test layers were modified.
+6. The implementation was checked through applicable automated tests, linting, database checks, browser tests, builds, and manual inspection.
+7. Findings from verification, prototype review, client consultation, or adviser feedback could reopen or alter the requirement.
 8. Cross-cutting decisions and significant changes were retained in repository documentation, specifications, ADRs, issue records, or related project evidence.
 
 This was not a fixed-length iteration. Work items varied in size and moved according to dependency, priority, risk, and project need. This distinction matters because describing the process as a series of "two-week sprints," for example, would not match the available evidence.
@@ -653,7 +653,7 @@ Release and milestone work followed the same principle. The project moved throug
 
 ## **3.2 Requirements Engineering and Stakeholder Engagement**
 
-Requirements engineering for Project CLOIE was an ongoing process of identifying institutional needs, converting them into system behavior, validating them against stakeholder expectations, and revising them when later evidence contradicted earlier assumptions. ISO/IEC/IEEE 29148:2018 treats requirements engineering as a lifecycle activity that covers the processes and information needed to establish and manage system and software requirements. This supports CLOIE's use of persistent requirement identifiers and change records rather than treating the first requirements document as permanently final. 
+Requirements engineering for Project CLOIE was an ongoing process of identifying institutional needs, converting them into system behavior, validating them against stakeholder expectations, and revising them when later evidence contradicted earlier assumptions. ISO/IEC/IEEE 29148:2018 treats requirements engineering as a lifecycle activity that covers the processes and information needed to establish and manage system and software requirements. This supports CLOIE's use of persistent requirement identifiers and change records rather than treating the first requirements document as permanently final.
 
 ### **3.2.1 Stakeholders Consulted**
 
@@ -719,14 +719,14 @@ Traceability connects the reason a capability exists to the evidence that it was
 
 Project CLOIE uses the following identifier families:
 
-* OBJ for project objectives;  
-* FR for functional requirements;  
-* NFR for quality or non-functional requirements;  
-* SEC for security and privacy requirements;  
-* DR for data and integrity requirements;  
-* INT for integration and infrastructure requirements;  
-* UC for use cases or user interactions;  
-* TC for test cases or test scenarios.
+- OBJ for project objectives;
+- FR for functional requirements;
+- NFR for quality or non-functional requirements;
+- SEC for security and privacy requirements;
+- DR for data and integrity requirements;
+- INT for integration and infrastructure requirements;
+- UC for use cases or user interactions;
+- TC for test cases or test scenarios.
 
 The intended traceability chain is:
 
@@ -760,7 +760,7 @@ The repository currently maintains a context map, domain-specific CONTEXT.md doc
 
 Historical specification systems used earlier in the project should be described according to their actual period of use. If a specification mechanism was later retired or migrated, the final documentation should retain the migration evidence rather than presenting the retired process as the current workflow.
 
-### 
+###
 
 ### **3.3.3 Code Review and Quality Gates**
 
@@ -814,7 +814,7 @@ Authentication identity and application-domain identity have also been treated a
 
 Development and demo authentication mechanisms are intentionally separated from production. Development authentication is restricted to development mode, while the dedicated demo uses a separate signed session and isolated data environment. The repository explicitly states that demo authentication does not replace OAuth evidence.
 
-### 
+###
 
 ### **3.4.2 Authorization and Scope Enforcement**
 
@@ -860,7 +860,7 @@ The application container runs as a non-root user and exposes a health-check end
 
 Dependency security still requires maintenance. The existence of a lockfile or CI pipeline does not prove that all dependencies are free from vulnerabilities. Dependency versions, known risks, update procedures, and licenses should therefore remain part of operational maintenance and the Appendix E dependency inventory.
 
-### 
+###
 
 ### **3.4.6 Backup, Recovery, and Incident Considerations**
 
@@ -922,7 +922,7 @@ The dedicated demo environment is also separated from the primary production env
 
 The final user-validation environment should be recorded in Appendix G, including the system/build version, testing period, validation type, location or mode, participant group, and tasks performed.
 
-### 
+###
 
 ### **3.5.3 Test Responsibilities**
 
@@ -932,7 +932,7 @@ Stakeholder validation has a different purpose. Representative users or institut
 
 The client, adviser, ICTC personnel, or other institutional representatives may participate in review or acceptance where required by the capstone process, but the final manuscript should identify only individuals and stakeholder groups that actually participated.
 
-### 
+###
 
 ### **3.5.4 Entry, Exit and Acceptance Criteria**
 
@@ -966,54 +966,54 @@ The current CI configuration uploads Playwright reports and traces on relevant f
 
 The institutional testing records are organized through Appendix G:
 
-* G-1 records system tests and expected versus actual behavior;  
-* G-2 records user or stakeholder validation;  
-* G-3 records defects, revisions, and retesting;  
-* G-4 records the user/client validation summary and acceptance.
+- G-1 records system tests and expected versus actual behavior;
+- G-2 records user or stakeholder validation;
+- G-3 records defects, revisions, and retesting;
+- G-4 records the user/client validation summary and acceptance.
 
 These forms are designed to show evidence of actual testing and improvement. Blank forms do not constitute proof that validation occurred.
 
 ### **3.6 Project Management, Risks and Milestones**
 
-Project management was integrated with the iterative development workflow. Detailed backlog history, issue records, repository activity, risk registers, and contribution evidence should remain in Appendix D rather than being reproduced in full in this chapter. The CLOIE manuscript format specifically reserves Appendix D for milestone history, selected Kanban or backlog evidence, risks, requirement changes, GitHub issues, pull requests, build evidence, CI evidence, and team contributions. 
+Project management was integrated with the iterative development workflow. Detailed backlog history, issue records, repository activity, risk registers, and contribution evidence should remain in Appendix D rather than being reproduced in full in this chapter. The CLOIE manuscript format specifically reserves Appendix D for milestone history, selected Kanban or backlog evidence, risks, requirement changes, GitHub issues, pull requests, build evidence, CI evidence, and team contributions.
 
 ### **3.6.1 Major Project Milestones**
 
-The milestone table below records the major project stages supported by the available project history. Exact closure dates and final statuses should be reconciled with Appendix D before submission. 
+The milestone table below records the major project stages supported by the available project history. Exact closure dates and final statuses should be reconciled with Appendix D before submission.
 
-#### **Table 3.1** *Project Milestones* 
+#### **Table 3.1** _Project Milestones_
 
-| Milestone | Planned Period | Actual / Current Status | Evidence |
-| ----- | ----- | ----- | ----- |
-| Initial problem identification and client consultation | Capstone planning stage | Consultation completed; exact milestone closure record to verify | Client consultation records |
-| Title proposal and early requirements definition | Capstone 1 | Conducted; final administrative status to verify against Appendix A/D | Adviser/client consultations, proposal records |
-| Initial prototype and system design | Development stage | Multiple prototypes and design revisions are evidenced; formal milestone status to verify | Prototype files, design documents |
-| Core application and data-model implementation | Development stage | Substantial implementation exists in repository; completion against final RTM not yet claimed here | Git history, source code, migrations |
-| Stakeholder and role workflow refinement | Iterative development stage | Revisions evidenced throughout repository; final requirement status to verify | Specifications, ADRs, issues |
-| Evaluation, response, analytics, and reporting implementation | Development stage | Implemented areas exist; final fulfillment status belongs to Chapter 5 | Source code, tests, RTM |
-| Automated verification and CI strengthening | Development and verification stage | Test and CI infrastructure exists; final pass results not reported in this chapter | GitHub Actions, Vitest, Playwright, database tests |
-| User / stakeholder validation | Pre-final/final validation stage | **To be verified from completed Appendix G evidence** | Appendix G |
-| Deployment and operational preparation | Pre-final/final stage | Deployment architecture and procedures exist; final operational status to verify | Deployment/runbook evidence |
-| Institutional turnover / final acceptance | Final stage | **To be verified** | Appendix A, E, G and Chapter 5 evidence |
+| Milestone                                                     | Planned Period                     | Actual / Current Status                                                                            | Evidence                                           |
+| ------------------------------------------------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Initial problem identification and client consultation        | Capstone planning stage            | Consultation completed; exact milestone closure record to verify                                   | Client consultation records                        |
+| Title proposal and early requirements definition              | Capstone 1                         | Conducted; final administrative status to verify against Appendix A/D                              | Adviser/client consultations, proposal records     |
+| Initial prototype and system design                           | Development stage                  | Multiple prototypes and design revisions are evidenced; formal milestone status to verify          | Prototype files, design documents                  |
+| Core application and data-model implementation                | Development stage                  | Substantial implementation exists in repository; completion against final RTM not yet claimed here | Git history, source code, migrations               |
+| Stakeholder and role workflow refinement                      | Iterative development stage        | Revisions evidenced throughout repository; final requirement status to verify                      | Specifications, ADRs, issues                       |
+| Evaluation, response, analytics, and reporting implementation | Development stage                  | Implemented areas exist; final fulfillment status belongs to Chapter 5                             | Source code, tests, RTM                            |
+| Automated verification and CI strengthening                   | Development and verification stage | Test and CI infrastructure exists; final pass results not reported in this chapter                 | GitHub Actions, Vitest, Playwright, database tests |
+| User / stakeholder validation                                 | Pre-final/final validation stage   | **To be verified from completed Appendix G evidence**                                              | Appendix G                                         |
+| Deployment and operational preparation                        | Pre-final/final stage              | Deployment architecture and procedures exist; final operational status to verify                   | Deployment/runbook evidence                        |
+| Institutional turnover / final acceptance                     | Final stage                        | **To be verified**                                                                                 | Appendix A, E, G and Chapter 5 evidence            |
 
 ### **3.6.2 Major Project Risks**
 
 The following risks arise directly from the project's documented engineering and institutional context. Final likelihood, owner, and closure status should be confirmed in the formal risk register rather than inferred solely for manuscript completion.
 
-#### **Table 3.2** *Project Risk Summary*
+#### **Table 3.2** _Project Risk Summary_
 
-| Risk | Likelihood | Impact | Mitigation | Owner | Status |
-| ----- | ----- | ----- | ----- | ----- | ----- |
-| Requirements or stakeholder responsibilities change after implementation begins | Verify in risk register | High | Maintain traceability, specifications, ADRs, and change records; revise affected tests and workflows | Proponents / Client as applicable | Verify |
-| Scope expands from evaluation evidence into unrelated curriculum, LMS, SIS, or decision-making functions | Verify | High | Evaluate proposed work against project objectives and boundaries before implementation | Proponents / Client | Verify |
-| Incorrect role or organizational-scope enforcement exposes unauthorized academic data | Verify | High | Server-side authorization, scoped services, negative tests, database policies, review of role changes | Proponents | Verify |
-| Confidential respondent information or qualitative feedback is exposed unnecessarily | Verify | High | Minimize data, restrict raw evidence, aggregate where appropriate, review external-processing boundaries | Proponents / Institutional data controller | Verify |
-| Database change or migration affects integrity of academic/evaluation records | Verify | High | Committed migrations, local replay, database invariant tests, dry-run before remote migration, backup procedure | Technical proponent / Maintainer | Verify |
-| Google OAuth or self-hosted backend configuration prevents normal access | Verify | High | Separate environment configuration, health checks, deployment runbooks, pre-production verification | Technical proponent / Infrastructure operator | Verify |
-| Test/demo data is confused with real evaluation evidence | Verify | Moderate to High | Isolate test and demo environments and label demo data clearly | Proponents | Verify |
-| Stakeholder validation cannot cover all important roles before final submission | Verify | High | Prioritize critical workflows and representative users; retain incomplete coverage honestly | Proponents / Client | Verify |
-| AI-assisted interpretation exposes sensitive data or is treated as authoritative | Verify | High if feature enabled | Server-only bounded processing, aggregate inputs, human review, optional enablement, deterministic analytics as evidence source | Proponents | Verify |
-| Project knowledge is difficult to maintain after turnover | Verify | Moderate to High | ADRs, context documentation, runbooks, dependency inventory, backup/deployment documentation, turnover checklist | Proponents / Future maintainer | Verify |
+| Risk                                                                                                     | Likelihood              | Impact                  | Mitigation                                                                                                                      | Owner                                         | Status |
+| -------------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------ |
+| Requirements or stakeholder responsibilities change after implementation begins                          | Verify in risk register | High                    | Maintain traceability, specifications, ADRs, and change records; revise affected tests and workflows                            | Proponents / Client as applicable             | Verify |
+| Scope expands from evaluation evidence into unrelated curriculum, LMS, SIS, or decision-making functions | Verify                  | High                    | Evaluate proposed work against project objectives and boundaries before implementation                                          | Proponents / Client                           | Verify |
+| Incorrect role or organizational-scope enforcement exposes unauthorized academic data                    | Verify                  | High                    | Server-side authorization, scoped services, negative tests, database policies, review of role changes                           | Proponents                                    | Verify |
+| Confidential respondent information or qualitative feedback is exposed unnecessarily                     | Verify                  | High                    | Minimize data, restrict raw evidence, aggregate where appropriate, review external-processing boundaries                        | Proponents / Institutional data controller    | Verify |
+| Database change or migration affects integrity of academic/evaluation records                            | Verify                  | High                    | Committed migrations, local replay, database invariant tests, dry-run before remote migration, backup procedure                 | Technical proponent / Maintainer              | Verify |
+| Google OAuth or self-hosted backend configuration prevents normal access                                 | Verify                  | High                    | Separate environment configuration, health checks, deployment runbooks, pre-production verification                             | Technical proponent / Infrastructure operator | Verify |
+| Test/demo data is confused with real evaluation evidence                                                 | Verify                  | Moderate to High        | Isolate test and demo environments and label demo data clearly                                                                  | Proponents                                    | Verify |
+| Stakeholder validation cannot cover all important roles before final submission                          | Verify                  | High                    | Prioritize critical workflows and representative users; retain incomplete coverage honestly                                     | Proponents / Client                           | Verify |
+| AI-assisted interpretation exposes sensitive data or is treated as authoritative                         | Verify                  | High if feature enabled | Server-only bounded processing, aggregate inputs, human review, optional enablement, deterministic analytics as evidence source | Proponents                                    | Verify |
+| Project knowledge is difficult to maintain after turnover                                                | Verify                  | Moderate to High        | ADRs, context documentation, runbooks, dependency inventory, backup/deployment documentation, turnover checklist                | Proponents / Future maintainer                | Verify |
 
 ## **3.7 Feasibility and Sustainability**
 
@@ -1049,7 +1049,7 @@ This became particularly important when earlier assumptions about Secretary and 
 
 Institutional feasibility also depends on approval for use of evaluation data, authentication configuration, privacy responsibilities, infrastructure, production operation, and eventual ownership by an appropriate ACD unit such as ICTC or another designated maintainer. Final turnover responsibility remains subject to confirmation and should be recorded in Chapter 5 and Appendix E.
 
-### 
+###
 
 ### **3.7.5 Economic Considerations**
 
@@ -1095,22 +1095,22 @@ A Program Head, for example, manages Program Learning Outcomes and program-speci
 
 **\[Insert Figure 4.1 – System CLOIE Context Diagram here\]**
 
-#### ***Figure 4.1.** System CLOIE Context Diagram*
+#### **\*Figure 4.1.** System CLOIE Context Diagram\*
 
 The context diagram should show System CLOIE as the central system boundary. Human actors should appear outside that boundary, together with Google OAuth and the self-hosted backend infrastructure. The diagram should distinguish authenticated internal academic users from respondent users and should show evaluation data entering CLOIE and analytics or reports leaving it. It should not depict an LMS or SIS as an integrated system unless such an integration is actually implemented.
 
-#### **Table 4.1** *Stakeholder and System Interaction Summary*
+#### **Table 4.1** _Stakeholder and System Interaction Summary_
 
-| Stakeholder | Primary responsibilities | Scope | Major system interactions |
-| ----- | ----- | ----- | ----- |
-| Secretary | User and account administration, academic-calendar administration, administrative oversight, permitted catalog and correction functions | College-wide administrative scope, subject to explicit authorization rules | Manage users, maintain permitted administrative data, view course assignments, perform authorized administrative actions |
-| College Dean | College-wide academic oversight and stewardship where explicitly authorized | All programs and applicable General Education contexts | View college analytics, inspect outcomes and academic structures, oversee course assignments, access reports and evidence |
-| General Education Coordinator | Manage Institutional Learning Outcomes and General Education course assignments | College-wide General Education scope | Manage ILOs, manage General Education assignments, inspect General Education courses, access applicable analytics |
-| Program Head | Manage program outcomes, program-specific assignments, evaluation instruments and deployments, and program evidence | Authorized academic program or programs | Manage PLOs, course assignments, instruments, deployments, analytics, responses, and reports |
-| Faculty Member | Maintain CILOs and mappings for authorized course contexts, manage applicable course-bound evaluations, inspect course evidence | Assigned courses and teaching contexts | Manage CILOs and alignment, course rosters where authorized, course-bound evaluations, course analytics |
-| Student | Participate in assigned or eligible evaluations | Own respondent and course/evaluation context | View evaluations, save drafts, answer questions, rate CILOs where applicable, review and submit responses, view submission history |
-| Alumni | Participate in eligible alumni evaluations | Own respondent/evaluation context | View evaluations, save drafts, answer questions, review and submit responses, view submission history |
-| Industry Partner | Participate in eligible industry evaluation activities | Own respondent/evaluation context | View evaluations, save drafts, answer questions, review and submit responses, view submission history |
+| Stakeholder                   | Primary responsibilities                                                                                                                | Scope                                                                      | Major system interactions                                                                                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Secretary                     | User and account administration, academic-calendar administration, administrative oversight, permitted catalog and correction functions | College-wide administrative scope, subject to explicit authorization rules | Manage users, maintain permitted administrative data, view course assignments, perform authorized administrative actions           |
+| College Dean                  | College-wide academic oversight and stewardship where explicitly authorized                                                             | All programs and applicable General Education contexts                     | View college analytics, inspect outcomes and academic structures, oversee course assignments, access reports and evidence          |
+| General Education Coordinator | Manage Institutional Learning Outcomes and General Education course assignments                                                         | College-wide General Education scope                                       | Manage ILOs, manage General Education assignments, inspect General Education courses, access applicable analytics                  |
+| Program Head                  | Manage program outcomes, program-specific assignments, evaluation instruments and deployments, and program evidence                     | Authorized academic program or programs                                    | Manage PLOs, course assignments, instruments, deployments, analytics, responses, and reports                                       |
+| Faculty Member                | Maintain CILOs and mappings for authorized course contexts, manage applicable course-bound evaluations, inspect course evidence         | Assigned courses and teaching contexts                                     | Manage CILOs and alignment, course rosters where authorized, course-bound evaluations, course analytics                            |
+| Student                       | Participate in assigned or eligible evaluations                                                                                         | Own respondent and course/evaluation context                               | View evaluations, save drafts, answer questions, rate CILOs where applicable, review and submit responses, view submission history |
+| Alumni                        | Participate in eligible alumni evaluations                                                                                              | Own respondent/evaluation context                                          | View evaluations, save drafts, answer questions, review and submit responses, view submission history                              |
+| Industry Partner              | Participate in eligible industry evaluation activities                                                                                  | Own respondent/evaluation context                                          | View evaluations, save drafts, answer questions, review and submit responses, view submission history                              |
 
 The table describes current responsibility boundaries rather than a hierarchy in which a higher-level role automatically inherits all lower-level permissions. Authorization is explicit. This is particularly important for the Secretary, Dean, General Education Coordinator, and Program Head because some of their views may use common services while their mutation rights remain different.
 
@@ -1258,7 +1258,7 @@ System CLOIE's reporting requirement ends with the production and organization o
 
 No arbitrary response-time threshold is introduced here. If a performance requirement is approved, its measurement conditions and acceptance threshold must be added to Appendix F before performance testing rather than chosen after results are known.
 
-### 
+###
 
 ### **4.2.3 Security and Privacy Requirements**
 
@@ -1344,9 +1344,9 @@ The older administrative use-case set must be reconciled with the newer General 
 
 **\[Insert Figure 4.2 – System CLOIE Use Case / User Interaction Diagram here\]**
 
-#### ***Figure 4.2.** System CLOIE Use Case / User Interaction Model*
+#### **\*Figure 4.2.** System CLOIE Use Case / User Interaction Model\*
 
-### 
+###
 
 ### **4.3.1 Authentication, Registration and Onboarding**
 
@@ -1356,7 +1356,7 @@ UC-AUTH-03 Profile Gate covers the requirement that users complete or satisfy th
 
 The system distinguishes pre-provisioned accounts from self-service onboarding. Secretary-created accounts are created with the information required by their selected role. Eligible self-service respondent accounts follow the onboarding and verification behavior defined for their account type. The final Appendix C should document those paths separately because their preconditions differ.
 
-### 
+###
 
 ### **4.3.2 Secretary Workflows**
 
@@ -1364,7 +1364,7 @@ The Secretary's current workflows center on administrative management rather tha
 
 The Secretary may inspect course assignments but does not mutate them. Likewise, ILO encoding is no longer a Secretary workflow. Any older Secretary use case that still grants these capabilities must be marked superseded during Appendix C reconciliation.
 
-### 
+###
 
 ### **4.3.3 Dean Workflows**
 
@@ -1378,7 +1378,7 @@ The General Education Coordinator is responsible for General Education workflows
 
 The ILO workflow includes creation, editing, ordering, archiving, and restoration. This responsibility belongs to the General Education Coordinator rather than the Secretary in the current design.
 
-### 
+###
 
 ### **4.3.5 Program Head Workflows**
 
@@ -1408,7 +1408,7 @@ The Alumni use cases are UC-ALU-01 through UC-ALU-06, covering dashboard access,
 
 Alumni use the shared evaluation-detail, question-answering, and completion-status workflows but do not use the Student-specific CILO-rating interaction unless an approved instrument explicitly defines such behavior.
 
-### 
+###
 
 ### **4.3.9 Industry Partner Workflows**
 
@@ -1426,9 +1426,9 @@ The current repository documents Next.js 16, TypeScript 5, Tailwind CSS, shadcn/
 
 **\[Insert Figure 4.3 – System CLOIE Solution Architecture here\]**
 
-#### ***Figure 4.3.** System CLOIE Solution Architecture*
+#### **\*Figure 4.3.** System CLOIE Solution Architecture\*
 
-### 
+###
 
 ### **4.4.1 Client and Presentation Architecture**
 
@@ -1438,7 +1438,7 @@ Shared interface components are separated from feature-specific components. The 
 
 The application uses server-rendered behavior where appropriate while client components handle interactions that require browser state, form control, or interactive visualization. This division avoids treating the entire application as a client-only single-page application.
 
-#### 
+####
 
 #### **4.4.2 Application and Domain Architecture**
 
@@ -1448,7 +1448,7 @@ The architecture follows a service-oriented pattern inside the monolith. UI comp
 
 This structure keeps deployment simple because CLOIE remains one application while avoiding a single undifferentiated codebase. A microservice architecture would add network boundaries, independent service deployment, distributed failure modes, and operational overhead that the current capstone does not require.
 
-### **4.4.3 Authentication and Authorization Architecture** 
+### **4.4.3 Authentication and Authorization Architecture**
 
 Production authentication uses Supabase Auth with Google OAuth. The application maintains its own domain-user records rather than treating the external authentication identity as the complete academic user model.
 
@@ -1496,7 +1496,7 @@ System CLOIE is strongly relational because evaluation evidence only becomes mea
 
 **\[Insert Figure 4.4 – System CLOIE Entity Relationship Diagram here\]**
 
-#### ***Figure 4.4.** System CLOIE Entity Relationship Diagram*
+#### **\*Figure 4.4.** System CLOIE Entity Relationship Diagram\*
 
 The ERD should show conceptual and logical relationships rather than every implementation field. The complete field-level dictionary belongs in Appendix E.
 
@@ -1542,7 +1542,7 @@ Each typed mapping stores its manifestation classification. The current model us
 
 Active/archive state is important for outcome history. Archiving an outcome prevents it from being treated as an ordinary active target for new work while avoiding destructive removal of evidence that already references it.
 
-### 
+###
 
 ### **4.5.5 Evaluation Instrument and Deployment Data**
 
@@ -1652,7 +1652,7 @@ Optional AI-assisted interpretation, where enabled, occurs after the determinist
 
 **\[Insert Figure 4.5 – Evaluation Evidence and Analytics Data Flow here\]**
 
-#### ***Figure 4.5. Evaluation Evidence and Analytics Data Flow***
+#### **_Figure 4.5. Evaluation Evidence and Analytics Data Flow_**
 
 A useful version of this figure should show:
 
@@ -1680,7 +1680,7 @@ The design therefore favors visible context, consistent navigation, recognizable
 
 Role awareness is also part of usability. The interface should make it clear whether the user is operating at college, General Education, program, course, or respondent scope.
 
-### 
+###
 
 ### **4.7.2 Information Architecture and Navigation**
 
@@ -1846,11 +1846,11 @@ Database backup and recovery belong to the production operating model. The appli
 
 The principal trust boundaries are:
 
-1. the user's browser and the CLOIE server;  
-2. the CLOIE server and self-hosted Supabase/Auth services;  
-3. the application and PostgreSQL persistence layer;  
-4. the application and Google OAuth;  
-5. the application and any optional external AI service;  
+1. the user's browser and the CLOIE server;
+2. the CLOIE server and self-hosted Supabase/Auth services;
+3. the application and PostgreSQL persistence layer;
+4. the application and Google OAuth;
+5. the application and any optional external AI service;
 6. administrative/deployment operators and production infrastructure.
 
 Important threats include unauthorized cross-role access, forged scope identifiers, disclosure of respondent information, duplicate or altered submissions, credential leakage, incorrect deployment configuration, destructive operations against the wrong backend, and disclosure of sensitive text to an external processing service.
@@ -1939,19 +1939,19 @@ Before Appendix F is finalized, the Chapter 4 baseline should be checked bidirec
 
 The current revision exposes several items that need deliberate reconciliation rather than being hidden:
 
-| Traceability issue | Required action |
-| ----- | ----- |
-| Legacy SRS contains duplicate and superseded FR numbering | Establish the Chapter 4 identifiers above as the approved baseline and retain legacy mappings in the Appendix F change log |
-| Older use cases predate the final General Education Coordinator responsibility model | Update Appendix C while retaining unaffected UC IDs |
-| Secretary ILO and course-assignment authority changed | Mark older requirements/use cases Changed/Superseded rather than deleting their history |
-| PLO terminology replaced older GO terminology in current code/documentation | Use PLO as the canonical term while retaining legacy database/snapshot terminology where historical evidence requires it |
-| CILO mapping rules changed to typed L/P/O manifestation relationships | Map FR-22 through FR-26 to the current outcomes components and corresponding TC coverage |
-| Peer-to-Peer Evaluation, Self-Evaluation, and Class Observation lack approved implementation evidence | Keep Proposed/Pending and outside the current verified FR/UC baseline |
-| Exact retention period is not established | Obtain institutional retention requirement before creating a measurable DR or SEC retention criterion |
-| Performance acceptance threshold is not established | Define a requirement and test conditions before Chapter 5 performance measurement if performance testing is required |
-| Final production deployment is not yet established by this chapter | Map INT requirements to deployment verification evidence in Chapter 5 |
-| Final backup/recovery acceptance evidence requires verification | Link NFR-08 and relevant security requirements to the final recovery test rather than marking them passed now |
-| Optional AI capability may differ between code availability and production enablement | Record enabled/disabled final state and map only the deployed behavior into Chapter 5 |
+| Traceability issue                                                                                    | Required action                                                                                                            |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Legacy SRS contains duplicate and superseded FR numbering                                             | Establish the Chapter 4 identifiers above as the approved baseline and retain legacy mappings in the Appendix F change log |
+| Older use cases predate the final General Education Coordinator responsibility model                  | Update Appendix C while retaining unaffected UC IDs                                                                        |
+| Secretary ILO and course-assignment authority changed                                                 | Mark older requirements/use cases Changed/Superseded rather than deleting their history                                    |
+| PLO terminology replaced older GO terminology in current code/documentation                           | Use PLO as the canonical term while retaining legacy database/snapshot terminology where historical evidence requires it   |
+| CILO mapping rules changed to typed L/P/O manifestation relationships                                 | Map FR-22 through FR-26 to the current outcomes components and corresponding TC coverage                                   |
+| Peer-to-Peer Evaluation, Self-Evaluation, and Class Observation lack approved implementation evidence | Keep Proposed/Pending and outside the current verified FR/UC baseline                                                      |
+| Exact retention period is not established                                                             | Obtain institutional retention requirement before creating a measurable DR or SEC retention criterion                      |
+| Performance acceptance threshold is not established                                                   | Define a requirement and test conditions before Chapter 5 performance measurement if performance testing is required       |
+| Final production deployment is not yet established by this chapter                                    | Map INT requirements to deployment verification evidence in Chapter 5                                                      |
+| Final backup/recovery acceptance evidence requires verification                                       | Link NFR-08 and relevant security requirements to the final recovery test rather than marking them passed now              |
+| Optional AI capability may differ between code availability and production enablement                 | Record enabled/disabled final state and map only the deployed behavior into Chapter 5                                      |
 
 \==================================================  
 CHAPTER 5  
@@ -2340,4 +2340,4 @@ everything into one sheet.\]
 ACM / IEEE-STYLE CAPSTONE RESEARCH PAPER
 
 \[Include only if the BSIT program or adviser requires a separate research-paper  
-output. Otherwise omit Appendix I.\]  
+output. Otherwise omit Appendix I.\]
