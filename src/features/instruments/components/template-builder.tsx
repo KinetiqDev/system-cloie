@@ -22,15 +22,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  Check,
-  CloudAlert,
-  GripVertical,
-  Plus,
-  Save,
-  SearchIcon,
-  XIcon,
-} from "lucide-react";
+import { Check, CloudAlert, GripVertical, Plus, Save, SearchIcon, XIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";

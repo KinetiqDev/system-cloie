@@ -4,28 +4,28 @@
 **Created:** 9/8/2026 9:15:19  
 **Updated:** 9/9/2026 6:54:24  
 **Exported:** 9/9/2026 6:56:04  
-**Link:** [https://chatgpt.com/g/g-p-6a3a9deba2208191afbfeddf3ff24e54-system-cloie/c/6a9f61a6-2380-83ec-bca6-6f22e4a397e3](https://chatgpt.com/g/g-p-6a3a9deba2208191afbfeddf3ff24e54-system-cloie/c/6a9f61a6-2380-83ec-bca6-6f22e4a397e3)  
+**Link:** [https://chatgpt.com/g/g-p-6a3a9deba2208191afbfeddf3ff24e54-system-cloie/c/6a9f61a6-2380-83ec-bca6-6f22e4a397e3](https://chatgpt.com/g/g-p-6a3a9deba2208191afbfeddf3ff24e54-system-cloie/c/6a9f61a6-2380-83ec-bca6-6f22e4a397e3)
 
 ## Prompt:
+
 9/8/2026, 9:22:54 AM
 
 Consider the ai implementationin system cloie. It is currently implemented for the program head and faculty. I don't feel like it generates actual valuable or rather insightful responses. Furthermore, in consideration of a capstone essence of the project--pretty much what makes a capstone a capstone, or what qualifies a project to be capstone-level or whatever bullshit they have to say, you can look into it in the new capstone technical document format--we pretty much implemented the ai insights in the analytics so that we would pretty much have something that makes system cloie not just a fucking crud app--I mean we have analytics and all, but like what fuck, it just does a few mean calculcations, and is still unfinished--so now we have ai insights in our analytics. I think we should have a better integration for it. Just on the analytics side I think, and I dont want to deal with scope creep so keep it simple and useful, and not make it feel that it is there for the sake of being there
 
-Can you consider what would be a good llm model for it to be used? Or is the current one good enough. I mean dont overthink it bro.  Currently I just rock with gpt oss 20b from groq, because it just serves really fast inference.
+Can you consider what would be a good llm model for it to be used? Or is the current one good enough. I mean dont overthink it bro. Currently I just rock with gpt oss 20b from groq, because it just serves really fast inference.
 
 ## Response:
+
 9/8/2026, 9:22:59 AM
 
 > **Inspected code, prompts, schemas, and analytics evidence-handling**
->
-> 
 >
 > **Searching the web**
 >
 > [OpenAI GPT-OSS 20B - GroqDocs](https://console.groq.com/docs/model/openai/gpt-oss-20b)
 > [Introducing gpt-oss | OpenAI](https://openai.com/index/introducing-gpt-oss/)
 > [gpt-oss-120b & gpt-oss-20b Model Card - OpenAI Deployment Safety Hub](https://deploymentsafety.openai.com/gpt-oss/a2)
-> [2.6.4  Full Evaluations](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf)
+> [2.6.4 Full Evaluations](https://cdn.openai.com/pdf/419b6906-9da6-406c-a19d-1bb078ac7637/oai_gpt-oss_model_card.pdf)
 >
 > **Assessing AI implementation**
 >
@@ -33,11 +33,7 @@ Can you consider what would be a good llm model for it to be used? Or is the cur
 >
 > **Assessed AI implementation**
 >
-> 
->
 > **Searched 4 websites**
->
-> 
 >
 > **Refining AI’s role**
 >
@@ -45,11 +41,7 @@ Can you consider what would be a good llm model for it to be used? Or is the cur
 >
 > **Refined AI’s role**
 >
-> 
->
 > **Evaluated AI integration evidence and updated capstone guide citations**
->
-> 
 >
 > **Searching the web**
 >
@@ -65,11 +57,7 @@ Can you consider what would be a good llm model for it to be used? Or is the cur
 >
 > **Prioritized implementation and evaluated model choices**
 >
-> 
->
 > **Searched 1 website**
->
-> 
 >
 > Worked for 2m 32s
 
@@ -324,16 +312,16 @@ That is a much stronger feature than "AI-generated insights," and it's still sma
 - [Introducing gpt-oss | OpenAI](https://openai.com/index/introducing-gpt-oss/?utm_source=chatgpt.com)
 
 ## Prompt:
+
 9/8/2026, 4:19:47 PM
 
 So I was also thinking of changing the AI sentiment usage in the program head's analytics page to be like the faculty's analytics page, where the AI insights or sentiment are under the charts themselves. Currently, program heads have to deliberately go to the AI insights tab and click the generate insights button—or whatever it's called. I forgot. But you get the point. They have to do that, which is almost equivalent to copying and pasting analytics and asking ChatGPT to interpret them. I’m thinking we should shift it so that it works like the faculty page, auto‑generating insights as they go to the page. It would use proper caching so it doesn’t reprompt the AI, waste tokens, or run inference when there are no changes in the analytics. I'm also thinking of improving the system prompt itself so that it would generate better results.
 
 ## Response:
+
 9/8/2026, 4:20:52 PM
 
 > **Evaluated caching and exact component resolution across analytics code**
->
-> 
 >
 > Worked for 1m 4s
 
@@ -439,13 +427,7 @@ The AI evidence is not.
 So the correct key is closer to the faculty implementation:
 
 ```ts
-SHA256(
-  promptVersion +
-  principalOrScope +
-  model +
-  provider +
-  canonicalEvidencePacket
-)
+SHA256(promptVersion + principalOrScope + model + provider + canonicalEvidencePacket);
 ```
 
 That gives you the property you actually care about:
@@ -482,8 +464,8 @@ Something like:
 generateProgramHeadAnalyticsInsight({
   programId,
   view: "outcomes",
-  filters
-})
+  filters,
+});
 ```
 
 Then:
@@ -779,6 +761,7 @@ And importantly, it doesn't increase CLOIE's scope. You're not adding an AI assi
 I'd consider this a **refinement of the analytics feature**, not a new feature area.
 
 ## Prompt:
+
 9/9/2026, 1:16:02 AM
 
 ![1de81a13-7f71-42e2-bb44-5a919e449b21.png](https://chatgpt.com/backend-api/estuary/content?id=file_00000000f9a482099f9fd1366409119a&ts=496918&p=fs&cid=1&sig=d461c63a9c77541200b277e133279a3e7fcc72e7a4118cfd18abcb7d3ab8f411&v=0)
@@ -804,23 +787,25 @@ I'd consider this a **refinement of the analytics feature**, not a new feature a
 I think the current implementation of the analytics page of the faculty is quite confusing. I don't think it uses proper charts for the data that must be shown in the profile. We're not really utilizing bar graphs much. I'm not sure about these loading bars; I think we could use some bar graphs here. To consider the implementation of the AI, as you can see, there is some AI insights below the charts or the data being presented. I think the props are absolutely stupid, though. Furthermore, another issue is the filters. The evaluation filter shows a duplicate course. From my perspective, it makes sense because faculty can be assigned the same course twice, just different sections. That makes sense, but on the user's end they might be confused about why there are two or more of the same course in the evaluation drop‑down filter. So, just to go over briefly each part of the analytics page of the faculty. In the overview tab, we have participation by evaluation. These are loading bars. I think these are okay. They show how much I’ve responded against the total number of respondents in that evaluation. The rating distribution, I think, from what I understand here, the left part of the rating distribution bar is 1 and the most right is 5. I think we must start reconsidering our data visualization, specifically the types of charts we are using. Given what the faculty should see in their analytics page. In the CILO results tab, I see a loading bar with a circular dot that moves to the right. This year could use a bar chart or a reach chart for data representation. I think that's a good representation of data. For the question results, the page is long and there are no valid ratings. Considering the code base, what should be shown? For the open-ended questions, the trends are unclear. There's no comparable course trends chart displayed, and the written feedback shows nothing. In fact, there's no Q2DELAC responses
 
 ---
+
 Just a quick side note, excuse the typos, I am using speech to text
 
 ## Response:
+
 9/9/2026, 1:16:10 AM
 
 > **Analyzed faculty analytics dashboards, code, trends, filters, and response issues**
 >
-> 
->
 > Worked for 1m 3s
 
 ## Prompt:
+
 9/9/2026, 1:17:07 AM
 
 Oh wait the filters part, it was actually the evaluations filter that got a duplicate my bad. The course actually does not show the way to do it. Of course, it was the evaluation filter.
 
 ## Response:
+
 9/9/2026, 1:17:48 AM
 
 > **Clarifying duplicate evaluations**
@@ -829,11 +814,7 @@ Oh wait the filters part, it was actually the evaluations filter that got a dupl
 >
 > **Clarified duplicate evaluations**
 >
-> 
->
 > **Clarified evaluation grouping, labels, and deployment filters**
->
-> 
 >
 > Worked for 40s
 
@@ -905,19 +886,18 @@ So for the broader faculty analytics redesign we were discussing, I'll treat the
 with the specific UX bug being **ambiguous evaluation labels**, not duplicate courses. The rest of your concerns about the charts, Question Results, Trends, Written Feedback, and the AI cards still stand.
 
 ## Prompt:
+
 9/9/2026, 1:27:04 AM
 
 Consider the previous prompt I gave along with the images I attached. Consider also the updated codebase that I have attached in the project sources.
 
 ## Response:
+
 9/9/2026, 1:27:10 AM
 
 > **Reviewed faculty analytics implementation, dashboard updates, charts, metrics, and evaluation labels**
 >
-> 
->
 > **Inspecting analytics XML source files**
->
 >
 > **Updating the assessment**
 >
@@ -945,15 +925,9 @@ Consider the previous prompt I gave along with the images I attached. Consider a
 >
 > **Updated assessment and finalized evidence-based recommendations**
 >
-> 
->
 > **Inspected analytics sources, dashboard code, trends views, and AI UI properties**
 >
-> 
->
 > **Revised faculty analytics and filtered seed research results**
->
-> 
 >
 > Worked for 4m 33s
 
@@ -1166,11 +1140,13 @@ For Faculty I would settle on **one combined AI interpretation on Overview**, th
 That is a fairly contained refactor. It improves the parts that actually feel bad without turning Faculty analytics into another six-week subsystem rewrite. The current repo already has most of the data and chart plumbing you need.
 
 ## Prompt:
+
 9/9/2026, 1:38:39 AM
 
 So essentially, what charts do you suggest to use for your faculty's analytics? ; give it to me in an easy-to-digest manner. In consideration of our chat, CN, Recharts, and other text that we are using, what would make sense here given the things that the faculty should see?
 
 ## Response:
+
 9/9/2026, 1:39:20 AM
 
 > **Designing dashboard charts**
@@ -1179,11 +1155,7 @@ So essentially, what charts do you suggest to use for your faculty's analytics? 
 >
 > **Designed dashboard charts**
 >
-> 
->
 > **Mapped faculty analytics requirements and tabs to Recharts visualizations**
->
-> 
 >
 > Worked for 31s
 
@@ -1191,14 +1163,14 @@ Yep. I would keep the Faculty Analytics visualization vocabulary **small and con
 
 The simplest answer is: **progress bars, horizontal bar charts, 100% stacked Likert bars, and line charts.** Then use the existing word cloud only as a secondary qualitative visualization.
 
-| Faculty analytics area | What to use | Why |
-|---|---|---|
-| Participation by evaluation | **Progress bar** | Shows submitted responses versus total opportunities |
-| Overall rating distribution | **100% stacked horizontal bar** | Shows how responses are split across 1 to 5 categories |
-| CILO results | **Horizontal bar chart** | Easy comparison of CILO means |
-| Question results | **Horizontal bar chart + expandable Likert distribution** | Quickly finds high and low questions without a massive page |
-| Trends | **Line chart with dots** | Academic periods have meaningful chronological order |
-| Written feedback | **Ranked horizontal bar + word cloud** | Bars show exact frequency, word cloud gives quick visual scanning |
+| Faculty analytics area      | What to use                                               | Why                                                               |
+| --------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| Participation by evaluation | **Progress bar**                                          | Shows submitted responses versus total opportunities              |
+| Overall rating distribution | **100% stacked horizontal bar**                           | Shows how responses are split across 1 to 5 categories            |
+| CILO results                | **Horizontal bar chart**                                  | Easy comparison of CILO means                                     |
+| Question results            | **Horizontal bar chart + expandable Likert distribution** | Quickly finds high and low questions without a massive page       |
+| Trends                      | **Line chart with dots**                                  | Academic periods have meaningful chronological order              |
+| Written feedback            | **Ranked horizontal bar + word cloud**                    | Bars show exact frequency, word cloud gives quick visual scanning |
 
 That would be the whole vocabulary.
 
@@ -1457,11 +1429,13 @@ AI
 That's enough. I'd rather have **five very readable visualizations used consistently** than fifteen different chart types trying to make the analytics page look sophisticated.
 
 ## Prompt:
+
 9/9/2026, 1:42:15 AM
 
 Now, furthermore, for the AI insights regarding prompt improvement or what they must generate, what would it be? What prompt improvement, or how should an AI respond based on each analytics?
 
 ## Response:
+
 9/9/2026, 1:43:30 AM
 
 > **Structuring meaningful insights**
@@ -1470,19 +1444,13 @@ Now, furthermore, for the AI insights regarding prompt improvement or what they 
 >
 > **Structured meaningful insights**
 >
-> 
->
 > **Refining the prompt**
 >
 > I’m narrowing the AI’s role to evidence-backed findings: rated-question outliers, valid-response counts, comparable-period deltas, and recurring feedback terms. I’m allowing null sections when evidence is insufficient, rather than generating generic filler.
 >
 > **Refined the prompt**
 >
-> 
->
 > **Improved faculty analytics prompts, schemas, evidence, and evaluation metrics**
->
-> 
 >
 > Worked for 1m 17s
 
@@ -1494,12 +1462,12 @@ The weak part is the output contract. Right now every section is forced into `su
 
 ## What the AI should do in each analytics view
 
-| View | AI's actual job | Example of a useful response |
-|---|---|---|
-| **Overview** | Give the overall picture of the rating evidence. Use participation mainly as a limitation. | "46 of 52 ratings are in the two highest categories, with an overall mean of 4.25/5. However, only 6 of 10 available response opportunities produced submissions, so the results do not represent the full invited group." |
-| **CILO results** | Compare CILOs and identify meaningful gaps, ties, or unusual distributions. | "CILO 1 has the highest mean at 5.00/5, while CILO 2 and CILO 3 are both 4.00/5. Each mean is based on only one rating, so the apparent difference is too thin to treat as a stable pattern." |
-| **Question results** | Find questions that stand apart from the rest. Do not summarize every question. | "Question 7 has the lowest mean in this section at 3.42/5 from 18 ratings, 0.61 points below the section mean. Its responses are also more spread across the scale than the other rated questions." |
-| **Trends** | Explain only real, comparable changes across periods. Quantify the change. | "The course mean increased from 3.81/5 to 4.16/5 across two comparable periods, a change of 0.35 points. The available data shows an increase, but two periods are not enough to establish a sustained trend." |
+| View                 | AI's actual job                                                                                                | Example of a useful response                                                                                                                                                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**         | Give the overall picture of the rating evidence. Use participation mainly as a limitation.                     | "46 of 52 ratings are in the two highest categories, with an overall mean of 4.25/5. However, only 6 of 10 available response opportunities produced submissions, so the results do not represent the full invited group."                                       |
+| **CILO results**     | Compare CILOs and identify meaningful gaps, ties, or unusual distributions.                                    | "CILO 1 has the highest mean at 5.00/5, while CILO 2 and CILO 3 are both 4.00/5. Each mean is based on only one rating, so the apparent difference is too thin to treat as a stable pattern."                                                                    |
+| **Question results** | Find questions that stand apart from the rest. Do not summarize every question.                                | "Question 7 has the lowest mean in this section at 3.42/5 from 18 ratings, 0.61 points below the section mean. Its responses are also more spread across the scale than the other rated questions."                                                              |
+| **Trends**           | Explain only real, comparable changes across periods. Quantify the change.                                     | "The course mean increased from 3.81/5 to 4.16/5 across two comparable periods, a change of 0.35 points. The available data shows an increase, but two periods are not enough to establish a sustained trend."                                                   |
 | **Written feedback** | Describe recurring terms and response coverage. Do not invent themes from individual words or infer sentiment. | "'laboratory' and 'hands-on' are among the most frequent terms in the available feedback. Frequency alone does not show whether they were mentioned positively or negatively, so the terms indicate topics receiving attention rather than opinions about them." |
 
 There should be **no separate AI interpretation for Participation**. A model has nothing useful to add to "6 of 10 responded." Participation should inform how cautiously the AI interprets the other evidence.
@@ -1512,10 +1480,7 @@ Instead of:
 
 ```ts
 {
-  summary,
-  implication,
-  sentiment,
-  watchPoints
+  (summary, implication, sentiment, watchPoints);
 }
 ```
 
@@ -1721,6 +1686,7 @@ These would make a surprisingly big difference with GPT-OSS 20B:
 The result I want from this feature is that a faculty member can glance at a chart, read **four or five lines underneath it**, and notice something they might have missed. If the AI paragraph is longer than the chart is useful, the feature has gone wrong.
 
 ## Prompt:
+
 9/9/2026, 6:36:03 AM
 
 ![2072640f-155e-4221-80a5-ff47123c26c5.png](https://chatgpt.com/backend-api/estuary/content?id=file_00000000440c82119fb01de8be2d83cc&ts=496918&p=fs&cid=1&sig=9e49b4fedd8c304686fca4c0d0585077ad75563c0e9d56d772bb85187d917ead&v=0)
@@ -1750,6 +1716,7 @@ The result I want from this feature is that a faculty member can glance at a cha
 Now in this chat what you can see is the analytics of the program head. In this part of the analytics, I think this is a poor implementation, and we also have to reconsider our choices of charts and the way data is presented. I'm really having a hard time explaining what the change to reconsider here, so help me out. Please, we need to make each chart traceable and make sense. I also want to consider adding more to the seed data so that we can see trends. The chart is currently not being rendered, probably because of the lack of data. For the AI insights, I'm also planning to change it so that it would be similar to how it is implemented with the faculty, where the AI insights would be automatically generated below the charts and properly cached if there are no data changes in the analytics.
 
 ## Response:
+
 9/9/2026, 6:37:30 AM
 
 > **Designing fair comparisons**
@@ -1758,19 +1725,13 @@ Now in this chat what you can see is the analytics of the program head. In this 
 >
 > **Designed fair comparisons**
 >
-> 
->
 > **Expanding trend data**
 >
 > I’m checking whether the current seed supports real trends; it likely offers too few comparable periods. I’ll add completed historical terms, preserve planned terms, and make every chart traceable to its source, scale, sample size, and exact values.
 >
 > **Expanded trend data**
 >
-> 
->
 > **Investigated program head analytics, AI insights, seeding, and trend aggregation**
->
-> 
 >
 > Worked for 2m 45s
 
@@ -1817,14 +1778,14 @@ The data model already distinguishes rating count from submitted-response count,
 
 # What I would do with each tab
 
-| Tab | Main question | Recommended presentation |
-|---|---|---|
-| Outcomes | Which PLOs stand out, and what produced those ratings? | PLO mean comparison + Likert distributions |
-| Courses | Which courses differ within comparable course-evaluation evidence? | Horizontal ranked bars |
-| Stakeholders | What does each stakeholder evidence source say? | Separate source summaries + Likert distributions |
-| Trends | How has the same evidence changed over time? | Line chart with comparability breaks |
-| Qualitative | What subjects repeatedly appear in written feedback? | Ranked term bars + word cloud |
-| AI Insights | Remove as a tab | Put contextual AI below the relevant charts |
+| Tab          | Main question                                                      | Recommended presentation                         |
+| ------------ | ------------------------------------------------------------------ | ------------------------------------------------ |
+| Outcomes     | Which PLOs stand out, and what produced those ratings?             | PLO mean comparison + Likert distributions       |
+| Courses      | Which courses differ within comparable course-evaluation evidence? | Horizontal ranked bars                           |
+| Stakeholders | What does each stakeholder evidence source say?                    | Separate source summaries + Likert distributions |
+| Trends       | How has the same evidence changed over time?                       | Line chart with comparability breaks             |
+| Qualitative  | What subjects repeatedly appear in written feedback?               | Ranked term bars + word cloud                    |
+| AI Insights  | Remove as a tab                                                    | Put contextual AI below the relevant charts      |
 
 And I would be pretty aggressive about removing charts that do not answer a useful question.
 
@@ -2342,11 +2303,13 @@ AI should never delay the chart.
 That would make the Program Head analytics feel like an evidence-review tool rather than a page full of Recharts demos. And it stays right inside CLOIE's intended role: organize and interpret evidence for human academic review, without deciding curriculum changes itself. `Meeting-Minutes.docx`
 
 ## Prompt:
+
 9/9/2026, 6:46:50 AM
 
 All in all, what we want from you is a better implementation or integration of the AI features and insights that we have in our analytics, especially for the program head. We also have to see the traceable connection and how these individual CILOs contribute to the program’s bigger picture—PLO or PLOs—given how, in the current implementation, they are being connected through manifestations and mappings.
 
 ## Response:
+
 9/9/2026, 6:47:44 AM
 
 > **Designing assessment analytics**
@@ -2355,11 +2318,7 @@ All in all, what we want from you is a better implementation or integration of t
 >
 > **Designed assessment analytics**
 >
-> 
->
 > **Designed traceable CILO–PLO analytics and reviewed outcome manifestation UI definitions**
->
-> 
 >
 > Worked for 40s
 
@@ -2443,11 +2402,11 @@ Then:
 
 ### How CILOs contribute to PLO 1
 
-| CILO | Course | Manifestation | Mean | Ratings |
-|---|---|---|---:|---:|
-| CILO 1 | IT201 Data Structures | Learning | 4.48 | 16 |
-| CILO 2 | IT201 Data Structures | Practice | 4.11 | 14 |
-| CILO 3 | ITRES1 Capstone 1 | Opportunity | 4.35 | 12 |
+| CILO   | Course                | Manifestation | Mean | Ratings |
+| ------ | --------------------- | ------------- | ---: | ------: |
+| CILO 1 | IT201 Data Structures | Learning      | 4.48 |      16 |
+| CILO 2 | IT201 Data Structures | Practice      | 4.11 |      14 |
+| CILO 3 | ITRES1 Capstone 1     | Opportunity   | 4.35 |      12 |
 
 This is what I think CLOIE is currently missing.
 
@@ -2847,11 +2806,13 @@ The AI isn't the interesting part by itself. The interesting part is that **CLOI
 That gives the Program Head something substantially more useful than CRUD plus averages, without wandering into curriculum-recommendation scope creep.
 
 ## Prompt:
+
 9/9/2026, 6:52:08 AM
 
 I’m just giving a run‑through summary of what we have discussed in this thread because I’m going to give this conversation to a coding agent. Based on this brainstorming session, it will formulate the plan, and the next prompt you give me will serve as a map throughout this conversation. I will export the conversation as a markdown file, so consider that every subsequent prompt should be useful for the next one. Furthermore, the coding agent will not treat this conversation as gospel; it will consider its options, determine what is optimal, and plan accordingly. It will not treat the discussed items as set in stone and will do further planning. It would consider the pros and cons, the documentation, the requirements, and the nature of the project. It would holistically consider it all and have a more thorough implementation plan.
 
 ## Response:
+
 9/9/2026, 6:52:29 AM
 
 > **Formulating the implementation map**
@@ -2860,11 +2821,7 @@ I’m just giving a run‑through summary of what we have discussed in this thre
 >
 > **Formulated the implementation map**
 >
-> 
->
 > **Synthesized analytics roadmap and reviewed program head AI mappings**
->
-> 
 >
 > Worked for 48s
 
@@ -3287,7 +3244,6 @@ Use the exported conversation as rationale and design context, then verify every
 
 That should work well as the anchor prompt for the exported thread. It tells the agent what we were trying to solve without turning our brainstorming into a pile of pre-approved requirements.
 
-
-
 ---
+
 Powered by [ChatGPT Exporter](https://www.chatgptexporter.com)

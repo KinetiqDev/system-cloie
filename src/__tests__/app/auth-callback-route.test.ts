@@ -770,7 +770,11 @@ describe("auth callback route", () => {
       is_active: true,
       roles: [{ role: SystemRole.FACULTY }],
     });
-    upsertUserRoleMock.mockResolvedValue({ id: "role-2", user_id: "domain-user-1", role: SystemRole.STUDENT });
+    upsertUserRoleMock.mockResolvedValue({
+      id: "role-2",
+      user_id: "domain-user-1",
+      role: SystemRole.STUDENT,
+    });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: null,
       roles: ["FACULTY", "STUDENT"],
@@ -1153,10 +1157,7 @@ describe("auth callback route", () => {
     });
 
     const response = await GET(
-      callbackRequest(
-        "https://cloie.test/api/auth/callback?code=abc&intent=secretary",
-        "secretary"
-      )
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary")
     );
 
     expect(updateUserMock).not.toHaveBeenCalled();
@@ -1306,7 +1307,9 @@ describe("auth callback route", () => {
 
       expect(createUserMock).not.toHaveBeenCalled();
       expect(signOutMock).toHaveBeenCalledTimes(1);
-      expect(response.headers.get("location")).toBe("https://cloie.test/status/missing-google-name");
+      expect(response.headers.get("location")).toBe(
+        "https://cloie.test/status/missing-google-name"
+      );
     });
 
     it("promotes an existing bootstrap email user to SECRETARY and replaces provisional name on first link", async () => {

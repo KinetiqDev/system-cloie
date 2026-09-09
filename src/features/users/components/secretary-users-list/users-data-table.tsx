@@ -203,7 +203,7 @@ export function UsersDataTable({
 
   const renderSortIcon = (field: "name" | "email" | "isActive") => {
     if (field !== activeSort) {
-      return <ArrowUpDown aria-hidden="true" className="size-4 text-muted-foreground/60" />;
+      return <ArrowUpDown aria-hidden="true" className="text-muted-foreground/60 size-4" />;
     }
     return activeDir === "asc" ? (
       <ArrowUp aria-hidden="true" className="size-4" />
@@ -212,7 +212,9 @@ export function UsersDataTable({
     );
   };
 
-  const ariaSortFor = (field: "name" | "email" | "isActive"): "ascending" | "descending" | "none" => {
+  const ariaSortFor = (
+    field: "name" | "email" | "isActive"
+  ): "ascending" | "descending" | "none" => {
     if (field !== activeSort) return "none";
     return activeDir === "asc" ? "ascending" : "descending";
   };
@@ -267,7 +269,8 @@ export function UsersDataTable({
                   type="button"
                   onClick={() => handleSort("name")}
                   aria-label={`Sort by name, currently ${ariaSortFor("name") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
                   Name
                   {renderSortIcon("name")}
                 </button>
@@ -281,7 +284,8 @@ export function UsersDataTable({
                   type="button"
                   onClick={() => handleSort("email")}
                   aria-label={`Sort by email, currently ${ariaSortFor("email") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
                   Email
                   {renderSortIcon("email")}
                 </button>
@@ -291,7 +295,8 @@ export function UsersDataTable({
                   type="button"
                   onClick={() => handleSort("isActive")}
                   aria-label={`Sort by status, currently ${ariaSortFor("isActive") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
                   Status
                   {renderSortIcon("isActive")}
                 </button>

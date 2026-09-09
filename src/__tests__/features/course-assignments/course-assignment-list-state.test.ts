@@ -149,18 +149,15 @@ describe("course assignment list URL state", () => {
   });
 
   it("round-trips column sorting and forwards it to service options", () => {
-    const state = parseCourseAssignmentListState(
-      { sort: "faculty", dir: "desc" },
-      "all-program"
-    );
+    const state = parseCourseAssignmentListState({ sort: "faculty", dir: "desc" }, "all-program");
 
     expect(state).toMatchObject({ sort: "faculty", dir: "desc" });
     expect(serializeCourseAssignmentListState(state, "all-program").toString()).toBe(
       "sort=faculty&dir=desc"
     );
-    expect(isCanonicalCourseAssignmentListState({ sort: "faculty", dir: "desc" }, state, "all-program")).toBe(
-      true
-    );
+    expect(
+      isCanonicalCourseAssignmentListState({ sort: "faculty", dir: "desc" }, state, "all-program")
+    ).toBe(true);
     expect(toCourseAssignmentListOptions(state)).toEqual({
       page: 0,
       sortBy: "faculty",

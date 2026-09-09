@@ -24,7 +24,7 @@ import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/p
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { ProgramHeadPLODetail } from "./program-head-plo-detail";
-import { ProgramHeadPloLollipopChart } from "./program-head-analytics-visualizations";
+import { LazyProgramHeadPloLollipopChart } from "./program-head-analytics-visualizations";
 import { ProgramHeadContributorMatrix } from "./program-head-contributor-matrix";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 import { HowCalculatedPopover } from "./how-calculated-popover";
@@ -165,7 +165,7 @@ export function ProgramHeadOutcomesView({
             )}
           </div>
 
-          <ProgramHeadPloLollipopChart
+          <LazyProgramHeadPloLollipopChart
             title="Mean Rating by Program Learning Outcome"
             outcomes={outcomes}
           />

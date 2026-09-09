@@ -244,9 +244,9 @@ describe("FacultyAnalyticsDashboard", () => {
     });
     // The overview AI section renders in both the participation and rating
     // distribution cards, so the observation appears twice.
-    expect(
-      await screen.findAllByText("5 of 5 invited students submitted responses.")
-    ).toHaveLength(2);
+    expect(await screen.findAllByText("5 of 5 invited students submitted responses.")).toHaveLength(
+      2
+    );
     expect(
       await screen.findAllByText(
         /Participation is complete, so the ratings represent the whole class./

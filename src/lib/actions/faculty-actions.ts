@@ -42,7 +42,8 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
     if (!domainUser) {
       return {
         success: false,
-        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
       };
     }
 

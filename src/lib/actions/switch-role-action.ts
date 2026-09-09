@@ -4,17 +4,13 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Role } from "@/lib/constants/roles";
+import {
+  ACTIVE_ROLE_COOKIE_MAX_AGE_SECONDS,
+  ACTIVE_ROLE_COOKIE_NAME,
+} from "@/features/auth/services/active-role-cookie";
 import { buildAuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
-
-// MUST stay identical to AuthBackend's ACTIVE_ROLE_COOKIE_NAME in
-// src/features/auth/services/active-role-cookie.ts. This action uses
-// cookies() directly (rather than importing the cookie module) to avoid an
-// import race while both halves of the feature land.
-const ACTIVE_ROLE_COOKIE_NAME = "cloie_active_role";
-
-const ACTIVE_ROLE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 /**
  * Switch the caller's active role context. The requested role MUST already
@@ -41,9 +37,8 @@ export async function switchActiveRole(role: string): Promise<void> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: ACTIVE_ROLE_COOKIE_MAX_AGE,
+    maxAge: ACTIVE_ROLE_COOKIE_MAX_AGE_SECONDS,
   });
-
   // Re-resolve the gate for the incoming role so onboarding/deferral routing
   // follows the new context instead of the previous one. INACTIVE is a
   // user-level (role-independent) gate whose input is not carried by the

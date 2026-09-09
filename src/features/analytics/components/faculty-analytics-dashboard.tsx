@@ -3,7 +3,16 @@
 import { useEffect, useId, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bot, CalendarDays, CheckCircle2, ChevronDown, Filter, Info, RotateCcw } from "lucide-react";
+import {
+  BarChart3,
+  Bot,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Filter,
+  Info,
+  RotateCcw,
+} from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -59,10 +68,7 @@ import type {
   FacultyTrendPoint,
 } from "../types";
 import type { DeploymentStatus } from "@prisma/client";
-import {
-  formatResponseStatus,
-  responseStatusVariant,
-} from "../program-head-responses-labels";
+import { formatResponseStatus, responseStatusVariant } from "../program-head-responses-labels";
 import type {
   FacultyAIInsight,
   FacultyAISectionInsight,
@@ -276,7 +282,10 @@ function FilterForm({
   );
   const deploymentNameCounts = new Map<string, number>();
   for (const item of options.evaluations) {
-    deploymentNameCounts.set(item.deploymentName, (deploymentNameCounts.get(item.deploymentName) ?? 0) + 1);
+    deploymentNameCounts.set(
+      item.deploymentName,
+      (deploymentNameCounts.get(item.deploymentName) ?? 0) + 1
+    );
   }
   const evaluations = options.evaluations
     .filter(
@@ -546,12 +555,7 @@ function OverviewView({
             ? "No evaluation opportunities exist in this scope."
             : `${data.kpi.submittedResponseCount} of ${data.kpi.opportunityCount} evaluation opportunities produced submitted responses.`}
         </PlainSummary>
-        <AIOverview
-          insight={ai?.overview ?? null}
-          state={aiState}
-          pending={pending}
-          data={data}
-        />
+        <AIOverview insight={ai?.overview ?? null} state={aiState} pending={pending} data={data} />
       </EvidenceCard>
       <EvidenceCard
         title="Rating distribution"
@@ -667,8 +671,8 @@ function CiloGroupChart({
   if (!rows.length) {
     return (
       <p className="text-body-sm text-text-secondary">
-        Mean ratings cannot be charted for this group: every outcome spans multiple rating
-        scales or has no resolvable mean.
+        Mean ratings cannot be charted for this group: every outcome spans multiple rating scales or
+        has no resolvable mean.
       </p>
     );
   }
@@ -690,10 +694,7 @@ function CiloGroupChart({
         />
         <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={80} />
         <ChartTooltip
-          formatter={(value) => [
-            typeof value === "number" ? value.toFixed(2) : value,
-            "Mean",
-          ]}
+          formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
         />
         <Bar
           dataKey="mean"
@@ -809,9 +810,7 @@ function QuestionView({
       {unratedQuestions.length ? (
         <Collapsible className="border-border rounded-lg border">
           <CollapsibleTrigger
-            render={
-              <Button variant="ghost" className="group min-h-11 w-full justify-between" />
-            }
+            render={<Button variant="ghost" className="group min-h-11 w-full justify-between" />}
           >
             <span className="font-medium">
               Show {unratedQuestions.length} unrated question
@@ -1392,7 +1391,9 @@ function TrendTable({ data }: { data: FacultyAnalyticsData }) {
                 {point.mean?.toFixed(2) ?? "—"}
               </TableCell>
               <TableCell className="text-right tabular-nums">{point.responseCount}</TableCell>
-              <TableCell>{point.comparableWithPrevious ? "Yes" : (point.breakReason ?? "—")}</TableCell>
+              <TableCell>
+                {point.comparableWithPrevious ? "Yes" : (point.breakReason ?? "—")}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

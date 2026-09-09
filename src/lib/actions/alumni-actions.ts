@@ -50,7 +50,10 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
       }
 
       if (major.program_id !== validatedData.program_id) {
-        return { success: false, error: "The selected major does not belong to the selected program." };
+        return {
+          success: false,
+          error: "The selected major does not belong to the selected program.",
+        };
       }
     }
 
@@ -62,7 +65,8 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
     if (!domainUser) {
       return {
         success: false,
-        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
       };
     }
 

@@ -20,7 +20,7 @@ import type {
  * Map the table's sort field to a Prisma orderBy. The trailing `id` tie-breaker
  * keeps pagination stable when the primary key repeats across rows.
  */
-export function buildCourseAssignmentOrderBy(
+function buildCourseAssignmentOrderBy(
   sortBy?: CourseAssignmentSortField,
   sortDir: CourseAssignmentSortDirection = "asc"
 ): Prisma.CourseAssignmentOrderByWithRelationInput[] {

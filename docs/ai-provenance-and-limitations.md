@@ -76,7 +76,7 @@
 
 ## 3. Deterministic vs AI Roles
 
-- **CLOIE calculates everything deterministically.** All metrics, means, rating
+- **System CLOIE calculates everything deterministically.** All metrics, means, rating
   distributions, CILO contributor matrices, trend comparability breaks
   (instrument-fingerprint matching), word-cloud tokens, and anomaly flags are
   computed by tested deterministic services. Charts render from these values and
@@ -127,7 +127,7 @@
     when marked comparable; small pools must be disclosed as possibly
     unrepresentative.
 - **Markdown-fence-tolerant JSON parsing:** `parseInsightJson` accepts a bare JSON
-  value or JSON inside a single markdown fence (```` ```json … ``` ````) and
+  value or JSON inside a single markdown fence (` ```json … ``` `) and
   rejects everything else. The system prompt demands exactly one JSON value with no
   surrounding text, while the parser tolerates the fence wrapper models commonly
   emit — belt and suspenders, with Zod as the final gate.

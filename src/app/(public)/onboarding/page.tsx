@@ -13,6 +13,7 @@ import { AlumniOnboardingForm } from "@/features/users/components/alumni-onboard
 import { IndustryPartnerOnboardingForm } from "@/features/users/components/industry-partner-onboarding-form";
 import { FacultyOnboardingForm } from "@/features/users/components/faculty-onboarding-form";
 import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
+import { ROLES } from "@/lib/constants/roles";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -144,6 +145,7 @@ export default async function OnboardingPage({
               <ArrowRight className="size-4" data-icon="inline-end" />
             </Button>
             <form action={resetIncompleteRoleClaim} className="flex w-full justify-center">
+              <input type="hidden" name="role" value={ROLES.STUDENT} />
               <Button
                 type="submit"
                 variant="ghost"

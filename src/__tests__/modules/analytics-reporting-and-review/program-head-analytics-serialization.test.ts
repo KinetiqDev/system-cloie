@@ -160,10 +160,20 @@ const feedback: ProgramHeadFeedbackDTO = {
   qualitativeItemCount: 12,
   qualitativeResponseCount: 8,
   sourceCounts: [
-    { sourceKey: "COURSE_STUDENT", sourceLabel: "Course-bound student evidence", itemCount: 12, responseCount: 8 },
+    {
+      sourceKey: "COURSE_STUDENT",
+      sourceLabel: "Course-bound student evidence",
+      itemCount: 12,
+      responseCount: 8,
+    },
   ],
   promptCounts: [
-    { sourceLabel: "Course-bound student evidence", promptLabel: "What worked well?", itemCount: 12, responseCount: 8 },
+    {
+      sourceLabel: "Course-bound student evidence",
+      promptLabel: "What worked well?",
+      itemCount: 12,
+      responseCount: 8,
+    },
   ],
   evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Evaluation" }],
 };
@@ -174,10 +184,7 @@ const stakeholdersReads: AnalyticsViewReads = { view: "stakeholders", stakeholde
 const trendsReads: AnalyticsViewReads = { view: "trends", trends };
 const qualitativeReads: AnalyticsViewReads = { view: "qualitative", feedback };
 
-function qualitativePacketFor(
-  reads: ProgramHeadFeedbackDTO,
-  config: AiConfiguration = CONFIG
-) {
+function qualitativePacketFor(reads: ProgramHeadFeedbackDTO, config: AiConfiguration = CONFIG) {
   const { packet } = buildAnalyticsViewPacket(
     "qualitative",
     overview,
@@ -445,12 +452,12 @@ describe("view-specific AI evidence packets", () => {
   });
 
   it("rejects reads backing a different view", () => {
-    expect(() =>
-      buildAnalyticsViewPacket("outcomes", overview, trendsReads, CONFIG)
-    ).toThrow("Outcome evidence reads required");
-    expect(() =>
-      buildAnalyticsViewPacket("qualitative", overview, outcomesReads, CONFIG)
-    ).toThrow("Qualitative evidence reads required");
+    expect(() => buildAnalyticsViewPacket("outcomes", overview, trendsReads, CONFIG)).toThrow(
+      "Outcome evidence reads required"
+    );
+    expect(() => buildAnalyticsViewPacket("qualitative", overview, outcomesReads, CONFIG)).toThrow(
+      "Qualitative evidence reads required"
+    );
   });
 });
 
@@ -492,12 +499,7 @@ describe("AI result DTO closure", () => {
   });
 
   it("never includes qualitative item rows in the packet", () => {
-    const { packet } = buildAnalyticsViewPacket(
-      "qualitative",
-      overview,
-      qualitativeReads,
-      CONFIG
-    );
+    const { packet } = buildAnalyticsViewPacket("qualitative", overview, qualitativeReads, CONFIG);
     expect(packet).not.toHaveProperty("qualitativeItems");
     expect(packet).not.toHaveProperty("responses");
     expect(packet).not.toHaveProperty("comments");

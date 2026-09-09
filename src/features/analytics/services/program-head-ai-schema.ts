@@ -71,11 +71,15 @@ export function loadAiConfiguration(): AiConfiguration | null {
   const minimumSubmittedResponses = positiveIntegerEnv(
     process.env[AI_MIN_SUBMITTED_RESPONSES_FIELD]
   );
-  const minimumQualitativeItems = positiveIntegerEnv(
-    process.env[AI_MIN_QUALITATIVE_ITEMS_FIELD]
-  );
+  const minimumQualitativeItems = positiveIntegerEnv(process.env[AI_MIN_QUALITATIVE_ITEMS_FIELD]);
 
-  if (!apiKey || !baseUrl || !model || minimumSubmittedResponses === null || minimumQualitativeItems === null) {
+  if (
+    !apiKey ||
+    !baseUrl ||
+    !model ||
+    minimumSubmittedResponses === null ||
+    minimumQualitativeItems === null
+  ) {
     return null;
   }
 
@@ -85,7 +89,8 @@ export function loadAiConfiguration(): AiConfiguration | null {
     model,
     minimumSubmittedResponses,
     minimumQualitativeItems,
-    maxPacketChars: positiveIntegerEnv(process.env[AI_MAX_PACKET_CHARS_FIELD]) ?? AI_DEFAULT_MAX_PACKET_CHARS,
+    maxPacketChars:
+      positiveIntegerEnv(process.env[AI_MAX_PACKET_CHARS_FIELD]) ?? AI_DEFAULT_MAX_PACKET_CHARS,
     maxTokens: positiveIntegerEnv(process.env[AI_MAX_TOKENS_FIELD]) ?? AI_DEFAULT_MAX_TOKENS,
   };
 }

@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
-import { QualitativeWordCloud } from "./program-head-analytics-visualizations";
+import { LazyQualitativeWordCloud } from "./program-head-analytics-visualizations";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
@@ -113,7 +113,7 @@ export function ProgramHeadFeedbackView({
       {emptyReason === null && (
         <>
           {tokens.length > 0 ? (
-            <QualitativeWordCloud
+            <LazyQualitativeWordCloud
               title="Qualitative Feedback"
               tokens={tokens}
               answerCount={qualitativeItemCount}

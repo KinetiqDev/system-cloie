@@ -3,10 +3,7 @@ import { ResponseStatus } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import {
-  buildRedactedWordCloudTokens,
-  FEEDBACK_SOURCE_LABELS,
-} from "./qualitative-analytics";
+import { buildRedactedWordCloudTokens, FEEDBACK_SOURCE_LABELS } from "./qualitative-analytics";
 import {
   buildProgramHeadOverviewKpi,
   buildTrendSeries,
@@ -49,12 +46,17 @@ const TERM_LABELS: Record<string, string> = {
 const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 function buildTermInstanceWhere(
-  filters: Pick<GeneralEducationAnalyticsFilterState, "termInstanceId" | "schoolYearId" | "semester">
+  filters: Pick<
+    GeneralEducationAnalyticsFilterState,
+    "termInstanceId" | "schoolYearId" | "semester"
+  >
 ): Record<string, unknown> {
   const where: Record<string, unknown> = {};
   if (filters.termInstanceId) (where as Record<string, unknown>).id = filters.termInstanceId;
-  if (filters.schoolYearId) (where as Record<string, unknown>).school_year_id = filters.schoolYearId;
-  if (filters.semester) (where as Record<string, unknown>).semester = filters.semester as AcademicSemester;
+  if (filters.schoolYearId)
+    (where as Record<string, unknown>).school_year_id = filters.schoolYearId;
+  if (filters.semester)
+    (where as Record<string, unknown>).semester = filters.semester as AcademicSemester;
   return where;
 }
 
@@ -109,7 +111,12 @@ async function listMatchingTermInstances(
   const where = buildTermInstanceWhere(filters);
   return prisma.academicTermInstance.findMany({
     where: Object.keys(where).length ? where : undefined,
-    select: { id: true, semester: true, term: true, school_year: { select: { id: true, code: true } } },
+    select: {
+      id: true,
+      semester: true,
+      term: true,
+      school_year: { select: { id: true, code: true } },
+    },
   });
 }
 
@@ -120,7 +127,10 @@ async function resolveSchoolYearLabel(
   if (!schoolYearId) return null;
   const codes = [...new Set(instances.map((i) => i.school_year.code))];
   if (codes.length === 1) return codes[0];
-  const sy = await prisma.schoolYear.findUnique({ where: { id: schoolYearId }, select: { code: true } });
+  const sy = await prisma.schoolYear.findUnique({
+    where: { id: schoolYearId },
+    select: { code: true },
+  });
   return sy?.code ?? null;
 }
 
@@ -139,11 +149,22 @@ async function resolveTermInstanceFilter(
   }
   const instances = await listMatchingTermInstances(filters);
   const schoolYearLabel = await resolveSchoolYearLabel(filters.schoolYearId, instances);
-  const resolvedSchoolYearLabel = schoolYearLabel ?? (filters.schoolYearId ? (instances[0]?.school_year.code ?? null) : null);
+  const resolvedSchoolYearLabel =
+    schoolYearLabel ?? (filters.schoolYearId ? (instances[0]?.school_year.code ?? null) : null);
   if (instances.length === 0) {
-    return { termInstanceWhere: { term_instance_id: IMPOSSIBLE_TERM_INSTANCE_ID }, schoolYearLabel: resolvedSchoolYearLabel, instances, hasMatchingTerm: false };
+    return {
+      termInstanceWhere: { term_instance_id: IMPOSSIBLE_TERM_INSTANCE_ID },
+      schoolYearLabel: resolvedSchoolYearLabel,
+      instances,
+      hasMatchingTerm: false,
+    };
   }
-  return { termInstanceWhere: { term_instance_id: { in: instances.map((i) => i.id) } }, schoolYearLabel: resolvedSchoolYearLabel, instances, hasMatchingTerm: true };
+  return {
+    termInstanceWhere: { term_instance_id: { in: instances.map((i) => i.id) } },
+    schoolYearLabel: resolvedSchoolYearLabel,
+    instances,
+    hasMatchingTerm: true,
+  };
 }
 
 // -- Auth guard ---------------------------------------------------------
@@ -151,7 +172,8 @@ async function resolveTermInstanceFilter(
 async function requireGenEdCoordinator(): Promise<{ ok: true } | { ok: false; reason: string }> {
   const session = await resolveAuthSession();
   if (!session) return { ok: false, reason: "Authentication is required." };
-  if (session.activeRole !== ROLES.GEN_ED_COORDINATOR) return { ok: false, reason: "Coordinator role is required." };
+  if (session.activeRole !== ROLES.GEN_ED_COORDINATOR)
+    return { ok: false, reason: "Coordinator role is required." };
   return { ok: true };
 }
 
@@ -169,102 +191,174 @@ export async function getGeneralEducationAnalytics(
   const auth = await requireGenEdCoordinator();
   if (!auth.ok) return null;
 
-  const [{ termInstanceWhere, schoolYearLabel, hasMatchingTerm }, periodInstances] = await Promise.all([
-    resolveTermInstanceFilter(filters),
-    prisma.academicTermInstance.findMany({
-      select: { id: true, semester: true, term: true, school_year: { select: { id: true, code: true } } },
-    }),
-  ]);
+  const [{ termInstanceWhere, schoolYearLabel, hasMatchingTerm }, periodInstances] =
+    await Promise.all([
+      resolveTermInstanceFilter(filters),
+      prisma.academicTermInstance.findMany({
+        select: {
+          id: true,
+          semester: true,
+          term: true,
+          school_year: { select: { id: true, code: true } },
+        },
+      }),
+    ]);
 
   // Course-bound, GE-only, submitted only
   const geResponseScope = {
     status: ResponseStatus.SUBMITTED,
     deployment_type: "COURSE_BOUND" as const,
-    assignment: { course_bound: { course_assignment: buildGeneralEducationCourseScope(), ...termInstanceWhere } },
+    assignment: {
+      course_bound: { course_assignment: buildGeneralEducationCourseScope(), ...termInstanceWhere },
+    },
   };
   const geOpportunityWhere = {
     course_bound: { course_assignment: buildGeneralEducationCourseScope(), ...termInstanceWhere },
   };
 
-  const [submittedResponseCount, evaluationOpportunityCount, ratingAggregate, ratingRows, responseRows, qualitativeRows] =
-    await Promise.all([
-      prisma.response.count({ where: geResponseScope }),
-      prisma.evaluationAssignment.count({ where: geOpportunityWhere }),
-      prisma.quantitativeResponseItem.aggregate({
-        _sum: { rating_value: true },
-        _count: { rating_value: true },
-        where: { response: geResponseScope },
-      }),
-      prisma.quantitativeResponseItem.findMany({
-        where: { response: geResponseScope },
-        select: {
-          rating_value: true,
-          response_id: true,
-          section_key: true,
-          item_key: true,
-          cilo_question_binding: { select: { cilo: { select: { cilo_mappings: { select: { plo: { select: { code: true } } } } } } } },
-          response: {
-            select: {
-              assignment: {
-                select: {
-                  course_bound: { select: { term_instance_id: true, instrument_version_id: true, course_assignment: { select: { course: { select: { id: true, code: true, title: true } }, program_id: true } }, instrument: { select: { id: true, version_number: true, template: { select: { name: true } }, structure_snapshot: true } } } },
+  const [
+    submittedResponseCount,
+    evaluationOpportunityCount,
+    ratingAggregate,
+    ratingRows,
+    responseRows,
+    qualitativeRows,
+  ] = await Promise.all([
+    prisma.response.count({ where: geResponseScope }),
+    prisma.evaluationAssignment.count({ where: geOpportunityWhere }),
+    prisma.quantitativeResponseItem.aggregate({
+      _sum: { rating_value: true },
+      _count: { rating_value: true },
+      where: { response: geResponseScope },
+    }),
+    prisma.quantitativeResponseItem.findMany({
+      where: { response: geResponseScope },
+      select: {
+        rating_value: true,
+        response_id: true,
+        section_key: true,
+        item_key: true,
+        cilo_question_binding: {
+          select: {
+            cilo: { select: { cilo_mappings: { select: { plo: { select: { code: true } } } } } },
+          },
+        },
+        response: {
+          select: {
+            assignment: {
+              select: {
+                course_bound: {
+                  select: {
+                    term_instance_id: true,
+                    instrument_version_id: true,
+                    course_assignment: {
+                      select: {
+                        course: { select: { id: true, code: true, title: true } },
+                        program_id: true,
+                      },
+                    },
+                    instrument: {
+                      select: {
+                        id: true,
+                        version_number: true,
+                        template: { select: { name: true } },
+                        structure_snapshot: true,
+                      },
+                    },
+                  },
                 },
               },
             },
           },
         },
-      }),
-      prisma.response.findMany({
-        where: geResponseScope,
-        select: {
-          id: true,
-          assignment: {
-            select: {
-              course_bound: {
-                select: {
-                  term_instance_id: true,
-                  course_assignment: { select: { course: { select: { id: true, code: true, title: true } } } },
-                  instrument: { select: { id: true, version_number: true, template: { select: { name: true } }, structure_snapshot: true } },
+      },
+    }),
+    prisma.response.findMany({
+      where: geResponseScope,
+      select: {
+        id: true,
+        assignment: {
+          select: {
+            course_bound: {
+              select: {
+                term_instance_id: true,
+                course_assignment: {
+                  select: { course: { select: { id: true, code: true, title: true } } },
+                },
+                instrument: {
+                  select: {
+                    id: true,
+                    version_number: true,
+                    template: { select: { name: true } },
+                    structure_snapshot: true,
+                  },
                 },
               },
             },
           },
         },
-      }),
-      prisma.qualitativeResponseItem.findMany({
-        where: { response: geResponseScope },
-        select: {
-          text_content: true,
-          section_key: true,
-          prompt_key: true,
-          response: {
-            select: {
-              id: true,
-              assignment: {
-                select: {
-                  course_bound: { select: { id: true, deployment_name: true, instrument: { select: { id: true, structure_snapshot: true } } } },
+      },
+    }),
+    prisma.qualitativeResponseItem.findMany({
+      where: { response: geResponseScope },
+      select: {
+        text_content: true,
+        section_key: true,
+        prompt_key: true,
+        response: {
+          select: {
+            id: true,
+            assignment: {
+              select: {
+                course_bound: {
+                  select: {
+                    id: true,
+                    deployment_name: true,
+                    instrument: { select: { id: true, structure_snapshot: true } },
+                  },
                 },
               },
             },
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   const ratingCount = ratingAggregate._count.rating_value;
   const ratingSum = ratingAggregate._sum.rating_value ?? 0;
-  const kpi = buildProgramHeadOverviewKpi({ submittedResponseCount, evaluationOpportunityCount, ratingCount, ratingSum });
+  const kpi = buildProgramHeadOverviewKpi({
+    submittedResponseCount,
+    evaluationOpportunityCount,
+    ratingCount,
+    ratingSum,
+  });
 
   const emptyReason =
-    evaluationOpportunityCount === 0 ? "no-assignments" : submittedResponseCount === 0 ? "no-submissions" : null;
+    evaluationOpportunityCount === 0
+      ? "no-assignments"
+      : submittedResponseCount === 0
+        ? "no-submissions"
+        : null;
 
   const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
 
   // ponytail: loose casts bridge row shapes until Prisma selections are typed end-to-end
   const anyRatingRows = ratingRows as unknown as GeRatingRow[];
-  const courseBreakdowns = buildCourseBreakdowns(anyRatingRows, responseRows as unknown as Parameters<typeof buildCourseBreakdowns>[1]);
-  const trends = await buildTrends(anyRatingRows as unknown as Parameters<typeof buildTrends>[0], responseRows as unknown as Parameters<typeof buildTrends>[1], periodInstances);
-  const feedback = buildFeedback(qualitativeRows, evaluationOpportunityCount, submittedResponseCount);
+  const courseBreakdowns = buildCourseBreakdowns(
+    anyRatingRows,
+    responseRows as unknown as Parameters<typeof buildCourseBreakdowns>[1]
+  );
+  const trends = await buildTrends(
+    anyRatingRows as unknown as Parameters<typeof buildTrends>[0],
+    responseRows as unknown as Parameters<typeof buildTrends>[1],
+    periodInstances
+  );
+  const feedback = buildFeedback(
+    qualitativeRows,
+    evaluationOpportunityCount,
+    submittedResponseCount
+  );
 
   return {
     scope: { periodLabel },
@@ -283,8 +377,24 @@ export async function getGeneralEducationAnalytics(
 type GeRatingRow = {
   rating_value: number;
   response_id: string;
-  response: { assignment: { course_bound: { course_assignment: { course: { id: string; code: string; title: string } }; instrument: { id: string; version_number: number; template: { name: string }; structure_snapshot: unknown }; term_instance_id?: string; instrument_version_id?: string | null } | null } };
-  cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } | null } | null;
+  response: {
+    assignment: {
+      course_bound: {
+        course_assignment: { course: { id: string; code: string; title: string } };
+        instrument: {
+          id: string;
+          version_number: number;
+          template: { name: string };
+          structure_snapshot: unknown;
+        };
+        term_instance_id?: string;
+        instrument_version_id?: string | null;
+      } | null;
+    };
+  };
+  cilo_question_binding?: {
+    cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } | null;
+  } | null;
 };
 
 function instrumentLabel(v: { template: { name: string }; version_number: number }): string {
@@ -292,10 +402,34 @@ function instrumentLabel(v: { template: { name: string }; version_number: number
 }
 
 // fallow-ignore-next-line complexity
-function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ id: string; assignment: { course_bound: { course_assignment: { course: { id: string; code: string; title: string } }; instrument: { id: string; version_number: number; template: { name: string }; structure_snapshot: unknown } } | null } }>): GeneralEducationCourseBreakdownRow[] {
+function buildCourseBreakdowns(
+  ratingRows: GeRatingRow[],
+  responseRows: Array<{
+    id: string;
+    assignment: {
+      course_bound: {
+        course_assignment: { course: { id: string; code: string; title: string } };
+        instrument: {
+          id: string;
+          version_number: number;
+          template: { name: string };
+          structure_snapshot: unknown;
+        };
+      } | null;
+    };
+  }>
+): GeneralEducationCourseBreakdownRow[] {
   const byCourse = new Map<
     string,
-    { course: { id: string; code: string; title: string }; ratingSum: number; ratingCount: number; responseIds: Set<string>; instruments: Map<string, string>; snapshotByInstrument: Map<string, unknown>; outcomeCodes: Set<string> }
+    {
+      course: { id: string; code: string; title: string };
+      ratingSum: number;
+      ratingCount: number;
+      responseIds: Set<string>;
+      instruments: Map<string, string>;
+      snapshotByInstrument: Map<string, unknown>;
+      outcomeCodes: Set<string>;
+    }
   >();
 
   for (const row of ratingRows as GeRatingRow[]) {
@@ -304,7 +438,15 @@ function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ 
     const course = cb.course_assignment.course;
     let agg = byCourse.get(course.id);
     if (!agg) {
-      agg = { course, ratingSum: 0, ratingCount: 0, responseIds: new Set(), instruments: new Map(), snapshotByInstrument: new Map(), outcomeCodes: new Set() };
+      agg = {
+        course,
+        ratingSum: 0,
+        ratingCount: 0,
+        responseIds: new Set(),
+        instruments: new Map(),
+        snapshotByInstrument: new Map(),
+        outcomeCodes: new Set(),
+      };
       byCourse.set(course.id, agg);
     }
     // Keep full-precision mean; include only ratings that have an instrument snapshot match handled below
@@ -314,21 +456,48 @@ function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ 
     agg.responseIds.add(row.response_id);
     agg.instruments.set(cb.instrument.id, instrumentLabel(cb.instrument));
     agg.snapshotByInstrument.set(cb.instrument.id, cb.instrument.structure_snapshot);
-    const ploCodes = (row as unknown as { cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } } }).cilo_question_binding?.cilo?.cilo_mappings?.map((m) => m.plo.code) ?? [];
+    const ploCodes =
+      (
+        row as unknown as {
+          cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } };
+        }
+      ).cilo_question_binding?.cilo?.cilo_mappings?.map((m) => m.plo.code) ?? [];
     for (const c of ploCodes) agg.outcomeCodes.add(c);
   }
-  for (const row of responseRows as Array<{ id: string; assignment: { course_bound: { course_assignment: { course: { id: string; code: string; title: string } }; instrument: { id: string; version_number: number; template: { name: string }; structure_snapshot: unknown } } | null } }>) {
+  for (const row of responseRows as Array<{
+    id: string;
+    assignment: {
+      course_bound: {
+        course_assignment: { course: { id: string; code: string; title: string } };
+        instrument: {
+          id: string;
+          version_number: number;
+          template: { name: string };
+          structure_snapshot: unknown;
+        };
+      } | null;
+    };
+  }>) {
     const cb = row.assignment.course_bound;
     if (!cb) continue;
     const course = cb.course_assignment.course;
     let agg = byCourse.get(course.id);
     if (!agg) {
-      agg = { course, ratingSum: 0, ratingCount: 0, responseIds: new Set(), instruments: new Map(), snapshotByInstrument: new Map(), outcomeCodes: new Set() };
+      agg = {
+        course,
+        ratingSum: 0,
+        ratingCount: 0,
+        responseIds: new Set(),
+        instruments: new Map(),
+        snapshotByInstrument: new Map(),
+        outcomeCodes: new Set(),
+      };
       byCourse.set(course.id, agg);
     }
     agg.responseIds.add(row.id);
     agg.instruments.set(cb.instrument.id, instrumentLabel(cb.instrument));
-    if (!agg.snapshotByInstrument.has(cb.instrument.id)) agg.snapshotByInstrument.set(cb.instrument.id, cb.instrument.structure_snapshot);
+    if (!agg.snapshotByInstrument.has(cb.instrument.id))
+      agg.snapshotByInstrument.set(cb.instrument.id, cb.instrument.structure_snapshot);
   }
 
   const rows: GeneralEducationCourseBreakdownRow[] = [...byCourse.values()].map((agg) => {
@@ -355,16 +524,46 @@ function buildCourseBreakdowns(ratingRows: GeRatingRow[], responseRows: Array<{ 
 
 // fallow-ignore-next-line complexity
 async function buildTrends(
-  ratingRows: Array<{ rating_value: number; response_id: string; cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } }; response: { assignment: { course_bound: { term_instance_id: string; instrument_version_id: string | null } | null } } }>,
-  responseRows: Array<{ id: string; assignment: { course_bound: { term_instance_id?: string | null } | null } }>,
+  ratingRows: Array<{
+    rating_value: number;
+    response_id: string;
+    cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } };
+    response: {
+      assignment: {
+        course_bound: { term_instance_id: string; instrument_version_id: string | null } | null;
+      };
+    };
+  }>,
+  responseRows: Array<{
+    id: string;
+    assignment: { course_bound: { term_instance_id?: string | null } | null };
+  }>,
   periodInstances: TermInstanceSummary[]
 ): Promise<GeneralEducationTrendsDTO> {
   const instancesById = new Map(periodInstances.map((i) => [i.id, i]));
-  const periodEvidence = new Map<string, { ratingSum: number; ratingCount: number; responseIds: Set<string>; instrumentVersionIds: Set<string>; outcomeCodes: Set<string> }>();
+  const periodEvidence = new Map<
+    string,
+    {
+      ratingSum: number;
+      ratingCount: number;
+      responseIds: Set<string>;
+      instrumentVersionIds: Set<string>;
+      outcomeCodes: Set<string>;
+    }
+  >();
 
   function getOrCreateEvidence(tid: string) {
     let e = periodEvidence.get(tid);
-    if (!e) { e = { ratingSum: 0, ratingCount: 0, responseIds: new Set(), instrumentVersionIds: new Set(), outcomeCodes: new Set() }; periodEvidence.set(tid, e); }
+    if (!e) {
+      e = {
+        ratingSum: 0,
+        ratingCount: 0,
+        responseIds: new Set(),
+        instrumentVersionIds: new Set(),
+        outcomeCodes: new Set(),
+      };
+      periodEvidence.set(tid, e);
+    }
     return e;
   }
 
@@ -377,7 +576,8 @@ async function buildTrends(
     e.ratingCount += 1;
     e.responseIds.add(row.response_id);
     if (ivId) e.instrumentVersionIds.add(ivId);
-    for (const m of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) e.outcomeCodes.add(m.plo.code);
+    for (const m of row.cilo_question_binding?.cilo?.cilo_mappings ?? [])
+      e.outcomeCodes.add(m.plo.code);
   }
   for (const row of responseRows) {
     const tid = row.assignment.course_bound?.term_instance_id;
@@ -385,12 +585,19 @@ async function buildTrends(
     getOrCreateEvidence(tid).responseIds.add(row.id);
   }
 
-  const instrumentVersionIds = [...new Set([...periodEvidence.values()].flatMap((e) => [...e.instrumentVersionIds]))];
+  const instrumentVersionIds = [
+    ...new Set([...periodEvidence.values()].flatMap((e) => [...e.instrumentVersionIds])),
+  ];
   const instrumentVersions =
     instrumentVersionIds.length > 0
       ? await prisma.instrumentVersion.findMany({
           where: { id: { in: instrumentVersionIds } },
-          select: { id: true, version_number: true, structure_snapshot: true, template: { select: { name: true } } },
+          select: {
+            id: true,
+            version_number: true,
+            structure_snapshot: true,
+            template: { select: { name: true } },
+          },
         })
       : [];
   const versionById = new Map(instrumentVersions.map((v) => [v.id, v]));
@@ -414,14 +621,27 @@ async function buildTrends(
     inputs.push({
       termInstanceId: tid,
       periodLabel: buildInstancePeriodLabel(instance),
-      sortKey: [instance.school_year.code, semesterOrder(instance.semester), termOrder(instance.term)],
+      sortKey: [
+        instance.school_year.code,
+        semesterOrder(instance.semester),
+        termOrder(instance.term),
+      ],
       meanRating: e.ratingCount === 0 ? null : e.ratingSum / e.ratingCount,
       submittedResponseCount: e.responseIds.size,
       ratingCount: e.ratingCount,
-      instrumentContext: instrumentVersionsSorted.length ? instrumentVersionsSorted.join(", ") : null,
+      instrumentContext: instrumentVersionsSorted.length
+        ? instrumentVersionsSorted.join(", ")
+        : null,
       scaleContext: describeScales(scales.flat()),
       outcomeCodes,
-      fingerprint: { instrumentVersions: instrumentVersionIdsSorted, scaleIdentities, outcomeCodes },
+      // GenEd trends read course-bound evidence only, so source composition is
+      // constant; it still participates in the fingerprint for uniformity.
+      fingerprint: {
+        instrumentVersions: instrumentVersionIdsSorted,
+        scaleIdentities,
+        outcomeCodes,
+        sources: ["COURSE_BOUND"],
+      },
     });
   }
 
@@ -431,7 +651,21 @@ async function buildTrends(
 
 // fallow-ignore-next-line complexity
 function buildFeedback(
-  rows: Array<{ text_content: string; section_key: string; prompt_key: string; response: { id: string; assignment: { course_bound: { id: string; deployment_name: string; instrument: { id: string; structure_snapshot: unknown } } | null } } }>,
+  rows: Array<{
+    text_content: string;
+    section_key: string;
+    prompt_key: string;
+    response: {
+      id: string;
+      assignment: {
+        course_bound: {
+          id: string;
+          deployment_name: string;
+          instrument: { id: string; structure_snapshot: unknown };
+        } | null;
+      };
+    };
+  }>,
   opportunityCount: number,
   submittedResponseCount: number
 ): GeneralEducationFeedbackDTO {
@@ -442,21 +676,38 @@ function buildFeedback(
   const tokens = buildRedactedWordCloudTokens(texts);
 
   const responseIds = new Set(contributing.map((r) => r.response.id));
-  const promptBuckets = new Map<string, { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }>();
+  const promptBuckets = new Map<
+    string,
+    { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
+  >();
   const evaluations = new Map<string, string>();
 
   function resolvePromptLabel(snap: unknown, sectionKey: string, promptKey: string): string {
     if (!Array.isArray(snap)) return "Unlabeled prompt";
-    const section = snap.find((c) => isSnapshotSection(c) && (c as { key: string }).key === sectionKey);
+    const section = snap.find(
+      (c) => isSnapshotSection(c) && (c as { key: string }).key === sectionKey
+    );
     if (!section || !isSnapshotSection(section)) return "Unlabeled prompt";
-    return getSnapshotSectionItems(section).find((i) => i.key === promptKey)?.prompt ?? "Unlabeled prompt";
+    return (
+      getSnapshotSectionItems(section).find((i) => i.key === promptKey)?.prompt ??
+      "Unlabeled prompt"
+    );
   }
 
   for (const row of contributing) {
     const instrument = row.response.assignment.course_bound?.instrument;
-    const promptLabel = resolvePromptLabel(instrument?.structure_snapshot, row.section_key, row.prompt_key);
+    const promptLabel = resolvePromptLabel(
+      instrument?.structure_snapshot,
+      row.section_key,
+      row.prompt_key
+    );
     const bucketKey = `${instrument?.id ?? "unknown"}:${row.section_key}:${row.prompt_key}`;
-    const bucket = promptBuckets.get(bucketKey) ?? { sourceLabel: FEEDBACK_SOURCE_LABELS.COURSE_STUDENT, promptLabel, itemCount: 0, responseIds: new Set<string>() };
+    const bucket = promptBuckets.get(bucketKey) ?? {
+      sourceLabel: FEEDBACK_SOURCE_LABELS.COURSE_STUDENT,
+      promptLabel,
+      itemCount: 0,
+      responseIds: new Set<string>(),
+    };
     bucket.itemCount += 1;
     bucket.responseIds.add(row.response.id);
     promptBuckets.set(bucketKey, bucket);
@@ -464,25 +715,53 @@ function buildFeedback(
     if (ev) evaluations.set(ev.id, ev.deployment_name);
   }
 
-  const displayBuckets = new Map<string, { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }>();
+  const displayBuckets = new Map<
+    string,
+    { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
+  >();
   for (const b of promptBuckets.values()) {
     const key = `${b.sourceLabel}:${b.promptLabel}`;
-    const d = displayBuckets.get(key) ?? { sourceLabel: b.sourceLabel, promptLabel: b.promptLabel, itemCount: 0, responseIds: new Set<string>() };
+    const d = displayBuckets.get(key) ?? {
+      sourceLabel: b.sourceLabel,
+      promptLabel: b.promptLabel,
+      itemCount: 0,
+      responseIds: new Set<string>(),
+    };
     d.itemCount += b.itemCount;
     for (const id of b.responseIds) d.responseIds.add(id);
     displayBuckets.set(key, d);
   }
 
   const promptCounts = [...displayBuckets.values()]
-    .map((b) => ({ sourceLabel: b.sourceLabel, promptLabel: b.promptLabel, itemCount: b.itemCount, responseCount: b.responseIds.size }))
-    .sort((a, b) => b.itemCount - a.itemCount || a.sourceLabel.localeCompare(b.sourceLabel) || a.promptLabel.localeCompare(b.promptLabel));
+    .map((b) => ({
+      sourceLabel: b.sourceLabel,
+      promptLabel: b.promptLabel,
+      itemCount: b.itemCount,
+      responseCount: b.responseIds.size,
+    }))
+    .sort(
+      (a, b) =>
+        b.itemCount - a.itemCount ||
+        a.sourceLabel.localeCompare(b.sourceLabel) ||
+        a.promptLabel.localeCompare(b.promptLabel)
+    );
 
   const evidenceEvaluations = [...evaluations.entries()]
     .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
-    .sort((a, b) => a.deploymentName.localeCompare(b.deploymentName) || a.evaluationId.localeCompare(b.evaluationId));
+    .sort(
+      (a, b) =>
+        a.deploymentName.localeCompare(b.deploymentName) ||
+        a.evaluationId.localeCompare(b.evaluationId)
+    );
 
   const emptyReason: GeneralEducationFeedbackDTO["emptyReason"] =
-    opportunityCount === 0 ? "no-assignments" : submittedResponseCount === 0 ? "no-submissions" : contributing.length === 0 ? "no-qualitative-evidence" : null;
+    opportunityCount === 0
+      ? "no-assignments"
+      : submittedResponseCount === 0
+        ? "no-submissions"
+        : contributing.length === 0
+          ? "no-qualitative-evidence"
+          : null;
 
   return {
     emptyReason,

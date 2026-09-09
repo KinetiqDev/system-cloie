@@ -113,7 +113,13 @@ describe("ProgramHeadComparisonChart", () => {
       <ProgramHeadComparisonChart
         title="Mean Rating by Evidence Source"
         rows={[
-          { key: "u", label: "Unrated", meanRating: null, ratingCount: 0, submittedResponseCount: 2 },
+          {
+            key: "u",
+            label: "Unrated",
+            meanRating: null,
+            ratingCount: 0,
+            submittedResponseCount: 2,
+          },
         ]}
       />
     );
@@ -255,7 +261,10 @@ describe("ProgramHeadComparisonChart", () => {
             ratingCount: 10,
             submittedResponseCount: 5,
             links: [
-              { href: "/program-head/programs/program-bsed/cilo-reviews/eval-1", label: "CILO Deployment" },
+              {
+                href: "/program-head/programs/program-bsed/cilo-reviews/eval-1",
+                label: "CILO Deployment",
+              },
             ],
           },
         ]}
@@ -272,7 +281,10 @@ describe("ProgramHeadComparisonChart", () => {
   it("namespaces ids per instance so two charts stay distinct", () => {
     const { container } = render(
       <div>
-        <ProgramHeadComparisonChart title="Mean Rating by Evidence Source" rows={rows.slice(0, 2)} />
+        <ProgramHeadComparisonChart
+          title="Mean Rating by Evidence Source"
+          rows={rows.slice(0, 2)}
+        />
         <ProgramHeadComparisonChart title="Mean Rating by Course" rows={rows.slice(2)} />
       </div>
     );
@@ -286,10 +298,7 @@ describe("ProgramHeadComparisonChart", () => {
     window.innerWidth = 320;
     const { container } = render(
       <div>
-        <ProgramHeadComparisonChart
-          title="Mean Rating by Evidence Source"
-          rows={rows}
-        />
+        <ProgramHeadComparisonChart title="Mean Rating by Evidence Source" rows={rows} />
         <ProgramHeadInstrumentBreakdownChart
           rows={[
             {

@@ -580,7 +580,10 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
       if (contributes) ratedInstrumentIds.add(evaluation.instrument.id);
     }
     const snapshotByInstrument = new Map(
-      group.map((evaluation) => [evaluation.instrument.id, evaluation.instrument.structure_snapshot] as const)
+      group.map(
+        (evaluation) =>
+          [evaluation.instrument.id, evaluation.instrument.structure_snapshot] as const
+      )
     );
     const scaleIdentities = buildScaleIdentities(
       [...ratedInstrumentIds].flatMap((id) => extractDistinctScales(snapshotByInstrument.get(id)))
@@ -628,7 +631,9 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
     const instrumentsEqual =
       previous !== undefined &&
       previous.instrumentVersions.length === period.instrumentVersions.length &&
-      previous.instrumentVersions.every((value, index) => value === period.instrumentVersions[index]);
+      previous.instrumentVersions.every(
+        (value, index) => value === period.instrumentVersions[index]
+      );
     const scalesEqual =
       previous !== undefined &&
       previous.scaleIdentities.length === period.scaleIdentities.length &&

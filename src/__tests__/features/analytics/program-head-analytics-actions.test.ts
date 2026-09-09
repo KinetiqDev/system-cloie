@@ -30,12 +30,16 @@ describe("generateProgramHeadAnalyticsInsightAction", () => {
     };
     await generateProgramHeadAnalyticsInsightAction(input);
 
-    expect(generateProgramHeadAnalyticsInsightMock).toHaveBeenCalledWith(PROGRAM_ID, {
-      tab: "outcomes",
-      schoolYearId: "22222222-2222-4222-8222-222222222222",
-      semester: "FIRST",
-      termInstanceId: "33333333-3333-4333-8333-333333333333",
-    }, "outcomes");
+    expect(generateProgramHeadAnalyticsInsightMock).toHaveBeenCalledWith(
+      PROGRAM_ID,
+      {
+        tab: "outcomes",
+        schoolYearId: "22222222-2222-4222-8222-222222222222",
+        semester: "FIRST",
+        termInstanceId: "33333333-3333-4333-8333-333333333333",
+      },
+      "outcomes"
+    );
   });
 
   it("rejects client-supplied computed metrics or identities", async () => {

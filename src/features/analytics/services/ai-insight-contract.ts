@@ -1,12 +1,14 @@
 import { z } from "zod";
 
-export const insightSectionSchema = z.object({
-  observation: z.string().min(1).max(400),
-  evidence: z.array(z.string().min(1).max(200)).min(1).max(5),
-  connection: z.string().max(400).optional(),
-  limitation: z.string().max(200).nullable(),
-  reviewQuestion: z.string().max(200).nullable(),
-}).nullable();
+export const insightSectionSchema = z
+  .object({
+    observation: z.string().min(1).max(400),
+    evidence: z.array(z.string().min(1).max(200)).min(1).max(5),
+    connection: z.string().max(400).optional(),
+    limitation: z.string().max(200).nullable(),
+    reviewQuestion: z.string().max(200).nullable(),
+  })
+  .nullable();
 export type InsightSection = z.infer<typeof insightSectionSchema>;
 
 /**
@@ -22,9 +24,3 @@ export const ANALYTICS_INSIGHT_VIEWS = [
   "qualitative",
 ] as const;
 export type AnalyticsInsightView = (typeof ANALYTICS_INSIGHT_VIEWS)[number];
-
-/**
- * View-keyed insight response. Both Faculty and PH generators converge on
- * this shape; PH adopts it fully, one `InsightSection` per analytics view.
- */
-export type AIInsightResponse = Record<AnalyticsInsightView, InsightSection>;

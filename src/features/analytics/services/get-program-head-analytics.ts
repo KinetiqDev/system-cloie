@@ -525,6 +525,7 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
     };
     response: {
       select: {
+        deployment_type: true;
         assignment: {
           select: {
             course_bound: {
@@ -539,10 +540,10 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
     };
   };
 }>;
-
 type TrendResponseRow = Prisma.ResponseGetPayload<{
   select: {
     id: true;
+    deployment_type: true;
     assignment: {
       select: {
         course_bound: { select: { term_instance_id: true } };
@@ -558,18 +559,22 @@ type PeriodEvidence = {
   responseIds: Set<string>;
   instrumentVersionIds: Set<string>;
   outcomeCodes: Set<string>;
+  sources: Set<string>;
 };
 
 function ratingRowTermContext(row: TrendRatingRow): {
-  termInstanceId: string | null;
-  instrumentVersionId: string | null;
-} {
-  const courseBound = row.response.assignment.course_bound;
-  const central = row.response.assignment.central_deployment;
+  termInstanceId: string;
+  instrumentVersionId: string;
+  source: string;
+} | null {
+  const source = row.response.assignment.course_bound ?? row.response.assignment.central_deployment;
+  if (!source) {
+    return null;
+  }
   return {
-    termInstanceId: courseBound?.term_instance_id ?? central?.term_instance_id ?? null,
-    instrumentVersionId:
-      courseBound?.instrument_version_id ?? central?.instrument_version_id ?? null,
+    termInstanceId: source.term_instance_id,
+    instrumentVersionId: source.instrument_version_id,
+    source: row.response.deployment_type,
   };
 }
 
@@ -585,6 +590,7 @@ function getOrCreateTrendEvidence(
       responseIds: new Set(),
       instrumentVersionIds: new Set(),
       outcomeCodes: new Set(),
+      sources: new Set(),
     };
     periodEvidence.set(termInstanceId, evidence);
   }
@@ -612,7 +618,7 @@ function accumulateRatingRow(
   row: TrendRatingRow
 ): void {
   const context = ratingRowTermContext(row);
-  if (!context.termInstanceId) {
+  if (!context) {
     return;
   }
 
@@ -620,9 +626,8 @@ function accumulateRatingRow(
   evidence.ratingSum += row.rating_value;
   evidence.ratingCount += 1;
   evidence.responseIds.add(row.response_id);
-  if (context.instrumentVersionId) {
-    evidence.instrumentVersionIds.add(context.instrumentVersionId);
-  }
+  evidence.instrumentVersionIds.add(context.instrumentVersionId);
+  evidence.sources.add(context.source);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
     evidence.outcomeCodes.add(mapping.plo.code);
   }
@@ -632,15 +637,15 @@ function accumulateResponseRow(
   periodEvidence: Map<string, PeriodEvidence>,
   row: TrendResponseRow
 ): void {
-  const termInstanceId =
-    row.assignment.course_bound?.term_instance_id ??
-    row.assignment.central_deployment?.term_instance_id;
+  const source = row.assignment.course_bound ?? row.assignment.central_deployment;
+  const termInstanceId = source?.term_instance_id;
   if (!termInstanceId) {
     return;
   }
 
   const evidence = getOrCreateTrendEvidence(periodEvidence, termInstanceId);
   evidence.responseIds.add(row.id);
+  evidence.sources.add(row.deployment_type);
 }
 
 function buildTrendSeriesInputs(
@@ -670,6 +675,7 @@ function buildTrendSeriesInputs(
     const instrumentVersionIdsSorted = [...evidence.instrumentVersionIds].sort();
     const scaleIdentities = buildScaleIdentities(scales);
     const outcomeCodes = [...evidence.outcomeCodes].sort();
+    const sources = [...evidence.sources].sort();
 
     inputs.push({
       termInstanceId,
@@ -690,6 +696,7 @@ function buildTrendSeriesInputs(
         instrumentVersions: instrumentVersionIdsSorted,
         scaleIdentities,
         outcomeCodes,
+        sources,
       },
     });
   }
@@ -1310,6 +1317,7 @@ export async function getProgramHeadTrends(
         },
         response: {
           select: {
+            deployment_type: true,
             assignment: {
               select: {
                 course_bound: {
@@ -1328,6 +1336,7 @@ export async function getProgramHeadTrends(
       where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
       select: {
         id: true,
+        deployment_type: true,
         assignment: {
           select: {
             course_bound: { select: { term_instance_id: true } },

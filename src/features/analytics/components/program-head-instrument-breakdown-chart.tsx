@@ -10,11 +10,7 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -40,33 +36,33 @@ function InstrumentExactValuesTable({ rows }: { rows: ProgramHeadInstrumentBreak
       <DisclosureContent>
         <div className="border-border/80 overflow-x-auto rounded-lg border">
           <Table aria-label="Exact values by instrument and evidence source">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Evidence Source</TableHead>
-              <TableHead className="text-right">Mean Rating</TableHead>
-              <TableHead className="text-right">Rating Count</TableHead>
-              <TableHead className="text-right">Submitted Responses</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.flatMap((row) =>
-              row.sources.map((source) => (
-                <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
-                  <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
-                  <TableCell>{source.sourceLabel}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {source.submittedResponseCount}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Instrument</TableHead>
+                <TableHead>Evidence Source</TableHead>
+                <TableHead className="text-right">Mean Rating</TableHead>
+                <TableHead className="text-right">Rating Count</TableHead>
+                <TableHead className="text-right">Submitted Responses</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.flatMap((row) =>
+                row.sources.map((source) => (
+                  <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
+                    <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
+                    <TableCell>{source.sourceLabel}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {source.submittedResponseCount}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </DisclosureContent>
     </Disclosure>

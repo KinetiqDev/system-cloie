@@ -12,11 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -173,14 +169,14 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
                   </DisclosureTrigger>
                   <DisclosureContent>
                     <ul className="flex flex-wrap gap-1.5" aria-label="Terms mentioned once">
-                    {singletons.map((token) => (
-                      <li
-                        key={token.text}
-                        className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-xs"
-                      >
-                        {token.text}
-                      </li>
-                    ))}
+                      {singletons.map((token) => (
+                        <li
+                          key={token.text}
+                          className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-xs"
+                        >
+                          {token.text}
+                        </li>
+                      ))}
                     </ul>
                   </DisclosureContent>
                 </Disclosure>

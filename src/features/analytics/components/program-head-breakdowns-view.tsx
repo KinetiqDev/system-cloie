@@ -18,8 +18,8 @@ import type {
   ProgramHeadCourseBreakdownRowDTO,
 } from "@/features/analytics/program-head-analytics-types";
 import {
-  ProgramHeadComparisonChart,
-  ProgramHeadInstrumentBreakdownChart,
+  LazyProgramHeadComparisonChart,
+  LazyProgramHeadInstrumentBreakdownChart,
 } from "./program-head-analytics-visualizations";
 import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
@@ -58,7 +58,7 @@ function courseRowToDatum(
 
 function contextualChart(title: string, breakdown: ProgramHeadContextualBreakdownDTO) {
   return (
-    <ProgramHeadComparisonChart
+    <LazyProgramHeadComparisonChart
       title={title}
       description={breakdown.attributionNote}
       rows={breakdown.rows.map(breakdownRowToDatum)}
@@ -158,7 +158,7 @@ export function ProgramHeadBreakdownsView({
     <div className="flex flex-col gap-6">
       {courseRows.length > 0 ? (
         <section aria-label="Course breakdown">
-          <ProgramHeadComparisonChart
+          <LazyProgramHeadComparisonChart
             title="Mean Rating by Course"
             description="Course-bound student evidence only. Each row discloses the instruments behind its ratings and links to authorized review evidence."
             rows={courseRows.map((row) => courseRowToDatum(programId, row))}
@@ -182,7 +182,7 @@ export function ProgramHeadBreakdownsView({
 
       {instrumentRows.length > 0 ? (
         <section aria-label="Instrument breakdown">
-          <ProgramHeadInstrumentBreakdownChart rows={instrumentRows} />
+          <LazyProgramHeadInstrumentBreakdownChart rows={instrumentRows} />
         </section>
       ) : (
         <DimensionNote title="Instrument Breakdown" resetHref={resetHref}>

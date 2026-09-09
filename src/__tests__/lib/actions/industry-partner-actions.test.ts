@@ -311,7 +311,10 @@ describe("Industry Partner Actions", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
-    expect(consoleSpy).toHaveBeenCalledWith("Failed to create industry partner profile:", customError);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Failed to create industry partner profile:",
+      customError
+    );
     consoleSpy.mockRestore();
   });
 

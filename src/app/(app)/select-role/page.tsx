@@ -1,18 +1,64 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { switchActiveRole } from "@/lib/actions/switch-role-action";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import type { Role } from "@/lib/constants/roles";
 import { formatRole, getRoleBadgeClass } from "@/features/users/lib/role-visuals";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
+
+type RoleCardCopy = {
+  frame: string | undefined;
+  badge: ReactNode;
+  description: string;
+  variant: "secondary" | "default";
+  action: string;
+};
+
+function roleCardCopy(role: Role, isActive: boolean): RoleCardCopy {
+  if (isActive) {
+    return {
+      frame: "border-primary/50",
+      badge: <span className="text-caption text-primary font-semibold">Current</span>,
+      description: "You are currently working in this role.",
+      variant: "secondary",
+      action: "Continue",
+    };
+  }
+  return {
+    frame: undefined,
+    badge: null,
+    description: `Continue to System CLOIE as ${formatRole(role).toLowerCase()}.`,
+    variant: "default",
+    action: `Switch to ${formatRole(role)}`,
+  };
+}
+
+function RoleSelectCard({ role, isActive }: { role: Role; isActive: boolean }) {
+  const copy = roleCardCopy(role, isActive);
+  return (
+    <Card className={copy.frame}>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-2">
+          <Badge className={getRoleBadgeClass(role)}>{formatRole(role)}</Badge>
+          {copy.badge}
+        </div>
+        <CardTitle>{formatRole(role)} workspace</CardTitle>
+        <CardDescription>{copy.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={switchActiveRole.bind(null, role)}>
+          <Button type="submit" variant={copy.variant}>
+            {copy.action}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default async function SelectRolePage() {
   // SessionGuard in the parent layout guarantees a session exists here.
@@ -40,34 +86,9 @@ export default async function SelectRolePage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {session.roles.map((role) => {
-          const isActive = session.activeRole === role;
-          return (
-            <Card key={role} className={isActive ? "border-primary/50" : undefined}>
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <Badge className={getRoleBadgeClass(role)}>{formatRole(role)}</Badge>
-                  {isActive ? (
-                    <span className="text-caption text-primary font-semibold">Current</span>
-                  ) : null}
-                </div>
-                <CardTitle>{formatRole(role)} workspace</CardTitle>
-                <CardDescription>
-                  {isActive
-                    ? "You are currently working in this role."
-                    : `Continue to System CLOIE as ${formatRole(role).toLowerCase()}.`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form action={switchActiveRole.bind(null, role)}>
-                  <Button type="submit" variant={isActive ? "secondary" : "default"}>
-                    {isActive ? "Continue" : `Switch to ${formatRole(role)}`}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {session.roles.map((role) => (
+          <RoleSelectCard key={role} role={role} isActive={session.activeRole === role} />
+        ))}
       </div>
     </div>
   );

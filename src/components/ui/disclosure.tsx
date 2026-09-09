@@ -46,7 +46,7 @@ function DisclosureTrigger({
   return (
     <summary
       className={cn(
-        "focus-visible:ring-ring flex cursor-pointer items-center font-semibold transition-colors select-none list-none focus-visible:ring-2 focus-visible:outline-hidden [&::-webkit-details-marker]:hidden pointer-coarse:min-h-11",
+        "focus-visible:ring-ring flex cursor-pointer list-none items-center font-semibold transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden",
         TRIGGER_VARIANTS[variant],
         className
       )}

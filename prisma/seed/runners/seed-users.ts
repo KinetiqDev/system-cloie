@@ -12,11 +12,10 @@ import {
 } from "../fixtures/users";
 import type { FoundationContext } from "../types";
 
-export async function seedUsers(
-  { pMap, mMap }: Pick<FoundationContext, "pMap" | "mMap">,
-  termInstanceId: string
-) {
-  console.log("  → Users & roles...");
+type ProgramMap = FoundationContext["pMap"];
+type MajorMap = FoundationContext["mMap"];
+
+async function seedUserAccounts(): Promise<void> {
   for (const u of allUsers) {
     const authUserId = "authUserId" in u ? u.authUserId : undefined;
     await prisma.user.upsert({
@@ -35,7 +34,13 @@ export async function seedUsers(
     where: { id: U.ALU_INACTIVE },
     data: { is_active: false },
   });
+}
 
+async function seedStudentProfiles(
+  pMap: ProgramMap,
+  mMap: MajorMap,
+  termInstanceId: string
+): Promise<void> {
   const students = studentDefinitions.map((student) => ({
     uid: student.uid,
     pid: pMap.get(student.program)!.id,
@@ -43,7 +48,6 @@ export async function seedUsers(
     ylid: student.yearLevel,
     sec: student.section,
   }));
-  console.log("  → Student profiles...");
   for (const s of students) {
     await prisma.studentAcademicProfile.upsert({
       where: { user_id: s.uid },
@@ -77,8 +81,9 @@ export async function seedUsers(
       },
     });
   }
+}
 
-  console.log("  → Faculty affiliations...");
+async function seedFacultyAffiliations(pMap: ProgramMap): Promise<void> {
   for (const affiliation of facultyAffiliations) {
     const programId = pMap.get(affiliation.program)!.id;
     await prisma.facultyProgramAffiliation.upsert({
@@ -94,8 +99,9 @@ export async function seedUsers(
       },
     });
   }
+}
 
-  console.log("  → Program head assignments...");
+async function seedProgramHeadAssignments(pMap: ProgramMap): Promise<void> {
   for (const assignment of programHeadAssignments) {
     const programId = pMap.get(assignment.program)!.id;
     await prisma.programHeadAssignment.upsert({
@@ -109,8 +115,9 @@ export async function seedUsers(
       create: { program_head_id: assignment.programHeadId, program_id: programId, is_active: true },
     });
   }
+}
 
-  console.log("  → Alumni profiles...");
+async function seedAlumniProfiles(pMap: ProgramMap): Promise<void> {
   for (const profile of externalProfiles) {
     await prisma.alumniProfile.upsert({
       where: { user_id: profile.userId },
@@ -127,8 +134,9 @@ export async function seedUsers(
       },
     });
   }
+}
 
-  console.log("  → Industry partner profiles...");
+async function seedIndustryPartnerProfiles(pMap: ProgramMap): Promise<void> {
   for (const profile of industryProfiles) {
     await prisma.industryPartnerProfile.upsert({
       where: { user_id: profile.userId },
@@ -147,8 +155,9 @@ export async function seedUsers(
       },
     });
   }
+}
 
-  console.log("  → Industry partner program affiliations...");
+async function seedIndustryPartnerAffiliations(pMap: ProgramMap): Promise<void> {
   for (const profile of industryProfiles) {
     const programId = pMap.get(profile.program)!.id;
     await prisma.industryPartnerProgramAffiliation.upsert({
@@ -165,8 +174,9 @@ export async function seedUsers(
       },
     });
   }
+}
 
-  console.log("  → External stakeholder invites...");
+async function seedExternalInvites(pMap: ProgramMap): Promise<void> {
   for (const invite of inviteDefinitions) {
     const programId = pMap.get(invite.program)!.id;
     await prisma.externalStakeholderInvite.upsert({
@@ -196,4 +206,26 @@ export async function seedUsers(
       },
     });
   }
+}
+
+export async function seedUsers(
+  { pMap, mMap }: Pick<FoundationContext, "pMap" | "mMap">,
+  termInstanceId: string
+) {
+  console.log("  → Users & roles...");
+  await seedUserAccounts();
+  console.log("  → Student profiles...");
+  await seedStudentProfiles(pMap, mMap, termInstanceId);
+  console.log("  → Faculty affiliations...");
+  await seedFacultyAffiliations(pMap);
+  console.log("  → Program head assignments...");
+  await seedProgramHeadAssignments(pMap);
+  console.log("  → Alumni profiles...");
+  await seedAlumniProfiles(pMap);
+  console.log("  → Industry partner profiles...");
+  await seedIndustryPartnerProfiles(pMap);
+  console.log("  → Industry partner program affiliations...");
+  await seedIndustryPartnerAffiliations(pMap);
+  console.log("  → External stakeholder invites...");
+  await seedExternalInvites(pMap);
 }

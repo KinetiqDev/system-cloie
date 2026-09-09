@@ -10,11 +10,7 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -42,10 +38,7 @@ type ProgramHeadPloLollipopChartProps = {
  * outcomes stay comparable at a glance. Rows without a mean carry no
  * defensible position and are never drawn (they remain in the exact table).
  */
-export function ProgramHeadPloLollipopChart({
-  title,
-  outcomes,
-}: ProgramHeadPloLollipopChartProps) {
+export function ProgramHeadPloLollipopChart({ title, outcomes }: ProgramHeadPloLollipopChartProps) {
   const instanceId = useId().replace(/[:]/g, "");
   const chartId = `plo-lollipop-${instanceId}`;
   const titleId = `${chartId}-title`;
@@ -101,7 +94,11 @@ export function ProgramHeadPloLollipopChart({
           className="aspect-auto w-full"
           style={{ height: Math.max(240, ranked.length * 56 + 96) }}
         >
-          <ComposedChart data={ranked} layout="vertical" margin={{ bottom: 8, left: 8, right: 24, top: 8 }}>
+          <ComposedChart
+            data={ranked}
+            layout="vertical"
+            margin={{ bottom: 8, left: 8, right: 24, top: 8 }}
+          >
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis
@@ -126,7 +123,13 @@ export function ProgramHeadPloLollipopChart({
                 return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];
               }}
             />
-            <Bar dataKey="value" barSize={4} radius={[2, 2, 2, 2]} isAnimationActive={false} tooltipType="none">
+            <Bar
+              dataKey="value"
+              barSize={4}
+              radius={[2, 2, 2, 2]}
+              isAnimationActive={false}
+              tooltipType="none"
+            >
               {ranked.map((entry, index) => (
                 <Cell key={entry.code} fill={chartFill(chartId, index)} fillOpacity={0.45} />
               ))}
@@ -159,31 +162,33 @@ export function ProgramHeadPloLollipopChart({
         <DisclosureContent>
           <div className="border-border/80 overflow-x-auto rounded-lg border">
             <Table aria-label="Mean ratings by graduate outcome on the fixed 1–5 scale">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Program Learning Outcome</TableHead>
-                <TableHead className="text-right">Mean Rating</TableHead>
-                <TableHead className="text-right">Rating Count</TableHead>
-                <TableHead className="text-right">Submitted Responses</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ranked.map((entry) => {
-                const outcome = outcomes.find((candidate) => candidate.code === entry.code)!;
-                return (
-                  <TableRow key={entry.code}>
-                    <TableCell className="font-medium">{entry.label}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {entry.value.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{outcome.ratingCount}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {outcome.submittedResponseCount}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Program Learning Outcome</TableHead>
+                  <TableHead className="text-right">Mean Rating</TableHead>
+                  <TableHead className="text-right">Rating Count</TableHead>
+                  <TableHead className="text-right">Submitted Responses</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ranked.map((entry) => {
+                  const outcome = outcomes.find((candidate) => candidate.code === entry.code)!;
+                  return (
+                    <TableRow key={entry.code}>
+                      <TableCell className="font-medium">{entry.label}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {entry.value.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {outcome.ratingCount}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {outcome.submittedResponseCount}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
             </Table>
           </div>
         </DisclosureContent>

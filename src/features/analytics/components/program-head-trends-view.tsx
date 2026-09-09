@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import type { ProgramHeadTrendsDTO } from "@/features/analytics/program-head-analytics-types";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
-import { ProgramHeadTrendChart } from "./program-head-analytics-visualizations";
+import { LazyProgramHeadTrendChart } from "./program-head-analytics-visualizations";
 
 type ProgramHeadTrendsViewProps = {
   programId: string;
@@ -31,7 +31,12 @@ type ProgramHeadTrendsViewProps = {
   aiFilters?: ProgramHeadInsightFilters;
 };
 
-export function ProgramHeadTrendsView({ programId, data, resetHref, aiFilters }: ProgramHeadTrendsViewProps) {
+export function ProgramHeadTrendsView({
+  programId,
+  data,
+  resetHref,
+  aiFilters,
+}: ProgramHeadTrendsViewProps) {
   const { periods, breaks, emptyReason } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
@@ -79,7 +84,7 @@ export function ProgramHeadTrendsView({ programId, data, resetHref, aiFilters }:
       )}
 
       {emptyReason === null && (
-        <ProgramHeadTrendChart
+        <LazyProgramHeadTrendChart
           title="Mean Rating by Academic Period"
           periods={periods}
           breaks={breaks}

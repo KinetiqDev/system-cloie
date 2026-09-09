@@ -11,11 +11,7 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -64,53 +60,53 @@ function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum
       <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
       <DisclosureContent>
         <div className="border-border/80 overflow-x-auto rounded-lg border">
-        <Table aria-label="Exact values by comparison group">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Group</TableHead>
-              <TableHead className="text-right">Mean Rating</TableHead>
-              <TableHead className="text-right">Rating Count</TableHead>
-              <TableHead className="text-right">Submitted Responses</TableHead>
-              {showsContext ? <TableHead>Instruments</TableHead> : null}
-              {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.key}>
-                <TableCell className="font-medium">{row.label}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.submittedResponseCount}
-                </TableCell>
-                {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
-                {showsLinks ? (
-                  <TableCell>
-                    {row.links && row.links.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {row.links.map((link) => (
-                          <li key={link.href}>
-                            <Link
-                              href={link.href}
-                              className="text-link hover:text-foreground underline underline-offset-3 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
-                            >
-                              {link.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                ) : null}
+          <Table aria-label="Exact values by comparison group">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Group</TableHead>
+                <TableHead className="text-right">Mean Rating</TableHead>
+                <TableHead className="text-right">Rating Count</TableHead>
+                <TableHead className="text-right">Submitted Responses</TableHead>
+                {showsContext ? <TableHead>Instruments</TableHead> : null}
+                {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.key}>
+                  <TableCell className="font-medium">{row.label}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.submittedResponseCount}
+                  </TableCell>
+                  {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
+                  {showsLinks ? (
+                    <TableCell>
+                      {row.links && row.links.length > 0 ? (
+                        <ul className="flex flex-col gap-1">
+                          {row.links.map((link) => (
+                            <li key={link.href}>
+                              <Link
+                                href={link.href}
+                                className="text-link hover:text-foreground underline underline-offset-3 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                              >
+                                {link.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </DisclosureContent>
     </Disclosure>

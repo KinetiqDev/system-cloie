@@ -51,9 +51,7 @@ describe("revokeUserRole Program Head gate", () => {
       programHeadAssignment: { count: vi.fn() },
       userRole: { delete: vi.fn().mockResolvedValue({ id: "role-1" }) },
     };
-    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) =>
-      cb(mockTx)
-    );
+    (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
   });
 
   it("rejects revoking the Program Head role while any assignment is active", async () => {
@@ -74,7 +72,9 @@ describe("revokeUserRole Program Head gate", () => {
     const result = await revokeUserRole(TARGET_ID, SystemRole.PROGRAM_HEAD);
 
     expect(result.success).toBe(true);
-    expect(mockTx.userRole.delete).toHaveBeenCalledWith({ where: { user_id_role: { user_id: TARGET_ID, role: SystemRole.PROGRAM_HEAD } } });
+    expect(mockTx.userRole.delete).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: TARGET_ID, role: SystemRole.PROGRAM_HEAD } },
+    });
   });
 
   it("serializes the active-assignment count with assignment-set administration", async () => {

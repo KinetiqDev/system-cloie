@@ -47,57 +47,6 @@ async function ensureProgramMajorRelation(programId: string, majorId?: string) {
   return { success: true as const };
 }
 
-async function listAdminUsers() {
-  return prisma.user.findMany({
-    include: {
-      roles: {
-        orderBy: { role: "asc" },
-      },
-      student_profile: {
-        include: {
-          major: true,
-          program: true,
-        },
-      },
-      faculty_program_affiliations: {
-        orderBy: {
-          program: {
-            code: "asc",
-          },
-        },
-        include: {
-          program: true,
-        },
-      },
-      program_head_assignments: {
-        orderBy: {
-          program: {
-            code: "asc",
-          },
-        },
-        include: {
-          program: true,
-        },
-      },
-      industry_partner_profile: {
-        include: {
-          program: true,
-        },
-      },
-    },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-  });
-}
-
-async function listExternalStakeholderInvites() {
-  return prisma.externalStakeholderInvite.findMany({
-    include: {
-      program: true,
-    },
-    orderBy: [{ status: "asc" }, { created_at: "desc" }],
-  });
-}
-
 export async function toggleUserActive(id: string, is_active: boolean): Promise<ServiceResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
@@ -128,7 +77,8 @@ export async function assignUserRole(
   if (!allowedRoles.includes(session.activeRole)) {
     return { success: false, error: "Insufficient permissions." };
   }
-  if (input.user_id === session.userId) return { success: false, error: "Cannot modify own account." };
+  if (input.user_id === session.userId)
+    return { success: false, error: "Cannot modify own account." };
 
   try {
     const role = await prisma.userRole.create({
@@ -432,7 +382,8 @@ export async function createProgramHeadAssignment(
   if (!allowedRoles.includes(session.activeRole)) {
     return { success: false, error: "Insufficient permissions." };
   }
-  if (input.program_head_id === session.userId) return { success: false, error: "Cannot modify own account." };
+  if (input.program_head_id === session.userId)
+    return { success: false, error: "Cannot modify own account." };
 
   const hasProgramHeadRole = await userHasRole(input.program_head_id, SystemRole.PROGRAM_HEAD);
 

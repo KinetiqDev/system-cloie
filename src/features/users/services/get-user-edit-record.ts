@@ -99,7 +99,7 @@ export async function getUserEditRecordBySecretary(
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      roles: { select: { role: true } },
+      roles: { select: { role: true }, orderBy: { role: "asc" } },
       student_profile: {
         include: {
           program: { select: { code: true, name: true, is_active: true } },
@@ -139,6 +139,9 @@ export async function getUserEditRecordBySecretary(
     return { success: false, error: "User not found." };
   }
 
+  // Roles resolve in deterministic enum order so this reader and the
+  // separately executed save mutation always target the same role for
+  // multi-role accounts; System CLOIE account roles are immutable here.
   const role = user.roles[0]?.role;
   if (!role) {
     return { success: false, error: "User has no assigned CLOIE account role." };
@@ -175,11 +178,12 @@ export async function getUserEditRecordBySecretary(
             section: activeEnrollment.section,
           }
         : null,
-      faculty: user.faculty_program_affiliations && user.faculty_program_affiliations.length > 0
-        ? {
-            primaryProgramId: user.faculty_program_affiliations[0].program_id,
-          }
-        : null,
+      faculty:
+        user.faculty_program_affiliations && user.faculty_program_affiliations.length > 0
+          ? {
+              primaryProgramId: user.faculty_program_affiliations[0].program_id,
+            }
+          : null,
       programHead: {
         assignments: (user.program_head_assignments ?? [])
           .filter((assignment) => assignment.is_active)

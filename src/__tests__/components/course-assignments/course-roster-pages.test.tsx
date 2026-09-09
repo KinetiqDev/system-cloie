@@ -602,7 +602,9 @@ describe("course roster pages", () => {
   it("removes standalone sort and removed-students filter controls", () => {
     render(<CourseRosterDetailPage data={{ ...detail, search: "grace" }} />);
 
-    expect(screen.queryByRole("checkbox", { name: /include removed students/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /include removed students/i })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /name a→z/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /name z→a/i })).not.toBeInTheDocument();
   });

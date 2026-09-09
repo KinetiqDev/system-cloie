@@ -162,9 +162,7 @@ describe("CourseAssignmentsTable", () => {
 
     fireEvent.click(header);
 
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/secretary/course-assignments?sort=course&dir=desc"
-    );
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/course-assignments?sort=course&dir=desc");
   });
 
   it("renders Edit for a Program-specific Program Head assignment", () => {

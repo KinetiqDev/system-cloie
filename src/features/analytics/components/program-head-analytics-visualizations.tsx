@@ -18,7 +18,9 @@ function VisualizationFallback({ label }: { label: string }) {
   );
 }
 
-export const ProgramHeadComparisonChart = dynamic<ComponentProps<typeof ComparisonChartComponent>>(
+export const LazyProgramHeadComparisonChart = dynamic<
+  ComponentProps<typeof ComparisonChartComponent>
+>(
   () =>
     import("./program-head-comparison-chart").then((module) => module.ProgramHeadComparisonChart),
   {
@@ -27,7 +29,7 @@ export const ProgramHeadComparisonChart = dynamic<ComponentProps<typeof Comparis
   }
 );
 
-export const ProgramHeadInstrumentBreakdownChart = dynamic<
+export const LazyProgramHeadInstrumentBreakdownChart = dynamic<
   ComponentProps<typeof InstrumentChartComponent>
 >(
   () =>
@@ -40,7 +42,9 @@ export const ProgramHeadInstrumentBreakdownChart = dynamic<
   }
 );
 
-export const ProgramHeadPloLollipopChart = dynamic<ComponentProps<typeof LollipopChartComponent>>(
+export const LazyProgramHeadPloLollipopChart = dynamic<
+  ComponentProps<typeof LollipopChartComponent>
+>(
   () =>
     import("./program-head-plo-lollipop-chart").then(
       (module) => module.ProgramHeadPloLollipopChart
@@ -51,7 +55,7 @@ export const ProgramHeadPloLollipopChart = dynamic<ComponentProps<typeof Lollipo
   }
 );
 
-export const ProgramHeadTrendChart = dynamic<ComponentProps<typeof TrendChartComponent>>(
+export const LazyProgramHeadTrendChart = dynamic<ComponentProps<typeof TrendChartComponent>>(
   () => import("./program-head-trend-chart").then((module) => module.ProgramHeadTrendChart),
   {
     ssr: false,
@@ -59,7 +63,7 @@ export const ProgramHeadTrendChart = dynamic<ComponentProps<typeof TrendChartCom
   }
 );
 
-export const QualitativeWordCloud = dynamic<ComponentProps<typeof WordCloudComponent>>(
+export const LazyQualitativeWordCloud = dynamic<ComponentProps<typeof WordCloudComponent>>(
   () => import("./qualitative-word-cloud").then((module) => module.QualitativeWordCloud),
   {
     ssr: false,

@@ -161,9 +161,15 @@ describe("SecretaryUsersList", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Sort by name, currently ascending" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sort by email, currently unsorted" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sort by status, currently unsorted" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sort by name, currently ascending" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sort by email, currently unsorted" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Sort by status, currently unsorted" })
+    ).toBeInTheDocument();
   });
 
   it("offers the General Education Coordinator role filter", () => {

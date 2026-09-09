@@ -1,5 +1,8 @@
-import { describeScale, resolveSnapshotItemScale, type ScaleDescriptor } from "../aggregators/scale-identity";
-import type { MetricEvidenceSummary } from "../aggregators/types";
+import {
+  describeScale,
+  resolveSnapshotItemScale,
+  type ScaleDescriptor,
+} from "../aggregators/scale-identity";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -18,7 +21,6 @@ import type {
   ProgramHeadTrendsEmptyReason,
 } from "../program-head-analytics-types";
 
-
 // ---------------------------------------------------------------------------
 // Comparability fingerprint
 // ---------------------------------------------------------------------------
@@ -27,19 +29,22 @@ import type {
  * Identity of a period's evidence for trend comparability. Two periods are
  * comparable only when every dimension matches: the immutable instrument
  * version IDs that produced the ratings (display labels can collide across
- * templates), the Likert scale identities, and the mapped Program Learning Outcome
- * codes. All arrays are sorted so equality is order-independent.
+ * templates), the Likert scale identities, the mapped Program Learning Outcome
+ * codes, and the response source composition (CENTRAL and/or COURSE_BOUND).
+ * Source composition matters because the All-sources scope blends central and
+ * course-bound responses into one mean; a term with both populations must not
+ * join a course-only term as though the shift were performance. All arrays
+ * are sorted so equality is order-independent.
  */
 export type TrendComparabilityFingerprint = {
   instrumentVersions: string[];
   scaleIdentities: string[];
   outcomeCodes: string[];
+  sources: string[];
 };
-
 function arraysEqual(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
-
 export function fingerprintsEqual(
   left: TrendComparabilityFingerprint,
   right: TrendComparabilityFingerprint
@@ -47,7 +52,8 @@ export function fingerprintsEqual(
   return (
     arraysEqual(left.instrumentVersions, right.instrumentVersions) &&
     arraysEqual(left.scaleIdentities, right.scaleIdentities) &&
-    arraysEqual(left.outcomeCodes, right.outcomeCodes)
+    arraysEqual(left.outcomeCodes, right.outcomeCodes) &&
+    arraysEqual(left.sources, right.sources)
   );
 }
 
@@ -66,6 +72,9 @@ function describeFingerprintChange(
   if (!arraysEqual(previous.outcomeCodes, current.outcomeCodes)) {
     reasons.push("The mapped outcomes changed between these periods.");
   }
+  if (!arraysEqual(previous.sources, current.sources)) {
+    reasons.push("The response source composition changed between these periods.");
+  }
   return reasons;
 }
 
@@ -83,7 +92,7 @@ export function semesterOrder(semester: string): number {
 
 /** Canonical term order for chronological period sorting; null sorts first. */
 export function termOrder(term: string | null): number {
-  return term ? TERM_ORDER[term] ?? 99 : -1;
+  return term ? (TERM_ORDER[term] ?? 99) : -1;
 }
 
 /** Per-period evidence assembled by the trends read before series resolution. */
@@ -101,10 +110,7 @@ export type TrendSeriesPeriodInput = {
   fingerprint: TrendComparabilityFingerprint;
 };
 
-function comparePeriods(
-  left: TrendSeriesPeriodInput,
-  right: TrendSeriesPeriodInput
-): number {
+function comparePeriods(left: TrendSeriesPeriodInput, right: TrendSeriesPeriodInput): number {
   const [leftYear, leftSemester, leftTerm] = left.sortKey;
   const [rightYear, rightSemester, rightTerm] = right.sortKey;
   return (
@@ -243,9 +249,7 @@ export function buildProgramHeadOverviewKpi(input: {
     submittedResponseCount,
     evaluationOpportunityCount,
     responseRate:
-      evaluationOpportunityCount === 0
-        ? null
-        : submittedResponseCount / evaluationOpportunityCount,
+      evaluationOpportunityCount === 0 ? null : submittedResponseCount / evaluationOpportunityCount,
     ratingCount,
     meanRating: ratingCount === 0 ? null : ratingSum / ratingCount,
   };
@@ -254,7 +258,6 @@ export function buildProgramHeadOverviewKpi(input: {
 // ---------------------------------------------------------------------------
 // Program PLO outcome evidence
 // ---------------------------------------------------------------------------
-
 
 /** One normalized course-bound rating row ready for Program PLO aggregation. */
 export type OutcomeEvidenceRow = {
@@ -265,9 +268,19 @@ export type OutcomeEvidenceRow = {
   /** Frozen structure snapshot of the instrument version that produced the rating. */
   instrumentVersion: { id: string; structureSnapshot: unknown } | null;
   /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
-  cilo: { id: string; code: string; description: string; course: { id: string; code: string; title: string } | null } | null;
+  cilo: {
+    id: string;
+    code: string;
+    description: string;
+    course: { id: string; code: string; title: string } | null;
+  } | null;
   /** Current CILO-to-PLO mappings for the selected Program only. */
-  ploMappings: Array<{ ploId: string; code: string; name: string; manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null }>;
+  ploMappings: Array<{
+    ploId: string;
+    code: string;
+    name: string;
+    manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  }>;
   evaluationId: string;
   deploymentName: string;
 };
@@ -284,7 +297,17 @@ type OutcomeEvidenceAggregate = {
   courses: Map<string, { code: string; title: string }>;
   evaluations: Map<string, string>;
   /** CILO id -> valid-rating-only contribution behind this PLO row. */
-  contributors: Map<string, { ciloCode: string; ciloDescription: string; course: { id: string; code: string; title: string } | null; manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null; ratingSum: number; ratingCount: number }>;
+  contributors: Map<
+    string,
+    {
+      ciloCode: string;
+      ciloDescription: string;
+      course: { id: string; code: string; title: string } | null;
+      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+      ratingSum: number;
+      ratingCount: number;
+    }
+  >;
   /** scaleKey (sorted descriptor JSON) -> per-category counts */
   distributions: Map<string, { descriptors: ScaleDescriptor[]; counts: Map<number, number> }>;
   excludedRatingCount: number;
@@ -325,11 +348,7 @@ function getOrCreateOutcomeAggregate(
 /** Resolve the frozen scale for one rating row; null when unresolvable. */
 function resolveRatingScale(row: OutcomeEvidenceRow): ScaleDescriptor[] | null {
   return row.instrumentVersion
-    ? resolveSnapshotItemScale(
-        row.instrumentVersion.structureSnapshot,
-        row.sectionKey,
-        row.itemKey
-      )
+    ? resolveSnapshotItemScale(row.instrumentVersion.structureSnapshot, row.sectionKey, row.itemKey)
     : null;
 }
 
@@ -414,7 +433,14 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
 
     for (const mapping of row.ploMappings) {
       const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
-      accumulateOutcomeRow(aggregate, row, row.cilo, mapping.manifestation, descriptors, isValidRating);
+      accumulateOutcomeRow(
+        aggregate,
+        row,
+        row.cilo,
+        mapping.manifestation,
+        descriptors,
+        isValidRating
+      );
     }
   }
 
@@ -502,7 +528,11 @@ export function buildProgramHeadOutcomeDtos(
   rows.sort((left, right) => {
     const leftMean = left.meanRating ?? -Infinity;
     const rightMean = right.meanRating ?? -Infinity;
-    return rightMean - leftMean || left.code.localeCompare(right.code) || left.ploId.localeCompare(right.ploId);
+    return (
+      rightMean - leftMean ||
+      left.code.localeCompare(right.code) ||
+      left.ploId.localeCompare(right.ploId)
+    );
   });
 
   return rows;
@@ -657,10 +687,7 @@ function sourceLabel(key: ProgramHeadStakeholderSourceKey): string {
   return SOURCE_LABEL_BY_KEY[key];
 }
 
-function instrumentLabel(version: {
-  version_number: number;
-  template: { name: string };
-}): string {
+function instrumentLabel(version: { version_number: number; template: { name: string } }): string {
   return `${version.template.name} v${version.version_number}`;
 }
 
@@ -713,7 +740,8 @@ export function buildStakeholderBuckets(
       bucket.ratingCount += 1;
     }
     bucket.responseIds.add(row.response_id);
-    const version = row.response.assignment.course_bound?.instrument ??
+    const version =
+      row.response.assignment.course_bound?.instrument ??
       row.response.assignment.central_deployment?.instrument;
     if (version) {
       bucket.instruments.set(version.id, instrumentLabel(version));
@@ -728,8 +756,7 @@ export function buildStakeholderBuckets(
     const bucket = getOrCreateBucket(buckets, sourceKey);
     bucket.responseIds.add(row.id);
     const version =
-      row.assignment.course_bound?.instrument ??
-      row.assignment.central_deployment?.instrument;
+      row.assignment.course_bound?.instrument ?? row.assignment.central_deployment?.instrument;
     if (version) {
       bucket.instruments.set(version.id, instrumentLabel(version));
     }
@@ -747,8 +774,7 @@ export function buildStakeholderBuckets(
         sourceLabel: source.label,
         sourceDescription: source.description,
         instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
-        meanRating:
-          bucket.ratingCount === 0 ? null : bucket.ratingSum / bucket.ratingCount,
+        meanRating: bucket.ratingCount === 0 ? null : bucket.ratingSum / bucket.ratingCount,
         ratingCount: bucket.ratingCount,
         submittedResponseCount: bucket.responseIds.size,
       },
@@ -757,10 +783,7 @@ export function buildStakeholderBuckets(
 }
 
 /** A rating is valid only when its value belongs to the item's frozen scale. */
-function ratingValueIsValid(
-  row: BreakdownRatingRow,
-  snapshotById: Map<string, unknown>
-): boolean {
+function ratingValueIsValid(row: BreakdownRatingRow, snapshotById: Map<string, unknown>): boolean {
   const version =
     row.response.assignment.course_bound?.instrument ??
     row.response.assignment.central_deployment?.instrument;
@@ -772,7 +795,9 @@ function ratingValueIsValid(
     return false;
   }
   const descriptors = resolveSnapshotItemScale(snapshot, row.section_key, row.item_key);
-  return descriptors !== null && descriptors.some((descriptor) => descriptor.value === row.rating_value);
+  return (
+    descriptors !== null && descriptors.some((descriptor) => descriptor.value === row.rating_value)
+  );
 }
 
 type BreakdownAggregate = {
@@ -795,8 +820,7 @@ function toBreakdownRow(
     key,
     label,
     isUnspecified,
-    meanRating:
-      aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
+    meanRating: aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
     ratingCount: aggregate.ratingCount,
     submittedResponseCount: aggregate.responseIds.size,
   };
@@ -861,32 +885,27 @@ export function buildCourseBreakdownRows(
       byCourse.set(course.id, aggregate);
     }
     aggregate.responseIds.add(row.id);
-    aggregate.instruments.set(
-      courseBound.instrument.id,
-      instrumentLabel(courseBound.instrument)
-    );
+    aggregate.instruments.set(courseBound.instrument.id, instrumentLabel(courseBound.instrument));
     aggregate.evaluations.set(courseBound.id, courseBound.deployment_name);
   }
 
-  const rows: ProgramHeadCourseBreakdownRowDTO[] = [...byCourse.values()].map(
-    (aggregate) => {
-      const instruments = [...aggregate.instruments.values()].sort();
-      const evaluations = [...aggregate.evaluations.entries()]
-        .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
-        .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName));
-      return {
-        ...toBreakdownRow(
-          aggregate,
-          aggregate.course.id,
-          `${aggregate.course.code} — ${aggregate.course.title}`,
-          false
-        ),
-        courseCode: aggregate.course.code,
-        instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
-        evidenceEvaluations: evaluations,
-      };
-    }
-  );
+  const rows: ProgramHeadCourseBreakdownRowDTO[] = [...byCourse.values()].map((aggregate) => {
+    const instruments = [...aggregate.instruments.values()].sort();
+    const evaluations = [...aggregate.evaluations.entries()]
+      .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
+      .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName));
+    return {
+      ...toBreakdownRow(
+        aggregate,
+        aggregate.course.id,
+        `${aggregate.course.code} — ${aggregate.course.title}`,
+        false
+      ),
+      courseCode: aggregate.course.code,
+      instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
+      evidenceEvaluations: evaluations,
+    };
+  });
 
   rows.sort((left, right) => left.courseCode.localeCompare(right.courseCode));
   return rows;
@@ -952,8 +971,7 @@ export function buildInstrumentBreakdownRows(
       row.assignment.central_deployment?.target_stakeholder
     );
     const version =
-      row.assignment.course_bound?.instrument ??
-      row.assignment.central_deployment?.instrument;
+      row.assignment.course_bound?.instrument ?? row.assignment.central_deployment?.instrument;
     if (!version) {
       continue;
     }
@@ -968,21 +986,24 @@ export function buildInstrumentBreakdownRows(
 
   const rows: ProgramHeadInstrumentBreakdownRowDTO[] = [...byInstrument.entries()]
     .map(([instrumentVersionId, entry]) => {
-      const sources: ProgramHeadInstrumentSourceDTO[] = STAKEHOLDER_SOURCES.flatMap(
-        (source) => {
-          const aggregate = entry.sources.get(source.key);
-          if (!aggregate || aggregate.responseIds.size === 0) {
-            return [];
-          }
-          return [
-            {
-              ...toBreakdownRow(aggregate, `${instrumentVersionId}:${source.key}`, source.label, false),
-              sourceKey: source.key,
-              sourceLabel: source.label,
-            },
-          ];
+      const sources: ProgramHeadInstrumentSourceDTO[] = STAKEHOLDER_SOURCES.flatMap((source) => {
+        const aggregate = entry.sources.get(source.key);
+        if (!aggregate || aggregate.responseIds.size === 0) {
+          return [];
         }
-      );
+        return [
+          {
+            ...toBreakdownRow(
+              aggregate,
+              `${instrumentVersionId}:${source.key}`,
+              source.label,
+              false
+            ),
+            sourceKey: source.key,
+            sourceLabel: source.label,
+          },
+        ];
+      });
       return { instrumentVersionId, instrumentLabel: entry.label, sources };
     })
     .filter((row) => row.sources.length > 0);
@@ -1012,7 +1033,10 @@ export function buildAttributionBreakdown(
   const rowSourceKey = (row: BreakdownRatingRow | BreakdownResponseRow) =>
     "response" in row
       ? ratingRowSourceKey(row)
-      : sourceKeyForTarget(row.assignment.course_bound, row.assignment.central_deployment?.target_stakeholder);
+      : sourceKeyForTarget(
+          row.assignment.course_bound,
+          row.assignment.central_deployment?.target_stakeholder
+        );
 
   const accumulateAttributed = (
     assignment: BreakdownAssignmentContext,

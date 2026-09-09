@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { useForm, Controller, type Resolver, type SubmitHandler } from "react-hook-form";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/schemas/alumni-profile";
 import { createAlumniProfile } from "@/lib/actions/alumni-actions";
 import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
+import { ROLES } from "@/lib/constants/roles";
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -49,6 +51,7 @@ type AlumniOnboardingFormProps = {
 
 export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     control,
@@ -64,7 +67,7 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
       major_id: "",
     },
   });
-
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch drives conditional majors; compiler skip is intentional, no memoization needed.
   const selectedProgramId = watch("program_id");
   const selectedProgramObj = programs.find((p) => p.id === selectedProgramId);
   const hasMajors = selectedProgramObj?.majors && selectedProgramObj.majors.length > 0;
@@ -89,7 +92,7 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
     }
 
     if (result.success === true) {
-      window.location.assign("/alumni/dashboard");
+      router.push("/alumni/dashboard");
     }
   };
 
@@ -270,21 +273,15 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 px-6 pt-2 pb-8 sm:px-8">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full font-semibold"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" size="lg" className="w-full font-semibold" disabled={isSubmitting}>
             {isSubmitting ? "Finalizing..." : "Submit and Continue"}
             {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
           </Button>
           <Button
             type="button"
             variant="ghost"
-            className="text-muted-foreground hover:text-foreground w-full"
             onClick={async () => {
-              await resetIncompleteRoleClaim();
+              await resetIncompleteRoleClaim(ROLES.ALUMNI);
             }}
           >
             <ArrowLeft className="size-4" data-icon="inline-start" />

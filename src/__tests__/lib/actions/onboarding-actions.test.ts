@@ -22,6 +22,10 @@ const {
   createClientMock,
   getActiveTermIdMock,
   upsertEnrollmentForActiveTermMock,
+  findUniqueStudentProfileMock,
+  findFirstFacultyAffiliationMock,
+  findUniqueAlumniProfileMock,
+  findUniqueIndustryPartnerProfileMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn((path: string) => {
     throw new Error(`${REDIRECT_ERROR}:${path}`);
@@ -40,6 +44,10 @@ const {
   createClientMock: vi.fn(),
   getActiveTermIdMock: vi.fn(),
   upsertEnrollmentForActiveTermMock: vi.fn(),
+  findUniqueStudentProfileMock: vi.fn(),
+  findFirstFacultyAffiliationMock: vi.fn(),
+  findUniqueAlumniProfileMock: vi.fn(),
+  findUniqueIndustryPartnerProfileMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -74,6 +82,16 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     studentAcademicProfile: {
       upsert: upsertStudentProfileMock,
+      findUnique: findUniqueStudentProfileMock,
+    },
+    facultyProgramAffiliation: {
+      findFirst: findFirstFacultyAffiliationMock,
+    },
+    alumniProfile: {
+      findUnique: findUniqueAlumniProfileMock,
+    },
+    industryPartnerProfile: {
+      findUnique: findUniqueIndustryPartnerProfileMock,
     },
     userRole: {
       deleteMany: deleteManyUserRoleMock,
@@ -89,7 +107,6 @@ vi.mock("@/lib/db/prisma", () => ({
     },
   },
 }));
-
 const validAcademicPayload = {
   program_id: "550e8400-e29b-41d4-a716-446655440000",
   major_id: "660e8400-e29b-41d4-a716-446655441111",
@@ -106,11 +123,14 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "test@example.com",
+      roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/respondents`);
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
 
     expect(deleteUserRoleMock).toHaveBeenCalledWith({
       where: { user_id_role: { user_id: "user-123", role: ROLES.STUDENT } },
@@ -122,6 +142,7 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "faculty@acd.edu.ph",
+      roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
       profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
@@ -138,11 +159,14 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "test@example.com",
+      roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
       profileGate: { status: "COMPLETE" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/respondents`);
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
@@ -152,11 +176,14 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "test@example.com",
+      roles: [ROLES.STUDENT],
       activeRole: null,
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/respondents`);
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
@@ -165,10 +192,90 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
   it("redirects to /portal when there is no authenticated session", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/respondents`);
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes the requested incomplete role when the cookie resolves to a complete role", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "test@example.com",
+      roles: [ROLES.FACULTY, ROLES.STUDENT],
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+    });
+    findUniqueStudentProfileMock.mockResolvedValue(null);
+    const formData = new FormData();
+    formData.set("role", ROLES.STUDENT);
+
+    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
+
+    expect(deleteUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "user-123", role: ROLES.STUDENT } },
+    });
+  });
+
+  it("accepts the requested role as a direct argument", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "faculty@acd.edu.ph",
+      roles: [ROLES.FACULTY],
+      activeRole: null,
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+
+    await expect(resetIncompleteRoleClaim(ROLES.FACULTY)).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/staff`
+    );
+
+    expect(deleteUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "user-123", role: ROLES.FACULTY } },
+    });
+  });
+
+  it("ignores a requested role that is not assigned to the user", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "test@example.com",
+      roles: [ROLES.FACULTY],
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+    });
+    const formData = new FormData();
+    formData.set("role", ROLES.STUDENT);
+
+    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/staff`
+    );
+
+    expect(deleteUserRoleMock).not.toHaveBeenCalled();
+    expect(findUniqueStudentProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps a requested role that already has a completed profile", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-123",
+      email: "test@example.com",
+      roles: [ROLES.FACULTY, ROLES.STUDENT],
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+    });
+    findUniqueStudentProfileMock.mockResolvedValue({ id: "profile-1" });
+    const formData = new FormData();
+    formData.set("role", ROLES.STUDENT);
+
+    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
+      `${REDIRECT_ERROR}:/portal/respondents`
+    );
+
+    expect(deleteUserRoleMock).not.toHaveBeenCalled();
   });
 });
 

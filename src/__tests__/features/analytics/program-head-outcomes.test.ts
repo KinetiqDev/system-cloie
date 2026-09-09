@@ -116,13 +116,19 @@ function prismaRatingRow(opts: {
 const ploA = { plo: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
 const ploB = { plo: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
 
-function ciloRow(opts: {
-  ciloId?: string;
-  ciloDescription?: string;
-  courseCode?: string;
-  ploMappings?: Array<typeof ploA>;
-} = {}) {
-  const { ciloId = "cilo-1", ciloDescription = "Achieve the outcome", courseCode = "EDUC 101" } = opts;
+function ciloRow(
+  opts: {
+    ciloId?: string;
+    ciloDescription?: string;
+    courseCode?: string;
+    ploMappings?: Array<typeof ploA>;
+  } = {}
+) {
+  const {
+    ciloId = "cilo-1",
+    ciloDescription = "Achieve the outcome",
+    courseCode = "EDUC 101",
+  } = opts;
   return {
     id: ciloId,
     description: ciloDescription,
@@ -131,13 +137,15 @@ function ciloRow(opts: {
   };
 }
 
-function bindingRow(opts: {
-  evaluationId?: string;
-  deploymentName?: string;
-  sectionKey?: string;
-  itemKey?: string;
-  cilo?: ReturnType<typeof ciloRow> | null;
-} = {}) {
+function bindingRow(
+  opts: {
+    evaluationId?: string;
+    deploymentName?: string;
+    sectionKey?: string;
+    itemKey?: string;
+    cilo?: ReturnType<typeof ciloRow> | null;
+  } = {}
+) {
   return {
     section_key: opts.sectionKey ?? "cilo-items",
     item_key: opts.itemKey ?? "cilo-attainment-1",
@@ -354,7 +362,9 @@ describe("getProgramHeadOutcomes", () => {
     expect(courseCall.where.response.deployment_type).toBe("COURSE_BOUND");
     const centralCall = prismaMock.quantitativeResponseItem.findMany.mock.calls[1][0];
     expect(centralCall.where.response.deployment_type).toBe("CENTRAL");
-    expect(centralCall.where.response.assignment.central_deployment.target_stakeholder).toBe("STUDENT");
+    expect(centralCall.where.response.assignment.central_deployment.target_stakeholder).toBe(
+      "STUDENT"
+    );
   });
 
   it("keeps the course-bound read when Course evidence is selected", async () => {
@@ -677,12 +687,19 @@ describe("getProgramHeadOutcomes", () => {
     const labels = row.distributions.map((distribution) => distribution.scaleLabel).sort();
     expect(labels).toEqual(["1–4 (4-point)", "1–5 (5-point)"]);
 
-    const likert = row.distributions.find((distribution) => distribution.scaleLabel === "1–4 (4-point)");
+    const likert = row.distributions.find(
+      (distribution) => distribution.scaleLabel === "1–4 (4-point)"
+    );
     expect(likert).toBeDefined();
     const agree = likert!.categories.find((category) => category.value === 3);
     expect(agree).toEqual({ value: 3, label: "Agree", count: 1, percentage: 1 });
     const stronglyDisagree = likert!.categories.find((category) => category.value === 1);
-    expect(stronglyDisagree).toEqual({ value: 1, label: "Strongly Disagree", count: 0, percentage: 0 });
+    expect(stronglyDisagree).toEqual({
+      value: 1,
+      label: "Strongly Disagree",
+      count: 0,
+      percentage: 0,
+    });
     // All snapshot categories are exposed, including zero-count ones.
     expect(likert!.categories).toHaveLength(4);
   });
@@ -850,9 +867,7 @@ describe("resolveSnapshotItemScale", () => {
       {
         key: "legacy-section",
         title: "Legacy",
-        quantitative_items: [
-          { key: "legacy-q1", prompt: "Q", scale: [1, 2, 3, 4, 5, 6] },
-        ],
+        quantitative_items: [{ key: "legacy-q1", prompt: "Q", scale: [1, 2, 3, 4, 5, 6] }],
       },
     ];
 
@@ -869,7 +884,9 @@ describe("resolveSnapshotItemScale", () => {
   it("returns null for unknown sections, items, or non-array snapshots", () => {
     expect(resolveSnapshotItemScale(ciloStructure, "missing", "cilo-attainment-1")).toBeNull();
     expect(resolveSnapshotItemScale(ciloStructure, "cilo-items", "missing")).toBeNull();
-    expect(resolveSnapshotItemScale({ not: "an array" }, "cilo-items", "cilo-attainment-1")).toBeNull();
+    expect(
+      resolveSnapshotItemScale({ not: "an array" }, "cilo-items", "cilo-attainment-1")
+    ).toBeNull();
   });
 });
 

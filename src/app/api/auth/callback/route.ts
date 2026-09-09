@@ -386,10 +386,6 @@ export async function GET(request: Request) {
         create: { user_id: dbUser.id, role: targetRole },
       });
 
-      dbUser = await prisma.user.findUnique({
-        where: { id: dbUser.id },
-        include: { roles: true },
-      });
       claimedTargetRole = targetRole;
     } else if (!hasAnyRole) {
       if (targetRole) {

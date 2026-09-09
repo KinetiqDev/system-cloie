@@ -172,7 +172,9 @@ export function parseCourseAssignmentListState(
   // Direction without a valid sort field is meaningless; a valid field without a
   // direction sorts ascending.
   const dir =
-    sort !== undefined ? (parseCourseAssignmentSortDirection(rawSearchParams.dir) ?? "asc") : undefined;
+    sort !== undefined
+      ? (parseCourseAssignmentSortDirection(rawSearchParams.dir) ?? "asc")
+      : undefined;
   const effectiveCourseScope = effectiveCourseScopeForRole(role, courseScope);
 
   const filters: ListCourseAssignmentsFilter = {

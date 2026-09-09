@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Bot, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateProgramHeadAnalyticsInsightAction } from "@/lib/actions/program-head-analytics-actions";
@@ -34,7 +34,7 @@ export function ProgramHeadInlineAiInsight({
   qualitative = false,
 }: ProgramHeadInlineAiInsightProps) {
   const [result, setResult] = useState<GenerateAIInsightResult | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
   const filtersKey = JSON.stringify(filters);
 
@@ -50,18 +50,22 @@ export function ProgramHeadInlineAiInsight({
         if (!cancelled) setResult(next);
       } catch {
         if (!cancelled) setResult({ ok: false, state: "unexpected" });
+      } finally {
+        if (!cancelled) setIsPending(false);
       }
     };
-    startTransition(() => {
-      void run();
-    });
+    void run();
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programId, analyticsView, filtersKey, refreshTick]);
 
-  if (result === null || isPending) {
+  const handleRefresh = () => {
+    setIsPending(true);
+    setRefreshTick((tick) => tick + 1);
+  };
+
+  if (result === null) {
     return (
       <div
         className="bg-information-soft border-information/25 min-h-36 rounded-lg border p-4"
@@ -74,8 +78,8 @@ export function ProgramHeadInlineAiInsight({
           Interpreting this evidence
         </div>
         <p className="text-body-sm text-text-secondary mt-1">
-          System CLOIE is preparing an AI-generated insight. The verified analytics remain
-          available while this finishes.
+          System CLOIE is preparing an AI-generated insight. The verified analytics remain available
+          while this finishes.
         </p>
         <div className="mt-4 flex flex-col gap-2" aria-hidden="true">
           <Skeleton className="h-3 w-full" />
@@ -92,7 +96,7 @@ export function ProgramHeadInlineAiInsight({
         evidenceBasis={evidenceBasis}
         qualitative={qualitative}
         refreshing={isPending}
-        onRefresh={() => setRefreshTick((tick) => tick + 1)}
+        onRefresh={handleRefresh}
       />
     );
   }
@@ -107,7 +111,8 @@ export function ProgramHeadInlineAiInsight({
   }
 
   const failure = result.ok ? null : result.state;
-  const retryable = failure !== null && failure !== "disabled" && failure !== "insufficient-evidence";
+  const retryable =
+    failure !== null && failure !== "disabled" && failure !== "insufficient-evidence";
   const label =
     failure === "disabled"
       ? "AI insight is not enabled for this deployment."
@@ -121,7 +126,7 @@ export function ProgramHeadInlineAiInsight({
         retryable ? (
           <button
             type="button"
-            onClick={() => setRefreshTick((tick) => tick + 1)}
+            onClick={handleRefresh}
             disabled={isPending}
             className="text-link focus-visible:ring-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-sm text-sm font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-60"
           >
