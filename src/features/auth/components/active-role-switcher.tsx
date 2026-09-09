@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -59,9 +60,7 @@ export function ActiveRoleSwitcher({
           if (isNextRedirectError(switchError)) {
             return;
           }
-          setError(
-            switchError instanceof Error ? switchError.message : "Could not switch role."
-          );
+          setError(switchError instanceof Error ? switchError.message : "Could not switch role.");
           return;
         }
         router.refresh();
@@ -88,7 +87,9 @@ export function ActiveRoleSwitcher({
         }
       />
       <DropdownMenuContent align="end" sideOffset={8} className="w-60">
-        <DropdownMenuLabel>Switch role</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Switch role</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         {roles.map((role) => (
           <DropdownMenuItem
