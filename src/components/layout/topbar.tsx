@@ -11,6 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import type { Role } from "@/lib/constants/roles";
@@ -39,9 +49,26 @@ export function Topbar({
 }: TopbarProps) {
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "GET" });
-    router.refresh();
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [logoutError, setLogoutError] = React.useState<string | null>(null);
+
+  const handleConfirmLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setLogoutError(null);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "GET" });
+      if (!response.ok) {
+        throw new Error(`Logout failed with status ${response.status}`);
+      }
+      setConfirmOpen(false);
+      router.refresh();
+    } catch {
+      setLogoutError("Couldn't log you out. Check your connection and try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const initials = user?.name?.[0]?.toUpperCase() || "U";
@@ -89,13 +116,44 @@ export function Topbar({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-danger focus:text-danger cursor-pointer gap-2"
-              onClick={handleLogout}
+              onClick={() => {
+                setLogoutError(null);
+                setConfirmOpen(true);
+              }}
             >
               <LogOut className="size-4" />
-              Logout
+              Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <AlertDialog
+          open={confirmOpen}
+          onOpenChange={(open) => {
+            if (!open && isLoggingOut) return;
+            setConfirmOpen(open);
+            if (open) setLogoutError(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Log out of System CLOIE?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You will be signed out and need to sign in again to continue.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {logoutError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {logoutError}
+              </p>
+            ) : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isLoggingOut}>Stay signed in</AlertDialogCancel>
+              <Button variant="default" onClick={handleConfirmLogout} loading={isLoggingOut}>
+                Log out
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </header>
   );
