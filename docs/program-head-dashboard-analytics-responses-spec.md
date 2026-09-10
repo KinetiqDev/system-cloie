@@ -16,6 +16,7 @@
 - Visual regression is deferred; Playwright journeys and the DB-integration CI job stay in scope (§52, §62).
 - Identified-response access is not separately audit-logged in v1.
 - The prototype's Analytics "Export view" action is out of scope.
+
 ---
 
 ## 1. Purpose
@@ -699,21 +700,11 @@ Candidate URL state:
 
 ```ts
 type ProgramHeadAnalyticsFilterState = {
-  tab:
-    | "outcomes"
-    | "courses"
-    | "stakeholders"
-    | "trends"
-    | "qualitative"
-    | "ai";
+  tab: "outcomes" | "courses" | "stakeholders" | "trends" | "qualitative";
 
   termInstanceId?: string;
 
-  evidenceSource?:
-    | "COURSE"
-    | "PROGRAM_WIDE_STUDENT"
-    | "ALUMNI"
-    | "INDUSTRY";
+  evidenceSource?: "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
 
   stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
 
@@ -800,12 +791,12 @@ Provide expandable exact-values table.
 Example:
 
 | Rating | Label | Count | Share |
-|---:|---|---:|---:|
-| 1 | ... | 2 | 2% |
-| 2 | ... | 5 | 5% |
-| 3 | ... | 11 | 11% |
-| 4 | ... | 34 | 34% |
-| 5 | ... | 48 | 48% |
+| -----: | ----- | ----: | ----: |
+|      1 | ...   |     2 |    2% |
+|      2 | ...   |     5 |    5% |
+|      3 | ...   |    11 |   11% |
+|      4 | ...   |    34 |   34% |
+|      5 | ...   |    48 |   48% |
 
 The mean displayed above must derive from these same counts.
 
@@ -836,7 +827,7 @@ The matrix communicates evidence volume, not attainment.
 Columns:
 
 | Course assignment | CILO | Mapping | Bound question | Ratings | Responses | Mean | Action |
-|---|---|---|---|---:|---:|---:|---|
+| ----------------- | ---- | ------- | -------------- | ------: | --------: | ---: | ------ |
 
 Course assignment identity includes:
 
@@ -853,7 +844,7 @@ Do not merge classes because course code matches.
 Columns:
 
 | Evaluation | Stakeholder | Bound question | Ratings | Responses | Mean | Action |
-|---|---|---|---:|---:|---:|---|
+| ---------- | ----------- | -------------- | ------: | --------: | ---: | ------ |
 
 Use publication-time `CentralDeploymentPloSnapshot` to trace the exact question.
 
@@ -883,7 +874,7 @@ Filters:
 Table:
 
 | Course assignment | Faculty | Class | Major | Completion | Evaluation quantitative mean | Status |
-|---|---|---|---|---:|---:|---|
+| ----------------- | ------- | ----- | ----- | ---------: | ---------------------------: | ------ |
 
 Selecting a row shows:
 
@@ -928,7 +919,7 @@ Show separate source means.
 Exact table:
 
 | Evidence source | Scale | Responses | Ratings | Mean |
-|---|---|---:|---:|---:|
+| --------------- | ----- | --------: | ------: | ---: |
 
 Do not pool Course students and Program-wide students automatically.
 
@@ -947,7 +938,7 @@ Do not use a dual-axis chart.
 ## 18.5 Major table
 
 | Major | Students | Assigned | Submitted | Completion | Mean |
-|---|---:|---:|---:|---:|---:|
+| ----- | -------: | -------: | --------: | ---------: | ---: |
 
 For student evidence, major attribution should come from the respondent's `StudentEnrollment` in the relevant term.
 
@@ -974,7 +965,7 @@ Every point represents one academic period.
 Provide exact table below:
 
 | Period | Mean / Rate | Responses | Ratings | Instrument | Scale |
-|---|---:|---:|---:|---|---|
+| ------ | ----------: | --------: | ------: | ---------- | ----- |
 
 Preserve existing comparability safeguards.
 
@@ -1047,9 +1038,13 @@ Word size represents token frequency.
 ## 20.5 Top terms table
 
 | Term | Mentions | Responses containing term |
-|---|---:|---:|
+| ---- | -------: | ------------------------: |
 
-`Mentions` and `Responses containing term` are separate metrics.
+`Mentions` and `Responses containing term` are separate metrics: `Mentions` counts total identifier-redacted term occurrences, while `Responses containing term` counts distinct responses containing the term, so one verbose respondent cannot outweigh a dozen brief ones.
+
+### 20.5.1 Deterministic tone distribution
+
+Show exact positive, neutral, and negative answer counts with the scored total. Tone follows the deterministic winkNLP bundled-lexicon rule banded at ±0.2 (positive at score ≥ +0.2, negative at score ≤ −0.2, neutral otherwise). Report exact counts, never a percentage whose denominator depends on a display control.
 
 ## 20.6 Raw evidence
 
@@ -1078,18 +1073,17 @@ Do not send:
 - raw comments;
 - authentication context.
 
-AI receives server-computed aggregate evidence.
+AI receives server-computed aggregate evidence plus the deterministic qualitative structure from ADR 0023 (identifier-redacted term prevalence, per-prompt structure, deterministic sentiment distribution).
 
-Output remains:
+Output is one validated `InsightSection` (observation, evidence, limitation, reviewQuestion, optional connection) or null when the evidence cannot support even one grounded observation.
 
-- possible strengths;
-- areas worth reviewing;
-- recurring themes;
-- questions for human review;
-- evidence considered;
-- limitations.
+Provider-authored sentiment, tone, satisfaction, or quality verdicts are banned, while the deterministic distribution may be reported as figures. The `InsightSection` contract is unchanged.
+
+AI never sends raw comments, names, emails, respondent or response IDs, or authentication context.
 
 AI does not determine attainment or curriculum actions.
+
+Both the Program Head and Faculty surfaces carry a visible AI-generated-and-fallible disclaimer.
 
 ---
 
@@ -1134,7 +1128,7 @@ Search covers:
 Table:
 
 | Evaluation | Class | Faculty | Period | Status | Responses | Evaluation quantitative mean |
-|---|---|---|---|---|---:|---:|
+| ---------- | ----- | ------- | ------ | ------ | --------: | ---------------------------: |
 
 Include zero-response evaluations.
 
@@ -1160,7 +1154,7 @@ Filters:
 Table:
 
 | Evaluation | Stakeholder | Target | Period | Status | Responses | Evaluation quantitative mean |
-|---|---|---|---|---|---:|---:|
+| ---------- | ----------- | ------ | ------ | ------ | --------: | ---------------------------: |
 
 Do not show Faculty or Section filters when the domain does not support them.
 
@@ -1196,7 +1190,7 @@ Summary:
 Table:
 
 | CILO | Description | PLO mappings | Ratings | Responses | Mean |
-|---|---|---|---:|---:|---:|
+| ---- | ----------- | ------------ | ------: | --------: | ---: |
 
 PLO mappings display manifestation.
 
@@ -1207,7 +1201,7 @@ Only CILO-bound questions contribute.
 Table:
 
 | Item | Question | Outcome binding | Mean | Ratings | Distribution |
-|---|---|---|---:|---:|---|
+| ---- | -------- | --------------- | ---: | ------: | ------------ |
 
 Outcome binding:
 
@@ -1256,7 +1250,7 @@ Program Head gets identified submitted-response access.
 Table:
 
 | Respondent | Major | Year | Section | Submitted | Response quantitative mean |
-|---|---|---|---|---|---:|
+| ---------- | ----- | ---- | ------- | --------- | -------------------------: |
 
 Click opens individual response detail.
 
@@ -1708,10 +1702,7 @@ type CiloMetric = {
     ploId: string;
     ploCode: string;
     ploDescription: string;
-    manifestation:
-      | "LEARNING"
-      | "PRACTICE"
-      | "OPPORTUNITY";
+    manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY";
   }>;
 
   contributingQuestions: Array<{
@@ -1799,10 +1790,7 @@ type ProgramHeadSubmittedResponseDetail = {
   sections: Array<{
     key: string;
     title: string;
-    items: Array<
-      QuantitativeSubmittedAnswer |
-      QualitativeSubmittedAnswer
-    >;
+    items: Array<QuantitativeSubmittedAnswer | QualitativeSubmittedAnswer>;
   }>;
 };
 ```
@@ -2400,7 +2388,6 @@ Deferred in the 2026-08-24 review; revisit if chart-related regressions appear. 
 - individual response.
 
 Disable chart animation or use reduced-motion behavior to keep screenshots deterministic.
-
 
 # 63. CI target
 

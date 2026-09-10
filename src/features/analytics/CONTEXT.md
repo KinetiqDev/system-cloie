@@ -17,7 +17,7 @@ Faculty receive no individual-response route or DTO. Retired Faculty Course-boun
 _Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
 
 **Faculty qualitative confidentiality floor**:
-Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, themes, sentiment, qualitative AI evidence, and every qualitative contribution count (submitted/response/item/evaluation counts read as zero) are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
+Written-feedback analytics require at least five distinct submitted respondents in the currently filtered scope. Below five, word-cloud tokens, ranked terms, prompt counts, per-prompt structure, themes, sentiment, tone bands, qualitative AI evidence, and every qualitative contribution count (submitted/response/item/evaluation counts read as zero) are withheld. At or above five, only identifier-redacted terms mentioned more than once can reach the Faculty browser or AI packet.
 _Avoid_: Lifetime evaluation threshold, answer-count threshold, singleton term, threshold countdown, exact small-cohort counts
 
 **Faculty inline AI overview**:
@@ -37,11 +37,11 @@ _Avoid_: One request per chart, manual first-generation button, TTL-only freshne
 ## Program Head analytics surface (shipped contract)
 
 **Program Head analytics tabs**:
-Six canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative`, `ai` — encoded in URL state by `program-head-analytics-state.ts`. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. Filter submission uses App Router navigation: the analytics frame and selected controls remain mounted while only the active evidence region presents its tab-shaped loading geometry. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change. The Program Head responses view (`course`, `program-wide` tabs in `program-head-responses-state.ts`) follows the same submission contract: filter and page changes navigate through a transition workspace that preserves the header, tabs, and filter controls while only the evaluation evidence region reloads.
+Five canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative` — encoded in URL state by `program-head-analytics-state.ts`. AI insights render inline per view (`ANALYTICS_INSIGHT_VIEWS` in `ai-insight-contract.ts`) instead of a dedicated tab. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. Filter submission uses App Router navigation: the analytics frame and selected controls remain mounted while only the active evidence region presents its tab-shaped loading geometry. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change. The Program Head responses view (`course`, `program-wide` tabs in `program-head-responses-state.ts`) follows the same submission contract: filter and page changes navigate through a transition workspace that preserves the header, tabs, and filter controls while only the evaluation evidence region reloads.
 _Avoid_: Legacy seven-tab vocabulary, overview as a landing tab, client-side tab authorization, document reload on filter application, whole-workspace loading replacement
 
 **AI insight freshness**:
-The AI insight is a non-persisted, fingerprint-tagged result of the single re-authorizing Server Action; it is recomputed when the filter fingerprint changes and never cached across requests.
+The AI insight is a non-persisted, fingerprint-tagged result of the single re-authorizing Server Action; it is recomputed when the filter fingerprint changes. Validated output may be reused from a bounded process-local cache (128 validated entries, cleared on process restart or deployment) keyed by prompt version, scope identity (selected Program and view, or authorized Faculty user), provider base URL, model, and a SHA-256 of the complete serialized evidence packet; concurrent identical requests share one provider call. The cache never holds sessions, authorization decisions, response rows, respondent identifiers, roster data, or raw comments.
 _Avoid_: Persisted AI result, stale insight after filter change
 
 ## General Education Coordinator evidence (approved scope, issue #477)
@@ -132,9 +132,21 @@ _Avoid_: Treating excluded ratings as valid aggregate input
 ## AI-assisted interpretation
 
 **AI-assisted interpretation**:
-A supplementary, bounded interpretation of authorized Analytics evidence that does not replace deterministic metrics or the Program Head's human CQI judgment. In development and testing, the provider receives a bounded aggregate packet of server-computed means, distributions, counts, source labels, trend summaries, limitations, and identifier-redacted word-frequency tokens only — response rows and raw comment text never cross the boundary; rows are capped and the serialized packet is budgeted. Raw qualitative text is never returned to the analytics browser surface or persisted as an AI result. Production enablement remains a separate governance decision.
+A supplementary, bounded interpretation of authorized Analytics evidence that does not replace deterministic metrics or the Program Head's human CQI judgment. In development and testing, the provider receives a bounded aggregate packet of server-computed means, distributions, counts, source labels, trend summaries, limitations, applied filter facets, and deterministic qualitative structure (identifier-redacted term prevalence, per-prompt structure, tone band counts) — response rows, raw comment text, sentences, and excerpts never cross the boundary; rows are capped and the serialized packet is budgeted. The provider may report the deterministic tone distribution as figures under its stated rule; its own sentiment, tone, satisfaction, and quality verdicts stay banned. Raw qualitative text is never returned to the analytics browser surface or persisted as an AI result. Production enablement remains a separate governance decision.
 _Avoid_: AI decision, automatic CQI plan, AI grading, chatbot
 
 **AI evidence packet**:
-The bounded aggregate projection sent to the OpenAI-compatible provider — capped rows, clamped strings, rounded aggregates, and character-budgeted serialization. It contains no raw comments or respondent identifiers.
+The bounded aggregate projection sent to the OpenAI-compatible provider — capped rows, clamped strings, rounded aggregates, and character-budgeted serialization. Qualitative evidence crosses only as deterministic structure: identifier-redacted term prevalence (term, mentions, distinct responses), per-prompt structure (item/response counts, top terms, tone bands), a deterministic sentiment distribution (band counts and the scored total), and applied filter facets (evidence source, stakeholder, period label). It contains no raw comments, sentences, excerpts, response identifiers, or respondent identifiers.
 _Avoid_: Raw response content in provider requests
+
+**Qualitative term prevalence**:
+The identifier-redacted term, its total mentions, and the count of distinct responses containing it, ordered by mentions descending, then distinct responses descending, then locale order.
+_Avoid_: Raw comment quotation, respondent-linked term
+
+**Qualitative tone shape**:
+The deterministic winkNLP bundled-lexicon score banded at ±0.2 into positive, neutral, or negative, emitted as band counts and the scored total only, with the rule disclosed in the product and in every AI limitation. The lexicon misses sarcasm and some negation patterns and averages mixed praise and criticism into one score.
+_Avoid_: Provider-judged sentiment, tone verdict without the stated rule
+
+**Qualitative evidence tier**:
+Deterministic qualitative structure ships to the provider; verbatim de-identified excerpts remain unshipped per ADR 0016/0023 with no schema migration.
+_Avoid_: Verbatim excerpt in the provider packet, provider-reproduced respondent text
