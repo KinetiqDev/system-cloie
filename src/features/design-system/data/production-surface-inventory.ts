@@ -2030,6 +2030,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/year-picker.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "Year-only calendar selector for the alumni graduation year; public shadcn inventory",
+  },
+  {
     path: "src/features/academic-calendar/components/active-term-badge.tsx",
     disposition: "task",
     taskId: 13,

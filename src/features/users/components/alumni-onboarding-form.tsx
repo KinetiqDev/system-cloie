@@ -7,6 +7,8 @@ import { useForm, Controller, type Resolver, type SubmitHandler } from "react-ho
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   alumniProfileSchema,
+  ALUMNI_GRADUATION_HIATUS_NOTE,
+  ALUMNI_GRADUATION_YEAR_RANGES,
   type AlumniProfileFormValues,
   type AlumniProfileInput,
 } from "@/lib/schemas/alumni-profile";
@@ -17,17 +19,10 @@ import { ROLES } from "@/lib/constants/roles";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { YearPicker } from "@/components/ui/year-picker";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  GraduationCap,
-  Mail,
-  Calendar,
-  UserCircle,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, GraduationCap, Mail, UserCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -55,7 +50,6 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
 
   const {
     control,
-    register,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -266,18 +260,30 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
               >
                 Graduation Year
               </Label>
-              <div className="relative">
-                <Calendar className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  id="graduation_year"
-                  type="number"
-                  placeholder="e.g. 2023"
-                  {...register("graduation_year")}
-                  className={`pl-10 ${errors.graduation_year ? "border-danger focus-visible:ring-danger" : ""}`}
-                />
-              </div>
+              <Controller
+                name="graduation_year"
+                control={control}
+                render={({ field }) => (
+                  <YearPicker
+                    id="graduation_year"
+                    value={field.value === "" ? null : field.value}
+                    onChange={field.onChange}
+                    ranges={ALUMNI_GRADUATION_YEAR_RANGES}
+                    note={ALUMNI_GRADUATION_HIATUS_NOTE}
+                    placeholder="Select your graduation year"
+                    aria-label={
+                      field.value === "" ? "Graduation year" : `Graduation year: ${field.value}`
+                    }
+                    aria-invalid={errors.graduation_year ? true : undefined}
+                    aria-describedby={errors.graduation_year ? "graduation-year-error" : undefined}
+                  />
+                )}
+              />
               {errors.graduation_year && (
-                <p className="text-danger flex items-center gap-1 text-xs">
+                <p
+                  id="graduation-year-error"
+                  className="text-destructive flex items-center gap-1 text-xs"
+                >
                   <AlertCircle className="size-3" />
                   {errors.graduation_year.message}
                 </p>
