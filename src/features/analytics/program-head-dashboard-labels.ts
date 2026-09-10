@@ -6,7 +6,7 @@
 // into the browser bundle.
 // ---------------------------------------------------------------------------
 
-/** Canonical evidence-source display order shared by every dashboard card. */
+/** Canonical evidence-source display order shared by every evidence-source projection. */
 export const DASHBOARD_SOURCE_ORDER = [
   "COURSE_STUDENT",
   "CENTRAL_STUDENT",

@@ -24,3 +24,9 @@ export const ANALYTICS_INSIGHT_VIEWS = [
   "qualitative",
 ] as const;
 export type AnalyticsInsightView = (typeof ANALYTICS_INSIGHT_VIEWS)[number];
+
+/**
+ * Highest-mention terms carried per prompt in a bounded AI packet. One shared
+ * cap keeps the Program Head and Faculty qualitative evidence comparable.
+ */
+export const AI_PACKET_MAX_PROMPT_TERMS = 6;

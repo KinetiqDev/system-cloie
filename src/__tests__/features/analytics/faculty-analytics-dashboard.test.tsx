@@ -41,6 +41,7 @@ const data: FacultyAnalyticsData = {
     itemCount: 0,
     evaluationCount: 0,
     tokens: [],
+    tone: { scoredItemCount: 0, positive: 0, neutral: 0, negative: 0 },
     promptCounts: [],
   },
 };

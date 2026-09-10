@@ -2272,6 +2272,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/analytics/components/qualitative-evidence.tsx",
+    disposition: "task",
+    taskId: 10,
+    category: "feature_component",
+  },
+  {
     path: "src/features/analytics/components/stakeholder-mean-pie-chart.tsx",
     disposition: "task",
     taskId: 9,

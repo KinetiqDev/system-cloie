@@ -80,6 +80,7 @@ function analyticsData(validRatingCount = 5): FacultyAnalyticsData {
       itemCount: 0,
       evaluationCount: 0,
       tokens: [],
+      tone: { scoredItemCount: 0, positive: 0, neutral: 0, negative: 0 },
       promptCounts: [],
     },
   };
@@ -298,5 +299,113 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
 
     expect(result.ok).toBe(true);
     expect(result.ok && result.data.qualitative).toBeNull();
+  });
+});
+
+describe("generateFacultyAnalyticsInsight qualitative packet", () => {
+  function qualitativeData() {
+    const base = analyticsData();
+    return {
+      ...base,
+      qualitative: {
+        ...base.qualitative,
+        available: true,
+        responseCount: 5,
+        itemCount: 6,
+        evaluationCount: 1,
+        tone: { scoredItemCount: 6, positive: 3, neutral: 2, negative: 1 },
+        tokens: Array.from({ length: 60 }, (_, index) => ({
+          text: `term-${index}`,
+          value: 60 - index,
+          responseCount: 5,
+        })),
+        promptCounts: [
+          {
+            prompt: "What worked well?",
+            itemCount: 6,
+            responseCount: 5,
+            tone: { scoredItemCount: 6, positive: 3, neutral: 2, negative: 1 },
+            terms: Array.from({ length: 9 }, (_, index) => ({
+              text: `prompt-term-${index}`,
+              value: 9 - index,
+              responseCount: 4,
+            })),
+          },
+        ],
+      },
+    };
+  }
+
+  it("reports a bounded qualitative slice when the packet truncates", async () => {
+    createCompletionMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ...insight,
+              qualitative: {
+                observation: "Written answers concentrate on laboratory time.",
+                evidence: ["6 written answers mention 2 recurring terms."],
+                limitation: null,
+                reviewQuestion: null,
+              },
+            }),
+          },
+        },
+      ],
+    });
+    analyticsMock.mockImplementation(async () => ({
+      success: true,
+      facultyUserId: "faculty-1",
+      data: {
+        ...qualitativeData(),
+        filters: {
+          view: "qualitative",
+          courseId: "course-1",
+          evaluationId: "evaluation-1",
+          termInstanceId: "term-1",
+          status: "CLOSED",
+        },
+      },
+    }));
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "qualitative" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.evidence.qualitativeTruncated).toBe(true);
+  });
+
+  it("reports no truncation when the whole qualitative corpus fits", async () => {
+    analyticsMock.mockImplementation(async () => ({
+      success: true,
+      facultyUserId: "faculty-1",
+      data: {
+        ...qualitativeData(),
+        qualitative: {
+          ...qualitativeData().qualitative,
+          tokens: [{ text: "laboratory", value: 4, responseCount: 3 }],
+          promptCounts: [
+            {
+              prompt: "What worked well?",
+              itemCount: 4,
+              responseCount: 3,
+              tone: { scoredItemCount: 4, positive: 2, neutral: 1, negative: 1 },
+              terms: [{ text: "laboratory", value: 4, responseCount: 3 }],
+            },
+          ],
+        },
+      },
+    }));
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "qualitative" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.evidence.qualitativeTruncated).toBe(false);
   });
 });

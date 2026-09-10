@@ -37,7 +37,12 @@ import {
   FacultyTrendPoint,
   GetFacultyAnalyticsDataResult,
 } from "../types";
-import { buildRedactedWordCloudTokens } from "./qualitative-analytics";
+import {
+  FEEDBACK_SOURCE_LABELS,
+  analyzeQualitativeCorpus,
+  toTermToken,
+  type QualitativeCorpusItem,
+} from "./qualitative-analytics";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 /**
  * Shared Faculty anonymity floor: the minimum number of distinct submitted
@@ -379,9 +384,6 @@ function buildFacultyAnalyticsData(
     (total, evaluation) => total + evaluation._count.assignments,
     0
   );
-  const qualitativeTexts = submitted.flatMap(({ response }) =>
-    response.qual_items.map((item) => item.text_content).filter((text) => text.trim().length > 0)
-  );
   const distinctSubmittedRespondentCount = new Set(
     submitted.map(({ respondentId }) => respondentId)
   ).size;
@@ -394,6 +396,24 @@ function buildFacultyAnalyticsData(
   ).size;
   const qualitativeAvailable =
     distinctSubmittedRespondentCount >= FACULTY_QUALITATIVE_MINIMUM_RESPONDENTS;
+  // Below the confidentiality floor the corpus is never analyzed, so no
+  // qualitative derivation exists to leak or to reuse.
+  const qualitativeItems: QualitativeCorpusItem[] = qualitativeAvailable
+    ? submitted.flatMap(({ evaluation, response }) =>
+        response.qual_items
+          .filter((item) => item.text_content.trim().length > 0)
+          .map((item) => ({
+            text: item.text_content,
+            responseId: response.id,
+            sourceKey: "COURSE_STUDENT" as const,
+            sourceLabel: FEEDBACK_SOURCE_LABELS.COURSE_STUDENT,
+            promptLabel: qualitativePromptLabel(evaluation, item.section_key, item.prompt_key),
+          }))
+      )
+    : [];
+  const qualitativeEvidence = qualitativeAvailable
+    ? analyzeQualitativeCorpus(qualitativeItems)
+    : null;
 
   return {
     filters,
@@ -422,8 +442,8 @@ function buildFacultyAnalyticsData(
       available: qualitativeAvailable,
       submittedResponseCount: qualitativeAvailable ? submitted.length : 0,
       responseCount: qualitativeAvailable ? qualitativeResponseCount : 0,
-      itemCount: qualitativeAvailable ? qualitativeTexts.length : 0,
-      evaluationCount: qualitativeAvailable
+      itemCount: qualitativeEvidence ? qualitativeItems.length : 0,
+      evaluationCount: qualitativeEvidence
         ? new Set(
             submitted
               .filter(({ response }) =>
@@ -432,12 +452,48 @@ function buildFacultyAnalyticsData(
               .map(({ evaluation }) => evaluation.id)
           ).size
         : 0,
-      tokens: qualitativeAvailable
-        ? buildRedactedWordCloudTokens(qualitativeTexts).filter((token) => token.value > 1)
+      tokens: qualitativeEvidence
+        ? qualitativeEvidence.terms.filter((term) => term.mentions > 1).map(toTermToken)
         : [],
-      promptCounts: qualitativeAvailable ? buildPromptCounts(submitted) : [],
+      tone: qualitativeEvidence?.tone ?? {
+        scoredItemCount: 0,
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+      },
+      promptCounts: qualitativeEvidence
+        ? qualitativeEvidence.prompts.map((prompt) => ({
+            prompt: prompt.promptLabel,
+            itemCount: prompt.itemCount,
+            responseCount: prompt.responseCount,
+            tone: prompt.tone,
+            terms: prompt.terms.map(toTermToken),
+          }))
+        : [],
     },
   };
+}
+
+/** Snapshot prompt label for one qualitative answer, with a stable fallback. */
+function qualitativePromptLabel(
+  evaluation: EvaluationRow,
+  sectionKey: string,
+  promptKey: string
+): string {
+  if (!Array.isArray(evaluation.instrument.structure_snapshot)) {
+    return "Written feedback";
+  }
+
+  for (const section of evaluation.instrument.structure_snapshot.filter(isSnapshotSection)) {
+    if (section.key !== sectionKey) continue;
+    for (const item of getSnapshotSectionItems(section)) {
+      if (item.kind === "qualitative" && item.key === promptKey) {
+        return item.prompt;
+      }
+    }
+  }
+
+  return "Written feedback";
 }
 
 function buildCiloMetrics(
@@ -671,45 +727,6 @@ function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {
       breakReason,
     };
   });
-}
-
-// Prompt resolution plus counting keeps snapshot prompt labels beside redacted counts in one
-// qualitative contract; splitting would scatter the identifier-redaction boundary.
-// fallow-ignore-next-line complexity
-function buildPromptCounts(
-  submitted: Array<{
-    response: EvaluationRow["assignments"][number]["response"] & {};
-    evaluation: EvaluationRow;
-  }>
-) {
-  const rows = new Map<string, { itemCount: number; responseIds: Set<string> }>();
-  for (const { evaluation, response } of submitted) {
-    const prompts = new Map<string, string>();
-    if (Array.isArray(evaluation.instrument.structure_snapshot)) {
-      for (const section of evaluation.instrument.structure_snapshot.filter(isSnapshotSection)) {
-        for (const item of getSnapshotSectionItems(section)) {
-          if (item.kind === "qualitative") prompts.set(`${section.key}:${item.key}`, item.prompt);
-        }
-      }
-    }
-    for (const item of response.qual_items) {
-      if (!item.text_content.trim()) continue;
-      const prompt = prompts.get(`${item.section_key}:${item.prompt_key}`) ?? "Written feedback";
-      const row = rows.get(prompt) ?? { itemCount: 0, responseIds: new Set<string>() };
-      row.itemCount += 1;
-      row.responseIds.add(response.id);
-      rows.set(prompt, row);
-    }
-  }
-  return [...rows.entries()]
-    .map(([prompt, value]) => ({
-      prompt,
-      itemCount: value.itemCount,
-      responseCount: value.responseIds.size,
-    }))
-    .sort(
-      (left, right) => right.itemCount - left.itemCount || left.prompt.localeCompare(right.prompt)
-    );
 }
 
 function toEvaluationItem(evaluation: EvaluationRow): FacultyAnalyticsEvaluationItem {

@@ -2,6 +2,8 @@
 
 **Status:** Accepted
 
+**Shipped-state note (2026-09-11):** the deterministic core, both browser surfaces, both AI packets, and both prompts shipped together: `qualitative-analytics.ts` (analyzer, tone bands, prevalence), the Program Head qualitative view, the Faculty written-feedback view, the Program Head qualitative packet with budgeted `promptEvidence`, the applied-filter facets on every packet, and prompt versions `program-head-analytics-v2` / `faculty-analytics-v4`. No database migration was required.
+
 System CLOIE ships richer qualitative evidence to bounded AI interpretation by computing the qualitative signal deterministically on the server and keeping verbatim respondent text on the server. Three concepts cross the provider boundary: identifier-redacted term prevalence (term, mentions, distinct responses), per-prompt qualitative structure (item/response counts, top terms, tone distribution), and a deterministic sentiment distribution. The provider interprets that structure; it never performs its own sentiment analysis, never reproduces respondent text, and never receives a sentence, an excerpt, a response identifier, or a respondent identifier. The de-identified raw-comment path accepted in ADR 0016 remains unshipped.
 
 ## Context

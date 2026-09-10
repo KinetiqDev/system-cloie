@@ -50,6 +50,19 @@ export type CourseBoundReviewResponseCard = {
 export type WordCloudToken = {
   text: string;
   value: number;
+  /** Distinct responses containing the term; present only where the producer tracked answer identity. */
+  responseCount?: number;
+};
+
+/**
+ * Deterministic tone distribution over scored answers (ADR 0023). Counts only:
+ * `positive + neutral + negative === scoredItemCount`.
+ */
+export type QualitativeToneShape = {
+  scoredItemCount: number;
+  positive: number;
+  neutral: number;
+  negative: number;
 };
 
 export type CourseBoundReviewDetail = {
@@ -217,7 +230,14 @@ export type FacultyAnalyticsData = {
     itemCount: number;
     evaluationCount: number;
     tokens: WordCloudToken[];
-    promptCounts: Array<{ prompt: string; itemCount: number; responseCount: number }>;
+    tone: QualitativeToneShape;
+    promptCounts: Array<{
+      prompt: string;
+      itemCount: number;
+      responseCount: number;
+      tone: QualitativeToneShape;
+      terms: WordCloudToken[];
+    }>;
   };
 };
 

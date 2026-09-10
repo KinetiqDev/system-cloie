@@ -20,8 +20,12 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
-import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
+import type {
+  ProgramHeadFeedbackDTO,
+  ProgramHeadFeedbackPromptCountDTO,
+} from "@/features/analytics/program-head-analytics-types";
 import { LazyQualitativeWordCloud } from "./program-head-analytics-visualizations";
+import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
@@ -41,6 +45,7 @@ export function ProgramHeadFeedbackView({
   const {
     emptyReason,
     tokens,
+    tone,
     qualitativeItemCount,
     qualitativeResponseCount,
     sourceCounts,
@@ -141,16 +146,9 @@ export function ProgramHeadFeedbackView({
             }))}
           />
 
-          <FeedbackCountTable
-            title="Prompt counts"
-            caption="Non-empty submitted comments grouped by evidence source and instrument prompt"
-            rows={promptCounts.map((prompt) => ({
-              key: `${prompt.sourceLabel}:${prompt.promptLabel}`,
-              label: `${prompt.sourceLabel} — ${prompt.promptLabel}`,
-              itemCount: prompt.itemCount,
-              responseCount: prompt.responseCount,
-            }))}
-          />
+          <QualitativeToneSummary tone={tone} />
+
+          <FeedbackPromptTable prompts={promptCounts} />
 
           <FeedbackEvidenceLinks programId={programId} evaluations={evidenceEvaluations} />
           {aiFilters ? (
@@ -198,6 +196,58 @@ function FeedbackCountTable({
                 <TableCell className="font-medium">{row.label}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.responseCount}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Prompt-level qualitative structure: counts, tone, and the highest-mention
+ * terms per instrument prompt, so terms are never presented as one
+ * undifferentiated corpus.
+ */
+function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCountDTO[] }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-title-sm text-foreground">Prompt structure</h3>
+        <p className="text-body-sm text-text-secondary">
+          Non-empty submitted comments by evidence source and instrument prompt, with the
+          highest-mention identifier-redacted terms and the tone counts for that prompt.
+        </p>
+      </div>
+      <div className="border-border overflow-x-auto rounded-lg border">
+        <Table aria-label="Exact values: Prompt structure">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Label</TableHead>
+              <TableHead className="text-right">Items</TableHead>
+              <TableHead className="text-right">Responses</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Tone (pos / neu / neg)</TableHead>
+              <TableHead>Top terms</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {prompts.map((prompt) => (
+              <TableRow key={`${prompt.sourceLabel}:${prompt.promptLabel}`}>
+                <TableCell className="font-medium">
+                  {prompt.sourceLabel} — {prompt.promptLabel}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{prompt.itemCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{prompt.responseCount}</TableCell>
+                <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  {prompt.tone.positive} / {prompt.tone.neutral} / {prompt.tone.negative}
+                </TableCell>
+                <TableCell>
+                  <QualitativeTermChips
+                    terms={prompt.terms}
+                    label={`Top terms for ${prompt.promptLabel}`}
+                  />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -45,23 +45,26 @@ function feedbackDTO(overrides: Partial<ProgramHeadFeedbackDTO> = {}): ProgramHe
     periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
     emptyReason: null,
     tokens: [
-      { text: "clarity", value: 3 },
-      { text: "support", value: 2 },
+      { text: "clarity", value: 3, responseCount: 2 },
+      { text: "support", value: 2, responseCount: 2 },
     ],
     qualitativeItemCount: 4,
     qualitativeResponseCount: 3,
+    tone: { scoredItemCount: 4, positive: 0, neutral: 4, negative: 0 },
     sourceCounts: [
       {
         sourceKey: "COURSE_STUDENT",
         sourceLabel: "Course-bound student evidence",
         itemCount: 3,
         responseCount: 2,
+        tone: { scoredItemCount: 3, positive: 0, neutral: 3, negative: 0 },
       },
       {
         sourceKey: "ALUMNI",
         sourceLabel: "Alumni evidence",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
       },
     ],
     promptCounts: [
@@ -70,6 +73,8 @@ function feedbackDTO(overrides: Partial<ProgramHeadFeedbackDTO> = {}): ProgramHe
         promptLabel: "What worked well?",
         itemCount: 3,
         responseCount: 2,
+        tone: { scoredItemCount: 3, positive: 0, neutral: 3, negative: 0 },
+        terms: [{ text: "clarity", value: 3, responseCount: 2 }],
       },
     ],
     evidenceEvaluations: [
@@ -96,6 +101,7 @@ describe("ProgramHeadFeedbackView", () => {
       feedbackDTO({
         emptyReason: "no-qualitative-evidence",
         tokens: [],
+        tone: { scoredItemCount: 0, positive: 0, neutral: 0, negative: 0 },
         qualitativeItemCount: 0,
         qualitativeResponseCount: 0,
         sourceCounts: [],

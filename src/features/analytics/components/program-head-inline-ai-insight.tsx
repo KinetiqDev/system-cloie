@@ -207,8 +207,9 @@ function InsightCard({
       </p>
       {qualitative ? (
         <p className="text-muted-foreground mt-2 text-xs">
-          Based on anonymous aggregate counts and redacted term frequencies. It does not read or
-          display individual responses and may miss context, sarcasm, or uncommon feedback.
+          Based on anonymous aggregate counts, redacted term counts, per-prompt structure, and a
+          fixed word-list tone distribution. It does not read or display individual responses and
+          may miss context, sarcasm, and uncommon feedback.
         </p>
       ) : null}
     </div>

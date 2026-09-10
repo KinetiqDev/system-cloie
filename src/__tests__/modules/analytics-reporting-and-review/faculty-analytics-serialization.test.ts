@@ -154,8 +154,8 @@ describe("faculty analytics serialization", () => {
     });
     expect(result.data.qualitative.tokens).toEqual(
       expect.arrayContaining([
-        { text: "examples", value: 4 },
-        { text: "helped", value: 3 },
+        { text: "examples", value: 4, responseCount: 4 },
+        { text: "helped", value: 3, responseCount: 3 },
       ])
     );
     expect(result.data.qualitative.tokens).not.toContainEqual({ text: "exercises", value: 1 });

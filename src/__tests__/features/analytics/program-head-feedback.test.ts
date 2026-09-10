@@ -56,6 +56,7 @@ const FEEDBACK_DTO_KEYS = [
   "scope",
   "sourceCounts",
   "tokens",
+  "tone",
 ].sort();
 
 type FeedbackAssignment = {
@@ -211,8 +212,8 @@ describe("getProgramHeadFeedback", () => {
     expect(result?.qualitativeResponseCount).toBe(1);
     expect(result?.tokens).toEqual(
       expect.arrayContaining([
-        { text: "clarity", value: 1 },
-        { text: "teaching", value: 1 },
+        { text: "clarity", value: 1, responseCount: 1 },
+        { text: "teaching", value: 1, responseCount: 1 },
       ])
     );
     expect(result?.emptyReason).toBeNull();
@@ -264,21 +265,26 @@ describe("getProgramHeadFeedback", () => {
     if (!result) return;
 
     expect(Object.keys(result).sort()).toEqual(FEEDBACK_DTO_KEYS);
-    expect(result.tokens.every((token) => Object.keys(token).sort().join(",") === "text,value")).toBe(
-      true
-    );
+    expect(
+      result.tokens.every(
+        (token) => Object.keys(token).sort().join(",") === "responseCount,text,value"
+      )
+    ).toBe(true);
+    expect(result.tone).toEqual({ scoredItemCount: 2, positive: 1, neutral: 1, negative: 0 });
     expect(result.sourceCounts).toEqual([
       {
         sourceKey: "COURSE_STUDENT",
         sourceLabel: "Course-bound student evidence",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 1, neutral: 0, negative: 0 },
       },
       {
         sourceKey: "ALUMNI",
         sourceLabel: "Alumni evidence",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
       },
     ]);
     expect(result.promptCounts).toEqual([
@@ -287,12 +293,26 @@ describe("getProgramHeadFeedback", () => {
         promptLabel: "What should improve?",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [
+          { text: "examples", value: 1, responseCount: 1 },
+          { text: "feedback", value: 1, responseCount: 1 },
+          { text: "needs", value: 1, responseCount: 1 },
+          { text: "practical", value: 1, responseCount: 1 },
+        ],
       },
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 1, neutral: 0, negative: 0 },
+        terms: [
+          { text: "examples", value: 1, responseCount: 1 },
+          { text: "improved", value: 1, responseCount: 1 },
+          { text: "learning", value: 1, responseCount: 1 },
+          { text: "practical", value: 1, responseCount: 1 },
+        ],
       },
     ]);
     expect(result.evidenceEvaluations).toEqual([
@@ -341,12 +361,19 @@ describe("getProgramHeadFeedback", () => {
         promptLabel: "What should alumni improve?",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [
+          { text: "exposure", value: 1, responseCount: 1 },
+          { text: "industry", value: 1, responseCount: 1 },
+        ],
       },
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [{ text: "activities", value: 1, responseCount: 1 }],
       },
     ]);
   });
@@ -387,10 +414,10 @@ describe("getProgramHeadFeedback", () => {
     const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
 
     expect(result?.tokens).toEqual([
-      { text: "support", value: 3 },
-      { text: "apple", value: 2 },
-      { text: "banana", value: 2 },
-      { text: "clarity", value: 2 },
+      { text: "support", value: 3, responseCount: 3 },
+      { text: "apple", value: 2, responseCount: 2 },
+      { text: "banana", value: 2, responseCount: 2 },
+      { text: "clarity", value: 2, responseCount: 2 },
     ]);
   });
 

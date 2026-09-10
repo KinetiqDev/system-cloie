@@ -154,9 +154,10 @@ const feedback: ProgramHeadFeedbackDTO = {
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   tokens: [
-    { text: "helpful", value: 6 },
-    { text: "caring", value: 5 },
+    { text: "helpful", value: 6, responseCount: 6 },
+    { text: "caring", value: 5, responseCount: 5 },
   ],
+  tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
   qualitativeItemCount: 12,
   qualitativeResponseCount: 8,
   sourceCounts: [
@@ -165,6 +166,7 @@ const feedback: ProgramHeadFeedbackDTO = {
       sourceLabel: "Course-bound student evidence",
       itemCount: 12,
       responseCount: 8,
+      tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
     },
   ],
   promptCounts: [
@@ -173,6 +175,11 @@ const feedback: ProgramHeadFeedbackDTO = {
       promptLabel: "What worked well?",
       itemCount: 12,
       responseCount: 8,
+      tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
+      terms: [
+        { text: "helpful", value: 6, responseCount: 6 },
+        { text: "caring", value: 5, responseCount: 5 },
+      ],
     },
   ],
   evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Evaluation" }],
@@ -253,15 +260,38 @@ describe("view-specific AI evidence packets", () => {
     const packet = qualitativePacketFor(feedback);
     expect(packet.view).toBe("qualitative");
     expect(packet.wordFrequencyTokens).toEqual([
-      { text: "helpful", value: 6 },
-      { text: "caring", value: 5 },
+      { text: "helpful", value: 6, responseCount: 6 },
+      { text: "caring", value: 5, responseCount: 5 },
     ]);
+    expect(packet.feedback.toneShape).toEqual(feedback.tone);
+    expect(packet.feedback.sourceCounts).toEqual([
+      {
+        sourceLabel: "Course-bound student evidence",
+        itemCount: 12,
+        responseCount: 8,
+        tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
+      },
+    ]);
+    expect(packet.promptEvidence).toEqual([
+      {
+        sourceLabel: "Course-bound student evidence",
+        promptLabel: "What worked well?",
+        itemCount: 12,
+        responseCount: 8,
+        tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
+        terms: [
+          { text: "helpful", mentions: 6, responseCount: 6 },
+          { text: "caring", mentions: 5, responseCount: 5 },
+        ],
+      },
+    ]);
+    expect(packet.appliedFilters).toEqual({ evidenceSource: null, stakeholder: null });
   });
 
   it("clamps long token text and long labels", () => {
     const packet = qualitativePacketFor({
       ...feedback,
-      tokens: [{ text: "a".repeat(80), value: 2 }],
+      tokens: [{ text: "a".repeat(80), value: 2, responseCount: 1 }],
     });
     const { packet: stakeholderPacket } = buildAnalyticsViewPacket(
       "stakeholders",
@@ -298,6 +328,7 @@ describe("view-specific AI evidence packets", () => {
     const manyTokens = Array.from({ length: 10 }, (_, index) => ({
       text: `token-${index}`,
       value: 10 - index,
+      responseCount: 10 - index,
     }));
     const packet = qualitativePacketFor(
       { ...feedback, tokens: manyTokens },
@@ -326,6 +357,7 @@ describe("view-specific AI evidence packets", () => {
     const manyTokens = Array.from({ length: 500 }, (_, index) => ({
       text: `token${index}`,
       value: 1000 - index,
+      responseCount: 1,
     }));
     // Budget = full packet without tokens + room for a small token slice, so the
     // base packet always fits while the 500-token corpus must be truncated.
@@ -353,18 +385,22 @@ describe("view-specific AI evidence packets", () => {
   it("never exceeds the packet limit at the token budget boundary", () => {
     // Regression: bracket characters must stay in the base size so a token
     // that exactly fills the limit is accepted and one character over is
-    // dropped instead of throwing the size guard.
+    // dropped instead of throwing the size guard. Prompt evidence spends the
+    // budget after the token slice, so at one character under it is the prompt
+    // that yields while the token slice survives.
     const base = qualitativePacketFor(feedback, {
       ...CONFIG,
       maxPacketChars: 1_000_000,
       maxTokens: 1,
     });
-    const baseWithEmptyTokens = JSON.stringify({
+    const emptySize = JSON.stringify({
       ...base,
       wordFrequencyTokens: [],
+      promptEvidence: [],
     }).length;
-    const entrySize = JSON.stringify({ text: "helpful", value: 6 }).length;
-    const exactLimit = baseWithEmptyTokens + entrySize;
+    const tokenEntrySize = JSON.stringify({ text: "helpful", value: 6, responseCount: 6 }).length;
+    const promptEntrySize = JSON.stringify(base.promptEvidence[0]).length;
+    const exactLimit = emptySize + tokenEntrySize + promptEntrySize;
 
     const atLimit = qualitativePacketFor(feedback, {
       ...CONFIG,
@@ -372,6 +408,7 @@ describe("view-specific AI evidence packets", () => {
       maxTokens: 1,
     });
     expect(atLimit.wordFrequencyTokens).toHaveLength(1);
+    expect(atLimit.promptEvidence).toHaveLength(1);
     expect(JSON.stringify(atLimit).length).toBe(exactLimit);
 
     const oneLess = qualitativePacketFor(feedback, {
@@ -379,7 +416,8 @@ describe("view-specific AI evidence packets", () => {
       maxPacketChars: exactLimit - 1,
       maxTokens: 1,
     });
-    expect(oneLess.wordFrequencyTokens).toHaveLength(0);
+    expect(oneLess.wordFrequencyTokens).toHaveLength(1);
+    expect(oneLess.promptEvidence).toHaveLength(0);
     expect(JSON.stringify(oneLess).length).toBeLessThanOrEqual(exactLimit - 1);
   });
 
@@ -390,6 +428,7 @@ describe("view-specific AI evidence packets", () => {
     const manyTokens = Array.from({ length: 500 }, (_, index) => ({
       text: `token-${index}`,
       value: 1000 - index,
+      responseCount: 1,
     }));
     const fullCorpusSize = JSON.stringify({ wordFrequencyTokens: manyTokens }).length;
     const base = qualitativePacketFor(
@@ -425,6 +464,7 @@ describe("view-specific AI evidence packets", () => {
       qualitativeItemCount: null,
       evaluatedSourceLabels: [],
       tokenAnalysis: null,
+      promptAnalysis: null,
     });
 
     const { evidenceScope: qualitativeScope } = buildAnalyticsViewPacket(
@@ -438,6 +478,7 @@ describe("view-specific AI evidence packets", () => {
       qualitativeItemCount: 12,
       evaluatedSourceLabels: ["Course-bound student evidence"],
       tokenAnalysis: { availableTokenCount: 2, includedTokenCount: 2, truncated: false },
+      promptAnalysis: { availablePromptCount: 1, includedPromptCount: 1, truncated: false },
     });
 
     const { evidenceScope: stakeholderScope } = buildAnalyticsViewPacket(
@@ -478,6 +519,7 @@ describe("AI result DTO closure", () => {
         qualitativeItemCount: null,
         evaluatedSourceLabels: [],
         tokenAnalysis: null,
+        promptAnalysis: null,
       },
     };
     const serialized = JSON.stringify(result);

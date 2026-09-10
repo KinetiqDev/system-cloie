@@ -35,8 +35,11 @@ import { buildParticipationSummary } from "../aggregators/participation";
 import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "../aggregators/plo";
 import {
   FEEDBACK_SOURCE_LABELS,
-  buildRedactedWordCloudTokens,
+  analyzeQualitativeCorpus,
   feedbackSourceKey,
+  toTermToken,
+  type QualitativeCorpusEvidence,
+  type QualitativeCorpusItem,
 } from "./qualitative-analytics";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
@@ -51,8 +54,6 @@ import type {
   ProgramHeadFeedbackDTO,
   ProgramHeadFeedbackEmptyReason,
   ProgramHeadFeedbackEvidenceDTO,
-  ProgramHeadFeedbackPromptCountDTO,
-  ProgramHeadFeedbackSourceCountDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOutcomesEmptyReason,
   ProgramHeadProgramWideOutcomeDTO,
@@ -1787,13 +1788,6 @@ export async function getProgramHeadBreakdowns(
 // Feedback read
 // ---------------------------------------------------------------------------
 
-const FEEDBACK_SOURCE_ORDER = [
-  "COURSE_STUDENT",
-  "CENTRAL_STUDENT",
-  "ALUMNI",
-  "INDUSTRY_PARTNER",
-] as const;
-
 type FeedbackQualitativeRow = {
   text_content: string;
   section_key: string;
@@ -1847,53 +1841,38 @@ function instrumentOf(
     : null;
 }
 
+/**
+ * Deterministic aggregate qualitative evidence. Redaction, tokenization,
+ * distinct-response counting, and tone scoring all happen inside
+ * `analyzeQualitativeCorpus`; this function only resolves the prompt label and
+ * collects the contributing evaluations.
+ */
 function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
-  texts: string[];
+  evidence: QualitativeCorpusEvidence;
   qualitativeItemCount: number;
   qualitativeResponseCount: number;
-  sourceCounts: ProgramHeadFeedbackSourceCountDTO[];
-  promptCounts: ProgramHeadFeedbackPromptCountDTO[];
   evidenceEvaluations: ProgramHeadFeedbackEvidenceDTO[];
 } {
   const contributing = rows.filter((row) => row.text_content.trim().length > 0);
-  const responseIds = new Set(contributing.map((row) => row.response.id));
-
-  const sourceBuckets = new Map<
-    ProgramHeadFeedbackSourceCountDTO["sourceKey"],
-    { itemCount: number; responseIds: Set<string> }
-  >();
-  const promptBuckets = new Map<
-    string,
-    { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
-  >();
   const evaluations = new Map<string, string>();
+  const items: QualitativeCorpusItem[] = [];
 
   for (const row of contributing) {
     const sourceKey = feedbackSourceKey({
       courseBound: row.response.assignment.course_bound,
       targetStakeholder: row.response.assignment.central_deployment?.target_stakeholder,
     });
-    const source = sourceBuckets.get(sourceKey) ?? { itemCount: 0, responseIds: new Set<string>() };
-    source.itemCount += 1;
-    source.responseIds.add(row.response.id);
-    sourceBuckets.set(sourceKey, source);
-
-    const instrument = instrumentOf(row);
-    const promptLabel = resolveFeedbackPromptLabel(
-      instrument?.structureSnapshot,
-      row.section_key,
-      row.prompt_key
-    );
-    const promptBucketKey = `${sourceKey}:${instrument?.id ?? "unknown"}:${row.section_key}:${row.prompt_key}`;
-    const prompt = promptBuckets.get(promptBucketKey) ?? {
+    items.push({
+      text: row.text_content,
+      responseId: row.response.id,
+      sourceKey,
       sourceLabel: FEEDBACK_SOURCE_LABELS[sourceKey],
-      promptLabel,
-      itemCount: 0,
-      responseIds: new Set<string>(),
-    };
-    prompt.itemCount += 1;
-    prompt.responseIds.add(row.response.id);
-    promptBuckets.set(promptBucketKey, prompt);
+      promptLabel: resolveFeedbackPromptLabel(
+        instrumentOf(row)?.structureSnapshot,
+        row.section_key,
+        row.prompt_key
+      ),
+    });
 
     const evaluation = row.response.assignment.course_bound;
     if (evaluation) {
@@ -1902,61 +1881,9 @@ function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
   }
 
   return {
-    texts: contributing.map((row) => row.text_content),
+    evidence: analyzeQualitativeCorpus(items),
     qualitativeItemCount: contributing.length,
-    qualitativeResponseCount: responseIds.size,
-    sourceCounts: FEEDBACK_SOURCE_ORDER.flatMap((sourceKey) => {
-      const bucket = sourceBuckets.get(sourceKey);
-      if (!bucket) {
-        return [];
-      }
-      return [
-        {
-          sourceKey,
-          sourceLabel: FEEDBACK_SOURCE_LABELS[sourceKey],
-          itemCount: bucket.itemCount,
-          responseCount: bucket.responseIds.size,
-        },
-      ];
-    }),
-    promptCounts: (() => {
-      const displayBuckets = new Map<
-        string,
-        { sourceLabel: string; promptLabel: string; itemCount: number; responseIds: Set<string> }
-      >();
-
-      for (const bucket of promptBuckets.values()) {
-        const key = `${bucket.sourceLabel}:${bucket.promptLabel}`;
-        const display = displayBuckets.get(key) ?? {
-          sourceLabel: bucket.sourceLabel,
-          promptLabel: bucket.promptLabel,
-          itemCount: 0,
-          responseIds: new Set<string>(),
-        };
-        display.itemCount += bucket.itemCount;
-        for (const responseId of bucket.responseIds) {
-          display.responseIds.add(responseId);
-        }
-        displayBuckets.set(key, display);
-      }
-
-      return [...displayBuckets.values()]
-        .map((bucket) => ({
-          sourceLabel: bucket.sourceLabel,
-          promptLabel: bucket.promptLabel,
-          itemCount: bucket.itemCount,
-          responseCount: bucket.responseIds.size,
-        }))
-        .sort((left, right) => {
-          if (right.itemCount !== left.itemCount) {
-            return right.itemCount - left.itemCount;
-          }
-          const sourceOrder = left.sourceLabel.localeCompare(right.sourceLabel);
-          return sourceOrder === 0
-            ? left.promptLabel.localeCompare(right.promptLabel)
-            : sourceOrder;
-        });
-    })(),
+    qualitativeResponseCount: new Set(contributing.map((row) => row.response.id)).size,
     evidenceEvaluations: [...evaluations.entries()]
       .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
       .sort(
@@ -2054,11 +1981,19 @@ export async function getProgramHeadFeedback(
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
-    tokens: buildRedactedWordCloudTokens(aggregated.texts),
+    tokens: aggregated.evidence.terms.map(toTermToken),
+    tone: aggregated.evidence.tone,
     qualitativeItemCount: aggregated.qualitativeItemCount,
     qualitativeResponseCount: aggregated.qualitativeResponseCount,
-    sourceCounts: aggregated.sourceCounts,
-    promptCounts: aggregated.promptCounts,
+    sourceCounts: aggregated.evidence.sources,
+    promptCounts: aggregated.evidence.prompts.map((prompt) => ({
+      sourceLabel: prompt.sourceLabel,
+      promptLabel: prompt.promptLabel,
+      itemCount: prompt.itemCount,
+      responseCount: prompt.responseCount,
+      tone: prompt.tone,
+      terms: prompt.terms.map(toTermToken),
+    })),
     evidenceEvaluations: aggregated.evidenceEvaluations,
   };
 }

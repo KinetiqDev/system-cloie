@@ -56,6 +56,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
+import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
 import { cn } from "@/lib/utils";
 import type {
@@ -1006,6 +1007,7 @@ function QualitativeView({
           the word, and word frequency does not determine whether feedback was positive or negative.
         </AlertDescription>
       </Alert>
+      <QualitativeToneSummary tone={data.qualitative.tone} />
       <AIOverview insight={ai} state={aiState} pending={pending} data={data} qualitative />
       <PromptCountTable data={data} />
     </div>
@@ -1180,9 +1182,15 @@ function AIOverview({
         </p>
         {qualitative ? (
           <p className="text-muted-foreground mt-2 text-xs">
-            Based on anonymous aggregate counts and redacted term frequencies. It does not read or
-            display individual student responses and may miss context, sarcasm, or uncommon
-            feedback.
+            Based on anonymous aggregate counts, redacted term counts, per-prompt structure, and a
+            fixed word-list tone distribution. It does not read or display individual student
+            responses and may miss context, sarcasm, and uncommon feedback.
+          </p>
+        ) : null}
+        {qualitative && state?.ok && state.data.evidence.qualitativeTruncated ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            The interpretation used a bounded slice of the written-feedback terms, not the entire
+            corpus.
           </p>
         ) : null}
       </div>
@@ -1414,6 +1422,8 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
               <TableHead>Prompt</TableHead>
               <TableHead className="text-right">Written answers</TableHead>
               <TableHead className="text-right">Responses</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Tone (pos / neu / neg)</TableHead>
+              <TableHead>Top terms</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1422,6 +1432,12 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
                 <TableCell className="whitespace-normal">{row.prompt}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.responseCount}</TableCell>
+                <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  {row.tone.positive} / {row.tone.neutral} / {row.tone.negative}
+                </TableCell>
+                <TableCell className="whitespace-normal">
+                  <QualitativeTermChips terms={row.terms} label={`Top terms for ${row.prompt}`} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
