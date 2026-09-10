@@ -1,24 +1,41 @@
 "use client";
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useAppearance } from "./appearance-provider";
 import type { AppearancePreference } from "@/features/design-system/lib/appearance";
 import { APPEARANCE_OPTIONS } from "@/features/design-system/lib/appearance";
 
 /**
- * Topbar appearance control: a ghost icon button that opens a larger
- * dropdown with the Light / Dark / System radio options. Renders nothing
- * when appearance is not available (production gate per ADR 0010).
+ * Appearance control: a ghost icon button that opens a larger dropdown with
+ * the Light / Dark / System radio options. The default styling belongs to the
+ * sidebar chrome it was introduced in; surfaces outside the sidebar pass the
+ * hover treatment of their own background. Renders nothing when appearance is
+ * not available (production gate per ADR 0010).
  */
-export function AppearanceMenuTrigger({ enabled = false }: { enabled?: boolean }) {
+export function AppearanceMenuTrigger({
+  enabled = false,
+  className,
+}: {
+  enabled?: boolean;
+  className?: string;
+}) {
   const { preference, setPreference } = useAppearance();
 
   if (!enabled) {
     return null;
   }
 
-  const Icon = APPEARANCE_OPTIONS.find((o) => o.value === preference)?.icon ?? APPEARANCE_OPTIONS[2].icon;
+  const Icon =
+    APPEARANCE_OPTIONS.find((o) => o.value === preference)?.icon ?? APPEARANCE_OPTIONS[2].icon;
 
   return (
     <DropdownMenu>
@@ -28,7 +45,7 @@ export function AppearanceMenuTrigger({ enabled = false }: { enabled?: boolean }
             variant="ghost"
             size="icon"
             aria-label="Appearance"
-            className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+            className={cn("hover:bg-sidebar-accent/40 hover:text-sidebar-foreground", className)}
           />
         }
       >

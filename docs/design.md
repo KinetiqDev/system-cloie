@@ -95,7 +95,7 @@ Theme-adaptive:
 - Persist the choice and resolve it before first paint.
 - Theme changes must not reset route, form, filter, scroll, or async state.
 - Use text labels; do not rely on a sun/moon icon alone.
-- Preferred placement: the standalone appearance trigger in the app topbar, mirrored on public routes (a dedicated `Settings → Appearance` route was removed during design-system implementation).
+- Placement: the standalone appearance trigger belongs to page chrome — the app topbar on authenticated routes, and a quiet in-flow top row on public routes. It is positioned in flow, never overlaying page content, and it aligns with the surface's own content gutter (a dedicated `Settings → Appearance` route was removed during design-system implementation).
 
 ### 4.5 Logo Treatment
 

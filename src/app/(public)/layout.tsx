@@ -8,11 +8,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const appearanceEnabled = resolveAppearanceAvailability();
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background p-4 text-foreground sm:p-8">
-      <div className="absolute top-4 right-4 z-40 sm:top-6 sm:right-6">
-        <AppearanceMenuTrigger enabled={appearanceEnabled} />
+    <div className="bg-background text-foreground flex min-h-screen w-full flex-col overflow-hidden">
+      {/* Page chrome: the appearance control sits in flow so it can never
+          overlap a focused form, and it aligns to the public content gutter. */}
+      <div className="mx-auto flex w-full max-w-7xl shrink-0 items-center justify-end px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
+        <AppearanceMenuTrigger
+          enabled={appearanceEnabled}
+          className="hover:bg-muted hover:text-foreground"
+        />
       </div>
-      <Suspense fallback={<PublicRouteLoading variant="status" />}>{children}</Suspense>
+      <main className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
+        <Suspense fallback={<PublicRouteLoading variant="status" />}>{children}</Suspense>
+      </main>
     </div>
   );
 }
