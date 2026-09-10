@@ -133,6 +133,7 @@ export function StudentProfileForm({
       // the (app) layout loads fresh with the newly-created student profile.
       // Client-side push + refresh causes a race between the new route and
       // the stale React cache() session in the current (public) layout.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/dashboard";
     }
   };
