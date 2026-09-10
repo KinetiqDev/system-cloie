@@ -73,29 +73,29 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
   };
 
   return (
-    <Card className="border-border overflow-hidden shadow-lg">
+    <Card className="border-border overflow-hidden shadow-sm">
       <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
         <span className="text-label-md text-link font-bold tracking-wider uppercase">
           Onboarding
         </span>
-        <span className="text-caption text-text-muted">Faculty Profile</span>
+        <span className="text-caption text-muted-foreground">Faculty Profile</span>
       </div>
       <div className="bg-primary h-1 w-full" />
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-8 px-6 py-8 sm:px-8">
           <div className="space-y-1">
-            <h1 className="font-heading text-text-primary text-2xl font-black">
+            <h1 className="font-heading text-foreground text-heading-lg font-bold">
               Faculty Profile Setup
             </h1>
-            <p className="text-body-sm text-text-secondary">
+            <p className="text-body-sm text-muted-foreground">
               Please complete your details and select your primary program affiliation to access the
               faculty portal.
             </p>
           </div>
 
           {globalError && (
-            <Alert variant="destructive" className="border-danger/50 bg-danger-soft text-danger">
+            <Alert variant="destructive">
               <AlertCircle className="size-4" />
               <AlertDescription>{globalError}</AlertDescription>
             </Alert>
@@ -104,12 +104,12 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
           <div className="space-y-5">
             {/* Institutional / Google Email */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Email Account
               </Label>
               <div className="border-border bg-surface-muted flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                <Mail className="text-text-muted size-4 shrink-0" />
-                <span className="text-body-md text-text-secondary">{email}</span>
+                <Mail className="text-muted-foreground size-4 shrink-0" />
+                <span className="text-body-md text-muted-foreground">{email}</span>
               </div>
             </div>
 
@@ -124,21 +124,21 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
             <div className="space-y-2">
               <Label
                 htmlFor="account-name"
-                className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+                className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
               >
                 Account Name
               </Label>
               <div className="relative">
                 <UserCircle
                   aria-hidden="true"
-                  className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
                 />
                 <Input
                   id="account-name"
                   value={name}
                   readOnly
                   aria-readonly="true"
-                  className="bg-surface-muted text-text-secondary pl-11"
+                  className="bg-surface-muted text-muted-foreground pl-11"
                 />
               </div>
             </div>
@@ -153,7 +153,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
 
             {/* Primary Program */}
             <div className="space-y-2">
-              <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+              <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
                 Primary Affiliated Program
               </Label>
               <Controller
@@ -161,7 +161,11 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
                 control={control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger className={`w-full ${errors.program_id ? "border-danger" : ""}`}>
+                    <SelectTrigger
+                      className="w-full"
+                      aria-invalid={errors.program_id ? true : undefined}
+                      aria-describedby={errors.program_id ? "program-id-error" : undefined}
+                    >
                       <SelectValue placeholder="Select primary program">
                         {field.value ? getProgramLabel(field.value) : null}
                       </SelectValue>
@@ -177,7 +181,10 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
                 )}
               />
               {errors.program_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
+                <p
+                  id="program-id-error"
+                  className="text-destructive flex items-center gap-1 text-xs"
+                >
                   <AlertCircle className="size-3" />
                   {errors.program_id.message}
                 </p>
@@ -195,7 +202,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
           <Button
             type="button"
             variant="ghost"
-            className="text-text-muted hover:text-text-primary w-full"
+            className="text-muted-foreground hover:text-foreground w-full"
             onClick={async () => {
               await resetIncompleteRoleClaim(ROLES.FACULTY);
             }}

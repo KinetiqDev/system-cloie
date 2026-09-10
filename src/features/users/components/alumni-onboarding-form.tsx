@@ -118,7 +118,7 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
           </div>
 
           {globalError && (
-            <Alert variant="destructive" className="border-danger/50 bg-danger-soft text-danger">
+            <Alert variant="destructive">
               <AlertCircle className="size-4" />
               <AlertDescription>{globalError}</AlertDescription>
             </Alert>
@@ -183,7 +183,11 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
                 control={control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger className={`w-full ${errors.program_id ? "border-danger" : ""}`}>
+                    <SelectTrigger
+                      className="w-full"
+                      aria-invalid={errors.program_id ? true : undefined}
+                      aria-describedby={errors.program_id ? "program-id-error" : undefined}
+                    >
                       <SelectValue placeholder="Select your program">
                         {field.value ? getProgramLabel(field.value) : null}
                       </SelectValue>
@@ -199,7 +203,10 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
                 )}
               />
               {errors.program_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
+                <p
+                  id="program-id-error"
+                  className="text-destructive flex items-center gap-1 text-xs"
+                >
                   <AlertCircle className="size-3" />
                   {errors.program_id.message}
                 </p>
@@ -220,7 +227,11 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
                   }}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <SelectTrigger className={`w-full ${errors.major_id ? "border-danger" : ""}`}>
+                      <SelectTrigger
+                        className="w-full"
+                        aria-invalid={errors.major_id ? true : undefined}
+                        aria-describedby={errors.major_id ? "major-id-error" : undefined}
+                      >
                         <SelectValue placeholder="Select your major">
                           {field.value ? getMajorLabel(field.value) : null}
                         </SelectValue>
@@ -236,7 +247,10 @@ export function AlumniOnboardingForm({ email, name, programs }: AlumniOnboarding
                   )}
                 />
                 {errors.major_id && (
-                  <p className="text-danger flex items-center gap-1 text-xs">
+                  <p
+                    id="major-id-error"
+                    className="text-destructive flex items-center gap-1 text-xs"
+                  >
                     <AlertCircle className="size-3" />
                     {errors.major_id.message}
                   </p>

@@ -19,7 +19,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ArrowLeft, ArrowRight, CalendarDays, GraduationCap, Mail, UserCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  GraduationCap,
+  Mail,
+  UserCircle,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -80,6 +88,7 @@ export function StudentProfileForm({
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch drives the conditional major field; compiler skip is intentional, no memoization needed.
   const selectedProgramId = watch("program_id");
   const selectedProgramObj = programs.find((p) => p.id === selectedProgramId);
   const requiresMajor = selectedProgramObj?.majors && selectedProgramObj.majors.length > 0;
@@ -152,7 +161,7 @@ export function StudentProfileForm({
           </div>
 
           {globalError && (
-            <Alert variant="destructive" className="border-danger/50 bg-danger-soft text-danger">
+            <Alert variant="destructive">
               <AlertCircle className="size-4" />
               <AlertDescription>{globalError}</AlertDescription>
             </Alert>
@@ -161,9 +170,9 @@ export function StudentProfileForm({
           {/* Deferred enrollment notice — shown when no active academic term is configured */}
           {!hasActiveTerm && (
             <Alert className="border-warning/30 bg-warning-soft/20">
-              <CalendarDays className="size-4 text-warning" />
+              <CalendarDays className="text-warning size-4" />
               <AlertDescription className="text-muted-foreground text-body-sm">
-                <span className="font-semibold text-warning">Enrollment Deferred</span> — No active
+                <span className="text-warning font-semibold">Enrollment Deferred</span> — No active
                 academic term is currently configured. Your profile will be created, but year level
                 and section information will be collected once a term becomes available.
               </AlertDescription>
@@ -180,7 +189,8 @@ export function StudentProfileForm({
             </div>
 
             <p className="text-body-sm text-muted-foreground">
-              Your account name comes from your Google account and is not editable during onboarding.
+              Your account name comes from your Google account and is not editable during
+              onboarding.
             </p>
 
             {/* Canonical account name */}
@@ -201,7 +211,7 @@ export function StudentProfileForm({
                   value={name}
                   readOnly
                   aria-readonly="true"
-                  className="bg-surface-muted pl-11 text-muted-foreground"
+                  className="bg-surface-muted text-muted-foreground pl-11"
                 />
               </div>
             </div>
@@ -237,7 +247,11 @@ export function StudentProfileForm({
                 control={control}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger className={`w-full ${errors.program_id ? "border-danger" : ""}`}>
+                    <SelectTrigger
+                      className="w-full"
+                      aria-invalid={errors.program_id ? true : undefined}
+                      aria-describedby={errors.program_id ? "program-id-error" : undefined}
+                    >
                       <SelectValue placeholder="Select your program">
                         {field.value ? getProgramLabel(field.value) : null}
                       </SelectValue>
@@ -253,7 +267,10 @@ export function StudentProfileForm({
                 )}
               />
               {errors.program_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
+                <p
+                  id="program-id-error"
+                  className="text-destructive flex items-center gap-1 text-xs"
+                >
                   <AlertCircle className="size-3" />
                   {errors.program_id.message}
                 </p>
@@ -274,7 +291,11 @@ export function StudentProfileForm({
                   }}
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <SelectTrigger className={`w-full ${errors.major_id ? "border-danger" : ""}`}>
+                      <SelectTrigger
+                        className="w-full"
+                        aria-invalid={errors.major_id ? true : undefined}
+                        aria-describedby={errors.major_id ? "major-id-error" : undefined}
+                      >
                         <SelectValue placeholder="Select your major">
                           {field.value ? getMajorLabel(field.value) : null}
                         </SelectValue>
@@ -295,7 +316,7 @@ export function StudentProfileForm({
                 </div>
               )}
               {errors.major_id && (
-                <p className="text-danger flex items-center gap-1 text-xs">
+                <p id="major-id-error" className="text-destructive flex items-center gap-1 text-xs">
                   <AlertCircle className="size-3" />
                   {errors.major_id.message}
                 </p>
@@ -313,7 +334,9 @@ export function StudentProfileForm({
                   render={({ field }) => (
                     <Select onValueChange={field.onChange} value={field.value}>
                       <SelectTrigger
-                        className={`w-full ${errors.year_level ? "border-danger" : ""}`}
+                        className="w-full"
+                        aria-invalid={errors.year_level ? true : undefined}
+                        aria-describedby={errors.year_level ? "year-level-error" : undefined}
                       >
                         <SelectValue placeholder="Select year">
                           {field.value ? getYearLevelLabel(field.value as YearLevel) : null}
@@ -330,7 +353,10 @@ export function StudentProfileForm({
                   )}
                 />
                 {errors.year_level && (
-                  <p className="text-danger flex items-center gap-1 text-xs">
+                  <p
+                    id="year-level-error"
+                    className="text-destructive flex items-center gap-1 text-xs"
+                  >
                     <AlertCircle className="size-3" />
                     {errors.year_level.message}
                   </p>
@@ -348,21 +374,19 @@ export function StudentProfileForm({
                   name="section"
                   control={control}
                   render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                    >
-                      <SelectTrigger className={`w-full ${errors.section ? "border-danger" : ""}`}>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger
+                        className="w-full"
+                        aria-invalid={errors.section ? true : undefined}
+                        aria-describedby={errors.section ? "section-error" : undefined}
+                      >
                         <SelectValue placeholder="Select section">
                           {field.value ? getSectionLabel(field.value) : null}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {SECTION_OPTIONS.map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                          >
+                          <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
                         ))}
@@ -371,7 +395,10 @@ export function StudentProfileForm({
                   )}
                 />
                 {errors.section && (
-                  <p className="text-danger flex items-center gap-1 text-xs">
+                  <p
+                    id="section-error"
+                    className="text-destructive flex items-center gap-1 text-xs"
+                  >
                     <AlertCircle className="size-3" />
                     {errors.section.message}
                   </p>
@@ -382,12 +409,7 @@ export function StudentProfileForm({
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 px-6 pt-2 pb-8 sm:px-8">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full font-semibold"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" size="lg" className="w-full font-semibold" disabled={isSubmitting}>
             {isSubmitting ? "Finalizing..." : "Submit and Continue"}
             {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
           </Button>

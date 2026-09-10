@@ -6,7 +6,7 @@ export const studentProfileSchema = z.object({
   major_id: z.string().uuid().optional().nullable().or(z.literal("")),
   year_level: z.nativeEnum(YearLevel, { error: "Please select a valid Year Level" }),
   section: z.nativeEnum(StudentSection, {
-    error: "Please select a section",
+    error: "Please select a valid Section",
   }),
 });
 
