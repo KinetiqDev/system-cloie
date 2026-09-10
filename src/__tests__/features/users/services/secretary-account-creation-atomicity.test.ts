@@ -125,9 +125,16 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
 
         await expectSingleRole(userId, SystemRole.FACULTY);
 
+        // Multi-role accounts permit a distinct second role on the same user.
+        const secondRole = await prisma.userRole.create({
+          data: { user_id: userId, role: SystemRole.DEAN },
+        });
+        expect(secondRole.role).toBe(SystemRole.DEAN);
+
+        // The composite [user_id, role] key still rejects a duplicate grant.
         await expect(
           prisma.userRole.create({
-            data: { user_id: userId, role: SystemRole.DEAN },
+            data: { user_id: userId, role: SystemRole.FACULTY },
           })
         ).rejects.toMatchObject({ code: "P2002" });
       } finally {

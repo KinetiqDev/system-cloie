@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EnrollmentSource, StudentSection, SystemRole, VerificationStatus, YearLevel } from "@prisma/client";
+import {
+  EnrollmentSource,
+  StudentSection,
+  SystemRole,
+  VerificationStatus,
+  YearLevel,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { createUserBySecretary } from "@/features/users/services/create-user-by-secretary";
 import { createUserBySecretarySchema } from "@/features/users/schemas/create-user";
@@ -37,6 +43,13 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     industryPartnerProfile: {
       create: vi.fn(),
+    },
+    centralDeployment: {
+      findMany: vi.fn(),
+    },
+    evaluationAssignment: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
     },
   },
 }));
@@ -179,7 +192,9 @@ describe("create-user-by-secretary schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const programIssues = result.error.issues.filter((issue) => issue.path.includes("program_id"));
+      const programIssues = result.error.issues.filter((issue) =>
+        issue.path.includes("program_id")
+      );
       expect(programIssues.length).toBeGreaterThan(0);
       expect(programIssues[0]?.message).toMatch(/select an affiliated program/i);
     }
@@ -193,7 +208,9 @@ describe("create-user-by-secretary schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const programIssues = result.error.issues.filter((issue) => issue.path.includes("program_id"));
+      const programIssues = result.error.issues.filter((issue) =>
+        issue.path.includes("program_id")
+      );
       expect(programIssues.length).toBeGreaterThan(0);
       expect(programIssues[0]?.message).toMatch(/select an affiliated program/i);
     }
@@ -274,7 +291,9 @@ describe("create-user-by-secretary schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const programIssues = result.error.issues.filter((issue) => issue.path.includes("program_id"));
+      const programIssues = result.error.issues.filter((issue) =>
+        issue.path.includes("program_id")
+      );
       expect(programIssues.length).toBeGreaterThan(0);
       expect(programIssues[0]?.message).toMatch(/select an affiliated program/i);
     }
@@ -352,7 +371,9 @@ describe("create-user-by-secretary schema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const programIssues = result.error.issues.filter((issue) => issue.path.includes("program_id"));
+      const programIssues = result.error.issues.filter((issue) =>
+        issue.path.includes("program_id")
+      );
       expect(programIssues.length).toBeGreaterThan(0);
       expect(programIssues[0]?.message).toMatch(/select an affiliated program/i);
     }
@@ -477,6 +498,8 @@ describe("createUserBySecretary service", () => {
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(
       async (callback: (tx: typeof prisma) => unknown) => callback(prisma)
     );
+    (prisma.centralDeployment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (prisma.evaluationAssignment.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
   it("creates an active Secretary account", async () => {
@@ -946,6 +969,14 @@ describe("createUserBySecretary service", () => {
         verification_status: VerificationStatus.APPROVED,
       },
     });
+    expect(prisma.centralDeployment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          program_id: programId,
+          target_stakeholder: "ALUMNI",
+        }),
+      })
+    );
   });
 
   it("creates an Alumni account with a major when the selected program has active majors", async () => {

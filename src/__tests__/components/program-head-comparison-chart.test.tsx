@@ -4,18 +4,10 @@ import {
   ProgramHeadComparisonChart,
   type ProgramHeadComparisonDatum,
 } from "@/features/analytics/components/program-head-comparison-chart";
-import { ProgramHeadResponseCompositionDonut } from "@/features/analytics/components/program-head-response-composition-donut";
 import { ProgramHeadInstrumentBreakdownChart } from "@/features/analytics/components/program-head-instrument-breakdown-chart";
 import type { ProgramHeadInstrumentBreakdownRowDTO } from "@/features/analytics/program-head-analytics-types";
-
 function barFills(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll(".recharts-bar-rectangle path")).map(
-    (path) => path.getAttribute("fill") ?? ""
-  );
-}
-
-function sectorFills(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll(".recharts-pie-sector path")).map(
     (path) => path.getAttribute("fill") ?? ""
   );
 }
@@ -121,7 +113,13 @@ describe("ProgramHeadComparisonChart", () => {
       <ProgramHeadComparisonChart
         title="Mean Rating by Evidence Source"
         rows={[
-          { key: "u", label: "Unrated", meanRating: null, ratingCount: 0, submittedResponseCount: 2 },
+          {
+            key: "u",
+            label: "Unrated",
+            meanRating: null,
+            ratingCount: 0,
+            submittedResponseCount: 2,
+          },
         ]}
       />
     );
@@ -263,7 +261,10 @@ describe("ProgramHeadComparisonChart", () => {
             ratingCount: 10,
             submittedResponseCount: 5,
             links: [
-              { href: "/program-head/programs/program-bsed/cilo-reviews/eval-1", label: "CILO Deployment" },
+              {
+                href: "/program-head/programs/program-bsed/cilo-reviews/eval-1",
+                label: "CILO Deployment",
+              },
             ],
           },
         ]}
@@ -280,7 +281,10 @@ describe("ProgramHeadComparisonChart", () => {
   it("namespaces ids per instance so two charts stay distinct", () => {
     const { container } = render(
       <div>
-        <ProgramHeadComparisonChart title="Mean Rating by Evidence Source" rows={rows.slice(0, 2)} />
+        <ProgramHeadComparisonChart
+          title="Mean Rating by Evidence Source"
+          rows={rows.slice(0, 2)}
+        />
         <ProgramHeadComparisonChart title="Mean Rating by Course" rows={rows.slice(2)} />
       </div>
     );
@@ -294,10 +298,7 @@ describe("ProgramHeadComparisonChart", () => {
     window.innerWidth = 320;
     const { container } = render(
       <div>
-        <ProgramHeadComparisonChart
-          title="Mean Rating by Evidence Source"
-          rows={rows}
-        />
+        <ProgramHeadComparisonChart title="Mean Rating by Evidence Source" rows={rows} />
         <ProgramHeadInstrumentBreakdownChart
           rows={[
             {
@@ -318,18 +319,12 @@ describe("ProgramHeadComparisonChart", () => {
             },
           ]}
         />
-        <ProgramHeadResponseCompositionDonut
-          data={[
-            { key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 60 },
-            { key: "ALUMNI", label: "Alumni evidence", count: 30 },
-          ]}
-        />
       </div>
     );
 
     // Interactive disclosures carry the >=44px touch-target sizing contract.
     const summaries = Array.from(container.querySelectorAll("summary"));
-    expect(summaries.length).toBeGreaterThanOrEqual(3);
+    expect(summaries.length).toBeGreaterThanOrEqual(2);
     for (const summary of summaries) {
       expect(summary.className).toContain("pointer-coarse:min-h-11");
     }
@@ -338,90 +333,9 @@ describe("ProgramHeadComparisonChart", () => {
     const scrollWrappers = Array.from(
       container.querySelectorAll(".overflow-x-auto.rounded-lg.border")
     );
-    expect(scrollWrappers.length).toBeGreaterThanOrEqual(3);
+    expect(scrollWrappers.length).toBeGreaterThanOrEqual(2);
     // Charts render without crashing at the narrow viewport.
-    expect(container.querySelectorAll('[data-slot="chart"]').length).toBe(3);
-  });
-});
-
-describe("ProgramHeadResponseCompositionDonut", () => {
-  const completion = [
-    { key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 60 },
-    { key: "ALUMNI", label: "Alumni evidence", count: 30 },
-    { key: "INDUSTRY_PARTNER", label: "Industry Partner evidence", count: 10 },
-  ];
-
-  it("renders a donut only for genuine response composition, with shares", () => {
-    const { container } = render(
-      <ProgramHeadResponseCompositionDonut data={completion} />
-    );
-
-    expect(screen.getByText("Submitted Responses by Evidence Source")).toBeInTheDocument();
-    expect(container.querySelectorAll(".recharts-pie-sector")).toHaveLength(3);
-    expect(container.querySelector(".recharts-bar-rectangle")).toBeNull();
-    const fills = sectorFills(container);
-    expect(fills.slice(0, 3)).toEqual([
-      "var(--chart-1)",
-      "var(--chart-2)",
-      "var(--chart-3)",
-    ]);
-  });
-
-  it("reports the total and largest source share in the insight", () => {
-    render(<ProgramHeadResponseCompositionDonut data={completion} />);
-
-    expect(regionInsight("Submitted Responses by Evidence Source")).toMatch(
-      /100 submitted responses in total/
-    );
-    expect(regionInsight("Submitted Responses by Evidence Source")).toMatch(
-      /Largest source: Course-bound student evidence \(60\.0%\)/
-    );
-  });
-
-  it("shows exact counts and shares in the table", () => {
-    render(<ProgramHeadResponseCompositionDonut data={completion} />);
-
-    expect(screen.getByText("60")).toBeInTheDocument();
-    expect(screen.getByText("30")).toBeInTheDocument();
-    expect(screen.getByText("60.0%")).toBeInTheDocument();
-    expect(screen.getByText("10.0%")).toBeInTheDocument();
-  });
-
-  it("renders an explicit empty state when there is no composition to show", () => {
-    const { container } = render(<ProgramHeadResponseCompositionDonut data={[]} />);
-
-    expect(screen.getByText("No response composition yet")).toBeInTheDocument();
-    expect(
-      screen.getByText("No submitted responses are available to compose in this scope.")
-    ).toBeInTheDocument();
-    // No blank donut is rendered for an empty composition.
-    expect(container.querySelector(".recharts-pie-sector")).toBeNull();
-  });
-
-  it("renders the same empty state when every bucket has zero submitted responses", () => {
-    const { container } = render(
-      <ProgramHeadResponseCompositionDonut
-        data={[
-          { key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 0 },
-          { key: "ALUMNI", label: "Alumni evidence", count: 0 },
-        ]}
-      />
-    );
-
-    expect(screen.getByText("No response composition yet")).toBeInTheDocument();
-    expect(container.querySelector(".recharts-pie-sector")).toBeNull();
-  });
-
-  it("explains a single-source composition without a comparison claim", () => {
-    render(
-      <ProgramHeadResponseCompositionDonut
-        data={[{ key: "COURSE_STUDENT", label: "Course-bound student evidence", count: 8 }]}
-      />
-    );
-
-    expect(regionInsight("Submitted Responses by Evidence Source")).toBe(
-      "All 8 submitted responses are from Course-bound student evidence."
-    );
+    expect(container.querySelectorAll('[data-slot="chart"]').length).toBe(2);
   });
 });
 

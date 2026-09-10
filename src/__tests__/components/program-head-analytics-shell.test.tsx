@@ -47,7 +47,7 @@ describe("ProgramHeadAnalyticsShell", () => {
 
     const navigation = screen.getByRole("navigation", { name: "Analytics views" });
     const links = Array.from(navigation.querySelectorAll("a"));
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(5);
     for (const link of links) {
       expect(link).toHaveAttribute("data-prefetch", "false");
       expect(link.getAttribute("href")).toContain("semester=FIRST");

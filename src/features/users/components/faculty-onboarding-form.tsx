@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, Controller, type Resolver, type SubmitHandler } from "react-hook-form";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/lib/schemas/faculty-profile";
 import { createFacultyProfile } from "@/lib/actions/faculty-actions";
 import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
+import { ROLES } from "@/lib/constants/roles";
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -39,6 +41,7 @@ type FacultyOnboardingFormProps = {
 
 export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     control,
@@ -64,9 +67,8 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
       setGlobalError(result.error);
       return;
     }
-
     if (result.success === true) {
-      window.location.assign("/faculty/dashboard");
+      router.push("/faculty/dashboard");
     }
   };
 
@@ -185,12 +187,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 px-6 pt-2 pb-8 sm:px-8">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full font-semibold"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" size="lg" className="w-full font-semibold" disabled={isSubmitting}>
             {isSubmitting ? "Finalizing..." : "Submit and Continue"}
             {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
           </Button>
@@ -200,7 +197,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
             variant="ghost"
             className="text-text-muted hover:text-text-primary w-full"
             onClick={async () => {
-              await resetIncompleteRoleClaim();
+              await resetIncompleteRoleClaim(ROLES.FACULTY);
             }}
           >
             <ArrowLeft className="size-4" data-icon="inline-start" />

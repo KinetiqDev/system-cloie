@@ -1,9 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
+import {
   ShieldAlert,
   FileKey,
   Users,
@@ -15,6 +16,7 @@ import {
   UserRoundX,
   IdCard,
 } from "lucide-react";
+import { buildPageTitle } from "@/lib/page-title";
 
 type PageProps = {
   params: Promise<{ type: string }>;
@@ -25,7 +27,8 @@ const STATUS_CONFIGS = {
   "invalid-domain": {
     title: "Institutional Email Required",
     description: "This role requires signing in with an official ACD institutional email address.",
-    details: "If you logged in with a personal Google account, please sign out and sign in again using your @acd.edu.ph or @acdeducation.com email.",
+    details:
+      "If you logged in with a personal Google account, please sign out and sign in again using your @acd.edu.ph or @acdeducation.com email.",
     icon: ShieldAlert,
     color: "danger",
     showRetry: true,
@@ -33,7 +36,8 @@ const STATUS_CONFIGS = {
   "pre-provisioning-required": {
     title: "Account Provisioning Required",
     description: "Your account is not yet provisioned for this role.",
-    details: "Access for the administration (Secretary, College Dean, and Program Head roles) must be configured in the database before you can enter. Please contact the IT Support team or system administrator to provision your account.",
+    details:
+      "Access for the administration (Secretary, College Dean, and Program Head roles) must be configured in the database before you can enter. Please contact the IT Support team or system administrator to provision your account.",
     icon: FileKey,
     color: "warning",
     showRetry: true,
@@ -41,23 +45,26 @@ const STATUS_CONFIGS = {
   "role-mismatch": {
     title: "Role Mismatch",
     description: "The role you selected does not match your registered account role.",
-    details: "Your institutional Google account is registered under a different role. If you need to access this role, please sign out and sign in using the correct role selection, or request a role change from an administrator.",
+    details:
+      "Your institutional Google account is registered under a different role. If you need to access this role, please sign out and sign in using the correct role selection, or request a role change from an administrator.",
     icon: Users,
     color: "info",
     showRetry: true,
   },
-  "inactive": {
+  inactive: {
     title: "Account Inactive",
     description: "Your CLOIE account is currently inactive.",
-    details: "This account has been deactivated by a system administrator. You cannot access the system dashboards. Please reach out to administration or IT support if you believe this is an error.",
+    details:
+      "This account has been deactivated by a system administrator. You cannot access the system dashboards. Please reach out to administration or IT support if you believe this is an error.",
     icon: Ban,
     color: "danger",
     showRetry: false,
   },
-  "rejected": {
+  rejected: {
     title: "Application Rejected",
     description: "Your registration application was not approved.",
-    details: "Following institutional review, your self-service Alumni or Industry Partner registration application was rejected by the administration. Consequently, access to system dashboards is restricted.",
+    details:
+      "Following institutional review, your self-service Alumni or Industry Partner registration application was rejected by the administration. Consequently, access to system dashboards is restricted.",
     icon: XCircle,
     color: "danger",
     showRetry: false,
@@ -65,7 +72,8 @@ const STATUS_CONFIGS = {
   "deferred-enrollment": {
     title: "Enrollment Deferred",
     description: "No active academic term configured.",
-    details: "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in CLOIE. Please contact a school administrator to configure the academic calendar.",
+    details:
+      "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in CLOIE. Please contact a school administrator to configure the academic calendar.",
     icon: CalendarDays,
     color: "warning",
     showRetry: false,
@@ -94,6 +102,18 @@ type StatusType = keyof typeof STATUS_CONFIGS;
 
 function isStatusType(type: string): type is StatusType {
   return Object.hasOwn(STATUS_CONFIGS, type);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ type: string }>;
+}): Promise<Metadata> {
+  const { type } = await params;
+  if (isStatusType(type)) {
+    return { title: buildPageTitle(STATUS_CONFIGS[type].title) };
+  }
+  return { title: buildPageTitle("Status") };
 }
 
 export default async function StatusPage({ params, searchParams }: PageProps) {
@@ -136,7 +156,8 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
   // Specific context formatting for invalid-domain role parameter
   let descriptionText: string = config.description;
   if (type === "invalid-domain") {
-    const roleParam = typeof resolvedSearchParams?.role === "string" ? resolvedSearchParams.role : undefined;
+    const roleParam =
+      typeof resolvedSearchParams?.role === "string" ? resolvedSearchParams.role : undefined;
     if (roleParam) {
       const displayRole = roleParam.replace("-", " ").toUpperCase();
       descriptionText = `The ${displayRole} role requires signing in with an official ACD institutional email address.`;
@@ -164,23 +185,29 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
             priority
           />
         </div>
-        <h1 className="text-heading-xl font-bold tracking-tight text-primary">System CLOIE</h1>
-        <p className="mt-1 text-label-sm text-muted-foreground uppercase tracking-wider">Access Status</p>
+        <h1 className="text-heading-xl text-primary font-bold tracking-tight">System CLOIE</h1>
+        <p className="text-label-sm text-muted-foreground mt-1 tracking-wider uppercase">
+          Access Status
+        </p>
       </div>
 
       {/* Main Status Card */}
-      <Card className="border border-border bg-surface shadow-sm overflow-hidden">
+      <Card className="border-border bg-surface overflow-hidden border shadow-sm">
         {/* Color accent bar at the top */}
-        <div className={`h-1.5 w-full ${config.color === "danger" ? "bg-danger" : config.color === "warning" ? "bg-warning" : "bg-info"}`} />
+        <div
+          className={`h-1.5 w-full ${config.color === "danger" ? "bg-danger" : config.color === "warning" ? "bg-warning" : "bg-info"}`}
+        />
 
         <CardHeader className="space-y-4 pt-8 pb-6 text-center">
           <div className="flex justify-center">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-full ${colorMap.iconBg}`}>
+            <div
+              className={`flex h-14 w-14 items-center justify-center rounded-full ${colorMap.iconBg}`}
+            >
               <Icon className={`size-7 ${colorMap.iconColor}`} />
             </div>
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-heading-lg font-bold text-foreground">
+            <CardTitle className="text-heading-lg text-foreground font-bold">
               {config.title}
             </CardTitle>
             <CardDescription className="text-body-md text-muted-foreground px-2">
@@ -190,21 +217,29 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <div className="p-4 bg-muted/50 rounded-lg border border-border text-body-sm text-muted-foreground leading-relaxed">
+          <div className="bg-muted/50 border-border text-body-sm text-muted-foreground rounded-lg border p-4 leading-relaxed">
             {config.details}
           </div>
 
           <div className="flex flex-col gap-3 pt-2">
             {config.showRetry && (
-              <Button render={<Link href="/portal/respondents" />} className="w-full" variant="default">
-                <ArrowLeft className="size-4 mr-2" />
+              <Button
+                render={<Link href="/portal/respondents" />}
+                className="w-full"
+                variant="default"
+              >
+                <ArrowLeft className="mr-2 size-4" />
                 Back to Role Selection
               </Button>
             )}
 
             <form action="/api/auth/logout" method="post" className="w-full">
-              <Button type="submit" variant="outline" className="w-full hover:bg-danger-soft hover:text-danger hover:border-danger/30 transition-all duration-200">
-                <LogOut className="size-4 mr-2" />
+              <Button
+                type="submit"
+                variant="outline"
+                className="hover:bg-danger-soft hover:text-danger hover:border-danger/30 w-full transition-all duration-200"
+              >
+                <LogOut className="mr-2 size-4" />
                 Sign Out of Account
               </Button>
             </form>
@@ -213,11 +248,11 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
       </Card>
 
       {/* Help Footer */}
-      <p className="mt-6 text-center text-body-sm text-muted-foreground">
+      <p className="text-body-sm text-muted-foreground mt-6 text-center">
         Need assistance?{" "}
         <a
           href="mailto:support@acdeducation.com"
-          className="font-medium text-primary underline-offset-2 transition-colors hover:text-primary-hover hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded"
+          className="text-primary hover:text-primary-hover focus-visible:ring-primary rounded font-medium underline-offset-2 transition-colors hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           Contact IT Support
         </a>

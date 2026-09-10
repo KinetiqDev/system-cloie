@@ -4,9 +4,10 @@ import { ROLES } from "@/lib/constants/roles";
 import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 import { loadAllProgramCourseAssignmentsPageData } from "@/features/course-assignments/services/load-all-program-course-assignments-page";
 import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Course Assignments — Secretary | CLOIE",
+  title: buildPageTitle("Course Assignments", "Secretary"),
 };
 
 export default async function SecretaryCourseAssignmentsPage({

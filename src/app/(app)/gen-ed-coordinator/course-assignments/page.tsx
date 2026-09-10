@@ -5,9 +5,10 @@ import { CourseScope } from "@prisma/client";
 import { CourseAssignmentsPageShell } from "@/features/course-assignments/components/course-assignments-page-shell";
 import { loadAllProgramCourseAssignmentsPageData } from "@/features/course-assignments/services/load-all-program-course-assignments-page";
 import { loadCourseAssignmentListPage } from "@/features/course-assignments/services/load-course-assignment-list-page";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Course Assignments — Gen Ed Coordinator | System CLOIE",
+  title: buildPageTitle("Course Assignments", "Gen Ed Coordinator"),
 };
 
 // fallow-ignore-next-line complexity

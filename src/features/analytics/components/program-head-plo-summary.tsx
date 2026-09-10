@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   DASHBOARD_SOURCE_ORDER,
@@ -165,58 +166,58 @@ export function ProgramHeadPloSummary({
                   />
                 </span>
               </div>
-              <details className="mt-1">
-                <summary className="text-muted-foreground hover:text-foreground text-label-sm focus-visible:ring-ring inline-flex cursor-pointer list-none font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none">
-                  Evidence details
-                </summary>
-                <dl className="text-muted-foreground text-label-sm mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                  <div>
-                    <dt className="sr-only">Rating count</dt>
-                    <dd className="tabular-nums">
-                      <strong className="text-foreground">
-                        {row.ratingCount.toLocaleString()}
-                      </strong>{" "}
-                      ratings
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="sr-only">Response count</dt>
-                    <dd className="tabular-nums">
-                      <strong className="text-foreground">
-                        {row.responseCount.toLocaleString()}
-                      </strong>{" "}
-                      responses
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="sr-only">Evaluation count</dt>
-                    <dd className="tabular-nums">
-                      <strong className="text-foreground">
-                        {row.evaluationCount.toLocaleString()}
-                      </strong>{" "}
-                      evaluations
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="sr-only">
-                      {row.contributorKind === "cilos"
-                        ? "Contributing CILO count"
-                        : "Bound question count"}
-                    </dt>
-                    <dd className="tabular-nums">
-                      <strong className="text-foreground">
-                        {row.contributorCount.toLocaleString()}
-                      </strong>{" "}
-                      {row.contributorKind === "cilos" ? "contributing CILOs" : "bound questions"}
-                    </dd>
-                  </div>
-                </dl>
-                {!row.hasEvidence && (
-                  <p className="text-muted-foreground text-label-sm mt-1">
-                    No mapped quantitative evidence for this source in the selected period.
-                  </p>
-                )}
-              </details>
+              <Disclosure className="mt-1">
+                <DisclosureTrigger variant="link">Evidence details</DisclosureTrigger>
+                <DisclosureContent className="pt-1.5">
+                  <dl className="text-muted-foreground text-label-sm grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                    <div>
+                      <dt className="sr-only">Rating count</dt>
+                      <dd className="tabular-nums">
+                        <strong className="text-foreground">
+                          {row.ratingCount.toLocaleString()}
+                        </strong>{" "}
+                        ratings
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="sr-only">Response count</dt>
+                      <dd className="tabular-nums">
+                        <strong className="text-foreground">
+                          {row.responseCount.toLocaleString()}
+                        </strong>{" "}
+                        responses
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="sr-only">Evaluation count</dt>
+                      <dd className="tabular-nums">
+                        <strong className="text-foreground">
+                          {row.evaluationCount.toLocaleString()}
+                        </strong>{" "}
+                        evaluations
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="sr-only">
+                        {row.contributorKind === "cilos"
+                          ? "Contributing CILO count"
+                          : "Bound question count"}
+                      </dt>
+                      <dd className="tabular-nums">
+                        <strong className="text-foreground">
+                          {row.contributorCount.toLocaleString()}
+                        </strong>{" "}
+                        {row.contributorKind === "cilos" ? "contributing CILOs" : "bound questions"}
+                      </dd>
+                    </div>
+                  </dl>
+                  {!row.hasEvidence && (
+                    <p className="text-muted-foreground text-label-sm mt-1">
+                      No mapped quantitative evidence for this source in the selected period.
+                    </p>
+                  )}
+                </DisclosureContent>
+              </Disclosure>
             </div>
           ))
         )}

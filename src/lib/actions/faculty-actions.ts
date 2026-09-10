@@ -42,7 +42,8 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
     if (!domainUser) {
       return {
         success: false,
-        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
       };
     }
 
@@ -61,11 +62,8 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
     // Role + affiliation only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
-        where: { user_id: domainUser.id },
+        where: { user_id_role: { user_id: domainUser.id, role: ROLES.FACULTY } },
       });
-      if (existingRole && existingRole.role !== ROLES.FACULTY) {
-        throw new Error("ROLE_MISMATCH_NON_FACULTY");
-      }
       if (!existingRole) {
         await tx.userRole.create({
           data: {

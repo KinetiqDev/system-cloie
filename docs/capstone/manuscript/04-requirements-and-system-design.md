@@ -86,7 +86,7 @@ Per the [official guide, Chapter 4](../guide/technical-document-guide-2026.md): 
 
 ### Working notes (from repository evidence)
 
-- AuthN/AuthZ design: single-role accounts ([docs/adr/0001-single-role-accounts.md](../../adr/0001-single-role-accounts.md)), domain users separated from auth identities ([docs/adr/0002-separate-domain-users-from-auth-identities.md](../../adr/0002-separate-domain-users-from-auth-identities.md)), Google-authoritative names ([docs/adr/0014-google-authoritative-account-names.md](../../adr/0014-google-authoritative-account-names.md))
+- AuthN/AuthZ design: multi-role accounts with one server-resolved active authorization context ([docs/adr/0022-multi-role-accounts-with-active-role-context.md](../../adr/0022-multi-role-accounts-with-active-role-context.md)), domain users separated from auth identities ([docs/adr/0002-separate-domain-users-from-auth-identities.md](../../adr/0002-separate-domain-users-from-auth-identities.md)), Google-authoritative names ([docs/adr/0014-google-authoritative-account-names.md](../../adr/0014-google-authoritative-account-names.md))
 - Legal gate: privacy/terms acknowledgement before role selection: [src/features/legal/CONTEXT.md](../../../src/features/legal/CONTEXT.md)
 - Confidential-response and one-response invariants; cross-role privacy boundaries: [src/features/responses/CONTEXT.md](../../../src/features/responses/CONTEXT.md), [src/features/response-review/CONTEXT.md](../../../src/features/response-review/CONTEXT.md)
 - Demo/production authentication separation: [docs/adr/0008-dedicated-demo-deployment-authentication.md](../../adr/0008-dedicated-demo-deployment-authentication.md)

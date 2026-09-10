@@ -3,9 +3,10 @@ import { GenEdCoursesCatalog } from "@/features/academic-structure/components/ge
 import { listGenEdCourses } from "@/features/academic-structure/services/resolve-gen-ed-courses";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Courses — General Education Catalog — Gen Ed Coordinator | System CLOIE",
+  title: buildPageTitle("Courses", "Gen Ed Coordinator"),
 };
 
 export default async function GenEdCoordinatorCoursesPage() {

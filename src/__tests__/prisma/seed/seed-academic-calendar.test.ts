@@ -1,31 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 
-const {
-  backfillCanonicalTermInstancesMock,
-  createSchoolYearWithCanonicalTermsMock,
-  prisma,
-} = vi.hoisted(() => ({
-  backfillCanonicalTermInstancesMock: vi.fn(),
-  createSchoolYearWithCanonicalTermsMock: vi.fn(),
-  prisma: {
-    schoolYear: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
-    qualitativeResponseItem: { deleteMany: vi.fn() },
-    quantitativeResponseItem: { deleteMany: vi.fn() },
-    response: { deleteMany: vi.fn() },
-    evaluationAssignment: { deleteMany: vi.fn() },
-    courseBoundCiloQuestionBinding: { deleteMany: vi.fn() },
-    courseBoundEvaluationTarget: { deleteMany: vi.fn() },
-    courseBoundEvaluation: { deleteMany: vi.fn() },
-    centralDeployment: { deleteMany: vi.fn() },
-    courseAssignmentMembership: { deleteMany: vi.fn() },
-    courseAssignment: { deleteMany: vi.fn() },
-    studentEnrollment: { deleteMany: vi.fn() },
-    $executeRawUnsafe: vi.fn(),
-    academicPeriodReadinessSnapshot: { deleteMany: vi.fn() },
-    academicTermInstance: { findFirst: vi.fn(), update: vi.fn() },
-  },
-}));
+const { backfillCanonicalTermInstancesMock, createSchoolYearWithCanonicalTermsMock, prisma } =
+  vi.hoisted(() => ({
+    backfillCanonicalTermInstancesMock: vi.fn(),
+    createSchoolYearWithCanonicalTermsMock: vi.fn(),
+    prisma: {
+      schoolYear: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+      qualitativeResponseItem: { deleteMany: vi.fn() },
+      quantitativeResponseItem: { deleteMany: vi.fn() },
+      response: { deleteMany: vi.fn() },
+      evaluationAssignment: { deleteMany: vi.fn() },
+      courseBoundCiloQuestionBinding: { deleteMany: vi.fn() },
+      courseBoundEvaluationTarget: { deleteMany: vi.fn() },
+      courseBoundEvaluation: { deleteMany: vi.fn() },
+      centralDeployment: { deleteMany: vi.fn() },
+      courseAssignmentMembership: { deleteMany: vi.fn() },
+      courseAssignment: { deleteMany: vi.fn() },
+      studentEnrollment: { deleteMany: vi.fn() },
+      $executeRawUnsafe: vi.fn(),
+      academicPeriodReadinessSnapshot: { deleteMany: vi.fn() },
+      academicTermInstance: { findFirst: vi.fn(), update: vi.fn() },
+    },
+  }));
 
 vi.mock("@/lib/db/prisma", () => ({ prisma }));
 vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
@@ -38,8 +35,7 @@ import { academicTermDefinitions } from "@/../prisma/seed/fixtures/academic-cale
 import { seedAcademicCalendar } from "@/../prisma/seed/runners/seed-academic-calendar";
 
 const schoolYearIdFor = (code: string) =>
-  code === "2026-2027" ? D.SY_2026_2027 : D.SY_2027_2028;
-
+  code === "2025-2026" ? D.SY_2025_2026 : code === "2026-2027" ? D.SY_2026_2027 : D.SY_2027_2028;
 describe("seed-academic-calendar runner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,8 +66,8 @@ describe("seed-academic-calendar runner", () => {
   it("creates School Years through the canonical path, backfills, applies lifecycle statuses, and activates SY_2026_2027", async () => {
     const context = await seedAcademicCalendar();
 
-    expect(prisma.schoolYear.findUnique).toHaveBeenCalledTimes(2);
-    expect(createSchoolYearWithCanonicalTermsMock).toHaveBeenCalledTimes(2);
+    expect(prisma.schoolYear.findUnique).toHaveBeenCalledTimes(3);
+    expect(createSchoolYearWithCanonicalTermsMock).toHaveBeenCalledTimes(3);
     expect(createSchoolYearWithCanonicalTermsMock).toHaveBeenCalledWith({
       id: D.SY_2026_2027,
       startYear: 2026,
@@ -151,7 +147,7 @@ describe("seed-academic-calendar runner", () => {
     expect(context.termInstance.id).toBe("generated-id");
     expect(context.termInstances.ti2026First.id).toBe("generated-id");
     expect(prisma.studentEnrollment.deleteMany).toHaveBeenCalledWith({
-      where: { term_instance_id: { in: ["generated-id", "generated-id", "generated-id", "generated-id"] } },
+      where: { term_instance_id: { in: academicTermDefinitions.map(() => "generated-id") } },
     });
   });
 
@@ -167,9 +163,7 @@ describe("seed-academic-calendar runner", () => {
     expect(context.termInstances.ti2026First.id).toBe(D.TI_2026_2027_1ST);
     expect(context.termInstances.ti2026Second.id).toBe(D.TI_2026_2027_2ND);
     expect(context.termInstances.ti2027First.id).toBe(D.TI_2027_2028_1ST);
-    expect(context.termInstances.ti2027SecondCancelled.id).toBe(
-      D.TI_2027_2028_2ND_CANCELLED
-    );
+    expect(context.termInstances.ti2027SecondCancelled.id).toBe(D.TI_2027_2028_2ND_CANCELLED);
   });
 
   it("uses a canonical fixture set (all fixture pairs are structural terms)", () => {
@@ -183,7 +177,7 @@ describe("seed-academic-calendar runner", () => {
       ].map(([semester, term]) => `${semester}:${term ?? ""}`)
     );
 
-    expect(academicTermDefinitions).toHaveLength(4);
+    expect(academicTermDefinitions).toHaveLength(6);
     for (const definition of academicTermDefinitions) {
       expect(canonical.has(`${definition.semester}:${definition.term ?? ""}`)).toBe(true);
     }

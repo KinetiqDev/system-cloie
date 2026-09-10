@@ -117,7 +117,7 @@ describe("program head identified response-review pages", () => {
         "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1"
       )
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Back to course evaluations/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Back to Course Evaluations/ })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/responses"
     );
@@ -294,7 +294,7 @@ describe("program head identified response-review pages", () => {
       "termInstanceId=11111111-1111-4111-8111-111111111111"
     );
     // Alternate back links keep the scope too.
-    expect(screen.getByRole("link", { name: /Back to evaluation/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Back to Evaluation/ })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/responses/course/eval-1?termInstanceId=11111111-1111-4111-8111-111111111111"
     );

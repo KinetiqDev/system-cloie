@@ -68,6 +68,7 @@ export async function editUserBySecretaryAction(formData: FormData): Promise<
 
   const raw: Record<string, unknown> = {
     id: String(formData.get("id") ?? ""),
+    expectedRole: String(formData.get("expectedRole") ?? ""),
     name: String(formData.get("name") ?? ""),
     confirmationToken: formData.get("confirmationToken") || undefined,
   };

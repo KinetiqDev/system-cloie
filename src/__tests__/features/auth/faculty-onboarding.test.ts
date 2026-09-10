@@ -195,7 +195,7 @@ describe("createFacultyProfile Server Action", () => {
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id: "faculty-123" },
+      where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
     });
     expect(prisma.userRole.create).toHaveBeenCalledWith({
       data: {
@@ -263,7 +263,7 @@ describe("createFacultyProfile Server Action", () => {
 
     expect(result.success).toBe(true);
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id: "faculty-123" },
+      where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
     });
     expect(prisma.userRole.create).not.toHaveBeenCalled();
   });
@@ -285,7 +285,7 @@ describe("createFacultyProfile Server Action", () => {
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
   });
 
-  it("should fail onboarding if userRole exists and is a different role", async () => {
+  it("allows onboarding when the user holds a different role (multi-role)", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
       error: null,
@@ -294,16 +294,21 @@ describe("createFacultyProfile Server Action", () => {
       id: "550e8400-e29b-41d4-a716-446655440000",
       is_active: true,
     });
-    (prisma.userRole.findUnique as any).mockResolvedValue({
-      id: "role-123",
-      user_id: "faculty-123",
-      role: ROLES.STUDENT,
-    });
+    // No FACULTY role claimed yet; other roles no longer block registration.
+    (prisma.userRole.findUnique as any).mockResolvedValue(null);
 
     const result = await createFacultyProfile(validPayload);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Your account is already registered with a different role.");
+    expect(result.success).toBe(true);
+    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
+    });
+    expect(prisma.userRole.create).toHaveBeenCalledWith({
+      data: {
+        user_id: "faculty-123",
+        role: ROLES.FACULTY,
+      },
+    });
   });
 
   it("rejects registration when the resolved domain user is inactive", async () => {

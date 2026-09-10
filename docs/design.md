@@ -29,7 +29,7 @@ Surface conflicts explicitly. This file does not define product scope, authoriza
 - **Institution:** Assumption College of Davao
 - **Administrative roles:** `SECRETARY`, `DEAN`, `PROGRAM_HEAD`, `FACULTY`
 - **Respondent roles:** `STUDENT`, `ALUMNI`, `INDUSTRY_PARTNER`
-- **Production identity:** one active account role; dev/demo role switching is environment-only
+- **Production identity:** accounts may hold distinct assigned roles; exactly one server-resolved role is active at a time
 - **Character:** institutional, trustworthy, calm, precise, professional, orderly, analytical, restrained
 
 ### Experience Principles
@@ -252,6 +252,12 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 Theme selection must not change the page pattern.
 
+### Document Titles (browser tab)
+
+- Every route sets its document title via `buildPageTitle` (`src/lib/page-title.ts`); the root template appends `| System CLOIE`, so titles never hand-type the brand.
+- Order is `{Page} | {Role}` (e.g. `Dashboard | Program Head`); omit the role only on unique public pages (e.g. `Respondent Portal`). The landing route uses the default `System CLOIE — Assumption College of Davao`.
+- The tab page segment matches the on-page H1. Separators are always `|`; never em dashes, hyphens, or `title.absolute`.
+
 ### System States
 
 - **Empty:** icon, title, explanation, recovery CTA
@@ -299,6 +305,7 @@ Rules:
 - Routine destructive controls use soft danger; filled danger is confirmation-only.
 - Async actions disable duplicate submission and show loading.
 - Keep existing size names in `button.tsx`.
+- Upward navigation uses `BackLink` (`src/components/ui/back-link.tsx`): ghost `sm`, `-ml-2`, muted-to-foreground, `ArrowLeft` leading. `href` for plain leaves, `onClick` only for a leave guard. Label `Back to {ParentList}` in Title Case. Step controls (`Previous`, `Back to editing`) and error-recovery CTAs are not upward navigation and keep their own variants.
 
 ### 8.3 Form Controls
 

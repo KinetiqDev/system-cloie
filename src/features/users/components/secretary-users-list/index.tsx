@@ -179,20 +179,6 @@ export function SecretaryUsersList({
             page: 1,
           })
         }
-        sort={query.sort}
-        direction={query.direction}
-        onSortChange={(value) =>
-          navigateWithQuery({
-            sort: (value ?? "name") as SecretaryUsersListQuery["sort"],
-            page: 1,
-          })
-        }
-        onDirectionChange={(value) =>
-          navigateWithQuery({
-            direction: (value ?? "asc") as SecretaryUsersListQuery["direction"],
-            page: 1,
-          })
-        }
         programs={programs}
       />
 

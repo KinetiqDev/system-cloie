@@ -282,4 +282,30 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       data: { items: [], page: 0, pageSize: 20 },
     });
   });
+
+  describe("column sorting", () => {
+    beforeEach(() => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
+    });
+
+    it("orders by the selected field with an id tie-breaker", async () => {
+      await listCourseAssignments({}, { sortBy: "faculty", sortDir: "desc" });
+
+      expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ faculty: { name: "desc" } }, { id: "asc" }],
+        })
+      );
+    });
+
+    it("keeps the default recency order with an id tie-breaker", async () => {
+      await listCourseAssignments({});
+
+      expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ created_at: "desc" }, { id: "asc" }],
+        })
+      );
+    });
+  });
 });

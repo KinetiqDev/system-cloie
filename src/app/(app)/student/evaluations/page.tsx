@@ -4,8 +4,11 @@ import { EvaluationListBrowser } from "@/features/users/components/evaluation-li
 import { listStudentAssignedEvaluations } from "@/features/responses/services/list-student-assigned-evaluations";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { EvaluationBrowserSkeleton } from "@/components/layout/respondent-route-loading";
+import { buildPageTitle } from "@/lib/page-title";
 
 type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
+
+export const metadata = { title: buildPageTitle("Evaluations", "Student") };
 
 export default async function StudentEvaluationsPage() {
   const session = await resolveAuthSession();

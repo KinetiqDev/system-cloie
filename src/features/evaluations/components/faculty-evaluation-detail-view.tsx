@@ -1,9 +1,8 @@
-import Link from "next/link";
-import { ArrowLeft, FileText, UsersRound } from "lucide-react";
+import { FileText, UsersRound } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Empty,
@@ -13,7 +12,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { getStatusVariant } from "./evaluation-status";
 import { FacultyEvaluationRespondents } from "./faculty-evaluation-respondents";
@@ -68,13 +66,7 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Link
-          href="/faculty/tools?tab=published"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
-          Back to Evaluation Tools
-        </Link>
+        <BackLink href="/faculty/tools?tab=published">Back to Evaluation Tools</BackLink>
       </div>
       <Breadcrumbs
         items={[

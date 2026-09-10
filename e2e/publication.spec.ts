@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
+import { E2E_CONTRACT } from "./support/contract";
 import { expectNoAxeViolations, loginAs } from "./support/helpers";
 
 /**
@@ -51,9 +52,14 @@ test("Faculty publishes an owned Course-bound evaluation; roster stays open; Stu
   // Configure: name the deployment and select the owned active assignment.
   await page.getByLabel("Deployed Evaluation Name").fill(fx.publicationDeploymentName);
   await page.getByLabel("Class Assignment").click();
+  // The historical-trends seed clones this assignment into COMPLETED terms
+  // with the same course/section identity; pin the ACTIVE school year so the
+  // publish targets the owned active assignment.
   await page
     .getByRole("option", {
-      name: new RegExp(`GESTECH.*EVENING \\(${fx.publicationTarget.programCode}\\)`),
+      name: new RegExp(
+        `GESTECH.*EVENING \\(${fx.publicationTarget.programCode}\\) ${E2E_CONTRACT.academicPeriods.active.schoolYearCode}`
+      ),
     })
     .click();
 
@@ -102,7 +108,9 @@ test("Faculty publishes an owned Course-bound evaluation; roster stays open; Stu
   await page.getByLabel("Class Assignment").click();
   await page
     .getByRole("option", {
-      name: new RegExp(`GESTECH.*EVENING \\(${fx.publicationTarget.programCode}\\)`),
+      name: new RegExp(
+        `GESTECH.*EVENING \\(${fx.publicationTarget.programCode}\\) ${E2E_CONTRACT.academicPeriods.active.schoolYearCode}`
+      ),
     })
     .click();
   await page.getByRole("button", { name: "Preview Respondents" }).click();

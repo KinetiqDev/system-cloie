@@ -6,6 +6,7 @@ import { getCiTestAuthConfig, readCiTestAuthCookie } from "./ci-test-auth";
 import { readDevAuthCookie } from "./dev-auth";
 import { getDemoAuthConfig, readDemoAuthCookie } from "./demo-auth";
 import { buildAuthSessionSnapshot } from "./build-auth-session-snapshot";
+import { readActiveRoleCookie } from "./active-role-cookie";
 import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import type { VerificationStatus } from "@prisma/client";
 
@@ -108,12 +109,19 @@ async function resolveAuthSessionFromAuthenticatedUser(
     hasFacultyAffiliation = !!affiliation;
   }
 
+  const requestedActiveRole = await readActiveRoleCookie();
+  const activeRole =
+    requestedActiveRole !== null && roles.includes(requestedActiveRole as Role)
+      ? (requestedActiveRole as Role)
+      : null;
+
   return buildAuthSessionSnapshot({
     userId: dbUser?.id ?? user.id,
     email: isDedicatedDemo || isCiTest ? (dbUser?.email ?? null) : user.email,
     // Domain User.name only — never invent from email or provider metadata here.
     name: dbUser?.name ?? null,
     roles,
+    activeRole,
     studentProfileId,
     alumniProfileId,
     industryPartnerProfileId,

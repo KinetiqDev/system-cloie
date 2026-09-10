@@ -34,6 +34,9 @@ import {
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { ROLES } from "@/lib/constants/roles";
 import { formatDate } from "@/lib/utils/date-format";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Dashboard", "Faculty") };
 
 // The page shells session guards, metric reads, and section composition in one server component;
 // the guard checks are the route's authorization contract.

@@ -342,12 +342,28 @@ export type ListCourseAssignmentsFilter = {
 };
 
 /**
+ * Sortable course assignment table columns (URL `sort` param values).
+ */
+export type CourseAssignmentSortField =
+  | "course"
+  | "faculty"
+  | "program"
+  | "class"
+  | "term"
+  | "scope"
+  | "status";
+
+export type CourseAssignmentSortDirection = "asc" | "desc";
+
+/**
  * Pagination options.
  */
 export type ListOptions = {
   page?: number;
   pageSize?: number;
   programId?: string;
+  sortBy?: CourseAssignmentSortField;
+  sortDir?: CourseAssignmentSortDirection;
 };
 
 /**

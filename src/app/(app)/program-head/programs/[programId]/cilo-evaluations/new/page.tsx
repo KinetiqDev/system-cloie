@@ -14,6 +14,9 @@ import {
 import { prisma } from "@/lib/db/prisma";
 import { buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 import type { AssignmentOption } from "@/features/evaluations/components/assignment-picker";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("New CILO Evaluation", "Program Head") };
 
 export default async function NewProgramHeadCiloEvaluationPage({
   params,

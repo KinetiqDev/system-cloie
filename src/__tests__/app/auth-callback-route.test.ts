@@ -71,6 +71,13 @@ vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
   resolvePostLoginDestination: resolvePostLoginDestinationMock,
 }));
 
+vi.mock("@/features/auth/services/active-role-cookie", () => ({
+  readActiveRoleCookie: vi.fn().mockResolvedValue(null),
+  setActiveRoleCookie: vi.fn(),
+  clearActiveRoleCookie: vi.fn(),
+  ACTIVE_ROLE_COOKIE_NAME: "cloie_active_role",
+}));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     user: {
@@ -102,10 +109,12 @@ describe("auth callback route", () => {
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
   });
@@ -215,6 +224,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -251,6 +261,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -292,6 +303,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -328,6 +340,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -364,6 +377,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
       profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=alumni");
@@ -434,6 +448,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -519,6 +534,7 @@ describe("auth callback route", () => {
       });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -563,6 +579,7 @@ describe("auth callback route", () => {
       });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
@@ -734,7 +751,7 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/status/inactive");
   });
 
-  it("redirects to role mismatch page when the intent does not match the stored role", async () => {
+  it("allows multi-role claim when the intent does not match the stored role", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -753,6 +770,17 @@ describe("auth callback route", () => {
       is_active: true,
       roles: [{ role: SystemRole.FACULTY }],
     });
+    upsertUserRoleMock.mockResolvedValue({
+      id: "role-2",
+      user_id: "domain-user-1",
+      role: SystemRole.STUDENT,
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: null,
+      roles: ["FACULTY", "STUDENT"],
+      profileGate: { status: "COMPLETE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/select-role");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
@@ -760,8 +788,13 @@ describe("auth callback route", () => {
 
     expect(updateUserMock).not.toHaveBeenCalled();
     expect(updateManyUserMock).not.toHaveBeenCalled();
-    expect(signOutMock).toHaveBeenCalledTimes(1);
-    expect(response.headers.get("location")).toContain("/status/role-mismatch");
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(upsertUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "domain-user-1", role: SystemRole.STUDENT } },
+      update: {},
+      create: { user_id: "domain-user-1", role: SystemRole.STUDENT },
+    });
+    expect(response.headers.get("location")).toContain("/select-role");
   });
 
   it("denies role mismatch on first link before mutation", async () => {
@@ -816,6 +849,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -946,6 +980,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
+      roles: ["FACULTY"],
       profileGate: { status: "COMPLETE" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/faculty/dashboard");
@@ -989,6 +1024,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
@@ -1121,10 +1157,7 @@ describe("auth callback route", () => {
     });
 
     const response = await GET(
-      callbackRequest(
-        "https://cloie.test/api/auth/callback?code=abc&intent=secretary",
-        "secretary"
-      )
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=secretary", "secretary")
     );
 
     expect(updateUserMock).not.toHaveBeenCalled();
@@ -1173,6 +1206,7 @@ describe("auth callback route", () => {
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "STUDENT",
+      roles: ["STUDENT"],
       profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
     });
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
@@ -1226,6 +1260,7 @@ describe("auth callback route", () => {
       });
       resolveAuthSessionFromUserMock.mockResolvedValue({
         activeRole: "SECRETARY",
+        roles: ["SECRETARY"],
         profileGate: { status: "COMPLETE" },
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
@@ -1272,7 +1307,9 @@ describe("auth callback route", () => {
 
       expect(createUserMock).not.toHaveBeenCalled();
       expect(signOutMock).toHaveBeenCalledTimes(1);
-      expect(response.headers.get("location")).toBe("https://cloie.test/status/missing-google-name");
+      expect(response.headers.get("location")).toBe(
+        "https://cloie.test/status/missing-google-name"
+      );
     });
 
     it("promotes an existing bootstrap email user to SECRETARY and replaces provisional name on first link", async () => {
@@ -1318,6 +1355,7 @@ describe("auth callback route", () => {
       updateManyUserMock.mockResolvedValue({ count: 1 });
       resolveAuthSessionFromUserMock.mockResolvedValue({
         activeRole: "SECRETARY",
+        roles: ["SECRETARY"],
         profileGate: { status: "COMPLETE" },
       });
       resolvePostLoginDestinationMock.mockReturnValue("/secretary/dashboard");
@@ -1338,8 +1376,10 @@ describe("auth callback route", () => {
       });
       expect(updateUserMock).not.toHaveBeenCalled();
       expect(upsertUserRoleMock).toHaveBeenCalledWith({
-        where: { user_id: "existing-user-id" },
-        update: { role: SystemRole.SECRETARY },
+        where: {
+          user_id_role: { user_id: "existing-user-id", role: SystemRole.SECRETARY },
+        },
+        update: {},
         create: { user_id: "existing-user-id", role: SystemRole.SECRETARY },
       });
       expect(response.headers.get("location")).toBe("https://cloie.test/secretary/dashboard");

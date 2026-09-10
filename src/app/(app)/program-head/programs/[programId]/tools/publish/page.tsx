@@ -10,6 +10,9 @@ import { listInstitutionalBaselines } from "@/features/instruments/services/list
 import { listProgramHeadTemplates } from "@/features/instruments/services/manage-program-head-templates";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { YearLevel } from "@prisma/client";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Publish Tool", "Program Head") };
 
 export default async function PublishSelectedProgramToolPage({
   params,

@@ -5,8 +5,8 @@ Identity and Access defines how people enter System CLOIE, claim or use account 
 ## General Education Coordinator (approved scope, issue #477)
 
 **General Education Coordinator (`GEN_ED_COORDINATOR`)**:
-A pre-provisioned, single-role System CLOIE account for college-wide General Education CourseAssignment stewardship after the approved transfer. It requires an eligible `acd.edu.ph` / `acdeducation.com` institutional email and SHALL NOT require `program_id`. Self-service role claim SHALL reject `GEN_ED_COORDINATOR`. No assignment/portfolios table exists in this change.
-_Avoid_: Self-service Coordinator claim, Coordinator with program_id, multi-role Coordinator
+A pre-provisioned System CLOIE account role for college-wide General Education CourseAssignment stewardship after the approved transfer. It requires an eligible `acd.edu.ph` / `acdeducation.com` institutional email and SHALL NOT require `program_id`. Self-service role claim SHALL reject `GEN_ED_COORDINATOR`. No assignment or portfolio table exists in this change.
+_Avoid_: Self-service Coordinator claim, Coordinator with `program_id`
 
 **Coordinator scope model — shared college-wide**:
 Every active `GEN_ED_COORDINATOR` account shares the same managed scope: `Course.course_scope == GENERAL_EDUCATION`. Authorization is derived from Course scope, not a nullable `Course.program_id` or an assignment row. A portfolio-partitioned model requires a separately approved capability change and a new assignment model and is not enabled.
@@ -26,6 +26,10 @@ _Avoid_: Self-sign up, self-registration when discussing authorization semantics
 **Incomplete self-service role claim**:
 A self-service role claim that has assigned the System CLOIE account role but has not yet completed the role's required onboarding data.
 _Avoid_: Completed account, role change
+
+**Incomplete role cancellation**:
+A request to abandon one assigned self-service role before its required profile artifact exists. The requested role is checked against the account's assigned-role set and removed only while its own completion artifact remains absent; another active role and a completed deferred Student profile are preserved.
+_Avoid_: Account deletion, active role selection, completed-role revocation
 
 **Pre-provisioned role**:
 A System CLOIE account role that must be created by an administrator before the person can enter through the role selection portal.
@@ -101,23 +105,27 @@ _Avoid_: Primary Production, development server, public demo bypass
 
 **Demo-authenticated account**:
 A seeded System CLOIE account selected through the dedicated demo deployment role switcher and represented by a short-lived signed demo session; its identity does not change the account's normal authorization or account-state rules. Demo and development authentication retain fixture-controlled names and do not perform Google name derivation or first-link replacement.
-_Avoid_: Real OAuth account, multi-role account, development-only account
+_Avoid_: Real OAuth account, development-only account
 
 **Account email**:
 The trimmed lowercase email address used to match a Google-authenticated identity to a System CLOIE account during the first OAuth link. It establishes the account match but never supplies the account name. An already-linked User whose email is presented with a different Auth identity fails closed rather than being relinked.
 _Avoid_: Gmail alias, display email when discussing identity matching
 
-**System CLOIE account role**:
-The single role that defines a user's participation in System CLOIE.
-_Avoid_: Primary role, role stack, multi-role account
+**Assigned account role**:
+A System CLOIE role attached to an account that the person may select as their active context. An account may hold multiple distinct assigned roles, but assigned membership alone grants no authority while another role is active.
+_Avoid_: Role stack, simultaneous authority, primary role
 
 **Active account role**:
-The current System CLOIE account role used for dashboard access, onboarding gates, and account-state decisions.
-_Avoid_: Historical profile, previous role
+The one assigned role currently used for dashboard access, authorization, onboarding gates, and account-state decisions.
+_Avoid_: Any assigned role, client-granted role, primary role
+
+**Active role selection**:
+A person's choice among their assigned account roles. Selection changes authorization context but does not create, revoke, or complete a role.
+_Avoid_: Role impersonation, role assignment, role change
 
 **Role change**:
-An administrator-controlled change from one System CLOIE account role to another after the account has already been registered.
-_Avoid_: Self-service role switch, role upgrade, role stacking
+An administrator-controlled change to an account's assigned-role set after registration.
+_Avoid_: Active role selection, role upgrade
 
 **Role requirement**:
 The role-specific information that must exist before a System CLOIE account can actively use a selected account role.
@@ -148,16 +156,16 @@ Enrollment ledger rows and evaluation history that remain attached to the User a
 _Avoid_: Active Student role, deleted student record
 
 **Role mismatch**:
-A sign-in attempt where the selected portal role differs from the existing System CLOIE account role for the authenticated Google identity.
-_Avoid_: Role switch, primary-role fallback
+A sign-in attempt whose requested role is neither already assigned nor eligible for self-service claim by that Google-authenticated account.
+_Avoid_: Active role selection, stale active-role preference
 
 **Faculty program affiliation**:
 The academic program a Faculty Member is associated with for System CLOIE participation; a Secretary-created Faculty account must start with one primary faculty program affiliation, while additional affiliations may be managed after account creation.
 _Avoid_: Faculty course assignment, teaching load when referring only to onboarding identity
 
 **Teaching capability**:
-A term-scoped ability to perform course instructor work for a specific course assignment, regardless of whether the account role is Faculty Member or Program Head.
-_Avoid_: Second account role, role switching
+A term-scoped ability to perform course instructor work for a specific course assignment, independent of which account roles the person holds.
+_Avoid_: Faculty-role requirement, unrestricted teaching access
 
 **Course assignment**:
 A term-scoped assignment of a person to handle a course for a specific academic context, granting teaching capability for that course.

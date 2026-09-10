@@ -101,7 +101,10 @@ test.describe("@visual curated baseline (desktop)", () => {
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await page.getByRole("link", { name: "Responses", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
-    await page.getByRole("link", { name: fx.courseEvaluation.title, exact: true }).click();
+    // The historical-trends seed clones this deployment title into COMPLETED
+    // terms, so scope the link to the ACTIVE evaluation id. The landing
+    // renders the same evaluation as both a card and a table row.
+    await page.locator(`a[href$="/${fx.courseEvaluation.id}"]:visible`).click();
     await expect(page.getByRole("heading", { name: fx.courseEvaluation.title })).toBeVisible();
     await respondentRow(page, fx.courseResponse.respondentName)
       .getByRole("link", { name: "View Response" })

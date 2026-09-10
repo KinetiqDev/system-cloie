@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { useForm, Controller, type Resolver, type SubmitHandler } from "react-hook-form";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
@@ -11,15 +12,32 @@ import {
 } from "@/lib/schemas/industry-partner-profile";
 import { createIndustryPartnerProfile } from "@/lib/actions/industry-partner-actions";
 import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
+import { ROLES } from "@/lib/constants/roles";
 import { cn } from "@/lib/utils";
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, ArrowLeft, ArrowRight, Briefcase, Mail, Building2, UserCircle, GraduationCap } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Briefcase,
+  Mail,
+  Building2,
+  UserCircle,
+  GraduationCap,
+} from "lucide-react";
 
 type Program = {
   id: string;
@@ -39,6 +57,7 @@ export function IndustryPartnerOnboardingForm({
   programs,
 }: IndustryPartnerOnboardingFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const router = useRouter();
 
   const {
     control,
@@ -70,7 +89,7 @@ export function IndustryPartnerOnboardingForm({
     }
 
     if (result.success === true) {
-      window.location.assign("/industry-partner/dashboard");
+      router.push("/industry-partner/dashboard");
     }
   };
 
@@ -78,12 +97,16 @@ export function IndustryPartnerOnboardingForm({
     <Card className="border-border shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <span className="text-label-md text-link font-bold tracking-wider uppercase">Onboarding</span>
+          <span className="text-label-md text-link font-bold tracking-wider uppercase">
+            Onboarding
+          </span>
           <span className="text-caption text-text-muted">Industry Partner Profile</span>
         </div>
         <div className="bg-primary -mx-6 mt-3 h-1 w-[calc(100%+3rem)] sm:-mx-8" />
         <CardTitle className="pt-4 text-2xl font-bold">Industry Partner Setup</CardTitle>
-        <CardDescription>Please provide your professional details to access the industry partner portal.</CardDescription>
+        <CardDescription>
+          Please provide your professional details to access the industry partner portal.
+        </CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
@@ -97,29 +120,58 @@ export function IndustryPartnerOnboardingForm({
 
           {/* Email — read-only display */}
           <div className="space-y-2">
-            <Label htmlFor="email-account" className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">Email Account</Label>
+            <Label
+              htmlFor="email-account"
+              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+            >
+              Email Account
+            </Label>
             <div className="relative">
-              <Mail aria-hidden="true" className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2" />
-              <Input id="email-account" type="email" value={email} readOnly aria-readonly="true" className="bg-surface-muted text-text-secondary pl-11" />
+              <Mail
+                aria-hidden="true"
+                className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+              />
+              <Input
+                id="email-account"
+                type="email"
+                value={email}
+                readOnly
+                aria-readonly="true"
+                className="bg-surface-muted text-text-secondary pl-11"
+              />
             </div>
           </div>
 
           {/* Account Identity */}
           <div className="flex items-center gap-2 pt-2">
             <UserCircle className="text-primary size-5" />
-            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">Account Identity</h2>
+            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
+              Account Identity
+            </h2>
           </div>
           <p className="text-body-sm text-text-muted -mt-4">
             Your account name comes from your Google account and is not editable during onboarding.
           </p>
 
           <div className="space-y-2">
-            <Label htmlFor="account-name" className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+            <Label
+              htmlFor="account-name"
+              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+            >
               Account Name
             </Label>
             <div className="relative">
-              <UserCircle aria-hidden="true" className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2" />
-              <Input id="account-name" value={name} readOnly aria-readonly="true" className="bg-surface-muted text-text-secondary pl-11" />
+              <UserCircle
+                aria-hidden="true"
+                className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+              />
+              <Input
+                id="account-name"
+                value={name}
+                readOnly
+                aria-readonly="true"
+                className="bg-surface-muted text-text-secondary pl-11"
+              />
             </div>
           </div>
 
@@ -128,12 +180,17 @@ export function IndustryPartnerOnboardingForm({
           {/* Professional Details */}
           <div className="flex items-center gap-2">
             <Briefcase className="text-primary size-5" />
-            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">Professional Details</h2>
+            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
+              Professional Details
+            </h2>
           </div>
 
           {/* Company Name */}
           <div className="space-y-2">
-            <Label htmlFor="company_name" className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+            <Label
+              htmlFor="company_name"
+              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+            >
               Company / Organization Name
             </Label>
             <div className="relative">
@@ -144,11 +201,17 @@ export function IndustryPartnerOnboardingForm({
                 {...register("company_name")}
                 aria-invalid={!!errors.company_name}
                 aria-describedby={errors.company_name ? "company_name-error" : undefined}
-                className={cn("pl-10", errors.company_name && "border-destructive focus-visible:ring-destructive/20")}
+                className={cn(
+                  "pl-10",
+                  errors.company_name && "border-destructive focus-visible:ring-destructive/20"
+                )}
               />
             </div>
             {errors.company_name && (
-              <p id="company_name-error" className="text-destructive flex items-center gap-1 text-xs">
+              <p
+                id="company_name-error"
+                className="text-destructive flex items-center gap-1 text-xs"
+              >
                 <AlertCircle className="size-3" />
                 {errors.company_name.message}
               </p>
@@ -157,7 +220,10 @@ export function IndustryPartnerOnboardingForm({
 
           {/* Position */}
           <div className="space-y-2">
-            <Label htmlFor="position" className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+            <Label
+              htmlFor="position"
+              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+            >
               Position / Title
             </Label>
             <div className="relative">
@@ -168,7 +234,10 @@ export function IndustryPartnerOnboardingForm({
                 {...register("position")}
                 aria-invalid={!!errors.position}
                 aria-describedby={errors.position ? "position-error" : undefined}
-                className={cn("pl-10", errors.position && "border-destructive focus-visible:ring-destructive/20")}
+                className={cn(
+                  "pl-10",
+                  errors.position && "border-destructive focus-visible:ring-destructive/20"
+                )}
               />
             </div>
             {errors.position && (
@@ -184,21 +253,29 @@ export function IndustryPartnerOnboardingForm({
           {/* Program Affiliations — multi-select */}
           <div className="flex items-center gap-2">
             <GraduationCap className="text-primary size-5" />
-            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">Program Affiliations</h2>
+            <h2 className="text-label-lg text-link font-bold tracking-wider uppercase">
+              Program Affiliations
+            </h2>
           </div>
 
           <div className="space-y-2">
             <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
               Affiliated Programs
             </Label>
-            <p className="text-caption text-text-muted">Select at least one program you are affiliated with.</p>
+            <p className="text-caption text-text-muted">
+              Select at least one program you are affiliated with.
+            </p>
             <Controller
               name="program_ids"
               control={control}
               render={({ field }) => {
-                const selected: string[] = Array.isArray(field.value) ? (field.value as string[]) : [];
+                const selected: string[] = Array.isArray(field.value)
+                  ? (field.value as string[])
+                  : [];
                 function toggle(programId: string, checked: boolean) {
-                  const next = checked ? [...selected, programId] : selected.filter((v) => v !== programId);
+                  const next = checked
+                    ? [...selected, programId]
+                    : selected.filter((v) => v !== programId);
                   const deduped = [...new Set(next)];
                   field.onChange(deduped);
                 }
@@ -206,7 +283,6 @@ export function IndustryPartnerOnboardingForm({
                   <div
                     role="group"
                     aria-label="Affiliated programs"
-                    aria-invalid={!!errors.program_ids}
                     aria-describedby={errors.program_ids ? "program_ids-error" : undefined}
                     className={cn(
                       "border-input bg-surface-input flex flex-col gap-1 rounded-xl border p-3",
@@ -223,24 +299,33 @@ export function IndustryPartnerOnboardingForm({
                           <label
                             key={program.id}
                             htmlFor={checkboxId}
-                            className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-hover has-[input:focus-visible]:ring-ring/50 has-[input:focus-visible]:ring-2 pointer-coarse:py-3"
+                            className="hover:bg-surface-hover has-[input:focus-visible]:ring-ring/50 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 has-[input:focus-visible]:ring-2 pointer-coarse:py-3"
                           >
                             <input
                               id={checkboxId}
                               type="checkbox"
                               checked={checked}
                               onChange={(e) => toggle(program.id, e.target.checked)}
-                              className="sr-only peer"
+                              className="peer sr-only"
                             />
                             <span
                               aria-hidden
                               className={cn(
-                                "border-input bg-surface-input peer-focus-visible:ring-ring/50 flex size-5 shrink-0 items-center justify-center rounded-[4px] border peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-2",
+                                "border-input bg-surface-input peer-focus-visible:ring-ring/50 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-[4px] border peer-focus-visible:ring-2",
                                 errors.program_ids && "border-destructive"
                               )}
                             >
                               {checked ? (
-                                <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <svg
+                                  viewBox="0 0 16 16"
+                                  className="size-3.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden
+                                >
                                   <path d="M3 8L6.5 11.5L13 4.5" />
                                 </svg>
                               ) : null}
@@ -257,7 +342,10 @@ export function IndustryPartnerOnboardingForm({
               }}
             />
             {errors.program_ids && (
-              <p id="program_ids-error" className="text-destructive flex items-center gap-1 text-xs">
+              <p
+                id="program_ids-error"
+                className="text-destructive flex items-center gap-1 text-xs"
+              >
                 <AlertCircle className="size-3" />
                 {errors.program_ids.message}
               </p>
@@ -280,9 +368,8 @@ export function IndustryPartnerOnboardingForm({
           <Button
             type="button"
             variant="ghost"
-            className="text-text-muted hover:text-text-primary w-full"
             onClick={async () => {
-              await resetIncompleteRoleClaim();
+              await resetIncompleteRoleClaim(ROLES.INDUSTRY_PARTNER);
             }}
           >
             <ArrowLeft className="size-4" data-icon="inline-start" />

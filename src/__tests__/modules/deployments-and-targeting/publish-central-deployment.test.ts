@@ -10,6 +10,7 @@ const {
   centralDeploymentFindFirstMock,
   centralDeploymentPloSnapshotCreateManyMock,
   academicTermInstanceFindUniqueMock,
+  alumniProfileFindManyMock,
   externalStakeholderInviteFindManyMock,
   industryPartnerProfileFindManyMock,
   instrumentTemplateFindFirstMock,
@@ -32,6 +33,7 @@ const {
   centralDeploymentFindFirstMock: vi.fn(),
   centralDeploymentPloSnapshotCreateManyMock: vi.fn(),
   academicTermInstanceFindUniqueMock: vi.fn(),
+  alumniProfileFindManyMock: vi.fn(),
   externalStakeholderInviteFindManyMock: vi.fn(),
   industryPartnerProfileFindManyMock: vi.fn(),
   instrumentTemplateFindFirstMock: vi.fn(),
@@ -131,8 +133,11 @@ function setupTransaction() {
       centralDeployment: { create: centralDeploymentCreateMock },
       evaluationAssignment: { createMany: assignmentCreateManyMock },
       externalStakeholderInvite: { findMany: externalStakeholderInviteFindManyMock },
+      alumniProfile: { findMany: alumniProfileFindManyMock },
       industryPartnerProfile: { findMany: industryPartnerProfileFindManyMock },
-      industryPartnerProgramAffiliation: { findMany: industryPartnerProgramAffiliationFindManyMock },
+      industryPartnerProgramAffiliation: {
+        findMany: industryPartnerProgramAffiliationFindManyMock,
+      },
       studentAcademicProfile: { findMany: studentAcademicProfileFindManyMock },
       user: { findMany: txUserFindManyMock },
       userRole: { findMany: userRoleFindManyMock },
@@ -195,8 +200,14 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: {
         userId: "ph-user-1",
-        authorizedPrograms: [{ id: baseInput.programId, code: "BSIT", name: "BS Information Technology" }],
-        selectedProgram: { id: baseInput.programId, code: "BSIT", name: "BS Information Technology" },
+        authorizedPrograms: [
+          { id: baseInput.programId, code: "BSIT", name: "BS Information Technology" },
+        ],
+        selectedProgram: {
+          id: baseInput.programId,
+          code: "BSIT",
+          name: "BS Information Technology",
+        },
       },
     });
     revalidateProgramHeadAssignmentMock.mockResolvedValue({
@@ -237,7 +248,10 @@ describe("publishCentralDeployment", () => {
   it("rejects PH without active program assignment", async () => {
     mockAuthenticatedPH();
     programHeadAssignmentFindFirstMock.mockResolvedValue(null);
-    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "No active program assignment found for this Program Head." });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "No active program assignment found for this Program Head.",
+    });
 
     const result = await publishCentralDeployment(baseInput);
 
@@ -352,11 +366,7 @@ describe("publishCentralDeployment", () => {
     });
     listStudentsForClassMock.mockResolvedValue({
       success: true,
-      data: [
-        { userId: "student-1" },
-        { userId: "student-2" },
-        { userId: "student-3" },
-      ],
+      data: [{ userId: "student-1" }, { userId: "student-2" }, { userId: "student-3" }],
     });
 
     const result = await publishCentralDeployment({
@@ -455,13 +465,17 @@ describe("publishCentralDeployment", () => {
     mockNoDuplicate();
     mockTermInstance();
 
-    externalStakeholderInviteFindManyMock.mockResolvedValue([
-      { email: "alumni1@example.com" },
-      { email: "alumni2@example.com" },
-    ]);
-    txUserFindManyMock.mockResolvedValue([
-      { id: "alumni-1" },
-      { id: "alumni-2" },
+    alumniProfileFindManyMock.mockResolvedValue([
+      {
+        user: { id: "alumni-1", email: "alumni1@example.com", name: "Alumni One" },
+        program: { code: "BSIT" },
+        major: null,
+      },
+      {
+        user: { id: "alumni-2", email: "alumni2@example.com", name: "Alumni Two" },
+        program: { code: "BSIT" },
+        major: null,
+      },
     ]);
 
     centralDeploymentCreateMock.mockResolvedValue({
@@ -483,10 +497,15 @@ describe("publishCentralDeployment", () => {
       },
     });
 
-    // Verify alumni invite query
-    expect(externalStakeholderInviteFindManyMock).toHaveBeenCalledWith(
+    // Alumni resolve from secretary-confirmed profiles, not invites
+    expect(externalStakeholderInviteFindManyMock).not.toHaveBeenCalled();
+    expect(txUserFindManyMock).not.toHaveBeenCalled();
+    expect(alumniProfileFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ role: ROLES.ALUMNI }),
+        where: expect.objectContaining({
+          program_id: "program-1",
+          verification_status: { not: "REJECTED" },
+        }),
       })
     );
 
@@ -496,6 +515,38 @@ describe("publishCentralDeployment", () => {
         { central_deployment_id: "deployment-3", respondent_id: "alumni-1" },
         { central_deployment_id: "deployment-3", respondent_id: "alumni-2" },
       ],
+    });
+  });
+
+  it("filters curated alumni IDs to confirmed-profile eligibility", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate();
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    alumniProfileFindManyMock.mockResolvedValue([
+      {
+        user: { id: "alumni-1", email: "alumni1@example.com", name: "Alumni One" },
+        program: { code: "BSIT" },
+        major: null,
+      },
+    ]);
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-3-curated" });
+
+    const result = await publishCentralDeployment({
+      ...baseInput,
+      target_stakeholder: "ALUMNI",
+      year_level: undefined,
+      respondent_ids: ["alumni-1", "alumni-unknown"],
+    });
+
+    expect(result).toEqual({
+      success: true,
+      data: { deploymentId: "deployment-3-curated", assignmentCount: 1, status: "ACTIVE" },
+    });
+    expect(assignmentCreateManyMock).toHaveBeenCalledWith({
+      data: [{ central_deployment_id: "deployment-3-curated", respondent_id: "alumni-1" }],
     });
   });
 
@@ -513,8 +564,14 @@ describe("publishCentralDeployment", () => {
       id: "deployment-4",
     });
     industryPartnerProfileFindManyMock.mockResolvedValue([
-      { user_id: "ip-1" },
-      { user_id: "ip-2" },
+      {
+        user: { id: "ip-1", email: "ip1@company.com", name: "Partner One" },
+        program: { code: "BSIT" },
+      },
+      {
+        user: { id: "ip-2", email: "ip2@company.com", name: "Partner Two" },
+        program: { code: "BSIT" },
+      },
     ]);
 
     const result = await publishCentralDeployment({
@@ -532,11 +589,15 @@ describe("publishCentralDeployment", () => {
       },
     });
 
-    // Verify industry partner profile query with program filter
-    expect(industryPartnerProfileFindManyMock).toHaveBeenCalledWith({
-      where: { program_id: "program-1" },
-      select: { user_id: true },
-    });
+    // Only secretary-confirmed partners on active accounts are eligible
+    expect(industryPartnerProfileFindManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          program_id: "program-1",
+          verification_status: { not: "REJECTED" },
+        }),
+      })
+    );
 
     // Verify assignments were created for industry partners
     expect(assignmentCreateManyMock).toHaveBeenCalledWith({
@@ -756,7 +817,10 @@ describe("publishCentralDeployment", () => {
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
-    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-1" }, { userId: "student-2" }] });
+    listStudentsForClassMock.mockResolvedValue({
+      success: true,
+      data: [{ userId: "student-1" }, { userId: "student-2" }],
+    });
 
     centralDeploymentCreateMock.mockResolvedValue({
       id: "deployment-6",
@@ -818,7 +882,10 @@ describe("publishCentralDeployment", () => {
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
-    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-bsed" }] });
+    listStudentsForClassMock.mockResolvedValue({
+      success: true,
+      data: [{ userId: "student-bsed" }],
+    });
     studentEnrollmentFindManyMock.mockResolvedValue([{ student_user_id: "student-bsed" }]);
     centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-scoped" });
 
@@ -840,7 +907,10 @@ describe("publishCentralDeployment", () => {
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
-    listStudentsForClassMock.mockResolvedValue({ success: true, data: [{ userId: "student-stale" }] });
+    listStudentsForClassMock.mockResolvedValue({
+      success: true,
+      data: [{ userId: "student-stale" }],
+    });
     studentEnrollmentFindManyMock.mockResolvedValue([]);
     centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-stale" });
 

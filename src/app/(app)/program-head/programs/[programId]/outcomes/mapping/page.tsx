@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ListChecks } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ListChecks } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
 import type { CILOMappingManifestation } from "@prisma/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,9 +19,10 @@ import {
   type CourseCILOMappings,
 } from "@/features/outcomes/services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "CILO Mapping Review | Program Head | System CLOIE",
+  title: buildPageTitle("CILO Mapping Review", "Program Head"),
 };
 
 function manifestationLabel(value: CILOMappingManifestation | null): string {
@@ -49,14 +51,9 @@ export default async function SelectedProgramOutcomeMappingPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="max-w-3xl">
-        <Button
-          render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
-          variant="ghost"
-          className="mb-4 inline-flex items-center gap-2 px-0"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
+        <BackLink href={buildProgramHeadOutcomesPath(programId)}>
           Back to Program Learning Outcomes
-        </Button>
+        </BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-muted-foreground mt-2 text-pretty">
           Review how Course Intended Learning Outcomes manifest across this program&apos;s Program

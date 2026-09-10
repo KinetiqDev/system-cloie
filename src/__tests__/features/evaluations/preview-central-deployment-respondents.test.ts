@@ -7,6 +7,7 @@ const {
   findFirstPhAssignmentMock,
   findUniqueProgramMock,
   findManyExternalInviteMock,
+  findManyAlumniProfileMock,
   findManyUserMock,
   findManyIndustryPartnerMock,
   findManyIndustryAffiliationMock,
@@ -18,6 +19,7 @@ const {
   findFirstPhAssignmentMock: vi.fn(),
   findUniqueProgramMock: vi.fn(),
   findManyExternalInviteMock: vi.fn(),
+  findManyAlumniProfileMock: vi.fn(),
   findManyUserMock: vi.fn(),
   findManyIndustryPartnerMock: vi.fn(),
   findManyIndustryAffiliationMock: vi.fn(),
@@ -37,6 +39,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     externalStakeholderInvite: {
       findMany: findManyExternalInviteMock,
+    },
+    alumniProfile: {
+      findMany: findManyAlumniProfileMock,
     },
     user: {
       findMany: findManyUserMock,
@@ -97,7 +102,11 @@ describe("previewCentralDeploymentRespondents", () => {
   });
 
   it("returns error if no active program head assignment is found", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.PROGRAM_HEAD,
+      userId: "ph-1",
+      roles: [ROLES.PROGRAM_HEAD],
+    });
     findFirstPhAssignmentMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue({
       success: false,
@@ -133,7 +142,11 @@ describe("previewCentralDeploymentRespondents", () => {
 
   describe("student targeting", () => {
     it("returns empty list if termInstanceId or yearLevel is missing", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        userId: "ph-1",
+        roles: [ROLES.PROGRAM_HEAD],
+      });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
       const result = await previewCentralDeploymentRespondents({
@@ -147,7 +160,11 @@ describe("previewCentralDeploymentRespondents", () => {
     });
 
     it("previews students using listStudentsForClass and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        userId: "ph-1",
+        roles: [ROLES.PROGRAM_HEAD],
+      });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
       findUniqueProgramMock.mockResolvedValue({ code: "BSCS" });
       listStudentsForClassMock.mockResolvedValue({
@@ -202,28 +219,25 @@ describe("previewCentralDeploymentRespondents", () => {
   });
 
   describe("alumni targeting", () => {
-    it("previews alumni by invitation status and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+    it("previews secretary-confirmed alumni from profiles even without invites", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        userId: "ph-1",
+        roles: [ROLES.PROGRAM_HEAD],
+      });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
-      findManyExternalInviteMock.mockResolvedValue([
-        { email: "alumni1@school.edu" },
-      ]);
-      findManyUserMock.mockResolvedValue([
+      findManyExternalInviteMock.mockResolvedValue([]);
+      findManyAlumniProfileMock.mockResolvedValue([
         {
-          id: "user-alumni-1",
-          email: "alumni1@school.edu",
-          name: "Jane Smith",
+          user: { id: "user-alumni-1", email: "alumni1@school.edu", name: "Jane Smith" },
+          program: { code: "BSIT" },
+          major: null,
         },
         {
-          id: "user-alumni-2",
-          email: "alumni2@school.edu",
-          name: "Mary Anne O'Connor",
-        },
-        {
-          id: "user-alumni-3",
-          email: "alumni3@school.edu",
-          name: "Prince",
+          user: { id: "user-alumni-2", email: "alumni2@school.edu", name: "Mary Anne O'Connor" },
+          program: { code: "BSIT" },
+          major: { name: "Multimedia" },
         },
       ]);
 
@@ -234,44 +248,72 @@ describe("previewCentralDeploymentRespondents", () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toHaveLength(3);
-        expect(result.data.map((r) => r.name)).toEqual([
-          "Jane Smith",
-          "Mary Anne O'Connor",
-          "Prince",
-        ]);
+        expect(result.data).toHaveLength(2);
         expect(result.data[0]).toEqual({
           email: "alumni1@school.edu",
           majorName: null,
           name: "Jane Smith",
-          programCode: null,
+          programCode: "BSIT",
           stakeholderType: TargetStakeholder.ALUMNI,
           userId: "user-alumni-1",
+          yearLevel: null,
+        });
+        expect(result.data[1]).toEqual({
+          email: "alumni2@school.edu",
+          majorName: "Multimedia",
+          name: "Mary Anne O'Connor",
+          programCode: "BSIT",
+          stakeholderType: TargetStakeholder.ALUMNI,
+          userId: "user-alumni-2",
           yearLevel: null,
         });
         expect(result.data[0]).not.toHaveProperty("firstName");
         expect(result.data[0]).not.toHaveProperty("lastName");
       }
 
-      expect(findManyExternalInviteMock).toHaveBeenCalledWith({
-        where: {
-          role: ROLES.ALUMNI,
-          program_id: "program-1",
-          status: "ACCEPTED",
-        },
-        select: { email: true },
+      expect(findManyExternalInviteMock).not.toHaveBeenCalled();
+      expect(findManyAlumniProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            program_id: "program-1",
+            verification_status: { not: "REJECTED" },
+            user: { is_active: true },
+          }),
+        })
+      );
+    });
+
+    it("narrows the alumni preview by major when requested", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        userId: "ph-1",
+        roles: [ROLES.PROGRAM_HEAD],
       });
-      expect(findManyUserMock).toHaveBeenCalledWith({
-        where: { email: { in: ["alumni1@school.edu"] } },
-        select: { id: true, email: true, name: true },
-        orderBy: { name: "asc" },
+      findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
+      findManyAlumniProfileMock.mockResolvedValue([]);
+
+      const result = await previewCentralDeploymentRespondents({
+        programId: "program-1",
+        targetStakeholder: TargetStakeholder.ALUMNI,
+        majorId: "major-1",
       });
+
+      expect(result.success).toBe(true);
+      expect(findManyAlumniProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ program_id: "program-1", major_id: "major-1" }),
+        })
+      );
     });
   });
 
   describe("industry partner targeting", () => {
     it("previews industry partners by profile and maps them correctly", async () => {
-      resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.PROGRAM_HEAD, userId: "ph-1", roles: [ROLES.PROGRAM_HEAD] });
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        userId: "ph-1",
+        roles: [ROLES.PROGRAM_HEAD],
+      });
       findFirstPhAssignmentMock.mockResolvedValue({ program_id: "program-1" });
 
       findManyIndustryPartnerMock.mockResolvedValue([
@@ -310,9 +352,24 @@ describe("previewCentralDeploymentRespondents", () => {
 
       expect(findManyIndustryPartnerMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { program_id: "program-1" },
+          where: expect.objectContaining({
+            program_id: "program-1",
+            verification_status: { not: "REJECTED" },
+            user: { is_active: true },
+          }),
           include: expect.objectContaining({
             user: { select: { id: true, email: true, name: true } },
+          }),
+        })
+      );
+      expect(findManyIndustryAffiliationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            program_id: "program-1",
+            industryPartner: expect.objectContaining({
+              is_active: true,
+              industry_partner_profile: { verification_status: { not: "REJECTED" } },
+            }),
           }),
         })
       );

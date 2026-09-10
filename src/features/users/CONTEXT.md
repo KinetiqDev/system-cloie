@@ -8,13 +8,17 @@ Users defines System CLOIE account administration — the readiness gates an acc
 The per-role readiness verdict resolved at sign-in that states what an account must finish before entering its portal: ROLE_SELECTION_REQUIRED (no role chosen), a role-specific onboarding requirement (STUDENT_ONBOARDING_REQUIRED, FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED), INACTIVE (deactivated account), REJECTED_EXTERNAL_ACCOUNT (rejected alumni or industry partner verification), DEFERRED_ENROLLMENT (student profile present but no active enrollment), or COMPLETE (portal entry allowed).
 _Avoid_: account status, sign-in result
 
-**Single active role**:
-The UserRole row's user_id is unique, so an account holds exactly one role at a time. Assigning a role to an account that already holds one is rejected; switching roles requires revoking the current role first, then assigning the new one.
-_Avoid_: multiple simultaneous roles, role replacement
+**Assigned-role set**:
+The distinct System CLOIE roles attached to one account. The `(user_id, role)` pair is unique, so the same role cannot be assigned twice; one assigned role is selected as active at a time.
+_Avoid_: Role stack, simultaneous authority, primary role
 
 **Role revocation gate**:
-A role cannot be revoked while its supporting records are active: Program Head requires all program-head assignments deactivated first, Faculty requires all faculty-program affiliations deactivated, Student requires the student academic context removed, and Industry Partner requires the profile removed. ALUMNI revocation carries no such gate.
-_Avoid_: revoking before cleanup
+An assigned role cannot be revoked while its supporting records are active: Program Head requires all program-head assignments deactivated first, Faculty requires all faculty-program affiliations deactivated, Student requires the student academic context removed, and Industry Partner requires the profile removed. ALUMNI revocation carries no such gate.
+_Avoid_: Active role selection, revoking before cleanup
+
+**Secretary role-bound edit**:
+A Secretary edit form is bound to the assigned role whose record populated it. The save carries that expected role, and the service rejects the request as stale if the account's deterministic edit role changed before submission; role-specific validation never retargets the old form to a newly assigned role.
+_Avoid_: Inferring a replacement role at submit time, silently retargeting stale edit data
 
 **Role provisioning category**:
 The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles are pre-provisioned by a Secretary; Faculty additionally appears as a self-service internal option.

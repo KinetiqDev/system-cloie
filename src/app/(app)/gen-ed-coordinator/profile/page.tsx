@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Profile", "Gen Ed Coordinator") };
 
 // fallow-ignore-next-line complexity
 export default async function GenEdCoordinatorProfilePage() {

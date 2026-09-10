@@ -1,5 +1,8 @@
 import { listBaselineTemplates } from "@/features/instruments/services/manage-instruments";
 import { ManagementToolsPage } from "@/features/instruments/components/management-tools-page";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Instruments", "Secretary") };
 
 export default async function SecretaryInstrumentsPage({
   searchParams,

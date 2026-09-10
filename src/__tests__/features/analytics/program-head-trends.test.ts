@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getProgramHeadTrends } from "@/features/analytics/services/get-program-head-analytics";
 import {
+  buildSourceComposition,
   buildTrendSeries,
   fingerprintsEqual,
   type TrendComparabilityFingerprint,
@@ -113,12 +114,37 @@ const exitStructure = [
 ];
 
 const instrumentVersions = [
-  { id: "iv-cilo-v1", version_number: 1, structure_snapshot: ciloStructureV1, template: { name: "CILO Evaluation" } },
-  { id: "iv-cilo-v2", version_number: 2, structure_snapshot: ciloStructureV2, template: { name: "CILO Evaluation" } },
-  { id: "iv-exit-v1", version_number: 1, structure_snapshot: exitStructure, template: { name: "Exit Survey" } },
+  {
+    id: "iv-cilo-v1",
+    version_number: 1,
+    structure_snapshot: ciloStructureV1,
+    template: { name: "CILO Evaluation" },
+  },
+  {
+    id: "iv-cilo-v2",
+    version_number: 2,
+    structure_snapshot: ciloStructureV2,
+    template: { name: "CILO Evaluation" },
+  },
+  {
+    id: "iv-exit-v1",
+    version_number: 1,
+    structure_snapshot: exitStructure,
+    template: { name: "Exit Survey" },
+  },
   // Distinct versions whose display labels collide (same template name + version number).
-  { id: "iv-collide-a", version_number: 1, structure_snapshot: ciloStructureV2, template: { name: "Course Evaluation" } },
-  { id: "iv-collide-b", version_number: 1, structure_snapshot: ciloStructureV2, template: { name: "Course Evaluation" } },
+  {
+    id: "iv-collide-a",
+    version_number: 1,
+    structure_snapshot: ciloStructureV2,
+    template: { name: "Course Evaluation" },
+  },
+  {
+    id: "iv-collide-b",
+    version_number: 1,
+    structure_snapshot: ciloStructureV2,
+    template: { name: "Course Evaluation" },
+  },
 ];
 
 function ratingRow(opts: {
@@ -141,6 +167,7 @@ function ratingRow(opts: {
       },
     },
     response: {
+      deployment_type: "COURSE_BOUND",
       assignment: {
         course_bound: courseBound,
         central_deployment: null,
@@ -149,12 +176,58 @@ function ratingRow(opts: {
   };
 }
 
+function centralRatingRow(opts: {
+  termInstanceId: string;
+  instrumentVersionId: string;
+  value: number;
+  responseId: string;
+  ploCodes?: string[];
+  stakeholder?: string;
+}) {
+  const central = {
+    term_instance_id: opts.termInstanceId,
+    instrument_version_id: opts.instrumentVersionId,
+    ...(opts.stakeholder ? { target_stakeholder: opts.stakeholder } : {}),
+  };
+  return {
+    rating_value: opts.value,
+    response_id: opts.responseId,
+    cilo_question_binding: {
+      cilo: {
+        cilo_mappings: (opts.ploCodes ?? []).map((code) => ({ plo: { code } })),
+      },
+    },
+    response: {
+      deployment_type: "CENTRAL",
+      assignment: {
+        course_bound: null,
+        central_deployment: central,
+      },
+    },
+  };
+}
+
 function responseRow(opts: { termInstanceId: string; id: string }) {
   return {
     id: opts.id,
+    deployment_type: "COURSE_BOUND",
     assignment: {
       course_bound: { term_instance_id: opts.termInstanceId },
       central_deployment: null,
+    },
+  };
+}
+
+function centralResponseRow(opts: { termInstanceId: string; id: string; stakeholder?: string }) {
+  return {
+    id: opts.id,
+    deployment_type: "CENTRAL",
+    assignment: {
+      course_bound: null,
+      central_deployment: {
+        term_instance_id: opts.termInstanceId,
+        ...(opts.stakeholder ? { target_stakeholder: opts.stakeholder } : {}),
+      },
     },
   };
 }
@@ -224,10 +297,21 @@ describe("getProgramHeadTrends", () => {
 
   it("resolves periods through AcademicTermInstance context, not a parallel model", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue([
-      { id: "term-2025-1st", semester: "FIRST", term: "FIRST_TERM", school_year: { id: "sy-2025", code: "2025-2026" } },
+      {
+        id: "term-2025-1st",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+        school_year: { id: "sy-2025", code: "2025-2026" },
+      },
     ]);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -257,7 +341,12 @@ describe("getProgramHeadTrends", () => {
 
   it("does not query any parallel period model", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1" }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -267,7 +356,11 @@ describe("getProgramHeadTrends", () => {
     await getProgramHeadTrends("program-bsed", trendsFilters);
 
     const calledModels = Object.entries(prismaMock)
-      .filter(([, model]) => Object.values(model as Record<string, unknown>).some((fn) => vi.isMockFunction(fn) && (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0))
+      .filter(([, model]) =>
+        Object.values(model as Record<string, unknown>).some(
+          (fn) => vi.isMockFunction(fn) && (fn as ReturnType<typeof vi.fn>).mock.calls.length > 0
+        )
+      )
       .map(([name]) => name)
       .sort();
 
@@ -280,9 +373,27 @@ describe("getProgramHeadTrends", () => {
 
   it("builds comparable periods with full-precision means and distinct counts", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-2", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-cilo-v2", value: 3, responseId: "resp-3", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-2",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-2nd",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "resp-3",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -317,9 +428,24 @@ describe("getProgramHeadTrends", () => {
 
   it("orders periods chronologically by school year, semester, and term", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-cilo-v2", value: 3, responseId: "resp-c" }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b" }),
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a" }),
+      ratingRow({
+        termInstanceId: "term-2025-2nd",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "resp-c",
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-b",
+      }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-a",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-2nd", id: "resp-c" }),
@@ -340,8 +466,20 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed instrument version as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v1", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v1",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-b",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -363,8 +501,20 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed Likert scale identity as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-exit-v1", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-exit-v1",
+        value: 4,
+        responseId: "resp-b",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -383,8 +533,20 @@ describe("getProgramHeadTrends", () => {
 
   it("marks a changed outcome identity as a comparability break", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-2"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-b",
+        ploCodes: ["GO-2"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -398,10 +560,265 @@ describe("getProgramHeadTrends", () => {
     expect(result!.breaks[0].reason).toMatch(/outcomes/i);
   });
 
+  it("marks a changed response source composition as a comparability break", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-b",
+        ploCodes: ["GO-1"],
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
+      responseRow({ termInstanceId: "term-2025-1st", id: "resp-b" }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
+
+  it("marks a shifted source mix as a break while an equal mix stays comparable", async () => {
+    const centralRows = (termInstanceId: string, prefix: string, count: number, value: number) =>
+      Array.from({ length: count }, (_, index) =>
+        centralRatingRow({
+          termInstanceId,
+          instrumentVersionId: "iv-cilo-v2",
+          value,
+          responseId: `${prefix}-c${index}`,
+          ploCodes: ["GO-1"],
+        })
+      );
+    const courseRows = (termInstanceId: string, prefix: string, count: number, value: number) =>
+      Array.from({ length: count }, (_, index) =>
+        ratingRow({
+          termInstanceId,
+          instrumentVersionId: "iv-cilo-v2",
+          value,
+          responseId: `${prefix}-b${index}`,
+          ploCodes: ["GO-1"],
+        })
+      );
+    const responseRows = (
+      termInstanceId: string,
+      prefix: string,
+      central: number,
+      bound: number
+    ) => [
+      ...Array.from({ length: central }, (_, index) =>
+        centralResponseRow({ termInstanceId, id: `${prefix}-c${index}` })
+      ),
+      ...Array.from({ length: bound }, (_, index) =>
+        responseRow({ termInstanceId, id: `${prefix}-b${index}` })
+      ),
+    ];
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      ...centralRows("term-2024-1st", "resp-a", 3, 3),
+      ...courseRows("term-2024-1st", "resp-a", 5, 3),
+      ...centralRows("term-2025-1st", "resp-b", 5, 4),
+      ...courseRows("term-2025-1st", "resp-b", 5, 4),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      ...responseRows("term-2024-1st", "resp-a", 3, 5),
+      ...responseRows("term-2025-1st", "resp-b", 5, 5),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
+
+  it("breaks when sources exchange instrument versions at the same mix", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 2,
+        responseId: "first-central",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-exit-v1",
+        value: 2,
+        responseId: "first-course",
+        ploCodes: ["GO-1"],
+      }),
+      centralRatingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-exit-v1",
+        value: 5,
+        responseId: "second-central",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "second-course",
+        ploCodes: ["GO-1"],
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({ termInstanceId: "term-2024-1st", id: "first-central" }),
+      responseRow({ termInstanceId: "term-2024-1st", id: "first-course" }),
+      centralResponseRow({ termInstanceId: "term-2025-1st", id: "second-central" }),
+      responseRow({ termInstanceId: "term-2025-1st", id: "second-course" }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([
+      instrumentVersions[1],
+      instrumentVersions[2],
+    ]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source-to-instrument/i);
+  });
+
+  it("breaks when the central stakeholder population changes at the same source mix", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+      centralRatingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-student",
+        ploCodes: ["GO-1"],
+        stakeholder: "STUDENT",
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({
+        termInstanceId: "term-2024-1st",
+        id: "first-alumni",
+        stakeholder: "ALUMNI",
+      }),
+      centralResponseRow({
+        termInstanceId: "term-2025-1st",
+        id: "second-student",
+        stakeholder: "STUDENT",
+      }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
+
+  it("keeps identical central stakeholder mixes comparable", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+      centralRatingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-alumni",
+        ploCodes: ["GO-1"],
+        stakeholder: "ALUMNI",
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({
+        termInstanceId: "term-2024-1st",
+        id: "first-alumni",
+        stakeholder: "ALUMNI",
+      }),
+      centralResponseRow({
+        termInstanceId: "term-2025-1st",
+        id: "second-alumni",
+        stakeholder: "ALUMNI",
+      }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods[1].comparableWithPrevious).toBe(true);
+    expect(result!.breaks).toEqual([]);
+  });
+
+  it("compares source composition from responses that contribute ratings", async () => {
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      centralRatingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 3,
+        responseId: "first-central-rated",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "second-course-rated",
+        ploCodes: ["GO-1"],
+      }),
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([
+      centralResponseRow({ termInstanceId: "term-2024-1st", id: "first-central-rated" }),
+      responseRow({ termInstanceId: "term-2024-1st", id: "first-course-unrated" }),
+      centralResponseRow({ termInstanceId: "term-2025-1st", id: "second-central-unrated" }),
+      responseRow({ termInstanceId: "term-2025-1st", id: "second-course-rated" }),
+    ]);
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[1]]);
+
+    const result = await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    expect(result!.periods.map((period) => period.submittedResponseCount)).toEqual([2, 2]);
+    expect(result!.periods[1].comparableWithPrevious).toBe(false);
+    expect(result!.breaks).toHaveLength(1);
+    expect(result!.breaks[0].reason).toMatch(/source composition/i);
+  });
   it("breaks when distinct instrument versions share a display label", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-collide-a", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-collide-b", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-collide-a",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-collide-b",
+        value: 4,
+        responseId: "resp-b",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -422,9 +839,27 @@ describe("getProgramHeadTrends", () => {
 
   it("never silently merges unlike periods into one comparable run", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b", ploCodes: ["GO-1"] }),
-      ratingRow({ termInstanceId: "term-2025-2nd", instrumentVersionId: "iv-exit-v1", value: 3, responseId: "resp-c", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-b",
+        ploCodes: ["GO-1"],
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-2nd",
+        instrumentVersionId: "iv-exit-v1",
+        value: 3,
+        responseId: "resp-c",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -461,7 +896,12 @@ describe("getProgramHeadTrends", () => {
 
   it("reports no-comparable-history with a single evidence period", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1" }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -475,8 +915,18 @@ describe("getProgramHeadTrends", () => {
 
   it("reports no-comparable-history when only unlike periods exist", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v1", value: 5, responseId: "resp-a" }),
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-b" }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v1",
+        value: 5,
+        responseId: "resp-a",
+      }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-b",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -494,7 +944,13 @@ describe("getProgramHeadTrends", () => {
 
   it("exposes unrated periods without fabricating comparability breaks", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2024-1st", instrumentVersionId: "iv-cilo-v2", value: 5, responseId: "resp-a", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2024-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 5,
+        responseId: "resp-a",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2024-1st", id: "resp-a" }),
@@ -516,7 +972,12 @@ describe("getProgramHeadTrends", () => {
 
   it("does not filter retired or inactive catalog records", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1" }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -545,7 +1006,13 @@ describe("getProgramHeadTrends", () => {
 
   it("returns a closed DTO with only expected keys", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1", ploCodes: ["GO-1"] }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+        ploCodes: ["GO-1"],
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -553,7 +1020,13 @@ describe("getProgramHeadTrends", () => {
 
     const result = await getProgramHeadTrends("program-bsed", trendsFilters);
 
-    expect(Object.keys(result!)).toEqual(["scope", "periods", "breaks", "emptyReason", "periodOptions"]);
+    expect(Object.keys(result!)).toEqual([
+      "scope",
+      "periods",
+      "breaks",
+      "emptyReason",
+      "periodOptions",
+    ]);
     expect(Object.keys(result!.scope)).toEqual(["programCode", "programName", "periodLabel"]);
     expect(Object.keys(result!.periods[0])).toEqual([
       "termInstanceId",
@@ -570,7 +1043,12 @@ describe("getProgramHeadTrends", () => {
 
   it("does not expose raw text, response IDs, respondent IDs, or emails", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      ratingRow({ termInstanceId: "term-2025-1st", instrumentVersionId: "iv-cilo-v2", value: 4, responseId: "resp-1" }),
+      ratingRow({
+        termInstanceId: "term-2025-1st",
+        instrumentVersionId: "iv-cilo-v2",
+        value: 4,
+        responseId: "resp-1",
+      }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
       responseRow({ termInstanceId: "term-2025-1st", id: "resp-1" }),
@@ -584,6 +1062,35 @@ describe("getProgramHeadTrends", () => {
     expect(serialized).not.toContain("respondent_id");
     expect(serialized).not.toContain("email");
     expect(serialized).not.toContain("assignment_id");
+  });
+});
+
+describe("buildSourceComposition", () => {
+  it("returns an empty mix without responses", () => {
+    expect(buildSourceComposition(new Map())).toEqual([]);
+  });
+
+  it("marks a single source as the whole mix", () => {
+    expect(buildSourceComposition(new Map([["COURSE_BOUND", 7]]))).toEqual(["COURSE_BOUND:1.00"]);
+  });
+
+  it("normalizes shares to the nearest percent independent of insertion order", () => {
+    expect(
+      buildSourceComposition(
+        new Map([
+          ["COURSE_BOUND", 5],
+          ["CENTRAL", 3],
+        ])
+      )
+    ).toEqual(["CENTRAL:0.38", "COURSE_BOUND:0.63"]);
+    expect(
+      buildSourceComposition(
+        new Map([
+          ["CENTRAL", 6],
+          ["COURSE_BOUND", 10],
+        ])
+      )
+    ).toEqual(["CENTRAL:0.38", "COURSE_BOUND:0.63"]);
   });
 });
 
@@ -605,7 +1112,15 @@ describe("trend comparability aggregators", () => {
         },
       ]);
 
-      expect(scales).toEqual([[{ value: 1, label: null }, { value: 2, label: null }, { value: 3, label: null }, { value: 4, label: null }, { value: 5, label: null }]]);
+      expect(scales).toEqual([
+        [
+          { value: 1, label: null },
+          { value: 2, label: null },
+          { value: 3, label: null },
+          { value: 4, label: null },
+          { value: 5, label: null },
+        ],
+      ]);
     });
 
     it("extracts likert descriptors from the questions format", () => {
@@ -614,7 +1129,15 @@ describe("trend comparability aggregators", () => {
           key: "s1",
           title: "S",
           questions: [
-            { key: "a", type: "likert", prompt: "A", likertDescriptors: [{ value: 1, label: "Poor" }, { value: 2, label: "Fair" }] },
+            {
+              key: "a",
+              type: "likert",
+              prompt: "A",
+              likertDescriptors: [
+                { value: 1, label: "Poor" },
+                { value: 2, label: "Fair" },
+              ],
+            },
           ],
         },
       ]);
@@ -629,8 +1152,16 @@ describe("trend comparability aggregators", () => {
 
     it("dedupes identical scales across sections and returns [] for non-arrays", () => {
       const scales = extractDistinctScales([
-        { key: "s1", title: "S", items: [{ key: "a", kind: "quantitative", prompt: "A", scale: [1, 2, 3] }] },
-        { key: "s2", title: "T", items: [{ key: "b", kind: "quantitative", prompt: "B", scale: [1, 2, 3] }] },
+        {
+          key: "s1",
+          title: "S",
+          items: [{ key: "a", kind: "quantitative", prompt: "A", scale: [1, 2, 3] }],
+        },
+        {
+          key: "s2",
+          title: "T",
+          items: [{ key: "b", kind: "quantitative", prompt: "B", scale: [1, 2, 3] }],
+        },
       ]);
 
       expect(scales).toHaveLength(1);
@@ -642,10 +1173,16 @@ describe("trend comparability aggregators", () => {
   describe("scale identity", () => {
     it("distinguishes scales that share values but differ in labels", () => {
       const achieved = [
-        [{ value: 1, label: "Not Achieved" }, { value: 5, label: "Fully Achieved" }],
+        [
+          { value: 1, label: "Not Achieved" },
+          { value: 5, label: "Fully Achieved" },
+        ],
       ];
       const agreement = [
-        [{ value: 1, label: "Strongly Disagree" }, { value: 5, label: "Strongly Agree" }],
+        [
+          { value: 1, label: "Strongly Disagree" },
+          { value: 5, label: "Strongly Agree" },
+        ],
       ];
 
       expect(buildScaleIdentities(achieved)).not.toEqual(buildScaleIdentities(agreement));
@@ -665,7 +1202,9 @@ describe("trend comparability aggregators", () => {
   });
 
   describe("buildTrendSeries", () => {
-    function input(overrides: Partial<TrendSeriesPeriodInput> & { termInstanceId: string }): TrendSeriesPeriodInput {
+    function input(
+      overrides: Partial<TrendSeriesPeriodInput> & { termInstanceId: string }
+    ): TrendSeriesPeriodInput {
       return {
         periodLabel: "Period",
         sortKey: ["2025-2026", 0, 0],
@@ -675,7 +1214,13 @@ describe("trend comparability aggregators", () => {
         instrumentContext: "CILO Evaluation v2",
         scaleContext: "1–5 (5-point)",
         outcomeCodes: [],
-        fingerprint: { instrumentVersions: ["CILO Evaluation v2"], scaleIdentities: [], outcomeCodes: [] },
+        fingerprint: {
+          instrumentVersions: ["CILO Evaluation v2"],
+          scaleIdentities: [],
+          outcomeCodes: [],
+          sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
+          sourceInstrumentComposition: ["CENTRAL:iv-a:0.38", "COURSE_BOUND:iv-b:0.63"],
+        },
         ...overrides,
       };
     }
@@ -684,17 +1229,25 @@ describe("trend comparability aggregators", () => {
       instrumentVersions: ["CILO Evaluation v2"],
       scaleIdentities: ["s1"],
       outcomeCodes: ["GO-1"],
+      sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
+      sourceInstrumentComposition: ["CENTRAL:iv-a:0.38", "COURSE_BOUND:iv-b:0.63"],
     };
     const fpY: TrendComparabilityFingerprint = {
       instrumentVersions: ["Exit Survey v1"],
       scaleIdentities: ["s2"],
       outcomeCodes: ["GO-1"],
+      sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
+      sourceInstrumentComposition: ["CENTRAL:iv-c:0.38", "COURSE_BOUND:iv-d:0.63"],
     };
 
     it("sorts periods by school year code, semester, then term", () => {
       const { periods } = buildTrendSeries([
         input({ termInstanceId: "c", sortKey: ["2025-2026", 1, 0], periodLabel: "2025-2026 2nd" }),
-        input({ termInstanceId: "b", sortKey: ["2025-2026", 0, 1], periodLabel: "2025-2026 1st T2" }),
+        input({
+          termInstanceId: "b",
+          sortKey: ["2025-2026", 0, 1],
+          periodLabel: "2025-2026 1st T2",
+        }),
         input({ termInstanceId: "a", sortKey: ["2024-2025", 0, 0], periodLabel: "2024-2025 1st" }),
       ]);
 
@@ -725,6 +1278,51 @@ describe("trend comparability aggregators", () => {
       expect(periods[1].comparableWithPrevious).toBe(false);
       expect(breaks).toHaveLength(1);
       expect(breaks[0].reason).toContain("instrument version");
+    });
+
+    it("breaks comparability when only the response source composition changes", () => {
+      const courseOnly: TrendComparabilityFingerprint = {
+        ...fpX,
+        sourceComposition: ["COURSE_BOUND:1.00"],
+      };
+      const { periods, breaks, emptyReason } = buildTrendSeries([
+        input({ termInstanceId: "a", fingerprint: fpX, periodLabel: "A", meanRating: 3 }),
+        input({ termInstanceId: "b", fingerprint: courseOnly, periodLabel: "B", meanRating: 5 }),
+      ]);
+
+      expect(periods[1].comparableWithPrevious).toBe(false);
+      expect(breaks).toHaveLength(1);
+      expect(breaks[0].reason).toContain("source composition");
+      expect(emptyReason).toBe("no-comparable-history");
+    });
+
+    it("breaks comparability when the source mix shifts at equal ratings", () => {
+      const shiftedMix: TrendComparabilityFingerprint = {
+        ...fpX,
+        sourceComposition: ["CENTRAL:0.50", "COURSE_BOUND:0.50"],
+      };
+      const { periods, breaks } = buildTrendSeries([
+        input({ termInstanceId: "a", fingerprint: fpX, periodLabel: "A", meanRating: 4 }),
+        input({ termInstanceId: "b", fingerprint: shiftedMix, periodLabel: "B", meanRating: 4 }),
+      ]);
+
+      expect(periods[1].comparableWithPrevious).toBe(false);
+      expect(breaks).toHaveLength(1);
+      expect(breaks[0].reason).toContain("source composition");
+    });
+
+    it("breaks when sources exchange instrument versions", () => {
+      const swapped: TrendComparabilityFingerprint = {
+        ...fpX,
+        sourceInstrumentComposition: ["CENTRAL:iv-b:0.38", "COURSE_BOUND:iv-a:0.63"],
+      };
+      const { periods, breaks } = buildTrendSeries([
+        input({ termInstanceId: "a", fingerprint: fpX, periodLabel: "A", meanRating: 2 }),
+        input({ termInstanceId: "b", fingerprint: swapped, periodLabel: "B", meanRating: 4 }),
+      ]);
+
+      expect(periods[1].comparableWithPrevious).toBe(false);
+      expect(breaks[0].reason).toContain("source-to-instrument");
     });
 
     it("reports no-evidence for an empty input", () => {
@@ -773,14 +1371,29 @@ describe("trend comparability aggregators", () => {
         instrumentVersions: ["a"],
         scaleIdentities: ["s"],
         outcomeCodes: ["GO-1"],
+        sourceComposition: ["CENTRAL:1.00"],
+        sourceInstrumentComposition: ["CENTRAL:a:1.00"],
       };
 
       expect(fingerprintsEqual(base, base)).toBe(true);
-      expect(
-        fingerprintsEqual(base, { ...base, instrumentVersions: ["b"] })
-      ).toBe(false);
+      expect(fingerprintsEqual(base, { ...base, instrumentVersions: ["b"] })).toBe(false);
       expect(fingerprintsEqual(base, { ...base, scaleIdentities: [] })).toBe(false);
       expect(fingerprintsEqual(base, { ...base, outcomeCodes: [] })).toBe(false);
+      expect(fingerprintsEqual(base, { ...base, sourceComposition: ["COURSE_BOUND:1.00"] })).toBe(
+        false
+      );
+      expect(
+        fingerprintsEqual(base, {
+          ...base,
+          sourceComposition: ["CENTRAL:0.50", "COURSE_BOUND:0.50"],
+        })
+      ).toBe(false);
+      expect(
+        fingerprintsEqual(base, {
+          ...base,
+          sourceInstrumentComposition: ["COURSE_BOUND:a:1.00"],
+        })
+      ).toBe(false);
     });
   });
 });

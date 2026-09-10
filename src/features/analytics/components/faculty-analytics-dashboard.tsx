@@ -3,8 +3,17 @@
 import { useEffect, useId, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BarChart3, Bot, CalendarDays, CheckCircle2, Filter, Info, RotateCcw } from "lucide-react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  BarChart3,
+  Bot,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Filter,
+  Info,
+  RotateCcw,
+} from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -34,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Table,
   TableBody,
@@ -57,6 +67,8 @@ import type {
   FacultyScaleDistribution,
   FacultyTrendPoint,
 } from "../types";
+import type { DeploymentStatus } from "@prisma/client";
+import { formatResponseStatus, responseStatusVariant } from "../program-head-responses-labels";
 import type {
   FacultyAIInsight,
   FacultyAISectionInsight,
@@ -70,20 +82,6 @@ const VIEW_LABELS: Record<FacultyAnalyticsView, string> = {
   trends: "Trends",
   qualitative: "Written feedback",
 };
-
-const SENTIMENT_LABELS = {
-  positive: "Positive",
-  negative: "Negative",
-  neutral: "Neutral",
-  mixed: "Mixed",
-} as const;
-
-const SENTIMENT_VARIANTS = {
-  positive: "success",
-  negative: "destructive",
-  neutral: "outline",
-  mixed: "warning",
-} as const;
 
 type Props = {
   data: FacultyAnalyticsData;
@@ -282,12 +280,27 @@ function FilterForm({
       (!filters.courseId || item.courseId === filters.courseId) &&
       (!filters.termInstanceId || item.termInstanceId === filters.termInstanceId)
   );
-  const evaluations = options.evaluations.filter(
-    (item) =>
-      (!filters.courseId || item.courseId === filters.courseId) &&
-      (!filters.termInstanceId || item.termInstanceId === filters.termInstanceId) &&
-      (!filters.assignmentId || item.assignmentId === filters.assignmentId)
-  );
+  const deploymentNameCounts = new Map<string, number>();
+  for (const item of options.evaluations) {
+    deploymentNameCounts.set(
+      item.deploymentName,
+      (deploymentNameCounts.get(item.deploymentName) ?? 0) + 1
+    );
+  }
+  const evaluations = options.evaluations
+    .filter(
+      (item) =>
+        (!filters.courseId || item.courseId === filters.courseId) &&
+        (!filters.termInstanceId || item.termInstanceId === filters.termInstanceId) &&
+        (!filters.assignmentId || item.assignmentId === filters.assignmentId)
+    )
+    .map((item) => ({
+      id: item.id,
+      label:
+        (deploymentNameCounts.get(item.deploymentName) ?? 0) > 1
+          ? `${item.deploymentName} · ${item.classLabel} · ${item.termInstanceLabel}`
+          : item.deploymentName,
+    }));
   return (
     <form
       method="get"
@@ -328,7 +341,7 @@ function FilterForm({
         label="Evaluation"
         value={filters.evaluationId}
         blank="All evaluations"
-        options={evaluations.map((item) => ({ id: item.id, label: item.deploymentName }))}
+        options={evaluations}
         className="lg:col-span-3"
       />
       <FilterSelect
@@ -542,12 +555,7 @@ function OverviewView({
             ? "No evaluation opportunities exist in this scope."
             : `${data.kpi.submittedResponseCount} of ${data.kpi.opportunityCount} evaluation opportunities produced submitted responses.`}
         </PlainSummary>
-        <AIOverview
-          insight={ai?.participation ?? null}
-          state={aiState}
-          pending={pending}
-          data={data}
-        />
+        <AIOverview insight={ai?.overview ?? null} state={aiState} pending={pending} data={data} />
       </EvidenceCard>
       <EvidenceCard
         title="Rating distribution"
@@ -555,7 +563,7 @@ function OverviewView({
       >
         <DistributionGroups groups={data.ratingDistributions} />
         <PlainSummary>{distributionSummary(data.ratingDistributions)}</PlainSummary>
-        <AIOverview insight={ai?.ratings ?? null} state={aiState} pending={pending} data={data} />
+        <AIOverview insight={ai?.overview ?? null} state={aiState} pending={pending} data={data} />
       </EvidenceCard>
       <ClassSummary data={data} />
     </div>
@@ -611,10 +619,13 @@ function CiloView({
                   {courseGroup.metrics.length === 1 ? "" : "s"}
                 </p>
               </header>
-              <div className="divide-border mt-1 divide-y">
-                {courseGroup.metrics.map((metric) => (
-                  <CiloMetricRow key={metric.key} metric={metric} />
-                ))}
+              <div className="mt-4 flex min-w-0 flex-col gap-2">
+                <CiloGroupChart courseGroup={courseGroup} />
+                <div className="divide-border divide-y">
+                  {courseGroup.metrics.map((metric) => (
+                    <CiloEvidenceRow key={metric.key} metric={metric} />
+                  ))}
+                </div>
               </div>
             </section>
           ))}
@@ -639,52 +650,80 @@ function CiloView({
     </EvidenceCard>
   );
 }
-
-// One row keeps single-scale track vs multi-scale notice with mobile/desktop mean layout
-// together; splitting would scatter the row's evidence contract.
-// fallow-ignore-next-line complexity
-function CiloMetricRow({ metric }: { metric: FacultyCiloMetric }) {
-  const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
-  const position =
-    group?.mean === null || !group
-      ? 0
-      : ((group.mean - group.scaleMin) / Math.max(1, group.scaleMax - group.scaleMin)) * 100;
+// One horizontal-bar chart per course group keeps every CILO mean on the fixed 1-5
+// rating scale; the evidence list below preserves each outcome's exact mean text.
+function CiloGroupChart({
+  courseGroup,
+}: {
+  courseGroup: {
+    key: string;
+    courseCode: string;
+    courseTitle: string;
+    evaluationName: string;
+    metrics: FacultyCiloMetric[];
+  };
+}) {
+  const rows = courseGroup.metrics.flatMap((metric) => {
+    const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
+    if (!group || group.mean === null) return [];
+    return [{ label: metric.label, mean: group.mean, ratingCount: group.ratingCount }];
+  });
+  if (!rows.length) {
+    return (
+      <p className="text-body-sm text-text-secondary">
+        Mean ratings cannot be charted for this group: every outcome spans multiple rating scales or
+        has no resolvable mean.
+      </p>
+    );
+  }
   return (
-    <div className="grid min-w-0 gap-4 py-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,1fr)_5rem] lg:items-center lg:gap-6">
+    <ChartContainer
+      role="region"
+      aria-label={`Mean CILO ratings for ${courseGroup.courseCode}, ${courseGroup.evaluationName}`}
+      className="aspect-auto w-full"
+      style={{ height: Math.max(180, rows.length * 56 + 72) }}
+    >
+      <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 16 }}>
+        <CartesianGrid horizontal={false} />
+        <XAxis
+          type="number"
+          domain={[1, 5]}
+          ticks={[1, 2, 3, 4, 5]}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis type="category" dataKey="label" tickLine={false} axisLine={false} width={80} />
+        <ChartTooltip
+          formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
+        />
+        <Bar
+          dataKey="mean"
+          name="Mean"
+          fill="var(--chart-2)"
+          radius={[0, 6, 6, 0]}
+          barSize={22}
+          isAnimationActive={false}
+        />
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+function CiloEvidenceRow({ metric }: { metric: FacultyCiloMetric }) {
+  const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
+  return (
+    <div className="flex min-w-0 flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="text-label-lg">{metric.label}</p>
         <p className="text-body-sm text-text-secondary mt-1 text-pretty break-words">
           {metric.description}
         </p>
       </div>
-      {group ? (
-        <div className="min-w-0 px-2 pb-4 lg:px-0">
-          <div className="relative h-6" aria-hidden="true">
-            <div className="bg-muted absolute inset-x-0 top-2 h-1.5 rounded-full" />
-            <div
-              className="bg-chart-2 ring-card absolute top-0 size-5 -translate-x-1/2 rounded-full ring-4"
-              style={{
-                left: `clamp(0.625rem, ${position}%, calc(100% - 0.625rem))`,
-              }}
-            />
-            <div className="text-caption text-text-muted mt-5 flex justify-between tabular-nums">
-              <span>{group.scaleMin}</span>
-              <span>{group.scaleMax}</span>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <p className="text-body-sm text-text-secondary">Multiple rating scales</p>
-      )}
-      <div className="flex items-baseline justify-between gap-3 lg:block lg:text-right">
-        <p className="text-caption text-text-muted lg:hidden">Mean rating</p>
-        <div>
-          <p className="text-title-lg tabular-nums">{group?.mean?.toFixed(2) ?? "—"}</p>
-          <p className="text-caption text-text-muted">
-            {group?.ratingCount ?? 0} rating{group?.ratingCount === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
+      <p className="text-body-sm text-text-secondary shrink-0 tabular-nums">
+        {group
+          ? `${group.mean?.toFixed(2) ?? "—"} mean · ${group.ratingCount} rating${group.ratingCount === 1 ? "" : "s"}`
+          : "Multiple rating scales"}
+      </p>
     </div>
   );
 }
@@ -733,14 +772,20 @@ function QuestionView({
   aiState: GenerateFacultyAIInsightResult | null;
   pending: boolean;
 }) {
+  const ratedQuestions = data.questionMetrics.filter((question) =>
+    question.scaleGroups.some((group) => group.ratingCount > 0)
+  );
+  const unratedQuestions = data.questionMetrics.filter(
+    (question) => !question.scaleGroups.some((group) => group.ratingCount > 0)
+  );
   return (
     <EvidenceCard
       title="Question results"
       description="Exact rating distributions for each quantitative question, grouped by instrument section."
     >
-      {data.questionMetrics.length ? (
+      {ratedQuestions.length ? (
         <div className="flex flex-col gap-6">
-          {data.questionMetrics.map((question) => (
+          {ratedQuestions.map((question) => (
             <div
               key={question.key}
               className="flex flex-col gap-3 border-b pb-5 last:border-0 last:pb-0"
@@ -762,6 +807,35 @@ function QuestionView({
           description="No valid quantitative question evidence exists in this scope."
         />
       )}
+      {unratedQuestions.length ? (
+        <Collapsible className="border-border rounded-lg border">
+          <CollapsibleTrigger
+            render={<Button variant="ghost" className="group min-h-11 w-full justify-between" />}
+          >
+            <span className="font-medium">
+              Show {unratedQuestions.length} unrated question
+              {unratedQuestions.length === 1 ? "" : "s"}
+            </span>
+            <ChevronDown
+              aria-hidden="true"
+              className="size-4 transition-transform duration-200 group-data-panel-open:rotate-180 motion-reduce:transition-none"
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden border-t transition-[height] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+            <ul className="flex flex-col gap-3 px-4 py-4">
+              {unratedQuestions.map((question) => (
+                <li key={question.key} className="min-w-0">
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                    {question.sectionTitle}
+                    {question.ciloLabel ? ` · ${question.ciloLabel}` : ""}
+                  </p>
+                  <p className="text-body-sm mt-0.5 text-pretty">{question.prompt}</p>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
       <PlainSummary>
         {rankedSummary(
           data.questionMetrics.map((metric) => ({
@@ -1066,32 +1140,40 @@ function AIOverview({
       <div className="bg-information-soft border-information/25 rounded-lg border p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Bot aria-hidden="true" className="size-4" />
-          <h3 className="text-label-lg">AI-generated overview</h3>
-          <Badge variant={SENTIMENT_VARIANTS[insight.sentiment]} className="ml-auto">
-            <span className="sr-only">Overall sentiment:&nbsp;</span>
-            {SENTIMENT_LABELS[insight.sentiment]}
-          </Badge>
+          <h3 className="text-label-lg">AI-generated insight</h3>
         </div>
-        <p className="text-body-md mt-2">{insight.summary}</p>
-        <p className="text-body-sm text-text-secondary mt-2">
-          <span className="text-foreground font-semibold">What this suggests: </span>
-          {insight.implication}
-        </p>
-        {insight.watchPoints.length > 0 ? (
-          <div className="mt-3">
-            <p className="text-label-sm font-semibold">Worth checking</p>
-            <ul className="mt-1 flex flex-col gap-1">
-              {insight.watchPoints.map((point) => (
-                <li key={point} className="text-body-sm flex items-start gap-2">
-                  <span
-                    aria-hidden="true"
-                    className="bg-information mt-[0.45rem] size-1.5 shrink-0 rounded-full"
-                  />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <p className="text-body-md mt-2">{insight.observation}</p>
+        <div className="mt-3">
+          <p className="text-label-sm font-semibold">Supporting evidence</p>
+          <ul className="mt-1 flex flex-col gap-1">
+            {insight.evidence.map((item) => (
+              <li key={item} className="text-body-sm flex items-start gap-2">
+                <span
+                  aria-hidden="true"
+                  className="bg-information mt-[0.45rem] size-1.5 shrink-0 rounded-full"
+                />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+        {insight.connection ? (
+          <p className="text-body-sm text-text-secondary mt-2">
+            <span className="text-foreground font-semibold">What this suggests: </span>
+            {insight.connection}
+          </p>
+        ) : null}
+        {insight.limitation ? (
+          <p className="text-body-sm text-text-secondary mt-2">
+            <span className="text-foreground font-semibold">Limitation: </span>
+            {insight.limitation}
+          </p>
+        ) : null}
+        {insight.reviewQuestion ? (
+          <p className="text-body-sm text-text-secondary mt-2">
+            <span className="text-foreground font-semibold">Worth discussing: </span>
+            {insight.reviewQuestion}
+          </p>
         ) : null}
         <p className="text-muted-foreground mt-3 text-xs">
           Based on {basis}. AI can be wrong. Use the chart and exact values as the evidence.
@@ -1187,7 +1269,9 @@ function ClassSummary({ data }: { data: FacultyAnalyticsData }) {
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{titleCase(item.status)}</Badge>
+                    <Badge variant={responseStatusVariant(item.status as DeploymentStatus)}>
+                      {formatResponseStatus(item.status as DeploymentStatus)}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1307,7 +1391,9 @@ function TrendTable({ data }: { data: FacultyAnalyticsData }) {
                 {point.mean?.toFixed(2) ?? "—"}
               </TableCell>
               <TableCell className="text-right tabular-nums">{point.responseCount}</TableCell>
-              <TableCell>{point.comparableWithPrevious ? "Yes" : point.breakReason}</TableCell>
+              <TableCell>
+                {point.comparableWithPrevious ? "Yes" : (point.breakReason ?? "—")}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -1374,9 +1460,6 @@ function analyticsHref(filters: Partial<FacultyAnalyticsFilters>) {
   });
   const query = params.toString();
   return `/faculty/analytics${query ? `?${query}` : ""}`;
-}
-function titleCase(value: string) {
-  return value.toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
 }
 function distributionSummary(groups: FacultyScaleDistribution[]) {
   if (!groups.length) return "No valid ratings are available.";

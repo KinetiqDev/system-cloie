@@ -1,8 +1,11 @@
 import { TargetStakeholder } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { listStudentsForClass } from "@/features/enrollments/services/list-students-for-class";
+import {
+  listEligibleAlumni,
+  listEligibleIndustryPartners,
+} from "./central-stakeholder-eligibility";
 import type {
   PreviewCentralDeploymentInput,
   PreviewCentralDeploymentRespondent,
@@ -21,9 +24,30 @@ export async function previewCentralDeploymentRespondents(
     if (input.targetStakeholder === TargetStakeholder.STUDENT) {
       respondents = await previewStudents(input);
     } else if (input.targetStakeholder === TargetStakeholder.ALUMNI) {
-      respondents = await previewAlumni(input.programId);
+      const eligible = await listEligibleAlumni(prisma, {
+        programId: input.programId,
+        majorId: input.majorId,
+      });
+      respondents = eligible.map((respondent) => ({
+        email: respondent.email,
+        majorName: respondent.majorName,
+        name: respondent.name,
+        programCode: respondent.programCode,
+        stakeholderType: TargetStakeholder.ALUMNI,
+        userId: respondent.userId,
+        yearLevel: null,
+      }));
     } else if (input.targetStakeholder === TargetStakeholder.INDUSTRY_PARTNER) {
-      respondents = await previewIndustryPartners(input.programId);
+      const eligible = await listEligibleIndustryPartners(prisma, { programId: input.programId });
+      respondents = eligible.map((respondent) => ({
+        email: respondent.email,
+        majorName: respondent.majorName,
+        name: respondent.name,
+        programCode: respondent.programCode,
+        stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
+        userId: respondent.userId,
+        yearLevel: null,
+      }));
     }
 
     return {
@@ -75,92 +99,4 @@ async function previewStudents(
   }
 
   return [];
-}
-
-// ─── Alumni Preview ───────────────────────────────────────────────────────────
-
-async function previewAlumni(
-  programId: string
-): Promise<PreviewCentralDeploymentRespondent[]> {
-  // Find accepted alumni invites scoped to the program
-  const invites = await prisma.externalStakeholderInvite.findMany({
-    where: {
-      role: ROLES.ALUMNI,
-      program_id: programId,
-      status: "ACCEPTED",
-    },
-    select: { email: true },
-  });
-
-  if (invites.length === 0) return [];
-
-  // Look up the actual User records by their invite emails
-  const emails = invites.map((i) => i.email);
-  const users = await prisma.user.findMany({
-    where: { email: { in: emails } },
-    select: { id: true, email: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
-  return users.map((u) => ({
-    email: u.email,
-    majorName: null,
-    name: u.name,
-    programCode: null,
-    stakeholderType: TargetStakeholder.ALUMNI,
-    userId: u.id,
-    yearLevel: null,
-  }));
-}
-
-async function previewIndustryPartners(
-  programId: string
-): Promise<PreviewCentralDeploymentRespondent[]> {
-  const [legacyProfiles, affiliatedIds] = await Promise.all([
-    prisma.industryPartnerProfile.findMany({
-      where: { program_id: programId },
-      include: {
-        user: { select: { id: true, email: true, name: true } },
-        program: { select: { code: true } },
-      },
-    }),
-    prisma.industryPartnerProgramAffiliation.findMany({
-      where: { program_id: programId },
-      include: {
-        industryPartner: { select: { id: true, email: true, name: true } },
-        program: { select: { code: true } },
-      },
-    }),
-  ]);
-
-  const seen = new Set<string>();
-  const respondents: PreviewCentralDeploymentRespondent[] = [];
-  for (const p of legacyProfiles) {
-    if (seen.has(p.user.id)) continue;
-    seen.add(p.user.id);
-    respondents.push({
-      email: p.user.email,
-      majorName: null,
-      name: p.user.name,
-      programCode: p.program?.code ?? null,
-      stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
-      userId: p.user.id,
-      yearLevel: null,
-    });
-  }
-  for (const a of affiliatedIds) {
-    if (seen.has(a.industryPartner.id)) continue;
-    seen.add(a.industryPartner.id);
-    respondents.push({
-      email: a.industryPartner.email,
-      majorName: null,
-      name: a.industryPartner.name,
-      programCode: a.program?.code ?? null,
-      stakeholderType: TargetStakeholder.INDUSTRY_PARTNER,
-      userId: a.industryPartner.id,
-      yearLevel: null,
-    });
-  }
-  respondents.sort((a, b) => a.name.localeCompare(b.name));
-  return respondents;
 }

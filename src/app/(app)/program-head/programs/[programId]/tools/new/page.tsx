@@ -2,6 +2,9 @@ import { ProgramHeadTemplateBuilder } from "@/features/instruments/components/pr
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { listProgramPloOptions } from "@/features/instruments/services/manage-program-head-templates";
 import { notFound } from "next/navigation";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("New Tool", "Program Head") };
 
 export default async function NewSelectedProgramToolPage({
   params,

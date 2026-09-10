@@ -21,18 +21,22 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
-import { QualitativeWordCloud } from "./program-head-analytics-visualizations";
+import { LazyQualitativeWordCloud } from "./program-head-analytics-visualizations";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
 type ProgramHeadFeedbackViewProps = {
   programId: string;
   data: ProgramHeadFeedbackDTO;
   resetHref: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
 export function ProgramHeadFeedbackView({
   programId,
   data,
   resetHref,
+  aiFilters,
 }: ProgramHeadFeedbackViewProps) {
   const {
     emptyReason,
@@ -109,7 +113,7 @@ export function ProgramHeadFeedbackView({
       {emptyReason === null && (
         <>
           {tokens.length > 0 ? (
-            <QualitativeWordCloud
+            <LazyQualitativeWordCloud
               title="Qualitative Feedback"
               tokens={tokens}
               answerCount={qualitativeItemCount}
@@ -149,6 +153,15 @@ export function ProgramHeadFeedbackView({
           />
 
           <FeedbackEvidenceLinks programId={programId} evaluations={evidenceEvaluations} />
+          {aiFilters ? (
+            <ProgramHeadInlineAiInsight
+              programId={programId}
+              analyticsView="qualitative"
+              filters={aiFilters}
+              evidenceBasis={`${qualitativeItemCount} anonymous written ${qualitativeItemCount === 1 ? "answer" : "answers"}`}
+              qualitative
+            />
+          ) : null}
         </>
       )}
     </div>

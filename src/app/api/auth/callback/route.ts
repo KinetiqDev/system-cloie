@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteUrlFromRequest } from "@/lib/utils/site-url";
 import { resolveAuthSessionFromUser } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
+import { buildAuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 import { resolveSelfServiceEligibility } from "@/features/auth/services/self-service-eligibility";
 import { resolveGoogleAccountName } from "@/features/auth/services/resolve-google-account-name";
 import { SystemRole, type User, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
+import {
+  readActiveRoleCookie,
+  setActiveRoleCookie,
+} from "@/features/auth/services/active-role-cookie";
 import {
   clearLegalAcknowledgementCookie,
   LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME,
@@ -29,9 +34,7 @@ type PrismaWriter = {
     }) => Promise<DbUserWithRoles | null>;
   };
   userRole: {
-    create: (args: {
-      data: { user_id: string; role: SystemRole };
-    }) => Promise<UserRole>;
+    create: (args: { data: { user_id: string; role: SystemRole } }) => Promise<UserRole>;
   };
 };
 
@@ -110,6 +113,9 @@ export async function GET(request: Request) {
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
 
   let dbUser: DbUserWithRoles | null = null;
+  // Role claimed moments ago in this callback. It expresses the user's current
+  // intent and takes precedence over a stale active-role cookie below.
+  let claimedTargetRole: SystemRole | null = null;
 
   const bootstrapEmail = process.env.BOOTSTRAP_SECRETARY_EMAIL?.trim().toLowerCase();
   const isBootstrapEmail = Boolean(bootstrapEmail && normalizedEmail === bootstrapEmail);
@@ -156,8 +162,8 @@ export async function GET(request: Request) {
         }
 
         await tx.userRole.upsert({
-          where: { user_id: existingUser.id },
-          update: { role: SystemRole.SECRETARY },
+          where: { user_id_role: { user_id: existingUser.id, role: SystemRole.SECRETARY } },
+          update: {},
           create: { user_id: existingUser.id, role: SystemRole.SECRETARY },
         });
 
@@ -352,19 +358,36 @@ export async function GET(request: Request) {
 
   // 3. Role / domain / self-service gates and new-account creation.
   if (dbUser) {
-    const userRole = dbUser.roles[0]?.role;
+    const hasTargetRole = dbUser.roles.some((r) => r.role === targetRole);
+    const hasAnyRole = dbUser.roles.length > 0;
 
-    if (userRole) {
-      if (targetRole && userRole !== targetRole) {
-        await supabase.auth.signOut();
-        return redirectWithClearedTicket(`${siteUrl}/status/role-mismatch`);
-      }
-
-      if (isInternalRole(userRole) && !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
+    if (hasTargetRole) {
+      // Already has the requested role — domain check on any internal role.
+      const hasInternalRole = dbUser.roles.some((r) => isInternalRole(r.role));
+      if (hasInternalRole && !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
         await supabase.auth.signOut();
         return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
       }
-    } else {
+    } else if (hasAnyRole && targetRole) {
+      // Multi-role claim on an already-linked account.
+      const eligibilityFailure = resolveSelfServiceEligibility({
+        email: normalizedEmail,
+        targetRole,
+        intent: intentParam,
+      });
+      if (eligibilityFailure) {
+        await supabase.auth.signOut();
+        return redirectWithClearedTicket(`${siteUrl}${eligibilityFailure.destination}`);
+      }
+
+      await prisma.userRole.upsert({
+        where: { user_id_role: { user_id: dbUser.id, role: targetRole } },
+        update: {},
+        create: { user_id: dbUser.id, role: targetRole },
+      });
+
+      claimedTargetRole = targetRole;
+    } else if (!hasAnyRole) {
       if (targetRole) {
         const eligibilityFailure = resolveSelfServiceEligibility({
           email: normalizedEmail,
@@ -428,12 +451,57 @@ export async function GET(request: Request) {
     email: normalizedEmail,
   });
 
+  const activeRoleCookie = await readActiveRoleCookie();
+
+  const claimedFreshRole =
+    session &&
+    claimedTargetRole &&
+    session.roles.includes(claimedTargetRole as (typeof session.roles)[number])
+      ? (claimedTargetRole as unknown as (typeof session.roles)[number])
+      : null;
+  const effectiveRole = claimedFreshRole ?? session?.activeRole ?? null;
+  const effectiveGate =
+    session && claimedFreshRole
+      ? buildAuthSessionSnapshot({
+          userId: session.userId,
+          email: session.email,
+          name: session.name,
+          roles: session.roles,
+          activeRole: claimedFreshRole,
+          studentProfileId: session.studentProfileId,
+          alumniProfileId: session.alumniProfileId,
+          industryPartnerProfileId: session.industryPartnerProfileId,
+          alumniVerificationStatus: session.alumniVerificationStatus,
+          industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+        }).profileGate
+      : (session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" });
+
   const nextUrl = resolvePostLoginDestination({
     requestedPath: searchParams.get("next") ?? "/dashboard",
     intent: intentParam,
-    activeRole: session?.activeRole ?? null,
-    profileGate: session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" },
+    activeRole: effectiveRole,
+    profileGate: effectiveGate,
   });
+
+  if (session && session.roles.length > 1) {
+    if (claimedFreshRole) {
+      const response = redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
+      setActiveRoleCookie(response, claimedFreshRole);
+      return response;
+    }
+    if (
+      !activeRoleCookie ||
+      !session.roles.includes(activeRoleCookie as (typeof session.roles)[number])
+    ) {
+      return redirectWithClearedTicket(`${siteUrl}/select-role`);
+    }
+  }
+
+  if (session && session.roles.length === 1) {
+    const response = redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
+    setActiveRoleCookie(response, session.roles[0]);
+    return response;
+  }
 
   return redirectWithClearedTicket(`${siteUrl}${nextUrl}`);
 }

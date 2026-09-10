@@ -36,6 +36,8 @@ export interface FoundationContext {
 export interface AcademicCalendarContext {
   termInstance: { id: string };
   termInstances: {
+    ti2025First: { id: string };
+    ti2025Second: { id: string };
     ti2026First: { id: string };
     ti2026Second: { id: string };
     ti2027First: { id: string };

@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CourseForm } from "@/features/academic-structure/components/course-form";
 import { updateCourseAction } from "@/lib/actions/management-foundation-actions";
 import { prisma } from "@/lib/db/prisma";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Course", "Dean") };
 
 export default async function DeanEditCoursePage({ params }: { params: Promise<{ id: string }> }) {
   const id = (await params).id;
@@ -36,12 +39,7 @@ export default async function DeanEditCoursePage({ params }: { params: Promise<{
   if (!course) notFound();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link
-        href="/dean/academic-structure/courses"
-        className="text-link inline-flex min-h-11 items-center"
-      >
-        Back to Courses
-      </Link>
+      <BackLink href="/dean/academic-structure/courses">Back to Courses</BackLink>
       <nav className="text-text-muted text-xs">Courses &gt; Edit &gt; {course.code}</nav>
       <Card>
         <CardHeader>

@@ -55,20 +55,6 @@ function TableSkeleton() {
 }
 
 function EvidenceSkeleton({ tab }: { tab: AnalyticsFilterState["tab"] }) {
-  if (tab === "ai") {
-    return (
-      <Card data-testid="analytics-ai-skeleton">
-        <CardHeader className="flex flex-col gap-2">
-          <Skeleton className="h-5 w-56" />
-          <Skeleton className="h-4 w-full max-w-2xl" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-10 w-44" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   const chartCount = tab === "stakeholders" ? 2 : tab === "courses" ? 3 : 1;
   const showsAlert = tab === "outcomes" || tab === "stakeholders";
   const showsTable = tab === "outcomes" || tab === "trends" || tab === "qualitative";

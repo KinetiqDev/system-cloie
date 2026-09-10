@@ -54,7 +54,8 @@ export type ProgramHeadOverviewDTO = {
 /**
  * One comparable period in the Trends view. `comparableWithPrevious` is true
  * only when the previous chronological period is also rated and shares the
- * same instrument version, Likert scale identity, and mapped outcome identity.
+ * same instrument version, Likert scale identity, mapped outcome identity,
+ * and response source composition.
  */
 export type ProgramHeadTrendPeriodDTO = {
   termInstanceId: string;
@@ -137,6 +138,11 @@ export type ProgramHeadOutcomeDTO = {
   /** Courses whose course-bound evidence contributed to this row. */
   contributingCourses: Array<{ id: string; code: string; title: string }>;
   /**
+   * Per-CILO contributions behind this row, valid ratings only. Each entry
+   * carries its course, mapping manifestation, mean, and valid rating count.
+   */
+  contributors: ProgramHeadOutcomeContributorDTO[];
+  /**
    * Course-bound evaluations behind this row. Links resolve to the existing
    * selected-Program CILO review route, which independently re-authorizes
    * before exposing any raw response text.
@@ -155,6 +161,25 @@ export type ProgramHeadOutcomeDTO = {
   excludedRatingCount: number;
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
+};
+
+/**
+ * One CILO-level contribution behind a Program PLO row. Mean and valid
+ * rating count pool valid in-scale ratings only; manifestation is the
+ * descriptive label on the CILO-to-PLO mapping (never a filter or weight).
+ */
+type ProgramHeadOutcomeContributorDTO = {
+  ciloId: string;
+  /** Positional `CILO n` label within the contributor's course. */
+  ciloCode: string;
+  ciloDescription: string;
+  /** Course behind the contribution; null when the course record is gone. */
+  course: { id: string; code: string; title: string } | null;
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  /** Mean of valid in-scale ratings; contributors always have at least one. */
+  meanRating: number;
+  /** Count of valid in-scale ratings from this contributor. */
+  ratingCount: number;
 };
 
 /**
@@ -401,73 +426,4 @@ export type ProgramHeadFeedbackDTO = {
   sourceCounts: ProgramHeadFeedbackSourceCountDTO[];
   promptCounts: ProgramHeadFeedbackPromptCountDTO[];
   evidenceEvaluations: ProgramHeadFeedbackEvidenceDTO[];
-};
-
-// ---------------------------------------------------------------------------
-// AI Insights
-// ---------------------------------------------------------------------------
-
-/**
- * Sentiment labels a provider may assign to one bounded evidence category.
- * The union is fixed; System CLOIE computes displayed counts and percentages
- * from the validated classifications instead of trusting model totals.
- */
-export type ProgramHeadAISentimentStatus = "positive" | "negative" | "neutral" | "mixed";
-
-/** One provider classification over one supplied aggregate evidence category. */
-type ProgramHeadAISentimentClassificationDTO = {
-  /** Bounded label of the analyzed aggregate evidence category, e.g. a source label. */
-  evidenceCategory: string;
-  sentiment: ProgramHeadAISentimentStatus;
-  rationale: string;
-};
-
-/** Locally computed sentiment count and share of all classifications. */
-type ProgramHeadAISentimentCountDTO = {
-  sentiment: ProgramHeadAISentimentStatus;
-  count: number;
-  /** Full-precision share of all classifications; round only for display. */
-  percentage: number;
-};
-
-/** One bounded theme over the supplied aggregate evidence. */
-type ProgramHeadAIThemeDTO = {
-  name: string;
-  summary: string;
-};
-
-/**
- * What the provider actually analyzed vs. what was available. Discloses that
- * interpretation covers bounded aggregate evidence only, never raw comments.
- */
-type ProgramHeadAIEvidenceScopeDTO = {
-  submittedResponseCount: number;
-  qualitativeItemCount: number;
-  /** Distinct readable source labels included in the evidence packet. */
-  evaluatedSourceLabels: string[];
-  tokenAnalysis: {
-    availableTokenCount: number;
-    includedTokenCount: number;
-    truncated: boolean;
-  };
-};
-
-/**
- * Validated, bounded AI interpretation returned to the browser. Contains only
- * model-authored aggregate findings plus System CLOIE-computed counts and the
- * filter fingerprint; no raw evidence, identifiers, or response rows.
- */
-export type ProgramHeadAIInsightsSuccessDTO = {
-  /** Filter fingerprint of the scope this interpretation was generated for. */
-  fingerprint: string;
-  scope: ProgramHeadAnalyticsScopeSummary;
-  summary: string;
-  strengths: string[];
-  areasForReview: string[];
-  themes: ProgramHeadAIThemeDTO[];
-  sentimentClassifications: ProgramHeadAISentimentClassificationDTO[];
-  sentimentCounts: ProgramHeadAISentimentCountDTO[];
-  questionsForHumanReview: string[];
-  limitations: string[];
-  evidenceScope: ProgramHeadAIEvidenceScopeDTO;
 };

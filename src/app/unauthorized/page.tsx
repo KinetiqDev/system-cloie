@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Unauthorized") };
 
 export default function UnauthorizedPage() {
   return (
@@ -13,9 +16,7 @@ export default function UnauthorizedPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button render={<Link href="/dashboard" />}>
-            Return to dashboard
-          </Button>
+          <Button render={<Link href="/dashboard" />}>Return to dashboard</Button>
         </CardContent>
       </Card>
     </main>

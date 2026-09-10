@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
@@ -481,7 +482,7 @@ export function WizardShell({
   if (isSubmitted) {
     const receiptResponseId = submittedReceipt?.responseId;
     const formattedSubmittedAt = formatServerTimestamp(submittedReceipt?.submittedAt);
-    const hasReceiptData = Boolean(receiptResponseId || formattedSubmittedAt);
+    const hasReceiptData = Boolean(formattedSubmittedAt);
     const historyHref =
       submittedReviewHref ??
       (submittedHistoryRoute && receiptResponseId
@@ -505,14 +506,6 @@ export function WizardShell({
               Submission receipt
             </p>
             <dl className="mt-3 space-y-2">
-              {receiptResponseId && (
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="text-text-secondary text-body-sm shrink-0">Reference</dt>
-                  <dd className="text-text-primary text-body-sm text-right font-semibold break-all tabular-nums">
-                    {receiptResponseId}
-                  </dd>
-                </div>
-              )}
               {formattedSubmittedAt && (
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="text-text-secondary text-body-sm shrink-0">Submitted</dt>
@@ -548,14 +541,7 @@ export function WizardShell({
       {/* Sticky Wizard Header */}
       <div className="bg-background border-border sticky top-0 z-20 mb-4 border-b pb-3 sm:mb-6 sm:pb-4">
         <div className="mb-3 flex items-center justify-between sm:mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(returnRoute)}
-            className="-ml-2"
-          >
-            <ArrowLeft className="mr-2 size-4" /> Back to Dashboard
-          </Button>
+          <BackLink href={returnRoute}>Back to Dashboard</BackLink>
           <div className="text-text-muted text-label-sm flex items-center gap-2 font-bold tracking-wider uppercase">
             <Save className="size-4" /> {isSaving ? "Saving..." : savedTimeText}
           </div>
@@ -689,8 +675,15 @@ export function WizardShell({
         </div>
       </div>
 
-      {/* Sticky Wizard Footer */}
-      <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:left-64">
+      {/* Sticky wizard footer. Hidden while the review modal is open: the bar
+          paints above the mobile drawer overlay and would otherwise intercept
+          taps meant for the drawer's Confirm & Submit button. */}
+      <div
+        className={cn(
+          "bg-surface border-border fixed inset-x-0 bottom-0 z-[60] border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:left-64",
+          isReviewOpen && "hidden"
+        )}
+      >
         <div className="mx-auto flex max-w-[1600px] items-center justify-between">
           <Button
             variant="outline"

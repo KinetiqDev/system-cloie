@@ -8,7 +8,7 @@ Status labels used below:
 - **Partial**: a usable path exists, but a material rule, screen, verification layer, or administrative transition is incomplete.
 - **Deferred / planned**: intentionally unavailable, stubbed, or still awaiting a product or policy decision.
 
-The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT.md`, and `docs/adr/` take precedence over older PRD/SRS wording. In particular, CLOIE uses explicit permissions rather than role impersonation, accounts have one active role, and the Dean has read-only oversight for outcome and enrollment views even though the Dean shares selected catalog and roster operations with the Secretary.
+The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT.md`, and `docs/adr/` take precedence over older PRD/SRS wording. System CLOIE uses explicit permissions rather than role impersonation. An account may hold distinct assigned roles, but exactly one server-resolved role is active for authorization at a time. The Dean has read-only oversight for outcome and enrollment views even though the Dean shares selected catalog and roster operations with the Secretary.
 
 ## 1. System-Wide Entry Rules
 
@@ -16,12 +16,12 @@ The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT
 
 1. A person opens the role selection portal rather than a role-less login page.
 2. The person chooses one intended role from the staff or respondent portal.
-3. CLOIE records the intended role and starts Google OAuth.
-4. Google authenticates the identity. CLOIE normalizes the account email by trimming whitespace and lowercasing it.
-5. CLOIE resolves the domain user record, links the Google identity to the existing domain account when applicable, resolves the single active CLOIE account role, and evaluates the role-specific profile gate.
-6. The person is sent to the requested route, role dashboard, onboarding, or an account-status page.
+3. System CLOIE records the intended role and starts Google OAuth.
+4. Google authenticates the identity. System CLOIE normalizes the account email by trimming whitespace and lowercasing it.
+5. System CLOIE resolves the domain user record and links Google identity to an existing domain account when applicable. An eligible self-service role may be added to an already-linked account.
+6. The server validates the requested active role against the assigned-role set, resolves that role's profile gate, and sends the person to role selection, onboarding, an account-status page, or the role-owned dashboard.
 
-Google OAuth is the primary Production authentication mechanism. CLOIE does not use CLOIE-managed passwords, magic links, or ordinary email invitations. A domain user can be provisioned before first sign-in; the first Google sign-in must match the registered normalized email.
+Google OAuth is the primary Production authentication mechanism. System CLOIE does not use System CLOIE-managed passwords, magic links, or ordinary email invitations. A domain user can be provisioned before first sign-in; the first Google sign-in must match the registered normalized email.
 
 ### 1.2 Role eligibility
 
@@ -35,20 +35,20 @@ Google OAuth is the primary Production authentication mechanism. CLOIE does not 
 | Alumni           | Self-service role claim or Secretary-created account          | Any valid email domain                     | Alumni profile; external verification applies to self-service accounts           |
 | Industry Partner | Self-service role claim or Secretary-created account          | Any valid email domain                     | Industry Partner profile; external verification applies to self-service accounts |
 
-The role selection portal rejects a self-service claim for Secretary, Dean, or Program Head with `pre-provisioning-required`. Internal role claims with a non-ACD email reach the invalid-domain status page. There is no self-service role switching or role stacking. A role change is administrator-controlled and must satisfy the target role's requirements.
+The role selection portal rejects a self-service claim for Secretary, Dean, Program Head, or General Education Coordinator with `pre-provisioning-required`. Internal role claims with a non-ACD email reach the invalid-domain status page. Eligible already-linked accounts may add Faculty, Student, Alumni, or Industry Partner roles. Active-role selection changes authorization context but does not assign or revoke a role.
 
 ### 1.3 Account states and destinations
 
-| State                     | User journey                                                                                                                                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Role selection required   | The person chooses a role and continues through Google OAuth.                                                                                                                                     |
-| Role mismatch             | The selected portal role differs from the account role; CLOIE stops the request rather than switching roles.                                                                                      |
-| Role onboarding required  | The person completes the missing Faculty, Student, Alumni, or Industry Partner profile.                                                                                                           |
-| Deferred enrollment       | A Student profile exists but no active academic term enrollment exists. The Student may see the dashboard and a warning but cannot participate in evaluation work that requires active placement. |
-| Pending external account  | A self-service Alumni or Industry Partner profile exists with pending verification. The current UI shows a verification banner; pending accounts are not currently blocked by the profile gate.   |
-| Rejected external account | A rejected Alumni or Industry Partner is sent to the rejected status page and cannot enter the role dashboard.                                                                                    |
-| Inactive account          | An administrator-disabled account is blocked regardless of role, profile, verification, or enrollment state.                                                                                      |
-| Complete                  | The account enters its role-owned dashboard.                                                                                                                                                      |
+| State                     | User journey                                                                                                                                                                                          |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Role selection required   | A multi-role account chooses one of its assigned roles; a role-less account chooses an eligible role through public entry.                                                                            |
+| Role mismatch             | The requested role is neither assigned nor eligible for self-service claim; System CLOIE stops the request without changing the assigned-role set.                                                    |
+| Role onboarding required  | The person completes the active role's missing Faculty, Student, Alumni, or Industry Partner profile. Cancelling removes only that requested role while its required profile artifact remains absent. |
+| Deferred enrollment       | A Student profile exists but no active academic term enrollment exists. The Student may see the dashboard and a warning but cannot participate in evaluation work that requires active placement.     |
+| Pending external account  | A self-service Alumni or Industry Partner profile exists with pending verification. The current UI shows a verification banner; pending accounts are not currently blocked by the profile gate.       |
+| Rejected external account | A rejected Alumni or Industry Partner is sent to the rejected status page and cannot enter the role dashboard.                                                                                        |
+| Inactive account          | An administrator-disabled account is blocked regardless of role, profile, verification, or enrollment state.                                                                                          |
+| Complete                  | The account enters its role-owned dashboard.                                                                                                                                                          |
 
 The status pages explain invalid domains, pre-provisioning, role mismatch, inactivity, and rejected external access without exposing internal account details. Legal acknowledgement is required before the OAuth flow where the legal flow applies.
 
@@ -621,7 +621,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 - `src/features/academic-calendar/CONTEXT.md`
 - `src/features/course-assignments/CONTEXT.md`
 - `src/features/academic-structure/CONTEXT.md`
-- `docs/adr/0001-single-role-accounts.md`
+- `docs/adr/0022-multi-role-accounts-with-active-role-context.md`
 - `docs/adr/0001-complete-secretary-created-accounts.md`
 - `docs/adr/0002-separate-domain-users-from-auth-identities.md`
 - `docs/adr/0003-course-catalog-and-assignment-refactor.md`

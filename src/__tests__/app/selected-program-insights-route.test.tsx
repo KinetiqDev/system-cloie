@@ -12,6 +12,7 @@ const {
   breakdownsMock,
   feedbackMock,
   resolveProgramHeadContextMock,
+  generateInsightActionMock,
 } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
@@ -27,6 +28,7 @@ const {
   breakdownsMock: vi.fn(),
   feedbackMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
+  generateInsightActionMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -42,6 +44,9 @@ vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadStakeholders: stakeholdersMock,
   getProgramHeadBreakdowns: breakdownsMock,
   getProgramHeadFeedback: feedbackMock,
+}));
+vi.mock("@/lib/actions/program-head-analytics-actions", () => ({
+  generateProgramHeadAnalyticsInsightAction: generateInsightActionMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -137,6 +142,7 @@ describe("selected Program insights routes", () => {
     breakdownsMock.mockResolvedValue(null);
     feedbackMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
+    generateInsightActionMock.mockResolvedValue({ ok: false, state: "disabled" });
   });
 
   it("passes only the explicitly selected Program and parsed filters to the analytics read", async () => {
@@ -164,25 +170,67 @@ describe("selected Program insights routes", () => {
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
-  it("renders the AI Insights view for the ai tab without running other view reads", async () => {
+  it("renders deterministic outcomes charts with the inline AI insight for the default view", async () => {
+    outcomesMock.mockResolvedValue({
+      ...bsedOutcomes,
+      outcomes: [
+        {
+          ploId: "11111111-1111-4111-8111-111111111111",
+          code: "PLO 2",
+          name: "Graduate attribute",
+          meanRating: 4.2,
+          ratingCount: 10,
+          submittedResponseCount: 5,
+          contributingCilos: [],
+          contributingCourses: [],
+          contributors: [],
+          evidenceEvaluations: [],
+          distributions: [],
+          spansMultipleScales: false,
+          excludedRatingCount: 0,
+          evidenceSummary: { ratingCount: 10, explanation: "Raw mean of 10 valid ratings." },
+        },
+      ],
+    });
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "ai" }),
+      searchParams: Promise.resolve({}),
     });
 
     render(page);
 
-    expect(analyticsFrameMock).toHaveBeenCalledWith("program-bsed", { tab: "ai" });
-    expect(analyticsMock).not.toHaveBeenCalled();
+    expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
+    // Deterministic evidence renders without waiting on the AI insight. The chart
+    // itself loads dynamically, so its title resolves asynchronously.
+    expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
+    expect(screen.getByText("Exact values by Program Learning Outcome")).toBeInTheDocument();
+    // The default view owns one inline evidence-bound insight requested for its view.
+    expect(generateInsightActionMock).toHaveBeenCalledWith({
+      programId: "program-bsed",
+      analyticsView: "outcomes",
+      filters: expect.objectContaining({ tab: "outcomes" }),
+    });
+    expect(
+      await screen.findByText("AI insight is not enabled for this deployment.")
+    ).toBeInTheDocument();
+  });
+
+  it("redirects the removed AI tab to the default Outcomes view", async () => {
+    const Page = await loadAnalyticsPage();
+
+    await expect(
+      Page({
+        params: Promise.resolve({ programId: "program-bsed" }),
+        searchParams: Promise.resolve({ tab: "ai" }),
+      })
+    ).rejects.toThrow(/REDIRECT/);
+
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/program-head/programs/program-bsed/analytics?tab=outcomes"
+    );
     expect(outcomesMock).not.toHaveBeenCalled();
-    expect(trendsMock).not.toHaveBeenCalled();
-    expect(stakeholdersMock).not.toHaveBeenCalled();
-    expect(breakdownsMock).not.toHaveBeenCalled();
-    expect(feedbackMock).not.toHaveBeenCalled();
-    // The AI view is strictly on-demand: no generation starts on render.
-    expect(screen.getByRole("button", { name: "Generate interpretation" })).toBeInTheDocument();
-    expect(screen.getByText("On-demand interpretation")).toBeInTheDocument();
+    expect(analyticsMock).not.toHaveBeenCalled();
   });
 
   it("renders no analytics data when the outcomes read denies a selected Program", async () => {
@@ -286,6 +334,7 @@ describe("selected Program insights routes", () => {
           submittedResponseCount: 5,
           contributingCilos: [],
           contributingCourses: [],
+          contributors: [],
           evidenceEvaluations: [],
           distributions: [],
           spansMultipleScales: false,
@@ -754,7 +803,7 @@ describe("selected Program insights routes", () => {
     expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
   });
 
-  it("renders all 6 canonical tab navigation links", async () => {
+  it("renders all 5 canonical tab navigation links without a dedicated AI tab", async () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -769,7 +818,8 @@ describe("selected Program insights routes", () => {
     expect(within(tabNav).getByText("Stakeholders")).toBeInTheDocument();
     expect(within(tabNav).getByText("Trends")).toBeInTheDocument();
     expect(within(tabNav).getByText("Qualitative")).toBeInTheDocument();
-    expect(within(tabNav).getByText("AI Insights")).toBeInTheDocument();
+    // AI moved inline per view: no dedicated tab remains.
+    expect(within(tabNav).queryByText("AI Insights")).not.toBeInTheDocument();
   });
 
   it("renders the Feedback view without falling back to Overview", async () => {

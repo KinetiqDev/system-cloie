@@ -12,24 +12,29 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import type { ProgramHeadStakeholdersDTO } from "@/features/analytics/program-head-analytics-types";
-import {
-  ProgramHeadComparisonChart,
-  ProgramHeadResponseCompositionDonut,
-} from "./program-head-analytics-visualizations";
-import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
 type ProgramHeadStakeholderViewProps = {
+  programId: string;
   data: ProgramHeadStakeholdersDTO;
   resetHref: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
 /**
- * Source-aware stakeholder comparison. Course-bound student evidence, central
+ * Source-aware stakeholder summary. Course-bound student evidence, central
  * student-respondent evidence, alumni evidence, and Industry Partner evidence
- * stay in separate buckets with instrument disclosure; means are ranked bars,
- * and a donut appears only for genuine response composition.
+ * stay in separate cards with instrument disclosure. Sources are never ranked
+ * against each other: different instruments and populations produce means
+ * that are not comparable side-by-side.
  */
-export function ProgramHeadStakeholderView({ data, resetHref }: ProgramHeadStakeholderViewProps) {
+export function ProgramHeadStakeholderView({
+  programId,
+  data,
+  resetHref,
+  aiFilters,
+}: ProgramHeadStakeholderViewProps) {
   const { emptyReason, buckets, sourceSeparationDisclosure } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
@@ -76,20 +81,8 @@ export function ProgramHeadStakeholderView({ data, resetHref }: ProgramHeadStake
     );
   }
 
-  const rows: ProgramHeadComparisonDatum[] = buckets.map((bucket) => ({
-    key: bucket.sourceKey,
-    label: bucket.sourceLabel,
-    meanRating: bucket.meanRating,
-    ratingCount: bucket.ratingCount,
-    submittedResponseCount: bucket.submittedResponseCount,
-    context: bucket.instrumentContext,
-  }));
-
-  const composition = buckets.map((bucket) => ({
-    key: bucket.sourceKey,
-    label: bucket.sourceLabel,
-    count: bucket.submittedResponseCount,
-  }));
+  const totalResponses = buckets.reduce((sum, bucket) => sum + bucket.submittedResponseCount, 0);
+  const totalRatings = buckets.reduce((sum, bucket) => sum + bucket.ratingCount, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,26 +91,46 @@ export function ProgramHeadStakeholderView({ data, resetHref }: ProgramHeadStake
         <AlertDescription>{sourceSeparationDisclosure}</AlertDescription>
       </Alert>
 
-      <div className="flex flex-col gap-2">
-        <h3 className="text-title-sm text-foreground">About these evidence sources</h3>
-        <ul className="flex flex-col gap-1.5">
-          {buckets.map((bucket) => (
-            <li key={bucket.sourceKey} className="text-body-sm text-text-secondary">
-              <span className="text-foreground font-semibold">{bucket.sourceLabel}:</span>{" "}
-              {bucket.sourceDescription}
-              {bucket.instrumentContext ? ` Instruments: ${bucket.instrumentContext}.` : null}
-            </li>
-          ))}
-        </ul>
+      <div
+        className="grid gap-4 sm:grid-cols-2"
+        role="list"
+        aria-label="Mean rating by evidence source"
+      >
+        {buckets.map((bucket) => (
+          <div
+            key={bucket.sourceKey}
+            role="listitem"
+            className="border-border/80 bg-card flex flex-col gap-2 rounded-xl border p-4 shadow-xs sm:p-5"
+          >
+            <h3 className="text-title-sm text-foreground font-semibold">{bucket.sourceLabel}</h3>
+            <p className="text-body-sm text-text-secondary">{bucket.sourceDescription}</p>
+            <p className="text-heading-md text-foreground mt-1 tabular-nums">
+              {bucket.meanRating === null ? "—" : bucket.meanRating.toFixed(2)}
+              <span className="text-body-sm text-text-secondary font-normal"> mean rating</span>
+            </p>
+            <p className="text-body-sm text-text-secondary tabular-nums">
+              {bucket.submittedResponseCount}{" "}
+              {bucket.submittedResponseCount === 1 ? "response" : "responses"} ·{" "}
+              {bucket.ratingCount} {bucket.ratingCount === 1 ? "rating" : "ratings"}
+            </p>
+            {bucket.instrumentContext ? (
+              <p className="text-body-sm text-text-secondary">
+                <span className="text-foreground font-medium">Instruments: </span>
+                {bucket.instrumentContext}
+              </p>
+            ) : null}
+          </div>
+        ))}
       </div>
 
-      <ProgramHeadComparisonChart
-        title="Mean Rating by Evidence Source"
-        description="Independent Mean Ratings per evidence source. Means are pooled within each source only and are never combined across sources."
-        rows={rows}
-      />
-
-      {buckets.length >= 2 ? <ProgramHeadResponseCompositionDonut data={composition} /> : null}
+      {aiFilters ? (
+        <ProgramHeadInlineAiInsight
+          programId={programId}
+          analyticsView="stakeholders"
+          filters={aiFilters}
+          evidenceBasis={`${totalResponses} submitted ${totalResponses === 1 ? "response" : "responses"} and ${totalRatings} valid ${totalRatings === 1 ? "rating" : "ratings"} across ${buckets.length} evidence ${buckets.length === 1 ? "source" : "sources"}`}
+        />
+      ) : null}
     </div>
   );
 }

@@ -4,9 +4,10 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { listSchoolYears } from "@/features/academic-calendar/services/list-school-years";
 import { SchoolYearsClientPage, type SchoolYearsTab } from "./client-page";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata: Metadata = {
-  title: "School Years | Secretary | System CLOIE",
+  title: buildPageTitle("School Years", "Secretary"),
   description: "Manage school years and academic periods in System CLOIE",
 };
 

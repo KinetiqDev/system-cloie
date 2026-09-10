@@ -5,6 +5,9 @@ import {
   duplicateDeanTemplateAction,
   deleteDeanTemplateAction,
 } from "@/lib/actions/dean-template-actions";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Instruments", "Dean") };
 
 export default async function DeanInstrumentsPage({
   searchParams,

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
+import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
 
 /**
  * Base identity fields editable for any account through the Secretary
@@ -65,6 +65,7 @@ export type IndustryPartnerEditInput = z.infer<typeof industryPartnerEditSchema>
 export const editUserBySecretarySchema = z
   .object({
     id: z.string().uuid(),
+    expectedRole: z.nativeEnum(SystemRole),
     confirmationToken: z.string().optional(), // Token for protected edits
   })
   .merge(baseIdentityEditSchema)
@@ -81,16 +82,14 @@ export const editUserBySecretarySchema = z
           // The complete desired assignment set. May be empty so a Secretary
           // can deactivate every Program Head assignment before role
           // revocation; zero active assignments does not revoke the role.
-          program_ids: z
-            .array(z.string().uuid("Program is required."))
-            .superRefine((ids, ctx) => {
-              if (new Set(ids).size !== ids.length) {
-                ctx.addIssue({
-                  code: "custom",
-                  message: "Duplicate programs are not allowed.",
-                });
-              }
-            }),
+          program_ids: z.array(z.string().uuid("Program is required.")).superRefine((ids, ctx) => {
+            if (new Set(ids).size !== ids.length) {
+              ctx.addIssue({
+                code: "custom",
+                message: "Duplicate programs are not allowed.",
+              });
+            }
+          }),
         })
         .optional(),
       alumni: alumniEditSchema.optional(),

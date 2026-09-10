@@ -13,6 +13,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { listStakeholderEvaluations } from "@/features/responses/services/list-stakeholder-evaluations";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("History", "Industry Partner") };
 
 export default async function IndustryPartnerHistoryPage() {
   const { submitted } = await listStakeholderEvaluations(

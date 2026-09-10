@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getFacultyEvaluationDetail } from "@/features/evaluations/services/get-faculty-evaluation-detail";
 import { FacultyEvaluationDetailView } from "@/features/evaluations/components/faculty-evaluation-detail-view";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Published Evaluation", "Faculty") };
 
 export default async function FacultyPublishedEvaluationDetailPage({
   params,

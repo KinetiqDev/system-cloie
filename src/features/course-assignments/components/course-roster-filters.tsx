@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownAZ, ArrowUpAZ } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -128,29 +127,28 @@ export function CourseRosterMemberFilters({
 }: CourseRosterMemberFiltersProps) {
   const router = useRouter();
   const [searchDraft, setSearchDraft] = useState(initialSearch);
-  const [includeRemoved, setIncludeRemoved] = useState(initialRemoved);
   const [isPending, startTransition] = useTransition();
   const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignmentId}`;
-  const nextSort: "asc" | "desc" = sortDirection === "asc" ? "desc" : "asc";
 
   const navigate = useCallback(
-    (search: string, removed: boolean, sort: "asc" | "desc") => {
+    (search: string) => {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      if (removed) params.set("removed", "1");
-      params.set("sort", sort);
+      if (initialRemoved) params.set("removed", "1");
+      params.set("sort", sortDirection);
       startTransition(() => router.replace(`${basePath}?${params.toString()}`));
     },
-    [basePath, router]
+    [basePath, router, initialRemoved, sortDirection]
   );
 
-  // Search streams in after a quiet pause while typing; the removed checkbox
-  // and the sort toggle apply immediately. Both preserve route scope.
+  // Search streams in after a quiet pause while typing. The sort direction
+  // and removed scope are owned by the column header and the server-driven
+  // view, so they are preserved untouched here.
   useEffect(() => {
     if (searchDraft === initialSearch) return;
-    const timer = setTimeout(() => navigate(searchDraft, includeRemoved, sortDirection), 300);
+    const timer = setTimeout(() => navigate(searchDraft), 300);
     return () => clearTimeout(timer);
-  }, [searchDraft, includeRemoved, sortDirection, initialSearch, navigate]);
+  }, [searchDraft, initialSearch, navigate]);
 
   return (
     <FieldGroup
@@ -170,33 +168,7 @@ export function CourseRosterMemberFilters({
           onChange={(event) => setSearchDraft(event.target.value)}
         />
       </Field>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
-        <Field orientation="horizontal" className="min-h-11 w-fit">
-          <Checkbox
-            id="member-removed"
-            checked={includeRemoved}
-            onCheckedChange={(checked) => {
-              setIncludeRemoved(checked);
-              navigate(searchDraft, checked, sortDirection);
-            }}
-          />
-          <FieldLabel htmlFor="member-removed">Include removed students</FieldLabel>
-        </Field>
-        <button
-          type="button"
-          aria-pressed={sortDirection === "desc"}
-          className="focus-visible:ring-ring bg-secondary text-secondary-foreground hover:bg-secondary/80 inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium focus-visible:ring-3 focus-visible:outline-none"
-          onClick={() => navigate(searchDraft, includeRemoved, nextSort)}
-        >
-          {sortDirection === "asc" ? (
-            <ArrowDownAZ aria-hidden="true" className="size-4" />
-          ) : (
-            <ArrowUpAZ aria-hidden="true" className="size-4" />
-          )}
-          Name {sortDirection === "asc" ? "A→Z" : "Z→A"}
-        </button>
-      </div>
+      {isPending ? <Spinner size="sm" label="Updating roster members" /> : null}
     </FieldGroup>
   );
 }

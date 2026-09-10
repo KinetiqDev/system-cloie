@@ -6,7 +6,6 @@ import { ProgramHeadTrendsView } from "@/features/analytics/components/program-h
 import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
 import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
-import { ProgramHeadAIInsightsView } from "@/features/analytics/components/program-head-ai-insights-view";
 import {
   getProgramHeadAnalyticsFrame,
   getProgramHeadBreakdowns,
@@ -19,14 +18,16 @@ import {
   buildAnalyticsQueryString,
   buildAnalyticsUrl,
   parseAnalyticsSearchParams,
+  toInsightFilters,
+  type AnalyticsFilterState,
 } from "@/features/analytics/services/program-head-analytics-state";
-import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
   buildProgramHeadDashboardPath,
   buildProgramHeadProgramPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Analytics | Program Head | System CLOIE" };
+export const metadata = { title: buildPageTitle("Analytics", "Program Head") };
 
 type ResolvedTabContent = { children: ReactNode; ploCode?: string };
 
@@ -34,11 +35,11 @@ async function withData<T>(
   programId: string,
   filters: AnalyticsFilterState,
   read: (id: string, state: AnalyticsFilterState) => Promise<T | null>,
-  render: (data: T) => ReactNode
+  render: (data: T, filters: AnalyticsFilterState) => ReactNode
 ): Promise<ResolvedTabContent> {
   const data = await read(programId, filters);
   if (!data) notFound();
-  return { children: render(data) };
+  return { children: render(data, filters) };
 }
 
 async function resolveOutcomesTab(
@@ -59,6 +60,7 @@ async function resolveOutcomesTab(
         data={data}
         resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
         selectedPloId={filters.ploId}
+        aiFilters={toInsightFilters(filters)}
       />
     ),
   };
@@ -72,44 +74,41 @@ async function resolveProgramHeadAnalyticsTabContent(
     case "outcomes":
       return resolveOutcomesTab(programId, filters);
     case "stakeholders":
-      return withData(programId, filters, getProgramHeadStakeholders, (data) => (
+      return withData(programId, filters, getProgramHeadStakeholders, (data, viewFilters) => (
         <ProgramHeadStakeholderView
+          programId={programId}
           data={data}
           resetHref={buildAnalyticsUrl(programId, { tab: "stakeholders" })}
+          aiFilters={toInsightFilters(viewFilters)}
         />
       ));
     case "trends":
-      return withData(programId, filters, getProgramHeadTrends, (data) => (
+      return withData(programId, filters, getProgramHeadTrends, (data, viewFilters) => (
         <ProgramHeadTrendsView
+          programId={programId}
           data={data}
           resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
+          aiFilters={toInsightFilters(viewFilters)}
         />
       ));
     case "courses":
-      return withData(programId, filters, getProgramHeadBreakdowns, (data) => (
+      return withData(programId, filters, getProgramHeadBreakdowns, (data, viewFilters) => (
         <ProgramHeadBreakdownsView
           programId={programId}
           data={data}
           resetHref={buildAnalyticsUrl(programId, { tab: "courses" })}
+          aiFilters={toInsightFilters(viewFilters)}
         />
       ));
     case "qualitative":
-      return withData(programId, filters, getProgramHeadFeedback, (data) => (
+      return withData(programId, filters, getProgramHeadFeedback, (data, viewFilters) => (
         <ProgramHeadFeedbackView
           programId={programId}
           data={data}
           resetHref={buildAnalyticsUrl(programId, { tab: "qualitative" })}
+          aiFilters={toInsightFilters(viewFilters)}
         />
       ));
-    case "ai": {
-      const frame = await getProgramHeadAnalyticsFrame(programId, filters);
-      if (!frame) notFound();
-      return {
-        children: (
-          <ProgramHeadAIInsightsView programId={programId} filters={filters} scope={frame.scope} />
-        ),
-      };
-    }
   }
 }
 
@@ -122,7 +121,6 @@ const VALID_RAW_TABS: Record<string, true> = {
   stakeholders: true,
   trends: true,
   qualitative: true,
-  ai: true,
 };
 
 function firstTrimmed(value: string | string[] | undefined): string | undefined {

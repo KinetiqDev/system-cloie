@@ -155,7 +155,7 @@ describe("Industry Partner Actions", () => {
       },
     });
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id: "user-123" },
+      where: { user_id_role: { user_id: "user-123", role: ROLES.INDUSTRY_PARTNER } },
     });
     expect(prisma.userRole.create).toHaveBeenCalledWith({
       data: {
@@ -292,7 +292,7 @@ describe("Industry Partner Actions", () => {
 
     expect(result.success).toBe(true);
     expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id: "user-123" },
+      where: { user_id_role: { user_id: "user-123", role: ROLES.INDUSTRY_PARTNER } },
     });
     expect(prisma.userRole.create).not.toHaveBeenCalled();
   });
@@ -311,11 +311,14 @@ describe("Industry Partner Actions", () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe("An unexpected error occurred while processing your request.");
-    expect(consoleSpy).toHaveBeenCalledWith("Failed to create industry partner profile:", customError);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Failed to create industry partner profile:",
+      customError
+    );
     consoleSpy.mockRestore();
   });
 
-  it("should fail onboarding if userRole exists and is a different role", async () => {
+  it("allows onboarding when the user holds a different role (multi-role)", async () => {
     mockGetUser.mockResolvedValue({
       data: {
         user: {
@@ -325,16 +328,21 @@ describe("Industry Partner Actions", () => {
       },
       error: null,
     });
-    (prisma.userRole.findUnique as any).mockResolvedValue({
-      id: "role-123",
-      user_id: "user-123",
-      role: ROLES.STUDENT,
-    });
+    // No INDUSTRY_PARTNER role claimed yet; other roles no longer block registration.
+    (prisma.userRole.findUnique as any).mockResolvedValue(null);
 
     const result = await createIndustryPartnerProfile(validPayload);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Your account is already registered with a different role.");
+    expect(result.success).toBe(true);
+    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "user-123", role: ROLES.INDUSTRY_PARTNER } },
+    });
+    expect(prisma.userRole.create).toHaveBeenCalledWith({
+      data: {
+        user_id: "user-123",
+        role: ROLES.INDUSTRY_PARTNER,
+      },
+    });
   });
 
   it("rejects registration when the resolved domain user is inactive", async () => {

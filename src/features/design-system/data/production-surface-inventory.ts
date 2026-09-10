@@ -1373,6 +1373,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/select-role/page.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/gen-ed-coordinator/analytics/error.tsx",
     disposition: "task",
     taskId: 25,
@@ -1882,6 +1888,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/disclosure.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes:
+      "Native details disclosure primitive with rotating chevron affordance for analytics expandable sections",
+  },
+  {
     path: "src/components/ui/dropdown-menu.tsx",
     disposition: "task",
     taskId: 6,
@@ -2305,6 +2318,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #521 responsive breadcrumb trail: full hierarchy in DOM, middle steps collapse on mobile, aria-current on the current page",
   },
   {
+    path: "src/components/ui/back-link.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes:
+      "Single upward-navigation BackLink primitive: ghost button wrapping a Next.js Link or a guarded onClick action with a leading arrow icon",
+  },
+  {
     path: "src/features/analytics/components/how-calculated-popover.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2406,11 +2426,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Server component composing aggregate-only qualitative feedback, accessible word-cloud alternatives, counts, empty states, and authorized review links",
   },
   {
-    path: "src/features/analytics/components/program-head-ai-insights-view.tsx",
+    path: "src/features/analytics/components/program-head-inline-ai-insight.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client on-demand AI interpretation view with fixed prompt boundary, validated aggregate-only output, locally computed sentiment counts, stale fingerprints, and recoverable failure states",
+      "Client inline AI interpretation section with evidence-bound observation, stale fingerprint refresh, and recoverable failure states",
   },
   {
     path: "src/features/analytics/components/program-head-outcomes-view.tsx",
@@ -2420,11 +2440,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
-    path: "src/features/analytics/components/program-head-outcome-ranking-chart.tsx",
+    path: "src/features/analytics/components/program-head-plo-lollipop-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "New client ranked outcome chart with data-derived axis domain, legend, insight, and exact-value table",
+      "Client lollipop chart rendering PLO means on the fixed 1-5 scale with exact-value disclosure alternative",
+  },
+  {
+    path: "src/features/analytics/components/program-head-contributor-matrix.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Server component exposing per-PLO CILO contributor matrix with course, manifestation, mean, and valid count",
   },
   {
     path: "src/features/analytics/components/program-head-plo-detail.tsx",
@@ -2455,12 +2482,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New client ranked-bar comparison chart with semantic tokens, insight, legend, and exact-value table",
   },
   {
-    path: "src/features/analytics/components/program-head-response-composition-donut.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes: "New client donut reserved for genuine response composition, never independent means",
-  },
-  {
     path: "src/features/analytics/components/program-head-breakdowns-view.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2472,6 +2493,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes: "New client grouped-bar instrument chart keeping every evidence source separate",
+  },
+  {
+    path: "src/features/auth/components/active-role-switcher.tsx",
+    disposition: "task",
+    taskId: 18,
+    category: "feature_component",
   },
   {
     path: "src/features/auth/components/authenticated-app-shell.tsx",

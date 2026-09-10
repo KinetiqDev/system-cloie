@@ -18,15 +18,18 @@ import type {
   ProgramHeadCourseBreakdownRowDTO,
 } from "@/features/analytics/program-head-analytics-types";
 import {
-  ProgramHeadComparisonChart,
-  ProgramHeadInstrumentBreakdownChart,
+  LazyProgramHeadComparisonChart,
+  LazyProgramHeadInstrumentBreakdownChart,
 } from "./program-head-analytics-visualizations";
 import type { ProgramHeadComparisonDatum } from "./program-head-comparison-chart";
+import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 
 type ProgramHeadBreakdownsViewProps = {
   programId: string;
   data: ProgramHeadBreakdownsDTO;
   resetHref: string;
+  aiFilters?: ProgramHeadInsightFilters;
 };
 
 function breakdownRowToDatum(row: ProgramHeadBreakdownRowDTO): ProgramHeadComparisonDatum {
@@ -55,7 +58,7 @@ function courseRowToDatum(
 
 function contextualChart(title: string, breakdown: ProgramHeadContextualBreakdownDTO) {
   return (
-    <ProgramHeadComparisonChart
+    <LazyProgramHeadComparisonChart
       title={title}
       description={breakdown.attributionNote}
       rows={breakdown.rows.map(breakdownRowToDatum)}
@@ -103,6 +106,7 @@ export function ProgramHeadBreakdownsView({
   programId,
   data,
   resetHref,
+  aiFilters,
 }: ProgramHeadBreakdownsViewProps) {
   const { emptyReason, courseRows, instrumentRows, majorBreakdown, yearLevelBreakdown } = data;
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
@@ -154,7 +158,7 @@ export function ProgramHeadBreakdownsView({
     <div className="flex flex-col gap-6">
       {courseRows.length > 0 ? (
         <section aria-label="Course breakdown">
-          <ProgramHeadComparisonChart
+          <LazyProgramHeadComparisonChart
             title="Mean Rating by Course"
             description="Course-bound student evidence only. Each row discloses the instruments behind its ratings and links to authorized review evidence."
             rows={courseRows.map((row) => courseRowToDatum(programId, row))}
@@ -167,9 +171,18 @@ export function ProgramHeadBreakdownsView({
         </DimensionNote>
       )}
 
+      {aiFilters && courseRows.length > 0 ? (
+        <ProgramHeadInlineAiInsight
+          programId={programId}
+          analyticsView="courses"
+          filters={aiFilters}
+          evidenceBasis={`${courseRows.reduce((sum, row) => sum + row.submittedResponseCount, 0)} submitted responses across ${courseRows.length} ${courseRows.length === 1 ? "course" : "courses"}`}
+        />
+      ) : null}
+
       {instrumentRows.length > 0 ? (
         <section aria-label="Instrument breakdown">
-          <ProgramHeadInstrumentBreakdownChart rows={instrumentRows} />
+          <LazyProgramHeadInstrumentBreakdownChart rows={instrumentRows} />
         </section>
       ) : (
         <DimensionNote title="Instrument Breakdown" resetHref={resetHref}>

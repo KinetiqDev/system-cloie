@@ -7,6 +7,9 @@ import {
 } from "@/lib/actions/student-evaluation-actions";
 import { notFound, redirect } from "next/navigation";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation", "Student") };
 
 export default async function EvaluationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

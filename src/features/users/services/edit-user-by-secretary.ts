@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type EditUserBySecretaryInput, editUserBySecretarySchema } from "../schemas/edit-user";
 import { applyProgramHeadAssignmentSet, lockProgramHeadAssignmentSet } from "./manage-users";
+import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
 import CryptoJS from "crypto-js";
 import { timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
@@ -41,9 +42,7 @@ type ReviewedProtectedSnapshot = {
   activeProgramIds: string[];
 };
 
-function activeAssignmentProgramIds(
-  assignments: ProgramHeadAssignmentRow[] | undefined
-): string[] {
+function activeAssignmentProgramIds(assignments: ProgramHeadAssignmentRow[] | undefined): string[] {
   return (assignments ?? [])
     .filter((assignment) => assignment.is_active)
     .map((assignment) => assignment.program_id)
@@ -171,7 +170,7 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "Secretary access required." };
   }
 
-  const { id, name, student, faculty, program_head, alumni, industry_partner } =
+  const { id, expectedRole, name, student, faculty, program_head, alumni, industry_partner } =
     parsed.data;
 
   if (id === session.userId) {
@@ -183,8 +182,10 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     select: {
       id: true,
       is_active: true,
-      roles: { select: { role: true } },
-      student_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
+      roles: { select: { role: true }, orderBy: { role: "asc" } },
+      student_profile: {
+        include: { program: { select: { name: true } }, major: { select: { name: true } } },
+      },
       enrollments: {
         where: { is_active: true, term: { status: "ACTIVE" } },
         take: 1,
@@ -197,7 +198,9 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       program_head_assignments: {
         include: { program: { select: { name: true, code: true } } },
       },
-      alumni_profile: { include: { program: { select: { name: true } }, major: { select: { name: true } } } },
+      alumni_profile: {
+        include: { program: { select: { name: true } }, major: { select: { name: true } } },
+      },
       industry_partner_profile: { include: { program: { select: { name: true } } } },
     },
   });
@@ -206,9 +209,18 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "User not found." };
   }
 
+  // Same deterministic enum order as the edit-record reader, so both agree
+  // on the target role for multi-role accounts.
   const existingRole = existing.roles[0]?.role;
   if (!existingRole) {
     return { success: false, error: "User has no assigned CLOIE account role." };
+  }
+
+  if (existingRole !== expectedRole) {
+    return {
+      success: false,
+      error: "The account roles changed since this form was loaded. Please reload and try again.",
+    };
   }
 
   // The complete reviewed before-set: every currently active assignment.
@@ -247,25 +259,24 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
   };
 
   // Detect protected changes — payload signs reviewed before-state + requested after-state.
-  const protectedPayload = deriveProtectedPayload(
-    parsed.data,
-    existingRole,
-    id,
-    reviewedSnapshot
-  );
+  const protectedPayload = deriveProtectedPayload(parsed.data, existingRole, id, reviewedSnapshot);
 
   // Each role needs an explicit review of its protected fields.
   // fallow-ignore-next-line complexity
-  const confirmationReview: {
-    role: SystemRole;
-    oldValues: Record<string, string>;
-    newValues: Record<string, string>;
-  } | undefined = protectedPayload
-    ? (() : {
+  const confirmationReview:
+    | {
         role: SystemRole;
         oldValues: Record<string, string>;
         newValues: Record<string, string>;
-      } | undefined => {
+      }
+    | undefined = protectedPayload
+    ? (():
+        | {
+            role: SystemRole;
+            oldValues: Record<string, string>;
+            newValues: Record<string, string>;
+          }
+        | undefined => {
         if (existingRole === SystemRole.STUDENT && student) {
           const current = existing.student_profile;
           const enrollment = existing.enrollments[0];
@@ -288,7 +299,9 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         if (existingRole === SystemRole.FACULTY && faculty) {
           return {
             role: existingRole,
-            oldValues: { program: existing.faculty_program_affiliations[0]?.program?.name ?? "None" },
+            oldValues: {
+              program: existing.faculty_program_affiliations[0]?.program?.name ?? "None",
+            },
             newValues: { program: faculty.program_id },
           };
         }
@@ -352,14 +365,15 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
       ...(program_head?.program_ids ?? []),
       alumni?.program_id,
       industry_partner?.program_id,
-    ]
-      .filter((value): value is string => Boolean(value));
+    ].filter((value): value is string => Boolean(value));
     const catalogs = await prisma.program.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true, majors: { select: { id: true, name: true } } },
     });
     const names = new Map(catalogs.map((program) => [program.id, program.name]));
-    const majors = new Map(catalogs.flatMap((program) => program.majors.map((major) => [major.id, major.name])));
+    const majors = new Map(
+      catalogs.flatMap((program) => program.majors.map((major) => [major.id, major.name]))
+    );
     const requestedProgram = ids[0];
     if (requestedProgram) {
       confirmationReview.newValues.program = names.get(requestedProgram) ?? requestedProgram;
@@ -382,13 +396,19 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "Faculty details are required for Faculty accounts." };
   }
   if (existingRole === SystemRole.PROGRAM_HEAD && !program_head) {
-    return { success: false, error: "Program Head details are required for Program Head accounts." };
+    return {
+      success: false,
+      error: "Program Head details are required for Program Head accounts.",
+    };
   }
   if (existingRole === SystemRole.ALUMNI && !alumni) {
     return { success: false, error: "Alumni details are required for Alumni accounts." };
   }
   if (existingRole === SystemRole.INDUSTRY_PARTNER && !industry_partner) {
-    return { success: false, error: "Industry Partner details are required for Industry Partner accounts." };
+    return {
+      success: false,
+      error: "Industry Partner details are required for Industry Partner accounts.",
+    };
   }
   if (student && Boolean(student.year_level) !== Boolean(student.section)) {
     return { success: false, error: "Year level and section must be provided together." };
@@ -497,18 +517,21 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           include: { majors: { where: { is_active: true } } },
         });
 
-         if (!program || (!program.is_active && program.id !== existing.student_profile?.program_id)) {
-           throw new Error("Selected program is archived or inactive.");
-         }
+        if (
+          !program ||
+          (!program.is_active && program.id !== existing.student_profile?.program_id)
+        ) {
+          throw new Error("Selected program is archived or inactive.");
+        }
 
         if (program.majors.length > 0) {
           if (!student.major_id) {
             throw new Error("A major is required for the selected program.");
           }
-           if (
-             !program.majors.some((m) => m.id === student.major_id) &&
-             student.major_id !== existing.student_profile?.major_id
-           ) {
+          if (
+            !program.majors.some((m) => m.id === student.major_id) &&
+            student.major_id !== existing.student_profile?.major_id
+          ) {
             throw new Error("Selected major is not valid for this program.");
           }
         } else if (student.major_id) {
@@ -558,7 +581,8 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
 
         if (!primary || primary.program_id !== faculty.program_id) {
           const program = await tx.program.findUnique({ where: { id: faculty.program_id } });
-          if (!program || !program.is_active) throw new Error("Selected program is archived or inactive.");
+          if (!program || !program.is_active)
+            throw new Error("Selected program is archived or inactive.");
           if (primary) {
             // Deactivate current primary
             await tx.facultyProgramAffiliation.update({
@@ -600,10 +624,10 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
         // The save transaction re-verifies that the target still holds the
         // Program Head role; a role revocation racing this save is denied.
         const roleRecord = await tx.userRole.findUnique({
-          where: { user_id: id },
+          where: { user_id_role: { user_id: id, role: SystemRole.PROGRAM_HEAD } },
           select: { role: true },
         });
-        if (!roleRecord || roleRecord.role !== SystemRole.PROGRAM_HEAD) {
+        if (!roleRecord) {
           throw new Error("The target user no longer has the Program Head role.");
         }
 
@@ -634,7 +658,9 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
               where: { id: { in: newlySelectedProgramIds } },
               select: { id: true, is_active: true },
             });
-            const programStates = new Map(programs.map((program) => [program.id, program.is_active]));
+            const programStates = new Map(
+              programs.map((program) => [program.id, program.is_active])
+            );
             const invalidProgram = newlySelectedProgramIds.find(
               (programId) => !programStates.has(programId) || !programStates.get(programId)
             );
@@ -653,16 +679,16 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           where: { id: alumni.program_id },
           include: { majors: { where: { is_active: true } } },
         });
-         if (!program || (!program.is_active && program.id !== existing.alumni_profile?.program_id))
+        if (!program || (!program.is_active && program.id !== existing.alumni_profile?.program_id))
           throw new Error("Selected program is archived or inactive.");
         if (program.majors.length > 0 && !alumni.major_id) {
           throw new Error("A major is required for the selected program.");
         }
-         if (
-           alumni.major_id &&
-           !program.majors.some((major) => major.id === alumni.major_id) &&
-           alumni.major_id !== existing.alumni_profile?.major_id
-         ) {
+        if (
+          alumni.major_id &&
+          !program.majors.some((major) => major.id === alumni.major_id) &&
+          alumni.major_id !== existing.alumni_profile?.major_id
+        ) {
           throw new Error("Selected major is not valid for this program.");
         }
         if (program.majors.length === 0 && alumni.major_id) {
@@ -684,6 +710,20 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             verification_status: alumni.verification_status,
           },
         });
+        const previousAlumni = existing.alumni_profile;
+        if (
+          alumni.verification_status === "APPROVED" &&
+          (previousAlumni?.verification_status !== "APPROVED" ||
+            previousAlumni.program_id !== alumni.program_id ||
+            (previousAlumni.major_id ?? null) !== (alumni.major_id ?? null))
+        ) {
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: alumni.program_id,
+            majorId: alumni.major_id ?? null,
+            targetStakeholder: "ALUMNI",
+            userIds: [id],
+          });
+        }
       } else if (existingRole === SystemRole.INDUSTRY_PARTNER && industry_partner) {
         if (industry_partner.program_id) {
           const program = await tx.program.findUnique({
@@ -709,6 +749,19 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
             verification_status: industry_partner.verification_status,
           },
         });
+        const previousPartner = existing.industry_partner_profile;
+        if (
+          industry_partner.verification_status === "APPROVED" &&
+          industry_partner.program_id &&
+          (previousPartner?.verification_status !== "APPROVED" ||
+            (previousPartner.program_id ?? null) !== industry_partner.program_id)
+        ) {
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: industry_partner.program_id,
+            targetStakeholder: "INDUSTRY_PARTNER",
+            userIds: [id],
+          });
+        }
       }
     });
   } catch (err: unknown) {

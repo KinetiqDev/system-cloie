@@ -321,6 +321,7 @@ function EditUserDialogBody({
 
     formData.set("id", userId);
     formData.set("name", trimmedName);
+    formData.set("expectedRole", loadState.record.role);
 
     if (loadState.status === "ready" && loadState.record.role === SystemRole.STUDENT) {
       if (!programId) {

@@ -3,8 +3,9 @@ import { z } from "zod";
 
 import { CourseRosterDiscoveryPage } from "@/features/course-assignments/components/course-roster-pages";
 import { listAuthorizedCourseRosterAssignments } from "@/features/course-assignments/services/read-course-rosters";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "My Course Rosters - Faculty | CLOIE" };
+export const metadata = { title: buildPageTitle("Course Rosters", "Faculty") };
 
 const searchParamsSchema = z.object({
   search: z.string().trim().max(100).optional(),

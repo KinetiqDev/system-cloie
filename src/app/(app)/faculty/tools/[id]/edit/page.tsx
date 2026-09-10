@@ -10,6 +10,9 @@ import {
 } from "@/lib/actions/faculty-template-actions";
 import { getFacultyTemplate } from "@/features/instruments/services/list-faculty-templates";
 import type { TemplateStructure } from "@/features/instruments/types";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Tool", "Faculty") };
 
 interface FacultyEditTemplatePageProps {
   params: Promise<{ id: string }>;

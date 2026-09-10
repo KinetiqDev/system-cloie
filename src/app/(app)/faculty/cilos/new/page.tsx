@@ -7,9 +7,10 @@ import {
   loadCilosForCourseAction,
   saveCilosForCourseAction,
 } from "@/lib/actions/faculty-cilo-actions";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Add CILOs | Faculty | CLOIE",
+  title: buildPageTitle("New CILOs", "Faculty"),
 };
 
 export default async function FacultyAddCiloPage({

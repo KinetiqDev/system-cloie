@@ -262,8 +262,10 @@ function TemplateTable({
 
             return (
               <TableRow key={item.id} className="hover:bg-muted/30">
-                <TableCell>
-                  <span className="block font-medium">{item.name}</span>
+                <TableCell className="align-top whitespace-normal">
+                  <span className="block font-medium break-words whitespace-normal">
+                    {item.name}
+                  </span>
                   {(item.boundCourseCode || item.origin === "faculty-copy") && (
                     <span className="mt-1.5 flex flex-wrap items-center gap-2">
                       <CourseBadge item={item} />
@@ -271,7 +273,7 @@ function TemplateTable({
                   )}
                   {item.description && (
                     <span
-                      className="text-muted-foreground mt-1 line-clamp-2 block max-w-[36rem]"
+                      className="text-muted-foreground mt-1 line-clamp-2 max-w-[36rem] break-words whitespace-normal"
                       title={item.description}
                     >
                       {item.description}

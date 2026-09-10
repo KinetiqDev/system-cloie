@@ -7,6 +7,9 @@ import type { SecretaryDashboardData } from "@/features/secretary/services/read-
 import { readSecretaryDashboard } from "@/features/secretary/services/read-secretary-dashboard";
 import { cn } from "@/lib/utils";
 import Loading from "./loading";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Dashboard", "Secretary") };
 
 export default function SecretaryDashboardPage() {
   const dashboardPromise = readSecretaryDashboard();
@@ -21,10 +24,7 @@ export default function SecretaryDashboardPage() {
             Manage the Academic Calendar, accounts, and institutional catalogs.
           </p>
         </div>
-        <Link
-          href="/secretary/users/new"
-          className={cn(buttonVariants(), "hidden sm:inline-flex")}
-        >
+        <Link href="/secretary/users/new" className={cn(buttonVariants(), "hidden sm:inline-flex")}>
           <UserPlus aria-hidden="true" data-icon="inline-start" />
           Add User
         </Link>

@@ -34,7 +34,7 @@ vi.mock("@/components/ui/select", () => {
     children: React.ReactNode;
   }) {
     return (
-        <SelectContext.Provider value={{ value, onValueChange, disabled }}>
+      <SelectContext.Provider value={{ value, onValueChange, disabled }}>
         <span data-testid="select-value" data-value={value ?? ""}>
           {children}
         </span>
@@ -44,7 +44,14 @@ vi.mock("@/components/ui/select", () => {
   function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     const { disabled } = React.useContext(SelectContext);
     return (
-      <button type="button" role="combobox" aria-expanded="false" disabled={disabled} {...props}>
+      <button
+        type="button"
+        role="combobox"
+        aria-controls="edit-user-select-options"
+        aria-expanded="false"
+        disabled={disabled}
+        {...props}
+      >
         {children}
       </button>
     );
@@ -60,12 +67,21 @@ vi.mock("@/components/ui/select", () => {
     return <span>{children ?? placeholder ?? value}</span>;
   }
   function SelectContent({ children }: { children: React.ReactNode }) {
-    return <div role="listbox">{children}</div>;
+    return (
+      <div id="edit-user-select-options" role="listbox">
+        {children}
+      </div>
+    );
   }
   function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
     const ctx = React.useContext(SelectContext);
     return (
-      <div role="option" data-value={value} onClick={() => ctx.onValueChange?.(value)}>
+      <div
+        role="option"
+        aria-selected={ctx.value === value}
+        data-value={value}
+        onClick={() => ctx.onValueChange?.(value)}
+      >
         {children}
       </div>
     );
@@ -273,6 +289,7 @@ describe("EditUserDialog", () => {
       .calls[0][0] as FormData;
     expect(formData.get("id")).toBe("target-user");
     expect(formData.get("name")).toBe("Johnny Doe");
+    expect(formData.get("expectedRole")).toBe(SystemRole.DEAN);
     expect(formData.get("first_name")).toBeNull();
     expect(formData.get("last_name")).toBeNull();
 
@@ -348,9 +365,7 @@ describe("EditUserDialog", () => {
     });
 
     expect(screen.getByLabelText(/primary program affiliation/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/other program affiliations stay unchanged/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/other program affiliations stay unchanged/i)).toBeInTheDocument();
   });
 
   it("shows labels instead of stored IDs and enum values in selected controls", async () => {
@@ -645,8 +660,12 @@ describe("EditUserDialog", () => {
     fireEvent.click(screen.getByLabelText(/primary program affiliation/i));
     fireEvent.click(screen.getByRole("option", { name: "Information Systems" }));
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
-    await waitFor(() => expect(screen.getByRole("button", { name: /keep editing/i })).toBeInTheDocument());
-    await waitFor(() => expect(screen.getByRole("button", { name: /confirm and save/i })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /keep editing/i })).toBeInTheDocument()
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /confirm and save/i })).toBeEnabled()
+    );
     fireEvent.click(screen.getByRole("button", { name: /keep editing/i }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
@@ -667,7 +686,9 @@ describe("EditUserDialog", () => {
         activeEnrollment: null,
         faculty: null,
         programHead: {
-          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+          assignments: [
+            { programId: "prog-old", programCode: "BSIT", programName: "Information Technology" },
+          ],
         },
         verification: null,
         industryPartner: null,
@@ -710,7 +731,9 @@ describe("EditUserDialog", () => {
         activeEnrollment: null,
         faculty: null,
         programHead: {
-          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+          assignments: [
+            { programId: "prog-old", programCode: "BSIT", programName: "Information Technology" },
+          ],
         },
         verification: null,
         industryPartner: null,
@@ -759,7 +782,9 @@ describe("EditUserDialog", () => {
         activeEnrollment: null,
         faculty: null,
         programHead: {
-          assignments: [{ programId: "prog-old", programCode: "BSIT", programName: "Information Technology" }],
+          assignments: [
+            { programId: "prog-old", programCode: "BSIT", programName: "Information Technology" },
+          ],
         },
         verification: null,
         industryPartner: null,
@@ -836,9 +861,7 @@ describe("EditUserDialog", () => {
     expect(screen.getByLabelText(/verification status/i)).toHaveTextContent("Pending");
     expect(screen.getByLabelText(/graduation year/i)).toHaveValue(2020);
     expect(screen.getByLabelText(/verification status/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/limited dashboard access until reviewed/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/limited dashboard access until reviewed/i)).toBeInTheDocument();
   });
 
   it("shows exact before/after assignment sets in Program Head confirmation", async () => {

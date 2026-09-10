@@ -10,6 +10,7 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -30,41 +31,41 @@ type ProgramHeadInstrumentBreakdownChartProps = {
 /** Exact per-source values shared by the chart and its unrated empty state. */
 function InstrumentExactValuesTable({ rows }: { rows: ProgramHeadInstrumentBreakdownRowDTO[] }) {
   return (
-    <details className="group">
-      <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11">
-        <span>View exact values</span>
-      </summary>
-      <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
-        <Table aria-label="Exact values by instrument and evidence source">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Evidence Source</TableHead>
-              <TableHead className="text-right">Mean Rating</TableHead>
-              <TableHead className="text-right">Rating Count</TableHead>
-              <TableHead className="text-right">Submitted Responses</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.flatMap((row) =>
-              row.sources.map((source) => (
-                <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
-                  <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
-                  <TableCell>{source.sourceLabel}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {source.submittedResponseCount}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </details>
+    <Disclosure>
+      <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
+      <DisclosureContent>
+        <div className="border-border/80 overflow-x-auto rounded-lg border">
+          <Table aria-label="Exact values by instrument and evidence source">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Instrument</TableHead>
+                <TableHead>Evidence Source</TableHead>
+                <TableHead className="text-right">Mean Rating</TableHead>
+                <TableHead className="text-right">Rating Count</TableHead>
+                <TableHead className="text-right">Submitted Responses</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.flatMap((row) =>
+                row.sources.map((source) => (
+                  <TableRow key={`${row.instrumentVersionId}-${source.sourceKey}`}>
+                    <TableCell className="font-medium">{row.instrumentLabel}</TableCell>
+                    <TableCell>{source.sourceLabel}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {source.meanRating === null ? "—" : source.meanRating.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{source.ratingCount}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {source.submittedResponseCount}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </DisclosureContent>
+    </Disclosure>
   );
 }
 

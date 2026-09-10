@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
-import { ChevronDown, Cloud, ListOrdered } from "lucide-react";
+import { Cloud, ListOrdered } from "lucide-react";
 import type { WordCloudConfig } from "@isoterik/react-word-cloud";
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -162,25 +163,23 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
           {groupSingletons && singletons.length > 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="whitespace-normal">
-                <details className="group">
-                  <summary className="text-label-md text-foreground flex cursor-pointer list-none items-center gap-1.5 font-medium pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
+                <Disclosure>
+                  <DisclosureTrigger variant="link" className="text-label-md text-foreground">
                     {singletons.length} {singletons.length === 1 ? "term" : "terms"} mentioned once
-                    <ChevronDown
-                      aria-hidden="true"
-                      className="text-muted-foreground size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
-                    />
-                  </summary>
-                  <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Terms mentioned once">
-                    {singletons.map((token) => (
-                      <li
-                        key={token.text}
-                        className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-xs"
-                      >
-                        {token.text}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                  </DisclosureTrigger>
+                  <DisclosureContent>
+                    <ul className="flex flex-wrap gap-1.5" aria-label="Terms mentioned once">
+                      {singletons.map((token) => (
+                        <li
+                          key={token.text}
+                          className="border-border text-muted-foreground rounded-full border px-2 py-0.5 text-xs"
+                        >
+                          {token.text}
+                        </li>
+                      ))}
+                    </ul>
+                  </DisclosureContent>
+                </Disclosure>
               </TableCell>
             </TableRow>
           ) : null}

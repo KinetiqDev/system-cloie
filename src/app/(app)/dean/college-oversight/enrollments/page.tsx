@@ -25,6 +25,9 @@ import {
 } from "@/features/dean/services/read-dean-oversight";
 import { z } from "zod";
 import { DeanEnrollmentsLoading } from "@/features/dean/components/dean-oversight-loading";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Enrollments", "Dean") };
 
 type SearchParams = { period?: string };
 const searchParamsSchema = z.object({ period: z.string().uuid().optional() });

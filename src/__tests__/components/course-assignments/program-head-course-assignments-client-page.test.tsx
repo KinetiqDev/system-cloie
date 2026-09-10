@@ -5,7 +5,8 @@ import { CourseAssignmentsPageShell } from "@/features/course-assignments/compon
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/program-head/course-assignments",
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 describe("Program Head Course Assignments server-first shell", () => {

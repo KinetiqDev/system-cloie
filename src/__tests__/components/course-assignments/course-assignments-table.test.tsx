@@ -18,6 +18,13 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   deleteCourseAssignmentAction: vi.fn(),
   preflightCourseAssignmentDeletionAction: vi.fn(),
 }));
+const replaceMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/secretary/course-assignments",
+  useRouter: () => ({ replace: replaceMock }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
+
 function mockMatchMedia(matches: boolean) {
   vi.stubGlobal(
     "matchMedia",
@@ -69,6 +76,7 @@ describe("CourseAssignmentsTable", () => {
   beforeEach(() => {
     mockMatchMedia(true);
     toastMessages = [];
+    replaceMock.mockClear();
     vi.mocked(preflightCourseAssignmentDeletionAction).mockResolvedValue({
       success: true,
       data: {
@@ -87,6 +95,7 @@ describe("CourseAssignmentsTable", () => {
 
   afterEach(() => {
     window.removeEventListener("cloie-toast", toastListener);
+    window.history.replaceState(null, "", "/");
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -133,6 +142,27 @@ describe("CourseAssignmentsTable", () => {
     renderTable({ total: 25, pageSize: 10, page: 1 });
     expect(screen.getByLabelText(/previous page/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/next page/i)).toBeInTheDocument();
+  });
+
+  it("sorts by column header and resets pagination", () => {
+    window.history.replaceState(null, "", "/secretary/course-assignments?page=3");
+    renderTable({ total: 25, pageSize: 10, page: 2 });
+
+    fireEvent.click(screen.getByRole("button", { name: /sort by course, currently unsorted/i }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/course-assignments?sort=course");
+  });
+
+  it("toggles the active column between ascending and descending", () => {
+    window.history.replaceState(null, "", "/secretary/course-assignments?sort=course");
+    renderTable();
+
+    const header = screen.getByRole("button", { name: /sort by course, currently asc/i });
+    expect(header.closest("th")).toHaveAttribute("aria-sort", "ascending");
+
+    fireEvent.click(header);
+
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/course-assignments?sort=course&dir=desc");
   });
 
   it("renders Edit for a Program-specific Program Head assignment", () => {

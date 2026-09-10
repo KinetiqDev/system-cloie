@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Reports", "Program Head") };
 
 const PLANNED_REPORTS = [
   {

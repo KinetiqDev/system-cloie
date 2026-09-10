@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useCallback, useState, useTransition } from "react";
 import {
-  ArrowLeft,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BackLink } from "@/components/ui/back-link";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -620,12 +622,7 @@ export function CourseRosterDetailPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <Link
-          href={backHref}
-          className="focus-visible:ring-ring text-link inline-flex min-h-11 w-fit items-center gap-2 rounded-md text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-        >
-          <ArrowLeft aria-hidden="true" /> {backLabel}
-        </Link>
+        <BackLink href={backHref}>{backLabel}</BackLink>
         <p className="text-label-md text-muted-foreground font-medium tracking-wide uppercase">
           Course roster
         </p>
@@ -751,6 +748,21 @@ function RosterTable({
   hasPublishedEvaluation: boolean;
   programId?: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isSortPending, startSortTransition] = useTransition();
+  const nextSortDirection = sortDirection === "asc" ? "desc" : "asc";
+
+  const handleSortToggle = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort", nextSortDirection);
+    params.delete("page");
+    const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignment.assignmentId}`;
+    const query = params.toString();
+    startSortTransition(() => {
+      router.replace(query ? `${basePath}?${query}` : basePath);
+    });
+  };
   if (members.length === 0) {
     const basePath = `${rosterBasePath ?? "/course-rosters"}/${assignment.assignmentId}`;
     const params = new URLSearchParams({ sort: sortDirection });
@@ -791,7 +803,20 @@ function RosterTable({
               aria-sort={sortDirection === "asc" ? "ascending" : "descending"}
               className="text-label-md px-4 py-3 font-semibold"
             >
-              Student
+              <button
+                type="button"
+                onClick={handleSortToggle}
+                aria-label={`Sort by student name, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
+                aria-busy={isSortPending || undefined}
+                className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold focus-visible:ring-3 focus-visible:outline-none"
+              >
+                Student
+                {sortDirection === "asc" ? (
+                  <ArrowUp aria-hidden="true" className="size-4" />
+                ) : (
+                  <ArrowDown aria-hidden="true" className="size-4" />
+                )}
+              </button>
             </th>
             {assignment.courseScope === "GENERAL_EDUCATION" && (
               <th scope="col" className="text-label-md px-4 py-3 font-semibold">

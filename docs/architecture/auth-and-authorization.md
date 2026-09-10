@@ -7,7 +7,7 @@ last_verified: 2026-09-04
 
 # Auth and Authorization
 
-How people enter System CLOIE and how the server decides what they may do. Domain terminology and invariants are owned by `src/features/auth/CONTEXT.md`; the durable decisions are [ADR 0001](../adr/0001-single-role-accounts.md), [ADR 0002](../adr/0002-separate-domain-users-from-auth-identities.md), [ADR 0008](../adr/0008-dedicated-demo-deployment-authentication.md), [ADR 0014](../adr/0014-google-authoritative-account-names.md), and [ADR 0015](../adr/0015-name-based-course-roster-resolution-and-student-id-removal.md).
+How people enter System CLOIE and how the server decides what they may do. Domain terminology and invariants are owned by `src/features/auth/CONTEXT.md`; the durable decisions are [ADR 0022](../adr/0022-multi-role-accounts-with-active-role-context.md), [ADR 0002](../adr/0002-separate-domain-users-from-auth-identities.md), [ADR 0008](../adr/0008-dedicated-demo-deployment-authentication.md), [ADR 0014](../adr/0014-google-authoritative-account-names.md), and [ADR 0015](../adr/0015-name-based-course-roster-resolution-and-student-id-removal.md).
 
 ## Identity model
 
@@ -25,11 +25,12 @@ The callback route (`src/app/api/auth/callback/route.ts`) then:
 
 There are no CLOIE-managed passwords, magic links, or invitation workflows for real accounts; Google OAuth is the only primary Production authentication mechanism ([ADR 0001: Complete Secretary-Created Accounts](../adr/0001-complete-secretary-created-accounts.md)).
 
-## Roles, role entry, and the single-active-role invariant
+## Roles, role entry, and active-role authorization
 
-- **Single-role accounts** ([ADR 0001](../adr/0001-single-role-accounts.md)): each account holds exactly one System CLOIE account role. The `UserRole` table enforces this (`user_id @unique` in `prisma/models/identity-access.prisma`); multi-role accumulation was rejected. Operational capabilities (e.g. course-assignment ownership granting teaching capability) are domain assignments, not second roles.
-- **Role entry**: roles enter either through the public self-service path (role claim with eligibility rules — institutional email domains for internal roles, self-service onboarding for external roles) or as Secretary-created accounts that are complete for their selected role at creation time ([ADR 0001: Complete Secretary-Created Accounts](../adr/0001-complete-secretary-created-accounts.md)). Account states (pending/rejected external verification, inactive) gate dashboard access.
-- **Role changes are administrator-controlled** only (managed role transitions, graduate transition); there is no self-service role switching.
+- **Multi-role accounts** ([ADR 0022](../adr/0022-multi-role-accounts-with-active-role-context.md)): an account may hold distinct assigned roles; the database enforces one row per `(user_id, role)`. Exactly one assigned role is active at a time, and role-owned authorization and profile gates use that server-resolved active role rather than any membership in the assigned-role set.
+- **Active-role selection**: an HTTP-only cookie records the requested role context but grants no role. Session resolution accepts it only when the role remains assigned. Multi-role accounts without a valid selection go to `/select-role`; single-role accounts receive their sole role as the active context.
+- **Role entry**: roles enter either through the public self-service path or as Secretary-created assignments. Eligible already-linked accounts may add self-service Faculty, Student, Alumni, or Industry Partner roles; Secretary, Dean, Program Head, and General Education Coordinator remain pre-provisioned. Cancelling onboarding removes only the requested incomplete role and only when its required profile artifact is absent.
+- **Assigned-role changes** remain administrator-controlled outside eligible self-service claims. Switching the active role does not create, revoke, or complete an assigned role.
 
 ## Program scoping
 

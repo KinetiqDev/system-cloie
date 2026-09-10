@@ -11,6 +11,7 @@ import {
   chartFill,
 } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import {
   Table,
   TableBody,
@@ -55,60 +56,60 @@ function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum
   const showsLinks = rows.some((row) => (row.links?.length ?? 0) > 0);
 
   return (
-    <details className="group">
-      <summary className="text-label-sm text-text-secondary hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1.5 rounded-sm py-1 font-medium transition-colors select-none focus-visible:ring-2 focus-visible:outline-hidden pointer-coarse:min-h-11">
-        <span>View exact values</span>
-      </summary>
-      <div className="border-border/80 mt-3 overflow-x-auto rounded-lg border">
-        <Table aria-label="Exact values by comparison group">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Group</TableHead>
-              <TableHead className="text-right">Mean Rating</TableHead>
-              <TableHead className="text-right">Rating Count</TableHead>
-              <TableHead className="text-right">Submitted Responses</TableHead>
-              {showsContext ? <TableHead>Instruments</TableHead> : null}
-              {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.key}>
-                <TableCell className="font-medium">{row.label}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.submittedResponseCount}
-                </TableCell>
-                {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
-                {showsLinks ? (
-                  <TableCell>
-                    {row.links && row.links.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {row.links.map((link) => (
-                          <li key={link.href}>
-                            <Link
-                              href={link.href}
-                              className="text-link hover:text-foreground underline underline-offset-3 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
-                            >
-                              {link.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                ) : null}
+    <Disclosure>
+      <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
+      <DisclosureContent>
+        <div className="border-border/80 overflow-x-auto rounded-lg border">
+          <Table aria-label="Exact values by comparison group">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Group</TableHead>
+                <TableHead className="text-right">Mean Rating</TableHead>
+                <TableHead className="text-right">Rating Count</TableHead>
+                <TableHead className="text-right">Submitted Responses</TableHead>
+                {showsContext ? <TableHead>Instruments</TableHead> : null}
+                {showsLinks ? <TableHead>Review Evidence</TableHead> : null}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </details>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.key}>
+                  <TableCell className="font-medium">{row.label}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{row.ratingCount}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.submittedResponseCount}
+                  </TableCell>
+                  {showsContext ? <TableCell>{row.context ?? "—"}</TableCell> : null}
+                  {showsLinks ? (
+                    <TableCell>
+                      {row.links && row.links.length > 0 ? (
+                        <ul className="flex flex-col gap-1">
+                          {row.links.map((link) => (
+                            <li key={link.href}>
+                              <Link
+                                href={link.href}
+                                className="text-link hover:text-foreground underline underline-offset-3 pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                              >
+                                {link.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DisclosureContent>
+    </Disclosure>
   );
 }
 
@@ -179,7 +180,7 @@ export function ProgramHeadComparisonChart({
           <BarChart
             data={ranked}
             layout="vertical"
-            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
           >
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />

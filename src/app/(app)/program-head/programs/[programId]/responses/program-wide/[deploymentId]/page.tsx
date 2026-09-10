@@ -1,8 +1,6 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Button } from "@/components/ui/button";
 import { CentralEvaluationDetail } from "@/features/response-review/components/central-evaluation-detail";
 import { getProgramHeadCentralEvaluationDetail } from "@/features/response-review/services/get-program-head-central-evaluation-detail";
 import {
@@ -15,6 +13,9 @@ import {
   buildProgramHeadResponsesProgramWideResponsePath,
   buildProgramHeadToolsPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation Responses", "Program Head") };
 
 export default async function CentralEvaluationDetailPage({
   params,
@@ -53,15 +54,9 @@ export default async function CentralEvaluationDetailPage({
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex min-w-0 flex-col gap-3">
         <div>
-          <Button
-            render={<Link href={openedFromTools ? toolsHref : responsesHref} />}
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
-          >
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-            {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-wide evaluations"}
-          </Button>
+          <BackLink href={openedFromTools ? toolsHref : responsesHref}>
+            {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-Wide Evaluations"}
+          </BackLink>
         </div>
         <Breadcrumbs
           items={

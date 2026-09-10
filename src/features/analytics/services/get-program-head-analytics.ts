@@ -10,6 +10,7 @@ import {
   buildInstrumentBreakdownRows,
   buildProgramHeadOverviewKpi,
   buildProgramHeadOutcomeDtos,
+  buildSourceComposition,
   buildStakeholderBuckets,
   buildTrendSeries,
   majorAttributionOf,
@@ -525,13 +526,18 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
     };
     response: {
       select: {
+        deployment_type: true;
         assignment: {
           select: {
             course_bound: {
               select: { term_instance_id: true; instrument_version_id: true };
             };
             central_deployment: {
-              select: { term_instance_id: true; instrument_version_id: true };
+              select: {
+                term_instance_id: true;
+                instrument_version_id: true;
+                target_stakeholder: true;
+              };
             };
           };
         };
@@ -539,14 +545,16 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
     };
   };
 }>;
-
 type TrendResponseRow = Prisma.ResponseGetPayload<{
   select: {
     id: true;
+    deployment_type: true;
     assignment: {
       select: {
         course_bound: { select: { term_instance_id: true } };
-        central_deployment: { select: { term_instance_id: true } };
+        central_deployment: {
+          select: { term_instance_id: true; target_stakeholder: true };
+        };
       };
     };
   };
@@ -558,18 +566,34 @@ type PeriodEvidence = {
   responseIds: Set<string>;
   instrumentVersionIds: Set<string>;
   outcomeCodes: Set<string>;
+  ratedSourceResponseIds: Map<string, Set<string>>;
+  ratedSourceInstrumentResponseIds: Map<string, Set<string>>;
 };
 
+/** Canonical per-response evidence key: source plus central stakeholder. */
+function responseEvidenceKey(row: {
+  deployment_type: string;
+  assignment: {
+    central_deployment: { target_stakeholder: string } | null;
+  };
+}): string {
+  const stakeholder = row.assignment.central_deployment?.target_stakeholder;
+  return stakeholder ? `${row.deployment_type}:${stakeholder}` : row.deployment_type;
+}
+
 function ratingRowTermContext(row: TrendRatingRow): {
-  termInstanceId: string | null;
-  instrumentVersionId: string | null;
-} {
-  const courseBound = row.response.assignment.course_bound;
-  const central = row.response.assignment.central_deployment;
+  termInstanceId: string;
+  instrumentVersionId: string;
+  source: string;
+} | null {
+  const source = row.response.assignment.course_bound ?? row.response.assignment.central_deployment;
+  if (!source) {
+    return null;
+  }
   return {
-    termInstanceId: courseBound?.term_instance_id ?? central?.term_instance_id ?? null,
-    instrumentVersionId:
-      courseBound?.instrument_version_id ?? central?.instrument_version_id ?? null,
+    termInstanceId: source.term_instance_id,
+    instrumentVersionId: source.instrument_version_id,
+    source: responseEvidenceKey(row.response),
   };
 }
 
@@ -585,10 +609,35 @@ function getOrCreateTrendEvidence(
       responseIds: new Set(),
       instrumentVersionIds: new Set(),
       outcomeCodes: new Set(),
+      ratedSourceResponseIds: new Map(),
+      ratedSourceInstrumentResponseIds: new Map(),
     };
     periodEvidence.set(termInstanceId, evidence);
   }
   return evidence;
+}
+
+/** Record a rating-bearing response under its source and instrument version. */
+function trackRatedSourceResponse(
+  evidence: PeriodEvidence,
+  source: string,
+  instrumentVersionId: string,
+  responseId: string
+): void {
+  let sourceIds = evidence.ratedSourceResponseIds.get(source);
+  if (!sourceIds) {
+    sourceIds = new Set<string>();
+    evidence.ratedSourceResponseIds.set(source, sourceIds);
+  }
+  sourceIds.add(responseId);
+
+  const sourceInstrument = `${source}:${instrumentVersionId}`;
+  let sourceInstrumentIds = evidence.ratedSourceInstrumentResponseIds.get(sourceInstrument);
+  if (!sourceInstrumentIds) {
+    sourceInstrumentIds = new Set<string>();
+    evidence.ratedSourceInstrumentResponseIds.set(sourceInstrument, sourceInstrumentIds);
+  }
+  sourceInstrumentIds.add(responseId);
 }
 
 function collectTrendPeriodEvidence(
@@ -612,7 +661,7 @@ function accumulateRatingRow(
   row: TrendRatingRow
 ): void {
   const context = ratingRowTermContext(row);
-  if (!context.termInstanceId) {
+  if (!context) {
     return;
   }
 
@@ -620,9 +669,8 @@ function accumulateRatingRow(
   evidence.ratingSum += row.rating_value;
   evidence.ratingCount += 1;
   evidence.responseIds.add(row.response_id);
-  if (context.instrumentVersionId) {
-    evidence.instrumentVersionIds.add(context.instrumentVersionId);
-  }
+  evidence.instrumentVersionIds.add(context.instrumentVersionId);
+  trackRatedSourceResponse(evidence, context.source, context.instrumentVersionId, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
     evidence.outcomeCodes.add(mapping.plo.code);
   }
@@ -632,9 +680,8 @@ function accumulateResponseRow(
   periodEvidence: Map<string, PeriodEvidence>,
   row: TrendResponseRow
 ): void {
-  const termInstanceId =
-    row.assignment.course_bound?.term_instance_id ??
-    row.assignment.central_deployment?.term_instance_id;
+  const source = row.assignment.course_bound ?? row.assignment.central_deployment;
+  const termInstanceId = source?.term_instance_id;
   if (!termInstanceId) {
     return;
   }
@@ -670,6 +717,14 @@ function buildTrendSeriesInputs(
     const instrumentVersionIdsSorted = [...evidence.instrumentVersionIds].sort();
     const scaleIdentities = buildScaleIdentities(scales);
     const outcomeCodes = [...evidence.outcomeCodes].sort();
+    const sourceCounts = new Map<string, number>(
+      [...evidence.ratedSourceResponseIds].map(([source, ids]) => [source, ids.size])
+    );
+    const sourceComposition = buildSourceComposition(sourceCounts);
+    const sourceInstrumentCounts = new Map<string, number>(
+      [...evidence.ratedSourceInstrumentResponseIds].map(([key, ids]) => [key, ids.size])
+    );
+    const sourceInstrumentComposition = buildSourceComposition(sourceInstrumentCounts);
 
     inputs.push({
       termInstanceId,
@@ -690,6 +745,8 @@ function buildTrendSeriesInputs(
         instrumentVersions: instrumentVersionIdsSorted,
         scaleIdentities,
         outcomeCodes,
+        sourceComposition,
+        sourceInstrumentComposition,
       },
     });
   }
@@ -736,13 +793,30 @@ type OutcomeBindingRow = {
   cilo: {
     id: string;
     description: string;
-    course: { id: string; code: string; title: string } | null;
-    cilo_mappings: Array<{ plo: { id: string; code: string; description: string } }>;
+    course: { id: string; code: string; title: string; cilos: Array<{ id: string }> } | null;
+    cilo_mappings: Array<{
+      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+      plo: { id: string; code: string; description: string };
+    }>;
   } | null;
 };
 
-function toPloMapping(mapping: { plo: { id: string; code: string; description: string } }) {
-  return { ploId: mapping.plo.id, code: mapping.plo.code, name: mapping.plo.description };
+function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: string): string {
+  if (!course) return "—";
+  const position = course.cilos.findIndex((cilo) => cilo.id === ciloId);
+  return position < 0 ? "—" : `CILO ${position + 1}`;
+}
+
+function toPloMapping(mapping: {
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  plo: { id: string; code: string; description: string };
+}) {
+  return {
+    ploId: mapping.plo.id,
+    code: mapping.plo.code,
+    name: mapping.plo.description,
+    manifestation: mapping.manifestation,
+  };
 }
 
 function resolveInstrumentSnapshot(
@@ -785,7 +859,14 @@ function toOutcomeEvidenceRow(
       row.response.assignment.course_bound?.instrument_version_id ?? null,
       snapshotById
     ),
-    cilo: { id: cilo.id, description: cilo.description, course: cilo.course },
+    cilo: {
+      id: cilo.id,
+      code: ciloCodeFor(cilo.course, cilo.id),
+      description: cilo.description,
+      course: cilo.course
+        ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
+        : null,
+    },
     ploMappings: cilo.cilo_mappings.map(toPloMapping),
     evaluationId: binding.course_bound_evaluation_id,
     deploymentName: binding.course_bound_evaluation.deployment_name,
@@ -1142,10 +1223,20 @@ export async function getProgramHeadOutcomes(
               select: {
                 id: true,
                 description: true,
-                course: { select: { id: true, code: true, title: true } },
+                course: {
+                  select: {
+                    id: true,
+                    code: true,
+                    title: true,
+                    cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
+                  },
+                },
                 cilo_mappings: {
                   where: { plo: { program_id: selectedProgram.id } },
-                  select: { plo: { select: { id: true, code: true, description: true } } },
+                  select: {
+                    manifestation: true,
+                    plo: { select: { id: true, code: true, description: true } },
+                  },
                 },
               },
             },
@@ -1276,13 +1367,18 @@ export async function getProgramHeadTrends(
         },
         response: {
           select: {
+            deployment_type: true,
             assignment: {
               select: {
                 course_bound: {
                   select: { term_instance_id: true, instrument_version_id: true },
                 },
                 central_deployment: {
-                  select: { term_instance_id: true, instrument_version_id: true },
+                  select: {
+                    term_instance_id: true,
+                    instrument_version_id: true,
+                    target_stakeholder: true,
+                  },
                 },
               },
             },
@@ -1294,10 +1390,13 @@ export async function getProgramHeadTrends(
       where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
       select: {
         id: true,
+        deployment_type: true,
         assignment: {
           select: {
             course_bound: { select: { term_instance_id: true } },
-            central_deployment: { select: { term_instance_id: true } },
+            central_deployment: {
+              select: { term_instance_id: true, target_stakeholder: true },
+            },
           },
         },
       },

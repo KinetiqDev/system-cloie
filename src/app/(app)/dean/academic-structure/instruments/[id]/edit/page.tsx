@@ -3,6 +3,9 @@ import { ManagementTemplateBuilder } from "@/features/instruments/components/man
 import { updateDeanTemplateAction } from "@/lib/actions/dean-template-actions";
 import { getBaselineTemplate } from "@/features/instruments/services/manage-instruments";
 import type { TemplateStructure } from "@/features/instruments/types";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Instrument", "Dean") };
 
 export default async function DeanEditTemplatePage({
   params,

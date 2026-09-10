@@ -9,8 +9,9 @@ import {
   buildProgramHeadCourseRosterPath,
   buildProgramHeadProgramPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
 
-export const metadata = { title: "Course Roster | Program Head | CLOIE" };
+export const metadata = { title: buildPageTitle("Course Roster", "Program Head") };
 
 const searchParamsSchema = z.object({
   search: z.string().trim().max(100).optional(),

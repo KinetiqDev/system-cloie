@@ -6,6 +6,11 @@ import {
 import { resolveProgramHeadEntry } from "@/features/auth/services/resolve-program-head-context";
 import { readSelectedProgramCookie } from "@/features/auth/services/selected-program-cookie";
 import { buildProgramHeadDashboardPath } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = {
+  title: buildPageTitle("Select Program", "Program Head"),
+};
 export default async function ProgramHeadEntryPage() {
   const result = await resolveProgramHeadEntry();
 

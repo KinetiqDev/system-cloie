@@ -1,7 +1,5 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
@@ -18,6 +16,9 @@ import {
   buildProgramHeadResponsesProgramWideDeploymentPath,
   buildProgramHeadToolsPath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Response", "Program Head") };
 
 export default async function CentralResponseDetailPage({
   params,
@@ -71,15 +72,7 @@ export default async function CentralResponseDetailPage({
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex min-w-0 flex-col gap-3">
         <div>
-          <Button
-            render={<Link href={evaluationHref} />}
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
-          >
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-            Back to evaluation
-          </Button>
+          <BackLink href={evaluationHref}>Back to Evaluation</BackLink>
         </div>
         <Breadcrumbs
           items={

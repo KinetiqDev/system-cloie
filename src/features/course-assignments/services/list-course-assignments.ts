@@ -12,7 +12,41 @@ import type {
   ListCourseAssignmentsResult,
   CourseAssignmentResult,
   CourseAssignmentItem,
+  CourseAssignmentSortDirection,
+  CourseAssignmentSortField,
 } from "../types";
+
+/**
+ * Map the table's sort field to a Prisma orderBy. The trailing `id` tie-breaker
+ * keeps pagination stable when the primary key repeats across rows.
+ */
+function buildCourseAssignmentOrderBy(
+  sortBy?: CourseAssignmentSortField,
+  sortDir: CourseAssignmentSortDirection = "asc"
+): Prisma.CourseAssignmentOrderByWithRelationInput[] {
+  switch (sortBy) {
+    case "course":
+      return [{ course: { code: sortDir } }, { id: "asc" }];
+    case "faculty":
+      return [{ faculty: { name: sortDir } }, { id: "asc" }];
+    case "program":
+      return [{ program: { code: sortDir } }, { id: "asc" }];
+    case "class":
+      return [{ year_level: sortDir }, { section: sortDir }, { id: "asc" }];
+    case "term":
+      return [
+        { term_instance: { school_year: { code: sortDir } } },
+        { term_instance: { semester: sortDir } },
+        { id: "asc" },
+      ];
+    case "scope":
+      return [{ course: { course_scope: sortDir } }, { id: "asc" }];
+    case "status":
+      return [{ is_active: sortDir }, { id: "asc" }];
+    default:
+      return [{ created_at: "desc" }, { id: "asc" }];
+  }
+}
 
 /**
  * List course assignments with role-aware scoping.
@@ -91,6 +125,9 @@ export async function listCourseAssignments(
     }),
   };
 
+  const sortDir = options?.sortDir ?? "asc";
+  const orderBy = buildCourseAssignmentOrderBy(options?.sortBy, sortDir);
+
   try {
     const [items, total] = await Promise.all([
       prisma.courseAssignment.findMany({
@@ -123,7 +160,7 @@ export async function listCourseAssignments(
           },
           _count: { select: { memberships: true } },
         },
-        orderBy: { created_at: "desc" },
+        orderBy,
         take: pageSize,
         skip: page * pageSize,
       }),

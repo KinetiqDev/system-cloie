@@ -3,6 +3,9 @@ import { ManagementTemplateBuilder } from "@/features/instruments/components/man
 import { updateAdminTemplateAction } from "@/lib/actions/admin-template-actions";
 import { getBaselineTemplate } from "@/features/instruments/services/manage-instruments";
 import type { TemplateStructure } from "@/features/instruments/types";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Edit Instrument", "Secretary") };
 
 interface SecretaryEditTemplatePageProps {
   params: Promise<{ id: string }>;

@@ -12,6 +12,12 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   console.log("  → School years...");
   const schoolYearDefinitions = [
     {
+      id: D.SY_2025_2026,
+      startYear: 2025,
+      startDate: new Date("2025-06-01"),
+      endDate: new Date("2026-05-31"),
+    },
+    {
       id: D.SY_2026_2027,
       startYear: 2026,
       startDate: new Date("2026-06-01"),
@@ -84,38 +90,81 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   const fixtureTermIdList = academicTermDefinitions.map((d) => fixtureTermIds[d.id]);
 
   console.log("  → Resetting mock Academic Period fixtures...");
-  await prisma.qualitativeResponseItem.deleteMany({ where: { response: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
-  ] } } });
-  await prisma.quantitativeResponseItem.deleteMany({ where: { response: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
-  ] } } });
-  await prisma.response.deleteMany({ where: { OR: [
-    { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
-    { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
-  ] } });
-  await prisma.evaluationAssignment.deleteMany({ where: { OR: [
-    { course_bound: { term_instance_id: { in: fixtureTermIdList } } },
-    { central_deployment: { term_instance_id: { in: fixtureTermIdList } } },
-  ] } });
-  await prisma.courseBoundCiloQuestionBinding.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } } });
-  await prisma.courseBoundEvaluationTarget.deleteMany({ where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } } });
-  await prisma.courseBoundEvaluation.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
-  await prisma.centralDeployment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
-  await prisma.courseAssignmentMembership.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
-  await prisma.courseAssignment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
-  await prisma.studentEnrollment.deleteMany({ where: { term_instance_id: { in: fixtureTermIdList } } });
-  await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" DISABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
+  await prisma.qualitativeResponseItem.deleteMany({
+    where: {
+      response: {
+        OR: [
+          { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+          { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
+        ],
+      },
+    },
+  });
+  await prisma.quantitativeResponseItem.deleteMany({
+    where: {
+      response: {
+        OR: [
+          { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+          { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
+        ],
+      },
+    },
+  });
+  await prisma.response.deleteMany({
+    where: {
+      OR: [
+        { assignment: { course_bound: { term_instance_id: { in: fixtureTermIdList } } } },
+        { assignment: { central_deployment: { term_instance_id: { in: fixtureTermIdList } } } },
+      ],
+    },
+  });
+  await prisma.evaluationAssignment.deleteMany({
+    where: {
+      OR: [
+        { course_bound: { term_instance_id: { in: fixtureTermIdList } } },
+        { central_deployment: { term_instance_id: { in: fixtureTermIdList } } },
+      ],
+    },
+  });
+  await prisma.courseBoundCiloQuestionBinding.deleteMany({
+    where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } },
+  });
+  await prisma.courseBoundEvaluationTarget.deleteMany({
+    where: { course_bound_evaluation: { term_instance_id: { in: fixtureTermIdList } } },
+  });
+  await prisma.courseBoundEvaluation.deleteMany({
+    where: { term_instance_id: { in: fixtureTermIdList } },
+  });
+  await prisma.centralDeployment.deleteMany({
+    where: { term_instance_id: { in: fixtureTermIdList } },
+  });
+  await prisma.courseAssignmentMembership.deleteMany({
+    where: { term_instance_id: { in: fixtureTermIdList } },
+  });
+  await prisma.courseAssignment.deleteMany({
+    where: { term_instance_id: { in: fixtureTermIdList } },
+  });
+  await prisma.studentEnrollment.deleteMany({
+    where: { term_instance_id: { in: fixtureTermIdList } },
+  });
+  await prisma.$executeRawUnsafe(
+    'ALTER TABLE "academic_period_readiness_snapshots" DISABLE TRIGGER "academic_period_readiness_snapshots_immutable"'
+  );
   try {
-    await prisma.academicPeriodReadinessSnapshot.deleteMany({ where: { period_id: { in: fixtureTermIdList } } });
+    await prisma.academicPeriodReadinessSnapshot.deleteMany({
+      where: { period_id: { in: fixtureTermIdList } },
+    });
   } finally {
-    await prisma.$executeRawUnsafe('ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"');
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "academic_period_readiness_snapshots" ENABLE TRIGGER "academic_period_readiness_snapshots_immutable"'
+    );
   }
 
   console.log("  → Applying lifecycle fixture statuses...");
-  const terms = {} as Record<string, Awaited<ReturnType<typeof prisma.academicTermInstance.update>>>;
+  const terms = {} as Record<
+    string,
+    Awaited<ReturnType<typeof prisma.academicTermInstance.update>>
+  >;
   for (const definition of academicTermDefinitions) {
     terms[definition.id] = await prisma.academicTermInstance.update({
       where: { id: fixtureTermIds[definition.id] },
@@ -152,6 +201,8 @@ export async function seedAcademicCalendar(): Promise<AcademicCalendarContext> {
   return {
     termInstance: terms[D.TI_2026_2027_2ND],
     termInstances: {
+      ti2025First: terms[D.TI_2025_2026_1ST],
+      ti2025Second: terms[D.TI_2025_2026_2ND],
       ti2026First: terms[D.TI_2026_2027_1ST],
       ti2026Second: terms[D.TI_2026_2027_2ND],
       ti2027First: terms[D.TI_2027_2028_1ST],

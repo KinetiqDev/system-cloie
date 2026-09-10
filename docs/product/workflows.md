@@ -2,7 +2,7 @@
 title: System CLOIE Primary Workflows
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-10
 ---
 
 # System CLOIE Primary Workflows
@@ -12,10 +12,10 @@ The primary end-to-end workflows, each traced to the domain contexts that own it
 ## 1. Role entry and onboarding gates
 
 1. A person enters through the **role selection portal** and picks one intended role; the signed legal-acknowledgement ticket gates the OAuth callback before Google code exchange ([auth](../../src/features/auth/CONTEXT.md), [legal](../../src/features/legal/CONTEXT.md)).
-2. Google authenticates the identity; the account is matched by exact normalized email and the single active role is resolved — self-service claiming is possible only for allowed roles (Secretary, Dean, Program Head, Gen Ed Coordinator are pre-provisioned and reject self-service claims) ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
-3. The **profile gate** resolves a per-role verdict: role-specific onboarding required, inactive account, rejected external verification, deferred enrollment, or complete ([users](../../src/features/users/CONTEXT.md)).
-4. Self-service external (Alumni, Industry Partner) accounts start as **pending external verification**; Secretary-created external accounts are institution-verified at creation ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
-5. On complete, the person enters their role-owned dashboard; role mismatch or invalid domain lands on a status page, never a role switch ([auth](../../src/features/auth/CONTEXT.md)).
+2. Google authenticates the identity; the account is matched by exact normalized email. Eligible self-service claims may add Faculty, Student, Alumni, or Industry Partner to an already-linked account; Secretary, Dean, Program Head, and General Education Coordinator remain pre-provisioned ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
+3. The server validates the requested active role against the account's assigned-role set. A multi-role account without a valid selection goes to role selection; authorization and the **profile gate** use only the selected active role ([ADR 0022](../adr/0022-multi-role-accounts-with-active-role-context.md), [users](../../src/features/users/CONTEXT.md)).
+4. Self-service external (Alumni, Industry Partner) profiles start as **pending external verification**; Secretary-created external profiles are institution-verified at creation ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
+5. A complete role enters its role-owned dashboard. An incomplete role enters onboarding, where cancellation removes only that requested role while its required profile artifact remains absent ([auth](../../src/features/auth/CONTEXT.md)).
 
 ## 2. Course assignment stewardship and evaluation deployment
 

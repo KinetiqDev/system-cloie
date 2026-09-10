@@ -3,7 +3,10 @@
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { industryPartnerProfileSchema, type IndustryPartnerProfileInput } from "@/lib/schemas/industry-partner-profile";
+import {
+  industryPartnerProfileSchema,
+  type IndustryPartnerProfileInput,
+} from "@/lib/schemas/industry-partner-profile";
 import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 
 function resolveProgramIds(data: IndustryPartnerProfileInput): string[] {
@@ -77,7 +80,8 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
     if (!domainUser) {
       return {
         success: false,
-        error: "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
       };
     }
 
@@ -99,11 +103,8 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
     // Role + industry partner profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
       const existingRole = await tx.userRole.findUnique({
-        where: { user_id: domainUser.id },
+        where: { user_id_role: { user_id: domainUser.id, role: ROLES.INDUSTRY_PARTNER } },
       });
-      if (existingRole && existingRole.role !== ROLES.INDUSTRY_PARTNER) {
-        throw new Error("ROLE_MISMATCH_NON_INDUSTRY_PARTNER");
-      }
       if (!existingRole) {
         await tx.userRole.create({
           data: {

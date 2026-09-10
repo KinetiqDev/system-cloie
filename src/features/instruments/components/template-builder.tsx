@@ -22,17 +22,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  ArrowLeft,
-  Check,
-  CloudAlert,
-  GripVertical,
-  Plus,
-  Save,
-  SearchIcon,
-  XIcon,
-} from "lucide-react";
+import { Check, CloudAlert, GripVertical, Plus, Save, SearchIcon, XIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -1241,14 +1233,7 @@ export function TemplateBuilder({
     <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
       <div className="border-border bg-background/95 sticky top-0 z-30 -mx-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border">
         <div className="min-w-0">
-          <button
-            type="button"
-            onClick={requestBackNavigation}
-            className="text-link focus-visible:ring-ring inline-flex min-h-8 items-center gap-2 rounded-md text-sm font-medium hover:underline focus-visible:ring-3 focus-visible:outline-none pointer-coarse:min-h-11"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Back to Tools
-          </button>
+          <BackLink onClick={requestBackNavigation}>Back to Tools</BackLink>
           <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
             {programLabel}
           </p>

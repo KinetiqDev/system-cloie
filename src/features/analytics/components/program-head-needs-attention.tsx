@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import type {
   NeedsAttentionItem,
@@ -72,34 +73,36 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
               ))}
             </ul>
             {remaining > 0 && (
-              <details className="mt-2">
-                <summary className="text-link focus-visible:ring-ring inline-flex min-h-11 cursor-pointer list-none items-center font-semibold hover:underline focus-visible:ring-2 focus-visible:outline-none">
+              <Disclosure className="mt-2">
+                <DisclosureTrigger variant="link" className="text-link hover:text-foreground">
                   Show {remaining} more
-                </summary>
-                <ul className="flex flex-col border-t">
-                  {items.slice(MAX_VISIBLE_ITEMS).map((item) => (
-                    <li key={item.id} className="border-border/60 border-b last:border-b-0">
-                      <Link
-                        href={item.href}
-                        className="focus-visible:ring-ring -mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none"
-                      >
-                        <span aria-hidden="true" className="text-muted-foreground mt-0.5">
-                          ·
-                        </span>
-                        <span className="min-w-0">
-                          <span className="text-label-md block font-bold break-words">
-                            {item.title}
+                </DisclosureTrigger>
+                <DisclosureContent className="pt-0">
+                  <ul className="flex flex-col border-t">
+                    {items.slice(MAX_VISIBLE_ITEMS).map((item) => (
+                      <li key={item.id} className="border-border/60 border-b last:border-b-0">
+                        <Link
+                          href={item.href}
+                          className="focus-visible:ring-ring -mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none"
+                        >
+                          <span aria-hidden="true" className="text-muted-foreground mt-0.5">
+                            ·
                           </span>
-                          <span className="text-muted-foreground text-label-sm mt-0.5 block">
-                            {RULE_LABELS[item.rule]}
-                            {item.note ? ` · ${item.note}` : ""}
+                          <span className="min-w-0">
+                            <span className="text-label-md block font-bold break-words">
+                              {item.title}
+                            </span>
+                            <span className="text-muted-foreground text-label-sm mt-0.5 block">
+                              {RULE_LABELS[item.rule]}
+                              {item.note ? ` · ${item.note}` : ""}
+                            </span>
                           </span>
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </details>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </DisclosureContent>
+              </Disclosure>
             )}
           </>
         )}

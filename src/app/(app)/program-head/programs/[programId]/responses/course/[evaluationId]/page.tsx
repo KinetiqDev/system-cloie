@@ -1,7 +1,5 @@
-import Link from "next/link";
+import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CourseEvaluationDetail } from "@/features/response-review/components/course-evaluation-detail";
 import { getProgramHeadCourseEvaluationDetail } from "@/features/response-review/services/get-program-head-course-evaluation-detail";
@@ -14,6 +12,10 @@ import {
   buildProgramHeadAnalyticsPath,
   buildProgramHeadResponsesCourseResponsePath,
 } from "@/lib/constants/program-head-routes";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("Evaluation Responses", "Program Head") };
+
 export default async function CourseEvaluationDetailPage({
   params,
   searchParams,
@@ -49,15 +51,7 @@ export default async function CourseEvaluationDetailPage({
     <div className="flex min-w-0 flex-col gap-6">
       <div className="flex min-w-0 flex-col gap-3">
         <div>
-          <Button
-            render={<Link href={responsesHref} />}
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground -ml-2 w-fit gap-1.5"
-          >
-            <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-            Back to course evaluations
-          </Button>
+          <BackLink href={responsesHref}>Back to Course Evaluations</BackLink>
         </div>
         <Breadcrumbs
           items={[

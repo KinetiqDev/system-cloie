@@ -11,6 +11,7 @@ import { seedFacultyPublicationTemplate } from "./seed/runners/seed-faculty-publ
 import { seedFoundation as seedFoundationRunner } from "./seed/runners/seed-foundation";
 import { seedInstruments } from "./seed/runners/seed-instruments";
 import { seedOutcomes as seedOutcomesRunner } from "./seed/runners/seed-outcomes";
+import { seedHistoricalTrends as seedHistoricalTrendsRunner } from "./seed/runners/seed-historical-trends";
 import { seedResponses as seedResponsesRunner } from "./seed/runners/seed-responses";
 import { seedUsers as seedUsersRunner } from "./seed/runners/seed-users";
 
@@ -53,6 +54,9 @@ async function main() {
 
   console.log("[F] Responses with items...");
   await seedResponsesRunner(evaluationContext);
+
+  console.log("[G] Historical trends (2025-2026)...");
+  await seedHistoricalTrendsRunner(termInstance.id);
 
   console.log("\n✅ Seed complete!");
 }

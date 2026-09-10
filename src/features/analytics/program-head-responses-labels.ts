@@ -4,15 +4,13 @@ import type {
   TargetStakeholder,
   YearLevel,
 } from "@prisma/client";
+import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "@/lib/constants/year-levels";
 
 export type ResponseFilterOption = { id: string; label: string };
 
-export const RESPONSE_YEAR_LEVEL_OPTIONS: ResponseFilterOption[] = [
-  { id: "FIRST_YEAR", label: "First year" },
-  { id: "SECOND_YEAR", label: "Second year" },
-  { id: "THIRD_YEAR", label: "Third year" },
-  { id: "FOURTH_YEAR", label: "Fourth year" },
-];
+export const RESPONSE_YEAR_LEVEL_OPTIONS: ResponseFilterOption[] = YEAR_LEVEL_OPTIONS.map(
+  (option) => ({ id: option.value, label: option.label })
+);
 
 export const RESPONSE_SECTION_OPTIONS: ResponseFilterOption[] = [
   { id: "MORNING", label: "Morning" },
@@ -45,7 +43,7 @@ function labelFor(options: ResponseFilterOption[], value: string | null | undefi
 }
 
 export function formatResponseYearLevel(value: YearLevel | null | undefined): string {
-  return labelFor(RESPONSE_YEAR_LEVEL_OPTIONS, value);
+  return getYearLevelDisplay(value);
 }
 
 export function formatResponseSection(value: StudentSection | null | undefined): string {

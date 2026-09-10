@@ -3,9 +3,10 @@ import { PortalShell } from "@/features/portals";
 import { ROLE_CARDS_STAFF } from "@/features/portals/lib/role-card-config";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
+import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
-  title: "Staff & Faculty Portal | System CLOIE",
+  title: buildPageTitle("Staff & Faculty Portal"),
   description: "Sign in as ACD Staff or Faculty Member",
 };
 

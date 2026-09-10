@@ -9,6 +9,9 @@ import {
   loadCilosForCourseAction,
   saveCilosForCourseAction,
 } from "@/lib/actions/faculty-cilo-actions";
+import { buildPageTitle } from "@/lib/page-title";
+
+export const metadata = { title: buildPageTitle("CILOs", "Faculty") };
 
 interface FacultyCilosPageProps {
   searchParams: Promise<{ term?: string; type?: string; q?: string; view?: string }>;

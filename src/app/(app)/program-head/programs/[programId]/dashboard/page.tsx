@@ -11,15 +11,17 @@ import {
   buildProgramHeadOutcomesPath,
 } from "@/lib/constants/program-head-routes";
 
-export const metadata = {
-  title: "Dashboard | Program Head | System CLOIE",
-};
 import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
 import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
 import { ProgramHeadNeedsAttention } from "@/features/analytics/components/program-head-needs-attention";
 import { ProgramHeadQualitativePulse } from "@/features/analytics/components/program-head-qualitative-pulse";
+import { buildPageTitle } from "@/lib/page-title";
 import { cn } from "@/lib/utils";
+
+export const metadata = {
+  title: buildPageTitle("Dashboard", "Program Head"),
+};
 
 export default async function SelectedProgramDashboardPage({
   params,

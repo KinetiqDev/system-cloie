@@ -80,11 +80,14 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
     .join(" ");
 
   return (
-    <div className="space-y-3">
-      <h3 id={titleId} className="text-title-sm text-foreground">
-        {title}
-      </h3>
-      <div className="border-border h-72 w-full rounded-xl border p-3">
+    <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
+      <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+          {title}
+        </h3>
+        <span className="text-muted-foreground text-xs font-medium">Comparable runs</span>
+      </div>
+      <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">
         <ChartContainer
           id={chartId}
           role="region"
@@ -92,7 +95,7 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
           aria-describedby={insightId}
           className="aspect-auto h-full w-full"
         >
-          <LineChart data={data} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
+          <LineChart data={data} margin={{ bottom: 10, left: 0, right: 12, top: 10 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="periodLabel"
@@ -104,7 +107,14 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
               height={70}
               tick={{ fontSize: 12 }}
             />
-            <YAxis domain={[0, "auto"]} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+            <YAxis
+              domain={[1, 5]}
+              ticks={[1, 2, 3, 4, 5]}
+              tickLine={false}
+              axisLine={false}
+              tick={{ fontSize: 12 }}
+              width={28}
+            />
             <ChartTooltip
               formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
             />
