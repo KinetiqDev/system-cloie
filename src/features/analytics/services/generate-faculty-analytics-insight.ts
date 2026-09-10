@@ -253,8 +253,7 @@ export async function generateFacultyAnalyticsInsight(
     qualitativeItemCount: data.qualitative.available ? data.qualitative.itemCount : 0,
     /** True when the packet carried a bounded slice instead of the whole feedback corpus. */
     qualitativeTruncated:
-      data.qualitative.available &&
-      (qualitativeTokensTruncated || qualitativePromptTermsTruncated),
+      data.qualitative.available && (qualitativeTokensTruncated || qualitativePromptTermsTruncated),
   };
   const generation = requestFacultyInsight(config, serialized, data.qualitative.available, evidence)
     .then((result) => {

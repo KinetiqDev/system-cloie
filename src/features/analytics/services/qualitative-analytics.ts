@@ -269,7 +269,9 @@ function groupQualitativeItems(
  * prevalence, per-source and per-prompt structure, and the tone distribution.
  * Raw answers, sentences, and response identities stay inside this function.
  */
-export function analyzeQualitativeCorpus(items: QualitativeCorpusItem[]): QualitativeCorpusEvidence {
+export function analyzeQualitativeCorpus(
+  items: QualitativeCorpusItem[]
+): QualitativeCorpusEvidence {
   const prepared = prepareQualitativeItems(items);
 
   const sources = [...groupQualitativeItems(prepared, (item) => item.sourceKey).values()]
@@ -286,10 +288,12 @@ export function analyzeQualitativeCorpus(items: QualitativeCorpusItem[]): Qualit
         DASHBOARD_SOURCE_ORDER.indexOf(right.sourceKey)
     );
 
-  const prompts = [...groupQualitativeItems(
-    prepared,
-    (item) => `${item.sourceKey}\u0000${item.sourceLabel}\u0000${item.promptLabel}`
-  ).values()]
+  const prompts = [
+    ...groupQualitativeItems(
+      prepared,
+      (item) => `${item.sourceKey}\u0000${item.sourceLabel}\u0000${item.promptLabel}`
+    ).values(),
+  ]
     .map<QualitativePromptEvidence>((group) => ({
       sourceKey: group[0]!.item.sourceKey,
       sourceLabel: group[0]!.item.sourceLabel,

@@ -16,11 +16,11 @@ A word-frequency token is also a poor fingerprint of what respondents meant. The
 
 ### Crossing the boundary
 
-| Signal | Definition | Emitted to browser and provider |
-| --- | --- | --- |
-| Term prevalence | identifier-redacted term, total mentions, distinct responses containing the term | term, mentions, distinct-response count |
-| Per-prompt structure | per instrument prompt and evidence source: item count, distinct-response count, top terms, tone distribution | counts and redacted terms only |
-| Sentiment shape | per prompt and per scope: count of answers banded positive, neutral, negative by a deterministic rule | band counts and the scored total |
+| Signal               | Definition                                                                                                   | Emitted to browser and provider         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Term prevalence      | identifier-redacted term, total mentions, distinct responses containing the term                             | term, mentions, distinct-response count |
+| Per-prompt structure | per instrument prompt and evidence source: item count, distinct-response count, top terms, tone distribution | counts and redacted terms only          |
+| Sentiment shape      | per prompt and per scope: count of answers banded positive, neutral, negative by a deterministic rule        | band counts and the scored total        |
 
 Nothing else crosses. Raw comments, sentences, excerpts, response identifiers, respondent identifiers, emails, roster records, and authorization context stay server-side, exactly as the Analytics CONTEXT AI evidence packet defines.
 

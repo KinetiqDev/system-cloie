@@ -71,16 +71,21 @@ type FeedbackAssignment = {
   } | null;
 };
 
-function courseBoundAssignment(opts: {
-  evaluationId?: string;
-  deploymentName?: string;
-  instrumentId?: string;
-} = {}): FeedbackAssignment {
+function courseBoundAssignment(
+  opts: {
+    evaluationId?: string;
+    deploymentName?: string;
+    instrumentId?: string;
+  } = {}
+): FeedbackAssignment {
   return {
     course_bound: {
       id: opts.evaluationId ?? "eval-1",
       deployment_name: opts.deploymentName ?? "CILO Evaluation",
-      instrument: { id: opts.instrumentId ?? "instrument-course", structure_snapshot: openPromptSnapshot },
+      instrument: {
+        id: opts.instrumentId ?? "instrument-course",
+        structure_snapshot: openPromptSnapshot,
+      },
     },
     central_deployment: null,
   };
@@ -117,7 +122,6 @@ describe("redactPotentialIdentifiers", () => {
     );
   });
 });
-
 
 describe("buildRedactedWordCloudTokens", () => {
   it("orders tokens by count descending then localeCompare", () => {
@@ -380,7 +384,11 @@ describe("getProgramHeadFeedback", () => {
 
   it("uses a generic label when a prompt is absent from its snapshot", async () => {
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
-      qualitativeRow({ text: "Clear direction", responseId: "response-1", promptKey: "legacy-private-key" }),
+      qualitativeRow({
+        text: "Clear direction",
+        responseId: "response-1",
+        promptKey: "legacy-private-key",
+      }),
     ]);
 
     const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);

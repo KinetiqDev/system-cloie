@@ -38,13 +38,7 @@ export function QualitativeToneSummary({ tone }: { tone: QualitativeToneShape })
 }
 
 /** Identifier-redacted prompt terms with their mention counts and respondent reach. */
-export function QualitativeTermChips({
-  terms,
-  label,
-}: {
-  terms: WordCloudToken[];
-  label: string;
-}) {
+export function QualitativeTermChips({ terms, label }: { terms: WordCloudToken[]; label: string }) {
   if (terms.length === 0) {
     return <span className="text-muted-foreground">—</span>;
   }

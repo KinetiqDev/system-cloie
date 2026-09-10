@@ -46,7 +46,10 @@ export const STAKEHOLDER_LABELS: Record<string, string> = {
  */
 export const DASHBOARD_SOURCE_TO_ANALYTICS_FILTER: Record<
   DashboardSourceKey,
-  { evidenceSource: "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY"; stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER" }
+  {
+    evidenceSource: "COURSE" | "PROGRAM_WIDE_STUDENT" | "ALUMNI" | "INDUSTRY";
+    stakeholder?: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
+  }
 > = {
   COURSE_STUDENT: { evidenceSource: "COURSE" },
   CENTRAL_STUDENT: { evidenceSource: "PROGRAM_WIDE_STUDENT", stakeholder: "STUDENT" },

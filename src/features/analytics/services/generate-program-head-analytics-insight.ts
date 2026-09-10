@@ -100,7 +100,10 @@ export function describeAppliedFilters(
   };
 }
 
-function buildPacketBase(overview: ProgramHeadOverviewDTO, appliedFilters: AppliedAnalyticsFilters) {
+function buildPacketBase(
+  overview: ProgramHeadOverviewDTO,
+  appliedFilters: AppliedAnalyticsFilters
+) {
   return {
     program: {
       code: overview.scope.programCode,
@@ -391,9 +394,7 @@ function buildQualitativePacket(
 }
 
 function clampTokenText(text: string): string {
-  return text.length <= MAX_TOKEN_TEXT_CHARS
-    ? text
-    : text.slice(0, MAX_TOKEN_TEXT_CHARS - 1) + "…";
+  return text.length <= MAX_TOKEN_TEXT_CHARS ? text : text.slice(0, MAX_TOKEN_TEXT_CHARS - 1) + "…";
 }
 
 function sortedDescending(tokens: ProgramHeadFeedbackTokenDTO[]) {

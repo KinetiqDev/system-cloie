@@ -37,9 +37,9 @@ describe("scoreQualitativeTone", () => {
     expect(scoreQualitativeTone("The instructor was excellent and very helpful.")).toBeGreaterThan(
       QUALITATIVE_TONE_POSITIVE_MIN
     );
-    expect(
-      scoreQualitativeTone("The lab equipment was broken and useless.")
-    ).toBeLessThan(QUALITATIVE_TONE_NEGATIVE_MAX);
+    expect(scoreQualitativeTone("The lab equipment was broken and useless.")).toBeLessThan(
+      QUALITATIVE_TONE_NEGATIVE_MAX
+    );
     expect(scoreQualitativeTone("The lecture was on Tuesday.")).toBe(0);
   });
 
@@ -74,7 +74,10 @@ describe("analyzeQualitativeCorpus", () => {
 
   it("redacts identifiers before counting and never emits source text", () => {
     const result = analyzeQualitativeCorpus([
-      item({ text: "Maria Santos emailed maria@example.com about IT201 support.", responseId: "r1" }),
+      item({
+        text: "Maria Santos emailed maria@example.com about IT201 support.",
+        responseId: "r1",
+      }),
     ]);
     const serialized = JSON.stringify(result);
 
@@ -92,12 +95,8 @@ describe("analyzeQualitativeCorpus", () => {
 
     expect(result.terms.map((term) => term.text)).toEqual(["helpful"]);
     expect(result.tone.scoredItemCount).toBe(2);
-    expect(result.sources).toEqual([
-      expect.objectContaining({ itemCount: 2, responseCount: 2 }),
-    ]);
-    expect(result.prompts).toEqual([
-      expect.objectContaining({ itemCount: 2, responseCount: 2 }),
-    ]);
+    expect(result.sources).toEqual([expect.objectContaining({ itemCount: 2, responseCount: 2 })]);
+    expect(result.prompts).toEqual([expect.objectContaining({ itemCount: 2, responseCount: 2 })]);
   });
 
   it("keeps an answer with no surviving term out of the term projection only", () => {
@@ -196,7 +195,9 @@ describe("analyzeQualitativeCorpus", () => {
       }),
     ];
 
-    expect(analyzeQualitativeCorpus(corpus)).toEqual(analyzeQualitativeCorpus([...corpus].reverse()));
+    expect(analyzeQualitativeCorpus(corpus)).toEqual(
+      analyzeQualitativeCorpus([...corpus].reverse())
+    );
   });
 
   it("groups source evidence by source with counts and tone", () => {
