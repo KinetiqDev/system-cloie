@@ -27,6 +27,14 @@ export const U = {
   ALU_REJECTED: "d4444444-4444-4444-8444-444444444444",
   ALU_INACTIVE: "d5555555-5555-4555-8555-555555555555",
   GENED: "d3333333-3333-4333-8333-333333333333",
+  STU_BSIT_Q1: "c7777777-7777-4777-8777-777777777777",
+  STU_BSIT_Q2: "c8888888-8888-4888-8888-888888888888",
+  STU_BSIT_Q3: "c9999999-9999-4999-8999-999999999999",
+  STU_BSIT_Q4: "cbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  STU_BSIT_Q5: "c0000000-0000-4000-8000-000000000000",
+  STU_BSHM_Q1: "cddddddd-dddd-4ddd-8ddd-dddddddddddd",
+  STU_BSHM_Q2: "ceeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  STU_BSHM_Q3: "caaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
 } as const;
 
 export const D = {
