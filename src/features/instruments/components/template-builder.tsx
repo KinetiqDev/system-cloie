@@ -1230,7 +1230,7 @@ export function TemplateBuilder({
         : "Create template";
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
       <div className="border-border bg-background/95 sticky top-0 z-30 -mx-4 border-b px-4 py-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border">
         <div className="min-w-0">
           <BackLink onClick={requestBackNavigation}>Back to Tools</BackLink>
@@ -1248,16 +1248,20 @@ export function TemplateBuilder({
       >
         <div className="mx-auto flex max-w-4xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p
-            className="text-muted-foreground flex min-h-5 items-center gap-1.5 text-xs"
+            className="text-muted-foreground flex min-h-5 min-w-0 items-center gap-1.5 text-xs sm:flex-1"
             role="status"
             aria-live="polite"
           >
             <SaveStateIcon className="size-3.5" aria-hidden="true" />
             {saveStateContent.label}
           </p>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center [&_[data-slot=button]]:min-h-11 sm:[&_[data-slot=button]]:min-w-28">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end [&_[data-slot=button]]:min-h-11 [&_[data-slot=button]]:max-w-full sm:[&_[data-slot=button]]:min-w-28">
             <Button
-              className={canContinueToPublish ? "w-full" : "col-span-2 w-full"}
+              className={
+                canContinueToPublish
+                  ? "w-full sm:w-auto"
+                  : "col-span-2 w-full sm:col-span-1 sm:w-auto"
+              }
               variant={canContinueToPublish ? "outline" : "default"}
               onClick={handleSave}
               loading={isPending || isCopyPending}
@@ -1266,7 +1270,7 @@ export function TemplateBuilder({
             </Button>
             {canContinueToPublish && (
               <Button
-                className="w-full"
+                className="w-full sm:w-auto"
                 onClick={handleContinueToPublish}
                 loading={isPending}
                 aria-label="Continue to publish"
