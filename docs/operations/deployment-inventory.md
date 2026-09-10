@@ -1,6 +1,6 @@
 # System CLOIE deployment inventory
 
-Last verified: 2026-09-07
+Last verified: 2026-09-10
 Operator: tugeru
 
 ## Host
@@ -25,7 +25,7 @@ Operator: tugeru
 - Resource UUID: q5lnvl1jcuyeqejgakvqzw64
 - Repository: KinetiqDev/system-cloie
 - Branch: main
-- Deployed commit: c8cf224f637175491af9268a39175e00e7626373 (2026-09-07 redeploy; was fc78b8a8a1a9aaf341bd25d44ad3c37c36cbee7c from 2026-09-04)
+- Deployed commit: 3995d0eb853667c19bb88f9c7e796bb151add319 (PR #618 analytics filters and UI refinements; 2026-09-10 redeploy: prod n6o8uqe3, staging Dev 1laonuad + Preview n6oggv5e, all on main; health 200 verified)
 - Internal port: 3000
 - Domain: https://system-cloie.app
 - Coolify origin route: http://system-cloie.app, because Cloudflare Tunnel terminates HTTPS
@@ -44,7 +44,7 @@ Operator: tugeru
 - Resource UUID: z6in60cnponudoazdc5e3dhq
 - Repository: KinetiqDev/system-cloie-infra
 - Branch: main
-- Infrastructure commit: 46d83994451ff8aaa5ba74634cf6f5c5b31a958f
+- Infrastructure commit: 46d83994451ff8aaa5ba74634cf6f5c5b31a958f (no redeploy 2026-09-10: PR #618 carries no BaaS config changes, only the `user_roles` index migration)
 - Self-hosted release: self-hosted/v0.8.0
 - Public API domain: https://api.system-cloie.app
 - Gateway internal port: 8000
@@ -71,7 +71,7 @@ Operator: tugeru
 - CONFIRMATION_SECRET: configured
 - CLOIE_LEGAL_TICKET_SECRET: configured
 - BOOTSTRAP_SECRETARY_EMAIL: configured
-- AI credentials: not configured; AI disabled
+- AI credentials: configured on System CLOIE App, Dev, and Preview (Groq `openai/gpt-oss-20b`, enabled 2026-09-09; prod redeploy 2hyoleux, staging Dev m81fsybm + Preview y3xp2pqng)
 - Demo and CI authentication variables: not configured
 
 ## Backups
@@ -97,7 +97,8 @@ The current backups are on the same server and are not disaster recovery.
 - Supabase Auth through local Coolify route: HTTP 200
 - Google provider: enabled
 - Google authorize endpoint: redirects to Google with callback `https://api.system-cloie.app/auth/v1/callback`
-- System CLOIE migrations: local and remote histories match through 20260905090100 (2 pending found 2026-09-07: 20260905090000, 20260905090100; applied with pre-apply backup at ~/system-cloie-backups/pre-migration-20260907.dump)
+- System CLOIE migrations: prod-remote and staging-remote match main through 20260909120000 multi-role index swap (0 pending on both, verified 2026-09-10; prod applied with dry-run review, pre-apply backup at ~/system-cloie-backups/pre-migration-20260910.dump, index state verified via `pg_indexes`: `user_roles_user_id_key` dropped, `user_roles_user_id_role_key` present)
+- Staging returned to main at 3995d0eb after PR #618 merged (Dev 1laonuad + Preview n6oggv5e, health 200 verified 2026-09-10). Prod stays on main at 3995d0eb (n6o8uqe3, health 200 verified 2026-09-10).
 - Prisma private database access: `SELECT 1` succeeded from the application container through Supavisor
 - Application image: healthy
 - Public application: HTTP 200
