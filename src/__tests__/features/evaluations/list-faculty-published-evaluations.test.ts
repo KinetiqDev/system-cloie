@@ -13,12 +13,14 @@ const prismaMocks = vi.hoisted(() => ({
   courseAssignmentFindMany: vi.fn(),
   courseBoundEvaluationFindMany: vi.fn(),
   facultyProgramAffiliationFindMany: vi.fn(),
+  responseGroupBy: vi.fn(),
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: { findMany: prismaMocks.courseAssignmentFindMany },
     courseBoundEvaluation: { findMany: prismaMocks.courseBoundEvaluationFindMany },
     facultyProgramAffiliation: { findMany: prismaMocks.facultyProgramAffiliationFindMany },
+    response: { groupBy: prismaMocks.responseGroupBy },
   },
 }));
 
@@ -94,6 +96,9 @@ describe("listFacultyPublishedEvaluations – course info snapshots", () => {
       userId: "faculty-1",
     });
     prismaMocks.facultyProgramAffiliationFindMany.mockResolvedValue([affiliation]);
+    prismaMocks.responseGroupBy.mockResolvedValue([
+      { deployment_id: "evaluation-1", _count: { _all: 2 } },
+    ]);
   });
 
   it("prefers published snapshot labels over live relations for historical records", async () => {

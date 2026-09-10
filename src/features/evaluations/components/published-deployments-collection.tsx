@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, MoreVertical } from "lucide-react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
 import type { DeploymentStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,19 @@ const STATUS_FILTERS: StatusFilter[] = ["ALL", "ACTIVE", "SCHEDULED", "CLOSED", 
 
 const PAGE_SIZE = 10;
 
+function useMobileCollectionLayout(): boolean {
+  const getSnapshot = () =>
+    typeof window.matchMedia === "function" && window.matchMedia("(max-width: 767px)").matches;
+  const subscribe = (onStoreChange: () => void) => {
+    if (typeof window.matchMedia !== "function") return () => {};
+    const media = window.matchMedia("(max-width: 767px)");
+    media.addEventListener("change", onStoreChange);
+    return () => media.removeEventListener("change", onStoreChange);
+  };
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+}
+
 function formatDate(date: Date | null): string {
   if (!date) return "--";
   return date.toLocaleDateString("en-US", {
@@ -111,6 +124,7 @@ export function PublishedDeploymentsCollection({
   renderCardActions,
   label = "Published evaluations",
 }: PublishedDeploymentsCollectionProps) {
+  const isMobile = useMobileCollectionLayout();
   const [internalStatusFilter, setInternalStatusFilter] = useState<StatusFilter>("ALL");
   const statusFilter = controlledStatusFilter ?? internalStatusFilter;
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -120,6 +134,14 @@ export function PublishedDeploymentsCollection({
     if (statusFilter === "ALL") return item.status !== "ARCHIVED";
     return item.status === statusFilter;
   });
+  const statusCounts = Object.fromEntries(
+    STATUS_FILTERS.map((filter) => [
+      filter,
+      items.filter((item) =>
+        filter === "ALL" ? item.status !== "ARCHIVED" : item.status === filter
+      ).length,
+    ])
+  ) as Record<StatusFilter, number>;
 
   const hasCourseColumn = items.some((item) => Boolean(item.courseLabel));
   const hasTargetColumn = items.some((item) => Boolean(item.targetLabel));
@@ -150,16 +172,25 @@ export function PublishedDeploymentsCollection({
 
   return (
     <div className="space-y-4">
-      {/* Status filters */}
-      <div className="flex flex-wrap gap-2">
+      <div
+        aria-label="Filter by deployment status"
+        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+        role="toolbar"
+      >
         {STATUS_FILTERS.map((filter) => (
           <Button
             key={filter}
             variant={statusFilter === filter ? "default" : "outline"}
             size="sm"
+            aria-pressed={statusFilter === filter}
+            className="shrink-0"
+            aria-label={filter === "ALL" ? "All" : statusLabel(filter)}
             onClick={() => handleFilterChange(filter)}
           >
             {filter === "ALL" ? "All" : statusLabel(filter)}
+            <span aria-hidden="true" className="tabular-nums opacity-70">
+              {statusCounts[filter]}
+            </span>
           </Button>
         ))}
       </div>
@@ -173,6 +204,17 @@ export function PublishedDeploymentsCollection({
             </p>
           </div>
         ))
+      ) : isMobile ? (
+        <PublishedCompactList
+          items={paginatedItems}
+          label={label}
+          hasCourse={hasCourseColumn}
+          hasTarget={hasTargetColumn}
+          expandedIds={expandedIds}
+          onToggle={toggleExpanded}
+          renderExpanded={renderExpanded}
+          renderMenuItems={renderMenuItems}
+        />
       ) : view === "card" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {paginatedItems.map((item) => (
@@ -228,9 +270,9 @@ function OverflowMenu({ children }: { children: ReactNode }) {
     <DropdownMenu>
       <DropdownMenuTrigger
         onClick={(e) => e.stopPropagation()}
-        className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors"
+        className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-8 items-center justify-center rounded-md transition-colors pointer-coarse:size-11"
       >
-        <MoreVertical className="size-4" />
+        <MoreHorizontal className="size-4" />
         <span className="sr-only">Actions</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">{children}</DropdownMenuContent>
@@ -264,11 +306,14 @@ function ResponsesSummary({
   const width = totalCount > 0 ? (responseCount / totalCount) * 100 : 0;
 
   return (
-    <div className="space-y-1">
-      <span className="text-sm tabular-nums">
-        {responseCount} / {totalCount}
-      </span>
-      <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="text-muted-foreground">Responses</span>
+        <span className="font-medium tabular-nums">
+          {responseCount} / {totalCount}
+        </span>
+      </div>
+      <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
         <div className="bg-primary h-1.5 rounded-full" style={{ width: `${width}%` }} />
       </div>
     </div>
@@ -490,5 +535,126 @@ function PublishedRow({
         </TableRow>
       )}
     </>
+  );
+}
+
+function PublishedCompactList({
+  className,
+  items,
+  label,
+  hasCourse,
+  hasTarget,
+  expandedIds,
+  onToggle,
+  renderExpanded,
+  renderMenuItems,
+}: {
+  className?: string;
+  items: PublishedDeploymentItem[];
+  label: string;
+  hasCourse: boolean;
+  hasTarget: boolean;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  renderExpanded?: (item: PublishedDeploymentItem) => ReactNode;
+  renderMenuItems: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
+}) {
+  return (
+    <div className={`bg-card overflow-hidden rounded-lg border ${className ?? ""}`}>
+      <ul aria-label={label} className="divide-y">
+        {items.map((item) => (
+          <PublishedListRow
+            key={item.id}
+            item={item}
+            hasCourse={hasCourse}
+            hasTarget={hasTarget}
+            expandedIds={expandedIds}
+            onToggle={onToggle}
+            renderExpanded={renderExpanded}
+            renderMenuItems={renderMenuItems}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PublishedListRow({
+  item,
+  hasCourse,
+  hasTarget,
+  expandedIds,
+  onToggle,
+  renderExpanded,
+  renderMenuItems,
+}: {
+  item: PublishedDeploymentItem;
+  hasCourse: boolean;
+  hasTarget: boolean;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  renderExpanded?: (item: PublishedDeploymentItem) => ReactNode;
+  renderMenuItems: (
+    item: PublishedDeploymentItem,
+    ctx: { view: ToolsViewMode; expanded: boolean; toggle: () => void }
+  ) => ReactNode;
+}) {
+  const isExpanded = expandedIds.has(item.id);
+  const listCtx = {
+    view: "list" as ToolsViewMode,
+    expanded: isExpanded,
+    toggle: () => onToggle(item.id),
+  };
+  return (
+    <li>
+      <div className="flex items-center gap-2 px-2 py-3 sm:px-3">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0"
+          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
+          aria-expanded={isExpanded}
+          aria-controls={`deployment-details-${item.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle(item.id);
+          }}
+        >
+          {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-sm leading-snug font-semibold">{item.name}</span>
+            <StatusBadge status={item.status} />
+          </div>
+          {(hasCourse || hasTarget) && (item.courseLabel || item.targetLabel) && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+              {hasCourse && item.courseLabel && (
+                <span className="text-muted-foreground text-xs">{item.courseLabel}</span>
+              )}
+              {hasTarget && item.targetLabel && (
+                <span className="text-muted-foreground text-xs">{item.targetLabel}</span>
+              )}
+            </div>
+          )}
+          <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+            <span className="shrink-0 tabular-nums">
+              {item.responseCount}/{item.totalCount} responses
+            </span>
+            {item.periodLabel && <span aria-hidden="true">·</span>}
+            {item.periodLabel && <span className="truncate">{item.periodLabel}</span>}
+          </div>
+        </div>
+        <OverflowMenu>{renderMenuItems(item, listCtx)}</OverflowMenu>
+      </div>
+      {isExpanded && renderExpanded && (
+        <div id={`deployment-details-${item.id}`} className="bg-muted/30 border-y px-3 py-3">
+          {renderExpanded(item)}
+        </div>
+      )}
+    </li>
   );
 }

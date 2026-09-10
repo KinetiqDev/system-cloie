@@ -96,21 +96,23 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
           school_year: true,
         },
       },
-      assignments: {
-        where: {
-          response: {
-            status: "SUBMITTED",
-          },
-        },
-        select: {
-          id: true,
-        },
-      },
     },
     orderBy: {
       created_at: "desc",
     },
   });
+  const submittedCounts = await prisma.response.groupBy({
+    by: ["deployment_id"],
+    where: {
+      deployment_type: "COURSE_BOUND",
+      deployment_id: { in: rawEvaluations.map((evaluation) => evaluation.id) },
+      status: "SUBMITTED",
+    },
+    _count: { _all: true },
+  });
+  const submittedCountByDeployment = new Map(
+    submittedCounts.map((count) => [count.deployment_id, count._count._all])
+  );
 
   const evaluations: FacultyPublishedEvaluationItem[] = rawEvaluations.map((evalItem) => {
     const courseInfo = parseCourseInfoSnapshot(evalItem.course_info_snapshot);
@@ -142,7 +144,7 @@ export async function listFacultyPublishedEvaluations(): Promise<ListFacultyPubl
       programId: ca.program.id,
       programName: courseInfo?.programName ?? ca.program.name,
       publishedAt: evalItem.published_at,
-      responseCount: evalItem.assignments.length,
+      responseCount: submittedCountByDeployment.get(evalItem.id) ?? 0,
       status: getEffectiveDeploymentStatus(
         evalItem.status,
         evalItem.activation_at,

@@ -74,19 +74,26 @@ export async function listProgramHeadDeployments(
           school_year: true,
         },
       },
-      assignments: {
+      _count: {
         select: {
-          id: true,
-          response: {
-            select: {
-              status: true,
-            },
-          },
+          assignments: true,
         },
       },
     },
     orderBy: { created_at: "desc" },
   });
+  const submittedCounts = await prisma.response.groupBy({
+    by: ["deployment_id"],
+    where: {
+      deployment_type: "CENTRAL",
+      deployment_id: { in: rawDeployments.map((deployment) => deployment.id) },
+      status: "SUBMITTED",
+    },
+    _count: { _all: true },
+  });
+  const submittedCountByDeployment = new Map(
+    submittedCounts.map((count) => [count.deployment_id, count._count._all])
+  );
 
   // 5. Map to typed result with counts
   const deployments: ProgramHeadDeploymentItem[] = rawDeployments.map((d) => {
@@ -114,8 +121,8 @@ export async function listProgramHeadDeployments(
       activation_at: d.activation_at,
       deadline_at: d.deadline_at,
       created_at: d.created_at,
-      assignmentCount: d.assignments.length,
-      responseCount: d.assignments.filter((a) => a.response?.status === "SUBMITTED").length,
+      assignmentCount: d._count.assignments,
+      responseCount: submittedCountByDeployment.get(d.id) ?? 0,
     };
   });
 

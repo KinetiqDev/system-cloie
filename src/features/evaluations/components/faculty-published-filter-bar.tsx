@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ListFilter, Search, X } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ export function FacultyPublishedFilterBar({
 }: FacultyPublishedFilterBarProps) {
   const [searchDraft, setSearchDraft] = useState(filters.query);
   const [previousQuery, setPreviousQuery] = useState(filters.query);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   if (previousQuery !== filters.query) {
     setPreviousQuery(filters.query);
@@ -65,26 +66,40 @@ export function FacultyPublishedFilterBar({
 
   return (
     <section
-      aria-labelledby="published-filter-title"
-      className="bg-card flex min-w-0 flex-col gap-4 overflow-hidden rounded-xl border p-4 shadow-xs sm:p-5"
+      aria-label="Published evaluation filters"
+      className="bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-3 sm:p-4"
     >
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            className="bg-muted text-muted-foreground ring-border hidden size-8 shrink-0 items-center justify-center rounded-lg ring-1 sm:inline-flex"
-            aria-hidden="true"
-          >
-            <ListFilter className="size-4" />
-          </span>
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 id="published-filter-title" className="text-title-sm leading-tight">
-              Filter evaluations
-            </h2>
-            <p className="text-muted-foreground text-xs leading-normal break-words">
-              Search or combine filters to narrow the published list.
-            </p>
+      <div className="flex min-w-0 items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="published-search" className="sr-only">
+            Search evaluations
+          </Label>
+          <div className="relative">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              id="published-search"
+              placeholder="Search published evaluations"
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              className="pl-9 pointer-coarse:h-11"
+              autoComplete="off"
+            />
           </div>
         </div>
+        <Button
+          variant={filters.periodId || filters.courseId ? "secondary" : "outline"}
+          size="icon"
+          className="sm:hidden"
+          aria-label="Toggle more filters"
+          aria-expanded={mobileFiltersOpen}
+          aria-controls="faculty-published-more-filters"
+          onClick={() => setMobileFiltersOpen((open) => !open)}
+        >
+          <SlidersHorizontal aria-hidden="true" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -98,32 +113,17 @@ export function FacultyPublishedFilterBar({
             })
           }
           disabled={!hasActive}
-          className="shrink-0 gap-1.5"
+          className="shrink-0"
         >
-          <X className="size-3.5" aria-hidden="true" />
-          Reset
+          <X aria-hidden="true" />
+          <span className="xs:inline hidden">Clear</span>
         </Button>
       </div>
 
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(13rem,1fr)_minmax(12rem,1fr)_minmax(14rem,1.25fr)]">
-        <div className="flex min-w-0 flex-col gap-2">
-          <Label htmlFor="published-search">Search evaluations</Label>
-          <div className="relative">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="published-search"
-              placeholder="Search name or course"
-              value={searchDraft}
-              onChange={(event) => setSearchDraft(event.target.value)}
-              className="pl-9 pointer-coarse:h-11"
-              autoComplete="off"
-            />
-          </div>
-        </div>
-
+      <div
+        id="faculty-published-more-filters"
+        className={`${mobileFiltersOpen ? "grid" : "hidden"} min-w-0 gap-3 sm:grid sm:grid-cols-2`}
+      >
         <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="published-period-filter">Academic Period</Label>
           <Select
@@ -158,7 +158,7 @@ export function FacultyPublishedFilterBar({
           </Select>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:col-span-1">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="published-course-filter">Course</Label>
           <Select
             value={
