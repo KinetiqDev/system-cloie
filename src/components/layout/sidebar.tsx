@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
 import {
-  getDeanActiveGroup,
+  getDeanActiveItem,
   getDeanNavGroups,
   getDeanStandaloneNav,
   getHighestNavRole,
@@ -15,11 +15,8 @@ import {
   getSecondaryNavByRoles,
   getDeepestMatchingNavItem,
   getDashboardHref,
-  getDeanActiveItem,
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
 import { NavigationRow } from "./navigation-row";
 
 const LOGO_CLASS_NAME = "h-8 w-auto rounded border border-border bg-white p-1";
@@ -141,13 +138,11 @@ export function Sidebar({ user, roles = [], activeProgramId = null }: SidebarPro
 
 function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
   const pathname = usePathname();
-  const activeGroup = getDeanActiveGroup(pathname);
   const activeItem = getDeanActiveItem(pathname);
   const groups = getDeanNavGroups();
   const [dashboard, profile] = getDeanStandaloneNav();
-  const [openGroup, setOpenGroup] = useState<{ href: string; pathname: string } | null>(null);
 
-  const renderLink = (item: typeof dashboard, compact = false) => {
+  const renderLink = (item: typeof dashboard, compact = false, nested = false) => {
     const active = activeItem === item;
     return (
       <NavigationRow
@@ -157,8 +152,9 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
         rail={compact}
         aria-current={active ? "page" : undefined}
         title={compact ? item.name : undefined}
+        className={nested ? "text-body-sm" : undefined}
       >
-        <item.icon className="size-5 shrink-0" aria-hidden="true" />
+        <item.icon className={cn("shrink-0", nested ? "size-4" : "size-5")} aria-hidden="true" />
         <span className={cn(compact && "md:hidden lg:inline")}>{item.name}</span>
       </NavigationRow>
     );
@@ -191,42 +187,21 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
         {renderLink(dashboard, true)}
         {groups.map((group) => {
           const active = activeItem?.href === group.href && activeItem.name === group.name;
-          const expanded =
-            activeGroup?.href === group.href ||
-            (openGroup?.href === group.href && openGroup.pathname === pathname);
           return (
             <div key={group.href}>
-              <div className="flex items-center gap-1">
-                <NavigationRow
-                  href={group.href}
-                  active={active}
-                  rail
-                  aria-current={active ? "page" : undefined}
-                  title={group.name}
-                  className="flex-1"
-                >
-                  <group.icon className="size-5 shrink-0" aria-hidden="true" />
-                  <span className="md:hidden lg:inline">{group.name}</span>
-                </NavigationRow>
-                <button
-                  type="button"
-                  aria-label={`${expanded ? "Collapse" : "Expand"} ${group.name}`}
-                  aria-expanded={expanded}
-                  disabled={activeGroup !== null}
-                  onClick={() => setOpenGroup(expanded ? null : { href: group.href, pathname })}
-                  className="text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring hidden min-h-11 min-w-11 items-center justify-center rounded-md focus-visible:outline-2 md:flex lg:min-w-11"
-                >
-                  <ChevronDown
-                    className={cn("size-4 transition-transform", expanded && "rotate-180")}
-                    aria-hidden="true"
-                  />
-                </button>
+              <NavigationRow
+                href={group.href}
+                active={active}
+                rail
+                aria-current={active ? "page" : undefined}
+                title={group.name}
+              >
+                <group.icon className="size-5 shrink-0" aria-hidden="true" />
+                <span className="md:hidden lg:inline">{group.name}</span>
+              </NavigationRow>
+              <div className="border-sidebar-border mt-1 ml-4 hidden gap-1 border-l pl-2 md:flex md:flex-col">
+                {group.items.map((item) => renderLink(item, true, true))}
               </div>
-              {expanded && (
-                <div className="border-sidebar-border mt-1 ml-4 hidden gap-1 border-l pl-2 md:flex md:flex-col">
-                  {group.items.map((item) => renderLink(item, true))}
-                </div>
-              )}
             </div>
           );
         })}

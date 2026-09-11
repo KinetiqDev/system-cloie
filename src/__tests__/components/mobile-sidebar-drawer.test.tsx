@@ -8,6 +8,7 @@ const pathnameMock = vi.hoisted(() => vi.fn(() => "/dean/academic-structure"));
 
 vi.mock("next/navigation", () => ({ usePathname: pathnameMock }));
 vi.mock("next/image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- test mock of next/image
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 vi.mock("next/link", () => ({
@@ -85,7 +86,6 @@ describe("Dean mobile navigation drawer", () => {
       "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
     );
     const last = interactive[interactive.length - 1];
-    const first = interactive[0];
     last.focus();
     fireEvent.keyDown(document, { key: "Tab" });
     expect(screen.getByRole("button", { name: "Close navigation menu" })).toHaveFocus();
@@ -116,6 +116,16 @@ describe("Dean mobile navigation drawer", () => {
     expect(screen.getByRole("link", { name: "Academic Structure" })).not.toHaveAttribute(
       "aria-current"
     );
+  });
+
+  it("keeps Dean group destinations visible in the drawer without a toggle", async () => {
+    pathnameMock.mockReturnValue("/dean/dashboard");
+    render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: "Learning Outcomes" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Tools" })).toBeInTheDocument();
   });
 
   it("preserves the selected Program in Program Head drawer links", async () => {

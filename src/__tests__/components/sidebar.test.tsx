@@ -8,6 +8,7 @@ const pathnameMock = vi.hoisted(() => vi.fn(() => "/program-head/programs/progra
 
 vi.mock("next/navigation", () => ({ usePathname: pathnameMock }));
 vi.mock("next/image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- test mock of next/image
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 vi.mock("next/link", () => ({
@@ -97,5 +98,22 @@ describe("Program Head desktop navigation", () => {
     const structure = screen.getByRole("link", { name: "Academic Structure" });
     expect(structure).not.toHaveClass("bg-sidebar-accent");
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("md:min-w-11");
+  });
+
+  it("keeps every Dean group destination visible without an accordion toggle", () => {
+    pathnameMock.mockReturnValue("/dean/dashboard");
+
+    render(<Sidebar roles={[ROLES.DEAN]} />);
+
+    for (const name of [
+      "Programs",
+      "Courses",
+      "Course Assignments",
+      "Tools",
+      "Learning Outcomes",
+    ]) {
+      expect(screen.getByRole("link", { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: /expand|collapse/i })).not.toBeInTheDocument();
   });
 });
