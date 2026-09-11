@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import type {
   ProgramHeadAnalyticsPeriodOptions,
   ProgramHeadAnalyticsScopeSummary,
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { NavigationLink } from "@/components/layout/navigation-link";
+import { ViewTabs } from "@/components/ui/view-tabs";
 import { ProgramHeadAnalyticsWorkspace } from "./program-head-analytics-workspace";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {
@@ -70,34 +69,15 @@ export function ProgramHeadAnalyticsShell({
         </div>
       </header>
 
-      <div className="relative">
-        <nav
-          aria-label="Analytics views"
-          className="border-border/80 -mx-1 flex min-w-0 gap-1 overflow-x-auto border-b px-1 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {ANALYTICS_TABS.map((tab) => {
-            const isActive = tab === filters.tab;
-            return (
-              <NavigationLink
-                key={tab}
-                href={buildAnalyticsTabUrl(programId, tab, filters)}
-                prefetch={false}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "text-label-md relative inline-flex min-h-11 shrink-0 items-center px-3 font-semibold whitespace-nowrap transition-colors motion-reduce:transition-none",
-                  "focus-visible:ring-ring focus-visible:rounded-t-lg focus-visible:ring-2 focus-visible:outline-none",
-                  "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors motion-reduce:after:transition-none",
-                  isActive
-                    ? "text-primary after:bg-primary"
-                    : "text-muted-foreground hover:text-foreground hover:after:bg-border-strong after:bg-transparent"
-                )}
-              >
-                {ANALYTICS_TAB_LABELS[tab]}
-              </NavigationLink>
-            );
-          })}
-        </nav>
-      </div>
+      <ViewTabs
+        label="Analytics views"
+        activeValue={filters.tab}
+        items={ANALYTICS_TABS.map((tab) => ({
+          value: tab,
+          label: ANALYTICS_TAB_LABELS[tab],
+          href: buildAnalyticsTabUrl(programId, tab, filters),
+        }))}
+      />
       <ProgramHeadAnalyticsWorkspace
         tab={filters.tab}
         filters={

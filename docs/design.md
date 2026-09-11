@@ -351,7 +351,10 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 - Supported tabs: pill and line.
 - Honor the 44 px touch target on coarse pointers: horizontal lists grow to fit and triggers floor at `min-h-11`; desktop density is unchanged.
-- Primary marks active tabs and progress.
+- Primary marks active tabs and progress. The active line tab pairs the selected foreground with a primary underline on a transparent surface.
+- One recipe owns tab geometry: `src/components/ui/tabs-styles.ts`. Surfaces never patch tab size, gap, padding, or indicator at the callsite.
+- A line row scrolls its own overflow rather than the page; its underline sits outside the trigger box inside reserved row padding.
+- Choose the tab contract by what the view does: panel switchers render `Tabs` with `TabsContent` (`role="tab"`); view switchers that navigate render `ViewTabs`, a labelled `nav` of links that reuses the same recipe and marks the active view with `aria-current="page"`.
 - Cyan badges are categorical; semantic badges indicate status.
 - Progress includes a text/count/percentage.
 - Structure remains identical across themes.

@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FacultyAnalyticsDashboard } from "@/features/analytics/components/faculty-analytics-dashboard";
 import type { FacultyAnalyticsData, FacultyAnalyticsOptions } from "@/features/analytics/types";
@@ -59,17 +59,24 @@ afterEach(() => {
 });
 
 describe("FacultyAnalyticsDashboard", () => {
-  it("renders analytics view tabs as link tabs without Base UI button-semantic errors", () => {
+  it("renders the analytics views as link tabs that mark the active view", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     render(<FacultyAnalyticsDashboard data={data} options={options} />);
 
-    const tabs = screen.getAllByRole("tab");
+    const navigation = screen.getByRole("navigation", { name: "Analytics view" });
+    const tabs = within(navigation).getAllByRole("link");
     expect(tabs).toHaveLength(5);
-    expect(tabs.every((tab) => tab.tagName === "A")).toBe(true);
-    expect(screen.getByRole("tab", { name: "CILO results" })).toHaveAttribute(
+    expect(within(navigation).getByRole("link", { name: "CILO results" })).toHaveAttribute(
       "href",
       "/faculty/analytics?view=cilos"
+    );
+    expect(within(navigation).getByRole("link", { name: "Overview" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    expect(within(navigation).getByRole("link", { name: "CILO results" })).not.toHaveAttribute(
+      "aria-current"
     );
     const consoleMessages = consoleError.mock.calls.flat().map(String);
     expect(consoleMessages).not.toEqual(

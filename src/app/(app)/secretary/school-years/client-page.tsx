@@ -65,13 +65,9 @@ export function SchoolYearsClientPage({
 
       <Tabs value={tab} onValueChange={handleTabChange} className="w-full">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <TabsList variant="line" className="h-auto w-full justify-start gap-5 sm:w-auto">
-            <TabsTrigger value="active" className="px-1 py-2.5 text-sm">
-              Active
-            </TabsTrigger>
-            <TabsTrigger value="archived" className="px-1 py-2.5 text-sm">
-              Archived
-            </TabsTrigger>
+          <TabsList variant="line" className="w-full sm:w-auto">
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
 
           <Button onClick={() => setOpen(true)} className="w-full sm:w-auto">

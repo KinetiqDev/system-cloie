@@ -1,9 +1,10 @@
 "use client";
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { tabsListVariants, tabsTriggerClass } from "./tabs-styles";
 
 function Tabs({ className, orientation = "horizontal", ...props }: TabsPrimitive.Root.Props) {
   return (
@@ -15,22 +16,6 @@ function Tabs({ className, orientation = "horizontal", ...props }: TabsPrimitive
     />
   );
 }
-
-const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-text-secondary group-data-horizontal/tabs:h-8 pointer-coarse:group-data-horizontal/tabs:h-auto group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none data-[variant=pill]:h-auto data-[variant=pill]:gap-2 data-[variant=pill]:rounded-none data-[variant=pill]:bg-transparent data-[variant=pill]:p-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-muted",
-        line: "gap-1 bg-transparent",
-        pill: "bg-transparent",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
 
 function TabsList({
   className,
@@ -51,14 +36,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
-      className={cn(
-        "text-text-secondary hover:text-foreground focus-visible:border-ring focus-visible:ring-ring focus-visible:outline-ring relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-60 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-60 group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none group-data-[variant=pill]/tabs-list:data-active:shadow-none motion-reduce:transition-none pointer-coarse:min-h-11",
-        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:border-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent",
-        "group-data-[variant=pill]/tabs-list:bg-surface group-data-[variant=pill]/tabs-list:data-active:bg-primary group-data-[variant=pill]/tabs-list:data-active:text-on-primary group-data-[variant=pill]/tabs-list:min-h-11 group-data-[variant=pill]/tabs-list:flex-initial group-data-[variant=pill]/tabs-list:rounded-full group-data-[variant=pill]/tabs-list:px-5 group-data-[variant=pill]/tabs-list:data-active:border-transparent",
-        "data-active:bg-primary-soft data-active:text-selected-fg data-active:border-transparent",
-        "after:bg-primary after:absolute after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=pill]/tabs-list:after:hidden group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
-        className
-      )}
+      className={cn(tabsTriggerClass, className)}
       {...props}
     />
   );

@@ -59,13 +59,9 @@ export function EvaluationToolsTabs({
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <TabsList variant="line" className="h-auto gap-4 self-start">
-          <TabsTrigger value="templates" className="px-1 py-2.5 text-sm">
-            Templates
-          </TabsTrigger>
-          <TabsTrigger value="published" className="px-1 py-2.5 text-sm">
-            Published
-          </TabsTrigger>
+        <TabsList variant="line" className="self-start">
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="published">Published</TabsTrigger>
         </TabsList>
 
         {(action || viewControl) && (

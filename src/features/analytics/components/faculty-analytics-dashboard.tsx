@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ViewTabs } from "@/components/ui/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
@@ -418,22 +418,16 @@ function FilterSelect({
 function ViewNavigation({ filters }: { filters: FacultyAnalyticsFilters }) {
   return (
     <>
-      <Tabs value={filters.view} className="hidden sm:block">
-        <TabsList variant="line" aria-label="Analytics view">
-          {Object.entries(VIEW_LABELS).map(([view, label]) => (
-            <TabsTrigger
-              key={view}
-              value={view}
-              nativeButton={false}
-              render={
-                <Link href={analyticsHref({ ...filters, view: view as FacultyAnalyticsView })} />
-              }
-            >
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <ViewTabs
+        label="Analytics view"
+        activeValue={filters.view}
+        className="hidden sm:flex"
+        items={Object.entries(VIEW_LABELS).map(([view, label]) => ({
+          value: view,
+          label,
+          href: analyticsHref({ ...filters, view: view as FacultyAnalyticsView }),
+        }))}
+      />
       <MobileViewSelect filters={filters} />
     </>
   );

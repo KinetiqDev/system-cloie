@@ -37,7 +37,7 @@ import {
   buildProgramHeadResponsesCourseEvaluationPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import { cn } from "@/lib/utils";
+import { ViewTabs } from "@/components/ui/view-tabs";
 import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 import { ProgramHeadResponsesWorkspace } from "./program-head-responses-workspace";
@@ -82,17 +82,22 @@ export function ProgramHeadResponsesLanding({
         </p>
       </header>
 
-      <nav aria-label="Response views" className="border-border grid grid-cols-2 border-b sm:flex">
-        <Tab href={buildProgramHeadResponsesTabUrl(programId, "course", state)} active={isCourse}>
-          Course evaluations
-        </Tab>
-        <Tab
-          href={buildProgramHeadResponsesTabUrl(programId, "program-wide", state)}
-          active={!isCourse}
-        >
-          Program-wide
-        </Tab>
-      </nav>
+      <ViewTabs
+        label="Response views"
+        activeValue={state.tab}
+        items={[
+          {
+            value: "course",
+            label: "Course evaluations",
+            href: buildProgramHeadResponsesTabUrl(programId, "course", state),
+          },
+          {
+            value: "program-wide",
+            label: "Program-wide",
+            href: buildProgramHeadResponsesTabUrl(programId, "program-wide", state),
+          },
+        ]}
+      />
 
       <ProgramHeadResponsesWorkspace
         tab={state.tab}
@@ -345,32 +350,5 @@ function ResponseTable({
         ))}
       </TableBody>
     </Table>
-  );
-}
-
-function Tab({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "text-label-md relative inline-flex min-h-11 min-w-0 items-center justify-center px-2 text-center font-semibold transition-colors motion-reduce:transition-none sm:justify-start sm:px-3",
-        "focus-visible:ring-ring focus-visible:rounded-t-lg focus-visible:ring-2 focus-visible:outline-none",
-        "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full",
-        active
-          ? "text-primary after:bg-primary"
-          : "text-muted-foreground hover:text-foreground hover:after:bg-border-strong after:bg-transparent"
-      )}
-    >
-      {children}
-    </Link>
   );
 }

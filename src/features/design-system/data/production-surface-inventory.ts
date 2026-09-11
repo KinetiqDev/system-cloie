@@ -2036,6 +2036,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Year-only calendar selector for the alumni graduation year; public shadcn inventory",
   },
   {
+    path: "src/components/ui/view-tabs.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes:
+      "Link-based line tab row sharing the tabs recipe, for view switchers that navigate instead of swapping panels",
+  },
+  {
     path: "src/features/academic-calendar/components/active-term-badge.tsx",
     disposition: "task",
     taskId: 13,
