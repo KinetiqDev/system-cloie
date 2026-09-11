@@ -14,6 +14,7 @@ import {
   type DeanLearningOutcomesData,
 } from "@/features/dean/services/read-dean-oversight";
 import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
+import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Learning Outcomes", "Dean") };
@@ -133,7 +134,7 @@ export function LearningOutcomesContent({
   if (result.state === "no-eligible-period")
     return (
       <Card>
-        <CardContent className="text-text-secondary py-6 text-sm">
+        <CardContent className="text-body-sm text-text-secondary py-6">
           No eligible Academic Period is available for oversight.
         </CardContent>
       </Card>
@@ -158,7 +159,7 @@ export function LearningOutcomesContent({
       ) : null}
       {programs.length === 0 ? (
         <Card>
-          <CardContent className="text-text-secondary py-6 text-sm">
+          <CardContent className="text-body-sm text-text-secondary py-6">
             No Academic Programs match this period and risk filter.
           </CardContent>
         </Card>
@@ -182,26 +183,25 @@ function PeriodControls({
   selectedPeriodId,
   risk,
 }: {
-  periods: { id: string; label: string; status: string }[];
+  periods: DeanPeriodSummary[];
   selectedPeriodId: string;
   risk: DeanLearningOutcomesData["risk"];
 }) {
   return (
     <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="period" className="text-sm font-medium">
+      <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
+        <label htmlFor="period" className="text-label-lg">
           Academic Period
         </label>
         <select
           id="period"
           name="period"
           defaultValue={selectedPeriodId}
-          className="border-input bg-background focus-visible:ring-ring h-11 min-w-64 rounded-lg border px-3 text-sm outline-none focus-visible:ring-3"
+          className="border-input bg-background focus-visible:ring-ring text-body-sm h-11 w-full min-w-0 rounded-lg border px-3 outline-none focus-visible:ring-3 sm:w-auto sm:min-w-64"
         >
           {periods.map((period) => (
             <option key={period.id} value={period.id}>
               {period.label}
-              {period.status === "COMPLETED" ? " (Completed)" : " (Active)"}
             </option>
           ))}
         </select>
@@ -234,15 +234,19 @@ function ProgramDetail({
     <details open={open} className="group ring-foreground/10 rounded-xl ring-1">
       <summary className="focus-visible:ring-ring flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 p-4 outline-none marker:hidden focus-visible:ring-3">
         <span className="flex min-w-0 flex-col gap-1">
-          <span className="truncate font-medium">{program.name}</span>
-          <span className="text-text-secondary text-xs tabular-nums">
-            {program.ploCount} Program Learning Outcomes · {institutionalGaps.length} Institutional
-            Outcome gaps · {ploGaps.length} Program Learning Outcome gaps
+          <span className="text-title-md truncate">{program.name}</span>
+          <span className="text-caption text-text-secondary tabular-nums">
+            {program.ploCount} Program Learning {program.ploCount === 1 ? "Outcome" : "Outcomes"} ·{" "}
+            {institutionalGaps.length} Institutional Outcome{" "}
+            {institutionalGaps.length === 1 ? "gap" : "gaps"} · {ploGaps.length} Program Learning
+            Outcome {ploGaps.length === 1 ? "gap" : "gaps"}
           </span>
-          <span className="text-text-secondary text-xs">
+          <span className="text-caption text-text-secondary tabular-nums">
             {program.activeContexts} active · {program.readyContexts} ready ·{" "}
-            {program.missingCiloContexts} missing CILOs · {program.incompleteMappingContexts}{" "}
-            incomplete mappings
+            {program.missingCiloContexts} missing{" "}
+            {program.missingCiloContexts === 1 ? "CILO" : "CILOs"} ·{" "}
+            {program.incompleteMappingContexts} incomplete{" "}
+            {program.incompleteMappingContexts === 1 ? "mapping" : "mappings"}
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
@@ -256,14 +260,15 @@ function ProgramDetail({
         </span>
       </summary>
       <div className="border-t px-4 pt-4 pb-4">
-        <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div className="text-body-sm grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Metric label="Active contexts" value={program.activeContexts} />
           <Metric label="Ready contexts" value={program.readyContexts} />
           <Metric label="Missing CILOs" value={program.missingCiloContexts} />
           <Metric label="Incomplete mappings" value={program.incompleteMappingContexts} />
         </div>
-        <p className="text-text-secondary mt-4 text-sm">
-          {coverage}% coverage from {program.readyContexts} of {program.activeContexts} contexts.
+        <p className="text-body-sm text-text-secondary mt-4">
+          {coverage}% coverage from {program.readyContexts} of {program.activeContexts}{" "}
+          {program.activeContexts === 1 ? "context" : "contexts"}.
         </p>
         <ProgramContent program={program} institutionalGaps={institutionalGaps} ploGaps={ploGaps} />
       </div>
@@ -283,9 +288,9 @@ function ProgramContent({
   return (
     <div className="mt-6 flex flex-col gap-6">
       <div>
-        <h3 className="text-sm font-semibold">Institutional Outcome mapping gaps</h3>
+        <h3 className="text-title-sm">Institutional Outcome mapping gaps</h3>
         {institutionalGaps.length === 0 ? (
-          <p className="text-text-secondary mt-2 text-sm">
+          <p className="text-body-sm text-text-secondary mt-2">
             No General Education Institutional Outcome gaps.
           </p>
         ) : (
@@ -293,9 +298,9 @@ function ProgramContent({
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">Program Learning Outcomes</h3>
+        <h3 className="text-title-sm">Program Learning Outcomes</h3>
         {program.plos.length === 0 ? (
-          <p className="text-text-secondary mt-2 text-sm">
+          <p className="text-body-sm text-text-secondary mt-2">
             No Program Learning Outcomes recorded for this Program.
           </p>
         ) : (
@@ -303,9 +308,9 @@ function ProgramContent({
         )}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">Program Learning Outcome mapping gaps</h3>
+        <h3 className="text-title-sm">Program Learning Outcome mapping gaps</h3>
         {ploGaps.length === 0 ? (
-          <p className="text-text-secondary mt-2 text-sm">
+          <p className="text-body-sm text-text-secondary mt-2">
             No Program-specific Program Learning Outcome gaps.
           </p>
         ) : (
@@ -330,9 +335,9 @@ function CatalogList({
       {outcomes.map((outcome) => (
         <li
           key={outcome.id}
-          className="flex flex-col gap-1 px-3 py-3 text-sm sm:flex-row sm:items-baseline sm:gap-3"
+          className="text-body-sm flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-baseline sm:gap-3"
         >
-          <span className="font-medium">{outcome.code}</span>
+          <span className="text-label-lg">{outcome.code}</span>
           <span className="text-text-secondary">{outcome.statement}</span>
           {outcome.isArchived ? <Badge variant="outline">Archived</Badge> : null}
         </li>
@@ -347,16 +352,16 @@ function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number][
       {gaps.map((gap, index) => (
         <li
           key={`${gap.courseId}-${gap.ciloId ?? "missing"}-${index}`}
-          className="rounded-lg border p-3 text-sm"
+          className="text-body-sm rounded-lg border p-3"
         >
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="font-medium">{gap.courseCode}</span>
+            <span className="text-label-lg">{gap.courseCode}</span>
             <span className="text-text-secondary">{gap.courseName}</span>
             <Badge variant="outline">
               {gap.courseScope === "GENERAL_EDUCATION" ? "General Education" : "Program-specific"}
             </Badge>
-            <span className="text-text-secondary text-xs">
-              {gap.yearLevel} · {gap.section}
+            <span className="text-caption text-text-secondary">
+              {getYearLevelDisplay(gap.yearLevel)} · {getSectionLabel(gap.section)}
             </span>
           </div>
           {gap.reason === "missing-cilos" ? (
@@ -387,8 +392,8 @@ function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number][
 function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <p className="text-text-secondary text-xs">{label}</p>
-      <p className="mt-1 font-semibold tabular-nums">{value}</p>
+      <p className="text-caption text-text-secondary">{label}</p>
+      <p className="text-label-lg mt-1 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -416,7 +421,7 @@ function EmptyPage({
       </div>
       <Card>
         <CardHeader>
-          <h2 className="font-heading text-base leading-snug font-medium">{heading}</h2>
+          <h2 className="text-title-md">{heading}</h2>
           <CardDescription>{message}</CardDescription>
         </CardHeader>
         <CardContent>

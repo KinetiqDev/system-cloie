@@ -23,7 +23,3 @@ _Avoid_: Readiness issue, alignment warning
 **Archived outcome display**:
 The period-status-dependent visibility of archived outcomes in the Dean's learning-outcomes view: in COMPLETED periods archived targets remain visible and are labeled `(Archived)`, while in ACTIVE periods archived targets are hidden.
 _Avoid_: Live catalog view, uniform archive filtering
-
-**Roster page**:
-A fixed 25-per-page view of student enrollments for one course assignment in the selected period, supporting name search and explicit page selection; it exposes student names only, never other response or enrollment data.
-_Avoid_: Full roster dump, paginated class list with sensitive fields

@@ -15,7 +15,7 @@
 - [Response Review](./src/features/response-review/CONTEXT.md) - defines identified vs anonymized review flows, submitted-answer outcome bindings, the SUBMITTED gate, period labels, and qualitative summaries.
 - [Enrollments](./src/features/enrollments/CONTEXT.md) - defines the per-term student enrollment ledger, enrollment sources, upsert semantics, soft deactivation, and class lookup targeting.
 - [Users](./src/features/users/CONTEXT.md) - defines profile gates, the single-active-role invariant, provisioning rules, external stakeholder invites, verification statuses, role revocation gates, and program scope records.
-- [Dean Oversight](./src/features/dean/CONTEXT.md) - defines the Dean's period-scoped oversight read model: readiness KPIs, risk buckets, mapping gaps, archived outcome display, and roster paging.
+- [Dean Oversight](./src/features/dean/CONTEXT.md) - defines the Dean's period-scoped oversight read model: readiness KPIs, risk buckets, mapping gaps, and archived outcome display.
 - [Legal](./src/features/legal/CONTEXT.md) - defines privacy/terms document versioning, the signed acknowledgement ticket gate before role selection, and the non-anonymity disclosure.
 
 ## Supporting modules (no `CONTEXT.md`)

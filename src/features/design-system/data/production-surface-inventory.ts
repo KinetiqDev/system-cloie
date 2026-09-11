@@ -292,30 +292,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(app)/dean/college-oversight/enrollments/loading.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/college-oversight/enrollments/page.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/college-oversight/enrollments/roster/loading.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "route",
-  },
-  {
-    path: "src/app/(app)/dean/college-oversight/enrollments/roster/page.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "route",
-  },
-  {
     path: "src/app/(app)/dean/college-oversight/learning-outcomes/loading.tsx",
     disposition: "task",
     taskId: 19,

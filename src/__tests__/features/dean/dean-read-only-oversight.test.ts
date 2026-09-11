@@ -142,9 +142,6 @@ describe("Dean read-only oversight (issue #549)", () => {
         "listDeanEligiblePeriods",
         "getDeanDashboard",
         "getDeanLearningOutcomes",
-        "getDeanEnrollments",
-        "getDeanRoster",
-        "getDeanRosterPage",
       ])
     );
   });

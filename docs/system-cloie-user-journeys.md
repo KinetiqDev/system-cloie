@@ -8,7 +8,7 @@ Status labels used below:
 - **Partial**: a usable path exists, but a material rule, screen, verification layer, or administrative transition is incomplete.
 - **Deferred / planned**: intentionally unavailable, stubbed, or still awaiting a product or policy decision.
 
-The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT.md`, and `docs/adr/` take precedence over older PRD/SRS wording. System CLOIE uses explicit permissions rather than role impersonation. An account may hold distinct assigned roles, but exactly one server-resolved role is active for authorization at a time. The Dean has read-only oversight for outcome and enrollment views even though the Dean shares selected catalog and roster operations with the Secretary.
+The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT.md`, and `docs/adr/` take precedence over older PRD/SRS wording. System CLOIE uses explicit permissions rather than role impersonation. An account may hold distinct assigned roles, but exactly one server-resolved role is active for authorization at a time. The Dean has read-only oversight for learning-outcome readiness even though the Dean shares selected catalog and roster operations with the Secretary.
 
 ## 1. System-Wide Entry Rules
 
@@ -217,18 +217,7 @@ The dashboard is not a response-analytics dashboard. Evaluation scores, raw resp
 
 This surface is read-only. Faculty own Course-level CILO authoring and are the primary mappers, Program Heads own Graduate Outcome authoring and review mappings read-only, and the Secretary has college-wide administrative write authority over the catalog and both mapping relations. The Dean does not edit outcomes or mappings.
 
-### 3.5 Enrollments oversight
-
-1. The Dean opens `/dean/college-oversight/enrollments`.
-2. CLOIE defaults to the active period; if no active period exists, it uses the latest completed eligible period or shows an explicit no-eligible-period state.
-3. The Dean sees Student placement totals by program.
-4. The Dean expands a program to see Course/class rows.
-5. The Dean explicitly opens a class roster before any names appear.
-6. The Dean searches and paginates the roster server-side, with 25 names per page.
-
-The Dean roster projection shows display names only. It does not expose Student IDs, email addresses, account IDs, enrollment source, profile details, or an export control. The Enrollments view is read-only.
-
-### 3.6 Dean limitations and unfinished areas
+### 3.5 Dean limitations and unfinished areas
 
 - Dean analytics and reporting routes outside the accepted oversight IA are unavailable or deferred.
 - `/dean/analytics`, `/dean/reports`, and stale CILO review routes are not current supported journeys; several return `404`.
@@ -512,7 +501,7 @@ Course-bound publication uses active Course-assignment memberships, not a broad 
 - Faculty views aggregates for evaluations within Faculty Course-assignment ownership.
 - Program Head views program-scoped Course-bound, central-deployment, and stakeholder summaries.
 - Program Head and Faculty can review scoped Course-bound responses using anonymized respondent labels such as `Respondent R-######`.
-- Dean views active-period readiness, outcome alignment coverage, program totals, and privacy-safe enrollment drill-down rather than response analytics.
+- Dean views active-period readiness, outcome alignment coverage, and program totals rather than response analytics.
 - Secretary has record-level setup and administrative views; a future Insights area is the intended home for response-based institution-wide analysis.
 
 ### 10.2 Planned reporting journey
@@ -554,8 +543,8 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 
 1. Secretary completes the active academic period through the lifecycle workflow.
 2. CLOIE persists the period's readiness snapshot in the completion transaction.
-3. Dean opens Dashboard for the next active period or selects a completed period on Learning Outcomes/Enrollments.
-4. Dean reviews readiness totals, program gaps, and privacy-safe class drill-down.
+3. Dean opens Dashboard for the next active period or selects a completed period on Learning Outcomes.
+4. Dean reviews readiness totals and program gaps.
 5. Historical views retain the completed-period context even when current Courses, programs, or outcomes later become inactive.
 
 ### 11.4 Student graduation transition
@@ -606,7 +595,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 | Alumni evaluation response workflow                                                                | Implemented; verification gate partial                   | Alumni routes and stakeholder response services                                   |
 | Industry Partner evaluation response workflow                                                      | Implemented; access-code policy open                     | Industry Partner routes; issue #132                                               |
 | Faculty and Program Head scoped analytics/review                                                   | Implemented, formulas/privacy incomplete                 | Analytics services; issues #133/#176                                              |
-| Dean readiness and enrollment oversight                                                            | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                               |
+| Dean readiness oversight                                                                           | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                               |
 | Program Head report exports                                                                        | Stubbed                                                  | `/program-head/reports`; issue #173                                               |
 | Dean report exports                                                                                | Deferred/unavailable                                     | `/dean/reports`; issue #173                                                       |
 | Formal PDF/spreadsheet reporting                                                                   | Deferred/planned                                         | Issue #173                                                                        |

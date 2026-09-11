@@ -45,8 +45,6 @@ import DeanAcademicCoursesLoading from "@/app/(app)/dean/academic-structure/cour
 import DeanAcademicProgramsLoading from "@/app/(app)/dean/academic-structure/programs/loading";
 import DeanAcademicInstrumentsLoading from "@/app/(app)/dean/academic-structure/instruments/loading";
 import DeanAcademicCourseAssignmentsLoading from "@/app/(app)/dean/academic-structure/course-assignments/loading";
-import DeanEnrollmentsLoading from "@/app/(app)/dean/college-oversight/enrollments/loading";
-import DeanEnrollmentRosterLoading from "@/app/(app)/dean/college-oversight/enrollments/roster/loading";
 import DeanLearningOutcomesLoading from "@/app/(app)/dean/college-oversight/learning-outcomes/loading";
 import DeanProfileLoading from "@/app/(app)/dean/profile/loading";
 import FacultyProfileLoading from "@/app/(app)/faculty/profile/loading";
@@ -110,8 +108,6 @@ const loadingRoutes = [
   [DeanAcademicProgramsLoading, "Loading records"],
   [DeanAcademicInstrumentsLoading, "Loading records"],
   [DeanAcademicCourseAssignmentsLoading, "Loading records"],
-  [DeanEnrollmentsLoading, "Loading records"],
-  [DeanEnrollmentRosterLoading, "Loading records"],
   [DeanLearningOutcomesLoading, "Loading records"],
   [DeanProfileLoading, "Loading profile"],
   [FacultyProfileLoading, "Loading profile"],

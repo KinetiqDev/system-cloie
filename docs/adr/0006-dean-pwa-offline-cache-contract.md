@@ -2,7 +2,7 @@
 
 ## Status
 
-Deferred
+Deferred — amended by [ADR 0023](./0023-remove-dean-enrollment-oversight.md): the Dean Enrollments oversight route and its roster drill-down were removed, so the Enrollments scope below no longer describes a Dean surface. The dashboard, Learning Outcomes, and Profile scope is unchanged.
 
 ## Context
 
@@ -61,31 +61,31 @@ Dean-only offline delivery is deferred. Whole-app offline access is a future eff
 
 ### 1. Scope
 
-- **Cached (app shell).** The static `/_next/static/*` build output, the manifest icons at `/icons/*`, the logos at `/logos/*`, the favicon, and the Next.js HTML document for the Dean dashboard root (`/dean`, `/dean/dashboard`, the read-only Dean group/list routes that are part of the Dean dashboard surface: dashboard, Learning Outcomes (read-only), Enrollments (read-only, drill-down included), Profile, and the group landing pages for `Academic Structure` and `College Oversight`). All shell assets are immutable-by-content.
-- **Cached (last-viewed read-only data).** JSON responses for the Dean dashboard read-only fetches that have been rendered on the client. Specifically: Dean dashboard KPI/period-context data, the active-period Graduate Outcomes overview, the active-period CILO-and-mapping coverage, Enrollments program totals and the drill-down class/course data the Dean already opened. **Names appear only after an explicit drill-down** (map #103 *Decisions so far*); the drill-down response is what becomes cacheable at that level, not the program-totals level.
+- **Cached (app shell).** The static `/_next/static/*` build output, the manifest icons at `/icons/*`, the logos at `/logos/*`, the favicon, and the Next.js HTML document for the Dean dashboard root (`/dean`, `/dean/dashboard`, the read-only Dean group/list routes that are part of the Dean dashboard surface: dashboard, Learning Outcomes (read-only), Profile, and the group landing pages for `Academic Structure` and `College Oversight`). All shell assets are immutable-by-content.
+- **Cached (last-viewed read-only data).** JSON responses for the Dean dashboard read-only fetches that have been rendered on the client. Specifically: Dean dashboard KPI/period-context data, the active-period Graduate Outcomes overview, and the active-period CILO-and-mapping coverage. **Names appear only after an explicit drill-down** (map #103 _Decisions so far_); the drill-down response is what becomes cacheable at that level, not the program-totals level.
 - **Never cached.**
   - Any response that contains a `students` array, student identifiers (student ID number, email, account email, enrollment record), or qualitative open-ended response text. The match rule is content-based: SW must inspect the response body and reject caching when any of these are present, not just rely on URL pattern.
-  - Any export endpoint, including the Enrollments export path (map #103: "Exports exclude student identifiers" — caching the export artifact would still leak its existence and file metadata; the contract forbids caching it).
+  - Any export endpoint (map #103: "Exports exclude student identifiers" — caching the export artifact would still leak its existence and file metadata; the contract forbids caching it).
   - The Secretary, Program Head, Faculty, Student, Alumni, and Industry Partner dashboards. The SW only serves routes under `/dean/*`; the `Role-owned route` rule from `src/features/course-assignments/CONTEXT.md` and ADR 0005 §4 means role-owned routes are separate and the SW is Dean-scoped.
   - Server Actions (`POST` with `next-action` header, or `multipart/form-data`), any non-GET request, and any `Authorization` / `Cookie`-bearing GET that returns above the Dean dashboard scope.
-  - The `Insights` group and its deferred children (Learning Evaluation Results, Analytics, Reports). Map #103 *Out of scope*.
+  - The `Insights` group and its deferred children (Learning Evaluation Results, Analytics, Reports). Map #103 _Out of scope_.
 
 ### 2. Trigger / registration
 
 - The SW registers **only** when the resolved session role is `College Dean`. A client component on `/dean` (and its sub-routes) calls `navigator.serviceWorker.register('/sw.js', { scope: '/dean', updateViaCache: 'none' })` once per session, gated on `'serviceWorker' in navigator`. Outside the Dean scope the call is never made; the SW never controls non-Dean routes.
 - On update detection (`registration.waiting` exists, or `updatefound` + `installing.state === 'installed'`), the SW uses `skipWaiting: true` and `clientsClaim: true` so a page reload picks up the new version. The update is non-prompted: the next navigation uses the new SW. There is no "new version available" toast in this effort.
-- The SW is **disabled in development** via the Serwist `disable` option, gated on `process.env.NODE_ENV === "development"`. The repo's existing `cloie_dev_auth` cookie is a dev-only auth path; the SW must not register under that mode. See AGENTS.md *Dev Auth Bypass*.
+- The SW is **disabled in development** via the Serwist `disable` option, gated on `process.env.NODE_ENV === "development"`. The repo's existing `cloie_dev_auth` cookie is a dev-only auth path; the SW must not register under that mode. See AGENTS.md _Dev Auth Bypass_.
 - The SW is **disabled** by an env flag `NEXT_PUBLIC_DISABLE_DEAN_PWA_SW` (read at build time via `disable` and at runtime by an inline check in the registration component) for incident response. The env flag is the kill switch.
 
 ### 3. Cache strategy per asset class
 
-| Asset class | Strategy | Cache name | TTL | Notes |
-|---|---|---|---|---|
-| App shell HTML for `/dean/*` | `NetworkFirst` with `/~offline` fallback | `dean-shell-v1` | n/a | First paint = network; offline = `/~offline` page. Precache the `/~offline` route. |
-| `/_next/static/*`, `/icons/*`, `/logos/*`, favicon, fonts | `CacheFirst` | `dean-static-v1` | indefinite (content-hashed) | Standard Workbox/Serwist content-hash precache. |
-| Last-viewed Dean JSON (KPI, GO overview, CILO coverage, Enrollments totals) | `StaleWhileRevalidate` | `dean-json-v1` | `maxAgeSeconds: 24h`, `maxEntries: 60` | Show cached body immediately; revalidate in background. Hard TTL is the size cap, not a correctness rule. |
-| Drill-down responses (already-drilled Enrollments class/course data, expanded structure/oversight group data) | `StaleWhileRevalidate` | `dean-drilldown-v1` | `maxAgeSeconds: 24h`, `maxEntries: 30` | Same hard TTL; smaller budget because drill-downs are heavier. |
-| Mutations (POST `next-action`, `multipart/form-data`, anything with `Authorization` header on a non-Dean route) | **network-only**, never cached | n/a | n/a | SW does not intercept; the request goes through `src/proxy.ts` and the network. While offline, the SW rejects the fetch with a `TypeError` that the client treats as "mutation blocked while offline." |
+| Asset class                                                                                                     | Strategy                                 | Cache name          | TTL                                    | Notes                                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| App shell HTML for `/dean/*`                                                                                    | `NetworkFirst` with `/~offline` fallback | `dean-shell-v1`     | n/a                                    | First paint = network; offline = `/~offline` page. Precache the `/~offline` route.                                                                                                                     |
+| `/_next/static/*`, `/icons/*`, `/logos/*`, favicon, fonts                                                       | `CacheFirst`                             | `dean-static-v1`    | indefinite (content-hashed)            | Standard Workbox/Serwist content-hash precache.                                                                                                                                                        |
+| Last-viewed Dean JSON (KPI, GO overview, CILO coverage)                                                         | `StaleWhileRevalidate`                   | `dean-json-v1`      | `maxAgeSeconds: 24h`, `maxEntries: 60` | Show cached body immediately; revalidate in background. Hard TTL is the size cap, not a correctness rule.                                                                                              |
+| Drill-down responses (expanded structure/oversight group data)                                                  | `StaleWhileRevalidate`                   | `dean-drilldown-v1` | `maxAgeSeconds: 24h`, `maxEntries: 30` | Same hard TTL; smaller budget because drill-downs are heavier.                                                                                                                                         |
+| Mutations (POST `next-action`, `multipart/form-data`, anything with `Authorization` header on a non-Dean route) | **network-only**, never cached           | n/a                 | n/a                                    | SW does not intercept; the request goes through `src/proxy.ts` and the network. While offline, the SW rejects the fetch with a `TypeError` that the client treats as "mutation blocked while offline." |
 
 The two `dean-json-v1` and `dean-drilldown-v1` caches are kept separate so a JSON size budget eviction does not wipe the user's last-viewed drill-down.
 
@@ -111,7 +111,7 @@ Server-driven invalidation hook via **deployment-versioned URL** + **`Cache-Cont
 - A small client component on the Dean dashboard listens to `online` / `offline` events on `window` and reads `navigator.onLine` to render a single badge at the top of the Dean shell. States: `online`, `offline (showing cached data from <HH:MM>)`, `offline (no cached data for this view)`. The badge is plain text, not a toast.
 - "Last viewed at" timestamp is stored per response key in IndexedDB (or the `Cache` API's response `Date` header if present). The badge reads the timestamp for the **currently rendered** route's primary data, not the most-recently-touched key. The timestamp format is the user's local timezone, RFC 3339 date + 24h time.
 - While offline the Dean can navigate between already-cached pages. Navigation to a non-cached page shows the `/~offline` fallback (a simple "You're offline. This view has not been opened yet." page), **not** a server-rendered shell. The shell stays visible; only the body content swaps.
-- The Enrollments export button is **disabled** (not hidden) while offline. Tooltip: "Exports require a network connection."
+- Export surfaces are not part of the Dean oversight IA; if one is added, its control is **disabled** (not hidden) while offline. Tooltip: "Exports require a network connection."
 
 ### 7. Mutation blocking
 
@@ -124,21 +124,21 @@ Server-driven invalidation hook via **deployment-versioned URL** + **`Cache-Cont
 
 - When the network returns, the next SW-intercepted GET hits the network; if it succeeds, the SW revalidates the cache under the existing entry. The badge clears on the next `online` event. No user action is required.
 - On a deployment that bumps the build id, the badge briefly shows `offline (showing cached data from <HH:MM>)` for one paint cycle as the SW transitions; this is acceptable. The versioned URL ensures the next render is from the new build.
-- The SW does **not** retry mutations; it does not queue them; it does not persist failed payloads. The user's "Your data has not been lost" message is the end of the offline-mutation story. When the network returns, the user re-submits. (This matches map #103 *Out of scope*: "Full offline mutations and sync.")
+- The SW does **not** retry mutations; it does not queue them; it does not persist failed payloads. The user's "Your data has not been lost" message is the end of the offline-mutation story. When the network returns, the user re-submits. (This matches map #103 _Out of scope_: "Full offline mutations and sync.")
 - There is no manual cache-clearing UI in this effort. The cache age out under the TTL.
 
 ### 9. Failure modes
 
-| Failure | Behavior |
-|---|---|
-| SW fails to install (`navigator.serviceWorker.register` rejects) | The registration component logs to the console and continues; the app functions online-only. The Dean shell is unaffected. No toast, no banner. |
-| SW fails to activate (cached entry can't be parsed) | The next `fetch` falls through to the network. The old cache entries age out under the TTL. The user sees a normal online experience. |
-| Cache exceeds size budget (`maxEntries` reached) | `ExpirationPlugin` evicts least-recently-used entries. No user-visible state change. |
-| Browser does not support SW (e.g. some embedded views, some private modes) | The registration component short-circuits. The Dean dashboard still works online. No offline view. |
-| User is on Secretary / Program Head / Faculty / Student / Alumni / Industry Partner route | The SW is never registered. `Role-owned route` separation is preserved (see `src/features/course-assignments/CONTEXT.md` *Role-owned route*). |
-| User logs out or session changes role away from `College Dean` | The registration component unregisters the SW on the next mount. The cache is cleared via `caches.delete('dean-shell-v1' | 'dean-static-v1' | 'dean-json-v1' | 'dean-drilldown-v1')` on logout. |
-| Stale-while-revalidate returns a JSON that the content filter now rejects (schema drift) | The cached entry is dropped, the response is shown once to the caller, no cache write occurs, and the next revalidation retries. |
-| `NEXT_PUBLIC_DISABLE_DEAN_PWA_SW` is set at runtime | The registration component short-circuits. Existing registrations are unregistered on the next page load. The cache is purged. |
+| Failure                                                                                   | Behavior                                                                                                                                        |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------------- | -------------------------------- |
+| SW fails to install (`navigator.serviceWorker.register` rejects)                          | The registration component logs to the console and continues; the app functions online-only. The Dean shell is unaffected. No toast, no banner. |
+| SW fails to activate (cached entry can't be parsed)                                       | The next `fetch` falls through to the network. The old cache entries age out under the TTL. The user sees a normal online experience.           |
+| Cache exceeds size budget (`maxEntries` reached)                                          | `ExpirationPlugin` evicts least-recently-used entries. No user-visible state change.                                                            |
+| Browser does not support SW (e.g. some embedded views, some private modes)                | The registration component short-circuits. The Dean dashboard still works online. No offline view.                                              |
+| User is on Secretary / Program Head / Faculty / Student / Alumni / Industry Partner route | The SW is never registered. `Role-owned route` separation is preserved (see `src/features/course-assignments/CONTEXT.md` _Role-owned route_).   |
+| User logs out or session changes role away from `College Dean`                            | The registration component unregisters the SW on the next mount. The cache is cleared via `caches.delete('dean-shell-v1'                        | 'dean-static-v1' | 'dean-json-v1' | 'dean-drilldown-v1')` on logout. |
+| Stale-while-revalidate returns a JSON that the content filter now rejects (schema drift)  | The cached entry is dropped, the response is shown once to the caller, no cache write occurs, and the next revalidation retries.                |
+| `NEXT_PUBLIC_DISABLE_DEAN_PWA_SW` is set at runtime                                       | The registration component short-circuits. Existing registrations are unregistered on the next page load. The cache is purged.                  |
 
 ## Consequences
 
@@ -147,7 +147,7 @@ Server-driven invalidation hook via **deployment-versioned URL** + **`Cache-Cont
 - `src/proxy.ts` is not modified. The SW sits in front of the proxy, but the `x-forwarded-host` rewrite and the Supabase session refresh still run on every request that reaches the server. Mutations are not cached, so the SW never short-circuits the auth refresh.
 - The cache is keyed by versioned URL and capped by TTL; no server push invalidation is required. The `Cache-Control` header for Dean JSON is a new addition the implementation must make at the response layer (no header is set today — see audit).
 - The contract is a **decision**, not a build. Offline implementation is deferred from Issue #110 and this Dean IA delivery. A future whole-app offline effort must revisit role scope before choosing an SW library, response-header middleware, online guard, offline page, and logout unregistration behavior.
-- The export-excludes-student-identifiers rule from map #103 is enforced in the contract by the "no exports cached" row of §1 and the content filter of §5. The Enrollments export button is disabled offline (§6), and the export endpoint itself is never cached.
+- The export-excludes-student-identifiers rule from map #103 is enforced in the contract by the "no exports cached" row of §1 and the content filter of §5. Any future Dean export endpoint is never cached.
 - The contract does not address future Insights content, real-time subscriptions, or background sync. Those remain out of scope per map #103.
 - The "no offline mutation queue" choice is a direct consequence of map #103 "All mutations require network." If a future effort reverses that, this ADR must be amended.
 
@@ -167,6 +167,6 @@ Server-driven invalidation hook via **deployment-versioned URL** + **`Cache-Cont
 - Consuming ticket: [Synthesize Dean IA into implementation tickets](https://github.com/Tugeru/project-cloie/issues/110)
 - Discrepancy inventory: `docs/agents/discrepancies-prd-srs-vs-current.md` §6
 - Outcome ownership ADR: `docs/adr/0005-outcome-ownership-and-dean-oversight.md`
-- Vocabulary: `src/features/course-assignments/CONTEXT.md` (*Role-owned route*, *All-program Course assignment manager*), `src/features/auth/CONTEXT.md` (*Course-level CILO*)
+- Vocabulary: `src/features/course-assignments/CONTEXT.md` (_Role-owned route_, _All-program Course assignment manager_), `src/features/auth/CONTEXT.md` (_Course-level CILO_)
 - Audit targets: `src/app/manifest.ts`, `src/app/layout.tsx`, `src/proxy.ts`, `src/lib/supabase/middleware.ts`, `public/`, `package.json`, `next.config.ts`
 - Background, non-authoritative: `docs/cloie-prd.md`, `docs/cloie-srs.md`

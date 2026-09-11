@@ -4,7 +4,6 @@ const { prismaMock, readinessMock, readinessTotalsMock } = vi.hoisted(() => ({
   prismaMock: {
     academicTermInstance: { findFirst: vi.fn(), findUnique: vi.fn() },
     courseAssignment: { findMany: vi.fn(), findFirst: vi.fn() },
-    studentEnrollment: { groupBy: vi.fn(), count: vi.fn(), findMany: vi.fn() },
     institutionalOutcome: { findMany: vi.fn() },
   },
   readinessMock: vi.fn(),
@@ -19,12 +18,8 @@ vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
 
 import type { PeriodReadiness } from "@/features/academic-calendar/services/read-period-readiness";
 import {
-  DeanReadModelNotFoundError,
   getDeanDashboard,
-  getDeanEnrollments,
   getDeanLearningOutcomes,
-  getDeanRoster,
-  getDeanRosterPage,
 } from "@/features/dean/services/read-dean-oversight";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
@@ -189,11 +184,10 @@ describe("Dean oversight read model", () => {
     vi.clearAllMocks();
   });
 
-  it("uses active period before completed fallback", async () => {
+  it("requires an explicit period when an eligible active period exists", async () => {
     prismaMock.academicTermInstance.findFirst.mockResolvedValue(period());
-    prismaMock.courseAssignment.findMany.mockResolvedValue([]);
 
-    await expect(getDeanEnrollments(undefined)).rejects.toThrow("period is required");
+    await expect(getDeanLearningOutcomes(undefined)).rejects.toThrow("period is required");
     expect(prismaMock.academicTermInstance.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: "ACTIVE" },
@@ -239,194 +233,6 @@ describe("Dean oversight read model", () => {
     });
     expect(readinessTotalsMock).toHaveBeenCalledWith(PERIOD_ID);
     expect(readinessMock).not.toHaveBeenCalled();
-  });
-
-  it("requires an explicit period when only a completed period exists", async () => {
-    prismaMock.academicTermInstance.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(period("COMPLETED"));
-    prismaMock.courseAssignment.findMany.mockResolvedValue([]);
-
-    await expect(getDeanEnrollments(undefined)).rejects.toThrow("period is required");
-  });
-
-  it("does not silently select a completed period for an omitted URL period", async () => {
-    prismaMock.academicTermInstance.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(period("COMPLETED"));
-
-    await expect(getDeanEnrollments(undefined)).rejects.toThrow("period is required");
-    expect(prismaMock.academicTermInstance.findFirst).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        where: { status: "COMPLETED" },
-        orderBy: [{ end_date: "desc" }, { created_at: "desc" }],
-      })
-    );
-  });
-
-  it("returns enrollment counts from placement keys, not broad enrollment records", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
-    prismaMock.studentEnrollment.groupBy
-      .mockResolvedValueOnce([{ program_id: "program-1", _count: { student_user_id: 2 } }])
-      .mockResolvedValueOnce([
-        {
-          program_id: "program-1",
-          year_level: "FIRST_YEAR",
-          section: "MORNING",
-          _count: { student_user_id: 2 },
-        },
-      ]);
-
-    await expect(getDeanEnrollments(PERIOD_ID)).resolves.toEqual({
-      state: "ready",
-      data: {
-        period: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
-        programs: [
-          {
-            id: "program-1",
-            name: "Computer Science",
-            enrolledStudentCount: 2,
-            classes: [
-              {
-                assignmentId: ASSIGNMENT_ID,
-                courseCode: "CS101",
-                courseName: "Intro",
-                yearLevel: "FIRST_YEAR",
-                section: "MORNING",
-                enrolledStudentCount: 2,
-              },
-            ],
-          },
-        ],
-      },
-    });
-    expect(prismaMock.studentEnrollment.groupBy).toHaveBeenCalledTimes(2);
-  });
-
-  it("rejects assignment from another period before reading students", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findFirst.mockResolvedValue(null);
-
-    await expect(
-      getDeanRoster({ periodId: PERIOD_ID, assignmentId: ASSIGNMENT_ID, page: 1 })
-    ).rejects.toBeInstanceOf(DeanReadModelNotFoundError);
-    expect(prismaMock.studentEnrollment.findMany).not.toHaveBeenCalled();
-  });
-
-  it("rejects archived current-period assignments before reading students", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findFirst.mockResolvedValue(null);
-
-    await expect(
-      getDeanRoster({ periodId: PERIOD_ID, assignmentId: ASSIGNMENT_ID, page: 1 })
-    ).rejects.toBeInstanceOf(DeanReadModelNotFoundError);
-    expect(prismaMock.courseAssignment.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          course: { is_active: true },
-          program: { is_active: true },
-        }),
-      })
-    );
-  });
-
-  it("queries roster within selected assignment placement and returns names only", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
-    prismaMock.studentEnrollment.count.mockResolvedValue(1);
-    prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { name: "Ada Lovelace" } },
-    ]);
-
-    const result = await getDeanRoster({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      query: "Ada",
-      page: 2,
-    });
-
-    expect(result).toEqual({
-      state: "ready",
-      data: {
-        assignment: {
-          id: ASSIGNMENT_ID,
-          courseCode: "CS101",
-          courseName: "Intro",
-          programName: "Computer Science",
-          yearLevel: "FIRST_YEAR",
-          section: "MORNING",
-        },
-        students: [{ displayName: "Ada Lovelace" }],
-        page: 1,
-        pageSize: 25,
-        totalCount: 1,
-        totalPages: 1,
-      },
-    });
-    expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        skip: 0,
-        take: 25,
-        where: expect.objectContaining({
-          term_instance_id: PERIOD_ID,
-          program_id: "program-1",
-          year_level: "FIRST_YEAR",
-          section: "MORNING",
-        }),
-        select: { student: { select: { name: true } } },
-        orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
-      })
-    );
-    expect(JSON.stringify(result)).not.toMatch(/studentId|email|enrollmentId|source|accountId/i);
-  });
-
-  it("clamps roster pages before calculating Prisma offset", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
-    prismaMock.studentEnrollment.count.mockResolvedValue(26);
-    prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { name: "Ada Lovelace" } },
-    ]);
-
-    const result = await getDeanRoster({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      page: Number.MAX_SAFE_INTEGER,
-    });
-
-    expect(result).toMatchObject({ state: "ready", data: { page: 2, totalPages: 2 } });
-    expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 25, take: 25 })
-    );
-  });
-
-  it("shares the roster page-size and count projection with the detail read", async () => {
-    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
-    prismaMock.courseAssignment.findFirst.mockResolvedValue(assignment());
-    prismaMock.studentEnrollment.count.mockResolvedValue(26);
-    prismaMock.studentEnrollment.findMany.mockResolvedValue([
-      { student: { name: "Ada Lovelace" } },
-    ]);
-
-    const pageResult = await getDeanRosterPage({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      page: 2,
-    });
-    const rosterResult = await getDeanRoster({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      page: 2,
-    });
-
-    expect(pageResult).toEqual({ state: "ready", data: { page: 2 } });
-    expect(rosterResult).toMatchObject({
-      state: "ready",
-      data: { page: 2, pageSize: 25, totalCount: 26, totalPages: 2 },
-    });
-    expect(prismaMock.studentEnrollment.findMany).toHaveBeenCalledTimes(1);
   });
 
   it("projects Institutional Outcome catalog coverage separately from Program GO gaps", async () => {

@@ -10,7 +10,7 @@ import { expectNoAxeViolations, expectNoHorizontalOverflow, loginAs } from "./su
  *     and its required affiliation, via the dynamic Secretary form.
  *   - Fresh browser reads show the created account without optimistic state.
  *   - Duplicate creation fails atomically with an actionable message.
- *   - Dean opens period-backed readiness/enrollment oversight for the
+ *   - Dean opens period-backed readiness oversight for the
  *     resulting context; URL-backed period selection survives reload.
  *   - Dean has no mutation control; direct access to Secretary surfaces
  *     is denied and direct mutation attempts fail at the server boundary.
@@ -144,17 +144,6 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await page.reload();
   await expect(page).toHaveURL(urlBefore);
   await expect(page.getByText("Learning Outcomes").first()).toBeVisible();
-
-  // Enrollments oversight for the same period.
-  await page.goto(
-    `/dean/college-oversight/enrollments?period=${encodeURIComponent(activePeriodId)}`
-  );
-  await expect(page.getByText("Academic Program totals").first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Selected period").first()).toBeVisible();
-  await expectNoHorizontalOverflow(page);
-  const enrollUrlBefore = page.url();
-  await page.reload();
-  await expect(page).toHaveURL(enrollUrlBefore);
 
   // Dean has no mutation control for the tested oversight records.
   await expect(page.getByRole("button", { name: "Make Active" })).toHaveCount(0);
