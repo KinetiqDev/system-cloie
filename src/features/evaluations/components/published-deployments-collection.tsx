@@ -582,6 +582,74 @@ function PublishedCompactList({
   );
 }
 
+/** Expand/collapse disclosure for one compact mobile row. */
+function CompactRowDisclosure({
+  item,
+  isExpanded,
+  onToggle,
+}: {
+  item: PublishedDeploymentItem;
+  isExpanded: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="shrink-0"
+      aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
+      aria-expanded={isExpanded}
+      aria-controls={`deployment-details-${item.id}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle(item.id);
+      }}
+    >
+      {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+    </Button>
+  );
+}
+
+/** Course and target labels, response counts, and period for one compact row. */
+function CompactRowMeta({
+  item,
+  hasCourse,
+  hasTarget,
+}: {
+  item: PublishedDeploymentItem;
+  hasCourse: boolean;
+  hasTarget: boolean;
+}) {
+  const showCourse = hasCourse && Boolean(item.courseLabel);
+  const showTarget = hasTarget && Boolean(item.targetLabel);
+
+  return (
+    <>
+      {showCourse || showTarget ? (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+          {showCourse ? (
+            <span className="text-muted-foreground text-xs">{item.courseLabel}</span>
+          ) : null}
+          {showTarget ? (
+            <span className="text-muted-foreground text-xs">{item.targetLabel}</span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+        <span className="shrink-0 tabular-nums">
+          {item.responseCount}/{item.totalCount} responses
+        </span>
+        {item.periodLabel ? (
+          <>
+            <span aria-hidden="true">·</span>
+            <span className="truncate">{item.periodLabel}</span>
+          </>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
 function PublishedListRow({
   item,
   hasCourse,
@@ -608,53 +676,25 @@ function PublishedListRow({
     expanded: isExpanded,
     toggle: () => onToggle(item.id),
   };
+
   return (
     <li>
       <div className="flex items-center gap-2 px-2 py-3 sm:px-3">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="shrink-0"
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.name}`}
-          aria-expanded={isExpanded}
-          aria-controls={`deployment-details-${item.id}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggle(item.id);
-          }}
-        >
-          {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-        </Button>
+        <CompactRowDisclosure item={item} isExpanded={isExpanded} onToggle={onToggle} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-col items-start gap-1">
             <span className="text-sm leading-snug font-semibold">{item.name}</span>
             <StatusBadge status={item.status} />
           </div>
-          {(hasCourse || hasTarget) && (item.courseLabel || item.targetLabel) && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-              {hasCourse && item.courseLabel && (
-                <span className="text-muted-foreground text-xs">{item.courseLabel}</span>
-              )}
-              {hasTarget && item.targetLabel && (
-                <span className="text-muted-foreground text-xs">{item.targetLabel}</span>
-              )}
-            </div>
-          )}
-          <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
-            <span className="shrink-0 tabular-nums">
-              {item.responseCount}/{item.totalCount} responses
-            </span>
-            {item.periodLabel && <span aria-hidden="true">·</span>}
-            {item.periodLabel && <span className="truncate">{item.periodLabel}</span>}
-          </div>
+          <CompactRowMeta item={item} hasCourse={hasCourse} hasTarget={hasTarget} />
         </div>
         <OverflowMenu>{renderMenuItems(item, listCtx)}</OverflowMenu>
       </div>
-      {isExpanded && renderExpanded && (
+      {isExpanded && renderExpanded ? (
         <div id={`deployment-details-${item.id}`} className="bg-muted/30 border-y px-3 py-3">
           {renderExpanded(item)}
         </div>
-      )}
+      ) : null}
     </li>
   );
 }

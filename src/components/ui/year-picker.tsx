@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const YEARS_PER_PAGE = 12;
 const COLUMNS = 3;
 
-export type YearRange = { start: number; end: number };
+type YearRange = { start: number; end: number };
 
 type YearPage = {
   /** Index of this page's first year in the flat year list. */

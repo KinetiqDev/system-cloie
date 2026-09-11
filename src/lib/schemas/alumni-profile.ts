@@ -26,7 +26,7 @@ export const ALUMNI_GRADUATION_HIATUS_NOTE = `No ACD college graduations from ${
  * Explains why a graduation year is unusable, or null when it is valid.
  * `z.coerce.number()` maps an empty field and null to 0, which no era contains.
  */
-export function alumniGraduationYearError(year: number): string | null {
+function alumniGraduationYearError(year: number): string | null {
   if (!Number.isFinite(year) || year === 0) {
     return "Select your graduation year.";
   }
