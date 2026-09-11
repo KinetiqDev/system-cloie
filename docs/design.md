@@ -364,6 +364,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Loading stays perceivable under reduced motion: spinner pairs a pulse fallback with text or skeleton context.
 - Preserve current URL-toast consumption and cleanup; toasts are dismissible with a keyboard- and touch-operable control.
 - Use Dialog on desktop and Drawer on mobile where established.
+- Overlays stay inside the viewport: the body scrolls its own overflow and the header and action row stay pinned, so a long body (for example an expanded column guide) never pushes the actions off screen.
 - Use `AlertDialog` for destructive confirmation.
 - Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.
 

@@ -658,7 +658,7 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
       <ResponsiveDialogContent
         showCloseButton={false}
         className="gap-0 p-0"
-        desktopClassName="sm:max-h-[calc(100dvh-2rem)] sm:max-w-4xl"
+        desktopClassName="sm:max-w-4xl"
       >
         <ResponsiveDialogHeader className="border-border shrink-0 border-b px-4 py-4 sm:px-6">
           <CourseImportSteps current={step} />
