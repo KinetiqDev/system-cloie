@@ -108,6 +108,33 @@ export function instrumentVersionLabel(version: {
   return `${version.template.name} v${version.version_number}`;
 }
 
+/**
+ * Visible provenance for each prompt group, keyed by instrument identity. Two
+ * instrument versions can share a template name and version number — uniqueness
+ * is per template — so a label two distinct instruments share is qualified with
+ * the stable instrument identity. Instrument ids are catalog identity, never
+ * respondent identity, so nothing about a respondent crosses with them.
+ */
+export function instrumentProvenanceLabels(
+  prompts: ReadonlyArray<{ instrumentId: string; instrumentLabel: string }>
+): Map<string, string> {
+  const instrumentsByLabel = new Map<string, Set<string>>();
+  for (const prompt of prompts) {
+    const instruments = instrumentsByLabel.get(prompt.instrumentLabel) ?? new Set<string>();
+    instruments.add(prompt.instrumentId);
+    instrumentsByLabel.set(prompt.instrumentLabel, instruments);
+  }
+
+  return new Map(
+    prompts.map((prompt) => [
+      prompt.instrumentId,
+      (instrumentsByLabel.get(prompt.instrumentLabel)?.size ?? 0) > 1
+        ? `${prompt.instrumentLabel} (${prompt.instrumentId})`
+        : prompt.instrumentLabel,
+    ])
+  );
+}
+
 /** Identifier-redacted term with both mention volume and respondent reach. */
 type QualitativeTermEvidence = {
   text: string;
@@ -142,6 +169,8 @@ type QualitativePromptEvidence = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   promptLabel: string;
+  /** Stable instrument identity; two versions can share a visible label. */
+  instrumentId: string;
   instrumentLabel: string;
   itemCount: number;
   responseCount: number;
@@ -315,6 +344,7 @@ export function analyzeQualitativeCorpus(
       sourceKey: group[0]!.item.sourceKey,
       sourceLabel: group[0]!.item.sourceLabel,
       promptLabel: group[0]!.item.promptLabel,
+      instrumentId: group[0]!.item.instrumentId,
       instrumentLabel: group[0]!.item.instrumentLabel,
       itemCount: group.length,
       responseCount: new Set(group.map(({ item }) => item.responseId)).size,

@@ -183,6 +183,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
         {
           sourceLabel: "Course-bound student evidence",
           promptLabel: "Remarks",
+          instrumentId: "instrument-version-1",
           instrumentLabel: "Course Evaluation v1",
           itemCount: 1,
           responseCount: 1,

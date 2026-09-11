@@ -233,6 +233,8 @@ export type FacultyAnalyticsData = {
     tone: QualitativeToneShape;
     promptCounts: Array<{
       prompt: string;
+      /** Stable instrument identity; two versions can share a visible label. */
+      instrumentId: string;
       /** Instrument version the answers came from; two versions never merge into one row. */
       instrumentLabel: string;
       itemCount: number;

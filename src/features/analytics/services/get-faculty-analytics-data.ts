@@ -40,6 +40,7 @@ import {
 import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
+  instrumentProvenanceLabels,
   instrumentVersionLabel,
   toTermToken,
   type QualitativeCorpusItem,
@@ -431,6 +432,9 @@ function buildFacultyAnalyticsData(
   const qualitativeEvidence = qualitativeAvailable
     ? analyzeQualitativeCorpus(qualitativeItems)
     : null;
+  const facultyPromptProvenance = qualitativeEvidence
+    ? instrumentProvenanceLabels(qualitativeEvidence.prompts)
+    : new Map<string, string>();
 
   return {
     filters,
@@ -483,7 +487,9 @@ function buildFacultyAnalyticsData(
             .filter((prompt) => prompt.responseCount >= FACULTY_QUALITATIVE_MINIMUM_RESPONDENTS)
             .map((prompt) => ({
               prompt: prompt.promptLabel,
-              instrumentLabel: prompt.instrumentLabel,
+              instrumentId: prompt.instrumentId,
+              instrumentLabel:
+                facultyPromptProvenance.get(prompt.instrumentId) ?? prompt.instrumentLabel,
               itemCount: prompt.itemCount,
               responseCount: prompt.responseCount,
               tone: prompt.tone,

@@ -173,6 +173,7 @@ const feedback: ProgramHeadFeedbackDTO = {
     {
       sourceLabel: "Course-bound student evidence",
       promptLabel: "What worked well?",
+      instrumentId: "instrument-version-1",
       instrumentLabel: "Course Evaluation v1",
       itemCount: 12,
       responseCount: 8,

@@ -1429,7 +1429,7 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
           </TableHeader>
           <TableBody>
             {data.qualitative.promptCounts.map((row) => (
-              <TableRow key={`${row.prompt}:${row.instrumentLabel}`}>
+              <TableRow key={`${row.instrumentId}:${row.prompt}`}>
                 <TableCell className="whitespace-normal">{row.prompt}</TableCell>
                 <TableCell className="whitespace-normal">{row.instrumentLabel}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.itemCount}</TableCell>

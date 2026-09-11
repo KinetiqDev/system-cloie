@@ -37,6 +37,7 @@ import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
   feedbackSourceKey,
+  instrumentProvenanceLabels,
   instrumentVersionLabel,
   toTermToken,
   type QualitativeCorpusEvidence,
@@ -1988,6 +1989,7 @@ export async function getProgramHeadFeedback(
   ]);
 
   const aggregated = aggregateFeedbackEvidence(qualitativeRows);
+  const promptProvenance = instrumentProvenanceLabels(aggregated.evidence.prompts);
   const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadFeedbackEmptyReason =
     evaluationOpportunityCount === 0
@@ -2014,7 +2016,8 @@ export async function getProgramHeadFeedback(
     promptCounts: aggregated.evidence.prompts.map((prompt) => ({
       sourceLabel: prompt.sourceLabel,
       promptLabel: prompt.promptLabel,
-      instrumentLabel: prompt.instrumentLabel,
+      instrumentId: prompt.instrumentId,
+      instrumentLabel: promptProvenance.get(prompt.instrumentId) ?? prompt.instrumentLabel,
       itemCount: prompt.itemCount,
       responseCount: prompt.responseCount,
       tone: prompt.tone,

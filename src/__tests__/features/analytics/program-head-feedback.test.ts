@@ -310,6 +310,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should improve?",
+        instrumentId: "instrument-alumni",
         instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
@@ -324,6 +325,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentId: "instrument-course",
         instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
@@ -385,6 +387,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should alumni improve?",
+        instrumentId: "instrument-alumni",
         instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
@@ -397,12 +400,47 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentId: "instrument-course",
         instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
         tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
         terms: [{ text: "activities", value: 1, responseCount: 1 }],
       },
+    ]);
+  });
+
+  it("qualifies provenance when two instruments share a template name and version", async () => {
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
+      qualitativeRow({ text: "Clear activities", responseId: "response-1" }),
+      qualitativeRow({
+        text: "More industry exposure",
+        responseId: "response-2",
+        assignment: {
+          course_bound: {
+            id: "eval-2",
+            deployment_name: "CILO Evaluation 2",
+            instrument: {
+              id: "instrument-course-b",
+              version_number: 1,
+              structure_snapshot: openPromptSnapshot,
+              template: { name: "Course Evaluation" },
+            },
+          },
+          central_deployment: null,
+        },
+      }),
+    ]);
+
+    const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
+
+    expect(result?.promptCounts.map((prompt) => prompt.instrumentId)).toEqual([
+      "instrument-course",
+      "instrument-course-b",
+    ]);
+    expect(result?.promptCounts.map((prompt) => prompt.instrumentLabel)).toEqual([
+      "Course Evaluation v1 (instrument-course)",
+      "Course Evaluation v1 (instrument-course-b)",
     ]);
   });
 

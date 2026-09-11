@@ -5,6 +5,7 @@ import {
   QUALITATIVE_TONE_POSITIVE_MIN,
   analyzeQualitativeCorpus,
   bandQualitativeTone,
+  instrumentProvenanceLabels,
   scoreQualitativeTone,
   type QualitativeCorpusItem,
 } from "@/features/analytics/services/qualitative-analytics";
@@ -193,17 +194,33 @@ describe("analyzeQualitativeCorpus", () => {
     expect(result.prompts).toEqual([
       expect.objectContaining({
         promptLabel: "What worked well?",
+        instrumentId: "instrument-version-2",
         instrumentLabel: "Course Evaluation v2",
         itemCount: 2,
         responseCount: 2,
       }),
       expect.objectContaining({
         promptLabel: "What worked well?",
+        instrumentId: "instrument-version-1",
         instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
       }),
     ]);
+  });
+
+  it("qualifies a provenance label two distinct instruments share", () => {
+    const labels = instrumentProvenanceLabels([
+      { instrumentId: "instr-1", instrumentLabel: "Course Evaluation v1" },
+      { instrumentId: "instr-2", instrumentLabel: "Course Evaluation v1" },
+      { instrumentId: "instr-2", instrumentLabel: "Course Evaluation v1" },
+      { instrumentId: "instr-3", instrumentLabel: "Alumni Survey v2" },
+    ]);
+
+    expect(labels.get("instr-1")).toBe("Course Evaluation v1 (instr-1)");
+    expect(labels.get("instr-2")).toBe("Course Evaluation v1 (instr-2)");
+    // One instrument with several prompts keeps its plain label.
+    expect(labels.get("instr-3")).toBe("Alumni Survey v2");
   });
 
   it("caps prompt terms deterministically at the highest mentions", () => {

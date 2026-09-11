@@ -235,9 +235,7 @@ function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCo
           </TableHeader>
           <TableBody>
             {prompts.map((prompt) => (
-              <TableRow
-                key={`${prompt.sourceLabel}:${prompt.promptLabel}:${prompt.instrumentLabel}`}
-              >
+              <TableRow key={`${prompt.sourceLabel}:${prompt.instrumentId}:${prompt.promptLabel}`}>
                 <TableCell className="font-medium">
                   {prompt.sourceLabel} — {prompt.promptLabel}
                 </TableCell>
