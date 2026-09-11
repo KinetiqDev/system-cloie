@@ -33,7 +33,7 @@ function redactProgramHeadFeedbackIdentifiers(text: string): string {
 }
 
 /** Closed `{ text, value }` projection used by Faculty and Program Head tokens. */
-export function prepareWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken[] {
+function prepareWordCloudTokens(tokens: WordCloudToken[]): WordCloudToken[] {
   return tokens
     .filter(
       (token) =>
@@ -91,10 +91,25 @@ export type QualitativeCorpusItem = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   promptLabel: string;
+  /**
+   * Instrument version the answer came from. `instrumentId` keeps two versions
+   * that share a prompt label apart; `instrumentLabel` is what a reviewer or the
+   * provider sees, so combined evidence never loses its instrument origin.
+   */
+  instrumentId: string;
+  instrumentLabel: string;
 };
 
+/** Readable instrument-version provenance label, e.g. `Program Exit Survey v2`. */
+export function instrumentVersionLabel(version: {
+  version_number: number;
+  template: { name: string };
+}): string {
+  return `${version.template.name} v${version.version_number}`;
+}
+
 /** Identifier-redacted term with both mention volume and respondent reach. */
-export type QualitativeTermEvidence = {
+type QualitativeTermEvidence = {
   text: string;
   mentions: number;
   responseCount: number;
@@ -113,9 +128,9 @@ export function toTermToken(term: QualitativeTermEvidence): {
   return { text: term.text, value: term.mentions, responseCount: term.responseCount };
 }
 
-export type QualitativeToneBand = "positive" | "neutral" | "negative";
+type QualitativeToneBand = "positive" | "neutral" | "negative";
 
-export type QualitativeSourceEvidence = {
+type QualitativeSourceEvidence = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   itemCount: number;
@@ -123,10 +138,11 @@ export type QualitativeSourceEvidence = {
   tone: QualitativeToneShape;
 };
 
-export type QualitativePromptEvidence = {
+type QualitativePromptEvidence = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   promptLabel: string;
+  instrumentLabel: string;
   itemCount: number;
   responseCount: number;
   tone: QualitativeToneShape;
@@ -291,13 +307,15 @@ export function analyzeQualitativeCorpus(
   const prompts = [
     ...groupQualitativeItems(
       prepared,
-      (item) => `${item.sourceKey}\u0000${item.sourceLabel}\u0000${item.promptLabel}`
+      (item) =>
+        `${item.sourceKey}\u0000${item.sourceLabel}\u0000${item.instrumentId}\u0000${item.promptLabel}`
     ).values(),
   ]
     .map<QualitativePromptEvidence>((group) => ({
       sourceKey: group[0]!.item.sourceKey,
       sourceLabel: group[0]!.item.sourceLabel,
       promptLabel: group[0]!.item.promptLabel,
+      instrumentLabel: group[0]!.item.instrumentLabel,
       itemCount: group.length,
       responseCount: new Set(group.map(({ item }) => item.responseId)).size,
       tone: toneShapeFor(group),
@@ -307,7 +325,8 @@ export function analyzeQualitativeCorpus(
       (left, right) =>
         right.itemCount - left.itemCount ||
         left.sourceLabel.localeCompare(right.sourceLabel) ||
-        left.promptLabel.localeCompare(right.promptLabel)
+        left.promptLabel.localeCompare(right.promptLabel) ||
+        left.instrumentLabel.localeCompare(right.instrumentLabel)
     );
 
   return {

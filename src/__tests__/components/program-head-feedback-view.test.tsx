@@ -71,6 +71,7 @@ function feedbackDTO(overrides: Partial<ProgramHeadFeedbackDTO> = {}): ProgramHe
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 3,
         responseCount: 2,
         tone: { scoredItemCount: 3, positive: 0, neutral: 3, negative: 0 },

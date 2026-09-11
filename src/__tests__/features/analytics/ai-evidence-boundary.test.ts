@@ -66,6 +66,7 @@ const feedback: ProgramHeadFeedbackDTO = {
     {
       sourceLabel: "Alumni evidence",
       promptLabel: "Strengths of the program:",
+      instrumentLabel: "Alumni Exit Survey v2",
       itemCount: 7,
       responseCount: 5,
       tone: { scoredItemCount: 7, positive: 5, neutral: 1, negative: 1 },
@@ -77,6 +78,7 @@ const feedback: ProgramHeadFeedbackDTO = {
     {
       sourceLabel: "Alumni evidence",
       promptLabel: "Areas for improvement:",
+      instrumentLabel: "Alumni Exit Survey v2",
       itemCount: 5,
       responseCount: 4,
       tone: { scoredItemCount: 5, positive: 0, neutral: 3, negative: 2 },

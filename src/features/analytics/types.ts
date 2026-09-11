@@ -233,6 +233,8 @@ export type FacultyAnalyticsData = {
     tone: QualitativeToneShape;
     promptCounts: Array<{
       prompt: string;
+      /** Instrument version the answers came from; two versions never merge into one row. */
+      instrumentLabel: string;
       itemCount: number;
       responseCount: number;
       tone: QualitativeToneShape;

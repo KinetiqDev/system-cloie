@@ -40,6 +40,7 @@ import {
 import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
+  instrumentVersionLabel,
   toTermToken,
   type QualitativeCorpusItem,
 } from "./qualitative-analytics";
@@ -86,7 +87,14 @@ type EvaluationRow = Prisma.CourseBoundEvaluationGetPayload<{
       };
     };
     cilo_question_bindings: true;
-    instrument: { select: { id: true; structure_snapshot: true } };
+    instrument: {
+      select: {
+        id: true;
+        version_number: true;
+        structure_snapshot: true;
+        template: { select: { name: true } };
+      };
+    };
     term_instance: {
       select: {
         id: true;
@@ -325,7 +333,14 @@ async function readAuthorizedEvaluations(userId: string, filters: FacultyAnalyti
         },
       },
       cilo_question_bindings: { orderBy: { created_at: "asc" } },
-      instrument: { select: { id: true, structure_snapshot: true } },
+      instrument: {
+        select: {
+          id: true,
+          version_number: true,
+          structure_snapshot: true,
+          template: { select: { name: true } },
+        },
+      },
       term_instance: {
         select: {
           id: true,
@@ -408,6 +423,8 @@ function buildFacultyAnalyticsData(
             sourceKey: "COURSE_STUDENT" as const,
             sourceLabel: FEEDBACK_SOURCE_LABELS.COURSE_STUDENT,
             promptLabel: qualitativePromptLabel(evaluation, item.section_key, item.prompt_key),
+            instrumentId: evaluation.instrument.id,
+            instrumentLabel: instrumentVersionLabel(evaluation.instrument),
           }))
       )
     : [];
@@ -462,13 +479,16 @@ function buildFacultyAnalyticsData(
         negative: 0,
       },
       promptCounts: qualitativeEvidence
-        ? qualitativeEvidence.prompts.map((prompt) => ({
-            prompt: prompt.promptLabel,
-            itemCount: prompt.itemCount,
-            responseCount: prompt.responseCount,
-            tone: prompt.tone,
-            terms: prompt.terms.map(toTermToken),
-          }))
+        ? qualitativeEvidence.prompts
+            .filter((prompt) => prompt.responseCount >= FACULTY_QUALITATIVE_MINIMUM_RESPONDENTS)
+            .map((prompt) => ({
+              prompt: prompt.promptLabel,
+              instrumentLabel: prompt.instrumentLabel,
+              itemCount: prompt.itemCount,
+              responseCount: prompt.responseCount,
+              tone: prompt.tone,
+              terms: prompt.terms.filter((term) => term.mentions > 1).map(toTermToken),
+            }))
         : [],
     },
   };

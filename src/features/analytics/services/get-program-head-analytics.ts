@@ -37,6 +37,7 @@ import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
   feedbackSourceKey,
+  instrumentVersionLabel,
   toTermToken,
   type QualitativeCorpusEvidence,
   type QualitativeCorpusItem,
@@ -1798,15 +1799,30 @@ type FeedbackQualitativeRow = {
       course_bound: {
         id: string;
         deployment_name: string;
-        instrument: { id: string; structure_snapshot: unknown };
+        instrument: FeedbackInstrumentRow;
       } | null;
       central_deployment: {
         target_stakeholder: string;
-        instrument: { id: string; structure_snapshot: unknown };
+        instrument: FeedbackInstrumentRow;
       } | null;
     };
   };
 };
+
+/** Instrument-version identity carried into qualitative evidence provenance. */
+type FeedbackInstrumentRow = {
+  id: string;
+  version_number: number;
+  structure_snapshot: unknown;
+  template: { name: string };
+};
+
+const FEEDBACK_INSTRUMENT_SELECT = {
+  id: true,
+  version_number: true,
+  structure_snapshot: true,
+  template: { select: { name: true } },
+} as const;
 
 function resolveFeedbackPromptLabel(
   snapshot: unknown,
@@ -1830,14 +1846,20 @@ function resolveFeedbackPromptLabel(
   );
 }
 
-function instrumentOf(
-  row: FeedbackQualitativeRow
-): { id: string; structureSnapshot: unknown } | null {
+function instrumentOf(row: FeedbackQualitativeRow): {
+  id: string;
+  label: string;
+  structureSnapshot: unknown;
+} | null {
   const instrument =
     row.response.assignment.course_bound?.instrument ??
     row.response.assignment.central_deployment?.instrument;
   return instrument
-    ? { id: instrument.id, structureSnapshot: instrument.structure_snapshot }
+    ? {
+        id: instrument.id,
+        label: instrumentVersionLabel(instrument),
+        structureSnapshot: instrument.structure_snapshot,
+      }
     : null;
 }
 
@@ -1862,16 +1884,19 @@ function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
       courseBound: row.response.assignment.course_bound,
       targetStakeholder: row.response.assignment.central_deployment?.target_stakeholder,
     });
+    const instrument = instrumentOf(row);
     items.push({
       text: row.text_content,
       responseId: row.response.id,
       sourceKey,
       sourceLabel: FEEDBACK_SOURCE_LABELS[sourceKey],
       promptLabel: resolveFeedbackPromptLabel(
-        instrumentOf(row)?.structureSnapshot,
+        instrument?.structureSnapshot,
         row.section_key,
         row.prompt_key
       ),
+      instrumentId: instrument?.id ?? "unknown-instrument",
+      instrumentLabel: instrument?.label ?? "Unlabeled instrument",
     });
 
     const evaluation = row.response.assignment.course_bound;
@@ -1941,13 +1966,13 @@ export async function getProgramHeadFeedback(
                   select: {
                     id: true,
                     deployment_name: true,
-                    instrument: { select: { id: true, structure_snapshot: true } },
+                    instrument: { select: FEEDBACK_INSTRUMENT_SELECT },
                   },
                 },
                 central_deployment: {
                   select: {
                     target_stakeholder: true,
-                    instrument: { select: { id: true, structure_snapshot: true } },
+                    instrument: { select: FEEDBACK_INSTRUMENT_SELECT },
                   },
                 },
               },
@@ -1989,6 +2014,7 @@ export async function getProgramHeadFeedback(
     promptCounts: aggregated.evidence.prompts.map((prompt) => ({
       sourceLabel: prompt.sourceLabel,
       promptLabel: prompt.promptLabel,
+      instrumentLabel: prompt.instrumentLabel,
       itemCount: prompt.itemCount,
       responseCount: prompt.responseCount,
       tone: prompt.tone,

@@ -216,8 +216,9 @@ function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCo
       <div className="flex flex-col gap-1">
         <h3 className="text-title-sm text-foreground">Prompt structure</h3>
         <p className="text-body-sm text-text-secondary">
-          Non-empty submitted comments by evidence source and instrument prompt, with the
-          highest-mention identifier-redacted terms and the tone counts for that prompt.
+          Non-empty submitted comments by evidence source, instrument prompt, and instrument
+          version, with the highest-mention identifier-redacted terms and the tone counts for that
+          prompt.
         </p>
       </div>
       <div className="border-border overflow-x-auto rounded-lg border">
@@ -225,6 +226,7 @@ function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCo
           <TableHeader>
             <TableRow>
               <TableHead>Label</TableHead>
+              <TableHead>Instrument</TableHead>
               <TableHead className="text-right">Items</TableHead>
               <TableHead className="text-right">Responses</TableHead>
               <TableHead className="text-right whitespace-nowrap">Tone (pos / neu / neg)</TableHead>
@@ -233,10 +235,13 @@ function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCo
           </TableHeader>
           <TableBody>
             {prompts.map((prompt) => (
-              <TableRow key={`${prompt.sourceLabel}:${prompt.promptLabel}`}>
+              <TableRow
+                key={`${prompt.sourceLabel}:${prompt.promptLabel}:${prompt.instrumentLabel}`}
+              >
                 <TableCell className="font-medium">
                   {prompt.sourceLabel} — {prompt.promptLabel}
                 </TableCell>
+                <TableCell className="whitespace-normal">{prompt.instrumentLabel}</TableCell>
                 <TableCell className="text-right tabular-nums">{prompt.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{prompt.responseCount}</TableCell>
                 <TableCell className="text-right whitespace-nowrap tabular-nums">

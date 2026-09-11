@@ -322,6 +322,7 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
         promptCounts: [
           {
             prompt: "What worked well?",
+            instrumentLabel: "Course Evaluation v1",
             itemCount: 6,
             responseCount: 5,
             tone: { scoredItemCount: 6, positive: 3, neutral: 2, negative: 1 },
@@ -378,6 +379,65 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
     expect(result.data.evidence.qualitativeTruncated).toBe(true);
   });
 
+  it("degrades a broad scope by omission instead of failing the request", async () => {
+    // A broad Faculty scope serializes every prompt the analyzer produced. The
+    // qualitative prompt tier spends only what the bounded base packet leaves
+    // and discloses the omission, so the request still reaches the provider
+    // instead of returning `unexpected` with no insight at all.
+    createCompletionMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ...insight,
+              qualitative: {
+                observation: "Written answers mention recurring teaching terms.",
+                evidence: ["Recurring redacted terms appear across the answered prompts."],
+                limitation: "The packet carried a bounded slice of the prompt structure.",
+                reviewQuestion: null,
+              },
+            }),
+          },
+        },
+      ],
+    });
+    analyticsMock.mockImplementation(async () => ({
+      success: true,
+      facultyUserId: "faculty-broad",
+      data: {
+        ...qualitativeData(),
+        qualitative: {
+          ...qualitativeData().qualitative,
+          promptCounts: Array.from({ length: 400 }, (_, index) => ({
+            prompt: `Prompt ${index} about teaching practice and course design`,
+            instrumentLabel: "Course Evaluation v1",
+            itemCount: 5,
+            responseCount: 5,
+            tone: { scoredItemCount: 5, positive: 2, neutral: 2, negative: 1 },
+            terms: [{ text: `term-${index}`, value: 3, responseCount: 2 }],
+          })),
+        },
+      },
+    }));
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "qualitative" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.evidence.qualitativeTruncated).toBe(true);
+    const sentPacket = String(createCompletionMock.mock.calls.at(-1)?.[0]?.messages?.[1]?.content);
+    expect(sentPacket).toContain('"promptCountsTruncated":true');
+    expect(sentPacket).toContain('"tokensTruncated":true');
+    const packet = sentPacket.slice(
+      sentPacket.indexOf("<system-cloie-evidence>") + "<system-cloie-evidence>".length,
+      sentPacket.lastIndexOf("</system-cloie-evidence>")
+    );
+    expect(JSON.parse(packet)).toHaveProperty("qualitative.promptCountsTruncated", true);
+    expect(packet.length).toBeLessThanOrEqual(16_000);
+  });
+
   it("reports no truncation when the whole qualitative corpus fits", async () => {
     analyticsMock.mockImplementation(async () => ({
       success: true,
@@ -390,6 +450,7 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
           promptCounts: [
             {
               prompt: "What worked well?",
+              instrumentLabel: "Course Evaluation v1",
               itemCount: 4,
               responseCount: 3,
               tone: { scoredItemCount: 4, positive: 2, neutral: 1, negative: 1 },

@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 
-**Shipped-state note (2026-09-11):** the deterministic core, both browser surfaces, both AI packets, and both prompts shipped together: `qualitative-analytics.ts` (analyzer, tone bands, prevalence), the Program Head qualitative view, the Faculty written-feedback view, the Program Head qualitative packet with budgeted `promptEvidence`, the applied-filter facets on every packet, and prompt versions `program-head-analytics-v2` / `faculty-analytics-v4`. No database migration was required.
+**Shipped-state note (2026-09-11):** the deterministic core, both browser surfaces, both AI packets, and both prompts shipped together: `qualitative-analytics.ts` (analyzer, tone bands, prevalence), the Program Head qualitative view, the Faculty written-feedback view, the Program Head qualitative packet with budgeted `promptEvidence`, the Faculty packet with budgeted token and prompt tiers, the applied-filter facets on every packet, and prompt versions `program-head-analytics-v3` / `faculty-analytics-v5`. No database migration was required. Per-prompt evidence is keyed by evidence source, instrument version, and prompt label, and carries the instrument-version label; every prompt tier is character-budgeted so a broad scope degrades by omission instead of losing the whole interpretation.
 
 System CLOIE ships richer qualitative evidence to bounded AI interpretation by computing the qualitative signal deterministically on the server and keeping verbatim respondent text on the server. Three concepts cross the provider boundary: identifier-redacted term prevalence (term, mentions, distinct responses), per-prompt qualitative structure (item/response counts, top terms, tone distribution), and a deterministic sentiment distribution. The provider interprets that structure; it never performs its own sentiment analysis, never reproduces respondent text, and never receives a sentence, an excerpt, a response identifier, or a respondent identifier. The de-identified raw-comment path accepted in ADR 0016 remains unshipped.
 
@@ -16,11 +16,11 @@ A word-frequency token is also a poor fingerprint of what respondents meant. The
 
 ### Crossing the boundary
 
-| Signal               | Definition                                                                                                   | Emitted to browser and provider         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
-| Term prevalence      | identifier-redacted term, total mentions, distinct responses containing the term                             | term, mentions, distinct-response count |
-| Per-prompt structure | per instrument prompt and evidence source: item count, distinct-response count, top terms, tone distribution | counts and redacted terms only          |
-| Sentiment shape      | per prompt and per scope: count of answers banded positive, neutral, negative by a deterministic rule        | band counts and the scored total        |
+| Signal               | Definition                                                                                                                        | Emitted to browser and provider                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Term prevalence      | identifier-redacted term, total mentions, distinct responses containing the term                                                  | term, mentions, distinct-response count                       |
+| Per-prompt structure | per instrument prompt, instrument version, and evidence source: item count, distinct-response count, top terms, tone distribution | counts, redacted terms, and the instrument-version label only |
+| Sentiment shape      | per prompt and per scope: count of answers banded positive, neutral, negative by a deterministic rule                             | band counts and the scored total                              |
 
 Nothing else crosses. Raw comments, sentences, excerpts, response identifiers, respondent identifiers, emails, roster records, and authorization context stay server-side, exactly as the Analytics CONTEXT AI evidence packet defines.
 
@@ -45,13 +45,13 @@ The provider may report the deterministic distribution as figures and may descri
 ### Floors and scope
 
 - Program Head: no change to the existing gates. Term prevalence and per-prompt structure are computed for every contributing source; per-source evidence keeps its source label so pooled evidence is never presented as one construct. The Program Head word cloud remains a single pooled magnitude visual, and the structured evidence — per-source tone, per-prompt terms, and prevalence with distinct-response counts — is what carries the source and prompt labels. Themes are the provider's reading of that structure; System CLOIE does not store one.
-- Faculty: the five-distinct-respondent floor continues to gate every qualitative contribution, including tone bands, which read zero below the floor. Singleton terms stay dropped for Faculty.
-- Per-prompt structure releases only for prompts meeting the floor; other prompts are withheld rather than partially disclosed.
+- Faculty: the five-distinct-respondent floor continues to gate every qualitative contribution, including tone bands, which read zero below the floor. Singleton terms stay dropped for Faculty, per prompt as well as per scope.
+- Per-prompt structure releases only for prompts whose own distinct-response count meets the floor; other prompts are withheld rather than partially disclosed, and two instrument versions that share a prompt label never merge into one aggregate.
 - The applied filter facets (evidence source, stakeholder, academic period label) are stated inside the packet, so the interpretation can name and caveat the scope it was given. Filter evidence is still rebuilt and re-authorized server-side per request; no client-supplied aggregate is trusted.
 
 ### Budget and caching
 
-The bounded base packet keeps its hard failure: exceeding `CLOIE_AI_MAX_PACKET_CHARS` aborts the request as `unexpected`. Optional qualitative tiers degrade by omission instead, recording truncation in `evidenceScope` so the browser can disclose what was analyzed. Ordered selection is deterministic: prompts by item count descending, terms by the prevalence order above.
+The bounded base packet keeps its hard failure: exceeding `CLOIE_AI_MAX_PACKET_CHARS` aborts the request as `unexpected`. Optional qualitative tiers degrade by omission instead, recording truncation so the browser can disclose what was analyzed — the Program Head packet in its `evidenceScope`, the Faculty packet in the per-tier `tokensTruncated`, `promptCountsTruncated`, and `promptTermsTruncated` flags that the Faculty AI evidence carries to the written-feedback view. Each tier spends only what the tiers before it left, so a broad scope still receives an interpretation. Ordered selection is deterministic: prompts by item count descending, terms by the prevalence order above.
 
 The cache key remains a SHA-256 over the prompt version, scope identity, provider, model, and the complete serialized packet, so any evidence change mints a new key. Because the key hashes the packet and not the prompt text, a prompt-only edit is invisible to the cache; bumping `PH_AI_PROMPT_VERSION` / `FACULTY_AI_PROMPT_VERSION` in the same commit is required, not optional.
 

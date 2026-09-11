@@ -59,15 +59,23 @@ const FEEDBACK_DTO_KEYS = [
   "tone",
 ].sort();
 
+/** Instrument-version fields the qualitative evidence read resolves provenance from. */
+type FeedbackInstrumentMock = {
+  id: string;
+  version_number: number;
+  structure_snapshot: unknown;
+  template: { name: string };
+};
+
 type FeedbackAssignment = {
   course_bound: {
     id: string;
     deployment_name: string;
-    instrument: { id: string; structure_snapshot: unknown };
+    instrument: FeedbackInstrumentMock;
   } | null;
   central_deployment: {
     target_stakeholder: string;
-    instrument: { id: string; structure_snapshot: unknown };
+    instrument: FeedbackInstrumentMock;
   } | null;
 };
 
@@ -84,7 +92,9 @@ function courseBoundAssignment(
       deployment_name: opts.deploymentName ?? "CILO Evaluation",
       instrument: {
         id: opts.instrumentId ?? "instrument-course",
+        version_number: 1,
         structure_snapshot: openPromptSnapshot,
+        template: { name: "Course Evaluation" },
       },
     },
     central_deployment: null,
@@ -258,7 +268,12 @@ describe("getProgramHeadFeedback", () => {
           course_bound: null,
           central_deployment: {
             target_stakeholder: "ALUMNI",
-            instrument: { id: "instrument-alumni", structure_snapshot: openPromptSnapshot },
+            instrument: {
+              id: "instrument-alumni",
+              version_number: 3,
+              structure_snapshot: openPromptSnapshot,
+              template: { name: "Alumni Survey" },
+            },
           },
         },
       }),
@@ -295,6 +310,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should improve?",
+        instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
         tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
@@ -308,6 +324,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
         tone: { scoredItemCount: 1, positive: 1, neutral: 0, negative: 0 },
@@ -351,7 +368,12 @@ describe("getProgramHeadFeedback", () => {
           course_bound: null,
           central_deployment: {
             target_stakeholder: "ALUMNI",
-            instrument: { id: "instrument-alumni", structure_snapshot: alumniSnapshot },
+            instrument: {
+              id: "instrument-alumni",
+              version_number: 3,
+              structure_snapshot: alumniSnapshot,
+              template: { name: "Alumni Survey" },
+            },
           },
         },
       }),
@@ -363,6 +385,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should alumni improve?",
+        instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
         tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
@@ -374,6 +397,7 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
         tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },

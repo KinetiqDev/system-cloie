@@ -74,7 +74,7 @@ function clampLabel(value: string): string {
  * already reflects them; the labels exist so the interpretation can name and
  * caveat the scope it was given instead of guessing from the evidence shape.
  */
-export type AppliedAnalyticsFilters = {
+type AppliedAnalyticsFilters = {
   evidenceSource: string | null;
   stakeholder: string | null;
 };
@@ -343,6 +343,7 @@ function buildQualitativePacket(
   const promptEvidence: Array<{
     sourceLabel: string;
     promptLabel: string;
+    instrumentLabel: string;
     itemCount: number;
     responseCount: number;
     tone: typeof feedback.tone;
@@ -352,6 +353,7 @@ function buildQualitativePacket(
     const candidate = {
       sourceLabel: clampLabel(prompt.sourceLabel),
       promptLabel: clampLabel(prompt.promptLabel),
+      instrumentLabel: clampLabel(prompt.instrumentLabel),
       itemCount: prompt.itemCount,
       responseCount: prompt.responseCount,
       tone: prompt.tone,
@@ -614,7 +616,7 @@ How to read this evidence:
 - Compare trend periods only when the evidence marks them comparable; when a period has a break reason, say the periods cannot be directly compared.
 - Qualitative evidence is redacted term counts, per-prompt structure, and tone counts, not quotations. Never present a term as a quote or a complete thought.
 - appliedFilters names the filters the reviewer chose. Every figure in this packet already reflects them, so never describe evidence outside that scope, and name the scope when the reading depends on it.
-- promptEvidence groups written feedback by instrument prompt, each with its own terms and tone counts. Describe prompts separately; never merge different prompts into one undifferentiated picture.
+- promptEvidence groups written feedback by instrument prompt and instrument version, each with its own terms, tone counts, and instrumentLabel. Describe prompts separately; never merge different prompts or different instrument versions into one undifferentiated picture.
 - Terms carry mentions and responseCount: mentions count occurrences, responseCount counts the distinct responses that used the term. High mentions from one answer are not broad agreement, so say which measure supports the claim.
 - tone counts come from a fixed word list that System CLOIE runs over the answers: positive above +0.2, negative below -0.2, neutral in between. You may report those counts as figures, name the rule, and describe which band holds most scored answers. Never add your own sentiment, tone, satisfaction, or quality verdict, and never treat the distribution as a judgement about teaching quality. State the limit that the rule can miss sarcasm, unusual phrasing, and some negations, and that an answer mixing praise and criticism counts once.
 
@@ -703,7 +705,7 @@ function createOpenAiCompatTransport(config: AiConfiguration): AiModelTransport 
  * clears every entry, preserving ADR 0016's non-persistence boundary.
  */
 const PH_AI_CACHE_MAX_ENTRIES = 128;
-const PH_AI_PROMPT_VERSION = "program-head-analytics-v2";
+const PH_AI_PROMPT_VERSION = "program-head-analytics-v3";
 const insightCache = new Map<string, ProgramHeadAnalyticsViewInsight>();
 const inFlightInsights = new Map<string, Promise<GenerateAIInsightResult>>();
 

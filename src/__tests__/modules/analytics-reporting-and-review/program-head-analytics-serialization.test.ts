@@ -173,6 +173,7 @@ const feedback: ProgramHeadFeedbackDTO = {
     {
       sourceLabel: "Course-bound student evidence",
       promptLabel: "What worked well?",
+      instrumentLabel: "Course Evaluation v1",
       itemCount: 12,
       responseCount: 8,
       tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },
@@ -276,6 +277,7 @@ describe("view-specific AI evidence packets", () => {
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 12,
         responseCount: 8,
         tone: { scoredItemCount: 12, positive: 0, neutral: 12, negative: 0 },

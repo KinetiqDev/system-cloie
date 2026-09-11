@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import OpenAI from "openai";
 import { z } from "zod";
-import type { FacultyAnalyticsData, FacultyAnalyticsFilters } from "../types";
+import type {
+  FacultyAnalyticsData,
+  FacultyAnalyticsFilters,
+  QualitativeToneShape,
+  WordCloudToken,
+} from "../types";
 import { getFacultyAnalyticsDataWithPrincipal } from "./get-faculty-analytics-data";
 import {
   AI_PACKET_MAX_PROMPT_TERMS,
@@ -13,6 +18,7 @@ import {
   AI_MAX_OUTPUT_TOKENS,
   AI_PROVIDER_TIMEOUT_MS,
   loadAiConfiguration,
+  type AiConfiguration,
 } from "./program-head-ai-schema";
 
 /**
@@ -22,9 +28,19 @@ import {
  * clears every entry, preserving ADR 0016's non-persistence boundary.
  */
 const FACULTY_AI_CACHE_MAX_ENTRIES = 128;
-const FACULTY_AI_PROMPT_VERSION = "faculty-analytics-v4";
+const FACULTY_AI_PROMPT_VERSION = "faculty-analytics-v5";
 /** Longest prompt label carried in the bounded packet. */
 const MAX_PROMPT_LABEL_CHARS = 180;
+
+/** One prompt entry in the bounded Faculty packet, with its instrument origin. */
+type FacultyPacketPrompt = {
+  prompt: string;
+  instrumentLabel: string;
+  itemCount: number;
+  responseCount: number;
+  tone: QualitativeToneShape;
+  terms: WordCloudToken[];
+};
 const insightCache = new Map<string, FacultyAIInsight>();
 const inFlightInsights = new Map<string, Promise<GenerateFacultyAIInsightResult>>();
 const outputSchema = z.object({
@@ -118,9 +134,9 @@ How to read this evidence:
 - Distribution shape matters as much as the mean: the same mean can come from consistent ratings or from sharply divided ones; describe which pattern appears.
 - Compare trend periods only when the evidence marks them comparable; when a period has a break reason, say the periods cannot be directly compared.
 - appliedFilters names the filters the faculty member chose. Every figure in this packet already reflects them, so never describe evidence outside that scope, and name the scope when the reading depends on it.
-- qualitative.tokensTruncated or qualitative.promptTermsTruncated means the packet carried a bounded slice of the written feedback rather than all of it: say so in the limitation when the reading depends on those terms.
+- qualitative.tokensTruncated, qualitative.promptCountsTruncated, or qualitative.promptTermsTruncated means the packet carried a bounded slice of the written feedback rather than all of it: say so in the limitation when the reading depends on those terms.
 - Qualitative evidence is redacted term counts, per-prompt structure, and tone counts, not quotations. Never present a term as a quote or a complete thought.
-- qualitative.promptCounts groups written feedback by instrument prompt, each with its own terms and tone counts. Describe prompts separately; never merge different prompts into one undifferentiated picture.
+- qualitative.promptCounts groups written feedback by instrument prompt and instrument version, each with its own terms, tone counts, and instrumentLabel. Describe prompts separately; never merge different prompts or different instrument versions into one undifferentiated picture.
 - Terms carry mentions and responseCount: mentions count occurrences, responseCount counts the distinct responses that used the term. High mentions from one answer are not broad agreement, so say which measure supports the claim.
 - tone counts come from a fixed word list that System CLOIE runs over the answers: positive above +0.2, negative below -0.2, neutral in between. You may report those counts as figures, name the rule, and describe which band holds most scored answers. Never add your own sentiment, tone, satisfaction, or quality verdict, and never treat the distribution as a judgement about teaching quality. State the limit that the rule can miss sarcasm, unusual phrasing, and some negations, and that an answer mixing praise and criticism counts once.
 
@@ -160,31 +176,111 @@ export function describeFacultyAppliedFilters(data: FacultyAnalyticsData): {
   };
 }
 
-export async function generateFacultyAnalyticsInsight(
-  filters: Partial<FacultyAnalyticsFilters>
-): Promise<GenerateFacultyAIInsightResult> {
-  const config = loadAiConfiguration();
-  if (!config) return { ok: false, state: "disabled" };
+type FacultyAnalyticsPrompt = FacultyAnalyticsData["qualitative"]["promptCounts"][number];
 
-  const analytics = await getFacultyAnalyticsDataWithPrincipal(filters);
-  if (!analytics.success) {
-    return {
-      ok: false,
-      state: analytics.error === "Faculty access required" ? "unauthorized" : "unexpected",
-    };
+/** Serialized entry size plus the separator comma when it is not the first. */
+function packetEntrySize(entry: unknown, index: number): number {
+  return JSON.stringify(entry).length + (index > 0 ? 1 : 0);
+}
+
+/**
+ * Take entries until the character budget runs out. Entries arrive in the
+ * deterministic order the analyzer produced, so a bounded packet keeps the
+ * largest prompts and the most frequent terms instead of an arbitrary slice.
+ */
+function takeWithinCharBudget<T>(available: T[], budget: number): T[] {
+  const entries: T[] = [];
+  let remaining = budget;
+  for (const [index, entry] of available.entries()) {
+    const size = packetEntrySize(entry, index);
+    if (size > remaining) break;
+    entries.push(entry);
+    remaining -= size;
+  }
+  return entries;
+}
+
+function toPacketPrompt(prompt: FacultyAnalyticsPrompt): FacultyPacketPrompt {
+  return {
+    prompt: prompt.prompt.slice(0, MAX_PROMPT_LABEL_CHARS),
+    instrumentLabel: prompt.instrumentLabel.slice(0, MAX_PROMPT_LABEL_CHARS),
+    itemCount: prompt.itemCount,
+    responseCount: prompt.responseCount,
+    tone: prompt.tone,
+    terms: prompt.terms.slice(0, AI_PACKET_MAX_PROMPT_TERMS),
+  };
+}
+
+/** Empty qualitative tier: its serialized size is the tier's cost floor. */
+function emptyFacultyQualitative(qualitative: FacultyAnalyticsData["qualitative"]) {
+  return {
+    available: true as const,
+    itemCount: qualitative.itemCount,
+    responseCount: qualitative.responseCount,
+    tone: qualitative.tone,
+    tokens: [] as WordCloudToken[],
+    tokensTruncated: false,
+    promptCounts: [] as FacultyPacketPrompt[],
+    promptCountsTruncated: false,
+    promptTermsTruncated: false,
+  };
+}
+
+function promptTermsOverCap(prompt: FacultyAnalyticsPrompt): boolean {
+  return prompt.terms.length > AI_PACKET_MAX_PROMPT_TERMS;
+}
+
+/**
+ * Bounded qualitative tiers for one Faculty packet. The token tier spends first
+ * and the prompt tier spends what it left, both in the deterministic order the
+ * analyzer produced, and every omission is reported, so a broad scope degrades
+ * by omission instead of failing the whole interpretation.
+ */
+function buildFacultyQualitativeTiers(
+  qualitative: FacultyAnalyticsData["qualitative"],
+  budget: number,
+  maxTokens: number
+) {
+  if (!qualitative.available) {
+    return { qualitative: { available: false as const }, truncated: false };
   }
 
-  const { data } = analytics;
-  if (data.kpi.submittedResponseCount < config.minimumSubmittedResponses) {
-    return { ok: false, state: "insufficient-evidence" };
-  }
-
-  const qualitativeTokensTruncated = data.qualitative.tokens.length > config.maxTokens;
-  const qualitativePromptTermsTruncated = data.qualitative.promptCounts.some(
-    (prompt) => prompt.terms.length > AI_PACKET_MAX_PROMPT_TERMS
+  const tokens = takeWithinCharBudget(qualitative.tokens.slice(0, maxTokens), budget);
+  const promptCounts = takeWithinCharBudget(
+    qualitative.promptCounts.map(toPacketPrompt),
+    budget - serializedEntriesSize(tokens)
   );
+  const tokensTruncated = tokens.length < qualitative.tokens.length;
+  const promptCountsTruncated = promptCounts.length < qualitative.promptCounts.length;
+  const promptTermsTruncated = qualitative.promptCounts.some(promptTermsOverCap);
 
-  const packet = {
+  return {
+    qualitative: {
+      ...emptyFacultyQualitative(qualitative),
+      tokens,
+      tokensTruncated,
+      promptCounts,
+      promptCountsTruncated,
+      promptTermsTruncated,
+    },
+    truncated: tokensTruncated || promptCountsTruncated || promptTermsTruncated,
+  };
+}
+
+function serializedEntriesSize(entries: unknown[]): number {
+  return entries.reduce<number>((total, entry, index) => total + packetEntrySize(entry, index), 0);
+}
+
+/**
+ * One bounded aggregate packet for a Faculty scope. The deterministic base
+ * packet keeps its hard failure; the optional qualitative tiers are
+ * character-budgeted here and disclose what they left out.
+ */
+function buildFacultyInsightPacket(
+  data: FacultyAnalyticsData,
+  config: AiConfiguration
+): { serialized: string; qualitativeTruncated: boolean } {
+  const packetBase = {
     scope: data.scopeLabel,
     appliedFilters: describeFacultyAppliedFilters(data),
     kpi: data.kpi,
@@ -208,25 +304,47 @@ export async function generateFacultyAnalyticsInsight(
       scaleGroups: metric.scaleGroups,
     })),
     trends: data.trends,
-    qualitative: data.qualitative.available
-      ? {
-          itemCount: data.qualitative.itemCount,
-          responseCount: data.qualitative.responseCount,
-          tone: data.qualitative.tone,
-          tokens: data.qualitative.tokens.slice(0, config.maxTokens),
-          tokensTruncated: qualitativeTokensTruncated,
-          promptCounts: data.qualitative.promptCounts.map((prompt) => ({
-            prompt: prompt.prompt.slice(0, MAX_PROMPT_LABEL_CHARS),
-            itemCount: prompt.itemCount,
-            responseCount: prompt.responseCount,
-            tone: prompt.tone,
-            terms: prompt.terms.slice(0, AI_PACKET_MAX_PROMPT_TERMS),
-          })),
-          promptTermsTruncated: qualitativePromptTermsTruncated,
-        }
-      : { available: false },
   };
-  const serialized = JSON.stringify(packet);
+  const remainingBudget =
+    config.maxPacketChars -
+    JSON.stringify({
+      ...packetBase,
+      qualitative: data.qualitative.available
+        ? emptyFacultyQualitative(data.qualitative)
+        : { available: false },
+    }).length;
+  const { qualitative, truncated } = buildFacultyQualitativeTiers(
+    data.qualitative,
+    remainingBudget,
+    config.maxTokens
+  );
+
+  return {
+    serialized: JSON.stringify({ ...packetBase, qualitative }),
+    qualitativeTruncated: truncated,
+  };
+}
+
+export async function generateFacultyAnalyticsInsight(
+  filters: Partial<FacultyAnalyticsFilters>
+): Promise<GenerateFacultyAIInsightResult> {
+  const config = loadAiConfiguration();
+  if (!config) return { ok: false, state: "disabled" };
+
+  const analytics = await getFacultyAnalyticsDataWithPrincipal(filters);
+  if (!analytics.success) {
+    return {
+      ok: false,
+      state: analytics.error === "Faculty access required" ? "unauthorized" : "unexpected",
+    };
+  }
+
+  const { data } = analytics;
+  if (data.kpi.submittedResponseCount < config.minimumSubmittedResponses) {
+    return { ok: false, state: "insufficient-evidence" };
+  }
+
+  const { serialized, qualitativeTruncated } = buildFacultyInsightPacket(data, config);
   if (serialized.length > config.maxPacketChars) return { ok: false, state: "unexpected" };
   const cacheKey = createHash("sha256")
     .update(FACULTY_AI_PROMPT_VERSION)
@@ -252,8 +370,7 @@ export async function generateFacultyAnalyticsInsight(
     validRatingCount: data.kpi.validRatingCount,
     qualitativeItemCount: data.qualitative.available ? data.qualitative.itemCount : 0,
     /** True when the packet carried a bounded slice instead of the whole feedback corpus. */
-    qualitativeTruncated:
-      data.qualitative.available && (qualitativeTokensTruncated || qualitativePromptTermsTruncated),
+    qualitativeTruncated,
   };
   const generation = requestFacultyInsight(config, serialized, data.qualitative.available, evidence)
     .then((result) => {

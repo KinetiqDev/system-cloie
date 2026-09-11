@@ -379,7 +379,7 @@ export type ProgramHeadFeedbackTokenDTO = {
 };
 
 /** Aggregate qualitative item and response counts for one evidence source. */
-export type ProgramHeadFeedbackSourceCountDTO = {
+type ProgramHeadFeedbackSourceCountDTO = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   itemCount: number;
@@ -391,6 +391,8 @@ export type ProgramHeadFeedbackSourceCountDTO = {
 export type ProgramHeadFeedbackPromptCountDTO = {
   sourceLabel: string;
   promptLabel: string;
+  /** Instrument version the answers came from; two versions never merge into one row. */
+  instrumentLabel: string;
   itemCount: number;
   responseCount: number;
   tone: QualitativeToneShape;

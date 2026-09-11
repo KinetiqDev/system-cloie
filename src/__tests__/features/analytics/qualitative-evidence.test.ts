@@ -16,6 +16,8 @@ function item(overrides: Partial<QualitativeCorpusItem> = {}): QualitativeCorpus
     sourceKey: "COURSE_STUDENT",
     sourceLabel: "Course-bound student evidence",
     promptLabel: "What worked well?",
+    instrumentId: "instrument-version-1",
+    instrumentLabel: "Course Evaluation v1",
     ...overrides,
   };
 }
@@ -165,6 +167,39 @@ describe("analyzeQualitativeCorpus", () => {
       }),
       expect.objectContaining({
         promptLabel: "Areas for improvement:",
+        itemCount: 1,
+        responseCount: 1,
+      }),
+    ]);
+  });
+
+  it("keeps two instrument versions of one prompt label apart", () => {
+    const result = analyzeQualitativeCorpus([
+      item({ text: "clarity clarity", responseId: "r1" }),
+      item({
+        text: "clarity",
+        responseId: "r2",
+        instrumentId: "instrument-version-2",
+        instrumentLabel: "Course Evaluation v2",
+      }),
+      item({
+        text: "structure",
+        responseId: "r3",
+        instrumentId: "instrument-version-2",
+        instrumentLabel: "Course Evaluation v2",
+      }),
+    ]);
+
+    expect(result.prompts).toEqual([
+      expect.objectContaining({
+        promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v2",
+        itemCount: 2,
+        responseCount: 2,
+      }),
+      expect.objectContaining({
+        promptLabel: "What worked well?",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
       }),

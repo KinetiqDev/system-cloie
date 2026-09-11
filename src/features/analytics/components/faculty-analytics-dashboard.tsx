@@ -1189,7 +1189,7 @@ function AIOverview({
         ) : null}
         {qualitative && state?.ok && state.data.evidence.qualitativeTruncated ? (
           <p className="text-muted-foreground mt-2 text-xs">
-            The interpretation used a bounded slice of the written-feedback terms, not the entire
+            The interpretation used a bounded slice of the written-feedback evidence, not the entire
             corpus.
           </p>
         ) : null}
@@ -1420,6 +1420,7 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
           <TableHeader>
             <TableRow>
               <TableHead>Prompt</TableHead>
+              <TableHead>Instrument</TableHead>
               <TableHead className="text-right">Written answers</TableHead>
               <TableHead className="text-right">Responses</TableHead>
               <TableHead className="text-right whitespace-nowrap">Tone (pos / neu / neg)</TableHead>
@@ -1428,8 +1429,9 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
           </TableHeader>
           <TableBody>
             {data.qualitative.promptCounts.map((row) => (
-              <TableRow key={row.prompt}>
+              <TableRow key={`${row.prompt}:${row.instrumentLabel}`}>
                 <TableCell className="whitespace-normal">{row.prompt}</TableCell>
+                <TableCell className="whitespace-normal">{row.instrumentLabel}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.responseCount}</TableCell>
                 <TableCell className="text-right whitespace-nowrap tabular-nums">

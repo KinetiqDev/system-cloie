@@ -66,16 +66,24 @@
   serialization — at most 20 course rows, 20 instrument rows, 15 context rows,
   120 characters per label, 40 characters per token text, 6 terms per prompt,
   qualitative prompts sliced to 180 characters, and a hard `maxPacketChars` ceiling
-  (default 16,000). The qualitative tier spends what the token slice leaves and
-  records the omission in `evidenceScope.promptAnalysis`, while a base packet that
-  itself exceeds the ceiling aborts the request (`unexpected`) instead of truncating
-  silently.
+  (default 16,000). The Program Head qualitative tier spends what the token slice
+  leaves and records the omission in `evidenceScope.promptAnalysis`; the Faculty
+  token and prompt tiers spend their own share and report `tokensTruncated`,
+  `promptCountsTruncated`, and `promptTermsTruncated` to the written-feedback view. A
+  base packet that itself exceeds the ceiling aborts the request (`unexpected`)
+  instead of truncating silently.
 - **Qualitative privacy thresholds:** Corpus gates refuse interpretation (provider
   never called) until the selected scope meets both
   `minimumSubmittedResponses` and, for the qualitative view, `minimumQualitativeItems`
   (`insufficient-evidence` state). Qualitative evidence is redacted term prevalence,
   per-prompt structure, and tone band counts — never quotations, identities, or PII.
   The prompt explicitly forbids presenting a term as a quote or complete thought.
+  Faculty surfaces add the five-distinct-respondent confidentiality floor: below it an
+  entire scope reports zero qualitative contribution counts, at or above it only terms
+  mentioned more than once cross, and a prompt whose own distinct-response count is
+  below the floor is withheld whole rather than partially disclosed. Per-prompt rows
+  stay separate by evidence source and instrument version, and each names that
+  instrument version.
 - **AI never receives client-supplied aggregates:** Client filters (tab, school year,
   evidence source) are re-validated server-side through Zod
   (`program-head-ai-schema.ts`) and then used only as selectors for the server's own
@@ -134,9 +142,10 @@
     or quality verdict, and must not treat the distribution as a judgement about
     teaching quality. It states the rule's limits with the figures.
   - Qualitative structural rules are enforced: prompts are described separately and
-    never merged, terms are never presented as quotations or complete thoughts, and a
-    high mention count from one answer is never reported as broad agreement (mention
-    volume and distinct-response reach are separate measures).
+    never merged, prompts collected by different instrument versions stay separate and
+    each entry names its instrument version, terms are never presented as quotations or
+    complete thoughts, and a high mention count from one answer is never reported as
+    broad agreement (mention volume and distinct-response reach are separate measures).
   - Applied filters are respected: the packet states the reviewer's chosen evidence
     source and stakeholder, every figure already reflects them, and the model must not
     describe evidence outside that scope.
@@ -162,7 +171,7 @@
   `Map` (max 128 entries each for PH and Faculty, oldest evicted first). The cache
   stores validated AI output only — never source responses, sessions, or
   authorization decisions. Cache keys hash the prompt version
-  (`program-head-analytics-v2` / `faculty-analytics-v4`), the scope identity
+  (`program-head-analytics-v3` / `faculty-analytics-v5`), the scope identity
   (program or faculty user id), the model, the base URL, and the full serialized
   evidence packet.
 - **In-flight deduplication:** Concurrent identical requests share one provider call
