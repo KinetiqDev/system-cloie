@@ -114,6 +114,7 @@ export function ProgramHeadPublishedFilterBar({
           }
           disabled={!hasActive}
           className="shrink-0"
+          aria-label="Clear filters"
         >
           <X aria-hidden="true" />
           <span className="hidden sm:inline">Clear</span>

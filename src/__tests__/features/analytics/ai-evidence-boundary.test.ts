@@ -136,6 +136,18 @@ describe("insight section contract", () => {
     expect(normalizeInsightSection(null)).toBeNull();
   });
 
+  it("drops a section whose observation is blank", () => {
+    expect(
+      normalizeInsightSection({
+        observation: " \n\t ",
+        evidence: ["5 of 12 answers support this observation."],
+        connection: null,
+        limitation: null,
+        reviewQuestion: null,
+      })
+    ).toBeNull();
+  });
+
   it("strips provider-authored sentiment so a verdict can never reach the browser", () => {
     const parsed = insightSectionSchema.safeParse({
       observation: "Most scored answers fall in the positive band.",

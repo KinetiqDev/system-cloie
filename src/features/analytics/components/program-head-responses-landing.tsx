@@ -37,7 +37,7 @@ import {
   buildProgramHeadResponsesCourseEvaluationPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import { ViewTabs } from "@/components/ui/view-tabs";
+import { ViewTabs } from "@/components/layout/view-tabs";
 import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 import { ProgramHeadResponsesWorkspace } from "./program-head-responses-workspace";

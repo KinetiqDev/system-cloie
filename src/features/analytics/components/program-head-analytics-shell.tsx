@@ -5,7 +5,7 @@ import type {
 } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadAnalyticsFilters } from "./program-head-analytics-filters";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { ViewTabs } from "@/components/ui/view-tabs";
+import { ViewTabs } from "@/components/layout/view-tabs";
 import { ProgramHeadAnalyticsWorkspace } from "./program-head-analytics-workspace";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
 import {

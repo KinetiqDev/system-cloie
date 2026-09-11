@@ -114,9 +114,10 @@ export function FacultyPublishedFilterBar({
           }
           disabled={!hasActive}
           className="shrink-0"
+          aria-label="Clear filters"
         >
           <X aria-hidden="true" />
-          <span className="xs:inline hidden">Clear</span>
+          <span className="hidden sm:inline">Clear</span>
         </Button>
       </div>
 

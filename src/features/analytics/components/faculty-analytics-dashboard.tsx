@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { ViewTabs } from "@/components/ui/view-tabs";
+import { ViewTabs } from "@/components/layout/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";

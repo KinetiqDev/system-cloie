@@ -39,6 +39,10 @@ function clampInsightText(value: string, maxChars: number): string {
  */
 export function normalizeInsightSection(section: InsightSection): InsightSection {
   if (section === null) return null;
+
+  const observation = section.observation.trim();
+  if (observation.length === 0) return null;
+
   const evidence = section.evidence
     .map((item) => clampInsightText(item, EVIDENCE_MAX_CHARS))
     .filter((item) => item.trim().length > 0)
@@ -46,7 +50,7 @@ export function normalizeInsightSection(section: InsightSection): InsightSection
   if (evidence.length === 0) return null;
 
   return {
-    observation: clampInsightText(section.observation, OBSERVATION_MAX_CHARS),
+    observation: clampInsightText(observation, OBSERVATION_MAX_CHARS),
     evidence,
     connection: section.connection
       ? clampInsightText(section.connection, CONNECTION_MAX_CHARS)

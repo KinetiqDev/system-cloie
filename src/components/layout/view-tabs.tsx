@@ -1,8 +1,8 @@
 import { NavigationLink } from "@/components/layout/navigation-link";
 import { cn } from "@/lib/utils";
-import { tabsListVariants, tabsTriggerClass } from "./tabs-styles";
+import { tabsListVariants, tabsTriggerClass } from "../ui/tabs-styles";
 
-export type ViewTabItem = {
+type ViewTabItem = {
   value: string;
   label: string;
   href: string;

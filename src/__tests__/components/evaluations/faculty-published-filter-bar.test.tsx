@@ -34,6 +34,12 @@ describe("FacultyPublishedFilterBar", () => {
     vi.useRealTimers();
   });
 
+  it("names the clear control when its visible label is hidden", () => {
+    renderBar({ ...DEFAULT_PUBLISHED_FILTERS, query: "capstone" });
+
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeEnabled();
+  });
+
   it("keeps a mid-debounce status change when the search timer fires", () => {
     const onFiltersChange = vi.fn();
     const { rerender } = renderBar(DEFAULT_PUBLISHED_FILTERS, onFiltersChange);
