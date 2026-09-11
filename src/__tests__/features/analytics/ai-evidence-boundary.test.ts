@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { insightSectionSchema } from "@/features/analytics/services/ai-insight-contract";
+import {
+  insightSectionSchema,
+  normalizeInsightSection,
+} from "@/features/analytics/services/ai-insight-contract";
 import {
   buildAnalyticsViewPacket,
   describeAppliedFilters,
@@ -102,6 +105,37 @@ function qualitativePacket(filters: Parameters<typeof buildAnalyticsViewPacket>[
 }
 
 describe("insight section contract", () => {
+  it("bounds an overflowing section instead of rejecting the whole insight", () => {
+    const bounded = normalizeInsightSection({
+      observation: "o".repeat(500),
+      evidence: ["e".repeat(250), "kept", "third", "fourth", "fifth", "sixth", "seventh"],
+      connection: "c".repeat(500),
+      limitation: "l".repeat(300),
+      reviewQuestion: null,
+    });
+
+    expect(bounded?.observation).toHaveLength(400);
+    expect(bounded?.evidence).toHaveLength(5);
+    expect(bounded?.evidence[0]).toHaveLength(200);
+    expect(bounded?.evidence[0]?.endsWith("…")).toBe(true);
+    expect(bounded?.evidence[1]).toBe("kept");
+    expect(bounded?.connection).toHaveLength(400);
+    expect(bounded?.limitation).toHaveLength(200);
+  });
+
+  it("drops a section that carries no usable evidence", () => {
+    expect(
+      normalizeInsightSection({
+        observation: "An observation with nothing behind it.",
+        evidence: ["   ", ""],
+        connection: null,
+        limitation: null,
+        reviewQuestion: null,
+      })
+    ).toBeNull();
+    expect(normalizeInsightSection(null)).toBeNull();
+  });
+
   it("strips provider-authored sentiment so a verdict can never reach the browser", () => {
     const parsed = insightSectionSchema.safeParse({
       observation: "Most scored answers fall in the positive band.",

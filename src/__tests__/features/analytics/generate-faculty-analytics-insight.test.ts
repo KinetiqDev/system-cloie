@@ -86,6 +86,80 @@ function analyticsData(validRatingCount = 5): FacultyAnalyticsData {
   };
 }
 
+function wideAnalyticsData(): FacultyAnalyticsData {
+  const base = analyticsData();
+  const scaleGroups: FacultyAnalyticsData["ratingDistributions"] = [
+    {
+      scaleKey: "scale-1",
+      scaleLabel: "1–5 (5-point)",
+      scaleMin: 1,
+      scaleMax: 5,
+      mean: 4.1,
+      ratingCount: 9,
+      responseCount: 9,
+      excludedRatingCount: 0,
+      categories: [1, 2, 3, 4, 5].map((value) => ({
+        value,
+        label: `Level ${value}`,
+        count: value,
+        percentage: value * 4,
+      })),
+    },
+  ];
+  return {
+    ...base,
+    kpi: {
+      ...base.kpi,
+      submittedResponseCount: 400,
+      opportunityCount: 500,
+      validRatingCount: 900,
+      overallMean: 4.1,
+    },
+    evaluations: Array.from({ length: 30 }, (_, index) => ({
+      ...base.evaluations[0]!,
+      id: `evaluation-${index}`,
+      deploymentName: `End-of-term evaluation ${index}`,
+      assignmentId: `assignment-${index}`,
+      courseCode: `IT${index % 4}`,
+      responseCount: 20,
+      opportunityCount: 25,
+    })),
+    ratingDistributions: scaleGroups,
+    ciloMetrics: Array.from({ length: 60 }, (_, index) => ({
+      key: `cilo-key-${index}`,
+      ciloId: `cilo-${index}`,
+      label: `CILO ${index}`,
+      courseId: `course-${index % 4}`,
+      courseCode: `IT${index % 4}`,
+      courseTitle: "Data Structures",
+      evaluationId: `evaluation-${index % 30}`,
+      evaluationName: `End-of-term evaluation ${index % 30}`,
+      description: "Demonstrate the ability to analyse and design data structures.",
+      questionPrompt: "How well did the course develop this outcome?",
+      scaleGroups,
+    })),
+    questionMetrics: Array.from({ length: 200 }, (_, index) => ({
+      key: `question-key-${index}`,
+      sectionTitle: "Course design",
+      prompt: `Question ${index} about the course and its teaching`,
+      ciloLabel: null,
+      scaleGroups,
+    })),
+    trends: Array.from({ length: 20 }, (_, index) => ({
+      key: `trend-${index}`,
+      courseId: "course-0",
+      courseCode: "IT201",
+      periodLabel: `2026–2027 · Term ${index}`,
+      mean: 4.1,
+      responseCount: 12,
+      ratingCount: 12,
+      scaleLabel: "1–5 (5-point)",
+      comparableWithPrevious: true,
+      breakReason: null,
+    })),
+  };
+}
+
 describe("generateFacultyAnalyticsInsight cache", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -227,11 +301,92 @@ describe("generateFacultyAnalyticsInsight output contract", () => {
 
     const result = await generateFacultyAnalyticsInsight({ view: "overview" });
 
-    expect(createCompletionMock.mock.calls[0][0].response_format).toMatchObject({
+    const responseFormat = createCompletionMock.mock.calls[0][0].response_format;
+    expect(responseFormat).toMatchObject({
       type: "json_schema",
       json_schema: { strict: true },
     });
+    // Strict structured outputs reject the whole request when a declared
+    // property is missing from `required`, so the shipped schema must satisfy
+    // that rule itself for every section it declares.
+    const sections = Object.values(
+      responseFormat.json_schema.schema.properties as Record<
+        string,
+        { anyOf?: Array<{ type: string; required?: string[]; properties?: object }> }
+      >
+    );
+    expect(sections).toHaveLength(5);
+    for (const section of sections) {
+      const objectSchema = section.anyOf?.[0];
+      expect(objectSchema?.type).toBe("object");
+      expect([...(objectSchema?.required ?? [])].sort()).toEqual(
+        Object.keys(objectSchema?.properties ?? {}).sort()
+      );
+    }
     expect(result.ok).toBe(true);
+  });
+
+  it("bounds a wide scope into one packet instead of failing the request", async () => {
+    // A real Faculty scope spans many course assignments: every CILO binding and
+    // every instrument question produces its own row. The packet caps those
+    // tiers and discloses the omission, so the request still reaches the
+    // provider instead of returning `unexpected` with no insight at all.
+    createCompletionMock.mockResolvedValue({
+      choices: [{ message: { content: JSON.stringify(insight) } }],
+    });
+    analyticsMock.mockImplementation(async () => ({
+      success: true,
+      facultyUserId: "faculty-wide",
+      data: wideAnalyticsData(),
+    }));
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.evidence.truncatedEvidence).toBe(true);
+    const sentPacket = String(createCompletionMock.mock.calls.at(-1)?.[0]?.messages?.[1]?.content);
+    const packet = sentPacket.slice(
+      sentPacket.indexOf("<system-cloie-evidence>") + "<system-cloie-evidence>".length,
+      sentPacket.lastIndexOf("</system-cloie-evidence>")
+    );
+    expect(packet.length).toBeLessThanOrEqual(16_000);
+    const parsed = JSON.parse(packet);
+    expect(parsed.cilos.length).toBeLessThan(60);
+    expect(parsed.questions.length).toBeLessThan(200);
+    expect(parsed.truncations.length).toBeGreaterThan(0);
+  });
+
+  it("bounds provider prose instead of rejecting an overflowing section", async () => {
+    createCompletionMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              ...insight,
+              overview: {
+                observation: "o".repeat(900),
+                evidence: Array.from({ length: 7 }, (_, index) => `evidence-${index}`),
+                connection: null,
+                limitation: null,
+                reviewQuestion: null,
+              },
+            }),
+          },
+        },
+      ],
+    });
+    const { generateFacultyAnalyticsInsight } =
+      await import("@/features/analytics/services/generate-faculty-analytics-insight");
+
+    const result = await generateFacultyAnalyticsInsight({ view: "overview" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.overview?.observation).toHaveLength(400);
+    expect(result.data.overview?.evidence).toHaveLength(5);
   });
 
   it("rejects output missing a required section", async () => {
@@ -322,6 +477,7 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
         promptCounts: [
           {
             prompt: "What worked well?",
+            instrumentId: "instrument-1",
             instrumentLabel: "Course Evaluation v1",
             itemCount: 6,
             responseCount: 5,
@@ -410,6 +566,7 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
           ...qualitativeData().qualitative,
           promptCounts: Array.from({ length: 400 }, (_, index) => ({
             prompt: `Prompt ${index} about teaching practice and course design`,
+            instrumentId: "instrument-1",
             instrumentLabel: "Course Evaluation v1",
             itemCount: 5,
             responseCount: 5,
@@ -450,6 +607,7 @@ describe("generateFacultyAnalyticsInsight qualitative packet", () => {
           promptCounts: [
             {
               prompt: "What worked well?",
+              instrumentId: "instrument-1",
               instrumentLabel: "Course Evaluation v1",
               itemCount: 4,
               responseCount: 3,

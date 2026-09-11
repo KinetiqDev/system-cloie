@@ -4,6 +4,7 @@ import {
   AI_PACKET_MAX_PROMPT_TERMS,
   ANALYTICS_INSIGHT_VIEWS,
   insightSectionSchema,
+  normalizeInsightSection,
   type AnalyticsInsightView,
   type InsightSection,
 } from "./ai-insight-contract";
@@ -923,7 +924,7 @@ async function requestProgramHeadViewInsight(
   try {
     const validated = insightSectionSchema.safeParse(parseInsightJson(content));
     if (!validated.success) return { ok: false, state: "invalid-output" };
-    return { ok: true, insight: validated.data };
+    return { ok: true, insight: normalizeInsightSection(validated.data) };
   } catch {
     return { ok: false, state: "invalid-output" };
   }

@@ -1193,15 +1193,26 @@ function AIOverview({
             corpus.
           </p>
         ) : null}
+        {!qualitative && state?.ok && state.data.evidence.truncatedEvidence ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            A scope this wide exceeds one AI evidence packet, so the interpretation used the
+            highest-volume groups only. The charts above carry the complete figures.
+          </p>
+        ) : null}
       </div>
     );
   const failure = state && !state.ok ? state.state : null;
-  const label =
-    !failure || failure === "disabled"
-      ? "AI overview is not enabled for this deployment."
-      : failure === "insufficient-evidence"
-        ? "There is not enough combined evidence for a responsible AI overview."
-        : "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
+  let label: string;
+  if (failure === "disabled") {
+    label = "AI overview is not enabled for this deployment.";
+  } else if (failure && failure !== "insufficient-evidence") {
+    label =
+      "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
+  } else if (state || data.kpi.submittedResponseCount === 0) {
+    label = "There is not enough combined evidence in this scope for a responsible AI overview.";
+  } else {
+    label = "The AI overview is loading with this scope's evidence.";
+  }
   return (
     <div className="border-border rounded-lg border border-dashed p-4">
       <div className="flex items-center gap-2 font-medium">

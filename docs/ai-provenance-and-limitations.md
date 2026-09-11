@@ -18,9 +18,11 @@
   is selected for speed and cost-efficiency on short, bounded interpretation tasks —
   not for open-ended generation.
 - **Transport:** Server-side only, through an OpenAI-compatible chat-completions
-  interface (`openai` SDK, `chat.completions.create` with
-  `response_format: { type: "json_object" }`). The browser never contacts the
-  provider; all provider calls originate from server services
+  interface (`openai` SDK, `chat.completions.create`). The Program Head surface asks
+  for `response_format: { type: "json_object" }`; the Faculty surface asks for a
+  strict `json_schema` whose `required` list includes every declared property, which
+  strict structured-output providers enforce before returning. The browser never
+  contacts the provider; all provider calls originate from server services
   (`generate-program-head-analytics-insight.ts`,
   `generate-faculty-analytics-insight.ts`).
 - **Environment-based configuration:** The feature is disabled unless every
@@ -69,9 +71,23 @@
   (default 16,000). The Program Head qualitative tier spends what the token slice
   leaves and records the omission in `evidenceScope.promptAnalysis`; the Faculty
   token and prompt tiers spend their own share and report `tokensTruncated`,
-  `promptCountsTruncated`, and `promptTermsTruncated` to the written-feedback view. A
-  base packet that itself exceeds the ceiling aborts the request (`unexpected`)
-  instead of truncating silently.
+  `promptCountsTruncated`, and `promptTermsTruncated` to the written-feedback view.
+  The Faculty deterministic tiers (participation, rating scales, CILO groups, question
+  groups, trend periods) are capped by rows and by a per-tier share of the packet
+  budget, because a Faculty scope carries every course assignment's CILO bindings and
+  instrument questions; each capped tier is reported in the packet's `truncations`
+  list, forwarded to the model's limitation, and disclosed in the browser through
+  `evidence.truncatedEvidence`. A packet that still exceeds the ceiling after capping
+  aborts the request (`unexpected`) rather than truncating silently.
+- **Provider prose is normalized, not rejected:** Section shape (types, presence,
+  nullability) is validated; the section bounds (400-character observation,
+  1–5 evidence strings of at most 200 characters, 400-character connection,
+  200-character limitation and review question) are applied to the validated output by
+  `normalizeInsightSection`. Bounds stay out of the strict JSON schema because a
+  provider that validates its own generation against them rejects the entire request
+  when the model writes a sixth evidence line, which the reader experiences as a
+  randomly unavailable insight. A section left with no usable evidence becomes null:
+  the browser shows the insufficient-evidence fallback rather than an empty card.
 - **Qualitative privacy thresholds:** Corpus gates refuse interpretation (provider
   never called) until the selected scope meets both
   `minimumSubmittedResponses` and, for the qualitative view, `minimumQualitativeItems`
