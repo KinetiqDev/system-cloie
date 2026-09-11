@@ -18,9 +18,11 @@
   is selected for speed and cost-efficiency on short, bounded interpretation tasks —
   not for open-ended generation.
 - **Transport:** Server-side only, through an OpenAI-compatible chat-completions
-  interface (`openai` SDK, `chat.completions.create` with
-  `response_format: { type: "json_object" }`). The browser never contacts the
-  provider; all provider calls originate from server services
+  interface (`openai` SDK, `chat.completions.create`). The Program Head surface asks
+  for `response_format: { type: "json_object" }`; the Faculty surface asks for a
+  strict `json_schema` whose `required` list includes every declared property, which
+  strict structured-output providers enforce before returning. The browser never
+  contacts the provider; all provider calls originate from server services
   (`generate-program-head-analytics-insight.ts`,
   `generate-faculty-analytics-insight.ts`).
 - **Environment-based configuration:** The feature is disabled unless every
@@ -48,24 +50,56 @@
   `getProgramHeadFeedback`); Faculty rebuilds from `getFacultyAnalyticsDataWithPrincipal`.
   Authorization is re-checked on each call — a request for a program or course outside
   the reviewer's scope returns `unauthorized` and the provider is never called.
-- **De-identified aggregate packets only:** The provider receives a bounded JSON
+- **De-identified aggregate packets only:** the provider receives a bounded JSON
   evidence packet containing server-computed means, distributions, counts, source
-  labels, trend summaries, limitation notes, and identifier-redacted word-frequency
-  tokens. Per ADR 0016, no raw comment text crosses the boundary — this shipped state
-  is deliberately more conservative than the ADR's accepted de-identified-raw-comment
-  option.
+  labels, trend summaries, limitation notes, the applied filter facets, and the
+  deterministic qualitative structure (identifier-redacted term prevalence with
+  distinct-response counts, per-prompt structure with top terms and tone bands, and
+  a tone distribution). Per ADR 0016 and ADR 0023, no raw comment text, sentence,
+  excerpt, response identifier, or respondent identifier crosses the boundary.
+- **Deterministic tone scoring:** tone bands come from the bundled winkNLP lexicon
+  (`doc.out(its.sentiment)`), banded at ±0.2 into positive, neutral, and negative.
+  The score is computed server-side over the answer as submitted — the identifier
+  redaction deletes title-cased and digit-bearing tokens and would bias tone toward
+  neutral — and only band counts plus the scored total are emitted, so no text can
+  be reconstructed from the result. The rule, its thresholds, and its limits are
+  disclosed in the product and in every AI limitation.
 - **Strict row and character caps:** Packets are deterministically truncated before
   serialization — at most 20 course rows, 20 instrument rows, 15 context rows,
-  120 characters per label, 40 characters per token text, qualitative prompts sliced
-  to 180 characters, and a hard `maxPacketChars` ceiling (default 16,000). Anything
-  exceeding the ceiling aborts the request (`unexpected`) instead of truncating
-  silently.
+  120 characters per label, 40 characters per token text, 6 terms per prompt,
+  qualitative prompts sliced to 180 characters, and a hard `maxPacketChars` ceiling
+  (default 16,000). The Program Head qualitative tier spends what the token slice
+  leaves and records the omission in `evidenceScope.promptAnalysis`; the Faculty
+  token and prompt tiers spend their own share and report `tokensTruncated`,
+  `promptCountsTruncated`, and `promptTermsTruncated` to the written-feedback view.
+  The Faculty deterministic tiers (participation, rating scales, CILO groups, question
+  groups, trend periods) are capped by rows and by a per-tier share of the packet
+  budget, because a Faculty scope carries every course assignment's CILO bindings and
+  instrument questions; each capped tier is reported in the packet's `truncations`
+  list, forwarded to the model's limitation, and disclosed in the browser through
+  `evidence.truncatedEvidence`. A packet that still exceeds the ceiling after capping
+  aborts the request (`unexpected`) rather than truncating silently.
+- **Provider prose is normalized, not rejected:** Section shape (types, presence,
+  nullability) is validated; the section bounds (400-character observation,
+  1–5 evidence strings of at most 200 characters, 400-character connection,
+  200-character limitation and review question) are applied to the validated output by
+  `normalizeInsightSection`. Bounds stay out of the strict JSON schema because a
+  provider that validates its own generation against them rejects the entire request
+  when the model writes a sixth evidence line, which the reader experiences as a
+  randomly unavailable insight. A section left with no usable evidence becomes null:
+  the browser shows the insufficient-evidence fallback rather than an empty card.
 - **Qualitative privacy thresholds:** Corpus gates refuse interpretation (provider
   never called) until the selected scope meets both
   `minimumSubmittedResponses` and, for the qualitative view, `minimumQualitativeItems`
-  (`insufficient-evidence` state). Qualitative evidence is redacted word-frequency
-  counts and per-prompt answer counts — never quotations, identities, or PII. The
-  prompt explicitly forbids presenting a term as a quote or complete thought.
+  (`insufficient-evidence` state). Qualitative evidence is redacted term prevalence,
+  per-prompt structure, and tone band counts — never quotations, identities, or PII.
+  The prompt explicitly forbids presenting a term as a quote or complete thought.
+  Faculty surfaces add the five-distinct-respondent confidentiality floor: below it an
+  entire scope reports zero qualitative contribution counts, at or above it only terms
+  mentioned more than once cross, and a prompt whose own distinct-response count is
+  below the floor is withheld whole rather than partially disclosed. Per-prompt rows
+  stay separate by evidence source and instrument version, and each names that
+  instrument version.
 - **AI never receives client-supplied aggregates:** Client filters (tab, school year,
   evidence source) are re-validated server-side through Zod
   (`program-head-ai-schema.ts`) and then used only as selectors for the server's own
@@ -78,9 +112,14 @@
 
 - **System CLOIE calculates everything deterministically.** All metrics, means, rating
   distributions, CILO contributor matrices, trend comparability breaks
-  (instrument-fingerprint matching), word-cloud tokens, and anomaly flags are
-  computed by tested deterministic services. Charts render from these values and
-  never wait on AI.
+  (instrument-fingerprint matching), word-cloud tokens, term prevalence with
+  distinct-response counts, per-prompt structure, and tone bands are computed by
+  tested deterministic services. Charts render from these values and never wait
+  on AI.
+- **Themes are the AI's reading of that structure, not a stored artifact.** System
+  CLOIE does not cluster, label, or persist a theme; the model names what the
+  per-prompt terms and counts show, inside one validated observation. Nothing about
+  a theme survives the request.
 - **The AI's sole role is interpretation of grounded evidence.** Given one bounded
   packet, it surfaces a single evidence-bound observation per section: what pattern
   the numbers show, the exact figures behind it, how it relates to other figures in
@@ -113,9 +152,19 @@
   and Zod-validated after. Anything failing validation surfaces as `invalid-output`,
   never rendered.
 - **System-prompt prohibitions (hallucination guardrails):**
-  - Sentiment analysis is fully removed and explicitly banned — the model must not
-    label evidence, sections, or findings as positive, negative, neutral, or mixed,
-    nor assign tone or satisfaction verdicts. It states only what the numbers show.
+  - Model-authored sentiment is banned. The model may report the deterministic tone
+    distribution as figures, name the fixed-rule thresholds, and describe which band
+    holds most scored answers; it must not add its own sentiment, tone, satisfaction,
+    or quality verdict, and must not treat the distribution as a judgement about
+    teaching quality. It states the rule's limits with the figures.
+  - Qualitative structural rules are enforced: prompts are described separately and
+    never merged, prompts collected by different instrument versions stay separate and
+    each entry names its instrument version, terms are never presented as quotations or
+    complete thoughts, and a high mention count from one answer is never reported as
+    broad agreement (mention volume and distinct-response reach are separate measures).
+  - Applied filters are respected: the packet states the reviewer's chosen evidence
+    source and stakeholder, every figure already reflects them, and the model must not
+    describe evidence outside that scope.
   - Management-consultant sludge is banned: no generic strengths/areas-for-review
     inventories (exactly one grounded observation per section), no synergies,
     holistic excellence, deep dives, moving forward, robust ecosystems, or filler.
@@ -138,7 +187,7 @@
   `Map` (max 128 entries each for PH and Faculty, oldest evicted first). The cache
   stores validated AI output only — never source responses, sessions, or
   authorization decisions. Cache keys hash the prompt version
-  (`program-head-analytics-v1` / `faculty-analytics-v3`), the scope identity
+  (`program-head-analytics-v3` / `faculty-analytics-v5`), the scope identity
   (program or faculty user id), the model, the base URL, and the full serialized
   evidence packet.
 - **In-flight deduplication:** Concurrent identical requests share one provider call
@@ -183,15 +232,19 @@
    backfill) was deferred as high-migration-risk for this phase; the UI carries the
    "Publication-time mapping snapshots are not yet available" disclosure, and this
    document records the gap as the primary defense-ready future-work item.
-2. **Aggregate-only interpretation ceiling.** Because the provider sees redacted
-   word-frequency tokens rather than raw comments, qualitative interpretation is
-   limited to recurring-term and coverage observations. Theme or sentiment reading
-   beyond that is out of scope by design (see ADR 0016 for the deferred
-   de-identified-raw-comment path).
-3. **Small-pool and incomparability caveats.** Single-term seeds, thin respondent
+2. **Deterministic-structure ceiling.** The provider sees identifier-redacted term
+   prevalence, per-prompt structure, and tone band counts rather than raw comments,
+   so interpretation is limited to what that structure shows. Verbatim de-identified
+   excerpts remain unshipped (ADR 0016 keeps the path available; ADR 0023 records the
+   adjudication and output-guardrail work it still requires).
+3. **Tone rule limits.** The bundled lexicon is small and fixed. It handles simple
+   negation but misses some negations and sarcasm, and an answer mixing praise and
+   criticism scores once. Bands are a word-level rule, not a reader's judgement, and
+   the product says so beside every distribution.
+4. **Small-pool and incomparability caveats.** Single-term seeds, thin respondent
    pools, and instrument-version breaks limit what trends can prove. The AI is
    instructed to state these limits, and trend views mark incomparable periods with
    break reasons rather than drawing continuous lines.
-4. **No persisted AI history.** Interpretations are ephemeral and non-auditable
+5. **No persisted AI history.** Interpretations are ephemeral and non-auditable
    beyond the deterministic evidence that produced them. Reproducibility rests on
    the evidence packet and prompt version, not on stored model output.

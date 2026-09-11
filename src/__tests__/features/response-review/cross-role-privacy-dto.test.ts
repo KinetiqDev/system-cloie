@@ -95,10 +95,12 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
 
     expectTypeOf<ProgramHeadFeedbackDTO["tokens"][number]>().toHaveProperty("text");
     expectTypeOf<ProgramHeadFeedbackDTO["tokens"][number]>().toHaveProperty("value");
+    expectTypeOf<ProgramHeadFeedbackDTO["tokens"][number]>().toHaveProperty("responseCount");
+    expectTypeOf<ProgramHeadFeedbackDTO>().toHaveProperty("tone");
     expectTypeOf<ProgramHeadFeedbackDTO["tokens"][number]>().not.toHaveProperty("email");
-    // Token shape is closed — { text, value }
-    const token: WordCloudToken = { text: "learning", value: 3 };
-    expect(Object.keys(token).sort()).toEqual(["text", "value"]);
+    // Token shape is closed — { text, value, responseCount }
+    const token: WordCloudToken = { text: "learning", value: 3, responseCount: 1 };
+    expect(Object.keys(token).sort()).toEqual(["responseCount", "text", "value"]);
     expect(JSON.stringify(token)).not.toContain("demo-student@cloie.test");
   });
 
@@ -143,6 +145,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
         itemCount: 5,
         evaluationCount: 1,
         tokens: [{ text: "learning", value: 2 }],
+        tone: { scoredItemCount: 5, positive: 0, neutral: 5, negative: 0 },
         promptCounts: [],
       },
     };
@@ -163,7 +166,8 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
       scope: { programCode: "BSIT", programName: "BSIT", periodLabel: null },
       periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
       emptyReason: null,
-      tokens: [{ text: "coding", value: 1 }],
+      tokens: [{ text: "coding", value: 1, responseCount: 1 }],
+      tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
       qualitativeItemCount: 1,
       qualitativeResponseCount: 1,
       sourceCounts: [
@@ -172,14 +176,19 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
           sourceLabel: "Course-bound student evidence",
           itemCount: 1,
           responseCount: 1,
+          tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
         },
       ],
       promptCounts: [
         {
           sourceLabel: "Course-bound student evidence",
           promptLabel: "Remarks",
+          instrumentId: "instrument-version-1",
+          instrumentLabel: "Course Evaluation v1",
           itemCount: 1,
           responseCount: 1,
+          tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+          terms: [{ text: "coding", value: 1, responseCount: 1 }],
         },
       ],
       evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "IT201 Post-Term" }],

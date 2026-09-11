@@ -154,6 +154,54 @@ export const allUsers = [
     name: "Gen Ed Coordinator",
     role: SystemRole.GEN_ED_COORDINATOR,
   },
+  {
+    id: U.STU_BSIT_Q1,
+    email: "student-bsit-q1@cloie.test",
+    name: "Sofia Ramos",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSIT_Q2,
+    email: "student-bsit-q2@cloie.test",
+    name: "Andre Bautista",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSIT_Q3,
+    email: "student-bsit-q3@cloie.test",
+    name: "Isabella Cruz",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSIT_Q4,
+    email: "student-bsit-q4@cloie.test",
+    name: "Rafael Mendoza",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSIT_Q5,
+    email: "student-bsit-q5@cloie.test",
+    name: "Katrina Uy",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSHM_Q1,
+    email: "student-bshm-q1@cloie.test",
+    name: "Paolo Gutierrez",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSHM_Q2,
+    email: "student-bshm-q2@cloie.test",
+    name: "Denise Ocampo",
+    role: SystemRole.STUDENT,
+  },
+  {
+    id: U.STU_BSHM_Q3,
+    email: "student-bshm-q3@cloie.test",
+    name: "Joshua Fernandez",
+    role: SystemRole.STUDENT,
+  },
 ] as const;
 
 export const studentDefinitions = [
@@ -212,6 +260,62 @@ export const studentDefinitions = [
     major: null,
     yearLevel: YearLevel.FOURTH_YEAR,
     section: "AFTERNOON" as const,
+  },
+  {
+    uid: U.STU_BSIT_Q1,
+    program: "BSIT",
+    major: null,
+    yearLevel: YearLevel.SECOND_YEAR,
+    section: "MORNING" as const,
+  },
+  {
+    uid: U.STU_BSIT_Q2,
+    program: "BSIT",
+    major: null,
+    yearLevel: YearLevel.SECOND_YEAR,
+    section: "MORNING" as const,
+  },
+  {
+    uid: U.STU_BSIT_Q3,
+    program: "BSIT",
+    major: null,
+    yearLevel: YearLevel.SECOND_YEAR,
+    section: "MORNING" as const,
+  },
+  {
+    uid: U.STU_BSIT_Q4,
+    program: "BSIT",
+    major: null,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "MORNING" as const,
+  },
+  {
+    uid: U.STU_BSIT_Q5,
+    program: "BSIT",
+    major: null,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "MORNING" as const,
+  },
+  {
+    uid: U.STU_BSHM_Q1,
+    program: "BSHM",
+    major: null,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "EVENING" as const,
+  },
+  {
+    uid: U.STU_BSHM_Q2,
+    program: "BSHM",
+    major: null,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "EVENING" as const,
+  },
+  {
+    uid: U.STU_BSHM_Q3,
+    program: "BSHM",
+    major: null,
+    yearLevel: YearLevel.FOURTH_YEAR,
+    section: "EVENING" as const,
   },
 ] as const;
 

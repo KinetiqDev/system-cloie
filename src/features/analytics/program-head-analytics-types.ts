@@ -1,4 +1,5 @@
 import type { MetricEvidenceSummary } from "@/features/analytics/aggregators/types";
+import type { QualitativeToneShape } from "./types";
 
 /** Readable scope summary for the current analytics view */
 export type ProgramHeadAnalyticsScopeSummary = {
@@ -373,22 +374,32 @@ export type ProgramHeadBreakdownsDTO = {
 export type ProgramHeadFeedbackTokenDTO = {
   text: string;
   value: number;
+  /** Distinct responses containing the term, so one verbose answer cannot dominate. */
+  responseCount: number;
 };
 
 /** Aggregate qualitative item and response counts for one evidence source. */
-export type ProgramHeadFeedbackSourceCountDTO = {
+type ProgramHeadFeedbackSourceCountDTO = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   itemCount: number;
   responseCount: number;
+  tone: QualitativeToneShape;
 };
 
 /** Aggregate qualitative item and response counts for one source-qualified prompt. */
 export type ProgramHeadFeedbackPromptCountDTO = {
   sourceLabel: string;
   promptLabel: string;
+  /** Stable instrument identity; two versions can share a visible label. */
+  instrumentId: string;
+  /** Instrument version the answers came from; two versions never merge into one row. */
+  instrumentLabel: string;
   itemCount: number;
   responseCount: number;
+  tone: QualitativeToneShape;
+  /** Highest-mention identifier-redacted terms for this prompt. */
+  terms: ProgramHeadFeedbackTokenDTO[];
 };
 
 /**
@@ -421,6 +432,7 @@ export type ProgramHeadFeedbackDTO = {
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
   emptyReason: ProgramHeadFeedbackEmptyReason;
   tokens: ProgramHeadFeedbackTokenDTO[];
+  tone: QualitativeToneShape;
   qualitativeItemCount: number;
   qualitativeResponseCount: number;
   sourceCounts: ProgramHeadFeedbackSourceCountDTO[];

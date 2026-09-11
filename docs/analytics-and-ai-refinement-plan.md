@@ -1,5 +1,7 @@
 # System CLOIE Analytics & AI Refinement Plan
 
+> **Historical baseline (2026-09-09):** this plan is a pre-change baseline whose problem list has since been superseded by shipped code. For the current qualitative evidence boundary, see ADR 0023 (`docs/adr/0023-deterministic-qualitative-evidence-and-sentiment-shape.md`).
+
 **Status:** Proposed Specification
 **Scope:** Faculty Analytics, Program Head Analytics, AI Integration, Traceability, Seed Data
 **Date:** 2026-09-09

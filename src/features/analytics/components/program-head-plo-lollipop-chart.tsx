@@ -118,6 +118,7 @@ export function ProgramHeadPloLollipopChart({ title, outcomes }: ProgramHeadPloL
             />
             <ZAxis type="number" range={[140, 140]} />
             <ChartTooltip
+              payloadUniqBy={(entry) => entry.dataKey}
               formatter={(_value, _name, item) => {
                 const original = (item?.payload as LollipopDatum | undefined)?.value;
                 return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];

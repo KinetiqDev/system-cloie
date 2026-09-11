@@ -141,9 +141,9 @@ export function DataShowcase() {
           <div className="flex flex-col gap-2">
             <p className="text-caption text-muted-foreground font-medium uppercase">Line</p>
             <Tabs defaultValue={SHOWCASE_TAB_CONTENT[0].id} className="w-full">
-              <TabsList variant="line" className="h-auto gap-4">
+              <TabsList variant="line">
                 {SHOWCASE_TAB_CONTENT.map((tab) => (
-                  <TabsTrigger key={tab.id} value={tab.id} className="px-1 py-2.5">
+                  <TabsTrigger key={tab.id} value={tab.id}>
                     {tab.heading}
                   </TabsTrigger>
                 ))}

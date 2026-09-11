@@ -124,14 +124,30 @@ export const membershipDefinitions = [
     program: "BSIT",
     year: YearLevel.FOURTH_YEAR,
     section: "MORNING",
-    students: [U.STU_BSIT, U.GRAD_BSIT],
+    students: [
+      U.STU_BSIT,
+      U.GRAD_BSIT,
+      U.STU_BSIT_Q1,
+      U.STU_BSIT_Q2,
+      U.STU_BSIT_Q3,
+      U.STU_BSIT_Q4,
+      U.STU_BSIT_Q5,
+    ],
   },
   {
     course: "IT201",
     program: "BSIT",
     year: YearLevel.SECOND_YEAR,
     section: "MORNING",
-    students: [U.STU_BSIT, U.GRAD_BSIT],
+    students: [
+      U.STU_BSIT,
+      U.GRAD_BSIT,
+      U.STU_BSIT_Q1,
+      U.STU_BSIT_Q2,
+      U.STU_BSIT_Q3,
+      U.STU_BSIT_Q4,
+      U.STU_BSIT_Q5,
+    ],
   },
   {
     course: "GESTECH",
@@ -187,7 +203,7 @@ export const membershipDefinitions = [
     program: "BSHM",
     year: YearLevel.FOURTH_YEAR,
     section: "EVENING",
-    students: [U.STU_BSHM, U.STU_BSHM_G],
+    students: [U.STU_BSHM, U.STU_BSHM_G, U.STU_BSHM_Q1, U.STU_BSHM_Q2, U.STU_BSHM_Q3],
   },
   // Publication-slice roster (issue #546): Juan Dela Cruz + Daniel Tan. These
   // two Students are unused by every other e2e journey and have no active

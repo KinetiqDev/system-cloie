@@ -22,7 +22,7 @@ const scale = [
   { value: 5, label: "Strongly agree" },
 ];
 
-function response(id: string, ratings: number[], comment: string) {
+function response(id: string, ratings: number[], comment: string, promptKey = "remarks") {
   return {
     respondent_id: `student-${id}`,
     response: {
@@ -34,7 +34,7 @@ function response(id: string, ratings: number[], comment: string) {
         item_key: "application",
         cilo_question_binding_id: "binding-1",
       })),
-      qual_items: [{ section_key: "feedback", prompt_key: "remarks", text_content: comment }],
+      qual_items: [{ section_key: "feedback", prompt_key: promptKey, text_content: comment }],
     },
   };
 }
@@ -78,6 +78,8 @@ function evaluation(assignments: ReturnType<typeof response>[]) {
     ],
     instrument: {
       id: "66666666-6666-4666-8666-666666666666",
+      version_number: 2,
+      template: { name: "IT201 Course Evaluation" },
       structure_snapshot: [
         {
           key: "outcomes",
@@ -94,7 +96,10 @@ function evaluation(assignments: ReturnType<typeof response>[]) {
         {
           key: "feedback",
           title: "Written feedback",
-          items: [{ key: "remarks", kind: "qualitative", prompt: "What helped you learn?" }],
+          items: [
+            { key: "remarks", kind: "qualitative", prompt: "What helped you learn?" },
+            { key: "improve", kind: "qualitative", prompt: "What should improve?" },
+          ],
         },
       ],
     },
@@ -154,17 +159,61 @@ describe("faculty analytics serialization", () => {
     });
     expect(result.data.qualitative.tokens).toEqual(
       expect.arrayContaining([
-        { text: "examples", value: 4 },
-        { text: "helped", value: 3 },
+        { text: "examples", value: 4, responseCount: 4 },
+        { text: "helped", value: 3, responseCount: 3 },
       ])
     );
     expect(result.data.qualitative.tokens).not.toContainEqual({ text: "exercises", value: 1 });
+    expect(result.data.qualitative.promptCounts).toHaveLength(1);
+    const [prompt] = result.data.qualitative.promptCounts;
+    expect(prompt).toMatchObject({
+      prompt: "What helped you learn?",
+      instrumentLabel: "IT201 Course Evaluation v2",
+      itemCount: 5,
+      responseCount: 5,
+      tone: { scoredItemCount: 5 },
+    });
+    // Singletons stay out per prompt too: "exercises" was mentioned once, and
+    // the title-cased sentence openers redaction removes are already gone.
+    expect(prompt?.terms).toEqual([
+      { text: "examples", value: 4, responseCount: 4 },
+      { text: "helped", value: 3, responseCount: 3 },
+    ]);
 
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("student1@acd.edu.ph");
     expect(serialized).not.toContain("Practical examples helped");
     expect(serialized).not.toContain("respondent_id");
     expect(serialized).not.toContain("qual_items");
+  });
+
+  it("withholds a prompt whose own response count is below the confidentiality floor", async () => {
+    courseBoundEvaluationFindManyMock.mockResolvedValue([
+      evaluation([
+        response("r1", [5], "Practical examples helped"),
+        response("r2", [4], "Practical exercises helped"),
+        response("r3", [4], "Clear examples helped"),
+        response("r4", [4], "Clear examples"),
+        response("r5", [4], "Practical examples"),
+        response("r6", [3], "Shorter term", "improve"),
+        response("r7", [3], "Shorter term again", "improve"),
+      ]),
+    ]);
+
+    const result = await getFacultyAnalyticsDataAction({ view: "qualitative" });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // Seven distinct respondents clear the scope floor, so the scope-level
+    // corpus is analyzed; the two-answer prompt stays withheld rather than
+    // releasing terms and tone for a smaller cohort.
+    expect(result.data.qualitative.available).toBe(true);
+    expect(result.data.qualitative.promptCounts.map((row) => row.prompt)).toEqual([
+      "What helped you learn?",
+    ]);
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("Shorter term");
+    expect(serialized).not.toContain("What should improve?");
   });
 
   it("suppresses all qualitative analytics below five submitted respondents", async () => {

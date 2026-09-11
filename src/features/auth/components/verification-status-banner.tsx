@@ -14,7 +14,7 @@ export function VerificationStatusBanner({ status }: VerificationStatusBannerPro
   if (status === VerificationStatus.PENDING) {
     return (
       <div className="mb-6">
-        <Alert className="border-info/50 bg-info-soft text-info">
+        <Alert variant="information">
           <Clock className="text-info size-5" />
           <AlertTitle className="text-label-lg font-semibold tracking-wide">
             Verification Pending
@@ -31,7 +31,7 @@ export function VerificationStatusBanner({ status }: VerificationStatusBannerPro
   if (status === VerificationStatus.REJECTED) {
     return (
       <div className="mb-6">
-        <Alert className="border-danger/50 bg-danger-soft text-danger">
+        <Alert variant="destructive">
           <AlertTriangle className="text-danger size-5" />
           <AlertTitle className="text-label-lg font-semibold tracking-wide">
             Verification Rejected

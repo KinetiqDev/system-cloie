@@ -54,8 +54,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ViewTabs } from "@/components/layout/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
+import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
 import { cn } from "@/lib/utils";
 import type {
@@ -417,22 +418,16 @@ function FilterSelect({
 function ViewNavigation({ filters }: { filters: FacultyAnalyticsFilters }) {
   return (
     <>
-      <Tabs value={filters.view} className="hidden sm:block">
-        <TabsList variant="line" aria-label="Analytics view">
-          {Object.entries(VIEW_LABELS).map(([view, label]) => (
-            <TabsTrigger
-              key={view}
-              value={view}
-              nativeButton={false}
-              render={
-                <Link href={analyticsHref({ ...filters, view: view as FacultyAnalyticsView })} />
-              }
-            >
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <ViewTabs
+        label="Analytics view"
+        activeValue={filters.view}
+        className="hidden sm:flex"
+        items={Object.entries(VIEW_LABELS).map(([view, label]) => ({
+          value: view,
+          label,
+          href: analyticsHref({ ...filters, view: view as FacultyAnalyticsView }),
+        }))}
+      />
       <MobileViewSelect filters={filters} />
     </>
   );
@@ -1006,6 +1001,7 @@ function QualitativeView({
           the word, and word frequency does not determine whether feedback was positive or negative.
         </AlertDescription>
       </Alert>
+      <QualitativeToneSummary tone={data.qualitative.tone} />
       <AIOverview insight={ai} state={aiState} pending={pending} data={data} qualitative />
       <PromptCountTable data={data} />
     </div>
@@ -1180,20 +1176,37 @@ function AIOverview({
         </p>
         {qualitative ? (
           <p className="text-muted-foreground mt-2 text-xs">
-            Based on anonymous aggregate counts and redacted term frequencies. It does not read or
-            display individual student responses and may miss context, sarcasm, or uncommon
-            feedback.
+            Based on anonymous aggregate counts, redacted term counts, per-prompt structure, and a
+            fixed word-list tone distribution. It does not read or display individual student
+            responses and may miss context, sarcasm, and uncommon feedback.
+          </p>
+        ) : null}
+        {qualitative && state?.ok && state.data.evidence.qualitativeTruncated ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            The interpretation used a bounded slice of the written-feedback evidence, not the entire
+            corpus.
+          </p>
+        ) : null}
+        {!qualitative && state?.ok && state.data.evidence.truncatedEvidence ? (
+          <p className="text-muted-foreground mt-2 text-xs">
+            A scope this wide exceeds one AI evidence packet, so the interpretation used the
+            highest-volume groups only. The charts above carry the complete figures.
           </p>
         ) : null}
       </div>
     );
   const failure = state && !state.ok ? state.state : null;
-  const label =
-    !failure || failure === "disabled"
-      ? "AI overview is not enabled for this deployment."
-      : failure === "insufficient-evidence"
-        ? "There is not enough combined evidence for a responsible AI overview."
-        : "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
+  let label: string;
+  if (failure === "disabled") {
+    label = "AI overview is not enabled for this deployment.";
+  } else if (failure && failure !== "insufficient-evidence") {
+    label =
+      "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
+  } else if (state || data.kpi.submittedResponseCount === 0) {
+    label = "There is not enough combined evidence in this scope for a responsible AI overview.";
+  } else {
+    label = "The AI overview is loading with this scope's evidence.";
+  }
   return (
     <div className="border-border rounded-lg border border-dashed p-4">
       <div className="flex items-center gap-2 font-medium">
@@ -1412,16 +1425,26 @@ function PromptCountTable({ data }: { data: FacultyAnalyticsData }) {
           <TableHeader>
             <TableRow>
               <TableHead>Prompt</TableHead>
+              <TableHead>Instrument</TableHead>
               <TableHead className="text-right">Written answers</TableHead>
               <TableHead className="text-right">Responses</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Tone (pos / neu / neg)</TableHead>
+              <TableHead>Top terms</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.qualitative.promptCounts.map((row) => (
-              <TableRow key={row.prompt}>
+              <TableRow key={`${row.instrumentId}:${row.prompt}`}>
                 <TableCell className="whitespace-normal">{row.prompt}</TableCell>
+                <TableCell className="whitespace-normal">{row.instrumentLabel}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.responseCount}</TableCell>
+                <TableCell className="text-right whitespace-nowrap tabular-nums">
+                  {row.tone.positive} / {row.tone.neutral} / {row.tone.negative}
+                </TableCell>
+                <TableCell className="whitespace-normal">
+                  <QualitativeTermChips terms={row.terms} label={`Top terms for ${row.prompt}`} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

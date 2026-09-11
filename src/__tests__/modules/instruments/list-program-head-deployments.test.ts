@@ -6,6 +6,7 @@ const {
   centralDeploymentFindManyMock,
   centralDeploymentFindUniqueMock,
   centralDeploymentUpdateMock,
+  responseGroupByMock,
   programFindUniqueMock,
   programHeadAssignmentFindManyMock,
   programHeadAssignmentFindFirstMock,
@@ -18,6 +19,7 @@ const {
   centralDeploymentFindManyMock: vi.fn(),
   centralDeploymentFindUniqueMock: vi.fn(),
   centralDeploymentUpdateMock: vi.fn(),
+  responseGroupByMock: vi.fn(),
   programFindUniqueMock: vi.fn(),
   programHeadAssignmentFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock("@/lib/db/prisma", () => ({
     program: {
       findUnique: programFindUniqueMock,
     },
+    response: { groupBy: responseGroupByMock },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
       findFirst: programHeadAssignmentFindFirstMock,
@@ -51,7 +54,11 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
-  revalidateProgramHeadAssignment: async () => ({ id: PROGRAM_ID, code: "BSIT", name: "BS Information Technology" }),
+  revalidateProgramHeadAssignment: async () => ({
+    id: PROGRAM_ID,
+    code: "BSIT",
+    name: "BS Information Technology",
+  }),
 }));
 
 // ─── Test Fixtures ───────────────────────────────────────────────────────────
@@ -98,21 +105,7 @@ const MOCK_DEPLOYMENT_RAW = {
   },
   major: null,
   year_level: null,
-  assignments: [
-    { id: "assign-1", response: { status: "SUBMITTED" } },
-    { id: "assign-2", response: null },
-    { id: "assign-3", response: { status: "IN_PROGRESS" } },
-  ],
-};
-
-const MOCK_DEPLOYMENT_OTHER_PROGRAM = {
-  ...MOCK_DEPLOYMENT_RAW,
-  id: "deploy-other",
-  program_id: "other-program",
-  program: {
-    code: "BSCS",
-    name: "BS Computer Science",
-  },
+  _count: { assignments: 3 },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -150,6 +143,7 @@ describe("listProgramHeadDeployments", () => {
         selectedProgram: PROGRAM,
       },
     });
+    responseGroupByMock.mockResolvedValue([{ deployment_id: "deploy-1", _count: { _all: 1 } }]);
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
       callback({
         $queryRaw: txQueryRawMock.mockResolvedValue([{ is_active: true, program_id: PROGRAM_ID }]),
@@ -223,7 +217,8 @@ describe("listProgramHeadDeployments", () => {
     mockProgram();
     centralDeploymentFindManyMock.mockResolvedValue([]);
 
-    const { listProgramHeadDeployments } = await import("@/features/evaluations/services/list-program-head-deployments");
+    const { listProgramHeadDeployments } =
+      await import("@/features/evaluations/services/list-program-head-deployments");
     await listProgramHeadDeployments(PROGRAM_ID);
 
     expect(centralDeploymentFindManyMock).toHaveBeenCalledWith(
@@ -233,7 +228,10 @@ describe("listProgramHeadDeployments", () => {
 
   it("rejects unauthenticated users", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
-    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "Program Head authentication is required." });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Program Head authentication is required.",
+    });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
@@ -251,7 +249,10 @@ describe("listProgramHeadDeployments", () => {
       activeRole: ROLES.FACULTY,
       roles: [ROLES.FACULTY],
     });
-    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "Program Head authentication is required." });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "Program Head authentication is required.",
+    });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");
@@ -266,7 +267,10 @@ describe("listProgramHeadDeployments", () => {
   it("returns error when PH has no program assignment", async () => {
     mockAuthenticatedPH();
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
-    resolveProgramHeadContextMock.mockResolvedValue({ success: false, error: "No active program assignment found for this Program Head." });
+    resolveProgramHeadContextMock.mockResolvedValue({
+      success: false,
+      error: "No active program assignment found for this Program Head.",
+    });
 
     const { listProgramHeadDeployments } =
       await import("@/features/evaluations/services/list-program-head-deployments");

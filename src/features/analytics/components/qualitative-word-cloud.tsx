@@ -129,6 +129,8 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
   const singletons = useMemo(() => tokens.filter((token) => token.value === 1), [tokens]);
   const groupSingletons = singletons.length >= SINGLETON_GROUP_MIN;
   const topValue = ranked[0]?.value ?? 1;
+  const showsRespondents = tokens.some((token) => typeof token.responseCount === "number");
+  const columnSpan = showsRespondents ? 4 : 3;
 
   return (
     <div className="flex min-h-0 flex-col" style={{ height: frameHeight }}>
@@ -141,6 +143,7 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
             <TableHead>Term</TableHead>
             <TableHead className="w-20 sm:w-32">Distribution</TableHead>
             <TableHead className="text-right">Mentions</TableHead>
+            {showsRespondents ? <TableHead className="text-right">Respondents</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -158,11 +161,16 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
                 </div>
               </TableCell>
               <TableCell className="text-right tabular-nums">{token.value}</TableCell>
+              {showsRespondents ? (
+                <TableCell className="text-right tabular-nums">
+                  {token.responseCount ?? "—"}
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
           {groupSingletons && singletons.length > 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="whitespace-normal">
+              <TableCell colSpan={columnSpan} className="whitespace-normal">
                 <Disclosure>
                   <DisclosureTrigger variant="link" className="text-label-md text-foreground">
                     {singletons.length} {singletons.length === 1 ? "term" : "terms"} mentioned once
@@ -196,6 +204,11 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
                   </div>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{token.value}</TableCell>
+                {showsRespondents ? (
+                  <TableCell className="text-right tabular-nums">
+                    {token.responseCount ?? "—"}
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
         </TableBody>

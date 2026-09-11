@@ -91,7 +91,14 @@ function ResponsiveDialogContent({
 
   if (isDesktop) {
     return (
-      <DialogContent className={cn(className, desktopClassName)} showCloseButton={showCloseButton}>
+      <DialogContent
+        className={cn(
+          "flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden",
+          className,
+          desktopClassName
+        )}
+        showCloseButton={showCloseButton}
+      >
         {children}
       </DialogContent>
     );

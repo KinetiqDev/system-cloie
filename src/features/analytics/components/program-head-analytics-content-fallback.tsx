@@ -1,6 +1,8 @@
 import { BarChart3, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { tabsListVariants, tabsTriggerClass } from "@/components/ui/tabs-styles";
+import { cn } from "@/lib/utils";
 import {
   ANALYTICS_TABS,
   ANALYTICS_TAB_LABELS,
@@ -108,12 +110,15 @@ export function ProgramHeadAnalyticsRouteFallback() {
           <Skeleton className="h-4 w-1/2 sm:hidden" />
         </div>
       </header>
-      <nav
-        aria-label="Loading analytics views"
-        className="border-border/80 flex gap-5 overflow-x-auto border-b pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
+      <nav aria-label="Loading analytics views" className={tabsListVariants({ variant: "line" })}>
         {ANALYTICS_TABS.map((tab) => (
-          <Skeleton key={tab} className="h-4 w-20 shrink-0" />
+          <span
+            key={tab}
+            className={cn(tabsTriggerClass, "pointer-events-none")}
+            aria-hidden="true"
+          >
+            <Skeleton className="h-5 w-20" />
+          </span>
         ))}
       </nav>
       <Card data-testid="analytics-filter-skeleton">

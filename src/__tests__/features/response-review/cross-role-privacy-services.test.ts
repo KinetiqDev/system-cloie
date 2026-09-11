@@ -292,7 +292,12 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
               course_bound: {
                 id: "eval-1",
                 deployment_name: "IT201 Eval",
-                instrument: { id: "inst-1", structure_snapshot: MOCK_STRUCTURE_SNAPSHOT },
+                instrument: {
+                  id: "inst-1",
+                  version_number: 1,
+                  structure_snapshot: MOCK_STRUCTURE_SNAPSHOT,
+                  template: { name: "IT201 Template" },
+                },
               },
               central_deployment: null,
             },

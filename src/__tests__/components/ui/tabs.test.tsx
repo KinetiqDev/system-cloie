@@ -68,7 +68,9 @@ describe("Tabs", () => {
         </Tabs>
       );
       const active = screen.getByText("One");
-      expect(active).toHaveClass("data-active:bg-primary-soft");
+      expect(active).toHaveClass(
+        "group-data-[variant=default]/tabs-list:data-active:bg-primary-soft"
+      );
       expect(active).toHaveClass("data-active:text-selected-fg");
     });
 
@@ -142,9 +144,7 @@ describe("Tabs", () => {
           </TabsList>
         </Tabs>
       );
-      expect(screen.getByRole("tablist")).toHaveClass(
-        "pointer-coarse:group-data-horizontal/tabs:h-auto"
-      );
+      expect(screen.getByRole("tablist")).toHaveClass("pointer-coarse:h-auto");
       expect(screen.getByRole("tab")).toHaveClass("pointer-coarse:min-h-11");
     });
   });

@@ -2030,6 +2030,19 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/year-picker.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes: "Year-only calendar selector for the alumni graduation year; public shadcn inventory",
+  },
+  {
+    path: "src/components/layout/view-tabs.tsx",
+    disposition: "already_compliant",
+    category: "layout",
+    notes:
+      "Link-based line tab row sharing the tabs recipe, for view switchers that navigate instead of swapping panels",
+  },
+  {
     path: "src/features/academic-calendar/components/active-term-badge.tsx",
     disposition: "task",
     taskId: 13,
@@ -2261,6 +2274,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/analytics/components/qualitative-word-cloud.tsx",
+    disposition: "task",
+    taskId: 10,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/analytics/components/qualitative-evidence.tsx",
     disposition: "task",
     taskId: 10,
     category: "feature_component",

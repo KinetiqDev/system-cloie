@@ -162,14 +162,16 @@ export function ProgramHeadToolsPage({
 
       <EvaluationToolsTabs
         initialTab={initialTab}
-        action={
-          <Button
-            render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
-            className="shrink-0"
-          >
-            <Plus className="size-4" data-icon="inline-start" />
-            Create New Template
-          </Button>
+        action={(activeTab) =>
+          activeTab === "templates" ? (
+            <Button
+              render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
+              className="shrink-0"
+            >
+              <Plus className="size-4" data-icon="inline-start" />
+              Create New Template
+            </Button>
+          ) : null
         }
         viewControl={
           <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />

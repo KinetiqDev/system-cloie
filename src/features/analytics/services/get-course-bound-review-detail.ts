@@ -1,12 +1,10 @@
-import winkNLP from "wink-nlp";
-import model from "wink-eng-lite-web-model";
-import { eng } from "stopword";
 import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { CourseBoundReviewDetail, WordCloudToken } from "../types";
+import { qualitativeNlp, qualitativeStopWords } from "./qualitative-nlp";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import {
   buildAnonymizedRespondentLabel,
@@ -15,27 +13,34 @@ import {
   pickReviewerRole,
 } from "./shared";
 
-const nlp = winkNLP(model);
-const stopWords = new Set(eng);
+/** Normalized, stopword-filtered word tokens for one qualitative answer. */
+export function tokenizeReviewText(text: string): string[] {
+  const tokens = qualitativeNlp.readDoc(text).tokens().out(qualitativeNlp.its.normal) as string[];
+  const normalized: string[] = [];
+
+  for (const token of tokens) {
+    const candidate = token.toLowerCase();
+
+    if (!/^[a-z][a-z-]*$/.test(candidate)) {
+      continue;
+    }
+
+    if (qualitativeStopWords.has(candidate)) {
+      continue;
+    }
+
+    normalized.push(candidate);
+  }
+
+  return normalized;
+}
 
 export function buildReviewWordCloudTokens(texts: string[]): WordCloudToken[] {
   const counts = new Map<string, number>();
 
   for (const text of texts) {
-    const tokens = nlp.readDoc(text).tokens().out(nlp.its.normal) as string[];
-
-    for (const token of tokens) {
-      const normalized = token.toLowerCase();
-
-      if (!/^[a-z][a-z-]*$/.test(normalized)) {
-        continue;
-      }
-
-      if (stopWords.has(normalized)) {
-        continue;
-      }
-
-      counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    for (const token of tokenizeReviewText(text)) {
+      counts.set(token, (counts.get(token) ?? 0) + 1);
     }
   }
 

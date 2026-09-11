@@ -56,30 +56,46 @@ const FEEDBACK_DTO_KEYS = [
   "scope",
   "sourceCounts",
   "tokens",
+  "tone",
 ].sort();
+
+/** Instrument-version fields the qualitative evidence read resolves provenance from. */
+type FeedbackInstrumentMock = {
+  id: string;
+  version_number: number;
+  structure_snapshot: unknown;
+  template: { name: string };
+};
 
 type FeedbackAssignment = {
   course_bound: {
     id: string;
     deployment_name: string;
-    instrument: { id: string; structure_snapshot: unknown };
+    instrument: FeedbackInstrumentMock;
   } | null;
   central_deployment: {
     target_stakeholder: string;
-    instrument: { id: string; structure_snapshot: unknown };
+    instrument: FeedbackInstrumentMock;
   } | null;
 };
 
-function courseBoundAssignment(opts: {
-  evaluationId?: string;
-  deploymentName?: string;
-  instrumentId?: string;
-} = {}): FeedbackAssignment {
+function courseBoundAssignment(
+  opts: {
+    evaluationId?: string;
+    deploymentName?: string;
+    instrumentId?: string;
+  } = {}
+): FeedbackAssignment {
   return {
     course_bound: {
       id: opts.evaluationId ?? "eval-1",
       deployment_name: opts.deploymentName ?? "CILO Evaluation",
-      instrument: { id: opts.instrumentId ?? "instrument-course", structure_snapshot: openPromptSnapshot },
+      instrument: {
+        id: opts.instrumentId ?? "instrument-course",
+        version_number: 1,
+        structure_snapshot: openPromptSnapshot,
+        template: { name: "Course Evaluation" },
+      },
     },
     central_deployment: null,
   };
@@ -116,7 +132,6 @@ describe("redactPotentialIdentifiers", () => {
     );
   });
 });
-
 
 describe("buildRedactedWordCloudTokens", () => {
   it("orders tokens by count descending then localeCompare", () => {
@@ -211,8 +226,8 @@ describe("getProgramHeadFeedback", () => {
     expect(result?.qualitativeResponseCount).toBe(1);
     expect(result?.tokens).toEqual(
       expect.arrayContaining([
-        { text: "clarity", value: 1 },
-        { text: "teaching", value: 1 },
+        { text: "clarity", value: 1, responseCount: 1 },
+        { text: "teaching", value: 1, responseCount: 1 },
       ])
     );
     expect(result?.emptyReason).toBeNull();
@@ -253,7 +268,12 @@ describe("getProgramHeadFeedback", () => {
           course_bound: null,
           central_deployment: {
             target_stakeholder: "ALUMNI",
-            instrument: { id: "instrument-alumni", structure_snapshot: openPromptSnapshot },
+            instrument: {
+              id: "instrument-alumni",
+              version_number: 3,
+              structure_snapshot: openPromptSnapshot,
+              template: { name: "Alumni Survey" },
+            },
           },
         },
       }),
@@ -264,35 +284,58 @@ describe("getProgramHeadFeedback", () => {
     if (!result) return;
 
     expect(Object.keys(result).sort()).toEqual(FEEDBACK_DTO_KEYS);
-    expect(result.tokens.every((token) => Object.keys(token).sort().join(",") === "text,value")).toBe(
-      true
-    );
+    expect(
+      result.tokens.every(
+        (token) => Object.keys(token).sort().join(",") === "responseCount,text,value"
+      )
+    ).toBe(true);
+    expect(result.tone).toEqual({ scoredItemCount: 2, positive: 1, neutral: 1, negative: 0 });
     expect(result.sourceCounts).toEqual([
       {
         sourceKey: "COURSE_STUDENT",
         sourceLabel: "Course-bound student evidence",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 1, neutral: 0, negative: 0 },
       },
       {
         sourceKey: "ALUMNI",
         sourceLabel: "Alumni evidence",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
       },
     ]);
     expect(result.promptCounts).toEqual([
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should improve?",
+        instrumentId: "instrument-alumni",
+        instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [
+          { text: "examples", value: 1, responseCount: 1 },
+          { text: "feedback", value: 1, responseCount: 1 },
+          { text: "needs", value: 1, responseCount: 1 },
+          { text: "practical", value: 1, responseCount: 1 },
+        ],
       },
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentId: "instrument-course",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 1, neutral: 0, negative: 0 },
+        terms: [
+          { text: "examples", value: 1, responseCount: 1 },
+          { text: "improved", value: 1, responseCount: 1 },
+          { text: "learning", value: 1, responseCount: 1 },
+          { text: "practical", value: 1, responseCount: 1 },
+        ],
       },
     ]);
     expect(result.evidenceEvaluations).toEqual([
@@ -327,7 +370,12 @@ describe("getProgramHeadFeedback", () => {
           course_bound: null,
           central_deployment: {
             target_stakeholder: "ALUMNI",
-            instrument: { id: "instrument-alumni", structure_snapshot: alumniSnapshot },
+            instrument: {
+              id: "instrument-alumni",
+              version_number: 3,
+              structure_snapshot: alumniSnapshot,
+              template: { name: "Alumni Survey" },
+            },
           },
         },
       }),
@@ -339,21 +387,70 @@ describe("getProgramHeadFeedback", () => {
       {
         sourceLabel: "Alumni evidence",
         promptLabel: "What should alumni improve?",
+        instrumentId: "instrument-alumni",
+        instrumentLabel: "Alumni Survey v3",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [
+          { text: "exposure", value: 1, responseCount: 1 },
+          { text: "industry", value: 1, responseCount: 1 },
+        ],
       },
       {
         sourceLabel: "Course-bound student evidence",
         promptLabel: "What worked well?",
+        instrumentId: "instrument-course",
+        instrumentLabel: "Course Evaluation v1",
         itemCount: 1,
         responseCount: 1,
+        tone: { scoredItemCount: 1, positive: 0, neutral: 1, negative: 0 },
+        terms: [{ text: "activities", value: 1, responseCount: 1 }],
       },
+    ]);
+  });
+
+  it("qualifies provenance when two instruments share a template name and version", async () => {
+    prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
+      qualitativeRow({ text: "Clear activities", responseId: "response-1" }),
+      qualitativeRow({
+        text: "More industry exposure",
+        responseId: "response-2",
+        assignment: {
+          course_bound: {
+            id: "eval-2",
+            deployment_name: "CILO Evaluation 2",
+            instrument: {
+              id: "instrument-course-b",
+              version_number: 1,
+              structure_snapshot: openPromptSnapshot,
+              template: { name: "Course Evaluation" },
+            },
+          },
+          central_deployment: null,
+        },
+      }),
+    ]);
+
+    const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
+
+    expect(result?.promptCounts.map((prompt) => prompt.instrumentId)).toEqual([
+      "instrument-course",
+      "instrument-course-b",
+    ]);
+    expect(result?.promptCounts.map((prompt) => prompt.instrumentLabel)).toEqual([
+      "Course Evaluation v1 (instrument-course)",
+      "Course Evaluation v1 (instrument-course-b)",
     ]);
   });
 
   it("uses a generic label when a prompt is absent from its snapshot", async () => {
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
-      qualitativeRow({ text: "Clear direction", responseId: "response-1", promptKey: "legacy-private-key" }),
+      qualitativeRow({
+        text: "Clear direction",
+        responseId: "response-1",
+        promptKey: "legacy-private-key",
+      }),
     ]);
 
     const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
@@ -387,10 +484,10 @@ describe("getProgramHeadFeedback", () => {
     const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
 
     expect(result?.tokens).toEqual([
-      { text: "support", value: 3 },
-      { text: "apple", value: 2 },
-      { text: "banana", value: 2 },
-      { text: "clarity", value: 2 },
+      { text: "support", value: 3, responseCount: 3 },
+      { text: "apple", value: 2, responseCount: 2 },
+      { text: "banana", value: 2, responseCount: 2 },
+      { text: "clarity", value: 2, responseCount: 2 },
     ]);
   });
 

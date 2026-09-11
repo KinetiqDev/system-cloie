@@ -15,14 +15,7 @@ import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
 import { ROLES } from "@/lib/constants/roles";
 import { cn } from "@/lib/utils";
 
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -94,23 +87,26 @@ export function IndustryPartnerOnboardingForm({
   };
 
   return (
-    <Card className="border-border shadow-sm">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <span className="text-label-md text-link font-bold tracking-wider uppercase">
-            Onboarding
-          </span>
-          <span className="text-caption text-text-muted">Industry Partner Profile</span>
-        </div>
-        <div className="bg-primary -mx-6 mt-3 h-1 w-[calc(100%+3rem)] sm:-mx-8" />
-        <CardTitle className="pt-4 text-2xl font-bold">Industry Partner Setup</CardTitle>
-        <CardDescription>
-          Please provide your professional details to access the industry partner portal.
-        </CardDescription>
-      </CardHeader>
+    <Card className="border-border overflow-hidden shadow-sm">
+      <div className="border-border bg-surface flex items-center justify-between border-b px-6 py-3">
+        <span className="text-label-md text-link font-bold tracking-wider uppercase">
+          Onboarding
+        </span>
+        <span className="text-caption text-muted-foreground">Industry Partner Profile</span>
+      </div>
+      <div className="bg-primary h-1 w-full" />
 
       <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
-        <CardContent className="flex flex-col gap-6 px-6 py-6 sm:px-8">
+        <CardContent className="flex flex-col gap-6 px-6 py-8 sm:px-8">
+          <div className="space-y-1">
+            <h1 className="font-heading text-foreground text-heading-lg font-bold">
+              Industry Partner Setup
+            </h1>
+            <p className="text-body-sm text-muted-foreground">
+              Please provide your professional details to access the industry partner portal.
+            </p>
+          </div>
+
           {globalError && (
             <Alert variant="destructive">
               <AlertCircle className="size-4" />
@@ -122,14 +118,14 @@ export function IndustryPartnerOnboardingForm({
           <div className="space-y-2">
             <Label
               htmlFor="email-account"
-              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+              className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
             >
               Email Account
             </Label>
             <div className="relative">
               <Mail
                 aria-hidden="true"
-                className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
               />
               <Input
                 id="email-account"
@@ -137,7 +133,7 @@ export function IndustryPartnerOnboardingForm({
                 value={email}
                 readOnly
                 aria-readonly="true"
-                className="bg-surface-muted text-text-secondary pl-11"
+                className="bg-surface-muted text-muted-foreground pl-11"
               />
             </div>
           </div>
@@ -149,28 +145,28 @@ export function IndustryPartnerOnboardingForm({
               Account Identity
             </h2>
           </div>
-          <p className="text-body-sm text-text-muted -mt-4">
+          <p className="text-body-sm text-muted-foreground -mt-4">
             Your account name comes from your Google account and is not editable during onboarding.
           </p>
 
           <div className="space-y-2">
             <Label
               htmlFor="account-name"
-              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+              className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
             >
               Account Name
             </Label>
             <div className="relative">
               <UserCircle
                 aria-hidden="true"
-                className="text-text-muted pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2"
               />
               <Input
                 id="account-name"
                 value={name}
                 readOnly
                 aria-readonly="true"
-                className="bg-surface-muted text-text-secondary pl-11"
+                className="bg-surface-muted text-muted-foreground pl-11"
               />
             </div>
           </div>
@@ -189,12 +185,12 @@ export function IndustryPartnerOnboardingForm({
           <div className="space-y-2">
             <Label
               htmlFor="company_name"
-              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+              className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
             >
               Company / Organization Name
             </Label>
             <div className="relative">
-              <Building2 className="text-text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <Building2 className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 id="company_name"
                 placeholder="e.g. Acme Corp"
@@ -222,12 +218,12 @@ export function IndustryPartnerOnboardingForm({
           <div className="space-y-2">
             <Label
               htmlFor="position"
-              className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase"
+              className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase"
             >
               Position / Title
             </Label>
             <div className="relative">
-              <UserCircle className="text-text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+              <UserCircle className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
                 id="position"
                 placeholder="e.g. Senior Engineer"
@@ -259,10 +255,10 @@ export function IndustryPartnerOnboardingForm({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-label-sm text-text-secondary font-semibold tracking-wider uppercase">
+            <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
               Affiliated Programs
             </Label>
-            <p className="text-caption text-text-muted">
+            <p className="text-caption text-muted-foreground">
               Select at least one program you are affiliated with.
             </p>
             <Controller
@@ -290,7 +286,9 @@ export function IndustryPartnerOnboardingForm({
                     )}
                   >
                     {programs.length === 0 ? (
-                      <p className="text-text-muted px-1 py-2 text-sm">No programs available.</p>
+                      <p className="text-muted-foreground px-1 py-2 text-sm">
+                        No programs available.
+                      </p>
                     ) : (
                       programs.map((program) => {
                         const checked = selected.includes(program.id);
