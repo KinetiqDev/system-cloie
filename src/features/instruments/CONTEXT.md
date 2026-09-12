@@ -34,5 +34,5 @@ Associates a Likert question with a course CILO — at most one CILO per questio
 _Avoid_: CILO mapping, outcome link
 
 **PLO question binding**:
-Associates a Likert question in a PROGRAM_WIDE template with an active PLO from the program's catalog. Drafts may be partial (missing bindings surface as warnings), but full Likert coverage is enforced at publication; the binding snapshots the PLO code, description, and question prompt.
+Associates a Likert question in a PROGRAM_WIDE template with an active PLO from the program's catalog; one question may carry several PLOs. Drafts may be partial, and publication does not require full Likert coverage: a Likert question with no binding publishes as a general evaluation item and produces no PLO evidence. Publication rejects bindings that no longer match the template structure and bindings whose PLO is archived or outside the program, and it snapshots the bound PLO code, description, and question prompt.
 _Avoid_: PLO mapping, outcome link

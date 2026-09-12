@@ -1122,7 +1122,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText("PLO Binding")).toBeInTheDocument();
     expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
     expect(
-      screen.getByText(/must be bound to at least one PLO before publishing/i)
+      screen.getByText(/publishes as a general evaluation item and gives no PLO evidence/i)
     ).toBeInTheDocument();
 
     // The trigger button is labelled by the "PLO Binding" label
@@ -1138,7 +1138,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText("PLO-1")).toBeInTheDocument();
     expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
     expect(
-      screen.queryByText(/must be bound to at least one PLO before publishing/i)
+      screen.queryByText(/publishes as a general evaluation item and gives no PLO evidence/i)
     ).not.toBeInTheDocument();
 
     // Save payload carries the binding keyed to the likert question

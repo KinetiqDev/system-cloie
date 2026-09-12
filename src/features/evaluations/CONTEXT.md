@@ -13,7 +13,7 @@ A per-class deployment bound to exactly one Course Assignment and offered to tha
 _Avoid_: Class evaluation when the Central Deployment distinction matters
 
 **Central deployment**:
-A program-wide deployment bound to a term instance, the owning program, and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by major and year level; year level is required when targeting students. Publishing snapshots each bound PLO's code, description, and question prompt into `CentralDeploymentPloSnapshot` rows.
+A program-wide deployment bound to a term instance, the owning program, and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by major and year level; year level is required when targeting students. Publishing snapshots each bound PLO's code, description, and question prompt into `CentralDeploymentPloSnapshot` rows; a Likert question with no PLO question binding writes no snapshot row and publishes as a general evaluation item.
 _Avoid_: Program-wide evaluation when stakeholder targeting matters
 
 ## Lifecycle and gating

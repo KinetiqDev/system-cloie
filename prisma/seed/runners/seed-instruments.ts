@@ -50,9 +50,13 @@ export async function seedInstruments(
   await upsertProgramPublicationTemplate({
     code: "BSIT_ALUMNI_EVAL",
     name: "BSIT Alumni Evaluation Tool",
-    description: "BSIT-owned Alumni evaluation tool with Program Learning Outcome bindings.",
+    description:
+      "BSIT-owned Alumni evaluation tool with Program Learning Outcome bindings; the general satisfaction item is deliberately left unbound.",
     programId: bsitProgram.id,
     structure: alumniEvalStructure,
+    // A general item that measures no PLO: it publishes as a general
+    // evaluation item instead of blocking publication (ADR 0025).
+    unboundItemKeys: ["overall-assessment-1"],
   });
   await upsertProgramPublicationTemplate({
     code: "BSIT_INDUSTRY_EVAL",
@@ -70,6 +74,8 @@ async function upsertProgramPublicationTemplate(input: {
   description: string;
   programId: string;
   structure: TemplateStructure;
+  /** Likert items left without a PLO binding (general evaluation items). */
+  unboundItemKeys?: readonly string[];
 }) {
   const structureJson = input.structure as unknown as Prisma.InputJsonValue;
   const template = await prisma.instrumentTemplate.upsert({
@@ -108,7 +114,10 @@ async function upsertProgramPublicationTemplate(input: {
     orderBy: { code: "asc" },
     select: { id: true, code: true, description: true },
   });
-  const questions = listTemplateLikertQuestions(input.structure);
+  const unboundItemKeys = new Set(input.unboundItemKeys ?? []);
+  const questions = listTemplateLikertQuestions(input.structure).filter(
+    (question) => !unboundItemKeys.has(question.itemKey)
+  );
   await prisma.instrumentTemplatePloQuestionBinding.deleteMany({
     where: { template_id: template.id },
   });

@@ -2,6 +2,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { StudentSection, YearLevel } from "@prisma/client";
 import { prisma } from "../../src/lib/db/prisma";
+import {
+  listTemplateLikertQuestions,
+  type TemplateStructure,
+} from "../../src/features/instruments/types";
 import { E2E_CONTRACT, type FixtureData } from "./contract";
 
 export const FIXTURE_DATA_PATH = join(__dirname, "..", ".fixture-data.json");
@@ -176,6 +180,99 @@ async function verifyPublicationFixture(): Promise<{
       programCode: target.programCode,
     },
   };
+}
+
+/**
+ * Relaxed PLO binding gate fixtures (issue #625, ADR 0025): the BSIT-owned
+ * alumni tool carries exactly one unbound Likert question, and the
+ * institutional exit-survey baseline carries none at all. The publish
+ * journeys assert that the publish step names those questions.
+ */
+async function verifyPloBindingGateFixtures(): Promise<void> {
+  const contract = E2E_CONTRACT;
+
+  const partial = await prisma.instrumentTemplate.findUnique({
+    where: { code: contract.programWidePartialMapping.templateCode },
+    select: {
+      id: true,
+      name: true,
+      is_active: true,
+      template_type: true,
+      program: { select: { code: true } },
+      structure: true,
+    },
+  });
+  assertContract(
+    partial?.name === contract.programWidePartialMapping.templateName,
+    `PLO binding gate fixture name drift: expected "${contract.programWidePartialMapping.templateName}", got "${partial?.name}"`
+  );
+  assertContract(
+    partial?.is_active === true &&
+      partial.template_type === "PROGRAM_WIDE" &&
+      partial.program?.code === "BSIT",
+    `"${contract.programWidePartialMapping.templateName}" must be an active PROGRAM_WIDE BSIT template`
+  );
+
+  const likertQuestions = listTemplateLikertQuestions(
+    partial!.structure as unknown as TemplateStructure
+  );
+  assertContract(
+    likertQuestions.length === contract.programWidePartialMapping.likertCount,
+    `PLO binding gate fixture Likert count drift: expected ${contract.programWidePartialMapping.likertCount}, got ${likertQuestions.length}`
+  );
+  const bindings = await prisma.instrumentTemplatePloQuestionBinding.findMany({
+    where: { template_id: partial!.id },
+    select: { section_key: true, item_key: true },
+  });
+  assertContract(
+    bindings.length === contract.programWidePartialMapping.boundQuestionCount,
+    `PLO binding gate fixture binding drift: expected ${contract.programWidePartialMapping.boundQuestionCount}, got ${bindings.length}`
+  );
+  const unbound = likertQuestions.filter(
+    (question) =>
+      !bindings.some(
+        (binding) =>
+          binding.section_key === question.sectionKey && binding.item_key === question.itemKey
+      )
+  );
+  assertContract(
+    unbound.length === 1 && unbound[0]!.prompt === contract.programWidePartialMapping.unboundPrompt,
+    `PLO binding gate fixture must leave exactly "${contract.programWidePartialMapping.unboundPrompt}" unbound, got ${unbound.length} unbound question(s)`
+  );
+
+  const baseline = await prisma.instrumentTemplate.findUnique({
+    where: { code: contract.programWideUnboundBaseline.templateCode },
+    select: {
+      id: true,
+      name: true,
+      is_active: true,
+      template_type: true,
+      program_id: true,
+      structure: true,
+    },
+  });
+  assertContract(
+    baseline !== null &&
+      baseline.name === contract.programWideUnboundBaseline.templateName &&
+      baseline.is_active &&
+      baseline.template_type === "PROGRAM_WIDE" &&
+      baseline.program_id === null,
+    `"${contract.programWideUnboundBaseline.templateName}" must be an active institution-owned PROGRAM_WIDE baseline`
+  );
+  const baselineLikertQuestions = listTemplateLikertQuestions(
+    baseline!.structure as unknown as TemplateStructure
+  );
+  assertContract(
+    baselineLikertQuestions.length === contract.programWideUnboundBaseline.likertCount,
+    `Unbound baseline Likert count drift: expected ${contract.programWideUnboundBaseline.likertCount}, got ${baselineLikertQuestions.length}`
+  );
+  const baselineBindings = await prisma.instrumentTemplatePloQuestionBinding.count({
+    where: { template_id: baseline!.id },
+  });
+  assertContract(
+    baselineBindings === 0,
+    `"${contract.programWideUnboundBaseline.templateName}" must carry no PLO bindings, got ${baselineBindings}`
+  );
 }
 
 async function verifyIdentities(): Promise<void> {
@@ -533,6 +630,7 @@ export default async function globalSetup(): Promise<void> {
   const ploId = await verifyPloEvidenceLink(bsit.id);
   const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
   const { publicationTemplate, publicationTarget } = await verifyPublicationFixture();
+  await verifyPloBindingGateFixtures();
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -643,6 +741,8 @@ export default async function globalSetup(): Promise<void> {
     publicationTarget,
     publicationDeploymentName: contract.publicationDeploymentName,
     publicationStudents: contract.publicationStudents.map((student) => ({ ...student })),
+    programWidePartialMapping: { ...contract.programWidePartialMapping },
+    programWideUnboundBaseline: { ...contract.programWideUnboundBaseline },
   };
 
   mkdirSync(join(__dirname, ".."), { recursive: true });

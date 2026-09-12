@@ -20,7 +20,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import { CentralPloBindingChecklist } from "./central-plo-binding-checklist";
 import type {
+  CentralPublishReadiness,
   PreviewCentralDeploymentInput,
   PreviewCentralDeploymentRespondent,
   PreviewCentralDeploymentResult,
@@ -45,6 +47,10 @@ interface PublishCentralDeploymentFormProps {
   preselectedTemplateId?: string;
   termInstances: TermInstanceItem[];
   activeTermId?: string;
+  /** Server-prepared PLO binding coverage per selectable template. */
+  readinessByTemplateId: Record<string, CentralPublishReadiness>;
+  /** Set when coverage could not be prepared; the checklist is then hidden. */
+  readinessError?: string | null;
   previewAction: (
     payload: PreviewCentralDeploymentInput
   ) => Promise<PreviewCentralDeploymentResult>;
@@ -70,6 +76,8 @@ export function PublishCentralDeploymentForm({
   preselectedTemplateId,
   termInstances,
   activeTermId,
+  readinessByTemplateId,
+  readinessError,
   previewAction,
   publishAction,
 }: PublishCentralDeploymentFormProps) {
@@ -92,6 +100,7 @@ export function PublishCentralDeploymentForm({
   const [excludedRespondentIds, setExcludedRespondentIds] = useState<string[]>([]);
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId);
+  const selectedReadiness = readinessByTemplateId[selectedTemplateId];
 
   const showYearLevel = targetStakeholder === "STUDENT";
   const showMajor = majors.length > 0;
@@ -271,6 +280,20 @@ export function PublishCentralDeploymentForm({
             )}
           </FieldContent>
         </Field>
+
+        {readinessError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{readinessError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {selectedReadiness ? (
+          <CentralPloBindingChecklist
+            instanceKey="configure"
+            programId={programId}
+            readiness={selectedReadiness}
+          />
+        ) : null}
 
         {/* Two-column grid */}
         <div className="grid gap-6 md:grid-cols-2">
@@ -570,6 +593,14 @@ export function PublishCentralDeploymentForm({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {selectedReadiness ? (
+            <CentralPloBindingChecklist
+              instanceKey="preview"
+              programId={programId}
+              readiness={selectedReadiness}
+            />
+          ) : null}
 
           <div className="flex items-center gap-3">
             <Button

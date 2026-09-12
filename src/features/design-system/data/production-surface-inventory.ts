@@ -2687,6 +2687,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/evaluations/components/central-plo-binding-checklist.tsx",
+    disposition: "task",
+    taskId: 21,
+    category: "feature_component",
+  },
+  {
     path: "src/features/evaluations/components/close-evaluation-dialog.tsx",
     disposition: "task",
     taskId: 22,

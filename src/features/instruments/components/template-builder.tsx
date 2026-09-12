@@ -2081,8 +2081,8 @@ function QuestionCard({
               />
               {selectedPloIds.length === 0 && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  Not bound to a PLO yet. Drafts save without bindings, but this Likert question
-                  must be bound to at least one PLO before publishing.
+                  No PLO assigned yet. This Likert question publishes as a general evaluation item
+                  and gives no PLO evidence.
                 </p>
               )}
             </div>
