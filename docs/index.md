@@ -19,7 +19,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 26 files numbered 0001–0025 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0006 is amended by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — 28 files numbered 0001–0027 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0006 is amended by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 
