@@ -142,12 +142,54 @@ async function verifyPublicationFixture(): Promise<{
     template?.is_active === true && template.bound_course?.code === "GESTECH",
     `Faculty publication template must be active and bound to GESTECH`
   );
-  const bindingCount = await prisma.instrumentTemplateCiloQuestionBinding.count({
+  // One CILO may evidence several Likert questions (issue #626), so the binding
+  // count exceeds the CILO count: the invariants are full CILO coverage, at most
+  // one CILO per question, and the pinned reused pair.
+  const templateBindings = await prisma.instrumentTemplateCiloQuestionBinding.findMany({
     where: { template_id: template!.id },
+    select: { cilo_id: true, section_key: true, item_key: true, question_prompt_snapshot: true },
   });
   assertContract(
-    bindingCount === contract.facultyPublicationTemplate.ciloCount,
-    `Faculty publication template binding drift: expected ${contract.facultyPublicationTemplate.ciloCount} CILO bindings, got ${bindingCount}`
+    templateBindings.length === contract.facultyPublicationTemplate.questionBindingCount,
+    `Faculty publication template binding drift: expected ${contract.facultyPublicationTemplate.questionBindingCount} CILO question bindings, got ${templateBindings.length}`
+  );
+  const boundQuestionKeys = new Set(
+    templateBindings.map((binding) => `${binding.section_key}:${binding.item_key}`)
+  );
+  assertContract(
+    boundQuestionKeys.size === templateBindings.length,
+    `Faculty publication template binds a question to more than one CILO: ${templateBindings.length} bindings over ${boundQuestionKeys.size} question(s)`
+  );
+  const coveredCiloIds = new Set(templateBindings.flatMap((binding) => binding.cilo_id ?? []));
+  assertContract(
+    coveredCiloIds.size === contract.facultyPublicationTemplate.ciloCount,
+    `Faculty publication template CILO drift: expected ${contract.facultyPublicationTemplate.ciloCount} covered CILOs, got ${coveredCiloIds.size}`
+  );
+  const gestechCilos = await prisma.cILO.findMany({
+    where: { course: { code: "GESTECH" }, is_active: true },
+    select: { id: true },
+  });
+  assertContract(
+    gestechCilos.length === contract.facultyPublicationTemplate.ciloCount &&
+      gestechCilos.every((cilo) => coveredCiloIds.has(cilo.id)),
+    `Faculty publication template must bind every active GESTECH CILO; covered ${coveredCiloIds.size} of ${gestechCilos.length}`
+  );
+  const reusedBinding = templateBindings.find(
+    (binding) =>
+      binding.section_key === contract.facultyPublicationTemplate.reusedCiloQuestions.sectionKey &&
+      binding.item_key === contract.facultyPublicationTemplate.reusedCiloQuestions.itemKey
+  );
+  assertContract(
+    reusedBinding?.question_prompt_snapshot ===
+      contract.facultyPublicationTemplate.reusedCiloQuestions.prompt,
+    `Faculty publication template reused-CILO question drift: expected "${contract.facultyPublicationTemplate.reusedCiloQuestions.prompt}", got "${reusedBinding?.question_prompt_snapshot}"`
+  );
+  const firstCiloBindings = templateBindings.filter(
+    (binding) => binding.cilo_id !== null && binding.cilo_id === reusedBinding?.cilo_id
+  );
+  assertContract(
+    firstCiloBindings.length === 2,
+    `Faculty publication template must evidence one CILO with two Likert questions, got ${firstCiloBindings.length}`
   );
 
   const target = await findCourseAssignmentByDefinition(contract.publicationTarget);

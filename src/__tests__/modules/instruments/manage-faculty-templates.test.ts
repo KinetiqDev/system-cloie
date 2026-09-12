@@ -250,4 +250,79 @@ describe("manage-faculty-templates structure persistence", () => {
       ],
     });
   });
+
+  it("persists one CILO bound to two Likert questions", async () => {
+    templateFindFirstMock.mockResolvedValue({
+      id: TEMPLATE_ID,
+      code: "SOURCE_EVAL",
+      name: "Source",
+      description: null,
+      structure: REORDERED_STRUCTURE,
+      program_id: "program-1",
+      source_template_id: null,
+      faculty_owner_id: FACULTY_ID,
+      template_cilo_question_bindings: [],
+      versions: [{ id: "version-1", version_number: 1 }],
+    });
+    versionFindFirstMock.mockResolvedValue({ id: "version-1" });
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        instrumentTemplate: {
+          update: templateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
+        },
+        instrumentVersion: {
+          findFirst: versionFindFirstMock,
+          update: versionUpdateMock.mockResolvedValue({ id: "version-1" }),
+        },
+        instrumentTemplateCiloQuestionBinding: {
+          deleteMany: bindingDeleteManyMock,
+          createMany: bindingCreateManyMock,
+        },
+      })
+    );
+
+    const { saveFacultyTemplateDraft } =
+      await import("@/features/instruments/services/manage-faculty-templates");
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      cilo_question_bindings: [
+        { ciloId: "cilo-1", itemKey: "question-b", sectionKey: "section-b" },
+        { ciloId: "cilo-1", itemKey: "question-a", sectionKey: "section-a" },
+      ],
+    });
+
+    expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
+    expect(bindingCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ cilo_id: "cilo-1", item_key: "question-b" }),
+        expect.objectContaining({ cilo_id: "cilo-1", item_key: "question-a" }),
+      ],
+    });
+  });
+
+  it("rejects two CILOs bound to the same Likert question", async () => {
+    ciloFindManyMock.mockResolvedValue([
+      { id: "cilo-1", description: "Communicates clearly" },
+      { id: "cilo-2", description: "Solves problems" },
+    ]);
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({})
+    );
+
+    const { saveFacultyTemplateDraft } =
+      await import("@/features/instruments/services/manage-faculty-templates");
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      cilo_question_bindings: [
+        { ciloId: "cilo-1", itemKey: "question-b", sectionKey: "section-b" },
+        { ciloId: "cilo-2", itemKey: "question-b", sectionKey: "section-b" },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "A Likert question can only be assigned one CILO.",
+    });
+    expect(bindingCreateManyMock).not.toHaveBeenCalled();
+  });
 });

@@ -29,15 +29,24 @@ export type CourseBoundReviewSectionMetric = {
   questions: CourseBoundReviewSectionQuestion[];
 };
 
+/**
+ * One CILO's evidence on a Course-bound evaluation. A CILO may be evidenced by
+ * several Likert questions, so `mean` pools every valid rating across
+ * `questions` into one raw mean, and each question reports its own mean.
+ */
 export type CourseBoundCiloMetric = {
-  bindingId: string;
+  /** Stable group identity: the CILO, or the binding when its CILO is gone. */
+  key: string;
   ciloId: string | null;
   ciloLabel: string;
   ciloDescription: string;
-  sectionKey: string;
-  itemKey: string;
-  questionPrompt: string;
   mean: number | null;
+  questions: Array<{
+    sectionKey: string;
+    itemKey: string;
+    prompt: string;
+    mean: number | null;
+  }>;
 };
 
 export type CourseBoundReviewResponseCard = {
@@ -171,6 +180,7 @@ export type FacultyScaleDistribution = {
 };
 
 export type FacultyCiloMetric = {
+  /** Stable identity: the evaluation plus the CILO (or the lone binding). */
   key: string;
   ciloId: string | null;
   label: string;
@@ -180,7 +190,8 @@ export type FacultyCiloMetric = {
   evaluationId: string;
   evaluationName: string;
   description: string;
-  questionPrompt: string;
+  /** Every Likert question evidencing this CILO, in binding order. */
+  questions: Array<{ sectionKey: string; itemKey: string; prompt: string }>;
   scaleGroups: FacultyScaleDistribution[];
 };
 

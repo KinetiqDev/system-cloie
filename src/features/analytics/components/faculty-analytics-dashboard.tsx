@@ -1332,8 +1332,16 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
               </p>
             </div>
             <dl className="mt-3 text-sm">
-              <dt className="text-caption text-text-muted">Bound question</dt>
-              <dd className="mt-0.5 break-words">{metric.questionPrompt}</dd>
+              <dt className="text-caption text-text-muted">
+                {metric.questions.length === 1 ? "Bound question" : "Bound questions"}
+              </dt>
+              <dd className="mt-0.5 break-words">
+                <ul className="flex flex-col gap-0.5">
+                  {metric.questions.map((question) => (
+                    <li key={`${question.sectionKey}:${question.itemKey}`}>{question.prompt}</li>
+                  ))}
+                </ul>
+              </dd>
             </dl>
           </article>
         ))}
@@ -1344,7 +1352,7 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
             <TableRow>
               <TableHead className="min-w-44">Course</TableHead>
               <TableHead className="min-w-64">CILO</TableHead>
-              <TableHead className="min-w-64">Bound question</TableHead>
+              <TableHead className="min-w-64">Bound questions</TableHead>
               <TableHead className="text-right">Mean</TableHead>
               <TableHead className="text-right">Ratings</TableHead>
             </TableRow>
@@ -1364,7 +1372,11 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
                   <span className="text-text-secondary block text-sm">{metric.description}</span>
                 </TableCell>
                 <TableCell className="align-top whitespace-normal">
-                  {metric.questionPrompt}
+                  <ul className="flex flex-col gap-0.5">
+                    {metric.questions.map((question) => (
+                      <li key={`${question.sectionKey}:${question.itemKey}`}>{question.prompt}</li>
+                    ))}
+                  </ul>
                 </TableCell>
                 <TableCell className="text-right align-top tabular-nums">
                   {group.mean?.toFixed(2) ?? "—"}

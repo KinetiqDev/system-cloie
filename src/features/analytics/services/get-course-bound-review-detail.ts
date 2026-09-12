@@ -3,7 +3,8 @@ import { resolveReviewerProgramScope } from "@/features/academic-structure/servi
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
-import type { CourseBoundReviewDetail, WordCloudToken } from "../types";
+import { resolveCiloLabels } from "@/features/analytics/aggregators/cilo";
+import type { CourseBoundCiloMetric, CourseBoundReviewDetail, WordCloudToken } from "../types";
 import { qualitativeNlp, qualitativeStopWords } from "./qualitative-nlp";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import {
@@ -142,6 +143,11 @@ export async function getCourseBoundReviewDetail(
   const submittedResponses = evaluation.assignments
     .map((assignment) => assignment.response)
     .filter((response): response is NonNullable<typeof response> => Boolean(response));
+  const ciloLabels = resolveCiloLabels(evaluation.cilos_snapshot, [
+    ...new Set(
+      (evaluation.cilo_question_bindings ?? []).flatMap((binding) => binding.cilo_id ?? [])
+    ),
+  ]);
   const allQuantRatings = submittedResponses.flatMap((response) =>
     response.quant_items.map((item) => item.rating_value)
   );
@@ -188,29 +194,95 @@ export async function getCourseBoundReviewDetail(
       };
     });
 
-  const ciloMetrics = (evaluation.cilo_question_bindings ?? []).map((binding, index) => {
-    const values = submittedResponses
-      .flatMap((response) => response.quant_items)
-      .filter(
-        (entry) =>
-          entry.cilo_question_binding_id === binding.id ||
-          (!entry.cilo_question_binding_id &&
-            entry.section_key === binding.section_key &&
-            entry.item_key === binding.item_key)
-      )
-      .map((entry) => entry.rating_value);
+  // One CILO may be evidenced by several Likert questions, so bindings group by
+  // CILO and every grouped question's ratings pool into that CILO's single mean.
+  // A binding whose CILO is gone (archived, or deleted with SetNull) keeps its
+  // own group: there is no CILO left to pool it under.
+  const groupKeyByBindingId = new Map<string, string>();
+  const groupKeyByQuestionKey = new Map<string, string>();
+  const ciloGroups = new Map<
+    string,
+    {
+      ciloDescription: string;
+      ciloId: string | null;
+      questions: Map<
+        string,
+        { itemKey: string; prompt: string; sectionKey: string; values: number[] }
+      >;
+    }
+  >();
 
-    return {
-      bindingId: binding.id,
-      ciloDescription: binding.cilo_description_snapshot,
-      ciloId: binding.cilo_id,
-      ciloLabel: `CILO ${index + 1}`,
-      itemKey: binding.item_key,
-      mean: mean(values),
-      questionPrompt: binding.question_prompt_snapshot,
-      sectionKey: binding.section_key,
-    };
-  });
+  // Submitted answers resolve their binding by ID first and by question keys
+  // otherwise, because a rating may predate the binding-ID column.
+  for (const binding of evaluation.cilo_question_bindings ?? []) {
+    const groupKey = binding.cilo_id ?? `binding:${binding.id}`;
+    groupKeyByBindingId.set(binding.id, groupKey);
+
+    let group = ciloGroups.get(groupKey);
+    if (!group) {
+      group = {
+        ciloDescription: binding.cilo_description_snapshot,
+        ciloId: binding.cilo_id,
+        questions: new Map(),
+      };
+      ciloGroups.set(groupKey, group);
+    }
+
+    const questionKey = `${binding.section_key}::${binding.item_key}`;
+    groupKeyByQuestionKey.set(questionKey, groupKey);
+    if (!group.questions.has(questionKey)) {
+      group.questions.set(questionKey, {
+        itemKey: binding.item_key,
+        prompt: binding.question_prompt_snapshot,
+        sectionKey: binding.section_key,
+        values: [],
+      });
+    }
+  }
+
+  for (const entry of submittedResponses.flatMap((response) => response.quant_items)) {
+    const groupKey = entry.cilo_question_binding_id
+      ? groupKeyByBindingId.get(entry.cilo_question_binding_id)
+      : groupKeyByQuestionKey.get(`${entry.section_key}::${entry.item_key}`);
+    const question = groupKey
+      ? ciloGroups.get(groupKey)?.questions.get(`${entry.section_key}::${entry.item_key}`)
+      : undefined;
+    question?.values.push(entry.rating_value);
+  }
+
+  const ciloPublishOrder = new Map([...ciloLabels.keys()].map((id, index) => [id, index]));
+
+  const ciloMetrics: CourseBoundCiloMetric[] = [...ciloGroups.entries()]
+    .map(([key, group]) => {
+      const entries = [...group.questions.values()];
+      const questions = entries
+        .map(({ itemKey, prompt, sectionKey, values }) => ({
+          itemKey,
+          mean: mean(values),
+          prompt,
+          sectionKey,
+        }))
+        .sort(
+          (left, right) =>
+            left.sectionKey.localeCompare(right.sectionKey) ||
+            left.itemKey.localeCompare(right.itemKey)
+        );
+      return {
+        ciloDescription: group.ciloDescription,
+        ciloId: group.ciloId,
+        ciloLabel: group.ciloId ? (ciloLabels.get(group.ciloId) ?? "CILO") : "Unassigned CILO",
+        key,
+        mean: mean(entries.flatMap((question) => question.values)),
+        questions,
+      };
+    })
+    .sort((left, right) => {
+      const leftOrder = left.ciloId ? (ciloPublishOrder.get(left.ciloId) ?? 0) : Number.MAX_VALUE;
+      const rightOrder = right.ciloId
+        ? (ciloPublishOrder.get(right.ciloId) ?? 0)
+        : Number.MAX_VALUE;
+      return leftOrder - rightOrder || left.ciloLabel.localeCompare(right.ciloLabel);
+    });
 
   const responseCards = submittedResponses
     .map((response) => ({

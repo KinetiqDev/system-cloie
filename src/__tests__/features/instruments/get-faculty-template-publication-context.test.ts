@@ -139,7 +139,10 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
       ],
     });
     mocks.cilo.findMany.mockResolvedValue([
-      { id: CILO_ID, description: "Analyze interactions between science, technology, and society." },
+      {
+        id: CILO_ID,
+        description: "Analyze interactions between science, technology, and society.",
+      },
     ]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
@@ -180,6 +183,137 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error).toBe("The saved course context is no longer available.");
+    }
+  });
+
+  it("publishes when one CILO is evidenced by two Likert questions", async () => {
+    mocks.template.findFirst.mockResolvedValue(
+      template({
+        structure: [
+          {
+            key: "cilo-items",
+            title: "Course Intended Learning Outcomes Evaluation",
+            description: "Bind each saved CILO to one or more Likert items.",
+            order: 1,
+            questions: [
+              {
+                key: "cilo-attainment-1",
+                prompt: "I achieved the course intended learning outcome in class work.",
+                type: "likert",
+                order: 1,
+                required: true,
+                likertDescriptors: [
+                  { value: 1, label: "Not Achieved" },
+                  { value: 5, label: "Fully Achieved" },
+                ],
+              },
+              {
+                key: "cilo-attainment-2",
+                prompt: "I achieved the course intended learning outcome in the final output.",
+                type: "likert",
+                order: 2,
+                required: true,
+                likertDescriptors: [
+                  { value: 1, label: "Not Achieved" },
+                  { value: 5, label: "Fully Achieved" },
+                ],
+              },
+            ],
+          },
+        ],
+        template_cilo_question_bindings: [
+          {
+            id: "f1",
+            cilo_id: CILO_ID,
+            cilo_description_snapshot: "Apply capstone planning fundamentals.",
+            section_key: "cilo-items",
+            item_key: "cilo-attainment-1",
+            question_prompt_snapshot:
+              "I achieved the course intended learning outcome in class work.",
+          },
+          {
+            id: "f2",
+            cilo_id: CILO_ID,
+            cilo_description_snapshot: "Apply capstone planning fundamentals.",
+            section_key: "cilo-items",
+            item_key: "cilo-attainment-2",
+            question_prompt_snapshot:
+              "I achieved the course intended learning outcome in the final output.",
+          },
+        ],
+      })
+    );
+    mocks.course.findUnique.mockResolvedValue({
+      id: COURSE_ID,
+      course_scope: "PROGRAM_SPECIFIC",
+    });
+    mocks.contexts.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          courseCode: "ITRES1",
+          courseId: COURSE_ID,
+          courseTitle: "Capstone Project 1",
+          courseType: "PROGRAM_SPECIFIC",
+          majorId: null,
+          majorName: null,
+          programCode: "BSIT",
+          programId: PROGRAM_ID,
+          programName: "Information Technology",
+          scopeLabel: "BSIT - Program Course",
+        },
+      ],
+    });
+    mocks.cilo.findMany.mockResolvedValue([
+      { id: CILO_ID, description: "Apply capstone planning fundamentals." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.bindings.map((binding) => binding.itemKey)).toEqual([
+        "cilo-attainment-1",
+        "cilo-attainment-2",
+      ]);
+    }
+  });
+
+  it("rejects publication when an active CILO has no Likert question", async () => {
+    mocks.template.findFirst.mockResolvedValue(template());
+    mocks.course.findUnique.mockResolvedValue({
+      id: COURSE_ID,
+      course_scope: "PROGRAM_SPECIFIC",
+    });
+    mocks.contexts.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          courseCode: "ITRES1",
+          courseId: COURSE_ID,
+          courseTitle: "Capstone Project 1",
+          courseType: "PROGRAM_SPECIFIC",
+          majorId: null,
+          majorName: null,
+          programCode: "BSIT",
+          programId: PROGRAM_ID,
+          programName: "Information Technology",
+          scopeLabel: "BSIT - Program Course",
+        },
+      ],
+    });
+    mocks.cilo.findMany.mockResolvedValue([
+      { id: CILO_ID, description: "Apply capstone planning fundamentals." },
+      { id: "unbound-cilo", description: "Communicate results to stakeholders." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toBe(
+        "Every saved CILO must be assigned to at least one Likert question before publishing."
+      );
     }
   });
 });

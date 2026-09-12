@@ -148,9 +148,17 @@ export function PublishCourseBoundEvaluationFormV2({
 
   const fallbackPublishErrorMessage = "Unable to publish evaluation right now. Please try again.";
 
-  const bindingByCiloId = new Map(
-    selectedPublicationContext.bindings.map((binding) => [binding.ciloId, binding])
-  );
+  // A CILO may be evidenced by several Likert questions, so the preview groups
+  // bindings by CILO and lists every bound question.
+  const bindingsByCiloId = new Map<string, typeof selectedPublicationContext.bindings>();
+  for (const binding of selectedPublicationContext.bindings) {
+    const existing = bindingsByCiloId.get(binding.ciloId);
+    if (existing) {
+      existing.push(binding);
+    } else {
+      bindingsByCiloId.set(binding.ciloId, [binding]);
+    }
+  }
 
   // Build a lookup from sectionKey:itemKey → { sectionIndex, sectionTitle, questionIndex }
   const questionLocationMap = new Map<
@@ -412,12 +420,12 @@ export function PublishCourseBoundEvaluationFormV2({
 
             <details className="border-border rounded-lg border">
               <summary className="cursor-pointer p-4 text-sm font-medium">
-                View all {selectedPublicationContext.cilos.length} CILO{" "}
-                {selectedPublicationContext.cilos.length === 1 ? "binding" : "bindings"}
+                View all {selectedPublicationContext.bindings.length} Likert question{" "}
+                {selectedPublicationContext.bindings.length === 1 ? "binding" : "bindings"}
               </summary>
               <ol className="space-y-3 border-t p-4">
                 {selectedPublicationContext.cilos.map((cilo, index) => {
-                  const binding = bindingByCiloId.get(cilo.id);
+                  const boundQuestions = bindingsByCiloId.get(cilo.id) ?? [];
 
                   return (
                     <li key={cilo.id} className="border-border rounded-lg border p-4">
@@ -425,24 +433,31 @@ export function PublishCourseBoundEvaluationFormV2({
                         CILO {index + 1}
                       </p>
                       <p className="text-foreground mt-2 text-sm">{cilo.description}</p>
-                      {binding &&
-                        (() => {
-                          const location = questionLocationMap.get(
-                            `${binding.sectionKey}:${binding.itemKey}`
-                          );
-                          return (
-                            <div className="bg-muted mt-3 rounded-md p-3">
-                              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                {location
-                                  ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
-                                  : "Bound Likert Question"}
-                              </p>
-                              <p className="text-foreground mt-1 text-sm">
-                                {binding.questionPromptSnapshot}
-                              </p>
-                            </div>
-                          );
-                        })()}
+                      {boundQuestions.length > 0 && (
+                        <div className="bg-muted mt-3 flex flex-col gap-2 rounded-md p-3">
+                          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                            {boundQuestions.length === 1
+                              ? "Bound Likert question"
+                              : `Bound Likert questions (${boundQuestions.length})`}
+                          </p>
+                          {boundQuestions.map((binding) => {
+                            const questionKey = `${binding.sectionKey}:${binding.itemKey}`;
+                            const location = questionLocationMap.get(questionKey);
+                            return (
+                              <div key={questionKey}>
+                                <p className="text-muted-foreground text-xs">
+                                  {location
+                                    ? `Section ${location.sectionIndex}: ${location.sectionTitle} · Question ${location.questionIndex}`
+                                    : "Bound Likert Question"}
+                                </p>
+                                <p className="text-foreground text-sm">
+                                  {binding.questionPromptSnapshot}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </li>
                   );
                 })}

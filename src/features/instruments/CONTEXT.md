@@ -30,7 +30,7 @@ A COURSE_BOUND template marked usable by faculty, who copy or draft it into thei
 _Avoid_: Item type, response type
 
 **CILO question binding**:
-Associates a Likert question with a course CILO — at most one CILO per question and one question per CILO. Every active CILO of the bound course must be covered before publication; the binding snapshots the CILO description and question prompt.
+Associates a Likert question with a course CILO — at most one CILO per question, and a CILO may be evidenced by one or more questions. Every active CILO of the bound course must be covered by at least one question before publication; the binding snapshots the CILO description and question prompt, so one CILO with several questions carries several snapshot rows that all pool into that CILO's single mean.
 _Avoid_: CILO mapping, outcome link
 
 **PLO question binding**:

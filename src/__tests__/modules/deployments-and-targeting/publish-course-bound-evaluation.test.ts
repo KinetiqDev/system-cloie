@@ -581,7 +581,7 @@ describe("publishCourseBoundEvaluation", () => {
     });
     courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
     getFacultyTemplatePublicationContextMock.mockResolvedValue({
-      error: "Every saved CILO must be assigned to one Likert question before publishing.",
+      error: "Every saved CILO must be assigned to at least one Likert question before publishing.",
       success: false,
     });
 
@@ -592,7 +592,7 @@ describe("publishCourseBoundEvaluation", () => {
         templateId: "template-1",
       })
     ).resolves.toEqual({
-      error: "Every saved CILO must be assigned to one Likert question before publishing.",
+      error: "Every saved CILO must be assigned to at least one Likert question before publishing.",
       success: false,
     });
   });
@@ -1102,6 +1102,53 @@ describe("publishCourseBoundEvaluation", () => {
         data: expect.objectContaining({
           deployed_by: deanUserId,
         }),
+      });
+    });
+
+    it("publishes on-behalf when one CILO is evidenced by two Likert questions", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.DEAN,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY, ROLES.DEAN],
+        userId: "dean-user-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      // Both Likert questions evidence the same CILO: more bindings than CILOs.
+      instrumentTemplateFindFirstMock.mockResolvedValue({
+        ...MOCK_BOUND_TEMPLATE,
+        template_cilo_question_bindings: [
+          { cilo_id: "cilo-1", section_key: "outcomes", item_key: "q1" },
+          { cilo_id: "cilo-1", section_key: "outcomes", item_key: "q2" },
+        ],
+      });
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [
+            {
+              manifestation: "LEARNING",
+              plo: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+      instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+      courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+      const result = await publishCourseBoundEvaluation({
+        assignmentId: "assignment-1",
+        deploymentName: "Dean On-Behalf Evaluation",
+        templateId: "bound-template-1",
+      });
+
+      if (!result.success) throw new Error(result.error);
+      expect(bindingCreateManyMock).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ cilo_id: "cilo-1", item_key: "q1" }),
+          expect.objectContaining({ cilo_id: "cilo-1", item_key: "q2" }),
+        ],
       });
     });
 

@@ -86,11 +86,22 @@ export const E2E_CONTRACT = {
    * owned active assignment (GESTECH BSBA EVENING) whose roster carries two
    * students. The publication journey publishes through the real service and
    * then proves the roster lock and the Student's fresh browser read.
+   *
+   * The template also evidences one CILO with two Likert questions (issue
+   * #626): `ciloCount` is the number of active GESTECH CILOs the template must
+   * cover, `questionBindingCount` is its larger binding count, and
+   * `reusedCiloQuestions` names the pair that shares a CILO.
    */
   facultyPublicationTemplate: {
     code: "FAC_GESTECH",
     name: "GESTECH Faculty CILO Evaluation",
     ciloCount: 3,
+    questionBindingCount: 4,
+    reusedCiloQuestions: {
+      sectionKey: "overall-attainment",
+      itemKey: "overall-attainment-2",
+      prompt: "I achieved the first course intended learning outcome in applied work.",
+    },
   },
   publicationTarget: {
     courseCode: "GESTECH",

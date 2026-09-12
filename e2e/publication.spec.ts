@@ -49,6 +49,25 @@ test("Faculty publishes an owned Course-bound evaluation; roster stays open; Stu
   });
   await expect(page.getByText(fx.publicationTemplate.name, { exact: true })).toBeVisible();
 
+  // Issue #626: one CILO is evidenced by two Likert questions, so the preview
+  // groups that CILO's questions instead of naming one per CILO.
+  const reusedCilo = E2E_CONTRACT.facultyPublicationTemplate.reusedCiloQuestions;
+  await page
+    .getByText(
+      `View all ${E2E_CONTRACT.facultyPublicationTemplate.questionBindingCount} Likert question bindings`
+    )
+    .click();
+  const reusedCiloBlock = page.locator("li").filter({
+    has: page.getByText("I achieved the first course intended learning outcome.", { exact: true }),
+  });
+  await expect(reusedCiloBlock.getByText("Bound Likert questions (2)")).toBeVisible();
+  await expect(reusedCiloBlock.getByText(reusedCilo.prompt, { exact: true })).toBeVisible();
+  await expect(
+    reusedCiloBlock.getByText("I achieved the first course intended learning outcome.", {
+      exact: true,
+    })
+  ).toBeVisible();
+
   // Configure: name the deployment and select the owned active assignment.
   await page.getByLabel("Deployed Evaluation Name").fill(fx.publicationDeploymentName);
   await page.getByLabel("Class Assignment").click();

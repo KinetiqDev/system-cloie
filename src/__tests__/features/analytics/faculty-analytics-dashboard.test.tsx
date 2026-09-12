@@ -127,7 +127,13 @@ describe("FacultyAnalyticsDashboard", () => {
           evaluationName: "Capstone exit evaluation",
           label: "CILO 1",
           description: "Defend the proposed capstone scope and methodology.",
-          questionPrompt: "I achieved the first course intended learning outcome.",
+          questions: [
+            {
+              sectionKey: "cilo-items",
+              itemKey: "cilo-attainment-1",
+              prompt: "I achieved the first course intended learning outcome.",
+            },
+          ],
           scaleGroups: [scaleGroup],
         },
         {
@@ -141,7 +147,13 @@ describe("FacultyAnalyticsDashboard", () => {
           label: "CILO 1",
           description:
             "Implement fundamental data structures (arrays, linked lists, trees, graphs) in a programming language.",
-          questionPrompt: "I achieved the first course intended learning outcome.",
+          questions: [
+            {
+              sectionKey: "cilo-items",
+              itemKey: "cilo-attainment-1",
+              prompt: "I achieved the first course intended learning outcome.",
+            },
+          ],
           scaleGroups: [{ ...scaleGroup, scaleKey: "scale-2" }],
         },
       ],

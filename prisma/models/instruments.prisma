@@ -66,7 +66,9 @@ model InstrumentTemplateCiloQuestionBinding {
   template InstrumentTemplate @relation(fields: [template_id], references: [id], onDelete: Cascade)
   cilo     CILO?              @relation(fields: [cilo_id], references: [id], onDelete: SetNull)
 
-  @@unique([template_id, cilo_id], map: "itcqb_template_cilo_key")
+  // One CILO may evidence several questions; a question still carries at most
+  // one CILO.
+  @@unique([template_id, cilo_id, section_key, item_key], map: "itcqb_template_cilo_key")
   @@unique([template_id, section_key, item_key], map: "itcqb_template_question_key")
   @@map("instrument_template_cilo_question_bindings")
 }

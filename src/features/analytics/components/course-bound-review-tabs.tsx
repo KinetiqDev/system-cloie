@@ -85,8 +85,8 @@ export function CourseBoundReviewTabs({ detail, responseBasePath }: CourseBoundR
             ) : (
               ciloMetrics.map((metric) => (
                 <div
-                  key={metric.bindingId}
-                  className="border-border grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem]"
+                  key={metric.key}
+                  className="border-border grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_6rem]"
                 >
                   <div>
                     <p className="text-text-muted text-xs font-semibold tracking-wide uppercase">
@@ -96,9 +96,21 @@ export function CourseBoundReviewTabs({ detail, responseBasePath }: CourseBoundR
                   </div>
                   <div>
                     <p className="text-text-muted text-xs font-semibold tracking-wide uppercase">
-                      Bound Question
+                      {metric.questions.length === 1
+                        ? "Bound question"
+                        : `Bound questions (${metric.questions.length})`}
                     </p>
-                    <p className="text-text text-sm">{metric.questionPrompt}</p>
+                    <ul className="text-text mt-1 flex flex-col gap-1 text-sm">
+                      {metric.questions.map((question) => (
+                        <li key={`${question.sectionKey}:${question.itemKey}`}>
+                          {question.prompt}
+                          <span className="text-text-muted tabular-nums">
+                            {" "}
+                            · {formatMean(question.mean)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                   <div>
                     <p className="text-text-muted text-xs font-semibold tracking-wide uppercase">

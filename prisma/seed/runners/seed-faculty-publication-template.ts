@@ -2,12 +2,12 @@ import { EvaluationTemplateType, Prisma } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
 import { U } from "../constants/ids";
 import { ciloEvalStructure } from "../fixtures/instruments";
-import type { FoundationContext } from "../types";
+import type { FoundationContext, TemplateStructure } from "../types";
 
 /**
  * Publication-slice fixture (issue #546): a faculty-owned Course-bound
  * template for the demo Faculty bound to GESTECH, with every GESTECH CILO
- * assigned to one Likert question and an active frozen version. The Faculty
+ * assigned to a Likert question and an active frozen version. The Faculty
  * publish journey (`/faculty/tools` → `/faculty/cilo-evaluations/new`) can
  * only publish through a template owned by the signed-in Faculty member
  * (`getFacultyTemplatePublicationContext` requires `faculty_owner_id`), and
@@ -15,12 +15,46 @@ import type { FoundationContext } from "../types";
  * course whose active CILOs carry active Institutional Outcome alignments,
  * so the typed publication alignment gate passes for it.
  *
+ * One CILO is evidenced by two Likert questions (issue #626), so the fixture
+ * exercises the real one-to-many publication path: the extra question sits in
+ * the second section, which no wizard or visual-baseline shot renders first,
+ * and the reused CILO's pair is pinned in `e2e/support/contract.ts`.
+ *
  * The template is discovered in the e2e global setup by its deterministic
  * code; its id is a runtime navigation handle, not an identifier under test.
  */
 
 const FACULTY_TEMPLATE_CODE = "FAC_GESTECH";
 const EXPECTED_GESTECH_CILO_COUNT = 3;
+
+/** The second Likert question evidencing the first GESTECH CILO. */
+const REUSED_CILO_SECTION_KEY = "overall-attainment";
+const REUSED_CILO_ITEM_KEY = "overall-attainment-2";
+const REUSED_CILO_PROMPT = "I achieved the first course intended learning outcome in applied work.";
+
+/**
+ * The CILO_EVAL structure plus one Likert question that re-evidences the first
+ * CILO. Kept local to this fixture so the shared institutional structure, and
+ * every deployment snapshotted from it, is unchanged.
+ */
+const facultyPublicationStructure: TemplateStructure = ciloEvalStructure.map((section) =>
+  section.key === REUSED_CILO_SECTION_KEY
+    ? {
+        ...section,
+        questions: [
+          ...section.questions,
+          {
+            key: REUSED_CILO_ITEM_KEY,
+            prompt: REUSED_CILO_PROMPT,
+            type: "likert",
+            order: section.questions.length + 1,
+            required: true,
+            likertDescriptors: [...section.questions[0]!.likertDescriptors!],
+          },
+        ],
+      }
+    : section
+);
 
 async function resolveGestechCilos(courseId: string) {
   const cilos = await prisma.cILO.findMany({
@@ -37,7 +71,7 @@ async function resolveGestechCilos(courseId: string) {
 }
 
 async function upsertFacultyTemplate(courseId: string): Promise<{ id: string }> {
-  const structureJson = ciloEvalStructure as unknown as Prisma.InputJsonValue;
+  const structureJson = facultyPublicationStructure as unknown as Prisma.InputJsonValue;
   return prisma.instrumentTemplate.upsert({
     where: { code: FACULTY_TEMPLATE_CODE },
     update: {
@@ -69,7 +103,7 @@ async function upsertFacultyTemplate(courseId: string): Promise<{ id: string }> 
 }
 
 async function upsertFacultyTemplateVersion(templateId: string): Promise<void> {
-  const structureJson = ciloEvalStructure as unknown as Prisma.InputJsonValue;
+  const structureJson = facultyPublicationStructure as unknown as Prisma.InputJsonValue;
   await prisma.instrumentVersion.upsert({
     where: { template_id_version_number: { template_id: templateId, version_number: 1 } },
     update: { is_active: true, structure_snapshot: structureJson },
@@ -86,34 +120,51 @@ async function bindGestechCilos(
   templateId: string,
   cilos: Array<{ id: string; description: string }>
 ): Promise<void> {
-  // Bind each GESTECH CILO to its Likert question, mirroring the CILO_EVAL
-  // structure used by every seeded Course-bound deployment.
-  for (const [index, cilo] of cilos.entries()) {
-    const itemKey = `cilo-attainment-${index + 1}`;
-    const prompt =
+  // Each GESTECH CILO is bound to its `cilo-items` Likert question, and the
+  // first CILO is also bound to the extra `overall-attainment` question, so the
+  // fixture carries more bindings than CILOs (issue #626).
+  const bindings: Array<{
+    sectionKey: string;
+    itemKey: string;
+    prompt: string;
+    ciloIndex: number;
+  }> = cilos.map((_cilo, index) => ({
+    sectionKey: "cilo-items",
+    itemKey: `cilo-attainment-${index + 1}`,
+    prompt:
       index === 0
         ? "I achieved the first course intended learning outcome."
         : index === 1
           ? "I achieved the second course intended learning outcome."
-          : "I achieved the third course intended learning outcome.";
+          : "I achieved the third course intended learning outcome.",
+    ciloIndex: index,
+  }));
+  bindings.push({
+    sectionKey: REUSED_CILO_SECTION_KEY,
+    itemKey: REUSED_CILO_ITEM_KEY,
+    prompt: REUSED_CILO_PROMPT,
+    ciloIndex: 0,
+  });
+
+  for (const binding of bindings) {
+    const cilo = cilos[binding.ciloIndex]!;
+    const data = {
+      cilo_id: cilo.id,
+      cilo_description_snapshot: cilo.description,
+      section_key: binding.sectionKey,
+      item_key: binding.itemKey,
+      question_prompt_snapshot: binding.prompt,
+    };
     await prisma.instrumentTemplateCiloQuestionBinding.upsert({
       where: {
-        template_id_cilo_id: { template_id: templateId, cilo_id: cilo.id },
+        template_id_section_key_item_key: {
+          template_id: templateId,
+          section_key: binding.sectionKey,
+          item_key: binding.itemKey,
+        },
       },
-      update: {
-        cilo_description_snapshot: cilo.description,
-        section_key: "cilo-items",
-        item_key: itemKey,
-        question_prompt_snapshot: prompt,
-      },
-      create: {
-        template_id: templateId,
-        cilo_id: cilo.id,
-        cilo_description_snapshot: cilo.description,
-        section_key: "cilo-items",
-        item_key: itemKey,
-        question_prompt_snapshot: prompt,
-      },
+      update: data,
+      create: { ...data, template_id: templateId },
     });
   }
 }
