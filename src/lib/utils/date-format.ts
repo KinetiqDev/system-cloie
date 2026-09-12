@@ -6,6 +6,15 @@ import {
 } from "@/lib/constants/academic-period";
 
 /**
+ * Timestamps in System CLOIE are academic records (assigned, submitted,
+ * activated, deadline). They render in the institution's time zone so that the
+ * server HTML and the hydrated client agree regardless of the viewer's device
+ * time zone, and so a recorded moment always reads in College time rather than
+ * the reader's.
+ */
+export const INSTITUTION_TIME_ZONE = "Asia/Manila";
+
+/**
  * Format a single date as a readable string.
  * Example: "Mar 18, 2025"
  */
@@ -14,6 +23,19 @@ export function formatDate(date: Date): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: INSTITUTION_TIME_ZONE,
+  }).format(date);
+}
+
+/**
+ * Format a date with its time as a readable string.
+ * Example: "Mar 18, 2025, 8:30 AM"
+ */
+export function formatDateTime(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: INSTITUTION_TIME_ZONE,
   }).format(date);
 }
 
@@ -23,16 +45,17 @@ export function formatDate(date: Date): string {
  */
 export function formatDateRange(startDate: Date | null, endDate: Date | null): string {
   if (!startDate && !endDate) return "No dates set";
-  
+
   const formatter = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: INSTITUTION_TIME_ZONE,
   });
-  
+
   const start = startDate ? formatter.format(startDate) : "?";
   const end = endDate ? formatter.format(endDate) : "?";
-  
+
   return `${start} – ${end}`;
 }
 

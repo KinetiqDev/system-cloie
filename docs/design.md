@@ -343,6 +343,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 - Use semantic header, hover, selected, and expanded states.
 - Contain wide tables in `overflow-x-auto`.
+- Cells that carry free text wrap (`whitespace-normal`) rather than forcing the table wider than its container; a required row control (for example a "View Response" link) must stay fully visible inside the container at every supported width, never clipped behind the table's own scroll.
 - Use `aria-sort`; keyboard-enable clickable rows.
 - Status badges require text.
 - Avoid zebra striping unless clearly needed.

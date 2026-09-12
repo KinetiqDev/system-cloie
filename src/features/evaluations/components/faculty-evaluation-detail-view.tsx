@@ -17,19 +17,9 @@ import { getStatusVariant } from "./evaluation-status";
 import { FacultyEvaluationRespondents } from "./faculty-evaluation-respondents";
 import { LateIncludeDialog } from "./late-include-dialog";
 import { getExclusionCategoryLabel, getReversalCategoryLabel } from "../exclusion-categories";
+import { formatDate } from "@/lib/utils/date-format";
 import { lateIncludeCourseBoundEvaluationAction } from "@/lib/actions/course-bound-evaluation-actions";
 import type { FacultyEvaluationDetail } from "../types";
-
-function formatDate(date: Date | string | null): string {
-  if (!date) return "—";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function getScopeLabel(scope: string): string {
   if (!scope) return "—";
@@ -134,7 +124,9 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Published</span>
-              <span className="font-medium tabular-nums">{formatDate(safeDetail.publishedAt)}</span>
+              <span className="font-medium tabular-nums">
+                {safeDetail.publishedAt ? formatDate(safeDetail.publishedAt) : "—"}
+              </span>
             </div>
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Available from</span>
@@ -428,7 +420,9 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                       {exclusion.membershipActive ? "Roster active" : "Roster inactive"}
                     </Badge>
                     {exclusion.reversedAt ? (
-                      <Badge variant="secondary">Reversed {formatDate(exclusion.reversedAt)}</Badge>
+                      <Badge variant="secondary">
+                        Reversed {exclusion.reversedAt ? formatDate(exclusion.reversedAt) : "—"}
+                      </Badge>
                     ) : (
                       <Badge variant="outline">Active exclusion</Badge>
                     )}

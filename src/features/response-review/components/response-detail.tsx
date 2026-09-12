@@ -9,11 +9,7 @@ import {
 } from "@/features/analytics/services/program-head-analytics-state";
 import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
-
-const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+import { formatDateTime } from "@/lib/utils/date-format";
 
 type ResponseDetailProps = {
   response: ProgramHeadSubmittedResponseDetail;
@@ -67,7 +63,7 @@ export function ResponseDetail({
           <CardDescription>Evaluation context and submitted response summary.</CardDescription>
         </CardHeader>
         <CardContent className="text-body-sm grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ContextFact label="Submitted" value={dateTimeFormatter.format(response.submittedAt)} />
+          <ContextFact label="Submitted" value={formatDateTime(response.submittedAt)} />
           <ContextFact
             label="Response Quantitative Mean"
             value={formatMean(response.quantitativeMean)}

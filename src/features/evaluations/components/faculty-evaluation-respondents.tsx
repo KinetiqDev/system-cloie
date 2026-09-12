@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 import type { FacultyEvaluationRespondent, FacultyEvaluationRespondentStatus } from "../types";
 
 type Props = {
@@ -58,30 +59,6 @@ function statusVariant(
     default:
       return "secondary";
   }
-}
-
-function formatDate(value: Date | string | null): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(value: Date | string | null): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 export function FacultyEvaluationRespondents({ respondents }: Props) {
@@ -227,7 +204,7 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
                         {formatDate(row.assignedAt)}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs tabular-nums">
-                        {formatDateTime(row.submittedAt)}
+                        {row.submittedAt ? formatDateTime(row.submittedAt) : "—"}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -258,7 +235,9 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
                     </div>
                     <div>
                       <span className="font-medium">Submitted: </span>
-                      <span className="tabular-nums">{formatDateTime(row.submittedAt)}</span>
+                      <span className="tabular-nums">
+                        {row.submittedAt ? formatDateTime(row.submittedAt) : "—"}
+                      </span>
                     </div>
                   </div>
                 </div>

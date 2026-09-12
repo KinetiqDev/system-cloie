@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
 import { getStatusVariant } from "./evaluation-status";
+import { formatDate } from "@/lib/utils/date-format";
 
 // ---------------------------------------------------------------------------
 // View DTO
@@ -93,15 +94,6 @@ function useMobileCollectionLayout(): boolean {
   };
 
   return useSyncExternalStore(subscribe, getSnapshot, () => false);
-}
-
-function formatDate(date: Date | null): string {
-  if (!date) return "--";
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function statusLabel(status: DeploymentStatus): string {
@@ -368,7 +360,9 @@ function PublishedCard({
         <ResponsesSummary responseCount={item.responseCount} totalCount={item.totalCount} />
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground text-xs">Published</span>
-          <span className="text-sm tabular-nums">{formatDate(item.publishedDate)}</span>
+          <span className="text-sm tabular-nums">
+            {item.publishedDate ? formatDate(item.publishedDate) : "--"}
+          </span>
         </div>
       </CardContent>
       <CardFooter className="mt-auto justify-end">
@@ -517,7 +511,7 @@ function PublishedRow({
           <ResponsesSummary responseCount={item.responseCount} totalCount={item.totalCount} />
         </TableCell>
         <TableCell className="text-muted-foreground text-sm tabular-nums">
-          {formatDate(item.publishedDate)}
+          {item.publishedDate ? formatDate(item.publishedDate) : "--"}
         </TableCell>
         <TableCell className="p-2">
           <div className="flex justify-end">

@@ -1,4 +1,5 @@
 import type { SubmittedResponseSection } from "@/features/responses/services/get-student-submitted-response-review";
+import { formatDateTime } from "@/lib/utils/date-format";
 
 interface SubmittedResponseReviewProps {
   evaluationTitle: string;
@@ -15,16 +16,6 @@ export function SubmittedResponseReview({
   submittedAt,
   sections,
 }: SubmittedResponseReviewProps) {
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in space-y-8 motion-safe:duration-500">
       <div>
@@ -32,7 +23,7 @@ export function SubmittedResponseReview({
         <p className="text-foreground text-sm">
           {courseTitle ? `${courseTitle} • ${programLabel}` : programLabel}
         </p>
-        <p className="text-foreground mt-1 text-xs">Submitted on {formatDate(submittedAt)}</p>
+        <p className="text-foreground mt-1 text-xs">Submitted on {formatDateTime(submittedAt)}</p>
       </div>
 
       {sections.map((section) => (

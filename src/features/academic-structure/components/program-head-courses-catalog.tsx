@@ -77,6 +77,7 @@ import type {
 import { showToast } from "@/components/ui/toast";
 import { CourseImportDialog } from "./course-import-dialog";
 import { useTableSelection } from "@/hooks/use-table-selection";
+import { formatDate } from "@/lib/utils/date-format";
 
 type ProgramHeadCoursesCatalogProps = {
   program: { id: string; code: string; name: string };
@@ -86,14 +87,6 @@ type ProgramHeadCoursesCatalogProps = {
 };
 
 type CourseFormMode = "create" | "edit";
-
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function filterCourses(
   courses: ProgramHeadCourseItem[],

@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
+import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils";
 import { formatMean } from "./format";
 import type { ProgramHeadAssignmentRespondentRow, ProgramHeadRespondentRow } from "../types";
@@ -31,11 +32,6 @@ import type { ProgramHeadAssignmentRespondentRow, ProgramHeadRespondentRow } fro
 type StatusFilter = "ALL" | ProgramHeadAssignmentRespondentRow["status"];
 
 const STATUS_FILTERS: StatusFilter[] = ["ALL", "SUBMITTED", "IN_PROGRESS", "NOT_STARTED"];
-const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
-const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 
 function statusLabel(status: ProgramHeadAssignmentRespondentRow["status"]): string {
   if (status === "IN_PROGRESS") return "In Progress";
@@ -208,18 +204,18 @@ export function IdentifiedRespondentsTable({
                 <TableBody>
                   {filtered.map((row) => (
                     <TableRow key={row.assignmentId} data-testid="respondent-row">
-                      <TableCell className="font-semibold">{row.name}</TableCell>
+                      <TableCell className="font-semibold whitespace-normal">{row.name}</TableCell>
                       <TableCell className="text-muted-foreground max-w-64 whitespace-normal">
                         {respondentContext(row)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(row.status)}>{statusLabel(row.status)}</Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">
-                        {dateFormatter.format(row.assignedAt)}
+                      <TableCell className="text-muted-foreground whitespace-normal tabular-nums">
+                        {formatDate(row.assignedAt)}
                       </TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">
-                        {row.submittedAt ? dateTimeFormatter.format(row.submittedAt) : "—"}
+                      <TableCell className="text-muted-foreground whitespace-normal tabular-nums">
+                        {row.submittedAt ? formatDateTime(row.submittedAt) : "—"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatMean(row.quantitativeMean)}
@@ -233,7 +229,9 @@ export function IdentifiedRespondentsTable({
                             View Response
                           </Link>
                         ) : (
-                          <span className="text-muted-foreground text-xs">Awaiting submission</span>
+                          <span className="text-muted-foreground text-xs whitespace-normal">
+                            Awaiting submission
+                          </span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -262,12 +260,12 @@ export function IdentifiedRespondentsTable({
                   <dl className="text-body-sm grid grid-cols-2 gap-3">
                     <div>
                       <dt className="text-muted-foreground">Assigned</dt>
-                      <dd className="tabular-nums">{dateFormatter.format(row.assignedAt)}</dd>
+                      <dd className="tabular-nums">{formatDate(row.assignedAt)}</dd>
                     </div>
                     <div>
                       <dt className="text-muted-foreground">Submitted</dt>
                       <dd className="tabular-nums">
-                        {row.submittedAt ? dateTimeFormatter.format(row.submittedAt) : "—"}
+                        {row.submittedAt ? formatDateTime(row.submittedAt) : "—"}
                       </dd>
                     </div>
                   </dl>
