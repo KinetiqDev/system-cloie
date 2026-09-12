@@ -6,7 +6,7 @@ Dean Oversight defines the Dean's college-wide read model over course-alignment 
 
 **Oversight read model**:
 The period-scoped, college-wide, read-only projection of readiness and mapping gaps served to the DEAN role. It returns either ready data for a selected period or `no-eligible-period`; eligible periods are ACTIVE or COMPLETED AcademicTermInstances (uses the active-period and completed-period semantics defined by Academic Calendar).
-_Avoid_: Live per-program analytics, editable oversight
+_Avoid_: Live per-program analytics, editable oversight, enrollment or roster oversight (removed end to end; out of scope, not deferred)
 
 **Readiness KPIs**:
 The dashboard and per-program counts of active contexts, ready contexts, missing-cilo contexts, and incomplete-mapping contexts, aggregated for the selected period (uses the readiness semantics defined by Outcomes).

@@ -2,7 +2,7 @@
 
 ## Status
 
-Deferred — amended by [ADR 0023](./0023-remove-dean-enrollment-oversight.md): the Dean Enrollments oversight route and its roster drill-down were removed, so the Enrollments scope below no longer describes a Dean surface. The dashboard, Learning Outcomes, and Profile scope is unchanged.
+Deferred — amended by [ADR 0024](./0024-remove-dean-enrollment-oversight.md): the Dean Enrollments oversight route and its roster drill-down were removed, so the Enrollments scope below no longer describes a Dean surface. The dashboard, Learning Outcomes, and Profile scope is unchanged.
 
 ## Context
 

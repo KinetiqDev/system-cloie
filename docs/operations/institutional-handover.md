@@ -2,7 +2,7 @@
 title: System CLOIE Institutional Handover — ISDRT Policy Interpretation
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-11
 ---
 
 # System CLOIE institutional handover — ISDRT policy interpretation
@@ -21,7 +21,7 @@ Per the policy's section XI (Effectivity), the policy takes effect upon approval
 
 ## Policy obligation mapping
 
-Statuses: **Supported** (repository evidence exists today), **Partial** (some evidence; named gaps), **Pending** (no repository evidence; open obligation). Evidence links are to repository files verified on 2026-09-04 unless noted.
+Statuses: **Supported** (repository evidence exists today), **Partial** (some evidence; named gaps), **Pending** (no repository evidence; open obligation). Evidence links are to repository files verified on 2026-09-11 unless noted.
 
 ### System turnover — policy §VII.4
 
@@ -30,7 +30,7 @@ Before deployment, the developer must formally turn over the completed system to
 | Required artifact                              | System CLOIE practice                                                                                                                    | Evidence                                                                                       | Status                         |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------ |
 | Complete and updated code                      | The repository itself is the turnover artifact, maintained in git on `main`                                                              | Repository `KinetiqDev/system-cloie`                                                           | Supported                      |
-| System architecture diagram                    | No consolidated diagram; architectural decisions are recorded as ADRs                                                                    | `../adr/` (21 ADRs)                                                                            | Pending (consolidated diagram) |
+| System architecture diagram                    | No consolidated diagram; architectural decisions are recorded as ADRs                                                                    | `../adr/` (25 ADR documents)                                                                   | Pending (consolidated diagram) |
 | User manual                                    | No end-user documentation exists in the repository                                                                                       | —                                                                                              | Pending                        |
 | Administrator Guide or System Playbook         | Deployment, secrets, migrations, backups, and rollback are documented operator-side, though not packaged as a formal administrator guide | `../deployment-coolify.md`, [deployment-inventory.md](deployment-inventory.md), `../runbooks/` | Partial                        |
 | Administrative and database access credentials | Secrets are configured in Coolify/Supabase and intentionally absent from git; encrypted recovery custody is not yet established          | [deployment-inventory.md](deployment-inventory.md), "Secrets" section                          | Partial                        |
@@ -79,7 +79,7 @@ The policy defines responsibilities for the ICTC, the ICTC Head, the concerned o
 
 ### Review and sustainability — policy §IX and §X
 
-The policy is subject to review every two years, and the institution expects sustainable ownership beyond individual developers. On the repository side, this interpretation follows the repository's living-document convention: every claim here carries a `last_verified` date (2026-09-04) and operational state is re-verified in [deployment-inventory.md](deployment-inventory.md) (last verified 2026-08-31). Scheduling the institutional biennial review and confirming continued ownership are pending.
+The policy is subject to review every two years, and the institution expects sustainable ownership beyond individual developers. On the repository side, this interpretation follows the repository's living-document convention: every claim here carries a `last_verified` date (2026-09-11) and operational state is re-verified in [deployment-inventory.md](deployment-inventory.md) (last verified 2026-09-10). Scheduling the institutional biennial review and confirming continued ownership are pending.
 
 ## Pending checklist
 

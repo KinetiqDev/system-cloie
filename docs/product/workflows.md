@@ -2,7 +2,7 @@
 title: System CLOIE Primary Workflows
 kind: living-project-document
 status: living
-last_verified: 2026-09-10
+last_verified: 2026-09-11
 ---
 
 # System CLOIE Primary Workflows
@@ -49,15 +49,14 @@ The primary end-to-end workflows, each traced to the domain contexts that own it
 1. The Dean enters a period-scoped, college-wide **read model**: readiness KPIs (active, ready, missing-CILO, incomplete-mapping contexts) defaulting to the active academic period ([dean](../../src/features/dean/CONTEXT.md)).
 2. Risk buckets and per-program **mapping-gap rows** classify course alignment risk; General Education gaps are labeled as Institutional Outcome gaps, never as missing Program PLOs ([dean](../../src/features/dean/CONTEXT.md), [outcomes](../../src/features/outcomes/CONTEXT.md)).
 3. Learning Outcomes oversight is read-only and period-selectable (ACTIVE or COMPLETED terms); archived outcomes show in COMPLETED periods, labelled `(Archived)` ([dean](../../src/features/dean/CONTEXT.md)).
-4. Completing an academic period atomically persists an immutable **readiness snapshot** that historical Dean views consume ([academic-calendar](../../src/features/academic-calendar/CONTEXT.md), [outcomes](../../src/features/outcomes/CONTEXT.md)).
-5. Enrollments oversight drills down to class rosters in fixed 25-per-page pages exposing **student names only** — no IDs, emails, exports, or response data ([dean](../../src/features/dean/CONTEXT.md)).
+4. Completing an academic period atomically persists an immutable **readiness snapshot** that historical Dean views consume ([academic-calendar](../../src/features/academic-calendar/CONTEXT.md), [outcomes](../../src/features/outcomes/CONTEXT.md)). (Dean enrollment/roster oversight was removed per [ADR 0024](../adr/0024-remove-dean-enrollment-oversight.md); class rosters remain managed through the role-owned Course-assignment routes in §2.)
 
 ## Flagged divergences (surfaced, not reconciled)
 
 Cross-checking the steps above against [../system-cloie-user-journeys.md](../system-cloie-user-journeys.md) found these discrepancies with the current CONTEXT.md files and ADRs. Per repo convention they are recorded here rather than silently resolved:
 
 - **Role table omits the General Education Coordinator** (documentation drift). Journeys §1.2 lists seven roles; [auth](../../src/features/auth/CONTEXT.md) and [users](../../src/features/users/CONTEXT.md) (with [docs/adr/0018-transfer-ilo-ownership-to-gen-ed-coordinator.md](../adr/0018-transfer-ilo-ownership-to-gen-ed-coordinator.md)) define an eighth, pre-provisioned `GEN_ED_COORDINATOR` role. Journeys also has no Coordinator ILO-catalog journey (`/gen-ed-coordinator/outcomes`, `/gen-ed-coordinator/courses`).
-- **Secretary ILO write authority stated as current** (outdated historical material). Journeys §3.4 says the Secretary "has college-wide administrative write authority over the catalog and both mapping relations"; ADR 0018 supersedes this — the Secretary has **no** ILO access and the Coordinator owns the ILO catalog. (ADR 0005 §1's Secretary ownership is likewise superseded by ADR 0018 for the ILO encoder; its readiness/mapping semantics stand.)
-- **Retired "Graduate Outcome" terminology** (documentation drift). Journeys §4.3 still says "Graduate Outcomes"; [docs/adr/0017-program-learning-outcome-canonical-terminology.md](../adr/0017-program-learning-outcome-canonical-terminology.md) makes PLO the canonical term (stored `GRADUATE_OUTCOME` values are data, not terminology).
+- **Secretary outcome-write authority stated as current** (implementation drift, unresolved). Journeys §3.4 says the Secretary "has college-wide administrative write authority over the catalog and both mapping relations". [ADR 0018](../adr/0018-transfer-ilo-ownership-to-gen-ed-coordinator.md) moves the ILO catalog to the General Education Coordinator — the Secretary has no ILO access and `/secretary/learning-outcomes/**` redirects to the dashboard. Code goes further than the ADR: `prepareOutcomeWrite` in `src/features/outcomes/services/manage-outcome-writes.ts` admits only a Program Head for PLO, the Coordinator for ILO, and Faculty for CILO, so the Secretary has no PLO or mapping write path either, while [ADR 0005](../adr/0005-outcome-ownership-and-dean-oversight.md) §2 still grants college-wide PLO authority. The code/ADR disagreement needs a decision before either side is documented as current.
+- **Residual "Graduate Outcome" strings in shipped UI** (implementation drift against [ADR 0017](../adr/0017-program-learning-outcome-canonical-terminology.md)). The journeys documentation was aligned to Program Learning Outcome terminology on 2026-09-11; user-visible copy still says "graduate outcomes" in `src/app/(app)/dean/college-oversight/page.tsx` and the Program Head analytics table labels, tracked by issue #603.
 - **Gen Ed Coordinator analytics missing** (documentation drift). Journeys §10.1 has no Coordinator analytics journey; [analytics](../../src/features/analytics/CONTEXT.md) defines an approved first-release Coordinator evidence path (issue #477).
 - Journeys §4.5's step-by-step central-deployment narrative matches [evaluations](../../src/features/evaluations/CONTEXT.md) semantics (status derivation, explicit close, no writer for `ARCHIVED`); no conflict found there.

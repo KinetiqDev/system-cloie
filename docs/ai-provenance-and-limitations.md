@@ -187,7 +187,7 @@
   `Map` (max 128 entries each for PH and Faculty, oldest evicted first). The cache
   stores validated AI output only — never source responses, sessions, or
   authorization decisions. Cache keys hash the prompt version
-  (`program-head-analytics-v3` / `faculty-analytics-v5`), the scope identity
+  (`program-head-analytics-v3` / `faculty-analytics-v6`), the scope identity
   (program or faculty user id), the model, the base URL, and the full serialized
   evidence packet.
 - **In-flight deduplication:** Concurrent identical requests share one provider call

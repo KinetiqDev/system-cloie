@@ -2,7 +2,7 @@
 title: System CLOIE Documentation Index
 kind: living-project-document
 status: living
-last_verified: 2026-09-08
+last_verified: 2026-09-11
 ---
 
 # Documentation Index
@@ -19,7 +19,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 24 files numbered 0001–0023 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0006 is amended by 0023). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — 25 files numbered 0001–0024 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0006 is amended by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 
@@ -32,7 +32,6 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 - [program-head-dashboard-analytics-responses-spec.md](program-head-dashboard-analytics-responses-spec.md) — draft Program Head dashboard/analytics/responses behavior and calculation contracts.
 - [initial-capstone-ux-audit.md](initial-capstone-ux-audit.md) + [evidence ledger](initial-capstone-ux-audit-evidence/evidence-ledger.md) — Week 1 capstone UX audit (2026-09-07).
-- [ChatGPT-Analytics brainstorming-20260908-0950.md](ChatGPT-Analytics%20brainstorming-20260908-0950.md) — unreviewed exported AI-chat transcript on analytics charts; research input only, not a decision source.
 
 ## Architecture
 

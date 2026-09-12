@@ -13,13 +13,13 @@ A per-class deployment bound to exactly one Course Assignment and offered to tha
 _Avoid_: Class evaluation when the Central Deployment distinction matters
 
 **Central deployment**:
-A program-wide deployment bound to a term instance and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by program, major, and year level. Publishing snapshots each bound PLO's code, description, and question prompt into `CentralDeploymentPloSnapshot` rows.
+A program-wide deployment bound to a term instance, the owning program, and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by major and year level; year level is required when targeting students. Publishing snapshots each bound PLO's code, description, and question prompt into `CentralDeploymentPloSnapshot` rows.
 _Avoid_: Program-wide evaluation when stakeholder targeting matters
 
 ## Lifecycle and gating
 
 **Deployment lifecycle**:
-The status progression is `DRAFT -> SCHEDULED -> ACTIVE -> CLOSED`, with the controlled recovery transition `CLOSED -> ACTIVE`. Publishing derives `SCHEDULED` when activation is in the future, otherwise `ACTIVE`; reaching the deadline makes an `ACTIVE` or `SCHEDULED` deployment effectively `CLOSED`, and Faculty may close either state manually. The owning Faculty may reopen a closed Course-bound evaluation only by choosing a new future deadline; reopening activates it immediately while preserving assignments, drafts, submitted responses, exclusions, and frozen publication snapshots. `ARCHIVED` exists in the enum but is written by no service.
+The status progression is `DRAFT -> SCHEDULED -> ACTIVE -> CLOSED`, with the controlled recovery transition `CLOSED -> ACTIVE`. Publishing derives `SCHEDULED` when activation is in the future, otherwise `ACTIVE`; reaching the deadline makes an `ACTIVE` or `SCHEDULED` deployment effectively `CLOSED`, and Faculty may close either state manually. The owning Faculty may reopen a closed Course-bound evaluation only by choosing a new future deadline; reopening activates it immediately while preserving assignments, drafts, submitted responses, exclusions, and frozen publication snapshots. A Program Head may close an `ACTIVE` or `SCHEDULED` Central deployment and reopen a closed one with a new future deadline, which likewise activates it immediately. `ARCHIVED` exists in the enum but is written by no service.
 _Avoid_: PENDING, EXPIRED, resetting responses on reopen
 
 **Publication alignment gate**:

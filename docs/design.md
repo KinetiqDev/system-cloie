@@ -2,7 +2,7 @@
 
 > **Status:** Approved unified light/dark design specification
 > Light, Dark, and System are implemented on `main`; Dark/System selection is gated in primary Production behind the server-owned `CLOIE_APPEARANCE_ENABLED` release control (ADR 0010).
-> **Reviewed against `main`:** 2026-08-21
+> **Reviewed against `main`:** 2026-09-11
 
 ## 1. Authority and Scope
 

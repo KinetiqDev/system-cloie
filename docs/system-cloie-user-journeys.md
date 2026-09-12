@@ -181,7 +181,7 @@ The Dean has college-wide oversight and selected operational capabilities. The D
 3. CLOIE matches the normalized Google email to the pre-provisioned domain account.
 4. The Dean enters `/dean/dashboard`.
 
-The Dean has no self-service role claim. The canonical Dean navigation is Dashboard, Academic Structure, College Oversight, and Profile.
+The Dean has no self-service role claim. The canonical Dean navigation is Dashboard, Structure, Oversight, and Profile, where Structure opens the Academic Structure group and Oversight opens the College Oversight group (currently Learning Outcomes only).
 
 ### 3.2 Academic Structure operations
 
@@ -211,11 +211,11 @@ The dashboard is not a response-analytics dashboard. Evaluation scores, raw resp
 1. The Dean opens `/dean/college-oversight/learning-outcomes`.
 2. The Dean selects an eligible active or completed academic period through URL-backed state.
 3. CLOIE shows program totals and readiness coverage.
-4. The Dean expands a program to see Institutional Outcome coverage and General Education gaps before Program-specific Graduate Outcome coverage and gaps.
+4. The Dean expands a program to see Institutional Outcome coverage and General Education gaps before Program-specific PLO coverage and gaps.
 5. Archived outcomes needed for historical context are labelled `Archived`.
 6. The Dean uses risk filters for missing CILOs, incomplete mappings, or not-ready contexts.
 
-This surface is read-only. Faculty own Course-level CILO authoring and are the primary mappers, Program Heads own Graduate Outcome authoring and review mappings read-only, and the Secretary has college-wide administrative write authority over the catalog and both mapping relations. The Dean does not edit outcomes or mappings.
+This surface is read-only. Faculty own Course-level CILO authoring and are the primary mappers, Program Heads own Program Learning Outcome authoring and review mappings read-only, and the Secretary has college-wide administrative write authority over the catalog and both mapping relations. The Dean does not edit outcomes or mappings.
 
 ### 3.5 Dean limitations and unfinished areas
 
@@ -238,7 +238,7 @@ The Program Head is the accountable owner for one or more explicitly assigned ac
 
 ### 4.2 Program catalog and course-assignment operations
 
-The Program Head can currently use `/program-head/courses` and `/program-head/course-assignments` for program-scoped Course and assignment work. The exact long-term boundary for Program Head catalog authoring is still open in the reconciled PRD/SRS decisions.
+The Program Head can currently use `/program-head/programs/<programId>/courses` and `/program-head/programs/<programId>/course-assignments` for program-scoped Course and assignment work; the top-level `/program-head/courses` and `/program-head/course-assignments` redirect to the program entry. The exact long-term boundary for Program Head catalog authoring is still open in the reconciled PRD/SRS decisions.
 
 For Course assignments, the Program Head can:
 
@@ -249,11 +249,11 @@ For Course assignments, the Program Head can:
 - Not manage General Education assignments; Secretary and Dean steward those assignments.
 - Open and manage authorized Program-specific rosters, subject to active assignment, active-period, roster-lock, and scope rules.
 
-### 4.3 Graduate Outcomes and alignment
+### 4.3 Program Learning Outcomes and alignment
 
-1. The Program Head opens `/program-head/outcomes`.
-2. The Program Head creates, edits, reorders, archives, and restores Graduate Outcomes for the assigned program.
-3. The Program Head opens the selected Program's mapping review (`/program-head/programs/<programId>/outcomes/mapping`) to inspect typed alignment — CILO-to-Institutional Outcome for General Education Courses, CILO-to-Graduate Outcome for Program-specific Courses — within authorized program scope. Legacy `/program-head/outcomes/mapping` bookmarks redirect safely to the Program dashboard.
+1. The Program Head opens `/program-head/programs/<programId>/outcomes`; the top-level `/program-head/outcomes` redirects to the program entry.
+2. The Program Head creates, edits, reorders, archives, and restores Program Learning Outcomes for the assigned program.
+3. The Program Head opens the selected Program's mapping review (`/program-head/programs/<programId>/outcomes/mapping`) to inspect typed alignment — CILO-to-Institutional Outcome for General Education Courses, CILO-to-PLO for Program-specific Courses — within authorized program scope. There is no top-level mapping route; mapping review lives only under the selected program.
 4. Mapping review is read-only: the Program Head inspects valid mappings and readiness gaps but cannot create or remove mapping rows. Faculty maintains Course-level alignment in the Course alignment workspace; the Secretary has college-wide correction authority.
 5. Readiness reports missing CILOs and incomplete typed mappings rather than blocking incremental authoring.
 
@@ -261,7 +261,7 @@ Every active CILO needs at least one valid active target of its Course scope's t
 
 ### 4.4 Program-owned evaluation template journey
 
-1. The Program Head opens `/program-head/tools`.
+1. The Program Head opens `/program-head/programs/<programId>/tools`; the top-level `/program-head/tools` redirects to the program entry.
 2. The Program Head creates a program-owned template or copies an institutional baseline.
 3. The Program Head selects the template type:
    - `PROGRAM_WIDE` for stakeholder evaluations that apply across the program.
@@ -272,7 +272,7 @@ Every active CILO needs at least one valid active target of its Course scope's t
 7. The Program Head can control faculty access by exposing only explicitly permitted Course-bound templates.
 8. The Program Head can duplicate a baseline or an in-scope template without modifying the source baseline.
 
-Program-owned templates are distinct from Graduate Outcomes. GO ownership does not make a Program Head the owner of institutional templates, and template authoring does not replace GO authoring.
+Program-owned templates are distinct from Program Learning Outcomes. PLO ownership does not make a Program Head the owner of institutional templates, and template authoring does not replace PLO authoring.
 
 ### 4.5 Program-wide deployment journey
 
@@ -302,11 +302,12 @@ The Program Head can deploy on behalf of a Faculty Member where the shared Cours
 
 ### 4.7 Analytics and reports
 
-- `/program-head/dashboard` provides program-scoped KPIs and stakeholder/course-bound summary visualizations.
-- `/program-head/analytics` provides program-scoped analytics for accessible deployments/evaluations.
+- `/program-head/programs/<programId>/dashboard` provides program-scoped KPIs and stakeholder/course-bound summary visualizations.
+- `/program-head/programs/<programId>/analytics` provides program-scoped analytics for accessible deployments/evaluations.
 - Review routes provide anonymized respondent labels and scoped Course-bound response review.
-- `/program-head/reports` exists, but export controls are intentionally stubbed while authoritative report contracts and server-side PDF/spreadsheet generation are defined.
+- `/program-head/programs/<programId>/reports` exists, but export controls are intentionally stubbed while authoritative report contracts and server-side PDF/spreadsheet generation are defined.
 
+The top-level `/program-head/dashboard`, `/program-head/analytics`, and `/program-head/reports` redirect to the program entry and are not destinations.
 The Program Head cannot view another program's analytics or reports. Exact analytics formulas, minimum-response suppression, weighting, qualitative privacy, and report structures remain open under issue #133 and report implementation issue #173.
 
 ## 5. Faculty Member Journey
@@ -345,7 +346,7 @@ Roster operations are locked only when the assignment is inactive or its Academi
 2. The Faculty Member selects an authorized Course context.
 3. The Faculty Member creates, edits, archives, or restores Course-level CILOs.
 4. CILOs remain attached to the Course across assignment periods; they are not owned by a particular assignment or copied as a new Faculty-owned outcome each term.
-5. The Faculty Member opens the Course alignment workspace to connect CILOs to valid active targets: Institutional Outcomes for General Education Courses (shared at Course level, with a shared-impact warning), owning-Program Graduate Outcomes for Program-specific Courses.
+5. The Faculty Member opens the Course alignment workspace to connect CILOs to valid active targets: Institutional Outcomes for General Education Courses (shared at Course level, with a shared-impact warning), owning-Program PLOs for Program-specific Courses.
 6. Readiness reflects missing active CILOs and incomplete typed mappings for the Course scope; new Course-bound evaluation publication is blocked until every active CILO has a valid active target.
 
 ### 5.4 Faculty template and Course-bound deployment journey
@@ -474,7 +475,7 @@ This lifecycle connects the operational roles and respondent roles.
 1. Secretary or Dean maintains an institutional baseline.
 2. Program Head copies or creates a program-owned instrument when a program-specific stakeholder evaluation is needed.
 3. Faculty creates a Faculty-owned derived Course-bound copy when the source is faculty-accessible.
-4. The author saves versions. Once an evaluation is published, the deployment uses an immutable instrument version and snapshots the relevant Course, CILO, GO, and question-binding context.
+4. The author saves versions. Once an evaluation is published, the deployment uses an immutable instrument version and snapshots the relevant Course, CILO, PLO, and question-binding context.
 
 ### 9.2 Publication types
 
@@ -510,11 +511,11 @@ The intended report journey is:
 
 1. The authorized role selects a program or college scope, academic period, evaluation/deployment, and report type.
 2. CLOIE resolves the role and scope server-side.
-3. CLOIE derives the report from submitted responses, instrument versions, CILO/GO snapshots, readiness snapshots, and approved privacy rules.
+3. CLOIE derives the report from submitted responses, instrument versions, CILO/PLO snapshots, readiness snapshots, and approved privacy rules.
 4. CLOIE displays a stable report preview with generation metadata and caveats.
 5. The user exports an authorized PDF or spreadsheet artifact.
 
-This is not complete. Program Head exports are stubbed, Dean Reports is unavailable, and report contracts are still open. Issue #133 must settle rating scales, CILO attainment, GO aggregation, weighting, minimum-response suppression, Dean drill-down, and report structure. Issue #173 tracks authoritative server-side reports and PDF/spreadsheet export. Raw qualitative comments require a separate privacy policy under issue #176 and must not be assumed safe merely because account identifiers are removed.
+This is not complete. Program Head exports are stubbed, Dean Reports is unavailable, and report contracts are still open. Issue #133 must settle rating scales, CILO attainment, PLO aggregation, weighting, minimum-response suppression, Dean drill-down, and report structure. Issue #173 tracks authoritative server-side reports and PDF/spreadsheet export. Raw qualitative comments require a separate privacy policy under issue #176 and must not be assumed safe merely because account identifiers are removed.
 
 ## 11. End-to-End Operational Chains
 
@@ -532,7 +533,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 ### 11.2 Program setup to stakeholder evaluation
 
 1. Secretary creates the program and assigns a Program Head.
-2. Program Head authors Graduate Outcomes and creates or copies a Program-wide template.
+2. Program Head authors Program Learning Outcomes and creates or copies a Program-wide template.
 3. Program Head selects Student, Alumni, or Industry Partner targeting and an academic period/window.
 4. CLOIE creates central respondent assignments.
 5. The target respondent signs in, completes the wizard, confirms, and submits.
@@ -571,36 +572,36 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 
 ## 13. Journey Status Matrix
 
-| Workflow                                                                                           | Current status                                           | Main evidence / follow-up                                                         |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Google OAuth, portal entry, role gates, status pages                                               | Implemented                                              | `src/features/auth/`, `src/features/users/services/resolve-profile-gate.ts`       |
-| Bootstrap and Secretary-created complete accounts                                                  | Partial                                                  | ADR `0001-complete-secretary-created-accounts.md`; issues #70-#77 remain tracked  |
-| School years, academic terms, active-period lifecycle                                              | Implemented                                              | `src/features/academic-calendar/`; Secretary-only lifecycle                       |
-| Term rollover and graduating exceptions                                                            | Implemented                                              | `run-term-rollover.ts` and Secretary rollover routes                              |
-| Programs and majors lifecycle                                                                      | Implemented                                              | `manage-programs.ts`; strict deletion ADR                                         |
-| General Education and Program-specific Course catalog                                              | Implemented                                              | `manage-courses.ts`; catalog defaults are advisory                                |
-| Institutional baseline instruments and versioning                                                  | Implemented                                              | `manage-instruments.ts`; complete deployment/report coverage remains partial      |
-| Secretary and Dean all-program Course assignments                                                  | Implemented                                              | ADR `0003`; role-owned routes                                                     |
-| Program Head Program-specific assignment management                                                | Implemented                                              | General Education management remains Secretary/Dean-only                          |
-| Faculty roster manual management                                                                   | Implemented                                              | Roster membership services; browser verification remains open                     |
-| Faculty name-list roster reconciliation                                                            | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes |
-| Graduate Outcome authoring                                                                         | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                  |
-| Faculty Course-level CILO authoring                                                                | Implemented                                              | `/faculty/cilos` and evaluation services                                          |
-| Typed outcome mapping (CILO→ILO for General Education, CILO→GO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate         |
-| Program-owned template creation and faculty access                                                 | Implemented                                              | `manage-program-head-templates.ts`                                                |
-| Faculty-derived Course-bound templates                                                             | Implemented                                              | `manage-faculty-templates.ts`                                                     |
-| Course-bound publication, exclusions, late inclusion                                               | Implemented                                              | `publish-course-bound-evaluation.ts`; roster-lock rules                           |
-| Program-wide stakeholder deployment                                                                | Implemented for current Program Head path                | Central deployment policy and external targeting remain partial                   |
-| Student evaluation response workflow                                                               | Implemented; concurrency hardening open                  | Wizard, draft, confirmation, submit, history; issue #168                          |
-| Alumni evaluation response workflow                                                                | Implemented; verification gate partial                   | Alumni routes and stakeholder response services                                   |
-| Industry Partner evaluation response workflow                                                      | Implemented; access-code policy open                     | Industry Partner routes; issue #132                                               |
-| Faculty and Program Head scoped analytics/review                                                   | Implemented, formulas/privacy incomplete                 | Analytics services; issues #133/#176                                              |
-| Dean readiness oversight                                                                           | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                               |
-| Program Head report exports                                                                        | Stubbed                                                  | `/program-head/reports`; issue #173                                               |
-| Dean report exports                                                                                | Deferred/unavailable                                     | `/dean/reports`; issue #173                                                       |
-| Formal PDF/spreadsheet reporting                                                                   | Deferred/planned                                         | Issue #173                                                                        |
-| Self-service external approval/rejection transition                                                | Partial                                                  | Rejected gate exists; complete approval workflow is not present                   |
-| Whole-app offline/PWA data workflow                                                                | Deferred                                                 | ADR `0006`                                                                        |
+| Workflow                                                                                            | Current status                                           | Main evidence / follow-up                                                         |
+| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Google OAuth, portal entry, role gates, status pages                                                | Implemented                                              | `src/features/auth/`, `src/features/users/services/resolve-profile-gate.ts`       |
+| Bootstrap and Secretary-created complete accounts                                                   | Partial                                                  | ADR `0001-complete-secretary-created-accounts.md`; issues #70-#77 remain tracked  |
+| School years, academic terms, active-period lifecycle                                               | Implemented                                              | `src/features/academic-calendar/`; Secretary-only lifecycle                       |
+| Term rollover and graduating exceptions                                                             | Implemented                                              | `run-term-rollover.ts` and Secretary rollover routes                              |
+| Programs and majors lifecycle                                                                       | Implemented                                              | `manage-programs.ts`; strict deletion ADR                                         |
+| General Education and Program-specific Course catalog                                               | Implemented                                              | `manage-courses.ts`; catalog defaults are advisory                                |
+| Institutional baseline instruments and versioning                                                   | Implemented                                              | `manage-instruments.ts`; complete deployment/report coverage remains partial      |
+| Secretary and Dean all-program Course assignments                                                   | Implemented                                              | ADR `0003`; role-owned routes                                                     |
+| Program Head Program-specific assignment management                                                 | Implemented                                              | General Education management remains Secretary/Dean-only                          |
+| Faculty roster manual management                                                                    | Implemented                                              | Roster membership services; browser verification remains open                     |
+| Faculty name-list roster reconciliation                                                             | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes |
+| Program Learning Outcome authoring                                                                  | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                  |
+| Faculty Course-level CILO authoring                                                                 | Implemented                                              | `/faculty/cilos` and evaluation services                                          |
+| Typed outcome mapping (CILO→ILO for General Education, CILO→PLO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate         |
+| Program-owned template creation and faculty access                                                  | Implemented                                              | `manage-program-head-templates.ts`                                                |
+| Faculty-derived Course-bound templates                                                              | Implemented                                              | `manage-faculty-templates.ts`                                                     |
+| Course-bound publication, exclusions, late inclusion                                                | Implemented                                              | `publish-course-bound-evaluation.ts`; roster-lock rules                           |
+| Program-wide stakeholder deployment                                                                 | Implemented for current Program Head path                | Central deployment policy and external targeting remain partial                   |
+| Student evaluation response workflow                                                                | Implemented; concurrency hardening open                  | Wizard, draft, confirmation, submit, history; issue #168                          |
+| Alumni evaluation response workflow                                                                 | Implemented; verification gate partial                   | Alumni routes and stakeholder response services                                   |
+| Industry Partner evaluation response workflow                                                       | Implemented; access-code policy open                     | Industry Partner routes; issue #132                                               |
+| Faculty and Program Head scoped analytics/review                                                    | Implemented, formulas/privacy incomplete                 | Analytics services; issues #133/#176                                              |
+| Dean readiness oversight                                                                            | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                               |
+| Program Head report exports                                                                         | Stubbed                                                  | `/program-head/programs/<programId>/reports`; issue #173                          |
+| Dean report exports                                                                                 | Deferred/unavailable                                     | `/dean/reports`; issue #173                                                       |
+| Formal PDF/spreadsheet reporting                                                                    | Deferred/planned                                         | Issue #173                                                                        |
+| Self-service external approval/rejection transition                                                 | Partial                                                  | Rejected gate exists; complete approval workflow is not present                   |
+| Whole-app offline/PWA data workflow                                                                 | Deferred                                                 | ADR `0006`                                                                        |
 
 ## 14. Primary Sources
 

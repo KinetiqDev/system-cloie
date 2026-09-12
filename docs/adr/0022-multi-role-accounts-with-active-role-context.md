@@ -1,6 +1,6 @@
 ---
 status: accepted
-supersedes: ADR 0001 Single-Role Accounts
+supersedes: ADR 0001 Single-Role Accounts (`0001-single-role-accounts.md`)
 ---
 
 # Multi-role accounts with active role context

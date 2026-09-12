@@ -14,7 +14,7 @@ The Dean oversight IA carried an Enrollments surface: `/dean/college-oversight/e
 
 That surface projects the term-placement ledger already owned by the Enrollments domain for the Secretary and Student flows. The Dean's college-wide D&D scope needs readiness and mapping-gap oversight, not enrollment administration: the view duplicates `StudentEnrollment` aggregates, and its roster drill-down serves student names to a role that has no operational use for them.
 
-The Dean dashboard information architecture ([issue #103](https://github.com/Tugeru/project-cloie/issues/103)) accepted the oversight direction; the enrolled-totals and roster drill-down are removed by this decision rather than deferred.
+The Dean dashboard information architecture ([issue #103](https://github.com/KinetiqDev/system-cloie/issues/103)) accepted the oversight direction; the enrolled-totals and roster drill-down are removed by this decision rather than deferred.
 
 ## Decision
 
@@ -40,4 +40,4 @@ No replacement route is introduced. Enrollment oversight is out of scope for Sys
 
 - [ADR 0005](0005-outcome-ownership-and-dean-oversight.md) — outcome ownership and the Dean's read-only oversight scope.
 - [ADR 0006](0006-dean-pwa-offline-cache-contract.md) — Dean PWA offline cache contract (Enrollments clauses void).
-- Wayfinder map: [Dean dashboard information architecture](https://github.com/Tugeru/project-cloie/issues/103)
+- Wayfinder map: [Dean dashboard information architecture](https://github.com/KinetiqDev/system-cloie/issues/103)

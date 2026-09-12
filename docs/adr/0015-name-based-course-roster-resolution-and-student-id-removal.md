@@ -30,6 +30,6 @@ Name resolution is preview-first. Parsing and candidate discovery perform no mem
 - Authorized managers may see ACD email and academic context for disambiguation, but interactive disclosure is bounded and failed exports omit candidate email.
 - Irregular Students remain resolvable because year level and section rank candidates but do not define eligibility.
 - Preview progress is lost on refresh or confirmed discard; this is an intentional simplicity and privacy tradeoff.
-- ADR 0001 is superseded only where Student role completeness requires Student ID.
+- [ADR 0001: Complete Secretary-Created Accounts](0001-complete-secretary-created-accounts.md) is superseded only where Student role completeness requires Student ID.
 - ADR 0014 is superseded only where it states roster eligibility and Student academic identity are unchanged; its canonical opaque-name authority remains controlling.
 - ADR 0007 remains controlling for explicit membership, audit/restoration, conflicts, and Course-bound evaluation recipient sourcing.

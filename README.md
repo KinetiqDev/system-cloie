@@ -153,6 +153,7 @@ src/
 │   │   ├── dean/
 │   │   ├── design-system/
 │   │   ├── faculty/
+│   │   ├── gen-ed-coordinator/
 │   │   ├── industry-partner/
 │   │   ├── program-head/
 │   │   ├── secretary/
@@ -164,7 +165,7 @@ src/
 │   │   └── status/
 │   ├── (legal)/           # Legal pages (terms, privacy)
 │   ├── unauthorized/      # Domain/role rejection page
-│   └── api/               # API routes (auth, dean)
+│   └── api/               # API routes (auth, dean, health)
 ├── components/            # Shared UI components
 │   └── ui/               # shadcn/ui base components (Base UI primitives)
 ├── features/             # Feature-based domain modules (15 domains)
@@ -179,9 +180,8 @@ src/
 │   ├── evaluations/          # Evaluation workflows and deployments
 │   ├── instruments/          # Templates, instruments, versioning
 │   ├── legal/                # Legal content, versions, acknowledgements
-│   ├── outcomes/             # Graduate outcomes, CILOs, mappings
-│   ├── portals/              # Role selection and entry portals
-│   ├── responses/            # Quantitative and qualitative response handling
+│   ├── outcomes/             # Outcome catalogs, CILOs, mappings
+│   ├── response-review/      # Identified vs anonymized review of submitted responses
 │   └── users/                # User profiles and admin management
 ├── hooks/                # Shared React hooks
 ├── lib/                  # Shared utilities and configurations
@@ -195,6 +195,8 @@ src/
 └── __tests__/           # Test files mirroring src/ structure
 ```
 
+`src/features/portals/` (role selection entry UI) and `src/features/secretary/` (Secretary dashboard read model) are supporting modules without `CONTEXT.md` files; their rules live in the owning contexts (see `CONTEXT-MAP.md`).
+
 Plus, at repo root: `scripts/` holds the Supabase CLI wrappers, demo verification, and fallow baseline scripts; `prisma/` and `supabase/` hold the schema and migrations (see below).
 
 ### Domain Contexts
@@ -203,7 +205,7 @@ The domain model is documented through a multi-context layout:
 
 - **`CONTEXT-MAP.md`** — index of domain contexts and their relationships
 - **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants
-- **`docs/adr/`** — architectural decision records (23 ADR files, see list below)
+- **`docs/adr/`** — architectural decision records (25 ADR files, see list below)
 
 Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
@@ -217,7 +219,7 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0003 | Course catalog and assignment refactor                           |
 | 0004 | Strict program deletion                                          |
 | 0005 | Outcome ownership and dean oversight                             |
-| 0006 | Dean PWA offline cache contract                                  |
+| 0006 | Dean PWA offline cache contract _(Amended by ADR 0024)_          |
 | 0007 | Course assignment roster membership                              |
 | 0008 | Dedicated demo deployment authentication                         |
 | 0009 | Program head selected program context                            |
@@ -234,6 +236,8 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0020 | Self-Hosted Supabase Only — Target-Neutral Backends              |
 | 0021 | Remove Curriculum Versioning                                     |
 | 0022 | Multi-role accounts with active role context                     |
+| 0023 | Deterministic qualitative evidence and sentiment shape           |
+| 0024 | Remove Dean enrollment oversight _(Amends ADR 0006)_             |
 
 #### Request Flow
 
@@ -425,7 +429,7 @@ pnpm test:watch                               # Watch mode
 pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 ```
 
-Sixteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a shared backend:
+Fourteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a shared backend:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
@@ -491,13 +495,13 @@ See `src/__tests__/` for example test implementations.
 
 CI runs on GitHub Actions. Workflows live in `.github/workflows/`. The retired Depot CI workflows remain locally under `.depot/workflows/` and are gitignored.
 
-`ci.yml` runs three jobs on every push to `main` and pull request:
+`ci.yml` runs risk-selected gates on every push to `main` and pull request (a `select` job derives the required gates from changed risk domains; unaffected gates are skipped):
 
 - **static-checks** — changed-file Prettier and zero-warning ESLint checks. This runs in parallel with unit tests.
 - **unit-tests** — the fast Vitest suite, split into Node and jsdom projects. `pnpm test` runs them sequentially to preserve test isolation; CI shards them across separate runners. Database and subprocess-heavy tooling suites run in their dedicated jobs.
 - **production-build** — risk-selected production compilation and route generation.
 - **database-integration** — applies the Supabase migrations and fixture seed to a disposable Postgres 16 container, then runs the gated DB suites (`pnpm test:db`). The container is the only database involved; no shared backend is touched.
-- **browser-e2e** — production build plus `pnpm test:e2e` against the same disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`). The Playwright report and traces upload as artifacts on failure.
+- **browser-e2e** — production build plus `pnpm test:e2e` against the same disposable Postgres, signed in with the isolated CI test session (`CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test`). The Playwright report and traces upload as artifacts on failure. A curated visual baseline runs when visual risk domains change (`CLOIE_E2E_VISUAL`).
 
 `scheduled.yml` repeats the full unit gate and runs the real-subprocess CI tooling integration suite nightly. `code-intelligence.yml` runs the baseline-backed Fallow audit gate on pull requests and scheduled Fallow reports.
 

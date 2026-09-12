@@ -19,7 +19,7 @@ The operation that, for the same student + term, updates the existing row in pla
 _Avoid_: Merge, replace
 
 **Soft deactivation**:
-Enrollments are deactivated (`is_active` false) rather than deleted, preserving history. Bulk deactivation accompanies removing a student's academic context.
+Enrollments are deactivated (`is_active` false) rather than deleted, preserving history. Deleting a student's academic context does not deactivate their enrollment rows.
 _Avoid_: Delete enrollment, hard removal
 
 ## Lookup

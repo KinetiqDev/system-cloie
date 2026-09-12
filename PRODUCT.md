@@ -64,7 +64,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 - Approved design spec: `docs/design.md`; numerical tokens in `src/styles/tokens.css` and `src/app/globals.css`.
 - Theme companion boards: `docs/assets/system-cloie-design-system-light.png`, `docs/assets/system-cloie-design-system-dark.png`.
 - Protected design-system showcase route in-app (`src/features/design-system/`, ADR 0010).
-- Domain truth: `CONTEXT-MAP.md` + 15 feature `CONTEXT.md` files (plus `portals` and `secretary` supporting modules without contracts) + 22 ADR files under `docs/adr/`.
+- Domain truth: `CONTEXT-MAP.md` + 15 feature `CONTEXT.md` files (plus `portals` and `secretary` supporting modules without contracts) + 25 ADR files under `docs/adr/`.
 - Demo seed data exists for development/demonstration; production contains real institutional data.
 - **Absence to respect:** no marketing testimonials, case studies, or customer evidence exist. This is an internal institutional platform — never fabricate such content.
 

@@ -2,7 +2,7 @@
 title: System CLOIE Product Overview
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-11
 ---
 
 # System CLOIE Product Overview
@@ -41,7 +41,7 @@ Role scopes are inventoried in [roles-and-access.md](roles-and-access.md).
 
 ## Domain map
 
-The 16 bounded contexts under `src/features/`, each with its own `CONTEXT.md` (linked; descriptions from the root [CONTEXT-MAP.md](../../CONTEXT-MAP.md)):
+The 15 bounded contexts under `src/features/`, each with its own `CONTEXT.md` (linked; descriptions from the root [CONTEXT-MAP.md](../../CONTEXT-MAP.md)):
 
 | Domain                         | Context                                                                | One-line description                                                                                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

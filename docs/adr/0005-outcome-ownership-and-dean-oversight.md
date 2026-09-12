@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — partially superseded for ILO catalog ownership by [ADR 0018](0018-transfer-ilo-ownership-to-gen-ed-coordinator.md); readiness, mapping, and Dean-oversight semantics remain.
 
 Amended 2026-08-14 for Issue #372: catalog-only amendment recording the Secretary-owned Institutional Learning Outcome catalog.
 
