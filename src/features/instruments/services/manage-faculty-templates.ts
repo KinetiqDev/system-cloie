@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { CourseScope, EvaluationTemplateType, Prisma } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";

@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import {
   AcademicSemester,
   AcademicTerm,

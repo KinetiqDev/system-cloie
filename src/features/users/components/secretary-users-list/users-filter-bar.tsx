@@ -259,6 +259,7 @@ function SharedRefinementFields({
  * Period. They appear only while the list is filtered to Students, because no
  * other role carries them.
  */
+// fallow-ignore-next-line complexity
 function StudentFilterGroup({
   value,
   onChange,

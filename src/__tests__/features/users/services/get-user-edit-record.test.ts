@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemRole, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";

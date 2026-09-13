@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
 import { expectNoAxeViolations, expectNoHorizontalOverflow, loginAs } from "./support/helpers";

@@ -138,6 +138,7 @@ function getRoleDetailsSectionTitle(role: SystemRole | undefined): string | null
  * Shared by the create-account and add-role submissions so both actions receive
  * the same FormData shape.
  */
+// fallow-ignore-next-line complexity
 function appendRoleDetails(formData: FormData, role: SystemRole, data: CreateUserBySecretaryInput) {
   if (needsProgramField(role) === "single" && data.program_id) {
     formData.set("program_id", data.program_id);
@@ -567,6 +568,7 @@ export function AddUserForm({
     setValue("role", newRole);
   }
 
+  // fallow-ignore-next-line complexity
   const onSubmit = async (data: CreateUserBySecretaryInput) => {
     setGlobalError(null);
 

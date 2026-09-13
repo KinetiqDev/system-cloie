@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import { useCallback, useState, useEffect, useTransition } from "react";

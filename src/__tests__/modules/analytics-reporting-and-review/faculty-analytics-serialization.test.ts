@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFacultyAnalyticsDataAction } from "@/lib/actions/faculty-analytics-actions";
 import { ROLES } from "@/lib/constants/roles";

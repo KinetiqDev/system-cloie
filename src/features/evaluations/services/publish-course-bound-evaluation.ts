@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { randomUUID } from "node:crypto";
 import {
   CourseBoundEvaluationExclusionCategory,

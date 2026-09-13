@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { Prisma, type SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {

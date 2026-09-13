@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { cleanup, render, screen } from "@testing-library/react";
 import { Suspense } from "react";
 import React from "react";

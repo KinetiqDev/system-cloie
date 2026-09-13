@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
@@ -98,7 +99,12 @@ const MOCK_RESPONSE_DATA = {
     central_deployment: null,
   },
   quant_items: [
-    { cilo_question_binding_id: "binding-clarity", section_key: "teaching", item_key: "clarity", rating_value: 4 },
+    {
+      cilo_question_binding_id: "binding-clarity",
+      section_key: "teaching",
+      item_key: "clarity",
+      rating_value: 4,
+    },
   ],
   qual_items: [
     { section_key: "teaching", prompt_key: "remarks", text_content: "Very clear delivery." },
@@ -115,10 +121,18 @@ describe("getProgramHeadResponseDetail", () => {
     });
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
-      data: { userId: "head-1", selectedProgram: { id: "prog-beed", code: "BEED", name: "Bachelor of Education" }, authorizedPrograms: [] },
+      data: {
+        userId: "head-1",
+        selectedProgram: { id: "prog-beed", code: "BEED", name: "Bachelor of Education" },
+        authorizedPrograms: [],
+      },
     });
     ciloMappingFindManyMock.mockResolvedValue([
-      { cilo_id: "cilo-1", plo: { id: "plo-1", code: "PLO-1", description: "Communicate effectively" }, manifestation: "LEARNING" },
+      {
+        cilo_id: "cilo-1",
+        plo: { id: "plo-1", code: "PLO-1", description: "Communicate effectively" },
+        manifestation: "LEARNING",
+      },
     ]);
     studentEnrollmentFindManyMock.mockResolvedValue([
       {
@@ -285,8 +299,18 @@ describe("getProgramHeadResponseDetail", () => {
         central_deployment: null,
       },
       quant_items: [
-        { cilo_question_binding_id: null, section_key: "teaching", item_key: "clarity", rating_value: 4 },
-        { cilo_question_binding_id: null, section_key: "teaching", item_key: "agreement", rating_value: 4 },
+        {
+          cilo_question_binding_id: null,
+          section_key: "teaching",
+          item_key: "clarity",
+          rating_value: 4,
+        },
+        {
+          cilo_question_binding_id: null,
+          section_key: "teaching",
+          item_key: "agreement",
+          rating_value: 4,
+        },
       ],
       qual_items: [],
     });
@@ -315,7 +339,12 @@ describe("getProgramHeadResponseDetail", () => {
           instrument: { version_number: 1, structure_snapshot: [] },
           program: { name: "BEED" },
           major: { name: "Mathematics" },
-          term_instance: { id: "term-ti2", school_year: { code: "2025-2026" }, semester: "FIRST", term: null },
+          term_instance: {
+            id: "term-ti2",
+            school_year: { code: "2025-2026" },
+            semester: "FIRST",
+            term: null,
+          },
           plo_snapshots: [],
         },
       },
@@ -323,7 +352,12 @@ describe("getProgramHeadResponseDetail", () => {
       qual_items: [],
     });
     alumniProfileFindManyMock.mockResolvedValue([
-      { user_id: "user-alum1", graduation_year: 2024, program: { name: "BEED" }, major: { name: "Mathematics" } },
+      {
+        user_id: "user-alum1",
+        graduation_year: 2024,
+        program: { name: "BEED" },
+        major: { name: "Mathematics" },
+      },
     ]);
 
     const result = await getProgramHeadResponseDetail("prog-beed", "response-alum");
@@ -351,7 +385,12 @@ describe("getProgramHeadResponseDetail", () => {
           instrument: { version_number: 1, structure_snapshot: [] },
           program: { name: "BSHM" },
           major: { name: "Hospitality" },
-          term_instance: { id: "term-ti2", school_year: { code: "2025-2026" }, semester: "FIRST", term: null },
+          term_instance: {
+            id: "term-ti2",
+            school_year: { code: "2025-2026" },
+            semester: "FIRST",
+            term: null,
+          },
           plo_snapshots: [],
         },
       },

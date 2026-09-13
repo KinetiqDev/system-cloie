@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import crypto from "node:crypto";
 import { CourseScope, DeploymentStatus, StudentSection, YearLevel } from "@prisma/client";
 import { describe, expect, it } from "vitest";

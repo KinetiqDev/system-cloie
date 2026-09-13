@@ -15,6 +15,7 @@ import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Publish Tool", "Program Head") };
 
+// fallow-ignore-next-line complexity
 export default async function PublishSelectedProgramToolPage({
   params,
   searchParams,

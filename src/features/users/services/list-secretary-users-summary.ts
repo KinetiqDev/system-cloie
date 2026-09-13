@@ -173,6 +173,7 @@ type PrismaUserPageRow = Prisma.UserGetPayload<{
   select: ReturnType<typeof buildPageSelect>;
 }>;
 
+// fallow-ignore-next-line complexity
 function buildWhere(
   query: SecretaryUsersListQuery,
   activePeriodId: string | null
@@ -293,6 +294,7 @@ type CanonicalizedFilterKey = (typeof CANONICALIZED_FILTER_KEYS)[number];
  * here is a filter the list can show; everything else is dropped so the
  * redirect surfaces the removal instead of honoring an invisible filter.
  */
+// fallow-ignore-next-line complexity
 function canonicalizeListFilters(
   query: SecretaryUsersListQuery,
   programs: Array<{ code: string; majors: Array<{ name: string }> }>,

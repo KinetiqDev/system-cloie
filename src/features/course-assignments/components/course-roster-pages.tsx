@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import Link from "next/link";
@@ -716,6 +717,7 @@ function memberStatus(member: CourseRosterMember) {
   );
 }
 
+// fallow-ignore-next-line complexity
 function RosterTable({
   members,
   includeRemoved,

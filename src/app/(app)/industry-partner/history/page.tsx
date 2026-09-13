@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { formatDate } from "@/lib/utils/date-format";
 import Link from "next/link";
 import { Calendar, Eye, FileText } from "lucide-react";

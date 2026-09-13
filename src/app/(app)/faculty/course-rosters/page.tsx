@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 

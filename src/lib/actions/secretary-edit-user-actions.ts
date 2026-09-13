@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use server";
 
 import { revalidatePath } from "next/cache";

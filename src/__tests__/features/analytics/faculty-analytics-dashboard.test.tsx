@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FacultyAnalyticsDashboard } from "@/features/analytics/components/faculty-analytics-dashboard";

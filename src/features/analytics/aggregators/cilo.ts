@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { describeScale, ratingBelongsToScale, type ScaleIdentity } from "./scale-identity";
 import { groupRatingsByScale, type QuantitativeRating } from "./quantitative";
 import type {

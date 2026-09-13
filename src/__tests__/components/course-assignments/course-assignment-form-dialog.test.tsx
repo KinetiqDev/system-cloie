@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";

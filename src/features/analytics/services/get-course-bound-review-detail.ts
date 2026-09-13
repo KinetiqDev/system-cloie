@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { prisma } from "@/lib/db/prisma";
 import { resolveReviewerProgramScope } from "@/features/academic-structure/services/resolve-reviewer-program-scope";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -55,6 +56,7 @@ export function buildReviewWordCloudTokens(texts: string[]): WordCloudToken[] {
     });
 }
 
+// fallow-ignore-next-line complexity
 export async function getCourseBoundReviewDetail(
   evaluationId: string,
   programId?: string

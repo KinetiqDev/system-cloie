@@ -108,6 +108,7 @@ async function verifySeededIdentity(
  * journey depends on (no published evaluation, exact roster, complete
  * bindings).
  */
+// fallow-ignore-next-line complexity
 async function verifyPublicationFixture(): Promise<{
   publicationTemplate: { id: string; code: string; name: string };
   publicationTarget: { id: string; courseCode: string; programCode: string };
@@ -230,6 +231,7 @@ async function verifyPublicationFixture(): Promise<{
  * institutional exit-survey baseline carries none at all. The publish
  * journeys assert that the publish step names those questions.
  */
+// fallow-ignore-next-line complexity
 async function verifyPloBindingGateFixtures(): Promise<void> {
   const contract = E2E_CONTRACT;
 

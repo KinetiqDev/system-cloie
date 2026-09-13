@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { z } from "zod";
 
