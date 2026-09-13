@@ -4,22 +4,28 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
-import { getYearLevelDisplay, YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
+import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "@/lib/constants/year-levels";
 import {
-  getSemesterLabel,
-  getTermLabel,
   SEMESTER_OPTIONS,
   TERM_OPTIONS,
+  getSemesterLabel,
+  getTermLabel,
 } from "@/lib/constants/academic";
 import {
-  Archive,
+  CourseScheduleFilterControls,
+  SCHEDULE_FILTER_ALL,
+  matchesScheduleFilters,
+} from "./course-schedule-filters";
+import {
   AlertCircle,
+  Archive,
   BookOpen,
   Edit,
   FileSpreadsheet,
   Layers,
   Plus,
   Power,
+  RotateCcw,
   Search,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -93,18 +99,19 @@ function filterCourses(
   courses: ProgramHeadCourseItem[],
   statusFilter: string,
   search: string,
-  majorFilter: string
+  majorFilter: string,
+  yearLevelFilter: string,
+  semesterFilter: string,
+  termFilter: string
 ): ProgramHeadCourseItem[] {
   let filtered = courses;
 
-  // Filter by status
   if (statusFilter === "active") {
     filtered = filtered.filter((c) => c.is_active);
   } else if (statusFilter === "archived") {
     filtered = filtered.filter((c) => !c.is_active);
   }
 
-  // Filter by search
   if (search.trim()) {
     const q = search.toLowerCase();
     filtered = filtered.filter(
@@ -112,12 +119,20 @@ function filterCourses(
     );
   }
 
-  // Filter by major
   if (majorFilter && majorFilter !== "all") {
     filtered = filtered.filter((c) => c.major_id === majorFilter);
   }
 
-  return filtered;
+  return filtered.filter((c) =>
+    matchesScheduleFilters(
+      {
+        yearLevel: c.default_year_level,
+        semester: c.default_semester,
+        term: c.default_term,
+      },
+      { yearLevel: yearLevelFilter, semester: semesterFilter, term: termFilter }
+    )
+  );
 }
 
 function StatCard({
@@ -502,9 +517,12 @@ export function ProgramHeadCoursesCatalog({
 }: ProgramHeadCoursesCatalogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [statusFilter, setStatusFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState(SCHEDULE_FILTER_ALL);
   const [search, setSearch] = useState("");
   const [majorFilter, setMajorFilter] = useState("all");
+  const [yearLevelFilter, setYearLevelFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [semesterFilter, setSemesterFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [termFilter, setTermFilter] = useState(SCHEDULE_FILTER_ALL);
   const [currentPage, setCurrentPage] = useState(1);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogKey, setCreateDialogKey] = useState(0);
@@ -516,13 +534,21 @@ export function ProgramHeadCoursesCatalog({
   } | null>(null);
 
   const PAGE_SIZE = 15;
-  const filteredCourses = filterCourses(courses, statusFilter, search, majorFilter);
+  const filteredCourses = filterCourses(
+    courses,
+    statusFilter,
+    search,
+    majorFilter,
+    yearLevelFilter,
+    semesterFilter,
+    termFilter
+  );
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${program.id}:${statusFilter}:${search}:${majorFilter}:${safePage}`
+    `${program.id}:${statusFilter}:${search}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
   const programLabel = program.name;
 
@@ -638,13 +664,13 @@ export function ProgramHeadCoursesCatalog({
         <Select
           value={statusFilter}
           onValueChange={(v) => {
-            setStatusFilter(v ?? "__all__");
+            setStatusFilter(v ?? SCHEDULE_FILTER_ALL);
             setCurrentPage(1);
           }}
         >
           <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
             <SelectValue>
-              {statusFilter === "__all__"
+              {statusFilter === SCHEDULE_FILTER_ALL
                 ? "All Statuses"
                 : statusFilter === "active"
                   ? "Active"
@@ -652,11 +678,28 @@ export function ProgramHeadCoursesCatalog({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All Statuses</SelectItem>
+            <SelectItem value={SCHEDULE_FILTER_ALL}>All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <CourseScheduleFilterControls
+          yearLevel={yearLevelFilter}
+          semester={semesterFilter}
+          term={termFilter}
+          onYearLevelChange={(v) => {
+            setYearLevelFilter(v);
+            setCurrentPage(1);
+          }}
+          onSemesterChange={(v) => {
+            setSemesterFilter(v);
+            setCurrentPage(1);
+          }}
+          onTermChange={(v) => {
+            setTermFilter(v);
+            setCurrentPage(1);
+          }}
+        />
 
         {/* Major filter */}
         {majors.length > 0 && (
@@ -699,6 +742,31 @@ export function ProgramHeadCoursesCatalog({
             }}
           />
         </div>
+
+        {(statusFilter !== SCHEDULE_FILTER_ALL ||
+          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+          semesterFilter !== SCHEDULE_FILTER_ALL ||
+          termFilter !== SCHEDULE_FILTER_ALL ||
+          majorFilter !== "all" ||
+          search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setStatusFilter(SCHEDULE_FILTER_ALL);
+              setYearLevelFilter(SCHEDULE_FILTER_ALL);
+              setSemesterFilter(SCHEDULE_FILTER_ALL);
+              setTermFilter(SCHEDULE_FILTER_ALL);
+              setMajorFilter("all");
+              setSearch("");
+              setCurrentPage(1);
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="size-3.5" />
+            Reset
+          </Button>
+        )}
       </div>
 
       <BulkActionBar
@@ -756,7 +824,12 @@ export function ProgramHeadCoursesCatalog({
                 <TableCell colSpan={10} className="h-32 text-center">
                   <p className="font-medium">No courses found</p>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {search || statusFilter !== "__all__" || majorFilter !== "all"
+                    {search ||
+                    statusFilter !== SCHEDULE_FILTER_ALL ||
+                    majorFilter !== "all" ||
+                    yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+                    semesterFilter !== SCHEDULE_FILTER_ALL ||
+                    termFilter !== SCHEDULE_FILTER_ALL
                       ? "Clear or change the filters to see more courses."
                       : "Add a course or import a CSV file to build this program’s catalog."}
                   </p>

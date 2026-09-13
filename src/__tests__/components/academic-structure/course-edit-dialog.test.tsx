@@ -8,6 +8,9 @@ const { editDataActionMock, updateActionMock, showToastMock, refreshMock } = vi.
   refreshMock: vi.fn(),
 }));
 
+// Shared router/action mock boilerplate with the create-dialog test; extracting
+// a shared test helper is tracked separately, keep the mock inline here.
+// fallow-ignore-next-line code-duplication
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: refreshMock, push: vi.fn(), replace: vi.fn() }),
 }));
@@ -34,6 +37,9 @@ const course: ManagementCourseSummaryItem = {
   programName: null,
   majorId: null,
   majorName: null,
+  defaultYearLevel: null,
+  defaultSemester: null,
+  defaultTerm: null,
   ciloCount: 3,
   evaluationCount: 2,
 };

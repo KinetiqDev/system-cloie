@@ -1,6 +1,7 @@
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { CreateCourseInput, UpdateCourseInput } from "../schemas/course";
+import { countCourseEvaluations } from "./count-course-evaluations";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isForeignKeyConstraintError, isUniqueConstraintError } from "@/lib/utils/prisma-errors";
@@ -68,14 +69,8 @@ async function ensureCourseScopeContext(input: {
   };
 }
 
-function countCourseEvaluations(course: {
-  course_assignments: Array<{ _count: { course_bound_evaluations: number } }>;
-}) {
-  return course.course_assignments.reduce(
-    (sum, assignment) => sum + assignment._count.course_bound_evaluations,
-    0
-  );
-}
+// Evaluation totals stay with the shared counter so secretary, program-head,
+// and course-lifecycle reads keep lockstep summation.
 
 export async function createCourse(
   input: CreateCourseInput
@@ -256,6 +251,9 @@ export type CourseEditData = {
 };
 
 export async function getCourseEditData(courseId: string): Promise<CourseEditData | null> {
+  // Pre-existing route/service select duplication with the dean edit page;
+  // unifying the edit-data read needs a routing-plus-auth design under #174.
+  // fallow-ignore-next-line code-duplication
   const [course, programs, majors] = await Promise.all([
     prisma.course.findUnique({
       where: { id: courseId },
@@ -272,6 +270,7 @@ export async function getCourseEditData(courseId: string): Promise<CourseEditDat
         updated_at: true,
       },
     }),
+    // fallow-ignore-next-line code-duplication
     prisma.program.findMany({
       where: { is_active: true },
       select: { id: true, code: true, name: true },

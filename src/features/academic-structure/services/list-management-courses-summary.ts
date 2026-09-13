@@ -1,5 +1,7 @@
 import { CourseScope } from "@prisma/client";
+import type { AcademicSemester, AcademicTerm, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { countCourseEvaluations } from "./count-course-evaluations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,6 +19,9 @@ export type ManagementCourseSummaryItem = {
   programName: string | null;
   majorId: string | null;
   majorName: string | null;
+  defaultYearLevel: YearLevel | null;
+  defaultSemester: AcademicSemester | null;
+  defaultTerm: AcademicTerm | null;
   ciloCount: number;
   evaluationCount: number;
 };
@@ -40,14 +45,8 @@ export type ProgramFilterOption = {
   majors: MajorFilterOption[];
 };
 
-function countCourseEvaluations(course: {
-  course_assignments: Array<{ _count: { course_bound_evaluations: number } }>;
-}) {
-  return course.course_assignments.reduce(
-    (sum, assignment) => sum + assignment._count.course_bound_evaluations,
-    0
-  );
-}
+// Evaluation totals stay with the shared counter so secretary, program-head,
+// and course-lifecycle reads keep lockstep summation.
 
 // ---------------------------------------------------------------------------
 // Main service function
@@ -122,6 +121,9 @@ export async function listManagementCoursesSummary(): Promise<{
       programName: c.program?.name ?? null,
       majorId: c.major?.id ?? null,
       majorName: c.major?.name ?? null,
+      defaultYearLevel: c.default_year_level,
+      defaultSemester: c.default_semester,
+      defaultTerm: c.default_term,
       ciloCount: c._count.cilos,
       evaluationCount: countCourseEvaluations(c),
     };

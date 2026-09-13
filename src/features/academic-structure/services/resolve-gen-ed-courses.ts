@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import type { CourseScheduleDefaults } from "./course-schedule-defaults";
 
 export type GenEdCourseItem = {
   id: string;
@@ -15,7 +16,7 @@ export type GenEdCourseItem = {
   created_at: Date;
   updated_at: Date;
   _count: { cilos: number };
-};
+} & CourseScheduleDefaults;
 
 export type GenEdCoursesSummary = {
   total: number;
@@ -59,6 +60,9 @@ export async function listGenEdCourses(): Promise<ServiceResult<GenEdCoursesResu
     course_scope: c.course_scope,
     program_id: c.program_id,
     major_id: c.major_id,
+    default_year_level: c.default_year_level,
+    default_semester: c.default_semester,
+    default_term: c.default_term,
     is_active: c.is_active,
     created_at: c.created_at,
     updated_at: c.updated_at,

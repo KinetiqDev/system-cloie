@@ -2,7 +2,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, Edit, FileSpreadsheet, Plus, Power, Search } from "lucide-react";
+import { Archive, Edit, FileSpreadsheet, Plus, Power, RotateCcw, Search } from "lucide-react";
+import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
+import {
+  CourseScheduleFilterControls,
+  SCHEDULE_FILTER_ALL,
+  matchesScheduleFilters,
+} from "./course-schedule-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -47,9 +54,11 @@ const PAGE_SIZE = 15;
 function filterCourses(
   courses: GenEdCourseItem[],
   statusFilter: string,
-  search: string
+  search: string,
+  yearLevelFilter: string,
+  semesterFilter: string,
+  termFilter: string
 ): GenEdCourseItem[] {
-  // fallow-ignore-next-line code-duplication
   let filtered = courses;
 
   if (statusFilter === "active") {
@@ -66,7 +75,16 @@ function filterCourses(
     );
   }
 
-  return filtered;
+  return filtered.filter((c) =>
+    matchesScheduleFilters(
+      {
+        yearLevel: c.default_year_level,
+        semester: c.default_semester,
+        term: c.default_term,
+      },
+      { yearLevel: yearLevelFilter, semester: semesterFilter, term: termFilter }
+    )
+  );
 }
 
 // fallow-ignore-next-line code-duplication
@@ -92,22 +110,32 @@ function StatCard({
 }
 
 export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogProps) {
-  const [statusFilter, setStatusFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState(SCHEDULE_FILTER_ALL);
   const [search, setSearch] = useState("");
+  const [yearLevelFilter, setYearLevelFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [semesterFilter, setSemesterFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [termFilter, setTermFilter] = useState(SCHEDULE_FILTER_ALL);
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<GenEdCourseItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const filteredCourses = filterCourses(courses, statusFilter, search);
+  const filteredCourses = filterCourses(
+    courses,
+    statusFilter,
+    search,
+    yearLevelFilter,
+    semesterFilter,
+    termFilter
+  );
   // fallow-ignore-next-line code-duplication
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${statusFilter}:${search}:${safePage}`
+    `${statusFilter}:${search}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
 
   function handleStatus(id: string, isActive: boolean) {
@@ -174,13 +202,13 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
         <Select
           value={statusFilter}
           onValueChange={(v) => {
-            setStatusFilter(v ?? "__all__");
+            setStatusFilter(v ?? SCHEDULE_FILTER_ALL);
             setCurrentPage(1);
           }}
         >
           <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
             <SelectValue>
-              {statusFilter === "__all__"
+              {statusFilter === SCHEDULE_FILTER_ALL
                 ? "All Statuses"
                 : statusFilter === "active"
                   ? "Active"
@@ -188,11 +216,28 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All Statuses</SelectItem>
+            <SelectItem value={SCHEDULE_FILTER_ALL}>All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
+        <CourseScheduleFilterControls
+          yearLevel={yearLevelFilter}
+          semester={semesterFilter}
+          term={termFilter}
+          onYearLevelChange={(v) => {
+            setYearLevelFilter(v);
+            setCurrentPage(1);
+          }}
+          onSemesterChange={(v) => {
+            setSemesterFilter(v);
+            setCurrentPage(1);
+          }}
+          onTermChange={(v) => {
+            setTermFilter(v);
+            setCurrentPage(1);
+          }}
+        />
 
         {/* fallow-ignore-next-line code-duplication */}
         <div className="relative w-full md:ml-auto md:max-w-xs">
@@ -207,6 +252,29 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             }}
           />
         </div>
+
+        {(statusFilter !== SCHEDULE_FILTER_ALL ||
+          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+          semesterFilter !== SCHEDULE_FILTER_ALL ||
+          termFilter !== SCHEDULE_FILTER_ALL ||
+          search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setStatusFilter(SCHEDULE_FILTER_ALL);
+              setYearLevelFilter(SCHEDULE_FILTER_ALL);
+              setSemesterFilter(SCHEDULE_FILTER_ALL);
+              setTermFilter(SCHEDULE_FILTER_ALL);
+              setSearch("");
+              setCurrentPage(1);
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="size-3.5" />
+            Reset
+          </Button>
+        )}
       </div>
 
       <BulkActionBar
@@ -248,6 +316,9 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
+              <TableHead className="hidden md:table-cell">Year Level</TableHead>
+              <TableHead className="hidden md:table-cell">Semester</TableHead>
+              <TableHead className="hidden md:table-cell">Term</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden md:table-cell">Last Updated</TableHead>
               <TableHead className="w-24 text-right">Actions</TableHead>
@@ -257,8 +328,14 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             {paginatedCourses.length === 0 ? (
               <TableRow>
                 {/* fallow-ignore-next-line code-duplication */}
-                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
-                  No courses found.
+                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                  {statusFilter !== SCHEDULE_FILTER_ALL ||
+                  search ||
+                  yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+                  semesterFilter !== SCHEDULE_FILTER_ALL ||
+                  termFilter !== SCHEDULE_FILTER_ALL
+                    ? "Clear or change the filters to see more courses."
+                    : "No courses found."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -291,6 +368,15 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{course.title}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {getYearLevelDisplay(course.default_year_level)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.default_semester ? getSemesterLabel(course.default_semester) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.default_term ? getTermLabel(course.default_term) : "—"}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Badge variant={course.is_active ? "success" : "secondary"}>
                       {course.is_active ? "Active" : "Inactive"}
