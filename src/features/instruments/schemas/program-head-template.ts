@@ -183,7 +183,10 @@ const ciloQuestionBindingSchema = z.object({
 });
 
 export const saveFacultyTemplateDraftSchema = z.object({
-  id: z.string().uuid(),
+  /** Existing accessible template being saved, or copied when faculty-unowned. */
+  id: z.string().uuid().optional(),
+  /** Starting template for a draft that has no owned template yet. */
+  source_template_id: z.string().uuid().optional(),
   name: z
     .string()
     .trim()

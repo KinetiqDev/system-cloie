@@ -45,8 +45,15 @@ export function ProgramHeadTemplateBuilder({
       {...props}
       onSave={handleSave}
       isInstitutionalBaseline={isInstitutionalBaseline}
-      onSaveAsCopy={(baselineId, customName, structure, ploBindings) =>
-        createBaselineCopyAction(programId, baselineId, customName, structure, ploBindings)
+      onSaveAsCopy={(baselineId, customName, structure, ploBindings, settings) =>
+        createBaselineCopyAction(
+          programId,
+          baselineId,
+          customName,
+          structure,
+          ploBindings,
+          settings
+        )
       }
       toolsHref={buildProgramHeadToolsPath(programId)}
       onPublish={handlePublish}

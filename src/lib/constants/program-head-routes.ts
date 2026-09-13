@@ -46,6 +46,17 @@ export function buildProgramHeadNewToolPath(programId: string): string {
   return buildProgramHeadProgramPath(programId, "tools/new");
 }
 
+export function buildProgramHeadNewBlankToolPath(programId: string): string {
+  return buildProgramHeadProgramPath(programId, "tools/new/blank");
+}
+
+export function buildProgramHeadNewToolFromBaselinePath(
+  programId: string,
+  baselineId: string
+): string {
+  return buildProgramHeadProgramPath(programId, `tools/new/from/${encodeURIComponent(baselineId)}`);
+}
+
 export function buildProgramHeadEditToolPath(programId: string, templateId: string): string {
   return buildProgramHeadProgramPath(programId, `tools/${encodeURIComponent(templateId)}/edit`);
 }

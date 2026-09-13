@@ -2,26 +2,81 @@
 
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import {
-  revalidateProgramHeadAssignment,
-  resolveProgramHeadContext,
-} from "@/features/auth/services/resolve-program-head-context";
+import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
   generateTemplateCode,
   normalizePloQuestionBindings,
   syncTemplatePloBindings,
+  withProgramHeadAssignment,
 } from "./manage-program-head-templates";
-import type { TemplateStructure } from "../types";
+import type { TemplateSettingsInput, TemplateStructure } from "../types";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
-interface CreateBaselineCopyInput {
+export interface CreateBaselineCopyInput {
   programId: string;
   baselineId: string;
   customName: string;
   structure: TemplateStructure;
   ploBindings: Array<{ ploId: string; itemKey: string; sectionKey: string }>;
+  /**
+   * Template settings the author edited before saving. Absent callers inherit
+   * the baseline's own description, type, active state, and faculty access.
+   */
+  settings?: TemplateSettingsInput;
+}
+
+/**
+ * Mirrors createProgramHeadTemplateSchema's name rules for the builder entry
+ * points that reach this service without that schema.
+ */
+function templateNameError(name: string): string | null {
+  if (name.length < 3) return "Template name must be at least 3 characters.";
+  if (name.length > 200) return "Template name must be 200 characters or fewer.";
+  return null;
+}
+
+type BaselineCopySettings = {
+  description: string | null;
+  isActive: boolean;
+  isFacultyAccessible: boolean;
+  templateType: EvaluationTemplateType;
+};
+
+/**
+ * Resolves the copy's settings: the author's edits when the builder sent them,
+ * otherwise the baseline's own values. Faculty access stays limited to
+ * course-bound templates.
+ */
+function resolveCopySettings(
+  baseline: {
+    description: string | null;
+    is_active: boolean;
+    is_faculty_accessible: boolean;
+    template_type: EvaluationTemplateType;
+  },
+  settings?: TemplateSettingsInput
+): BaselineCopySettings {
+  if (!settings) {
+    return {
+      description: baseline.description,
+      isActive: baseline.is_active,
+      isFacultyAccessible:
+        baseline.template_type === EvaluationTemplateType.COURSE_BOUND &&
+        baseline.is_faculty_accessible,
+      templateType: baseline.template_type,
+    };
+  }
+
+  return {
+    description: settings.description || null,
+    isActive: settings.is_active,
+    isFacultyAccessible:
+      settings.template_type === EvaluationTemplateType.COURSE_BOUND &&
+      settings.is_faculty_accessible,
+    templateType: settings.template_type,
+  };
 }
 
 /**
@@ -55,6 +110,13 @@ export async function createBaselineCopy(
     return authResult;
   }
 
+  const customName = input.customName.trim();
+  const nameError = templateNameError(customName);
+
+  if (nameError) {
+    return { success: false, error: nameError };
+  }
+
   const { userId, selectedProgram } = authResult.data;
   const programId = selectedProgram.id;
 
@@ -66,6 +128,7 @@ export async function createBaselineCopy(
       name: true,
       description: true,
       template_type: true,
+      is_active: true,
       is_faculty_accessible: true,
       structure: true,
       faculty_owner_id: true,
@@ -95,30 +158,36 @@ export async function createBaselineCopy(
     return { success: false, error: "Assigned program not found." };
   }
 
+  const copySettings = resolveCopySettings(baseline, input.settings);
+  // Only PROGRAM_WIDE templates bind Program Learning Outcomes, so a copy the
+  // author retyped as course-bound carries none.
+  const ploBindings =
+    copySettings.templateType === EvaluationTemplateType.PROGRAM_WIDE ? input.ploBindings : [];
+
   // Reject a same-name copy before generating a code: code uniqueness was
   // previously derived from the source baseline (program code + baseline code),
   // so a second copy of the same baseline always collided regardless of the
   // name the user entered. The code now derives from the user's name, and a
   // duplicate name within the program is reported plainly.
   const nameConflict = await prisma.instrumentTemplate.findFirst({
-    where: { program_id: programId, name: input.customName },
+    where: { program_id: programId, name: customName },
     select: { id: true },
   });
 
   if (nameConflict) {
     return {
       success: false,
-      error: `A template named "${input.customName}" already exists for this program. Try a different name.`,
+      error: `A template named "${customName}" already exists for this program. Try a different name.`,
     };
   }
 
-  const code = await resolveAvailableTemplateCode(program.code, input.customName);
+  const code = await resolveAvailableTemplateCode(program.code, customName);
 
   // Validate question–PLO bindings against the program's active PLO catalog.
   // Empty bindings are allowed: drafts copy without bindings, and full Likert
   // coverage is enforced at publication.
   const activePlos =
-    input.ploBindings.length > 0
+    ploBindings.length > 0
       ? await prisma.pLO.findMany({
           where: { program_id: programId, is_active: true },
           select: { id: true, code: true, description: true },
@@ -126,7 +195,7 @@ export async function createBaselineCopy(
       : [];
 
   const bindingValidation = normalizePloQuestionBindings({
-    bindings: input.ploBindings,
+    bindings: ploBindings,
     structure: input.structure,
     plos: activePlos,
   });
@@ -136,23 +205,18 @@ export async function createBaselineCopy(
   }
 
   try {
-    const template = await prisma.$transaction(async (tx) => {
-      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
-      if (!currentProgram) return null;
-
+    const created = await withProgramHeadAssignment({ userId, programId }, async (tx) => {
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
           code,
-          name: input.customName,
-          description: baseline.description ?? null,
-          is_active: true,
-          is_faculty_accessible:
-            baseline.template_type === EvaluationTemplateType.COURSE_BOUND &&
-            baseline.is_faculty_accessible,
+          name: customName,
+          description: copySettings.description,
+          is_active: copySettings.isActive,
+          is_faculty_accessible: copySettings.isFacultyAccessible,
           program_id: programId,
           source_template_id: baseline.id,
           structure: input.structure as unknown as Prisma.InputJsonValue,
-          template_type: baseline.template_type,
+          template_type: copySettings.templateType,
         },
       });
 
@@ -172,13 +236,14 @@ export async function createBaselineCopy(
       return createdTemplate;
     });
 
-    if (!template) return { success: false, error: "Selected Program is no longer assigned." };
-    return { success: true, data: { id: template.id } };
+    if (!created.success) return created;
+
+    return { success: true, data: { id: created.data.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return {
         success: false,
-        error: `A template named "${input.customName}" already exists for this program. Try a different name.`,
+        error: `A template named "${customName}" already exists for this program. Try a different name.`,
       };
     }
 

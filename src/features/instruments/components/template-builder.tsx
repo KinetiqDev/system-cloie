@@ -23,8 +23,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, CloudAlert, GripVertical, Plus, Save, SearchIcon, XIcon } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Check, CloudAlert, GripVertical, Info, Plus, Save, SearchIcon, XIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +92,7 @@ import type {
   TemplateCiloQuestionBinding,
   ProgramPloOption,
   TemplatePloQuestionBinding,
+  TemplateSettingsInput,
 } from "../types";
 import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
 
@@ -138,8 +139,20 @@ export interface TemplateBuilderProps {
     baselineId: string,
     customName: string,
     structure: TemplateStructure,
-    ploBindings: TemplatePloQuestionBinding[]
+    ploBindings: TemplatePloQuestionBinding[],
+    settings: TemplateSettingsInput
   ) => Promise<ActionResult<{ id: string }>>;
+  /**
+   * Identity of the template this builder was opened from while no owned
+   * template exists yet. The first save derives a new template from it: a
+   * Program Head baseline copy runs through `onSaveAsCopy`, a faculty copy of a
+   * shared template carries `source_template_id` on the draft save.
+   */
+  startingFrom?: {
+    id: string;
+    name: string;
+    origin: "institutional-baseline" | "shared-template";
+  };
   onPublish?: (templateId: string) => void;
   /**
    * Server-prepared active PLOs (canonical order) offered to Program-wide
@@ -420,6 +433,7 @@ export function TemplateBuilder({
   onSaveResult,
   isInstitutionalBaseline = false,
   onSaveAsCopy,
+  startingFrom,
   onPublish,
   ploOptions,
   initialPloBindings,
@@ -1058,6 +1072,10 @@ export function TemplateBuilder({
       formData.set("id", templateId);
     }
 
+    if (!templateId && startingFrom) {
+      formData.set("source_template_id", startingFrom.id);
+    }
+
     formData.set("name", name);
     formData.set("description", description);
     formData.set("template_type", effectiveTemplateType);
@@ -1109,6 +1127,7 @@ export function TemplateBuilder({
     ploQuestionBindings,
     programWideMode,
     sections,
+    startingFrom,
     templateId,
   ]);
 
@@ -1137,7 +1156,12 @@ export function TemplateBuilder({
     setIsCopyPending(true);
     const structure = normalizeTemplateStructure(sections);
     const ploBindings = programWideMode ? collectPloBindings(structure, ploQuestionBindings) : [];
-    const result = await onSaveAsCopy(templateId, copyName, structure, ploBindings);
+    const result = await onSaveAsCopy(templateId, copyName, structure, ploBindings, {
+      description,
+      is_active: isActive,
+      is_faculty_accessible: isFacultyAccessible,
+      template_type: effectiveTemplateType,
+    });
     setIsCopyPending(false);
     setCopyNameDialogOpen(false);
 
@@ -1160,12 +1184,54 @@ export function TemplateBuilder({
     onSaveResult,
     programWideMode,
     ploQuestionBindings,
+    description,
+    isActive,
+    isFacultyAccessible,
+    effectiveTemplateType,
   ]);
 
   const handleSave = useCallback(() => {
     if (isInstitutionalBaseline && templateId && onSaveAsCopy) {
       setCopyName(name);
       setCopyNameDialogOpen(true);
+      return;
+    }
+
+    if (!templateId && startingFrom && onSaveAsCopy) {
+      const copyNameInput = name.trim();
+
+      // The supporting copy dialog blocks an empty name; this path must too,
+      // or the copy is created without one.
+      if (copyNameInput.length < 3) {
+        const message = "Template name must be at least 3 characters.";
+        setError(message);
+        showToast(message, "error");
+        return;
+      }
+
+      startTransition(async () => {
+        const structure = normalizeTemplateStructure(sections);
+        const ploBindings = programWideMode
+          ? collectPloBindings(structure, ploQuestionBindings)
+          : [];
+        const result = await onSaveAsCopy(startingFrom.id, copyNameInput, structure, ploBindings, {
+          description,
+          is_active: isActive,
+          is_faculty_accessible: isFacultyAccessible,
+          template_type: effectiveTemplateType,
+        });
+
+        if (!result.success) {
+          setError(result.error);
+          showToast(result.error, "error");
+          onSaveResult?.({ success: false, error: result.error });
+          return;
+        }
+
+        showToast("Program copy created. The institutional baseline is unchanged.", "success");
+        onSaveResult?.({ success: true, id: result.data!.id });
+        router.push(`${toolsHref}/${encodeURIComponent(result.data!.id)}/edit`);
+      });
       return;
     }
 
@@ -1192,6 +1258,10 @@ export function TemplateBuilder({
     saveDraft,
     saveSuccessConfig,
     onSaveResult,
+    startingFrom,
+    programWideMode,
+    ploQuestionBindings,
+    sections,
   ]);
 
   const handleContinueToPublish = useCallback(() => {
@@ -1226,15 +1296,23 @@ export function TemplateBuilder({
     error: { icon: CloudAlert, label: "Save failed" },
   }[visibleSaveState];
   const SaveStateIcon = saveStateContent.icon;
-  const canContinueToPublish = (facultyMode || Boolean(onPublish)) && !isInstitutionalBaseline;
+  const canContinueToPublish =
+    (facultyMode || Boolean(onPublish)) &&
+    !isInstitutionalBaseline &&
+    // A template created from a starting source saves through the copy path,
+    // which lands in the new copy's editor; publishing follows from there.
+    !(!templateId && startingFrom?.origin === "institutional-baseline");
   const saveActionLabel =
-    isInstitutionalBaseline && onSaveAsCopy
+    (isInstitutionalBaseline && onSaveAsCopy) ||
+    (!templateId && startingFrom?.origin === "institutional-baseline")
       ? "Create program copy"
-      : templateId
-        ? facultyMode || onPublish
-          ? "Save draft"
-          : "Save template"
-        : "Create template";
+      : !templateId && startingFrom
+        ? "Create my copy"
+        : templateId
+          ? facultyMode || onPublish
+            ? "Save draft"
+            : "Save template"
+          : "Create template";
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
@@ -1294,6 +1372,27 @@ export function TemplateBuilder({
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {!templateId && startingFrom && (
+        <Alert variant="information">
+          <Info aria-hidden="true" />
+          <AlertTitle>
+            {startingFrom.origin === "institutional-baseline"
+              ? "Starting from an institutional baseline"
+              : "Starting from a shared template"}
+          </AlertTitle>
+          <AlertDescription>
+            Saving creates{" "}
+            {startingFrom.origin === "institutional-baseline"
+              ? "your program's own copy of "
+              : "your own copy of "}
+            <strong>{startingFrom.name}</strong>.{" "}
+            {startingFrom.origin === "institutional-baseline"
+              ? "The baseline stays unchanged."
+              : "The shared template stays unchanged."}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -1646,7 +1745,11 @@ export function TemplateBuilder({
             <Button variant="outline" onClick={() => setCopyNameDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveAsCopy} disabled={!copyName.trim()} loading={isCopyPending}>
+            <Button
+              onClick={handleSaveAsCopy}
+              disabled={copyName.trim().length < 3}
+              loading={isCopyPending}
+            >
               Create Copy
             </Button>
           </DialogFooter>

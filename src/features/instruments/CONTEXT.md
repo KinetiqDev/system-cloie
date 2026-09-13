@@ -17,11 +17,15 @@ _Avoid_: Template revision, live snapshot
 _Avoid_: Survey category, evaluation kind
 
 **Institutional baseline**:
-An institution-owned template with no program and no faculty owner, offered to Program Heads for copying. A Program Head copies it into a program-owned template via `source_template_id` with a generated unique code (name-derived, suffixed on collision), and the copy owns its PLO bindings.
+An institution-owned template with no program and no faculty owner, offered to Program Heads for copying. A Program Head copies it into a program-owned template via `source_template_id` with a generated unique code (name-derived, suffixed on collision), and the copy owns its PLO bindings. Choosing a baseline in the creation flow only pre-fills the template builder: the program-owned copy is created on the first save, so an abandoned selection leaves no record and the baseline is never modified.
 _Avoid_: Admin template, starter template
 
+**Blank draft**:
+A template authored without a starting point. A Program Head's blank draft becomes a program-owned `PROGRAM_WIDE` template; a faculty member's blank draft is a faculty-owned `COURSE_BOUND` template with no bound course, so CILO bindings and publication wait until the author selects a course.
+_Avoid_: Empty template, untitled instrument
+
 **Faculty-accessible template**:
-A COURSE_BOUND template marked usable by faculty, who copy or draft it into their own faculty-owned template bound to a course context (course, plus program and major where applicable) resolved from their active faculty affiliations. Copies start as course-bound drafts with a faculty-generated code.
+A COURSE_BOUND template marked usable by faculty, who copy or draft it into their own faculty-owned template bound to a course context (course, plus program and major where applicable) resolved from their active faculty affiliations. Copies start as course-bound drafts with a faculty-generated code. A faculty member never edits a shared template in place: saving one creates their copy on the first save, and a blank faculty draft is created the same way.
 
 ## Questions and outcome bindings
 

@@ -1582,7 +1582,13 @@ describe("TemplateBuilder", () => {
       "baseline-1",
       "Institutional Baseline",
       expect.any(Array),
-      [{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }]
+      [{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }],
+      {
+        description: "",
+        is_active: true,
+        is_faculty_accessible: false,
+        template_type: "PROGRAM_WIDE",
+      }
     );
 
     unmount();
@@ -1800,5 +1806,125 @@ describe("TemplateBuilder", () => {
     fireEvent.click(bindings[1]!);
     const option = await screen.findByRole("option", { name: /CILO 1.*already on 1 question/ });
     expect(option).not.toHaveAttribute("aria-disabled", "true");
+  });
+
+  test("copies a starting template only when the new draft is saved", async () => {
+    const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
+    const onSave = vi.fn();
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        onSaveAsCopy={onSaveAsCopy}
+        ploOptions={[]}
+        startingFrom={{
+          id: "baseline-1",
+          name: "CILO Evaluation",
+          origin: "institutional-baseline",
+        }}
+        initialData={{
+          name: "CILO Evaluation",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    // The starting point is disclosed and nothing is written before a save.
+    expect(screen.getByText("Starting from an institutional baseline")).toBeInTheDocument();
+    expect(screen.getByText(/The baseline stays unchanged/)).toBeInTheDocument();
+    expect(onSaveAsCopy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create program copy" }));
+
+    // The first save derives the copy through the baseline-copy action, named
+    // from the builder's name field, instead of the plain create action.
+    await waitFor(() => expect(onSaveAsCopy).toHaveBeenCalledTimes(1));
+    expect(onSaveAsCopy).toHaveBeenCalledWith(
+      "baseline-1",
+      "CILO Evaluation",
+      expect.any(Array),
+      [],
+      {
+        description: "",
+        is_active: true,
+        is_faculty_accessible: false,
+        template_type: "PROGRAM_WIDE",
+      }
+    );
+    expect(onSave).not.toHaveBeenCalled();
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/program-head/tools/copy-1/edit"));
+  });
+
+  test("refuses to create a baseline copy without a usable name", async () => {
+    const onSaveAsCopy = vi.fn();
+    const onSave = vi.fn();
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        onSaveAsCopy={onSaveAsCopy}
+        ploOptions={[]}
+        startingFrom={{
+          id: "baseline-1",
+          name: "CILO Evaluation",
+          origin: "institutional-baseline",
+        }}
+        initialData={{
+          name: "  ",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate your learning",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create program copy" }));
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts.map((node) => node.textContent)).toContain(
+      "Template name must be at least 3 characters."
+    );
+    expect(onSaveAsCopy).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

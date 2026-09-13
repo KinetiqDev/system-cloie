@@ -48,7 +48,11 @@ describe("selected Program template edit route", () => {
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
       data: {
-        selectedProgram: { code: "BSIT", id: PROGRAM_ID, name: "Bachelor of Science in Information Technology" },
+        selectedProgram: {
+          code: "BSIT",
+          id: PROGRAM_ID,
+          name: "Bachelor of Science in Information Technology",
+        },
       },
     });
     listProgramPloOptionsMock.mockResolvedValue({ success: true, data: { plos: [] } });
@@ -57,7 +61,9 @@ describe("selected Program template edit route", () => {
   it("passes only serializable data to the client builder for an institutional baseline", async () => {
     const Page = await loadPage();
 
-    const page = await Page({ params: Promise.resolve({ id: BASELINE_ID, programId: PROGRAM_ID }) });
+    const page = await Page({
+      params: Promise.resolve({ id: BASELINE_ID, programId: PROGRAM_ID }),
+    });
 
     expect(getProgramHeadTemplateMock).toHaveBeenCalledWith(PROGRAM_ID, BASELINE_ID);
     expect(page.props).toMatchObject({
@@ -67,7 +73,7 @@ describe("selected Program template edit route", () => {
     expect(page.props).not.toHaveProperty("onSave");
   });
 
-  it("passes only serializable data to the client builder for a new template", async () => {
+  it("passes only serializable data to the client builder for a blank template", async () => {
     const Page = await loadNewPage();
 
     const page = await Page({ params: Promise.resolve({ programId: PROGRAM_ID }) });
@@ -79,15 +85,13 @@ describe("selected Program template edit route", () => {
 });
 
 async function loadPage() {
-  const { default: Page } = await import(
-    "@/app/(app)/program-head/programs/[programId]/tools/[id]/edit/page"
-  );
+  const { default: Page } =
+    await import("@/app/(app)/program-head/programs/[programId]/tools/[id]/edit/page");
   return Page;
 }
 
 async function loadNewPage() {
-  const { default: Page } = await import(
-    "@/app/(app)/program-head/programs/[programId]/tools/new/page"
-  );
+  const { default: Page } =
+    await import("@/app/(app)/program-head/programs/[programId]/tools/new/blank/page");
   return Page;
 }

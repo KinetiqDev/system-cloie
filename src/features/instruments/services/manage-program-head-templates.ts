@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
@@ -198,6 +199,28 @@ async function requirePHSession(programId: string) {
   return resolveProgramHeadContext(programId);
 }
 
+/**
+ * Runs a Program Head write inside a transaction that first re-checks the
+ * assignment under lock, so a Program revoked mid-session cannot be written to.
+ */
+export async function withProgramHeadAssignment<T>(
+  context: { userId: string; programId: string },
+  write: (tx: Prisma.TransactionClient) => Promise<T>
+): Promise<ServiceResult<T>> {
+  const result = await prisma.$transaction(async (tx) => {
+    const currentProgram = await revalidateProgramHeadAssignment(tx, context);
+    if (!currentProgram) return null;
+
+    return write(tx);
+  });
+
+  if (result === null) {
+    return { success: false, error: "Selected Program is no longer assigned." };
+  }
+
+  return { success: true, data: result };
+}
+
 // ─── List Templates ──────────────────────────────────────────────────────────
 
 export async function listProgramHeadTemplates(
@@ -299,12 +322,7 @@ export async function createProgramHeadTemplate(
   }
 
   try {
-    const template = await prisma.$transaction(async (tx) => {
-      const currentProgram = await revalidateProgramHeadAssignment(tx, { userId, programId });
-      if (!currentProgram) {
-        return null;
-      }
-
+    const created = await withProgramHeadAssignment({ userId, programId }, async (tx) => {
       const createdTemplate = await tx.instrumentTemplate.create({
         data: {
           code,
@@ -346,8 +364,9 @@ export async function createProgramHeadTemplate(
       return createdTemplate;
     });
 
-    if (!template) return { success: false, error: "Selected Program is no longer assigned." };
-    return { success: true, data: { id: template.id } };
+    if (!created.success) return created;
+
+    return { success: true, data: { id: created.data.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return {

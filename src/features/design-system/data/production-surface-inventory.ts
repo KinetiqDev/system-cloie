@@ -598,6 +598,42 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/faculty/tools/new/loading.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/new/page.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/new/blank/loading.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/new/blank/page.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/new/from/[templateId]/loading.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/faculty/tools/new/from/[templateId]/page.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "route",
+  },
+  {
     path: "src/app/(app)/industry-partner/dashboard/loading.tsx",
     disposition: "task",
     taskId: 24,
@@ -1070,6 +1106,30 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/app/(app)/program-head/programs/[programId]/tools/new/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/new/blank/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/new/blank/page.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/new/from/[baselineId]/loading.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/program-head/programs/[programId]/tools/new/from/[baselineId]/page.tsx",
     disposition: "task",
     taskId: 14,
     category: "route",
@@ -2777,6 +2837,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/instruments/components/faculty-template-builder.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
     path: "src/features/instruments/components/evaluation-tools-tabs.tsx",
     disposition: "task",
     taskId: 20,
@@ -2814,6 +2880,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/instruments/components/template-collection.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/instruments/components/template-start-chooser.tsx",
     disposition: "task",
     taskId: 20,
     category: "feature_component",
