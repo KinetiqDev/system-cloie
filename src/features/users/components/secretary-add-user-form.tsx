@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { showToast } from "@/components/ui/toast";
 import {
@@ -8,14 +8,21 @@ import {
   Controller,
   type Control,
   type Path,
+  type Resolver,
   type UseFormRegister,
 } from "react-hook-form";
 import { SystemRole } from "@prisma/client";
+import type { z } from "zod";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   createUserBySecretarySchema,
   type CreateUserBySecretaryInput,
 } from "../schemas/create-user";
+import { addRoleToExistingUserFormSchema } from "../schemas/add-role-to-existing-user";
+import type {
+  ExistingAccountLookup,
+  LookupUserByEmailResult,
+} from "@/lib/actions/secretary-user-lookup-actions";
 
 import {
   Card,
@@ -28,6 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -38,10 +46,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
-import { AlertCircle, Loader2, UserPlus } from "lucide-react";
+import { AlertCircle, Info, Loader2, UserCheck, UserPlus, UserRoundCog } from "lucide-react";
+import { formatRole, getRoleBadgeClass } from "../lib/role-visuals";
 import { cn } from "@/lib/utils";
 
 type ActionResult = { success: true } | { success: false; error: string };
+
+/**
+ * Creation can report an existing email as a pivot signal: `existingUserId`
+ * names the account that already holds the address.
+ */
+type CreateActionResult =
+  | { success: true }
+  | { success: false; error: string; existingUserId?: string };
 
 type AddUserFormProps = {
   programs: Array<{
@@ -50,7 +67,9 @@ type AddUserFormProps = {
     name: string;
     majors: Array<{ id: string; name: string }>;
   }>;
-  createAction: (formData: FormData) => Promise<ActionResult>;
+  createAction: (formData: FormData) => Promise<CreateActionResult>;
+  addRoleAction: (formData: FormData) => Promise<ActionResult>;
+  lookupUserByEmailAction: (email: string) => Promise<LookupUserByEmailResult>;
 };
 
 const ROLE_LABELS: Record<SystemRole, string> = {
@@ -73,6 +92,17 @@ const SINGLE_SELECT_ROLES: SystemRole[] = [
 ];
 
 const INTERNAL_EMAIL_HELPER = "Internal roles require an @acd.edu.ph or @acdeducation.com address.";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_LOOKUP_DEBOUNCE_MS = 400;
+
+/** Email resolution state for the "does this account already exist?" pivot. */
+type EmailLookupState =
+  | { status: "idle" }
+  | { status: "checking"; email: string }
+  | { status: "absent"; email: string }
+  | { status: "found"; email: string; user: ExistingAccountLookup }
+  | { status: "error"; email: string; error: string };
 
 function needsProgramField(role: SystemRole | undefined): "single" | "none" {
   if (!role) return "none";
@@ -103,13 +133,48 @@ function getRoleDetailsSectionTitle(role: SystemRole | undefined): string | null
   return null;
 }
 
+/**
+ * Copies the role-context fields the role requires into the action payload.
+ * Shared by the create-account and add-role submissions so both actions receive
+ * the same FormData shape.
+ */
+function appendRoleDetails(formData: FormData, role: SystemRole, data: CreateUserBySecretaryInput) {
+  if (needsProgramField(role) === "single" && data.program_id) {
+    formData.set("program_id", data.program_id);
+  }
+
+  if (data.major_id) {
+    formData.set("major_id", data.major_id);
+  }
+
+  if (isStudentRole(role)) {
+    if (data.year_level) {
+      formData.set("year_level", data.year_level);
+    }
+    if (data.section) {
+      formData.set("section", data.section);
+    }
+  }
+
+  if (isAlumniRole(role) && data.graduation_year != null) {
+    formData.set("graduation_year", String(data.graduation_year));
+  }
+
+  if (isIndustryPartnerRole(role)) {
+    formData.set("company_name", data.company_name ?? "");
+    if (data.position) {
+      formData.set("position", data.position);
+    }
+  }
+}
+
 type SelectOption = { value: string; label: string };
 
 type FormControlProps = {
   id: string;
   label: string;
   optional?: boolean;
-  helper?: string;
+  helper?: React.ReactNode;
   error?: string;
   children: React.ReactNode;
 };
@@ -148,12 +213,13 @@ type TextFieldProps = {
   name: Path<CreateUserBySecretaryInput>;
   register: UseFormRegister<CreateUserBySecretaryInput>;
   error?: string;
-  helper?: string;
+  helper?: React.ReactNode;
   optional?: boolean;
   placeholder?: string;
   type?: React.HTMLInputTypeAttribute;
   min?: number | string;
   max?: number | string;
+  onBlur?: () => void;
 };
 
 function TextField({
@@ -168,6 +234,7 @@ function TextField({
   type = "text",
   min,
   max,
+  onBlur,
 }: TextFieldProps) {
   const describedByIds = [helper ? `${id}-helper` : null, error ? `${id}-error` : null]
     .filter(Boolean)
@@ -184,6 +251,7 @@ function TextField({
         aria-invalid={!!error}
         aria-describedby={describedByIds || undefined}
         {...register(name)}
+        onBlur={onBlur}
       />
     </FormControl>
   );
@@ -198,7 +266,7 @@ type SelectFieldProps = {
   onChange?: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
-  helper?: string;
+  helper?: React.ReactNode;
   optional?: boolean;
   error?: string;
 };
@@ -257,9 +325,32 @@ function SelectField({
   );
 }
 
-export function AddUserForm({ programs, createAction }: AddUserFormProps) {
+export function AddUserForm({
+  programs,
+  createAction,
+  addRoleAction,
+  lookupUserByEmailAction,
+}: AddUserFormProps) {
   const router = useRouter();
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [lookup, setLookup] = useState<EmailLookupState>({ status: "idle" });
+
+  const existingUserRef = useRef<ExistingAccountLookup | null>(null);
+
+  const resolver = useMemo<Resolver<CreateUserBySecretaryInput>>(() => {
+    const createResolver = customZodResolver(createUserBySecretarySchema);
+    // The pivot schema validates the same fields minus `name`; it is used when
+    // the email belongs to an existing account, so the action receives role
+    // context instead of account-creation data.
+    const addRoleResolver = customZodResolver(
+      addRoleToExistingUserFormSchema as unknown as z.ZodType<CreateUserBySecretaryInput>
+    );
+
+    return (values, context, options) =>
+      existingUserRef.current
+        ? addRoleResolver(values, context, options)
+        : createResolver(values, context, options);
+  }, []);
 
   const {
     control,
@@ -269,9 +360,10 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     setValue,
     clearErrors,
     setError,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<CreateUserBySecretaryInput>({
-    resolver: customZodResolver(createUserBySecretarySchema),
+    resolver,
     defaultValues: {
       name: "",
       email: "",
@@ -286,8 +378,112 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     },
   });
 
+  const emailValue = watch("email") ?? "";
+  const normalizedEmail = emailValue.trim().toLowerCase();
   const selectedRole = watch("role");
   const selectedProgramId = watch("program_id");
+
+  // Only trust a lookup result that still matches the current email, so a
+  // half-edited address can never add a role to the wrong account.
+  const existingUser =
+    lookup.status === "found" && lookup.email === normalizedEmail ? lookup.user : null;
+
+  useEffect(() => {
+    existingUserRef.current = existingUser;
+  }, [existingUser]);
+
+  const lookupTimerRef = useRef<number | null>(null);
+  const lookupRequestRef = useRef(0);
+
+  const runLookup = useCallback(
+    async (email: string) => {
+      const requestId = ++lookupRequestRef.current;
+      setLookup({ status: "checking", email });
+
+      let result: LookupUserByEmailResult;
+      try {
+        result = await lookupUserByEmailAction(email);
+      } catch {
+        if (requestId === lookupRequestRef.current) {
+          setLookup({ status: "error", email, error: "Could not check this email. Try again." });
+        }
+        return;
+      }
+
+      if (requestId !== lookupRequestRef.current) return;
+
+      if (!result.success) {
+        setLookup({ status: "error", email, error: result.error });
+      } else if (result.found) {
+        setLookup({ status: "found", email, user: result.user });
+      } else {
+        setLookup({ status: "absent", email });
+      }
+    },
+    [lookupUserByEmailAction]
+  );
+
+  // Check the email after the Secretary stops typing; blur checks immediately.
+  useEffect(() => {
+    if (lookupTimerRef.current !== null) {
+      window.clearTimeout(lookupTimerRef.current);
+      lookupTimerRef.current = null;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      lookupRequestRef.current += 1;
+      setLookup((previous) => (previous.status === "idle" ? previous : { status: "idle" }));
+      return;
+    }
+
+    lookupTimerRef.current = window.setTimeout(() => {
+      lookupTimerRef.current = null;
+      void runLookup(normalizedEmail);
+    }, EMAIL_LOOKUP_DEBOUNCE_MS);
+
+    return () => {
+      if (lookupTimerRef.current !== null) {
+        window.clearTimeout(lookupTimerRef.current);
+        lookupTimerRef.current = null;
+      }
+    };
+  }, [normalizedEmail, runLookup]);
+
+  const resetRoleDetails = useCallback(() => {
+    clearErrors();
+    setValue("program_id", undefined);
+    setValue("major_id", undefined);
+    setValue("year_level", undefined);
+    setValue("section", undefined);
+    setValue("graduation_year", undefined);
+    setValue("company_name", "");
+    setValue("position", "");
+  }, [clearErrors, setValue]);
+
+  // Switching between "create account" and "add role" resets the role choice:
+  // roles already held by the account must never be carried into either flow.
+  const previousExistingUserIdRef = useRef<string | null>(null);
+  const nameBeforePivotRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const previousId = previousExistingUserIdRef.current;
+    const nextId = existingUser?.id ?? null;
+    if (previousId === nextId) return;
+    previousExistingUserIdRef.current = nextId;
+
+    setGlobalError(null);
+    resetRoleDetails();
+    setValue("role", undefined as unknown as SystemRole);
+
+    if (existingUser) {
+      nameBeforePivotRef.current = getValues("name") ?? "";
+      setValue("name", existingUser.name);
+    } else if (previousId !== null) {
+      setValue("name", nameBeforePivotRef.current ?? "");
+      nameBeforePivotRef.current = null;
+    }
+  }, [existingUser, getValues, resetRoleDetails, setValue]);
+
   const programMode = needsProgramField(selectedRole);
   const studentMode = isStudentRole(selectedRole);
   const alumniMode = isAlumniRole(selectedRole);
@@ -301,10 +497,11 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
 
   const programLabel = studentMode ? "Academic program" : "Affiliated program";
 
-  const roleOptions = Object.values(SystemRole).map((role) => ({
-    value: role,
-    label: ROLE_LABELS[role],
-  }));
+  const roleOptions = Object.values(SystemRole)
+    .filter((role) => !existingUser?.roles.includes(role))
+    .map((role) => ({ value: role, label: ROLE_LABELS[role] }));
+
+  const everyRoleAssigned = existingUser !== null && roleOptions.length === 0;
 
   const programOptions = programs.map((program) => ({
     value: program.id,
@@ -327,24 +524,45 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
     label: option.label,
   }));
 
+  const emailHelper =
+    lookup.status === "checking" ? (
+      <span className="inline-flex items-center gap-1">
+        <Loader2 className="size-3 animate-spin" />
+        Checking this email…
+      </span>
+    ) : lookup.status === "error" ? (
+      lookup.error
+    ) : lookup.status === "absent" ? (
+      "No existing account found. Submitting will create a new user account."
+    ) : (
+      INTERNAL_EMAIL_HELPER
+    );
+
+  const roleHelper = existingUser
+    ? everyRoleAssigned
+      ? "This account already holds every role."
+      : "Only roles this account does not hold yet are listed."
+    : undefined;
+
+  function handleEmailBlur() {
+    if (lookupTimerRef.current !== null) {
+      window.clearTimeout(lookupTimerRef.current);
+      lookupTimerRef.current = null;
+    }
+    if (!EMAIL_PATTERN.test(normalizedEmail)) return;
+
+    const alreadyResolved =
+      (lookup.status === "checking" || lookup.status === "found" || lookup.status === "absent") &&
+      lookup.email === normalizedEmail;
+    if (alreadyResolved) return;
+
+    void runLookup(normalizedEmail);
+  }
+
   function handleRoleChange(newRole: SystemRole) {
     setGlobalError(null);
-    clearErrors();
+    resetRoleDetails();
     setValue("role", newRole);
-
-    const resetValues: Partial<CreateUserBySecretaryInput> = {
-      program_id: undefined,
-      major_id: undefined,
-      year_level: undefined,
-      section: undefined,
-      graduation_year: undefined,
-      company_name: "",
-      position: "",
-    };
-
-    (Object.keys(resetValues) as Array<keyof typeof resetValues>).forEach((fieldName) => {
-      setValue(fieldName as Path<CreateUserBySecretaryInput>, resetValues[fieldName] as never);
-    });
   }
 
   const onSubmit = async (data: CreateUserBySecretaryInput) => {
@@ -358,42 +576,55 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
       return;
     }
 
+    if (existingUser) {
+      if (existingUser.roles.includes(data.role)) {
+        setError("role", {
+          type: "manual",
+          message: `${formatRole(data.role)} is already assigned to ${existingUser.name}.`,
+        });
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("user_id", existingUser.id);
+      formData.set("role", data.role);
+      appendRoleDetails(formData, data.role, data);
+
+      const result = await addRoleAction(formData);
+
+      if (!result.success) {
+        const msg = result.error || "Failed to add role.";
+        setGlobalError(msg);
+        showToast(msg, "error");
+        return;
+      }
+
+      router.push(
+        `/secretary/users?toast=${encodeURIComponent("Role added successfully.")}&toastType=success`
+      );
+      return;
+    }
+
     const formData = new FormData();
     formData.set("name", data.name);
     formData.set("email", data.email);
     formData.set("role", data.role);
-
-    if (programMode === "single" && data.program_id) {
-      formData.set("program_id", data.program_id);
-    }
-
-    if (data.major_id) {
-      formData.set("major_id", data.major_id);
-    }
-
-    if (studentMode) {
-      if (data.year_level) {
-        formData.set("year_level", data.year_level);
-      }
-      if (data.section) {
-        formData.set("section", data.section);
-      }
-    }
-
-    if (alumniMode && data.graduation_year != null) {
-      formData.set("graduation_year", String(data.graduation_year));
-    }
-
-    if (industryPartnerMode) {
-      formData.set("company_name", data.company_name ?? "");
-      if (data.position) {
-        formData.set("position", data.position);
-      }
-    }
+    appendRoleDetails(formData, data.role, data);
 
     const result = await createAction(formData);
 
     if (!result.success) {
+      // The account was created after the pre-submit check (or the check could
+      // not run): resolve the lookup so the form pivots to granting a role.
+      if (result.existingUserId) {
+        showToast(
+          "This email already belongs to an account. Choose a role to add instead.",
+          "error"
+        );
+        void runLookup(data.email);
+        return;
+      }
+
       const msg = result.error || "Failed to create user.";
       setGlobalError(msg);
       showToast(msg, "error");
@@ -402,18 +633,26 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
 
     // Query-param toast: consumed by ToastProvider on arrival; the users page
     // carries it through its canonicalization redirect.
-    router.push(`/secretary/users?toast=${encodeURIComponent("User created successfully.")}&toastType=success`);
+    router.push(
+      `/secretary/users?toast=${encodeURIComponent("User created successfully.")}&toastType=success`
+    );
   };
   return (
     <Card className="border-border shadow-sm">
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2">
-            <UserPlus className="text-primary size-5" />
-            Add new user
+            {existingUser ? (
+              <UserRoundCog className="text-primary size-5" />
+            ) : (
+              <UserPlus className="text-primary size-5" />
+            )}
+            {existingUser ? "Add role to existing user" : "Add new user"}
           </CardTitle>
           <CardDescription>
-            Create a new user account and assign their initial role.
+            {existingUser
+              ? "This email already belongs to a CLOIE account. Add another role instead of creating a duplicate account."
+              : "Create a new user account and assign their initial role."}
           </CardDescription>
         </CardHeader>
 
@@ -425,17 +664,29 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
             </Alert>
           )}
 
-          <TextField
-            id="name"
-            label="Name"
-            name="name"
-            register={register}
-            error={errors.name?.message}
-            placeholder="Enter full name"
-            helper="Provisional name used until the user links their Google account."
-          />
+          {existingUser && (
+            <Alert variant="information">
+              <Info className="size-4" />
+              <AlertDescription>
+                You are adding a role to an existing account. Its name, email, and current roles
+                stay unchanged.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {!existingUser && (
+            <TextField
+              id="name"
+              label="Name"
+              name="name"
+              register={register}
+              error={errors.name?.message}
+              placeholder="Enter full name"
+              helper="Provisional name used until the user links their Google account."
+            />
+          )}
+
+          <div className={cn("grid grid-cols-1 gap-4", !existingUser && "md:grid-cols-2")}>
             <TextField
               id="email"
               label="Email address"
@@ -443,21 +694,66 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
               name="email"
               register={register}
               error={errors.email?.message}
-              helper={INTERNAL_EMAIL_HELPER}
+              helper={emailHelper}
               placeholder="user@example.com"
+              onBlur={handleEmailBlur}
             />
+            {!existingUser && (
+              <SelectField
+                id="role"
+                label="Role"
+                name="role"
+                control={control}
+                value={selectedRole}
+                onChange={(value) => handleRoleChange(value as SystemRole)}
+                options={roleOptions}
+                placeholder="Select a role"
+                error={errors.role?.message}
+              />
+            )}
+          </div>
+
+          {existingUser && (
+            <div className="border-border bg-muted/40 flex flex-col gap-3 rounded-lg border p-4">
+              <div className="flex items-start gap-2.5">
+                <span className="bg-primary/10 text-primary mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full">
+                  <UserCheck className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-foreground text-sm font-semibold">{existingUser.name}</p>
+                  <p className="text-text-muted truncate text-xs">{existingUser.email}</p>
+                </div>
+                {!existingUser.isActive && <Badge variant="secondary">Inactive</Badge>}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-text-muted text-xs font-medium">Current roles</span>
+                {existingUser.roles.length > 0 ? (
+                  existingUser.roles.map((role) => (
+                    <Badge key={role} className={getRoleBadgeClass(role)}>
+                      {formatRole(role)}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-text-muted text-xs">No roles assigned</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {existingUser && (
             <SelectField
               id="role"
-              label="Role"
+              label="New role"
               name="role"
               control={control}
               value={selectedRole}
               onChange={(value) => handleRoleChange(value as SystemRole)}
               options={roleOptions}
-              placeholder="Select a role"
+              placeholder="Select a role to add"
+              helper={roleHelper}
               error={errors.role?.message}
             />
-          </div>
+          )}
 
           {showDetailsSection && (
             <>
@@ -570,12 +866,17 @@ export function AddUserForm({ programs, createAction }: AddUserFormProps) {
           <Button
             type="submit"
             className="w-full gap-2 font-semibold sm:w-auto"
-            disabled={isSubmitting}
+            disabled={isSubmitting || everyRoleAssigned}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="animate-spin" data-icon="inline-start" />
-                Creating user…
+                {existingUser ? "Adding role…" : "Creating user…"}
+              </>
+            ) : existingUser ? (
+              <>
+                Add role
+                <UserPlus data-icon="inline-end" />
               </>
             ) : (
               <>

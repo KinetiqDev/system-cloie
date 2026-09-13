@@ -1,6 +1,13 @@
-import { InviteStatus, Prisma, SystemRole } from "@prisma/client";
+import {
+  EnrollmentSource,
+  InviteStatus,
+  Prisma,
+  SystemRole,
+  VerificationStatus,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {
+  AddRoleToExistingUserInput,
   AssignRoleInput,
   CreateExternalInviteDraftInput,
   CreateFacultyAffiliationInput,
@@ -13,6 +20,8 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
+import { resolveRoleEntryContext } from "./create-user-by-secretary";
 
 async function userHasRole(userId: string, role: SystemRole) {
   const record = await prisma.userRole.findUnique({
@@ -101,6 +110,239 @@ export async function assignUserRole(
   }
 }
 
+/**
+ * Grants one additional role to an existing account and applies that role's
+ * supporting record in a single transaction, so a role can never be committed
+ * without its role-specific record. The same role-entry gates as account
+ * creation apply, evaluated against the existing account's email.
+ */
+export async function addRoleToExistingUser(
+  input: AddRoleToExistingUserInput
+): Promise<ServiceResult<{ id: string }>> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { success: false, error: "Authentication required." };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { success: false, error: "Insufficient permissions." };
+  }
+  if (input.user_id === session.userId) {
+    return { success: false, error: "Cannot modify own account." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: input.user_id },
+    select: { id: true, email: true },
+  });
+
+  if (!user) {
+    return { success: false, error: "The selected account was not found." };
+  }
+
+  const contextResult = await resolveRoleEntryContext({
+    role: input.role,
+    email: user.email,
+    program_id: input.program_id,
+    major_id: input.major_id,
+    year_level: input.year_level,
+    section: input.section,
+    graduation_year: input.graduation_year,
+    company_name: input.company_name,
+  });
+
+  if (!contextResult.success) {
+    return contextResult;
+  }
+
+  const activeMajorId = contextResult.data.activeMajorId;
+
+  try {
+    const roleRecord = await prisma.$transaction(async (tx) => {
+      // A Program Head grant takes the per-user advisory lock before the role
+      // row is written, matching assignment-set administration and the
+      // revocation gate, so a concurrent revocation cannot interleave between
+      // the grant and its first assignment.
+      if (input.role === SystemRole.PROGRAM_HEAD) {
+        await lockProgramHeadAssignmentSet(tx, input.user_id);
+      }
+
+      const created = await tx.userRole.create({
+        data: { user_id: input.user_id, role: input.role },
+      });
+
+      switch (input.role) {
+        case SystemRole.FACULTY: {
+          // The role-entry gate guarantees a program. A historical affiliation
+          // for it is reactivated instead of duplicated, and becomes the single
+          // active primary program for the Faculty member.
+          await tx.facultyProgramAffiliation.updateMany({
+            where: {
+              faculty_id: input.user_id,
+              is_primary: true,
+              program_id: { not: input.program_id! },
+            },
+            data: { is_active: false, is_primary: false },
+          });
+          await tx.facultyProgramAffiliation.upsert({
+            where: {
+              faculty_id_program_id: {
+                faculty_id: input.user_id,
+                program_id: input.program_id!,
+              },
+            },
+            update: { is_active: true, is_primary: true },
+            create: {
+              faculty_id: input.user_id,
+              program_id: input.program_id!,
+              is_active: true,
+              is_primary: true,
+            },
+          });
+          break;
+        }
+
+        case SystemRole.PROGRAM_HEAD: {
+          await tx.programHeadAssignment.upsert({
+            where: {
+              program_head_id_program_id: {
+                program_head_id: input.user_id,
+                program_id: input.program_id!,
+              },
+            },
+            update: { is_active: true },
+            create: {
+              program_head_id: input.user_id,
+              program_id: input.program_id!,
+              is_active: true,
+            },
+          });
+          break;
+        }
+
+        case SystemRole.STUDENT: {
+          // Academic context plus the active term's placement, mirroring the
+          // Secretary account-creation flow; a term already on the ledger is
+          // re-placed instead of duplicated.
+          await tx.studentAcademicProfile.upsert({
+            where: { user_id: input.user_id },
+            update: { program_id: input.program_id!, major_id: activeMajorId },
+            create: {
+              user_id: input.user_id,
+              program_id: input.program_id!,
+              major_id: activeMajorId,
+            },
+          });
+
+          const activeTerm = await tx.academicTermInstance.findFirst({
+            where: { status: "ACTIVE" },
+            select: { id: true },
+          });
+
+          if (activeTerm) {
+            await tx.studentEnrollment.upsert({
+              where: {
+                student_user_id_term_instance_id: {
+                  student_user_id: input.user_id,
+                  term_instance_id: activeTerm.id,
+                },
+              },
+              update: {
+                program_id: input.program_id!,
+                major_id: activeMajorId,
+                year_level: input.year_level!,
+                section: input.section!,
+                is_active: true,
+              },
+              create: {
+                student_user_id: input.user_id,
+                term_instance_id: activeTerm.id,
+                program_id: input.program_id!,
+                major_id: activeMajorId,
+                year_level: input.year_level!,
+                section: input.section!,
+                source: EnrollmentSource.SECRETARY,
+              },
+            });
+          }
+          break;
+        }
+
+        case SystemRole.ALUMNI: {
+          await tx.alumniProfile.upsert({
+            where: { user_id: input.user_id },
+            update: {
+              graduation_year: input.graduation_year!,
+              program_id: input.program_id!,
+              major_id: activeMajorId,
+              verification_status: VerificationStatus.APPROVED,
+            },
+            create: {
+              user_id: input.user_id,
+              graduation_year: input.graduation_year!,
+              program_id: input.program_id!,
+              major_id: activeMajorId,
+              verification_status: VerificationStatus.APPROVED,
+            },
+          });
+          await backfillCentralAssignmentsForUsers(tx, {
+            programId: input.program_id!,
+            majorId: activeMajorId,
+            targetStakeholder: "ALUMNI",
+            userIds: [input.user_id],
+          });
+          break;
+        }
+
+        case SystemRole.INDUSTRY_PARTNER: {
+          await tx.industryPartnerProfile.upsert({
+            where: { user_id: input.user_id },
+            update: {
+              company_name: input.company_name!.trim(),
+              position: input.position ?? null,
+              program_id: input.program_id ?? null,
+              verification_status: VerificationStatus.APPROVED,
+            },
+            create: {
+              user_id: input.user_id,
+              company_name: input.company_name!.trim(),
+              position: input.position ?? null,
+              program_id: input.program_id ?? null,
+              verification_status: VerificationStatus.APPROVED,
+            },
+          });
+
+          if (input.program_id) {
+            await backfillCentralAssignmentsForUsers(tx, {
+              programId: input.program_id,
+              targetStakeholder: "INDUSTRY_PARTNER",
+              userIds: [input.user_id],
+            });
+          }
+          break;
+        }
+
+        // SECRETARY, DEAN, GEN_ED_COORDINATOR carry no role-specific record.
+        default:
+          break;
+      }
+
+      return created;
+    });
+
+    return { success: true, data: { id: roleRecord.id } };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return {
+        success: false,
+        error: `${input.role.replaceAll("_", " ")} is already assigned to this user.`,
+      };
+    }
+
+    throw error;
+  }
+}
+
 /** Expected denial thrown by the revocation transaction for the assignment gate. */
 class ActiveProgramHeadAssignmentsError extends Error {
   constructor() {
@@ -114,6 +356,14 @@ class MissingProgramHeadRoleError extends Error {
   constructor() {
     super("Assign the Program Head role before linking a program assignment.");
     this.name = "MissingProgramHeadRoleError";
+  }
+}
+
+/** Expected denial thrown by the removal transaction when the role vanished. */
+class MissingRoleAssignmentError extends Error {
+  constructor() {
+    super("Role assignment not found.");
+    this.name = "MissingRoleAssignmentError";
   }
 }
 
@@ -214,6 +464,125 @@ export async function revokeUserRole(userId: string, role: SystemRole): Promise<
         error: "Remove the industry partner profile before revoking the Industry Partner role.",
       };
     }
+  }
+
+  await prisma.userRole.delete({
+    where: { user_id_role: { user_id: userId, role } },
+  });
+
+  return { success: true, data: undefined };
+}
+
+/**
+ * Removes an assigned role and settles its supporting records with a soft
+ * deactivation instead of deleting them, so the scope history survives the
+ * role. Student academic contexts and industry partner profiles carry no
+ * active flag, so they keep the explicit-removal gate; the Faculty and Program
+ * Head scope records are deactivated in the same transaction as the role row,
+ * which is the state the revocation gate requires at commit time.
+ */
+export async function removeRoleFromUser(userId: string, role: SystemRole): Promise<ServiceResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { success: false, error: "Authentication required." };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { success: false, error: "Insufficient permissions." };
+  }
+  if (userId === session.userId) return { success: false, error: "Cannot modify own account." };
+
+  const assignedRole = await prisma.userRole.findUnique({
+    where: { user_id_role: { user_id: userId, role } },
+  });
+
+  if (!assignedRole) {
+    return { success: false, error: "Role assignment not found." };
+  }
+
+  if (role === SystemRole.STUDENT) {
+    const profile = await prisma.studentAcademicProfile.findUnique({
+      where: { user_id: userId },
+      select: { id: true },
+    });
+
+    if (profile) {
+      return {
+        success: false,
+        error: "Remove the student academic context before revoking the Student role.",
+      };
+    }
+  }
+
+  if (role === SystemRole.INDUSTRY_PARTNER) {
+    const profile = await prisma.industryPartnerProfile.findUnique({
+      where: { user_id: userId },
+      select: { id: true },
+    });
+
+    if (profile) {
+      return {
+        success: false,
+        error: "Remove the industry partner profile before revoking the Industry Partner role.",
+      };
+    }
+  }
+
+  if (role === SystemRole.PROGRAM_HEAD) {
+    // Deactivating the assignment set and deleting the role row run under the
+    // same advisory lock as assignment-set administration and the activation
+    // service, so no concurrent assignment edit can reactivate a row between
+    // the deactivation and the role deletion.
+    const programHeadUserId = userId;
+    try {
+      await prisma.$transaction(async (tx) => {
+        await lockProgramHeadAssignmentSet(tx, programHeadUserId);
+
+        const stillAssigned = await tx.userRole.findUnique({
+          where: {
+            user_id_role: { user_id: programHeadUserId, role: SystemRole.PROGRAM_HEAD },
+          },
+          select: { role: true },
+        });
+
+        if (!stillAssigned) {
+          throw new MissingRoleAssignmentError();
+        }
+
+        await tx.programHeadAssignment.updateMany({
+          where: { program_head_id: programHeadUserId, is_active: true },
+          data: { is_active: false },
+        });
+
+        await tx.userRole.delete({
+          where: { user_id_role: { user_id: programHeadUserId, role: SystemRole.PROGRAM_HEAD } },
+        });
+      });
+    } catch (error) {
+      // Convert only the expected concurrent-removal denial; database failures
+      // propagate to the caller's error boundary.
+      if (error instanceof MissingRoleAssignmentError) {
+        return { success: false, error: error.message };
+      }
+      throw error;
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  if (role === SystemRole.FACULTY) {
+    await prisma.$transaction(async (tx) => {
+      await tx.facultyProgramAffiliation.updateMany({
+        where: { faculty_id: userId, is_active: true },
+        data: { is_active: false },
+      });
+
+      await tx.userRole.delete({
+        where: { user_id_role: { user_id: userId, role: SystemRole.FACULTY } },
+      });
+    });
+
+    return { success: true, data: undefined };
   }
 
   await prisma.userRole.delete({

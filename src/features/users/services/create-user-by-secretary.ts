@@ -1,4 +1,10 @@
-import { EnrollmentSource, SystemRole, VerificationStatus } from "@prisma/client";
+import {
+  EnrollmentSource,
+  StudentSection,
+  SystemRole,
+  VerificationStatus,
+  YearLevel,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isInstitutionalEmail } from "@/lib/utils/email-domain";
 import {
@@ -11,7 +17,8 @@ import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
 
 /**
- * Roles that require an ACD institutional email when created by a Secretary.
+ * Roles that require an ACD institutional email when a Secretary creates the
+ * account or grants the role to an existing account.
  */
 const INSTITUTIONAL_EMAIL_ROLES: SystemRole[] = [
   SystemRole.SECRETARY,
@@ -23,7 +30,8 @@ const INSTITUTIONAL_EMAIL_ROLES: SystemRole[] = [
 ];
 
 /**
- * Roles that require a program selection at creation time.
+ * Roles that require a program selection when a Secretary creates the account
+ * or grants the role to an existing account.
  */
 const PROGRAM_REQUIRED_ROLES: SystemRole[] = [
   SystemRole.PROGRAM_HEAD,
@@ -74,21 +82,34 @@ async function validateProgramAndMajor(
   return { success: true, activeMajorId: null };
 }
 
-export async function createUserBySecretary(
-  input: CreateUserBySecretaryInput
-): Promise<ServiceResult<{ id: string }>> {
-  const {
-    name,
-    email,
-    role,
-    program_id,
-    major_id,
-    year_level,
-    section,
-    graduation_year,
-    company_name,
-    position,
-  } = input;
+/**
+ * The role-entry fields shared by Secretary account creation and role grants on
+ * existing accounts. Both entry points must apply the same eligibility rules,
+ * so the gates live here once.
+ */
+export type RoleEntryContextInput = {
+  role: SystemRole;
+  /** Email of the account receiving the role — created or already existing. */
+  email: string;
+  program_id?: string;
+  major_id?: string;
+  year_level?: YearLevel;
+  section?: StudentSection;
+  graduation_year?: number;
+  company_name?: string;
+};
+
+/**
+ * Applies the role-entry gates for a Secretary-granted role: the
+ * institutional-email policy, the required program selection, and the
+ * role-specific required fields. Returns the resolved active major so callers
+ * persist the same program/major pairing the gates validated.
+ */
+export async function resolveRoleEntryContext(
+  input: RoleEntryContextInput
+): Promise<ServiceResult<{ activeMajorId: string | null }>> {
+  const { role, email, program_id, major_id, year_level, section, graduation_year, company_name } =
+    input;
 
   // 1. Enforce institutional email for internal roles
   if (INSTITUTIONAL_EMAIL_ROLES.includes(role) && !isInstitutionalEmail(email)) {
@@ -152,14 +173,64 @@ export async function createUserBySecretary(
     }
   }
 
-  // 5. Check for duplicate email
+  return { success: true, data: { activeMajorId } };
+}
+
+/**
+ * Failure returned when the submitted email already belongs to an account. The
+ * caller does not retry creation: it pivots to granting the role on the
+ * existing account through `addRoleToExistingUser`.
+ */
+export type UserExistsResult = {
+  success: false;
+  error: "USER_EXISTS";
+  existingUserId: string;
+};
+
+export type CreateUserBySecretaryResult = ServiceResult<{ id: string }> | UserExistsResult;
+
+export async function createUserBySecretary(
+  input: CreateUserBySecretaryInput
+): Promise<CreateUserBySecretaryResult> {
+  const {
+    name,
+    email,
+    role,
+    program_id,
+    major_id,
+    year_level,
+    section,
+    graduation_year,
+    company_name,
+    position,
+  } = input;
+
+  const contextResult = await resolveRoleEntryContext({
+    role,
+    email,
+    program_id,
+    major_id,
+    year_level,
+    section,
+    graduation_year,
+    company_name,
+  });
+
+  if (!contextResult.success) {
+    return contextResult;
+  }
+
+  const activeMajorId = contextResult.data.activeMajorId;
+
+  // 5. An existing account is not a creation failure: the caller pivots to
+  // granting the role on that account instead of duplicating the identity.
   const existing = await prisma.user.findUnique({
     where: { email },
     select: { id: true },
   });
 
   if (existing) {
-    return { success: false, error: "A user with this email already exists." };
+    return { success: false, error: "USER_EXISTS", existingUserId: existing.id };
   }
 
   try {
@@ -294,6 +365,18 @@ export async function createUserBySecretary(
     return { success: true, data: { id: user.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
+      // Lost a concurrent race for the same email between the lookup and the
+      // insert: the account now exists, so report the same pivot result. Any
+      // other unique violation on a brand-new user leaves the generic failure.
+      const raced = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+
+      if (raced) {
+        return { success: false, error: "USER_EXISTS", existingUserId: raced.id };
+      }
+
       return { success: false, error: "A user with this email already exists." };
     }
 

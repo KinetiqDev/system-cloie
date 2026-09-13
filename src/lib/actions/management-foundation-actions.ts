@@ -18,6 +18,7 @@ import {
 } from "@/features/academic-structure/services/manage-courses";
 import type { CourseEditData } from "@/features/academic-structure/services/manage-courses";
 import {
+  addRoleToExistingUserSchema,
   assignRoleSchema,
   createExternalInviteDraftSchema,
   createFacultyAffiliationSchema,
@@ -27,6 +28,7 @@ import {
   updateStudentAcademicContextSchema,
 } from "@/features/users/schemas/secretary-user";
 import {
+  addRoleToExistingUser,
   assignUserRole,
   createExternalInviteDraft,
   createFacultyProgramAffiliation,
@@ -35,6 +37,7 @@ import {
   deactivateProgramHeadAssignment,
   deleteIndustryPartnerProfile,
   deleteStudentAcademicContext,
+  removeRoleFromUser,
   revokeUserRole,
   toggleUserActive,
   updateExternalInviteStatus,
@@ -321,6 +324,51 @@ export async function assignUserRoleAction(formData: FormData): Promise<ActionRe
   return { success: true };
 }
 
+/**
+ * Grants a role to an account that already exists, together with the role's
+ * supporting record. The frontend reaches this action after account creation
+ * reports USER_EXISTS for the submitted email.
+ */
+export async function addRoleToExistingUserAction(formData: FormData): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+
+  const parsed = parseWithSchema(addRoleToExistingUserSchema, {
+    user_id: formData.get("user_id"),
+    role: formData.get("role"),
+    program_id: formData.get("program_id"),
+    major_id: formData.get("major_id"),
+    year_level: formData.get("year_level"),
+    section: formData.get("section"),
+    graduation_year: formData.get("graduation_year"),
+    company_name: formData.get("company_name"),
+    position: formData.get("position"),
+  });
+
+  if (!parsed.success) {
+    return parsed;
+  }
+
+  if (parsed.data.user_id === session.userId) {
+    return { error: "Cannot modify own account.", success: false };
+  }
+
+  const result = await addRoleToExistingUser(parsed.data);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  revalidateAdminFoundation();
+  return { success: true };
+}
+
 export async function revokeUserRoleAction(
   userId: string,
   role: SystemRole
@@ -337,6 +385,35 @@ export async function revokeUserRoleAction(
     return { error: "Cannot modify own account.", success: false };
   }
   const result = await revokeUserRole(userId, role);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  revalidateAdminFoundation();
+  return { success: true };
+}
+
+/**
+ * Removes an assigned role and soft-deactivates the scope records that belong
+ * to it, keeping the affiliation/assignment history on the account.
+ */
+export async function removeRoleFromUserAction(
+  userId: string,
+  role: SystemRole
+): Promise<ActionResult> {
+  const session = await resolveAuthSession();
+  if (!session || !session.activeRole) {
+    return { error: "Authentication required.", success: false };
+  }
+  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
+  if (!allowedRoles.includes(session.activeRole)) {
+    return { error: "Insufficient permissions.", success: false };
+  }
+  if (userId === session.userId) {
+    return { error: "Cannot modify own account.", success: false };
+  }
+  const result = await removeRoleFromUser(userId, role);
 
   if (!result.success) {
     return { success: false, error: result.error };

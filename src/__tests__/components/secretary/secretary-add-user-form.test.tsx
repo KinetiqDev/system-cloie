@@ -35,10 +35,7 @@ vi.mock("@/components/ui/select", () => {
     );
   }
 
-  function SelectTrigger({
-    children,
-    ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
       <button
         type="button"
@@ -70,13 +67,7 @@ vi.mock("@/components/ui/select", () => {
     );
   }
 
-  function SelectItem({
-    value,
-    children,
-  }: {
-    value: string;
-    children: React.ReactNode;
-  }) {
+  function SelectItem({ value, children }: { value: string; children: React.ReactNode }) {
     const ctx = React.useContext(SelectContext);
     return (
       <div
@@ -104,6 +95,15 @@ vi.mock("@/components/ui/select", () => {
   };
 });
 
+const mockAddRoleAction = vi.fn();
+const mockLookupUserByEmailAction = vi.fn();
+
+beforeEach(() => {
+  mockAddRoleAction.mockReset();
+  mockLookupUserByEmailAction.mockReset();
+  mockLookupUserByEmailAction.mockResolvedValue({ success: true, found: false });
+});
+
 describe("SecretaryAddUserForm base roles", () => {
   const mockCreateAction = vi.fn();
 
@@ -112,7 +112,14 @@ describe("SecretaryAddUserForm base roles", () => {
   });
 
   function renderForm(createAction = mockCreateAction) {
-    return render(<AddUserForm programs={[]} createAction={createAction} />);
+    return render(
+      <AddUserForm
+        programs={[]}
+        createAction={createAction}
+        addRoleAction={mockAddRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
   }
 
   function selectRole(roleLabel: string) {
@@ -247,7 +254,10 @@ describe("SecretaryAddUserForm base roles", () => {
   });
 
   it("renders a global error alert when the server action fails", async () => {
-    mockCreateAction.mockResolvedValue({ success: false, error: "A user with this email already exists." });
+    mockCreateAction.mockResolvedValue({
+      success: false,
+      error: "A user with this email already exists.",
+    });
     renderForm();
 
     selectRole("Secretary");
@@ -292,7 +302,14 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
   });
 
   function renderForm(createAction = mockCreateAction) {
-    return render(<AddUserForm programs={programs} createAction={createAction} />);
+    return render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={mockAddRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
   }
 
   function selectRole(roleLabel: string) {
@@ -300,9 +317,7 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
   }
 
   function selectProgram(programCode: string) {
-    fireEvent.click(
-      screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") })
-    );
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") }));
   }
 
   function fillIdentity() {
@@ -430,7 +445,14 @@ describe("SecretaryAddUserForm Student", () => {
   });
 
   function renderForm(createAction = mockCreateAction) {
-    return render(<AddUserForm programs={programs} createAction={createAction} />);
+    return render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={mockAddRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
   }
 
   function selectRole(roleLabel: string) {
@@ -438,9 +460,7 @@ describe("SecretaryAddUserForm Student", () => {
   }
 
   function selectProgram(programCode: string) {
-    fireEvent.click(
-      screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") })
-    );
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") }));
   }
 
   function selectMajor(majorName: string) {
@@ -644,7 +664,14 @@ describe("SecretaryAddUserForm Alumni", () => {
   });
 
   function renderForm(createAction = mockCreateAction) {
-    return render(<AddUserForm programs={programs} createAction={createAction} />);
+    return render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={mockAddRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
   }
 
   function selectRole(roleLabel: string) {
@@ -652,9 +679,7 @@ describe("SecretaryAddUserForm Alumni", () => {
   }
 
   function selectProgram(programCode: string) {
-    fireEvent.click(
-      screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") })
-    );
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") }));
   }
 
   function selectMajor(majorName: string) {
@@ -835,7 +860,14 @@ describe("SecretaryAddUserForm Industry Partner", () => {
   });
 
   function renderForm(createAction = mockCreateAction) {
-    return render(<AddUserForm programs={programs} createAction={createAction} />);
+    return render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={mockAddRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
   }
 
   function selectRole(roleLabel: string) {
@@ -843,9 +875,7 @@ describe("SecretaryAddUserForm Industry Partner", () => {
   }
 
   function selectProgram(programCode: string) {
-    fireEvent.click(
-      screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") })
-    );
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") }));
   }
 
   function fillIdentity(email = "partner@external-company.com") {
@@ -977,5 +1007,151 @@ describe("SecretaryAddUserForm Industry Partner", () => {
     expect(formData.get("company_name")).toBeNull();
     expect(formData.get("position")).toBeNull();
     expect(formData.getAll("program_ids")).toHaveLength(0);
+  });
+});
+
+describe("SecretaryAddUserForm existing account pivot", () => {
+  const existingUser = {
+    id: "11111111-1111-4111-a111-111111111111",
+    name: "Maria Santos",
+    email: "maria.santos@acd.edu.ph",
+    isActive: true,
+    roles: [SystemRole.ALUMNI],
+  };
+
+  const createAction = vi.fn();
+  const addRoleAction = vi.fn();
+
+  beforeEach(() => {
+    createAction.mockReset();
+    addRoleAction.mockReset();
+  });
+
+  function renderForm(foundUser = existingUser) {
+    mockLookupUserByEmailAction.mockResolvedValue({
+      success: true,
+      found: true,
+      user: foundUser,
+    });
+    return render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={addRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
+  }
+
+  function typeEmail(email: string) {
+    const input = screen.getByLabelText(/email address/i);
+    fireEvent.change(input, { target: { value: email } });
+    fireEvent.blur(input);
+  }
+
+  it("pivots to add-role mode when the email already belongs to an account", async () => {
+    renderForm();
+    typeEmail(existingUser.email);
+
+    await screen.findByText(existingUser.name);
+
+    expect(screen.getByText(/adding a role to an existing account/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^add role$/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^name$/i)).not.toBeInTheDocument();
+
+    // The held role is shown as context but is not offered for assignment.
+    expect(screen.getByText(/^alumni$/i)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /^alumni$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /^faculty$/i })).toBeInTheDocument();
+  });
+
+  it("submits the new role and its program context to addRoleAction", async () => {
+    addRoleAction.mockResolvedValue({ success: true });
+    renderForm();
+    typeEmail(existingUser.email);
+    await screen.findByText(existingUser.name);
+
+    fireEvent.click(screen.getByRole("option", { name: /^faculty$/i }));
+    fireEvent.click(screen.getByRole("option", { name: /^BSIT —/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
+
+    await waitFor(() => {
+      expect(addRoleAction).toHaveBeenCalledTimes(1);
+    });
+
+    const formData = addRoleAction.mock.calls[0][0] as FormData;
+    expect(formData.get("user_id")).toBe(existingUser.id);
+    expect(formData.get("role")).toBe(SystemRole.FACULTY);
+    expect(formData.get("program_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+    expect(createAction).not.toHaveBeenCalled();
+  });
+
+  it("returns to account creation when the email no longer matches an account", async () => {
+    renderForm();
+    typeEmail(existingUser.email);
+    await screen.findByText(existingUser.name);
+
+    mockLookupUserByEmailAction.mockResolvedValue({ success: true, found: false });
+    typeEmail("new.person@acd.edu.ph");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(existingUser.name)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create user/i })).toBeInTheDocument();
+  });
+
+  it("restores the name typed before pivoting", async () => {
+    renderForm();
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
+    typeEmail(existingUser.email);
+    await screen.findByText(existingUser.name);
+
+    mockLookupUserByEmailAction.mockResolvedValue({ success: true, found: false });
+    typeEmail("jane.doe@acd.edu.ph");
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^name$/i)).toHaveValue("Jane Doe");
+    });
+  });
+
+  it("pivots when creation reports that the email already exists", async () => {
+    // The lookup stays "absent" until creation has reported the account, so
+    // only the create-submit path can trigger the pivot.
+    mockLookupUserByEmailAction.mockImplementation(async () =>
+      createAction.mock.calls.length > 0
+        ? { success: true, found: true, user: existingUser }
+        : { success: true, found: false }
+    );
+    createAction.mockResolvedValue({
+      success: false,
+      error: "USER_EXISTS",
+      existingUserId: existingUser.id,
+    });
+
+    render(
+      <AddUserForm
+        programs={programs}
+        createAction={createAction}
+        addRoleAction={addRoleAction}
+        lookupUserByEmailAction={mockLookupUserByEmailAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("option", { name: /^secretary$/i }));
+    fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Maria Santos" } });
+    // Blur resolves the lookup once (still "absent") and cancels the debounce,
+    // so the pivot below can only come from the create-submit signal.
+    typeEmail(existingUser.email);
+
+    fireEvent.click(screen.getByRole("button", { name: /create user/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^add role$/i })).toBeInTheDocument();
+    });
+
+    expect(createAction).toHaveBeenCalledTimes(1);
+    expect(addRoleAction).not.toHaveBeenCalled();
+    expect(screen.getByText(existingUser.name)).toBeInTheDocument();
   });
 });

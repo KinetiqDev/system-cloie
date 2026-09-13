@@ -97,6 +97,13 @@ export function SecretaryUsersList({
   }, [navigateWithQuery, appliedQuery.q, searchDraft]);
 
   const handleUserUpdated = () => router.refresh();
+
+  // An open View dialog mirrors the refreshed list row so its program labels
+  // track the role changes made from inside it; the dialog owns the roles it
+  // just mutated locally, so a refresh cannot revert them mid-flight.
+  const liveViewUser = viewUser
+    ? (users.find((user) => user.id === viewUser.id) ?? viewUser)
+    : null;
   const handleToggleActive = (userId: string, currentActive: boolean) => {
     toggleActive(userId, currentActive, handleUserUpdated);
   };
@@ -227,9 +234,10 @@ export function SecretaryUsersList({
       )}
 
       <UserDialogs
-        viewUser={viewUser}
+        viewUser={liveViewUser}
         onCloseView={() => setViewUser(null)}
         onUserUpdated={handleUserUpdated}
+        programs={programs}
       />
 
       <EditUserDialog

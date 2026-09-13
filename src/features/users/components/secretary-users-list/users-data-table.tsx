@@ -69,10 +69,12 @@ type MobileUserCardProps = Pick<
 
 function MobileUserBadges({ user }: { user: SecretaryUserSummaryItem }) {
   return (
-    <div className="mt-1 flex items-center gap-2">
-      {user.activeRole ? (
-        <Badge className={getRoleBadgeClass(user.activeRole)}>{formatRole(user.activeRole)}</Badge>
-      ) : null}
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      {user.roles.map((role) => (
+        <Badge key={role} className={getRoleBadgeClass(role)}>
+          {formatRole(role)}
+        </Badge>
+      ))}
       <Badge variant={user.isActive ? "success" : "secondary"}>
         {user.isActive ? "Active" : "Inactive"}
       </Badge>
@@ -320,10 +322,14 @@ export function UsersDataTable({
                 </TableCell>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>
-                  {user.activeRole ? (
-                    <Badge className={getRoleBadgeClass(user.activeRole)}>
-                      {formatRole(user.activeRole)}
-                    </Badge>
+                  {user.roles.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {user.roles.map((role) => (
+                        <Badge key={role} className={getRoleBadgeClass(role)}>
+                          {formatRole(role)}
+                        </Badge>
+                      ))}
+                    </div>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
