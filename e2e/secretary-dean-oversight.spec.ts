@@ -92,7 +92,9 @@ test("secretary creates Faculty and Dean oversees the active period", async ({ p
   await page.getByLabel("Email address").blur();
 
   // The form pivots: title changes, Name field hides, existing user summary appears.
-  await expect(page.getByText("Add role to existing user").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Add role to existing user").first()).toBeVisible({
+    timeout: 10_000,
+  });
   await expect(page.getByLabel("Name")).toHaveCount(0);
   await expect(page.getByText(facultyName).first()).toBeVisible();
 
