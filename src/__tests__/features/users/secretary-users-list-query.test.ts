@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { StudentSection, YearLevel } from "@prisma/client";
 import {
   parseSecretaryUsersListQuery,
   serializeSecretaryUsersListQuery,
@@ -47,9 +48,7 @@ describe("Secretary Users list URL", () => {
         direction: "desc",
       })
     ).toBe("page=3&role=STUDENT&program=BSCE&major=Structural&q=Jane&sort=email&dir=desc");
-    expect(serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })).toBe(
-      ""
-    );
+    expect(serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })).toBe("");
   });
 
   it("round-trips actionable dashboard filters", () => {
@@ -65,9 +64,56 @@ describe("Secretary Users list URL", () => {
   });
 
   it("drops unsupported dashboard filter values", () => {
+    expect(parseSecretaryUsersListQuery({ state: "inactive", verification: "approved" })).toEqual({
+      page: 1,
+      sort: "name",
+      direction: "asc",
+    });
+  });
+
+  it("parses Student placement filters from canonical and friendly spellings", () => {
     expect(
-      parseSecretaryUsersListQuery({ state: "inactive", verification: "approved" })
-    ).toEqual({ page: 1, sort: "name", direction: "asc" });
+      parseSecretaryUsersListQuery({
+        role: ROLES.STUDENT,
+        yearLevel: "THIRD_YEAR",
+        section: "MORNING",
+      })
+    ).toMatchObject({ yearLevel: YearLevel.THIRD_YEAR, section: StudentSection.MORNING });
+    expect(
+      parseSecretaryUsersListQuery({
+        role: ROLES.STUDENT,
+        yearLevel: "3rd Year",
+        section: "evening",
+      })
+    ).toMatchObject({ yearLevel: YearLevel.THIRD_YEAR, section: StudentSection.EVENING });
+    expect(parseSecretaryUsersListQuery({ role: ROLES.STUDENT, yearLevel: "2" })).toMatchObject({
+      yearLevel: YearLevel.SECOND_YEAR,
+    });
+  });
+
+  it("drops unrecognized placement values independently", () => {
+    expect(parseSecretaryUsersListQuery({ yearLevel: "fifth", section: "TWILIGHT" })).toEqual({
+      page: 1,
+      sort: "name",
+      direction: "asc",
+    });
+  });
+
+  it("serializes placement filters in canonical order", () => {
+    expect(
+      serializeSecretaryUsersListQuery({
+        page: 2,
+        role: ROLES.STUDENT,
+        program: "BSBA",
+        major: "Marketing Management",
+        yearLevel: YearLevel.FOURTH_YEAR,
+        section: StudentSection.AFTERNOON,
+        sort: "name",
+        direction: "asc",
+      })
+    ).toBe(
+      "page=2&role=STUDENT&program=BSBA&major=Marketing+Management&yearLevel=FOURTH_YEAR&section=AFTERNOON"
+    );
   });
 
   it("bounds the maximum page value", () => {
@@ -90,21 +136,22 @@ describe("Secretary Users list URL", () => {
     ["lastName", "asc"],
     ["firstName", "asc"],
     ["lastName", "desc"],
-  ] as const)("canonicalizes legacy sort=%s to complete name without surname semantics", (legacy, dir) => {
-    expect(parseSecretaryUsersListQuery({ sort: legacy, dir })).toEqual({
-      page: 1,
-      sort: "name",
-      direction: dir,
-    });
-  });
+  ] as const)(
+    "canonicalizes legacy sort=%s to complete name without surname semantics",
+    (legacy, dir) => {
+      expect(parseSecretaryUsersListQuery({ sort: legacy, dir })).toEqual({
+        page: 1,
+        sort: "name",
+        direction: dir,
+      });
+    }
+  );
 
   it("serializes complete-name default without embedding legacy first/last sort keys", () => {
-    expect(
-      serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })
-    ).toBe("");
-    expect(
-      serializeSecretaryUsersListQuery({ page: 2, sort: "name", direction: "desc" })
-    ).toBe("page=2&sort=name&dir=desc");
+    expect(serializeSecretaryUsersListQuery({ page: 1, sort: "name", direction: "asc" })).toBe("");
+    expect(serializeSecretaryUsersListQuery({ page: 2, sort: "name", direction: "desc" })).toBe(
+      "page=2&sort=name&dir=desc"
+    );
     const serialized = serializeSecretaryUsersListQuery({
       page: 1,
       sort: "name",

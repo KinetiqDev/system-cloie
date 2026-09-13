@@ -1,5 +1,7 @@
-import { SystemRole } from "@prisma/client";
+import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { z } from "zod";
+
+import { parseYearLevelInput } from "@/lib/constants/year-levels";
 
 export const SECRETARY_USERS_PAGE_SIZE = 15;
 export const SECRETARY_USERS_MAX_PAGE = 10_000;
@@ -26,15 +28,14 @@ const secretaryUsersQueryValuesSchema = z.object({
   role: z.enum(roleValues).optional().catch(undefined),
   program: z.string().trim().min(1).max(100).optional().catch(undefined),
   major: z.string().trim().min(1).max(100).optional().catch(undefined),
+  yearLevel: z.string().trim().min(1).max(20).optional().catch(undefined),
+  section: z.string().trim().min(1).max(20).optional().catch(undefined),
   q: z.string().trim().min(1).max(100).optional().catch(undefined),
   state: z.enum(["awaiting-term-placement"]).optional().catch(undefined),
   verification: z.enum(["pending"]).optional().catch(undefined),
   // Accept current fields plus legacy firstName/lastName so bookmarks can be
   // canonicalized to complete-name sorting without surname semantics.
-  sort: z
-    .enum(["name", "email", "isActive", "firstName", "lastName"])
-    .optional()
-    .catch(undefined),
+  sort: z.enum(["name", "email", "isActive", "firstName", "lastName"]).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
 });
 
@@ -43,6 +44,14 @@ export type SecretaryUsersListQuery = {
   role?: SystemRole;
   program?: string;
   major?: string;
+  /**
+   * Student term-placement filters. They describe the Student's placement in
+   * the active Academic Period, so the service honors them only alongside
+   * `role=STUDENT` and an ACTIVE period, and canonicalizes them away
+   * otherwise.
+   */
+  yearLevel?: YearLevel;
+  section?: StudentSection;
   q?: string;
   state?: "awaiting-term-placement";
   verification?: "pending";
@@ -57,9 +66,7 @@ function firstNonEmpty(value: string | string[] | undefined): string | undefined
   return values.find((entry): entry is string => !!entry && entry.trim().length > 0)?.trim();
 }
 
-function canonicalizeSort(
-  raw: string | undefined
-): SecretaryUsersSortField {
+function canonicalizeSort(raw: string | undefined): SecretaryUsersSortField {
   if (!raw) {
     return "name";
   }
@@ -72,6 +79,30 @@ function canonicalizeSort(
   return "name";
 }
 
+/**
+ * Year level accepts the enum spelling plus the friendly spellings the
+ * canonical parser already understands ("3", "3rd Year"); unrecognized values
+ * parse to undefined and are dropped like any other unsupported filter.
+ */
+function parseYearLevelFilter(raw: string | undefined): YearLevel | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const parsed = parseYearLevelInput(raw);
+  return parsed.ok ? (parsed.value ?? undefined) : undefined;
+}
+
+/** Section accepts any casing of the StudentSection spellings ("morning"). */
+function parseSectionFilter(raw: string | undefined): StudentSection | undefined {
+  if (!raw) {
+    return undefined;
+  }
+  const normalized = raw.trim().toUpperCase();
+  return (Object.values(StudentSection) as string[]).includes(normalized)
+    ? (normalized as StudentSection)
+    : undefined;
+}
+
 export function parseSecretaryUsersListQuery(
   raw: RawSecretaryUsersSearchParams = {}
 ): SecretaryUsersListQuery {
@@ -80,6 +111,8 @@ export function parseSecretaryUsersListQuery(
     role: firstNonEmpty(raw.role),
     program: firstNonEmpty(raw.program),
     major: firstNonEmpty(raw.major),
+    yearLevel: firstNonEmpty(raw.yearLevel),
+    section: firstNonEmpty(raw.section),
     q: firstNonEmpty(raw.q),
     state: firstNonEmpty(raw.state),
     verification: firstNonEmpty(raw.verification),
@@ -95,6 +128,8 @@ export function parseSecretaryUsersListQuery(
     role: values.role,
     program: values.program,
     major: values.major,
+    yearLevel: parseYearLevelFilter(values.yearLevel),
+    section: parseSectionFilter(values.section),
     q: values.q,
     state: values.state,
     verification: values.verification,
@@ -109,6 +144,8 @@ export function serializeSecretaryUsersListQuery(query: SecretaryUsersListQuery)
   if (query.role) params.set("role", query.role);
   if (query.program) params.set("program", query.program);
   if (query.major) params.set("major", query.major);
+  if (query.yearLevel) params.set("yearLevel", query.yearLevel);
+  if (query.section) params.set("section", query.section);
   if (query.q) params.set("q", query.q);
   if (query.state) params.set("state", query.state);
   if (query.verification) params.set("verification", query.verification);

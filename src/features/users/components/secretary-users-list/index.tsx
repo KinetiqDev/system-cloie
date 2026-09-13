@@ -4,16 +4,17 @@ import { useCallback, useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { YearLevel } from "@prisma/client";
+import { SystemRole, YearLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import type {
   SecretaryUserSummaryItem,
+  SecretaryUsersActivePeriod,
   SecretaryUsersKPI,
 } from "../../services/list-secretary-users-summary";
 import type { SecretaryUsersListQuery } from "../../schemas/secretary-users-list";
 import { serializeSecretaryUsersListQuery } from "../../schemas/secretary-users-list";
 import { UsersKPI } from "./users-kpi";
-import { UsersFilterBar } from "./users-filter-bar";
+import { UsersFilterBar, type UsersSecondaryFilters } from "./users-filter-bar";
 import { UsersDataTable } from "./users-data-table";
 import { Pagination } from "@/components/ui/pagination";
 import { UserDialogs, useToggleUserActive } from "./user-dialogs";
@@ -36,6 +37,7 @@ interface SecretaryUsersListProps {
     majors: Array<{ id: string; name: string }>;
   }>;
   yearLevels: YearLevel[];
+  activePeriod: SecretaryUsersActivePeriod | null;
   currentUserId: string;
 }
 
@@ -48,6 +50,7 @@ export function SecretaryUsersList({
   kpi,
   programs,
   yearLevels,
+  activePeriod,
   currentUserId,
 }: SecretaryUsersListProps) {
   const [viewUser, setViewUser] = useState<SecretaryUserSummaryItem | null>(null);
@@ -59,27 +62,39 @@ export function SecretaryUsersList({
 
   const [searchDraft, setSearchDraft] = useState(query.q ?? "");
 
+  // Client-side mirror of the applied list state. The URL stays authoritative —
+  // a landed payload resets the mirror — but consecutive changes compose against
+  // the latest intent rather than the last rendered payload, so two quick filter
+  // changes cannot drop one another.
+  const [appliedQuery, setAppliedQuery] = useState(query);
+  const [serverQuery, setServerQuery] = useState(query);
+  if (query !== serverQuery) {
+    setServerQuery(query);
+    setAppliedQuery(query);
+  }
+
   const totalPages = Math.ceil(total / pageSize);
   const selection = useTableSelection(
     users.map((user) => user.id),
-    `${page}:${query.role ?? ""}:${query.program ?? ""}:${query.major ?? ""}:${query.q ?? ""}:${query.state ?? ""}:${query.verification ?? ""}:${query.sort}:${query.direction}`
+    `${page}:${appliedQuery.role ?? ""}:${appliedQuery.program ?? ""}:${appliedQuery.major ?? ""}:${appliedQuery.yearLevel ?? ""}:${appliedQuery.section ?? ""}:${appliedQuery.q ?? ""}:${appliedQuery.state ?? ""}:${appliedQuery.verification ?? ""}:${appliedQuery.sort}:${appliedQuery.direction}`
   );
 
   const navigateWithQuery = useCallback(
     (next: Partial<SecretaryUsersListQuery>) => {
-      const nextQuery = { ...query, ...next };
+      const nextQuery = { ...appliedQuery, ...next };
+      setAppliedQuery(nextQuery);
       const search = serializeSecretaryUsersListQuery(nextQuery);
       startTransition(() => router.replace(search ? `${pathname}?${search}` : pathname));
     },
-    [pathname, query, router]
+    [appliedQuery, pathname, router]
   );
 
   useEffect(() => {
     const nextQ = searchDraft.trim() || undefined;
-    if (nextQ === (query.q || undefined)) return;
+    if (nextQ === (appliedQuery.q || undefined)) return;
     const timer = setTimeout(() => navigateWithQuery({ q: nextQ, page: 1 }), 300);
     return () => clearTimeout(timer);
-  }, [navigateWithQuery, query.q, searchDraft]);
+  }, [navigateWithQuery, appliedQuery.q, searchDraft]);
 
   const handleUserUpdated = () => router.refresh();
   const handleToggleActive = (userId: string, currentActive: boolean) => {
@@ -102,11 +117,38 @@ export function SecretaryUsersList({
     });
   };
 
-  const handleAttentionChange = (value: string | null) => {
-    const nextAttention = value === "__all__" ? undefined : value;
+  /**
+   * A role change swaps which records the list shows, so refinements that
+   * describe the previous role's records are dropped with it. Program stays:
+   * every role carries one.
+   */
+  const handleRoleChange = (nextRole: SystemRole | undefined) => {
     navigateWithQuery({
-      state: nextAttention === "awaiting-term-placement" ? nextAttention : undefined,
-      verification: nextAttention === "pending-verification" ? "pending" : undefined,
+      role: nextRole,
+      major: undefined,
+      yearLevel: undefined,
+      section: undefined,
+      state: undefined,
+      verification: undefined,
+      page: 1,
+    });
+  };
+
+  const handleFiltersChange = (next: UsersSecondaryFilters) => {
+    navigateWithQuery({ ...next, page: 1 });
+  };
+
+  const handleClearFilters = () => {
+    setSearchDraft("");
+    navigateWithQuery({
+      role: undefined,
+      program: undefined,
+      major: undefined,
+      yearLevel: undefined,
+      section: undefined,
+      q: undefined,
+      state: undefined,
+      verification: undefined,
       page: 1,
     });
   };
@@ -138,48 +180,22 @@ export function SecretaryUsersList({
       </div>
 
       <UsersFilterBar
-        roleFilter={query.role ?? "__all__"}
-        onRoleChange={(value) =>
-          navigateWithQuery({
-            role:
-              value && value !== "__all__" ? (value as SecretaryUsersListQuery["role"]) : undefined,
-            page: 1,
-          })
-        }
-        programFilter={query.program ?? "__all__"}
-        onProgramChange={(value) =>
-          navigateWithQuery({
-            program: value && value !== "__all__" ? value : undefined,
-            major: undefined,
-            page: 1,
-          })
-        }
-        majorFilter={query.major ?? "__all__"}
-        onMajorChange={(value) =>
-          navigateWithQuery({ major: value && value !== "__all__" ? value : undefined, page: 1 })
-        }
-        attentionFilter={
-          query.state === "awaiting-term-placement"
-            ? "awaiting-term-placement"
-            : query.verification === "pending"
-              ? "pending-verification"
-              : "__all__"
-        }
-        onAttentionChange={handleAttentionChange}
+        role={appliedQuery.role}
+        filters={{
+          program: appliedQuery.program,
+          major: appliedQuery.major,
+          yearLevel: appliedQuery.yearLevel,
+          section: appliedQuery.section,
+          state: appliedQuery.state,
+          verification: appliedQuery.verification,
+        }}
         searchTerm={searchDraft}
-        onSearchChange={setSearchDraft}
-        onClearFilters={() =>
-          navigateWithQuery({
-            role: undefined,
-            program: undefined,
-            major: undefined,
-            q: undefined,
-            state: undefined,
-            verification: undefined,
-            page: 1,
-          })
-        }
+        activePeriod={activePeriod}
         programs={programs}
+        onRoleChange={handleRoleChange}
+        onFiltersChange={handleFiltersChange}
+        onSearchChange={setSearchDraft}
+        onClearFilters={handleClearFilters}
       />
 
       <UsersDataTable

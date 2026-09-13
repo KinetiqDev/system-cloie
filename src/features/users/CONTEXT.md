@@ -24,6 +24,10 @@ _Avoid_: Inferring a replacement role at submit time, silently retargeting stale
 The Secretary Edit User flow's write of a Student's current-term placement: year level and section save together into the unique enrollment row for the active Academic Period — created with source `SECRETARY` when the Student has none, updated in place and reactivated otherwise. It requires an active Academic Period, leaves the static academic profile and other terms' enrollments untouched, and is a Protected account edit reviewed before saving.
 _Avoid_: Bulk placement update, term rollover, profile-only correction
 
+**Secretary Users placement filter**:
+The Secretary Users list's year level and section filters read the Student's enrollment row in the active Academic Period — the same row the Secretary term placement set writes and the Year & Section column displays. They are honored only alongside the Student role context, and only while that period is active and the Student is not already filtered to awaiting placement; elsewhere the list canonicalizes them away rather than keep a filter it cannot show. Program and major filters read the static student academic context.
+_Avoid_: Year level over enrollment history, section from the academic profile, placement filters without an active Academic Period
+
 **Role provisioning category**:
 The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles are pre-provisioned by a Secretary; Faculty additionally appears as a self-service internal option.
 _Avoid_: permission level, access tier

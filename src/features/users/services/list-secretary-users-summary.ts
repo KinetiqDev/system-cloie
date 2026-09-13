@@ -1,9 +1,10 @@
-import { Prisma, SystemRole, YearLevel } from "@prisma/client";
+import { Prisma, StudentSection, SystemRole, YearLevel } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { type ServiceResult } from "@/lib/utils/service-result";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
   SECRETARY_USERS_PAGE_SIZE,
   serializeSecretaryUsersListQuery,
@@ -24,7 +25,12 @@ export type SecretaryUserSummaryItem = {
   activeRole: SystemRole | null;
   programLabel: string;
   majorLabel: string;
-  sectionLabel: string;
+  /**
+   * The Student's placement in the active Academic Period — the enrollment row
+   * the placement filters and the Secretary edit dialog both read. Null when
+   * the account has no enrollment there.
+   */
+  placement: { yearLevel: YearLevel; section: StudentSection | null } | null;
 };
 
 export type SecretaryUsersKPI = {
@@ -33,6 +39,9 @@ export type SecretaryUsersKPI = {
   totalAlumni: number;
   totalIndustryPartners: number;
 };
+
+/** The ACTIVE Academic Period that Student placement filters and labels read. */
+export type SecretaryUsersActivePeriod = { id: string; label: string };
 
 export type SecretaryUsersSummaryResult = {
   users: SecretaryUserSummaryItem[];
@@ -48,6 +57,7 @@ export type SecretaryUsersSummaryResult = {
     majors: Array<{ id: string; name: string; isActive: boolean }>;
   }>;
   yearLevels: YearLevel[];
+  activePeriod: SecretaryUsersActivePeriod | null;
 };
 
 type SecretaryUsersSummaryServiceResult =
@@ -102,48 +112,66 @@ function resolveMajorLabel(user: PrismaUserPageRow): string {
 }
 
 /**
- * Capitalizes a StudentSection enum value into a display label (e.g., "MORNING" → "Morning").
- *
- * Section is stored on StudentEnrollment, not StudentAcademicProfile, so
- * the resolution requires an enrollment join which is deferred.
+ * Resolves the Student's placement in the active Academic Period. The
+ * projection already scopes enrollments to that period (and to active rows),
+ * so the first row is the Student's current placement.
  */
-function resolveSectionLabel(): string {
-  return "—";
+function resolvePlacement(
+  user: PrismaUserPageRow
+): { yearLevel: YearLevel; section: StudentSection | null } | null {
+  const enrollment = user.enrollments[0];
+  if (!enrollment) {
+    return null;
+  }
+  return { yearLevel: enrollment.year_level, section: enrollment.section };
 }
 
 // ---------------------------------------------------------------------------
 // Prisma user shape (internal type for the raw query result)
 // ---------------------------------------------------------------------------
 
-const pageSelect = {
-  id: true,
-  name: true,
-  email: true,
-  is_active: true,
-  roles: { select: { role: true } },
-  student_profile: {
-    select: {
-      program: { select: { code: true } },
-      major: { select: { name: true } },
+/**
+ * Student placement is projected only for the active Academic Period; with no
+ * active period there is no placement to read, so the relation matches nothing.
+ */
+function buildPageSelect(activePeriodId: string | null) {
+  return {
+    id: true,
+    name: true,
+    email: true,
+    is_active: true,
+    roles: { select: { role: true } },
+    student_profile: {
+      select: {
+        program: { select: { code: true } },
+        major: { select: { name: true } },
+      },
     },
-  },
-  faculty_program_affiliations: {
-    where: { is_active: true },
-    select: { program: { select: { code: true } } },
-  },
-  program_head_assignments: {
-    where: { is_active: true },
-    select: { program: { select: { code: true } } },
-  },
-  industry_partner_profile: {
-    select: { program: { select: { code: true } } },
-  },
-  industry_partner_program_affiliations: {
-    select: { program: { select: { code: true } } },
-  },
-} satisfies Prisma.UserSelect;
+    enrollments: {
+      where: { is_active: true, term_instance_id: activePeriodId ?? { in: [] } },
+      take: 1,
+      select: { year_level: true, section: true },
+    },
+    faculty_program_affiliations: {
+      where: { is_active: true },
+      select: { program: { select: { code: true } } },
+    },
+    program_head_assignments: {
+      where: { is_active: true },
+      select: { program: { select: { code: true } } },
+    },
+    industry_partner_profile: {
+      select: { program: { select: { code: true } } },
+    },
+    industry_partner_program_affiliations: {
+      select: { program: { select: { code: true } } },
+    },
+  } satisfies Prisma.UserSelect;
+}
 
-type PrismaUserPageRow = Prisma.UserGetPayload<{ select: typeof pageSelect }>;
+type PrismaUserPageRow = Prisma.UserGetPayload<{
+  select: ReturnType<typeof buildPageSelect>;
+}>;
 
 function buildWhere(
   query: SecretaryUsersListQuery,
@@ -177,6 +205,26 @@ function buildWhere(
   if (query.role) conditions.push({ roles: { some: { role: query.role } } });
   if (query.major) conditions.push({ student_profile: { major: { name: query.major } } });
   if (query.program) conditions.push(programFilter);
+  if (query.yearLevel || query.section) {
+    // Year level and section describe one placement — the Student's enrollment
+    // row in the active Academic Period — so they resolve together into a
+    // single `some` clause. The service drops them when no period is active,
+    // which keeps this branch reachable only with a period id.
+    conditions.push(
+      activePeriodId
+        ? {
+            enrollments: {
+              some: {
+                is_active: true,
+                term_instance_id: activePeriodId,
+                ...(query.yearLevel ? { year_level: query.yearLevel } : {}),
+                ...(query.section ? { section: query.section } : {}),
+              },
+            },
+          }
+        : { id: { in: [] } }
+    );
+  }
   if (query.state === "awaiting-term-placement") {
     conditions.push(
       { is_active: true },
@@ -221,6 +269,73 @@ function buildOrderBy(query: SecretaryUsersListQuery): Prisma.UserOrderByWithRel
 }
 
 // ---------------------------------------------------------------------------
+// Filter canonicalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Filters whose value can be dropped by the read, because only the read knows
+ * whether the Programs, Majors, and period placement they name still exist.
+ */
+const CANONICALIZED_FILTER_KEYS = [
+  "program",
+  "major",
+  "yearLevel",
+  "section",
+  "state",
+  "verification",
+] as const;
+
+type CanonicalizedFilterKey = (typeof CANONICALIZED_FILTER_KEYS)[number];
+
+/**
+ * Resolves every filter against the records it names and against the role
+ * context the Secretary Users list can present. A filter that survives only
+ * here is a filter the list can show; everything else is dropped so the
+ * redirect surfaces the removal instead of honoring an invisible filter.
+ */
+function canonicalizeListFilters(
+  query: SecretaryUsersListQuery,
+  programs: Array<{ code: string; majors: Array<{ name: string }> }>,
+  activePeriodId: string | null
+): SecretaryUsersListQuery {
+  const { role } = query;
+  const studentContext = role === SystemRole.STUDENT;
+  const allRolesContext = role === undefined;
+  const externalContext = role === SystemRole.ALUMNI || role === SystemRole.INDUSTRY_PARTNER;
+
+  const selectedProgram = query.program
+    ? programs.find((program) => program.code === query.program)
+    : undefined;
+  const program = !query.program || selectedProgram ? query.program : undefined;
+  const major =
+    studentContext &&
+    query.major &&
+    selectedProgram?.majors.some((entry) => entry.name === query.major)
+      ? query.major
+      : undefined;
+  // Year level and section name the Student's placement in the active Academic
+  // Period, so they need both the Student context and an ACTIVE period — and
+  // awaiting placement means there is no placement to name.
+  const placementContext =
+    studentContext && activePeriodId !== null && query.state !== "awaiting-term-placement";
+  const yearLevel = placementContext ? query.yearLevel : undefined;
+  const section = placementContext ? query.section : undefined;
+  const state = studentContext || allRolesContext ? query.state : undefined;
+  const verification = allRolesContext || externalContext ? query.verification : undefined;
+
+  return { ...query, program, major, yearLevel, section, state, verification };
+}
+
+function hasCanonicalizedFilters(
+  query: SecretaryUsersListQuery,
+  canonical: SecretaryUsersListQuery
+): boolean {
+  return CANONICALIZED_FILTER_KEYS.some(
+    (key: CanonicalizedFilterKey) => query[key] !== canonical[key]
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main service function
 // ---------------------------------------------------------------------------
 
@@ -233,48 +348,40 @@ export async function listSecretaryUsersSummary(
   }
 
   const pageSize = SECRETARY_USERS_PAGE_SIZE;
-  const programs = await prisma.program.findMany({
-    orderBy: { code: "asc" },
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      is_active: true,
-      majors: {
-        orderBy: { name: "asc" },
-        select: { id: true, name: true, is_active: true },
+  const [programs, activePeriod] = await Promise.all([
+    prisma.program.findMany({
+      orderBy: { code: "asc" },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        is_active: true,
+        majors: {
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, is_active: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.academicTermInstance.findFirst({
+      where: { status: "ACTIVE", school_year: { is_active: true } },
+      select: {
+        id: true,
+        semester: true,
+        term: true,
+        school_year: { select: { code: true } },
+      },
+    }),
+  ]);
 
-  const selectedProgram = query.program
-    ? programs.find((program) => program.code === query.program)
-    : undefined;
-  const hasValidProgram = !query.program || !!selectedProgram;
-  const hasValidMajor =
-    !query.major ||
-    (!!selectedProgram && selectedProgram.majors.some((major) => major.name === query.major));
-
-  if (!hasValidProgram || !hasValidMajor) {
-    const canonicalQuery = serializeSecretaryUsersListQuery({
-      ...query,
-      page: 1,
-      program: hasValidProgram ? query.program : undefined,
-      major: hasValidProgram && hasValidMajor ? query.major : undefined,
-    });
+  const canonicalQuery = canonicalizeListFilters(query, programs, activePeriod?.id ?? null);
+  if (hasCanonicalizedFilters(query, canonicalQuery)) {
     return {
       success: false,
       error: "Invalid Secretary Users filters.",
-      canonicalQuery,
+      canonicalQuery: serializeSecretaryUsersListQuery({ ...canonicalQuery, page: 1 }),
     };
   }
 
-  const activePeriod = query.state
-    ? await prisma.academicTermInstance.findFirst({
-        where: { status: "ACTIVE", school_year: { is_active: true } },
-        select: { id: true },
-      })
-    : null;
   const where = buildWhere(query, activePeriod?.id ?? null);
   const [total, totalUsers, totalStudents, totalAlumni, totalIndustryPartners] = await Promise.all([
     prisma.user.count({ where }),
@@ -287,7 +394,7 @@ export async function listSecretaryUsersSummary(
   const page = total === 0 ? 1 : Math.min(query.page, Math.ceil(total / pageSize));
   const rawUsers = await prisma.user.findMany({
     where,
-    select: pageSelect,
+    select: buildPageSelect(activePeriod?.id ?? null),
     orderBy: buildOrderBy(query),
     skip: (page - 1) * pageSize,
     take: pageSize,
@@ -307,7 +414,7 @@ export async function listSecretaryUsersSummary(
       activeRole: roleEnums[0] ?? null,
       programLabel: resolveProgramLabel(u),
       majorLabel: resolveMajorLabel(u),
-      sectionLabel: resolveSectionLabel(),
+      placement: resolvePlacement(u),
     };
   });
 
@@ -320,6 +427,16 @@ export async function listSecretaryUsersSummary(
       pageSize,
       kpi: { totalUsers, totalStudents, totalAlumni, totalIndustryPartners },
       yearLevels,
+      activePeriod: activePeriod
+        ? {
+            id: activePeriod.id,
+            label: formatTermInstanceLabel(
+              activePeriod.school_year.code,
+              activePeriod.semester,
+              activePeriod.term
+            ),
+          }
+        : null,
       programs: programs.map((p) => ({
         id: p.id,
         code: p.code,

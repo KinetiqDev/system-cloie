@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { StudentSection, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 
 const REDIRECT_ERROR = "NEXT_REDIRECT";
@@ -40,6 +41,7 @@ describe("Secretary Users route", () => {
         kpi: { totalUsers: 0, totalStudents: 0, totalAlumni: 0, totalIndustryPartners: 0 },
         programs: [],
         yearLevels: [],
+        activePeriod: null,
       },
     });
   });
@@ -73,6 +75,11 @@ describe("Secretary Users route", () => {
     [{ sort: "firstName" }, "/secretary/users"],
     [{ sort: "lastName" }, "/secretary/users"],
     [{ sort: "lastName", dir: "desc" }, "/secretary/users?sort=name&dir=desc"],
+    // Student placement filters canonicalize to their enum spellings.
+    [
+      { role: "STUDENT", yearLevel: "3rd Year", section: "morning" },
+      "/secretary/users?role=STUDENT&yearLevel=THIRD_YEAR&section=MORNING",
+    ],
     // Transient toast params are carried across canonicalization redirects.
     [
       { sort: "lastName", toast: "Failed", toastType: "error" },
@@ -137,6 +144,43 @@ describe("Secretary Users route", () => {
     });
   });
 
+  it("passes Student placement filters to the read service", async () => {
+    const Page = await loadPage();
+    await Page({
+      searchParams: Promise.resolve({
+        role: ROLES.STUDENT,
+        program: "BSBA",
+        major: "Marketing Management",
+        yearLevel: "THIRD_YEAR",
+        section: "MORNING",
+      }),
+    });
+
+    expect(listSummaryMock).toHaveBeenCalledWith({
+      page: 1,
+      role: ROLES.STUDENT,
+      program: "BSBA",
+      major: "Marketing Management",
+      yearLevel: YearLevel.THIRD_YEAR,
+      section: StudentSection.MORNING,
+      sort: "name",
+      direction: "asc",
+    });
+  });
+
+  it("redirects placement filters the read service dropped to the canonical URL", async () => {
+    listSummaryMock.mockResolvedValueOnce({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "role=STUDENT",
+    });
+    const Page = await loadPage();
+
+    await expect(
+      Page({ searchParams: Promise.resolve({ role: "STUDENT", yearLevel: "THIRD_YEAR" }) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/secretary/users?role=STUDENT`);
+  });
+
   it("redirects a page beyond filtered results to the service's canonical page", async () => {
     listSummaryMock.mockResolvedValue({
       success: true,
@@ -148,6 +192,7 @@ describe("Secretary Users route", () => {
         kpi: { totalUsers: 16, totalStudents: 16, totalAlumni: 0, totalIndustryPartners: 0 },
         programs: [],
         yearLevels: [],
+        activePeriod: null,
       },
     });
     const Page = await loadPage();

@@ -11,6 +11,7 @@ import {
 import { showToast } from "@/components/ui/toast";
 import { toggleUserActiveAction } from "@/lib/actions/management-foundation-actions";
 import { formatRole, getRoleBadgeClass } from "@/features/users/lib/role-visuals";
+import { getPlacementLabel } from "@/lib/constants/academic";
 import type { SecretaryUserSummaryItem } from "../../services/list-secretary-users-summary";
 
 interface UserDialogsProps {
@@ -36,9 +37,7 @@ export function UserDialogs({ viewUser, onCloseView }: UserDialogsProps) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>User Details</DialogTitle>
-              <DialogDescription>
-                Viewing information for {viewUser.name}.
-              </DialogDescription>
+              <DialogDescription>Viewing information for {viewUser.name}.</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 pt-2">
               <div className="flex flex-col gap-1">
@@ -88,14 +87,14 @@ export function UserDialogs({ viewUser, onCloseView }: UserDialogsProps) {
                   </div>
                 </div>
               )}
-              {viewUser.sectionLabel && viewUser.sectionLabel !== "—" && (
+              {viewUser.placement && (
                 <div className="flex flex-col gap-1">
                   <label className="text-label-sm text-muted-foreground tracking-wider uppercase">
-                    Section
+                    Year &amp; Section
                   </label>
                   <div className="flex items-center gap-2 text-sm">
                     <GraduationCap className="text-muted-foreground size-4" />
-                    {viewUser.sectionLabel}
+                    {getPlacementLabel(viewUser.placement)}
                   </div>
                 </div>
               )}

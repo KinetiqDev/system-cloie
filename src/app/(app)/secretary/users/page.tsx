@@ -69,7 +69,7 @@ export default async function SecretaryUsersPage({
     }
     redirect("/unauthorized");
   }
-  const { users, total, page, pageSize, kpi, programs, yearLevels } = result.data;
+  const { users, total, page, pageSize, kpi, programs, yearLevels, activePeriod } = result.data;
 
   if (page !== query.page) {
     const canonicalPageQuery = serializeSecretaryUsersListQuery({ ...query, page });
@@ -86,6 +86,7 @@ export default async function SecretaryUsersPage({
       kpi={kpi}
       programs={programs}
       yearLevels={yearLevels}
+      activePeriod={activePeriod}
       currentUserId={session?.userId ?? ""}
     />
   );

@@ -2,7 +2,6 @@
 
 import { useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SystemRole } from "@prisma/client";
 import {
   MoreVertical,
   Mail,
@@ -42,6 +41,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { formatRole, getRoleBadgeClass } from "@/features/users/lib/role-visuals";
+import { getPlacementLabel } from "@/lib/constants/academic";
 import type { SecretaryUserSummaryItem } from "../../services/list-secretary-users-summary";
 
 interface UsersDataTableProps {
@@ -88,10 +88,10 @@ function MobileUserAcademicContext({ user }: { user: SecretaryUserSummaryItem })
         <span>{user.programLabel}</span>
         {user.majorLabel && <span className="text-muted-foreground">• {user.majorLabel}</span>}
       </div>
-      {user.roles.includes(SystemRole.STUDENT) && user.sectionLabel && (
+      {user.placement && (
         <div className="flex items-center gap-2 text-sm">
           <GraduationCap className="text-muted-foreground size-4" />
-          <span>{user.sectionLabel}</span>
+          <span>{getPlacementLabel(user.placement)}</span>
         </div>
       )}
     </>
@@ -278,7 +278,7 @@ export function UsersDataTable({
               <TableHead>Role</TableHead>
               <TableHead>Program</TableHead>
               <TableHead>Major</TableHead>
-              <TableHead>Section</TableHead>
+              <TableHead>Year &amp; Section</TableHead>
               <TableHead aria-sort={ariaSortFor("email")}>
                 <button
                   type="button"
@@ -330,13 +330,7 @@ export function UsersDataTable({
                 </TableCell>
                 <TableCell>{user.programLabel}</TableCell>
                 <TableCell>{user.majorLabel}</TableCell>
-                <TableCell>
-                  {user.roles.includes(SystemRole.STUDENT) ? (
-                    user.sectionLabel
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
+                <TableCell>{getPlacementLabel(user.placement)}</TableCell>
                 <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
                 <TableCell>
                   <Badge variant={user.isActive ? "success" : "secondary"}>
