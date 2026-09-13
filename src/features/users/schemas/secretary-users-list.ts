@@ -12,8 +12,8 @@ export const SECRETARY_USERS_SORT_FIELDS = ["name", "email", "isActive"] as cons
 /** Legacy first/last sort values that canonicalize to complete-name sorting. */
 const LEGACY_NAME_SORT_FIELDS = new Set(["firstName", "lastName"]);
 
-export type SecretaryUsersSortField = (typeof SECRETARY_USERS_SORT_FIELDS)[number];
-export type SecretaryUsersSortDirection = "asc" | "desc";
+type SecretaryUsersSortField = (typeof SECRETARY_USERS_SORT_FIELDS)[number];
+type SecretaryUsersSortDirection = "asc" | "desc";
 
 const roleValues = Object.values(SystemRole) as [SystemRole, ...SystemRole[]];
 

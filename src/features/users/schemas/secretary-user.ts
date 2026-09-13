@@ -1,4 +1,4 @@
-import { InviteStatus, StudentSection, SystemRole, YearLevel } from "@prisma/client";
+import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { z } from "zod";
 
 const optionalUuidField = z.preprocess(
@@ -109,11 +109,6 @@ export const createExternalInviteDraftSchema = z.object({
   invitee_name: optionalTextField,
   company_name: optionalTextField,
   note: optionalLongTextField,
-});
-
-const updateExternalInviteStatusSchema = z.object({
-  id: z.string().uuid(),
-  status: z.nativeEnum(InviteStatus),
 });
 
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;

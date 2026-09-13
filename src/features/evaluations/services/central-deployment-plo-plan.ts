@@ -4,13 +4,13 @@ import {
   type TemplateStructure,
 } from "@/features/instruments/types";
 
-export type CentralPloBindingRow = {
+type CentralPloBindingRow = {
   plo_id: string | null;
   section_key: string;
   item_key: string;
 };
 
-export type CentralPloOption = {
+type CentralPloOption = {
   id: string;
   code: string;
   description: string;
@@ -25,7 +25,7 @@ export type CentralPloSnapshotRow = {
   question_prompt: string;
 };
 
-export type CentralPloBindingPlan = {
+type CentralPloBindingPlan = {
   /** First blocking binding problem, or null when the template can publish. */
   error: string | null;
   likertCount: number;

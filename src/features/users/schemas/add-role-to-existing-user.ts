@@ -143,5 +143,3 @@ export const addRoleToExistingUserFormSchema = z
       path: ["company_name"],
     }
   );
-
-export type AddRoleToExistingUserFormInput = z.infer<typeof addRoleToExistingUserFormSchema>;

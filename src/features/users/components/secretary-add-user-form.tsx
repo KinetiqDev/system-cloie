@@ -378,6 +378,7 @@ export function AddUserForm({
     },
   });
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch is safe here
   const emailValue = watch("email") ?? "";
   const normalizedEmail = emailValue.trim().toLowerCase();
   const selectedRole = watch("role");

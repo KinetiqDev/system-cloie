@@ -87,7 +87,7 @@ async function validateProgramAndMajor(
  * existing accounts. Both entry points must apply the same eligibility rules,
  * so the gates live here once.
  */
-export type RoleEntryContextInput = {
+type RoleEntryContextInput = {
   role: SystemRole;
   /** Email of the account receiving the role — created or already existing. */
   email: string;
@@ -181,13 +181,13 @@ export async function resolveRoleEntryContext(
  * caller does not retry creation: it pivots to granting the role on the
  * existing account through `addRoleToExistingUser`.
  */
-export type UserExistsResult = {
+type UserExistsResult = {
   success: false;
   error: "USER_EXISTS";
   existingUserId: string;
 };
 
-export type CreateUserBySecretaryResult = ServiceResult<{ id: string }> | UserExistsResult;
+type CreateUserBySecretaryResult = ServiceResult<{ id: string }> | UserExistsResult;
 
 export async function createUserBySecretary(
   input: CreateUserBySecretaryInput

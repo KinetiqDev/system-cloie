@@ -49,7 +49,14 @@ vi.mock("@/components/ui/select", () => {
   function SelectTrigger({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     const { disabled } = React.useContext(SelectContext);
     return (
-      <button type="button" role="combobox" aria-expanded="false" disabled={disabled} {...props}>
+      <button
+        type="button"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="select-content"
+        disabled={disabled}
+        {...props}
+      >
         {children}
       </button>
     );

@@ -12,7 +12,7 @@ import {
  * time zone, and so a recorded moment always reads in College time rather than
  * the reader's.
  */
-export const INSTITUTION_TIME_ZONE = "Asia/Manila";
+const INSTITUTION_TIME_ZONE = "Asia/Manila";
 
 /**
  * Format a single date as a readable string.
