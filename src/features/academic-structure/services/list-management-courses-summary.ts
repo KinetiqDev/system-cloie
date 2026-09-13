@@ -1,4 +1,4 @@
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
 // ---------------------------------------------------------------------------
@@ -17,6 +17,9 @@ export type ManagementCourseSummaryItem = {
   programName: string | null;
   majorId: string | null;
   majorName: string | null;
+  defaultYearLevel: YearLevel | null;
+  defaultSemester: AcademicSemester | null;
+  defaultTerm: AcademicTerm | null;
   ciloCount: number;
   evaluationCount: number;
 };
@@ -122,6 +125,9 @@ export async function listManagementCoursesSummary(): Promise<{
       programName: c.program?.name ?? null,
       majorId: c.major?.id ?? null,
       majorName: c.major?.name ?? null,
+      defaultYearLevel: c.default_year_level,
+      defaultSemester: c.default_semester,
+      defaultTerm: c.default_term,
       ciloCount: c._count.cilos,
       evaluationCount: countCourseEvaluations(c),
     };

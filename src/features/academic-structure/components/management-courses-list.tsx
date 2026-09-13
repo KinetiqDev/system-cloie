@@ -14,7 +14,15 @@ import {
   Search,
   Library,
   Power,
+  RotateCcw,
 } from "lucide-react";
+import { getYearLevelDisplay, YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
+import {
+  getSemesterLabel,
+  getTermLabel,
+  SEMESTER_OPTIONS,
+  TERM_OPTIONS,
+} from "@/lib/constants/academic";
 
 import { CourseImportDialog } from "@/features/academic-structure/components/course-import-dialog";
 
@@ -110,6 +118,9 @@ export function ManagementCoursesList({
   const [scopeFilter, setScopeFilter] = useState<string>("__all__");
   const [programFilter, setProgramFilter] = useState<string>("__all__");
   const [majorFilter, setMajorFilter] = useState<string>("__all__");
+  const [yearLevelFilter, setYearLevelFilter] = useState<string>("__all__");
+  const [semesterFilter, setSemesterFilter] = useState<string>("__all__");
+  const [termFilter, setTermFilter] = useState<string>("__all__");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
@@ -143,6 +154,21 @@ export function ManagementCoursesList({
       result = result.filter((c) => c.majorId === majorFilter);
     }
 
+    // Year Level filter
+    if (yearLevelFilter !== "__all__") {
+      result = result.filter((c) => c.defaultYearLevel === yearLevelFilter);
+    }
+
+    // Semester filter
+    if (semesterFilter !== "__all__") {
+      result = result.filter((c) => c.defaultSemester === semesterFilter);
+    }
+
+    // Term filter
+    if (termFilter !== "__all__") {
+      result = result.filter((c) => c.defaultTerm === termFilter);
+    }
+
     // Search by code or title
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
@@ -152,7 +178,7 @@ export function ManagementCoursesList({
     }
 
     return result;
-  }, [courses, scopeFilter, programFilter, majorFilter, searchTerm]);
+  }, [courses, scopeFilter, programFilter, majorFilter, yearLevelFilter, semesterFilter, termFilter, searchTerm]);
 
   // ---- Pagination ----------------------------------------------------------
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
@@ -160,7 +186,7 @@ export function ManagementCoursesList({
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${scopeFilter}:${programFilter}:${majorFilter}:${searchTerm}:${safePage}`
+    `${scopeFilter}:${programFilter}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${searchTerm}:${safePage}`
   );
 
   // Reset to page 1 when filters change
@@ -177,6 +203,21 @@ export function ManagementCoursesList({
 
   const handleMajorChange = (value: string | null) => {
     setMajorFilter(value ?? "__all__");
+    setCurrentPage(1);
+  };
+
+  const handleYearLevelChange = (value: string | null) => {
+    setYearLevelFilter(value ?? "__all__");
+    setCurrentPage(1);
+  };
+
+  const handleSemesterChange = (value: string | null) => {
+    setSemesterFilter(value ?? "__all__");
+    setCurrentPage(1);
+  };
+
+  const handleTermChange = (value: string | null) => {
+    setTermFilter(value ?? "__all__");
     setCurrentPage(1);
   };
 
@@ -327,6 +368,63 @@ export function ManagementCoursesList({
           </Select>
         )}
 
+        {/* Year Level filter */}
+        <Select value={yearLevelFilter} onValueChange={handleYearLevelChange}>
+          <SelectTrigger aria-label="Filter by year level" className="w-full md:w-[160px]">
+            <SelectValue>
+              {yearLevelFilter === "__all__"
+                ? "All Year Levels"
+                : (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevelFilter)?.label ?? "All Year Levels")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Year Levels</SelectItem>
+            {YEAR_LEVEL_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Semester filter */}
+        <Select value={semesterFilter} onValueChange={handleSemesterChange}>
+          <SelectTrigger aria-label="Filter by semester" className="w-full md:w-[160px]">
+            <SelectValue>
+              {semesterFilter === "__all__"
+                ? "All Semesters"
+                : (SEMESTER_OPTIONS.find((o) => o.value === semesterFilter)?.label ?? "All Semesters")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Semesters</SelectItem>
+            {SEMESTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Term filter */}
+        <Select value={termFilter} onValueChange={handleTermChange}>
+          <SelectTrigger aria-label="Filter by term" className="w-full md:w-[150px]">
+            <SelectValue>
+              {termFilter === "__all__"
+                ? "All Terms"
+                : (TERM_OPTIONS.find((o) => o.value === termFilter)?.label ?? "All Terms")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Terms</SelectItem>
+            {TERM_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* Search */}
         <div className="relative w-full md:ml-auto md:max-w-xs">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -337,6 +435,28 @@ export function ManagementCoursesList({
             className="pl-8"
           />
         </div>
+
+        {/* Reset Filters — visible only when any filter is active */}
+        {(scopeFilter !== "__all__" || programFilter !== "__all__" || majorFilter !== "__all__" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__" || searchTerm) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setScopeFilter("__all__");
+              setProgramFilter("__all__");
+              setMajorFilter("__all__");
+              setYearLevelFilter("__all__");
+              setSemesterFilter("__all__");
+              setTermFilter("__all__");
+              setSearchTerm("");
+              setCurrentPage(1);
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="size-3.5" />
+            Reset
+          </Button>
+        )}
       </div>
 
       <BulkActionBar
@@ -382,6 +502,9 @@ export function ManagementCoursesList({
               <TableHead className="hidden md:table-cell">Scope</TableHead>
               <TableHead className="hidden md:table-cell">Program</TableHead>
               <TableHead className="hidden md:table-cell">Major</TableHead>
+              <TableHead className="hidden md:table-cell">Year Level</TableHead>
+              <TableHead className="hidden md:table-cell">Semester</TableHead>
+              <TableHead className="hidden md:table-cell">Term</TableHead>
               <TableHead className="hidden text-right md:table-cell">CILOs</TableHead>
               {showEvaluationCount && (
                 <TableHead className="hidden text-right md:table-cell">Evaluations</TableHead>
@@ -394,10 +517,12 @@ export function ManagementCoursesList({
             {paginatedCourses.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={showEvaluationCount ? 10 : 9}
+                  colSpan={showEvaluationCount ? 13 : 12}
                   className="text-muted-foreground h-24 text-center"
                 >
-                  No courses found.
+                  {scopeFilter !== "__all__" || programFilter !== "__all__" || majorFilter !== "__all__" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__" || searchTerm
+                    ? "Clear or change the filters to see more courses."
+                    : "No courses found."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -453,6 +578,15 @@ export function ManagementCoursesList({
                     {course.programCode ?? "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{course.majorName ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {getYearLevelDisplay(course.defaultYearLevel)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.defaultSemester ? getSemesterLabel(course.defaultSemester) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.defaultTerm ? getTermLabel(course.defaultTerm) : "—"}
+                  </TableCell>
                   <TableCell className="hidden text-right md:table-cell">
                     {course.ciloCount}
                   </TableCell>

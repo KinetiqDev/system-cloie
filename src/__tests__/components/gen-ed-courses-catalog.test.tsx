@@ -23,6 +23,9 @@ function course(overrides: Partial<GenEdCourseItem> = {}): GenEdCourseItem {
     course_scope: CourseScope.GENERAL_EDUCATION,
     program_id: null,
     major_id: null,
+    default_year_level: null,
+    default_semester: null,
+    default_term: null,
     is_active: true,
     created_at: new Date("2026-01-01"),
     updated_at: new Date("2026-01-05"),
@@ -120,7 +123,7 @@ describe("GenEdCoursesCatalog", () => {
       />
     );
 
-    const trigger = screen.getByRole("combobox");
+    const trigger = screen.getByRole("combobox", { name: /filter by course status/i });
     fireEvent.click(trigger);
     const archivedOption = await screen.findByRole("option", { name: "Archived" });
     fireEvent.mouseMove(archivedOption);

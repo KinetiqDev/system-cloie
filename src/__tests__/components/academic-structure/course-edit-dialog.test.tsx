@@ -34,6 +34,9 @@ const course: ManagementCourseSummaryItem = {
   programName: null,
   majorId: null,
   majorName: null,
+  defaultYearLevel: null,
+  defaultSemester: null,
+  defaultTerm: null,
   ciloCount: 3,
   evaluationCount: 2,
 };

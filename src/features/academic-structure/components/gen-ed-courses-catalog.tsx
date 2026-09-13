@@ -2,7 +2,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, Edit, FileSpreadsheet, Plus, Power, Search } from "lucide-react";
+import { Archive, Edit, FileSpreadsheet, Plus, Power, RotateCcw, Search } from "lucide-react";
+import { getYearLevelDisplay, YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
+import {
+  getSemesterLabel,
+  getTermLabel,
+  SEMESTER_OPTIONS,
+  TERM_OPTIONS,
+} from "@/lib/constants/academic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -47,7 +54,10 @@ const PAGE_SIZE = 15;
 function filterCourses(
   courses: GenEdCourseItem[],
   statusFilter: string,
-  search: string
+  search: string,
+  yearLevelFilter: string,
+  semesterFilter: string,
+  termFilter: string
 ): GenEdCourseItem[] {
   // fallow-ignore-next-line code-duplication
   let filtered = courses;
@@ -64,6 +74,18 @@ function filterCourses(
       // fallow-ignore-next-line code-duplication
       (c) => c.code.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
     );
+  }
+
+  if (yearLevelFilter && yearLevelFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_year_level === yearLevelFilter);
+  }
+
+  if (semesterFilter && semesterFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_semester === semesterFilter);
+  }
+
+  if (termFilter && termFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_term === termFilter);
   }
 
   return filtered;
@@ -94,20 +116,23 @@ function StatCard({
 export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogProps) {
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [search, setSearch] = useState("");
+  const [yearLevelFilter, setYearLevelFilter] = useState("__all__");
+  const [semesterFilter, setSemesterFilter] = useState("__all__");
+  const [termFilter, setTermFilter] = useState("__all__");
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<GenEdCourseItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const filteredCourses = filterCourses(courses, statusFilter, search);
+  const filteredCourses = filterCourses(courses, statusFilter, search, yearLevelFilter, semesterFilter, termFilter);
   // fallow-ignore-next-line code-duplication
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${statusFilter}:${search}:${safePage}`
+    `${statusFilter}:${search}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
 
   function handleStatus(id: string, isActive: boolean) {
@@ -194,6 +219,81 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
           </SelectContent>
         </Select>
 
+        {/* Year Level filter */}
+        <Select
+          value={yearLevelFilter}
+          onValueChange={(v) => {
+            setYearLevelFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by year level" className="w-full md:w-[160px]">
+            <SelectValue>
+              {yearLevelFilter === "__all__"
+                ? "All Year Levels"
+                : (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevelFilter)?.label ?? "All Year Levels")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Year Levels</SelectItem>
+            {YEAR_LEVEL_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Semester filter */}
+        <Select
+          value={semesterFilter}
+          onValueChange={(v) => {
+            setSemesterFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by semester" className="w-full md:w-[160px]">
+            <SelectValue>
+              {semesterFilter === "__all__"
+                ? "All Semesters"
+                : (SEMESTER_OPTIONS.find((o) => o.value === semesterFilter)?.label ?? "All Semesters")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Semesters</SelectItem>
+            {SEMESTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Term filter */}
+        <Select
+          value={termFilter}
+          onValueChange={(v) => {
+            setTermFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by term" className="w-full md:w-[150px]">
+            <SelectValue>
+              {termFilter === "__all__"
+                ? "All Terms"
+                : (TERM_OPTIONS.find((o) => o.value === termFilter)?.label ?? "All Terms")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Terms</SelectItem>
+            {TERM_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* fallow-ignore-next-line code-duplication */}
         <div className="relative w-full md:ml-auto md:max-w-xs">
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
@@ -207,6 +307,26 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             }}
           />
         </div>
+
+        {/* Reset Filters — visible only when any filter is active */}
+        {(statusFilter !== "__all__" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__" || search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setStatusFilter("__all__");
+              setYearLevelFilter("__all__");
+              setSemesterFilter("__all__");
+              setTermFilter("__all__");
+              setSearch("");
+              setCurrentPage(1);
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="size-3.5" />
+            Reset
+          </Button>
+        )}
       </div>
 
       <BulkActionBar
@@ -248,6 +368,9 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
+              <TableHead className="hidden md:table-cell">Year Level</TableHead>
+              <TableHead className="hidden md:table-cell">Semester</TableHead>
+              <TableHead className="hidden md:table-cell">Term</TableHead>
               <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden md:table-cell">Last Updated</TableHead>
               <TableHead className="w-24 text-right">Actions</TableHead>
@@ -257,8 +380,10 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             {paginatedCourses.length === 0 ? (
               <TableRow>
                 {/* fallow-ignore-next-line code-duplication */}
-                <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
-                  No courses found.
+                <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
+                  {statusFilter !== "__all__" || search || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__"
+                    ? "Clear or change the filters to see more courses."
+                    : "No courses found."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -291,6 +416,15 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                     </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{course.title}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {getYearLevelDisplay(course.default_year_level)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.default_semester ? getSemesterLabel(course.default_semester) : "—"}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {course.default_term ? getTermLabel(course.default_term) : "—"}
+                  </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Badge variant={course.is_active ? "success" : "secondary"}>
                       {course.is_active ? "Active" : "Inactive"}

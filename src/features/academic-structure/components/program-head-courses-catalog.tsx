@@ -12,14 +12,15 @@ import {
   TERM_OPTIONS,
 } from "@/lib/constants/academic";
 import {
-  Archive,
   AlertCircle,
+  Archive,
   BookOpen,
   Edit,
   FileSpreadsheet,
   Layers,
   Plus,
   Power,
+  RotateCcw,
   Search,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -93,18 +94,19 @@ function filterCourses(
   courses: ProgramHeadCourseItem[],
   statusFilter: string,
   search: string,
-  majorFilter: string
+  majorFilter: string,
+  yearLevelFilter: string,
+  semesterFilter: string,
+  termFilter: string
 ): ProgramHeadCourseItem[] {
   let filtered = courses;
 
-  // Filter by status
   if (statusFilter === "active") {
     filtered = filtered.filter((c) => c.is_active);
   } else if (statusFilter === "archived") {
     filtered = filtered.filter((c) => !c.is_active);
   }
 
-  // Filter by search
   if (search.trim()) {
     const q = search.toLowerCase();
     filtered = filtered.filter(
@@ -112,9 +114,20 @@ function filterCourses(
     );
   }
 
-  // Filter by major
   if (majorFilter && majorFilter !== "all") {
     filtered = filtered.filter((c) => c.major_id === majorFilter);
+  }
+
+  if (yearLevelFilter && yearLevelFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_year_level === yearLevelFilter);
+  }
+
+  if (semesterFilter && semesterFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_semester === semesterFilter);
+  }
+
+  if (termFilter && termFilter !== "__all__") {
+    filtered = filtered.filter((c) => c.default_term === termFilter);
   }
 
   return filtered;
@@ -505,6 +518,9 @@ export function ProgramHeadCoursesCatalog({
   const [statusFilter, setStatusFilter] = useState("__all__");
   const [search, setSearch] = useState("");
   const [majorFilter, setMajorFilter] = useState("all");
+  const [yearLevelFilter, setYearLevelFilter] = useState("__all__");
+  const [semesterFilter, setSemesterFilter] = useState("__all__");
+  const [termFilter, setTermFilter] = useState("__all__");
   const [currentPage, setCurrentPage] = useState(1);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createDialogKey, setCreateDialogKey] = useState(0);
@@ -516,13 +532,13 @@ export function ProgramHeadCoursesCatalog({
   } | null>(null);
 
   const PAGE_SIZE = 15;
-  const filteredCourses = filterCourses(courses, statusFilter, search, majorFilter);
+  const filteredCourses = filterCourses(courses, statusFilter, search, majorFilter, yearLevelFilter, semesterFilter, termFilter);
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${program.id}:${statusFilter}:${search}:${majorFilter}:${safePage}`
+    `${program.id}:${statusFilter}:${search}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
   const programLabel = program.name;
 
@@ -658,6 +674,81 @@ export function ProgramHeadCoursesCatalog({
           </SelectContent>
         </Select>
 
+        {/* Year Level filter */}
+        <Select
+          value={yearLevelFilter}
+          onValueChange={(v) => {
+            setYearLevelFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by year level" className="w-full md:w-[160px]">
+            <SelectValue>
+              {yearLevelFilter === "__all__"
+                ? "All Year Levels"
+                : (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevelFilter)?.label ?? "All Year Levels")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Year Levels</SelectItem>
+            {YEAR_LEVEL_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Semester filter */}
+        <Select
+          value={semesterFilter}
+          onValueChange={(v) => {
+            setSemesterFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by semester" className="w-full md:w-[160px]">
+            <SelectValue>
+              {semesterFilter === "__all__"
+                ? "All Semesters"
+                : (SEMESTER_OPTIONS.find((o) => o.value === semesterFilter)?.label ?? "All Semesters")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Semesters</SelectItem>
+            {SEMESTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Term filter */}
+        <Select
+          value={termFilter}
+          onValueChange={(v) => {
+            setTermFilter(v ?? "__all__");
+            setCurrentPage(1);
+          }}
+        >
+          <SelectTrigger aria-label="Filter by term" className="w-full md:w-[150px]">
+            <SelectValue>
+              {termFilter === "__all__"
+                ? "All Terms"
+                : (TERM_OPTIONS.find((o) => o.value === termFilter)?.label ?? "All Terms")}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All Terms</SelectItem>
+            {TERM_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {/* Major filter */}
         {majors.length > 0 && (
           <Select
@@ -699,6 +790,27 @@ export function ProgramHeadCoursesCatalog({
             }}
           />
         </div>
+
+        {/* Reset Filters — visible only when any filter is active */}
+        {(statusFilter !== "__all__" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__" || majorFilter !== "all" || search) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setStatusFilter("__all__");
+              setYearLevelFilter("__all__");
+              setSemesterFilter("__all__");
+              setTermFilter("__all__");
+              setMajorFilter("all");
+              setSearch("");
+              setCurrentPage(1);
+            }}
+          >
+            <RotateCcw aria-hidden="true" className="size-3.5" />
+            Reset
+          </Button>
+        )}
       </div>
 
       <BulkActionBar
@@ -756,9 +868,9 @@ export function ProgramHeadCoursesCatalog({
                 <TableCell colSpan={10} className="h-32 text-center">
                   <p className="font-medium">No courses found</p>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {search || statusFilter !== "__all__" || majorFilter !== "all"
+                    {search || statusFilter !== "__all__" || majorFilter !== "all" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__"
                       ? "Clear or change the filters to see more courses."
-                      : "Add a course or import a CSV file to build this program’s catalog."}
+                      : "Add a course or import a CSV file to build this program\u2019s catalog."}
                   </p>
                 </TableCell>
               </TableRow>

@@ -1,4 +1,4 @@
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -11,6 +11,9 @@ export type GenEdCourseItem = {
   course_scope: CourseScope;
   program_id: string | null;
   major_id: string | null;
+  default_year_level: YearLevel | null;
+  default_semester: AcademicSemester | null;
+  default_term: AcademicTerm | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -59,6 +62,9 @@ export async function listGenEdCourses(): Promise<ServiceResult<GenEdCoursesResu
     course_scope: c.course_scope,
     program_id: c.program_id,
     major_id: c.major_id,
+    default_year_level: c.default_year_level,
+    default_semester: c.default_semester,
+    default_term: c.default_term,
     is_active: c.is_active,
     created_at: c.created_at,
     updated_at: c.updated_at,
