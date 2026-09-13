@@ -15,7 +15,7 @@ _Avoid_: Import origin, registration channel
 ## Lifecycle
 
 **Enrollment upsert**:
-The operation that, for the same student + term, updates the existing row in place and forces `is_active` true; otherwise it creates a new row. The onboarding flow upserts only the active term, while the secretary flow can upsert any term.
+The operation that, for the same student + term, updates the existing row in place and forces `is_active` true; otherwise it creates a new row. The onboarding flow upserts only the active term, while the secretary flow can upsert any term. The Secretary user-edit flow applies this rule to the active term when it sets a Student's placement.
 _Avoid_: Merge, replace
 
 **Soft deactivation**:

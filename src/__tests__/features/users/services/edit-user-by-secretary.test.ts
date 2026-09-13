@@ -23,6 +23,9 @@ vi.mock("@/lib/db/prisma", () => ({
     program: {
       findMany: vi.fn().mockResolvedValue([]),
     },
+    academicTermInstance: {
+      findFirst: vi.fn().mockResolvedValue({ id: "active-term" }),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -87,7 +90,7 @@ describe("editUserBySecretary service", () => {
         upsert: vi.fn(),
       },
       studentEnrollment: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        findUnique: vi.fn().mockResolvedValue(null),
         update: vi.fn(),
         create: vi.fn(),
       },
@@ -133,6 +136,10 @@ describe("editUserBySecretary service", () => {
       alumni_profile: null,
       industry_partner_profile: null,
     });
+
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({
+      id: "active-term",
+    } as never);
 
     mockTx = buildMockTx();
     (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation(async (cb) => cb(mockTx));
@@ -837,10 +844,11 @@ describe("editUserBySecretary service", () => {
       setStudentRecord({ program_id: PROG_OLD, major_id: null }, [
         { id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" },
       ]);
-      mockTx.studentEnrollment.findFirst.mockResolvedValue({
+      mockTx.studentEnrollment.findUnique.mockResolvedValue({
         id: "active-enrollment",
         year_level: "FIRST_YEAR",
         section: "MORNING",
+        is_active: true,
       });
       mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
 
@@ -864,12 +872,13 @@ describe("editUserBySecretary service", () => {
           major_id: null,
           year_level: "SECOND_YEAR",
           section: "AFTERNOON",
+          is_active: true,
         },
       });
       expect(mockTx.studentEnrollment.create).not.toHaveBeenCalled();
     });
 
-    it("preserves historical enrollment and does not create missing active enrollment", async () => {
+    it("saves a profile-only change without creating a placement", async () => {
       setStudentRecord({ program_id: PROG_OLD, major_id: null }, []);
       mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
 
@@ -887,6 +896,78 @@ describe("editUserBySecretary service", () => {
       expect(mockTx.studentEnrollment.create).not.toHaveBeenCalled();
     });
 
+    it("creates the active-term placement when the student has no enrollment yet", async () => {
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, []);
+      mockTx.studentEnrollment.findUnique.mockResolvedValue(null);
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
+
+      const result = await editUserBySecretary({
+        ...studentInput,
+        confirmationToken: makeToken(
+          `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=null:section=null:after=program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+        ),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.studentEnrollment.create).toHaveBeenCalledWith({
+        data: {
+          student_user_id: USER_ID,
+          term_instance_id: "active-term",
+          program_id: PROG_NEW,
+          major_id: null,
+          year_level: "SECOND_YEAR",
+          section: "AFTERNOON",
+          source: "SECRETARY",
+          created_by: SECRETARY_ID,
+          is_active: true,
+        },
+      });
+    });
+
+    it("reactivates the student's deactivated active-term row instead of creating a duplicate", async () => {
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, []);
+      mockTx.studentEnrollment.findUnique.mockResolvedValue({
+        id: "deactivated-enrollment",
+        year_level: "FIRST_YEAR",
+        section: "MORNING",
+        is_active: false,
+      });
+      mockTx.program.findUnique.mockResolvedValue({ id: PROG_NEW, is_active: true, majors: [] });
+
+      const result = await editUserBySecretary({
+        ...studentInput,
+        confirmationToken: makeToken(
+          `STUDENT:id=${USER_ID}:before=program=${PROG_OLD}:major=null:year=null:section=null:after=program=${PROG_NEW}:major=null:year=SECOND_YEAR:section=AFTERNOON`
+        ),
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockTx.studentEnrollment.update).toHaveBeenCalledWith({
+        where: { id: "deactivated-enrollment" },
+        data: {
+          program_id: PROG_NEW,
+          major_id: null,
+          year_level: "SECOND_YEAR",
+          section: "AFTERNOON",
+          is_active: true,
+        },
+      });
+      expect(mockTx.studentEnrollment.create).not.toHaveBeenCalled();
+    });
+
+    it("rejects a placement save before review when no Academic Period is active", async () => {
+      setStudentRecord({ program_id: PROG_OLD, major_id: null }, []);
+      vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null as never);
+
+      const result = await editUserBySecretary(studentInput);
+
+      expect(result).toEqual({
+        success: false,
+        error: "No active Academic Period is set. Activate one before setting placement.",
+      });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
     it("rolls back profile and enrollment writes when related update fails", async () => {
       setStudentRecord({ program_id: PROG_OLD, major_id: null }, [
         { id: "active-enrollment", year_level: "FIRST_YEAR", section: "MORNING" },
@@ -896,10 +977,11 @@ describe("editUserBySecretary service", () => {
         academicTermInstance: { findFirst: vi.fn().mockResolvedValue({ id: "active-term" }) },
         studentAcademicProfile: { upsert: vi.fn() },
         studentEnrollment: {
-          findFirst: vi.fn().mockResolvedValue({
+          findUnique: vi.fn().mockResolvedValue({
             id: "active-enrollment",
             year_level: "FIRST_YEAR",
             section: "MORNING",
+            is_active: true,
           }),
           update: vi.fn().mockRejectedValue(new Error("Enrollment write failed")),
           create: vi.fn(),

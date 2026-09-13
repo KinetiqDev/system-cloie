@@ -8,7 +8,7 @@ import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/servi
 import CryptoJS from "crypto-js";
 import { timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
-import { SystemRole } from "@prisma/client";
+import { SystemRole, EnrollmentSource } from "@prisma/client";
 
 type ProgramHeadAssignmentRow = {
   id: string;
@@ -52,6 +52,10 @@ function activeAssignmentProgramIds(assignments: ProgramHeadAssignmentRow[] | un
 function formatProgramSet(names: string[]): string {
   return names.sort((a, b) => a.localeCompare(b)).join(", ") || "None";
 }
+
+/** Placement writes need somewhere to write: the single ACTIVE Academic Period. */
+const NO_ACTIVE_PERIOD_PLACEMENT_ERROR =
+  "No active Academic Period is set. Activate one before setting placement.";
 
 /** Stable token segment for optional IDs/values (empty string → null). */
 function tokenValue(value: string | number | null | undefined): string {
@@ -413,8 +417,16 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
   if (student && Boolean(student.year_level) !== Boolean(student.section)) {
     return { success: false, error: "Year level and section must be provided together." };
   }
-  if (student && (student.year_level || student.section) && !existing.enrollments[0]) {
-    return { success: false, error: "Student has no editable active enrollment." };
+  if (student && (student.year_level || student.section)) {
+    // Fail before issuing a confirmation token when there is nowhere to place
+    // the Student; the save itself re-checks inside the transaction.
+    const activePeriod = await prisma.academicTermInstance.findFirst({
+      where: { status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!activePeriod) {
+      return { success: false, error: NO_ACTIVE_PERIOD_PLACEMENT_ERROR };
+    }
   }
 
   if (protectedPayload) {
@@ -552,26 +564,52 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
           },
         });
 
-        // Sync active enrollment if present or if placement is being set
+        // Write the Student's placement for the active term: update their row
+        // in place (reactivating a deactivated one), or create the placement
+        // when they have none yet. Other terms' enrollments are untouched.
         const activeTerm = await tx.academicTermInstance.findFirst({ where: { status: "ACTIVE" } });
         if (activeTerm) {
-          const activeEnrollment = await tx.studentEnrollment.findFirst({
-            where: { student_user_id: id, is_active: true, term_instance_id: activeTerm.id },
+          const placement =
+            student.year_level && student.section
+              ? { year_level: student.year_level, section: student.section }
+              : null;
+          const enrollment = await tx.studentEnrollment.findUnique({
+            where: {
+              student_user_id_term_instance_id: {
+                student_user_id: id,
+                term_instance_id: activeTerm.id,
+              },
+            },
           });
 
-          if (activeEnrollment) {
-            // Update existing enrollment
+          if (enrollment) {
             await tx.studentEnrollment.update({
-              where: { id: activeEnrollment.id },
+              where: { id: enrollment.id },
               data: {
                 program_id: student.program_id,
                 major_id: student.major_id ?? null,
-                year_level: student.year_level ?? activeEnrollment.year_level,
-                section: student.section ?? activeEnrollment.section,
+                year_level: student.year_level ?? enrollment.year_level,
+                section: student.section ?? enrollment.section,
+                ...(placement ? { is_active: true } : {}),
+              },
+            });
+          } else if (placement) {
+            await tx.studentEnrollment.create({
+              data: {
+                student_user_id: id,
+                term_instance_id: activeTerm.id,
+                program_id: student.program_id,
+                major_id: student.major_id ?? null,
+                year_level: placement.year_level,
+                section: placement.section,
+                source: EnrollmentSource.SECRETARY,
+                created_by: session.userId,
+                is_active: true,
               },
             });
           }
-          // Do NOT create a missing enrollment per spec #79 / #81
+        } else if (student.year_level || student.section) {
+          throw new Error(NO_ACTIVE_PERIOD_PLACEMENT_ERROR);
         }
       } else if (existingRole === SystemRole.FACULTY && faculty) {
         // Find existing active primary affiliation to see if we need to change it

@@ -20,6 +20,10 @@ _Avoid_: Active role selection, revoking before cleanup
 A Secretary edit form is bound to the assigned role whose record populated it. The save carries that expected role, and the service rejects the request as stale if the account's deterministic edit role changed before submission; role-specific validation never retargets the old form to a newly assigned role.
 _Avoid_: Inferring a replacement role at submit time, silently retargeting stale edit data
 
+**Secretary term placement set**:
+The Secretary Edit User flow's write of a Student's current-term placement: year level and section save together into the unique enrollment row for the active Academic Period — created with source `SECRETARY` when the Student has none, updated in place and reactivated otherwise. It requires an active Academic Period, leaves the static academic profile and other terms' enrollments untouched, and is a Protected account edit reviewed before saving.
+_Avoid_: Bulk placement update, term rollover, profile-only correction
+
 **Role provisioning category**:
 The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles are pre-provisioned by a Secretary; Faculty additionally appears as a self-service internal option.
 _Avoid_: permission level, access tier

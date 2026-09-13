@@ -92,6 +92,30 @@ describe("editUserBySecretaryAction", () => {
     expect(editUserBySecretary).not.toHaveBeenCalled();
   });
 
+  it("forwards Student placement fields and confirmation token", async () => {
+    const formData = new FormData();
+    formData.set("id", "22222222-2222-4222-8222-222222222222");
+    formData.set("expectedRole", "STUDENT");
+    formData.set("name", "Ana Cruz");
+    formData.set("student.program_id", "33333333-3333-4333-8333-333333333333");
+    formData.set("student.year_level", "SECOND_YEAR");
+    formData.set("student.section", "EVENING");
+    formData.set("confirmationToken", "token");
+
+    await editUserBySecretaryAction(formData);
+
+    expect(editUserBySecretary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        confirmationToken: "token",
+        student: {
+          program_id: "33333333-3333-4333-8333-333333333333",
+          year_level: "SECOND_YEAR",
+          section: "EVENING",
+        },
+      })
+    );
+  });
+
   it("forwards Alumni fields and confirmation token", async () => {
     const formData = new FormData();
     formData.set("id", "22222222-2222-4222-8222-222222222222");

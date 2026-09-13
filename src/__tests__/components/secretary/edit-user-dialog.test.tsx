@@ -504,8 +504,8 @@ describe("EditUserDialog", () => {
     expect(editUserBySecretaryAction).not.toHaveBeenCalled();
   });
 
-  it("explains unavailable Student placement when no active enrollment exists", async () => {
-    (getUserEditRecordAction as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it("lets the Secretary set placement for a Student with no active enrollment", async () => {
+    vi.mocked(getUserEditRecordAction).mockResolvedValue({
       success: true,
       data: {
         id: "target-user",
@@ -523,6 +523,92 @@ describe("EditUserDialog", () => {
           majorIsActive: null,
         },
         activeEnrollment: null,
+        activeTerm: { id: "term-1", label: "2026-2027 — 1st Semester — 1st Term" },
+        faculty: null,
+        programHead: null,
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      },
+    });
+    vi.mocked(editUserBySecretaryAction).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        protectedConfirmationRequired: true,
+        protectedPayload: "STUDENT:id=target-user:before=:after=FIRST_YEAR:MORNING",
+        token: "test-token",
+        confirmationReview: {
+          role: SystemRole.STUDENT,
+          oldValues: {
+            program: "Information Technology",
+            major: "None",
+            year: "None",
+            section: "None",
+          },
+          newValues: {
+            program: "Information Technology",
+            major: "None",
+            year: "FIRST_YEAR",
+            section: "MORNING",
+          },
+        },
+      },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={[{ id: "prog-old", code: "BSIT", name: "Information Technology", majors: [] }]}
+        yearLevels={["FIRST_YEAR"]}
+      />
+    );
+    await waitFor(() => expect(screen.getByDisplayValue("Deferred Student")).toBeInTheDocument());
+
+    expect(screen.getByText(/placement in 2026-2027/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Year Level")).toBeEnabled();
+    expect(screen.getByLabelText("Section")).toBeEnabled();
+
+    fireEvent.click(screen.getByLabelText("Year Level"));
+    fireEvent.click(screen.getByRole("option", { name: "First Year" }));
+    fireEvent.click(screen.getByLabelText("Section"));
+    fireEvent.click(screen.getByRole("option", { name: "Morning" }));
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(editUserBySecretaryAction).toHaveBeenCalledTimes(1));
+    const formData = vi.mocked(editUserBySecretaryAction).mock.calls[0][0] as FormData;
+    expect(formData.get("student.program_id")).toBe("prog-old");
+    expect(formData.get("student.year_level")).toBe("FIRST_YEAR");
+    expect(formData.get("student.section")).toBe("MORNING");
+
+    expect(await screen.findByText(/active term placement changes/i)).toBeInTheDocument();
+    expect(screen.getByText("None • None")).toBeInTheDocument();
+    expect(screen.getByText("First Year • Morning")).toBeInTheDocument();
+  });
+
+  it("keeps Student placement locked while no Academic Period is active", async () => {
+    vi.mocked(getUserEditRecordAction).mockResolvedValue({
+      success: true,
+      data: {
+        id: "target-user",
+        name: "Deferred Student",
+        email: "student@acd.edu.ph",
+        isActive: true,
+        role: SystemRole.STUDENT,
+        student: {
+          programId: "prog-old",
+          programCode: "BSIT",
+          programName: "Information Technology",
+          majorId: null,
+          majorName: null,
+          programIsActive: true,
+          majorIsActive: null,
+        },
+        activeEnrollment: null,
+        activeTerm: null,
         faculty: null,
         programHead: null,
         verification: null,
@@ -542,7 +628,8 @@ describe("EditUserDialog", () => {
       />
     );
     await waitFor(() => expect(screen.getByDisplayValue("Deferred Student")).toBeInTheDocument());
-    expect(screen.getByText(/active enrollment in the current term/i)).toBeInTheDocument();
+
+    expect(screen.getByText(/needs an active Academic Period/i)).toBeInTheDocument();
     expect(screen.getByLabelText("Year Level")).toBeDisabled();
     expect(screen.getByLabelText("Section")).toBeDisabled();
   });

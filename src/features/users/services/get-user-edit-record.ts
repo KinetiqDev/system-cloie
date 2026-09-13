@@ -2,6 +2,7 @@ import { SystemRole, VerificationStatus, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { type ServiceResult } from "@/lib/utils/service-result";
 
 /**
@@ -27,8 +28,8 @@ export type SecretaryUserEditRecord = {
     programIsActive: boolean | null;
     majorIsActive: boolean | null;
   } | null;
-  // Active-term enrollment record is intentionally not projected here; #81
-  // owns the active enrollment projection and placement fields.
+  // Current placement: the Student's active enrollment in the ACTIVE Academic
+  // Period, projected with the year level and section the dialog edits.
   activeEnrollment: {
     id: string;
     termInstanceId: string;
@@ -36,6 +37,15 @@ export type SecretaryUserEditRecord = {
     majorId: string | null;
     yearLevel: YearLevel;
     section: string | null;
+  } | null;
+  /**
+   * The Academic Period currently ACTIVE, when one is set. It gates the
+   * dialog's placement controls: year level and section can only be written
+   * into an active period, whether or not the Student already has a row there.
+   */
+  activeTerm: {
+    id: string;
+    label: string;
   } | null;
   // Faculty primary program affiliation.
   faculty: {
@@ -96,44 +106,50 @@ export async function getUserEditRecordBySecretary(
     return { success: false, error: "Cannot edit your own account." };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      roles: { select: { role: true }, orderBy: { role: "asc" } },
-      student_profile: {
-        include: {
-          program: { select: { code: true, name: true, is_active: true } },
-          major: { select: { name: true, is_active: true } },
+  const [user, activeTerm] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { select: { role: true }, orderBy: { role: "asc" } },
+        student_profile: {
+          include: {
+            program: { select: { code: true, name: true, is_active: true } },
+            major: { select: { name: true, is_active: true } },
+          },
+        },
+        enrollments: {
+          where: {
+            is_active: true,
+            term: { status: "ACTIVE" },
+          },
+          include: {
+            term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },
+          },
+          take: 1, // A student has at most one active enrollment in the active term
+        },
+        faculty_program_affiliations: {
+          where: { is_active: true, is_primary: true },
+          take: 1,
+        },
+        program_head_assignments: {
+          include: {
+            program: { select: { code: true, name: true } },
+          },
+        },
+        industry_partner_profile: true,
+        alumni_profile: {
+          include: {
+            program: { select: { name: true, is_active: true } },
+            major: { select: { name: true, is_active: true } },
+          },
         },
       },
-      enrollments: {
-        where: {
-          is_active: true,
-          term: { status: "ACTIVE" },
-        },
-        include: {
-          term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },
-        },
-        take: 1, // A student has at most one active enrollment in the active term
-      },
-      faculty_program_affiliations: {
-        where: { is_active: true, is_primary: true },
-        take: 1,
-      },
-      program_head_assignments: {
-        include: {
-          program: { select: { code: true, name: true } },
-        },
-      },
-      industry_partner_profile: true,
-      alumni_profile: {
-        include: {
-          program: { select: { name: true, is_active: true } },
-          major: { select: { name: true, is_active: true } },
-        },
-      },
-    },
-  });
+    }),
+    prisma.academicTermInstance.findFirst({
+      where: { status: "ACTIVE" },
+      select: { id: true, semester: true, term: true, school_year: { select: { code: true } } },
+    }),
+  ]);
 
   if (!user) {
     return { success: false, error: "User not found." };
@@ -176,6 +192,16 @@ export async function getUserEditRecordBySecretary(
             majorId: activeEnrollment.major_id,
             yearLevel: activeEnrollment.year_level,
             section: activeEnrollment.section,
+          }
+        : null,
+      activeTerm: activeTerm
+        ? {
+            id: activeTerm.id,
+            label: formatTermInstanceLabel(
+              activeTerm.school_year.code,
+              activeTerm.semester,
+              activeTerm.term
+            ),
           }
         : null,
       faculty:

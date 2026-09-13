@@ -68,6 +68,14 @@ function verificationEffect(status: VerificationStatus): string {
   return "Pending — limited dashboard access until reviewed.";
 }
 
+/** Renders a confirmation review's placement pair; missing values read "None". */
+function formatPlacementChange(year: string | undefined, section: string | undefined): string {
+  const yearLabel = !year || year === "None" ? "None" : formatYearLevel(year as YearLevel);
+  const sectionLabel =
+    !section || section === "None" ? "None" : formatSection(section as StudentSection);
+  return `${yearLabel} • ${sectionLabel}`;
+}
+
 const SECTION_OPTIONS: { label: string; value: StudentSection }[] = [
   { label: "Morning", value: "MORNING" },
   { label: "Afternoon", value: "AFTERNOON" },
@@ -333,7 +341,6 @@ function EditUserDialogBody({
         return;
       }
 
-      const canEditPlacement = !!loadState.record.activeEnrollment;
       const hasYearLevel = !!yearLevel;
       const hasSection = !!section;
       if (hasYearLevel !== hasSection) {
@@ -343,8 +350,8 @@ function EditUserDialogBody({
 
       formData.set("student.program_id", programId);
       if (majorId) formData.set("student.major_id", majorId);
-      if (canEditPlacement && yearLevel) formData.set("student.year_level", yearLevel);
-      if (canEditPlacement && section) formData.set("student.section", section);
+      if (yearLevel) formData.set("student.year_level", yearLevel);
+      if (section) formData.set("student.section", section);
     } else if (loadState.status === "ready" && loadState.record.role === SystemRole.FACULTY) {
       if (!programId) {
         setSubmitError("Primary program affiliation is required.");
@@ -422,7 +429,7 @@ function EditUserDialogBody({
           const oldSec = record?.activeEnrollment?.section;
           const newSec = section;
 
-          const profileChanged = !!(oldM !== newM);
+          const profileChanged = record?.student?.programId !== programId || oldM !== newM;
           const placementChanged = !!(newYL && newSec && (oldYL !== newYL || oldSec !== newSec));
 
           setConfirmationToken(result.data.token!);
@@ -639,7 +646,7 @@ function EditUserDialogBody({
                       <Select
                         value={yearLevel ?? ""}
                         onValueChange={(val) => setYearLevel(val as YearLevel)}
-                        disabled={isSubmitting || !loadState.record.activeEnrollment}
+                        disabled={isSubmitting || !loadState.record.activeTerm}
                       >
                         <SelectTrigger id="edit-user-year-level" className={TRIGGER_FULL}>
                           <SelectValue placeholder="Select year level">
@@ -662,7 +669,7 @@ function EditUserDialogBody({
                       <Select
                         value={section ?? ""}
                         onValueChange={(val) => setSection(val as StudentSection)}
-                        disabled={isSubmitting || !loadState.record.activeEnrollment}
+                        disabled={isSubmitting || !loadState.record.activeTerm}
                       >
                         <SelectTrigger id="edit-user-section" className={TRIGGER_FULL}>
                           <SelectValue placeholder="Select section">
@@ -681,8 +688,9 @@ function EditUserDialogBody({
                     </Field>
                   </div>
                   <FieldDescription>
-                    Year level and section save only while the student has an active enrollment in
-                    the current term.
+                    {loadState.record.activeTerm
+                      ? `Year level and section save together as this student's placement in ${loadState.record.activeTerm.label}.`
+                      : "Setting placement needs an active Academic Period. Activate one before choosing year level or section."}
                   </FieldDescription>
                 </FieldSet>
               )}
@@ -1012,11 +1020,17 @@ function EditUserDialogBody({
                   <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
                     <div className="text-muted-foreground">Previous:</div>
                     <div>
-                      {confirmationSummary.oldValues.year} • {confirmationSummary.oldValues.section}
+                      {formatPlacementChange(
+                        confirmationSummary.oldValues.year,
+                        confirmationSummary.oldValues.section
+                      )}
                     </div>
                     <div className="text-link font-medium">New:</div>
                     <div className="font-medium">
-                      {confirmationSummary.newValues.year} • {confirmationSummary.newValues.section}
+                      {formatPlacementChange(
+                        confirmationSummary.newValues.year,
+                        confirmationSummary.newValues.section
+                      )}
                     </div>
                   </div>
                 </div>
