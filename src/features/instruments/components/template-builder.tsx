@@ -82,6 +82,7 @@ import type {
   FacultyManagedCiloContext,
   FacultyManagedCiloLoadResult,
 } from "@/features/evaluations/types";
+import { PUBLISH_FROM_BUILDER } from "@/features/evaluations/components/publish-navigation";
 import type {
   TemplateStructure,
   TemplateSection,
@@ -1279,7 +1280,9 @@ export function TemplateBuilder({
           return;
         }
 
-        router.push(`/faculty/cilo-evaluations/new?templateId=${saveResult.id}`);
+        router.push(
+          `/faculty/cilo-evaluations/new?templateId=${saveResult.id}&from=${PUBLISH_FROM_BUILDER}`
+        );
         return;
       }
 

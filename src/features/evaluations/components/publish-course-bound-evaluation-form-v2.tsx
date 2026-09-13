@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import type { PublishBackNavigation } from "@/features/evaluations/components/publish-navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BackLink } from "@/components/ui/back-link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +74,8 @@ interface PublishCourseBoundEvaluationFormV2Props {
   ) => Promise<PublishCourseBoundEvaluationResult>;
   isOnBehalf?: boolean;
   successRedirectPath?: string;
+  /** Server-computed upward navigation for the page-level Back control. */
+  backNavigation?: PublishBackNavigation;
   programId?: string;
 }
 
@@ -116,6 +120,7 @@ export function PublishCourseBoundEvaluationFormV2({
   isOnBehalf: isOnBehalfProp = false,
   successRedirectPath = "/faculty/tools",
   programId,
+  backNavigation,
 }: PublishCourseBoundEvaluationFormV2Props) {
   // Step state
   const [step, setStep] = useState<Step>("configure");
@@ -350,12 +355,15 @@ export function PublishCourseBoundEvaluationFormV2({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-heading-lg">Publish CILO Evaluation</h1>
-        <p className="text-muted-foreground text-sm">
-          Select a class assignment to target the right students. The course context and
-          CILO-to-question bindings come from the saved faculty template.
-        </p>
+      <div className="space-y-3">
+        {backNavigation && <BackLink href={backNavigation.href}>{backNavigation.label}</BackLink>}
+        <div className="space-y-2">
+          <h1 className="text-heading-lg">Publish CILO Evaluation</h1>
+          <p className="text-muted-foreground text-sm">
+            Select a class assignment to target the right students. The course context and
+            CILO-to-question bindings come from the saved faculty template.
+          </p>
+        </div>
       </div>
 
       {isOnBehalf && selectedAssignment && (
