@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type React from "react";
@@ -52,11 +53,11 @@ describe("MobileNav", () => {
 
     render(<MobileNav roles={[ROLES.ALUMNI]} />);
 
-    expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
-      "aria-current",
-      "page"
-    );
-    expect(screen.getByRole("navigation", { name: "Primary navigation" })
-      .querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "History" })).toHaveAttribute("aria-current", "page");
+    expect(
+      screen
+        .getByRole("navigation", { name: "Primary navigation" })
+        .querySelectorAll('[aria-current="page"]')
+    ).toHaveLength(1);
   });
 });

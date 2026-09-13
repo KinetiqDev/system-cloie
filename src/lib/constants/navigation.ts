@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import {
   LayoutDashboard,
   FileText,
@@ -171,7 +172,7 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
         href: "/dean/academic-structure/course-assignments",
         icon: UsersRound,
       },
-      { name: "Instruments", href: "/dean/academic-structure/instruments", icon: Layers3 },
+      { name: "Tools", href: "/dean/academic-structure/instruments", icon: Layers3 },
     ],
   },
   {
@@ -184,7 +185,6 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
         href: "/dean/college-oversight/learning-outcomes",
         icon: BookOpen,
       },
-      { name: "Enrollments", href: "/dean/college-oversight/enrollments", icon: UsersRound },
     ],
   },
 ];

@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
@@ -341,6 +342,63 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     expect(questionA!.ploBindings).toEqual([]);
     // buildQuestionMetrics gives GENERAL binding for unbound items
     expect(questionA!.binding.type).toBe("GENERAL");
+  });
+
+  it("keeps an unbound question's ratings in the evaluation mean and out of PLO evidence", async () => {
+    centralDeploymentFindFirstMock.mockResolvedValue({
+      ...MOCK_DEPLOYMENT,
+      plo_snapshots: [MOCK_DEPLOYMENT.plo_snapshots[0]],
+    });
+    evaluationAssignmentFindManyMock.mockResolvedValue([
+      {
+        id: "assignment-1",
+        assigned_at: new Date("2026-01-02T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        response: {
+          id: "response-1",
+          status: "SUBMITTED",
+          submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        },
+      },
+    ]);
+    responseFindManyMock.mockResolvedValue([
+      {
+        id: "response-1",
+        submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        quant_items: [
+          {
+            cilo_question_binding_id: null,
+            section_key: "plo-items",
+            item_key: "q-plo-a",
+            rating_value: 4,
+          },
+          {
+            cilo_question_binding_id: null,
+            section_key: "plo-items",
+            item_key: "q-plo-b",
+            rating_value: 2,
+          },
+        ],
+        qual_items: [],
+      },
+    ]);
+
+    const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
+
+    expect(result).not.toBeNull();
+    // Only the bound question reaches PLO evidence.
+    expect(result!.ploResults).toEqual([
+      expect.objectContaining({ ploId: "plo-1", ploCode: "PLO-1", ratingCount: 1, mean: 4 }),
+    ]);
+    const questionB = result!.questionResults.find((q) => q.itemKey === "q-plo-b");
+    expect(questionB!.ploBindings).toEqual([]);
+    expect(questionB!.binding.type).toBe("GENERAL");
+    // The deployment mean keeps the unbound rating: (4 + 2) / 2.
+    expect(result!.summary.evaluationMean).toBeCloseTo(3, 12);
+    expect(result!.summary.evaluationScaleCount).toBe(1);
   });
 
   it("returns alumni identity for alumni stakeholder deployments", async () => {

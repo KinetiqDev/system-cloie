@@ -1,7 +1,9 @@
+// fallow-ignore-file code-duplication
 import { SystemRole, VerificationStatus, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
+import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { type ServiceResult } from "@/lib/utils/service-result";
 
 /**
@@ -16,6 +18,13 @@ export type SecretaryUserEditRecord = {
   name: string;
   email: string;
   isActive: boolean;
+  /** The complete assigned-role set, in deterministic enum order. */
+  roles: SystemRole[];
+  /**
+   * The role whose profile slice this record targets: the caller's selected
+   * role when the account still holds it, otherwise the account's
+   * deterministic edit role (lowest enum order).
+   */
   role: SystemRole;
   // Populated only for the relevant role slices (Student in #81, etc.).
   student: {
@@ -27,8 +36,8 @@ export type SecretaryUserEditRecord = {
     programIsActive: boolean | null;
     majorIsActive: boolean | null;
   } | null;
-  // Active-term enrollment record is intentionally not projected here; #81
-  // owns the active enrollment projection and placement fields.
+  // Current placement: the Student's active enrollment in the ACTIVE Academic
+  // Period, projected with the year level and section the dialog edits.
   activeEnrollment: {
     id: string;
     termInstanceId: string;
@@ -36,6 +45,15 @@ export type SecretaryUserEditRecord = {
     majorId: string | null;
     yearLevel: YearLevel;
     section: string | null;
+  } | null;
+  /**
+   * The Academic Period currently ACTIVE, when one is set. It gates the
+   * dialog's placement controls: year level and section can only be written
+   * into an active period, whether or not the Student already has a row there.
+   */
+  activeTerm: {
+    id: string;
+    label: string;
   } | null;
   // Faculty primary program affiliation.
   faculty: {
@@ -85,7 +103,8 @@ async function getCurrentSecretaryId(): Promise<ServiceResult<{ id: string; role
 }
 
 export async function getUserEditRecordBySecretary(
-  userId: string
+  userId: string,
+  selectedRole?: SystemRole
 ): Promise<ServiceResult<SecretaryUserEditRecord>> {
   const access = await getCurrentSecretaryId();
   if (!access.success) {
@@ -96,56 +115,70 @@ export async function getUserEditRecordBySecretary(
     return { success: false, error: "Cannot edit your own account." };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      roles: { select: { role: true }, orderBy: { role: "asc" } },
-      student_profile: {
-        include: {
-          program: { select: { code: true, name: true, is_active: true } },
-          major: { select: { name: true, is_active: true } },
+  const [user, activeTerm] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { select: { role: true }, orderBy: { role: "asc" } },
+        student_profile: {
+          include: {
+            program: { select: { code: true, name: true, is_active: true } },
+            major: { select: { name: true, is_active: true } },
+          },
+        },
+        enrollments: {
+          where: {
+            is_active: true,
+            term: { status: "ACTIVE" },
+          },
+          include: {
+            term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },
+          },
+          take: 1, // A student has at most one active enrollment in the active term
+        },
+        faculty_program_affiliations: {
+          where: { is_active: true, is_primary: true },
+          take: 1,
+        },
+        program_head_assignments: {
+          include: {
+            program: { select: { code: true, name: true } },
+          },
+        },
+        industry_partner_profile: true,
+        alumni_profile: {
+          include: {
+            program: { select: { name: true, is_active: true } },
+            major: { select: { name: true, is_active: true } },
+          },
         },
       },
-      enrollments: {
-        where: {
-          is_active: true,
-          term: { status: "ACTIVE" },
-        },
-        include: {
-          term: { select: { id: true, semester: true, school_year: { select: { code: true } } } },
-        },
-        take: 1, // A student has at most one active enrollment in the active term
-      },
-      faculty_program_affiliations: {
-        where: { is_active: true, is_primary: true },
-        take: 1,
-      },
-      program_head_assignments: {
-        include: {
-          program: { select: { code: true, name: true } },
-        },
-      },
-      industry_partner_profile: true,
-      alumni_profile: {
-        include: {
-          program: { select: { name: true, is_active: true } },
-          major: { select: { name: true, is_active: true } },
-        },
-      },
-    },
-  });
+    }),
+    prisma.academicTermInstance.findFirst({
+      where: { status: "ACTIVE" },
+      select: { id: true, semester: true, term: true, school_year: { select: { code: true } } },
+    }),
+  ]);
 
   if (!user) {
     return { success: false, error: "User not found." };
   }
 
-  // Roles resolve in deterministic enum order so this reader and the
-  // separately executed save mutation always target the same role for
-  // multi-role accounts; System CLOIE account roles are immutable here.
-  const role = user.roles[0]?.role;
-  if (!role) {
+  // Roles resolve in deterministic enum order; the caller may target any role
+  // the account still holds. The save re-validates the same membership, so a
+  // role revoked between load and submit makes the form stale instead of
+  // retargeting it to another role.
+  const assignedRoles = user.roles.map((entry) => entry.role);
+  if (assignedRoles.length === 0) {
     return { success: false, error: "User has no assigned CLOIE account role." };
   }
+  if (selectedRole && !assignedRoles.includes(selectedRole)) {
+    return {
+      success: false,
+      error: "The account no longer holds the selected role. Reload to see its current roles.",
+    };
+  }
+  const role = selectedRole ?? assignedRoles[0];
 
   const activeEnrollment = user.enrollments?.[0] ?? null;
 
@@ -156,6 +189,7 @@ export async function getUserEditRecordBySecretary(
       name: user.name,
       email: user.email,
       isActive: user.is_active,
+      roles: assignedRoles,
       role,
       student: user.student_profile
         ? {
@@ -176,6 +210,16 @@ export async function getUserEditRecordBySecretary(
             majorId: activeEnrollment.major_id,
             yearLevel: activeEnrollment.year_level,
             section: activeEnrollment.section,
+          }
+        : null,
+      activeTerm: activeTerm
+        ? {
+            id: activeTerm.id,
+            label: formatTermInstanceLabel(
+              activeTerm.school_year.code,
+              activeTerm.semester,
+              activeTerm.term
+            ),
           }
         : null,
       faculty:

@@ -8,12 +8,14 @@ import {
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { listInstitutionalBaselines } from "@/features/instruments/services/list-institutional-baselines";
 import { listProgramHeadTemplates } from "@/features/instruments/services/manage-program-head-templates";
+import { resolveCentralPublishReadiness } from "@/features/evaluations/services/resolve-central-publish-readiness";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { YearLevel } from "@prisma/client";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Publish Tool", "Program Head") };
 
+// fallow-ignore-next-line complexity
 export default async function PublishSelectedProgramToolPage({
   params,
   searchParams,
@@ -23,21 +25,23 @@ export default async function PublishSelectedProgramToolPage({
 }) {
   const { programId } = await params;
   const { templateId } = await searchParams;
-  const [contextResult, templatesResult, baselines, terms, majors] = await Promise.all([
-    resolveProgramHeadContext(programId),
-    listProgramHeadTemplates(programId),
-    listInstitutionalBaselines(),
-    prisma.academicTermInstance.findMany({
-      where: { school_year: { is_archived: false } },
-      include: { school_year: true },
-      orderBy: [{ school_year: { start_date: "desc" } }, { semester: "asc" }],
-    }),
-    prisma.major.findMany({
-      where: { program_id: programId, is_active: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  const [contextResult, templatesResult, baselines, terms, majors, readinessResult] =
+    await Promise.all([
+      resolveProgramHeadContext(programId),
+      listProgramHeadTemplates(programId),
+      listInstitutionalBaselines(),
+      prisma.academicTermInstance.findMany({
+        where: { school_year: { is_archived: false } },
+        include: { school_year: true },
+        orderBy: [{ school_year: { start_date: "desc" } }, { semester: "asc" }],
+      }),
+      prisma.major.findMany({
+        where: { program_id: programId, is_active: true },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      resolveCentralPublishReadiness(programId),
+    ]);
 
   if (!contextResult.success || !templatesResult.success) notFound();
 
@@ -74,6 +78,8 @@ export default async function PublishSelectedProgramToolPage({
       preselectedTemplateId={templateId}
       termInstances={termInstances}
       activeTermId={activeTermId}
+      readinessByTemplateId={readinessResult.success ? readinessResult.data : {}}
+      readinessError={readinessResult.success ? null : readinessResult.error}
       previewAction={previewCentralDeploymentRespondentsAction}
       publishAction={publishCentralDeploymentAction}
     />

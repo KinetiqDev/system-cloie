@@ -2,7 +2,7 @@
 title: System CLOIE Deployment
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-11
 ---
 
 # Deployment

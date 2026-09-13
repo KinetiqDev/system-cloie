@@ -113,9 +113,13 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
           role: SystemRole.FACULTY,
           program_id: programId,
         });
-        expect(duplicate.success).toBe(false);
-        if (duplicate.success) throw new Error("expected duplicate to fail");
-        expect(duplicate.error.toLowerCase()).toMatch(/already exists|duplicate/);
+        // The duplicate is reported as a pivot to the existing account, not as
+        // a generic creation failure.
+        expect(duplicate).toMatchObject({
+          success: false,
+          error: "USER_EXISTS",
+          existingUserId: userId,
+        });
 
         const usersWithEmail = await prisma.user.findMany({
           where: { email },

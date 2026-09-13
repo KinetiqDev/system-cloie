@@ -16,7 +16,7 @@ The first-paint appearance bootstrap is a same-origin external script loaded syn
 
 `docs/design.md` defines the approved Light, Dark, and System visual contract. Current `main` has Light token values in `src/styles/tokens.css`, no Dark block, no appearance provider, no persistence, and no first-paint resolver. The repository has no effective Content Security Policy header in `src/proxy.ts` or `next.config.ts`. The authenticated `(app)` layout already streams `AuthenticatedAppShell` under `Suspense` (`src/app/(app)/layout.tsx`).
 
-ADR 0008 requires development and demo tooling to fail closed in primary Production. ADR 0006 defers service workers, offline caching, and mutation queues. ADR 0009 establishes canonical Program Head selected-Program routes under `programs/[programId]/...` and preserves the single-role account invariant.
+ADR 0008 requires development and demo tooling to fail closed in primary Production. ADR 0006 defers service workers, offline caching, and mutation queues. [ADR 0009](0009-program-head-selected-program-context.md) establishes canonical Program Head selected-Program routes under `programs/[programId]/...` and its no-default-program rule stands (the single-role invariant it cited is superseded by [ADR 0022](0022-multi-role-accounts-with-active-role-context.md)).
 
 The showcase is an authenticated design reference that renders real production tokens and components. It uses static fixtures without database queries, mutations, user data, or credentials. Its access policy is server-side only; no `NEXT_PUBLIC_*` flag enables it. The route is intentionally URL-only and does not enter role-primary navigation.
 

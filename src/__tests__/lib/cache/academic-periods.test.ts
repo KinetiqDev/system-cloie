@@ -50,8 +50,6 @@ describe("academic-period cache ownership", () => {
     expect(revalidatePathMock.mock.calls).toEqual([
       ["/dean/dashboard"],
       ["/dean/college-oversight/learning-outcomes"],
-      ["/dean/college-oversight/enrollments"],
-      ["/dean/college-oversight/enrollments/roster"],
     ]);
   });
 });

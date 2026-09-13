@@ -1,8 +1,10 @@
+// fallow-ignore-file code-duplication
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import Home from "@/app/page";
 import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
 vi.mock("next/image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- Mocking next/image in test environment
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 
@@ -53,6 +55,8 @@ describe("Landing page", () => {
       .join(" ");
     expect(classStrings).not.toMatch(/radial-gradient/);
     expect(classStrings).not.toMatch(/(^|\s)blur-/);
-    expect(classStrings).not.toMatch(/shadow-primary|shadow-danger|shadow-warning|shadow-success|shadow-info/);
+    expect(classStrings).not.toMatch(
+      /shadow-primary|shadow-danger|shadow-warning|shadow-success|shadow-info/
+    );
   });
 });

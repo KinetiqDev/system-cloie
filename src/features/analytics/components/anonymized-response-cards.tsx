@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/utils/date-format";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ export function AnonymizedResponseCards({
             <CardHeader className="gap-1">
               <CardTitle>{response.respondentLabel}</CardTitle>
               <p className="text-text-muted text-xs">
-                Submitted {response.submittedAt.toLocaleDateString()}
+                Submitted {formatDate(response.submittedAt)}
               </p>
             </CardHeader>
 

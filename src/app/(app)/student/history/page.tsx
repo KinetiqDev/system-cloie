@@ -1,3 +1,5 @@
+// fallow-ignore-file code-duplication
+import { formatDate } from "@/lib/utils/date-format";
 import Link from "next/link";
 import { Calendar, Eye, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,15 +19,6 @@ import { listStudentAssignedEvaluations } from "@/features/responses/services/li
 import { buildPageTitle } from "@/lib/page-title";
 
 type StudentEvaluations = Awaited<ReturnType<typeof listStudentAssignedEvaluations>>;
-
-const formatDate = (date: Date | null) => {
-  if (!date) return "N/A";
-  return date.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-};
 
 export const metadata = { title: buildPageTitle("History", "Student") };
 

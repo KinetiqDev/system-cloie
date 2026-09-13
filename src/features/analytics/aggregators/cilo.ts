@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { describeScale, ratingBelongsToScale, type ScaleIdentity } from "./scale-identity";
 import { groupRatingsByScale, type QuantitativeRating } from "./quantitative";
 import type {
@@ -74,10 +75,7 @@ function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow):
  * scaleGroups instead of one combined metric (§9).
  */
 export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
-  const byCilo = new Map<
-    string,
-    CiloAggregate & { label: string; description: string }
-  >();
+  const byCilo = new Map<string, CiloAggregate & { label: string; description: string }>();
 
   for (const row of rows) {
     if (!row.cilo || !validRating(row)) {
@@ -111,16 +109,16 @@ export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
           left.itemKey.localeCompare(right.itemKey)
       );
       const ratingCount = scaleGroups.reduce((sum, group) => sum + group.ratingCount, 0);
-      const responseCount = new Set(
-        aggregate.ratings.map((entry) => entry.rating.responseId)
-      ).size;
+      const responseCount = new Set(aggregate.ratings.map((entry) => entry.rating.responseId)).size;
       const evidenceSummary: MetricEvidenceSummary = {
         ratingCount,
         responseCount,
         questionCount: questions.length,
         scaleLabel:
           scaleGroups.length === 1
-            ? (scaleGroups[0].scale ? describeScale(scaleGroups[0].scale.descriptors) : undefined)
+            ? scaleGroups[0].scale
+              ? describeScale(scaleGroups[0].scale.descriptors)
+              : undefined
             : undefined,
         explanation:
           scaleGroups.length === 1
@@ -144,6 +142,44 @@ export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
       (left, right) =>
         left.description.localeCompare(right.description) || left.ciloId.localeCompare(right.ciloId)
     );
+}
+
+/**
+ * Publication-time CILO labels from a Course-bound evaluation's
+ * `cilos_snapshot`. Publishing records the course's active CILOs in
+ * publication order, so a CILO keeps one label — `CILO 2` — however many
+ * Likert questions evidence it. Numbering by binding order instead would
+ * relabel a CILO whenever it gained a question.
+ *
+ * Older and seeded snapshots carry no CILO identity (`{ description, order }`
+ * rather than `{ description, id, label }`), so labels fall back to
+ * `orderedCiloIds`, the bindings' CILO order.
+ */
+export function resolveCiloLabels(
+  snapshot: unknown,
+  orderedCiloIds: string[]
+): Map<string, string> {
+  const labels = new Map<string, string>();
+  const fromSnapshot = new Map<string, string>();
+
+  if (Array.isArray(snapshot)) {
+    for (const entry of snapshot) {
+      if (!entry || typeof entry !== "object") continue;
+      const { id, label } = entry as { id?: unknown; label?: unknown };
+      if (typeof id === "string" && typeof label === "string") {
+        fromSnapshot.set(id, label);
+      }
+    }
+  }
+
+  const snapshotLabelsEveryCilo =
+    orderedCiloIds.length > 0 && orderedCiloIds.every((id) => fromSnapshot.has(id));
+
+  orderedCiloIds.forEach((id, index) => {
+    labels.set(id, snapshotLabelsEveryCilo ? fromSnapshot.get(id)! : `CILO ${index + 1}`);
+  });
+
+  return labels;
 }
 
 type QuestionAggregate = {

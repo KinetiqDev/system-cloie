@@ -8,8 +8,6 @@ export const ACADEMIC_PERIOD_SUMMARIES_REVALIDATE_SECONDS = 300;
 const ACADEMIC_PERIOD_READ_MODEL_PATHS = [
   "/dean/dashboard",
   "/dean/college-oversight/learning-outcomes",
-  "/dean/college-oversight/enrollments",
-  "/dean/college-oversight/enrollments/roster",
 ] as const;
 
 /** Call after a successful academic-period mutation has committed. */

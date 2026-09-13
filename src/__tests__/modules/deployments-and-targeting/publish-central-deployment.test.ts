@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
@@ -653,17 +654,104 @@ describe("publishCentralDeployment", () => {
     },
   ];
 
-  it("rejects publication when a Likert question has no PLO binding", async () => {
+  const PARTIAL_LIKERT_STRUCTURE = [
+    ...LIKERT_STRUCTURE.map((section) => ({
+      ...section,
+      questions: [
+        ...section.questions,
+        {
+          key: "q-2",
+          prompt: "Overall satisfaction with the program",
+          type: "likert" as const,
+          order: 1,
+          required: true,
+          likertDescriptors: [
+            { value: 1, label: "Strongly Disagree" },
+            { value: 2, label: "Disagree" },
+            { value: 3, label: "Neutral" },
+            { value: 4, label: "Agree" },
+            { value: 5, label: "Strongly Agree" },
+          ],
+        },
+      ],
+    })),
+  ];
+
+  it("publishes with an unbound Likert question and snapshots only the bound pairs", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate({
+      structure: PARTIAL_LIKERT_STRUCTURE,
+      template_plo_question_bindings: [{ plo_id: "plo-1", section_key: "sec-1", item_key: "q-1" }],
+    });
+    ploFindManyMock.mockResolvedValue([
+      { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    ]);
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-partial" });
+    listStudentsForClassMock.mockResolvedValue({ success: true, data: [] });
+
+    const result = await publishCentralDeployment(baseInput);
+
+    expect(result).toEqual({
+      success: true,
+      data: { deploymentId: "deployment-partial", assignmentCount: 0, status: "ACTIVE" },
+    });
+    expect(centralDeploymentPloSnapshotCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        {
+          central_deployment_id: "deployment-partial",
+          plo_id: "plo-1",
+          plo_code_snapshot: "BSIT-GO1",
+          plo_description_snapshot: "Communicate effectively",
+          section_key: "sec-1",
+          item_key: "q-1",
+          question_prompt_snapshot: "The program prepared me for employment",
+        },
+      ],
+    });
+  });
+
+  it("publishes a template whose Likert questions have no PLO bindings and writes no snapshot rows", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
     mockTemplate({ structure: LIKERT_STRUCTURE, template_plo_question_bindings: [] });
+    mockVersion();
+    mockNoDuplicate();
+    mockTermInstance();
+    centralDeploymentCreateMock.mockResolvedValue({ id: "deployment-unbound" });
+    listStudentsForClassMock.mockResolvedValue({ success: true, data: [] });
+
+    const result = await publishCentralDeployment(baseInput);
+
+    expect(result).toEqual({
+      success: true,
+      data: { deploymentId: "deployment-unbound", assignmentCount: 0, status: "ACTIVE" },
+    });
+    expect(centralDeploymentPloSnapshotCreateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects publication when a binding no longer matches the template structure", async () => {
+    mockAuthenticatedPH();
+    mockPHAssignment();
+    mockTemplate({
+      structure: LIKERT_STRUCTURE,
+      template_plo_question_bindings: [
+        { plo_id: "plo-1", section_key: "sec-1", item_key: "q-deleted" },
+      ],
+    });
+    ploFindManyMock.mockResolvedValue([
+      { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    ]);
     mockVersion();
 
     const result = await publishCentralDeployment(baseInput);
 
     expect(result).toEqual({
       success: false,
-      error: "Every Likert question must be assigned to at least one PLO before publishing.",
+      error: "One or more question–PLO bindings no longer match the template structure.",
     });
     expect(centralDeploymentCreateMock).not.toHaveBeenCalled();
   });

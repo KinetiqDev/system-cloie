@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { ReviewModal } from "./review-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils/date-format";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type { StudentEvaluationSection } from "@/features/responses/types";
 
@@ -117,7 +118,7 @@ function formatServerTimestamp(isoTimestamp: string | undefined): string | null 
     return null;
   }
 
-  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  return formatDateTime(date);
 }
 
 type SectionItem = StudentEvaluationSection["items"][number];

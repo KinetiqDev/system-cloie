@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatDate,
   formatDateRange,
+  formatDateTime,
   formatSchoolYearRange,
   formatTermInstanceLabel,
   formatTermInstanceCompact,
@@ -9,6 +11,21 @@ import {
 import { AcademicSemester, AcademicTerm } from "@prisma/client";
 
 describe("date-format", () => {
+  describe("formatDate", () => {
+    // The same moment must read identically on the server and in the browser,
+    // so the rendered calendar day comes from the institution's time zone and
+    // not from whichever time zone the process or device runs in.
+    it("renders the institution's calendar day for a UTC instant", () => {
+      expect(formatDate(new Date("2026-09-10T18:10:06.000Z"))).toBe("Sep 11, 2026");
+    });
+  });
+
+  describe("formatDateTime", () => {
+    it("renders the institution's date and time for a UTC instant", () => {
+      expect(formatDateTime(new Date("2026-09-12T16:37:50.000Z"))).toBe("Sep 13, 2026, 12:37 AM");
+    });
+  });
+
   describe("formatDateRange", () => {
     it("formats date range with both dates", () => {
       const start = new Date("2025-08-01");
@@ -59,11 +76,7 @@ describe("date-format", () => {
     });
 
     it("formats full label without term (Summer)", () => {
-      const result = formatTermInstanceLabel(
-        "2025-2026",
-        AcademicSemester.SUMMER,
-        null
-      );
+      const result = formatTermInstanceLabel("2025-2026", AcademicSemester.SUMMER, null);
       expect(result).toBe("2025-2026 — Summer");
     });
   });
@@ -79,29 +92,19 @@ describe("date-format", () => {
     });
 
     it("formats compact label without term", () => {
-      const result = formatTermInstanceCompact(
-        "2025-2026",
-        AcademicSemester.SECOND,
-        null
-      );
+      const result = formatTermInstanceCompact("2025-2026", AcademicSemester.SECOND, null);
       expect(result).toBe("2025-2026 | 2nd Sem");
     });
   });
 
   describe("formatTermInstanceShort", () => {
     it("formats short label for first semester", () => {
-      const result = formatTermInstanceShort(
-        "2025-2026",
-        AcademicSemester.FIRST
-      );
+      const result = formatTermInstanceShort("2025-2026", AcademicSemester.FIRST);
       expect(result).toBe("25-26 1st Sem");
     });
 
     it("formats short label for second semester", () => {
-      const result = formatTermInstanceShort(
-        "2025-2026",
-        AcademicSemester.SECOND
-      );
+      const result = formatTermInstanceShort("2025-2026", AcademicSemester.SECOND);
       expect(result).toBe("25-26 2nd Sem");
     });
 

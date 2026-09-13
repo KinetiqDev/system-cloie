@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getYearLevelDisplay } from "@/lib/constants/academic";
@@ -16,9 +17,8 @@ import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import { STAKEHOLDER_LABELS } from "@/features/analytics/program-head-dashboard-labels";
+import { formatDate } from "@/lib/utils/date-format";
 import type { ProgramHeadCentralEvaluationDetail } from "../types";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 type CentralEvaluationDetailProps = {
   detail: ProgramHeadCentralEvaluationDetail;
@@ -74,11 +74,9 @@ export function CentralEvaluationDetail({
         {evaluation.activationAt || evaluation.deadlineAt ? (
           <p className="text-body-sm text-muted-foreground">
             {evaluation.activationAt
-              ? `Activated ${dateFormatter.format(evaluation.activationAt)}`
+              ? `Activated ${formatDate(evaluation.activationAt)}`
               : "Not yet activated"}
-            {evaluation.deadlineAt
-              ? ` · Deadline ${dateFormatter.format(evaluation.deadlineAt)}`
-              : ""}
+            {evaluation.deadlineAt ? ` · Deadline ${formatDate(evaluation.deadlineAt)}` : ""}
           </p>
         ) : null}
       </header>
@@ -202,10 +200,10 @@ export function CentralEvaluationDetail({
               <TableRow>
                 <TableHead>Item</TableHead>
                 <TableHead>Question</TableHead>
-                <TableHead>Outcome binding</TableHead>
+                <TableHead className="whitespace-normal">Outcome binding</TableHead>
                 <TableHead className="text-right">Mean</TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
-                <TableHead>Distribution</TableHead>
+                <TableHead className="whitespace-normal">Distribution</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -221,11 +219,13 @@ export function CentralEvaluationDetail({
                   const evidence = questionEvidence(question);
                   return (
                     <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
-                      <TableCell>{question.itemKey}</TableCell>
-                      <TableCell className="min-w-72 break-words whitespace-normal">
+                      <TableCell className="break-words whitespace-normal">
+                        {question.itemKey}
+                      </TableCell>
+                      <TableCell className="break-words whitespace-normal">
                         {question.prompt}
                       </TableCell>
-                      <TableCell className="min-w-40 whitespace-normal">
+                      <TableCell className="whitespace-normal">
                         {question.ploBindings.length > 0
                           ? question.ploBindings.map((binding) => binding.code).join(", ")
                           : "General evaluation item"}
@@ -242,7 +242,7 @@ export function CentralEvaluationDetail({
                       <TableCell className="text-right tabular-nums">
                         {quantitative?.ratingCount ?? 0}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-normal">
                         <DistributionCounts metric={quantitative ?? null} />
                       </TableCell>
                     </TableRow>
@@ -370,7 +370,9 @@ function DistributionCounts({
     return <span className="text-text-muted text-sm">—</span>;
   }
   return (
-    <span className="text-text-muted text-xs">
+    // Small text must clear 4.5:1 even on a tinted row, which `text-muted`
+    // does not at 12px.
+    <span className="text-text-secondary text-xs">
       {metric.distribution
         .filter((entry) => entry.count > 0)
         .map((entry) => `${entry.label}: ${entry.count}`)

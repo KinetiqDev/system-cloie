@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";

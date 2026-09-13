@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted — partially superseded for identity-name authority by [ADR 0014](0014-google-authoritative-account-names.md) and for the Student ID requirement by [ADR 0015](0015-name-based-course-roster-resolution-and-student-id-removal.md); role completeness, atomic creation, enrollment, program, verification, and account-state rules remain.
 
 ## Context
 
@@ -23,15 +23,15 @@ The identity-name authority defined here is partially superseded by [ADR 0014: G
 
 ### Role completeness rules
 
-| Role | Required information at creation | Role-specific record |
-|---|---|---|
-| Secretary | Provisional account name, ACD institutional email | `User` + `UserRole` |
-| College Dean | Provisional account name, ACD institutional email | `User` + `UserRole` |
-| Program Head | Provisional account name, ACD institutional email, exactly one managed program | `User` + `UserRole` + `ProgramHeadAssignment` (active) |
-| Faculty | Provisional account name, ACD institutional email, one primary program affiliation | `User` + `UserRole` + `FacultyProgramAffiliation` (active, primary) |
-| Student | Provisional account name, ACD institutional email, program, year level, section, and major when the program has active majors | `User` + `UserRole` + `StudentAcademicProfile`; plus `StudentEnrollment` in the active term when one exists |
-| Alumni | Provisional account name, any valid email, program, graduation year, and major when the program has active majors | `User` + `UserRole` + `AlumniProfile` (approved) |
-| Industry Partner | Provisional account name, any valid email, company/organization name, optional position, optional affiliated program | `User` + `UserRole` + `IndustryPartnerProfile` (approved) |
+| Role             | Required information at creation                                                                                              | Role-specific record                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Secretary        | Provisional account name, ACD institutional email                                                                             | `User` + `UserRole`                                                                                         |
+| College Dean     | Provisional account name, ACD institutional email                                                                             | `User` + `UserRole`                                                                                         |
+| Program Head     | Provisional account name, ACD institutional email, exactly one managed program                                                | `User` + `UserRole` + `ProgramHeadAssignment` (active)                                                      |
+| Faculty          | Provisional account name, ACD institutional email, one primary program affiliation                                            | `User` + `UserRole` + `FacultyProgramAffiliation` (active, primary)                                         |
+| Student          | Provisional account name, ACD institutional email, program, year level, section, and major when the program has active majors | `User` + `UserRole` + `StudentAcademicProfile`; plus `StudentEnrollment` in the active term when one exists |
+| Alumni           | Provisional account name, any valid email, program, graduation year, and major when the program has active majors             | `User` + `UserRole` + `AlumniProfile` (approved)                                                            |
+| Industry Partner | Provisional account name, any valid email, company/organization name, optional position, optional affiliated program          | `User` + `UserRole` + `IndustryPartnerProfile` (approved)                                                   |
 
 ### Supporting rules
 

@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import {
   AcademicSemester,
   AcademicTerm,
@@ -16,6 +17,7 @@ import {
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
 import { groupRatingsByScale } from "../aggregators/quantitative";
+import { resolveCiloLabels } from "../aggregators/cilo";
 import {
   buildScaleIdentities,
   describeScale,
@@ -522,33 +524,77 @@ function qualitativePromptLabel(
   return "Written feedback";
 }
 
+/**
+ * Per-CILO faculty evidence. A CILO may be evidenced by several Likert
+ * questions, so bindings group by CILO and every grouped question's ratings
+ * pool into that CILO's scale groups. A binding whose CILO is gone (archived,
+ * or deleted with SetNull) keeps its own group: there is no CILO left to pool
+ * it under. Labels come from the evaluation's publication-time CILO snapshot,
+ * so a CILO keeps one label however many questions evidence it.
+ */
 function buildCiloMetrics(
   evaluations: EvaluationRow[],
   ratings: RatingEntry[]
 ): FacultyCiloMetric[] {
-  return evaluations.flatMap((evaluation) =>
-    evaluation.cilo_question_bindings.map((binding, index) => {
-      const entries = ratings.filter(
-        (rating) =>
-          rating.evaluation.id === evaluation.id &&
-          rating.sectionKey === binding.section_key &&
-          rating.itemKey === binding.item_key
-      );
-      return {
-        key: binding.id,
-        ciloId: binding.cilo_id,
-        label: `CILO ${index + 1}`,
-        courseId: evaluation.course_assignment.course.id,
-        courseCode: courseCode(evaluation),
-        courseTitle: courseTitle(evaluation),
-        evaluationId: evaluation.id,
-        evaluationName: evaluation.deployment_name,
-        description: binding.cilo_description_snapshot,
-        questionPrompt: binding.question_prompt_snapshot,
-        scaleGroups: metricGroups(entries),
-      };
-    })
-  );
+  return evaluations.flatMap((evaluation) => {
+    const orderedCiloIds = [
+      ...new Set(evaluation.cilo_question_bindings.flatMap((binding) => binding.cilo_id ?? [])),
+    ];
+    const ciloLabels = resolveCiloLabels(evaluation.cilos_snapshot, orderedCiloIds);
+    const groups = new Map<
+      string,
+      {
+        ciloId: string | null;
+        description: string;
+        questions: Array<{ sectionKey: string; itemKey: string; prompt: string }>;
+        questionKeys: Set<string>;
+      }
+    >();
+
+    for (const binding of evaluation.cilo_question_bindings) {
+      const key = binding.cilo_id ?? `binding:${binding.id}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          ciloId: binding.cilo_id,
+          description: binding.cilo_description_snapshot,
+          questions: [],
+          questionKeys: new Set(),
+        };
+        groups.set(key, group);
+      }
+      const questionKey = `${binding.section_key}:${binding.item_key}`;
+      if (group.questionKeys.has(questionKey)) {
+        continue;
+      }
+      group.questionKeys.add(questionKey);
+      group.questions.push({
+        sectionKey: binding.section_key,
+        itemKey: binding.item_key,
+        prompt: binding.question_prompt_snapshot,
+      });
+    }
+
+    return [...groups.entries()].map(([key, group]) => ({
+      key: `${evaluation.id}:${key}`,
+      ciloId: group.ciloId,
+      label: group.ciloId ? (ciloLabels.get(group.ciloId) ?? "CILO") : "Unassigned CILO",
+      courseId: evaluation.course_assignment.course.id,
+      courseCode: courseCode(evaluation),
+      courseTitle: courseTitle(evaluation),
+      evaluationId: evaluation.id,
+      evaluationName: evaluation.deployment_name,
+      description: group.description,
+      questions: group.questions,
+      scaleGroups: metricGroups(
+        ratings.filter(
+          (rating) =>
+            rating.evaluation.id === evaluation.id &&
+            group.questionKeys.has(`${rating.sectionKey}:${rating.itemKey}`)
+        )
+      ),
+    }));
+  });
 }
 
 function buildQuestionMetrics(
@@ -556,10 +602,16 @@ function buildQuestionMetrics(
   ratings: RatingEntry[]
 ): FacultyQuestionMetric[] {
   return evaluations.flatMap((evaluation) => {
-    const bindings = new Map(
-      evaluation.cilo_question_bindings.map((binding, index) => [
+    const orderedCiloIds = [
+      ...new Set(evaluation.cilo_question_bindings.flatMap((binding) => binding.cilo_id ?? [])),
+    ];
+    const ciloLabels = resolveCiloLabels(evaluation.cilos_snapshot, orderedCiloIds);
+    // One CILO may span several questions, so a question's label comes from its
+    // CILO's publication-time label, never from binding position.
+    const bindingByQuestion = new Map(
+      evaluation.cilo_question_bindings.map((binding) => [
         `${binding.section_key}:${binding.item_key}`,
-        `CILO ${index + 1}`,
+        binding.cilo_id ? (ciloLabels.get(binding.cilo_id) ?? "CILO") : null,
       ])
     );
     if (!Array.isArray(evaluation.instrument.structure_snapshot)) return [];
@@ -570,7 +622,7 @@ function buildQuestionMetrics(
           key: `${evaluation.id}:${section.key}:${item.key}`,
           sectionTitle: section.title,
           prompt: item.prompt,
-          ciloLabel: bindings.get(`${section.key}:${item.key}`) ?? null,
+          ciloLabel: bindingByQuestion.get(`${section.key}:${item.key}`) ?? null,
           scaleGroups: metricGroups(
             ratings.filter(
               (rating) =>

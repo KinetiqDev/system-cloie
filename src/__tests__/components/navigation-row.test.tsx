@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type React from "react";
@@ -39,9 +40,11 @@ describe("NavigationRow", () => {
   });
 
   it("centers rail rows for the Dean tablet icon rail", () => {
-    render(<NavigationRow href="/dean/dashboard" rail>
-      Dashboard
-    </NavigationRow>);
+    render(
+      <NavigationRow href="/dean/dashboard" rail>
+        Dashboard
+      </NavigationRow>
+    );
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass(
       "justify-center",
@@ -51,9 +54,11 @@ describe("NavigationRow", () => {
   });
 
   it("applies the compact secondary geometry", () => {
-    render(<NavigationRow href="/support" secondary>
-      Support
-    </NavigationRow>);
+    render(
+      <NavigationRow href="/support" secondary>
+        Support
+      </NavigationRow>
+    );
 
     expect(screen.getByRole("link", { name: "Support" })).toHaveClass("text-body-sm");
   });

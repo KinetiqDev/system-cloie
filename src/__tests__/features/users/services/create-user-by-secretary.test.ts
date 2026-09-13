@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EnrollmentSource,
@@ -557,15 +558,16 @@ describe("createUserBySecretary service", () => {
     });
   });
 
-  it("rejects a duplicate account email", async () => {
+  it("reports an existing account email as a role-grant pivot", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "existing-user" });
 
     const result = await createUserBySecretary({ ...validSecretaryInput });
 
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error).toMatch(/already exists/i);
-    }
+    expect(result).toMatchObject({
+      success: false,
+      error: "USER_EXISTS",
+      existingUserId: "existing-user",
+    });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 

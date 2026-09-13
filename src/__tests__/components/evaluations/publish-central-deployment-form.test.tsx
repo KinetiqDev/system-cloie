@@ -1,5 +1,6 @@
+// fallow-ignore-file code-duplication
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { AcademicSemester, YearLevel } from "@prisma/client";
 
 const { mockPush } = vi.hoisted(() => ({ mockPush: vi.fn() }));
@@ -11,6 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { PublishCentralDeploymentForm } from "@/features/evaluations/components/publish-central-deployment-form";
+import type { CentralPublishReadiness } from "@/features/evaluations/types";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 
 function deferred<T>() {
@@ -47,10 +49,23 @@ const previewRespondent = {
   yearLevel: YearLevel.FIRST_YEAR as YearLevel | null,
 };
 
-function renderForm(overrides: {
-  previewAction?: ReturnType<typeof vi.fn<() => Promise<unknown>>>;
-  publishAction?: ReturnType<typeof vi.fn<() => Promise<unknown>>>;
-} = {}) {
+const FULLY_BOUND_READINESS: CentralPublishReadiness = {
+  templateId: "template-1",
+  likertCount: 3,
+  boundQuestionCount: 3,
+  coveredPlos: [{ code: "BSIT-GO1", description: "Communicate effectively" }],
+  unboundQuestions: [],
+  blockingError: null,
+};
+
+function renderForm(
+  overrides: {
+    previewAction?: Mock;
+    publishAction?: Mock;
+    readinessByTemplateId?: Record<string, CentralPublishReadiness>;
+    readinessError?: string | null;
+  } = {}
+) {
   return render(
     <PublishCentralDeploymentForm
       templates={templates}
@@ -60,6 +75,10 @@ function renderForm(overrides: {
       programLabel="BSCS — BS Computer Science"
       termInstances={termInstances}
       activeTermId="term-1"
+      readinessByTemplateId={
+        overrides.readinessByTemplateId ?? { "template-1": FULLY_BOUND_READINESS }
+      }
+      readinessError={overrides.readinessError ?? null}
       previewAction={
         overrides.previewAction ?? vi.fn().mockResolvedValue({ success: true, data: [] })
       }
@@ -100,6 +119,76 @@ describe("PublishCentralDeploymentForm", () => {
     expect(screen.getByRole("radio", { name: "Industry Partners" })).toBeInTheDocument();
   });
 
+  it("names the unbound Likert questions of the selected template", async () => {
+    renderForm({
+      readinessByTemplateId: {
+        "template-1": {
+          ...FULLY_BOUND_READINESS,
+          boundQuestionCount: 2,
+          unboundQuestions: [
+            {
+              itemKey: "q-3",
+              prompt: "Overall satisfaction with the program",
+              sectionKey: "overall",
+              sectionTitle: "Overall Assessment",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(screen.queryByText("PLO coverage")).not.toBeInTheDocument();
+
+    await selectTemplate();
+
+    expect(screen.getByRole("heading", { name: "PLO coverage" })).toBeInTheDocument();
+    expect(
+      screen.getByText("2 of 3 Likert questions bound to a PLO, covering 1 PLO.")
+    ).toBeInTheDocument();
+    expect(screen.getByText("Overall Assessment")).toBeInTheDocument();
+    expect(screen.getByText("Overall satisfaction with the program")).toBeInTheDocument();
+    expect(
+      screen.getByText(/publish as general evaluation items and give no PLO evidence/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Assign PLOs in the template editor" })
+    ).toHaveAttribute("href", "/program-head/programs/program-1/tools/template-1/edit");
+  });
+
+  it("surfaces a readiness failure instead of hiding the coverage panel", () => {
+    renderForm({ readinessError: "Unable to load PLO coverage right now." });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to load PLO coverage right now.");
+  });
+
+  it("shows the binding problem that still blocks publication", async () => {
+    renderForm({
+      readinessByTemplateId: {
+        "template-1": {
+          ...FULLY_BOUND_READINESS,
+          boundQuestionCount: 2,
+          blockingError:
+            "One or more bound PLOs are archived or no longer available. Update the template before publishing.",
+          unboundQuestions: [
+            {
+              itemKey: "q-1",
+              prompt: "The program prepared me for employment",
+              sectionKey: "outcomes",
+              sectionTitle: "Outcomes",
+            },
+          ],
+        },
+      },
+    });
+
+    await selectTemplate();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "One or more bound PLOs are archived or no longer available."
+    );
+    expect(screen.getByText("The program prepared me for employment")).toBeInTheDocument();
+  });
+
   it("requires a template, term, and year level before previewing", async () => {
     renderForm();
 
@@ -107,19 +196,15 @@ describe("PublishCentralDeploymentForm", () => {
       target: { value: "BSIT Exit Survey 2026" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Preview Respondents" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Please select a template to deploy."
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Please select a template to deploy.");
 
     await selectTemplate();
     fireEvent.click(screen.getByRole("button", { name: "Preview Respondents" }));
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Please select a target year level."
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Please select a target year level.");
   });
 
   it("shows a loading state with pending copy and aria-busy while previewing", async () => {
-    const pending = deferred<{ success: true; data: typeof previewRespondent[] }>();
+    const pending = deferred<{ success: true; data: (typeof previewRespondent)[] }>();
     const previewAction = vi.fn().mockReturnValue(pending.promise);
     renderForm({ previewAction });
 
@@ -200,9 +285,7 @@ describe("PublishCentralDeploymentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preview Respondents" }));
 
     await waitFor(() => {
-      expect(previewAction).toHaveBeenCalledWith(
-        expect.objectContaining({ majorId: "major-1" })
-      );
+      expect(previewAction).toHaveBeenCalledWith(expect.objectContaining({ majorId: "major-1" }));
     });
 
     await waitFor(() => {
@@ -258,7 +341,9 @@ describe("PublishCentralDeploymentForm", () => {
     expect(formData.get("target_stakeholder")).toBe("STUDENT");
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(expect.stringContaining("/program-head/programs/program-1/tools"));
+      expect(mockPush).toHaveBeenCalledWith(
+        expect.stringContaining("/program-head/programs/program-1/tools")
+      );
     });
   });
 

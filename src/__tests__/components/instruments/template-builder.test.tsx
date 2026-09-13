@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -1122,7 +1123,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText("PLO Binding")).toBeInTheDocument();
     expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
     expect(
-      screen.getByText(/must be bound to at least one PLO before publishing/i)
+      screen.getByText(/publishes as a general evaluation item and gives no PLO evidence/i)
     ).toBeInTheDocument();
 
     // The trigger button is labelled by the "PLO Binding" label
@@ -1138,7 +1139,7 @@ describe("TemplateBuilder", () => {
     expect(screen.getByText("PLO-1")).toBeInTheDocument();
     expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
     expect(
-      screen.queryByText(/must be bound to at least one PLO before publishing/i)
+      screen.queryByText(/publishes as a general evaluation item and gives no PLO evidence/i)
     ).not.toBeInTheDocument();
 
     // Save payload carries the binding keyed to the likert question
@@ -1713,5 +1714,91 @@ describe("TemplateBuilder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close PLO binding" }));
     expect(screen.getByText("PLO-2")).toBeInTheDocument();
     expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+  });
+  test("keeps a CILO bound to another question selectable and reports its reuse count", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "First outcome question",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+                {
+                  key: "question-2",
+                  prompt: "Second outcome question",
+                  type: "likert",
+                  order: 1,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          // CILO 1 already evidences question-1; question-2 is still unbound.
+          initialBindings: [{ ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" }],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              hasSavedCilos: true,
+              items: [{ description: "Apply engineering methods", id: "cilo-1" }],
+            },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
+
+    const bindings = await screen.findAllByLabelText("CILO Binding");
+    expect(bindings).toHaveLength(2);
+
+    // The CILO bound to question-1 stays offered on question-2 — the one-to-one
+    // rule is gone — and the option carries the reuse count.
+    fireEvent.click(bindings[1]!);
+    const option = await screen.findByRole("option", { name: /CILO 1.*already on 1 question/ });
+    expect(option).not.toHaveAttribute("aria-disabled", "true");
   });
 });

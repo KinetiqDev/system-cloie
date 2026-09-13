@@ -42,9 +42,13 @@ export function handleDeanReadError(error: unknown, endpoint: string): Response 
   }
   console.error(`Dean ${endpoint} read failed`, {
     errorType: error instanceof Error ? error.name : typeof error,
-    errorCode: typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
-      ? error.code
-      : undefined,
+    errorCode:
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "string"
+        ? error.code
+        : undefined,
   });
   return deanJson({ error: "Internal server error." }, 500);
 }
@@ -70,25 +74,4 @@ export function parseUuid(value: string | null, name: string): string {
 
 export function parseRequiredUuid(value: string | null, name: string): string {
   return parseUuid(value, name);
-}
-
-export function parseOptionalTrimmedQuery(value: string | null): string | undefined {
-  if (value === null) return undefined;
-  const query = value.trim();
-  if (query.length < 1 || query.length > 100) {
-    throw new DeanRouteBadRequestError("Query must be 1-100 characters after trimming.");
-  }
-  return query;
-}
-
-export function parsePage(value: string | null): number {
-  if (value === null) return 1;
-  if (!/^[1-9]\d*$/.test(value)) {
-    throw new DeanRouteBadRequestError("Page must be a positive integer.");
-  }
-  const page = Number(value);
-  if (!Number.isSafeInteger(page)) {
-    throw new DeanRouteBadRequestError("Page must be a positive integer.");
-  }
-  return page;
 }

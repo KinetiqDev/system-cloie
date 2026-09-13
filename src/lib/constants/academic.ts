@@ -1,4 +1,6 @@
-import { AcademicSemester, AcademicTerm, StudentSection } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, StudentSection, YearLevel } from "@prisma/client";
+
+import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "./year-levels";
 
 // Re-export from centralized academic-period module for backward compatibility
 export {
@@ -30,11 +32,27 @@ export const STUDENT_SECTION_OPTIONS = [
 ] as const;
 
 // Re-export year level constants for convenience
-export { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "./year-levels";
+export { YEAR_LEVEL_OPTIONS, getYearLevelDisplay };
 
 export function getSectionLabel(section: StudentSection | null | undefined): string {
   if (!section) return "—";
   return STUDENT_SECTION_OPTIONS.find((o) => o.value === section)?.label ?? section;
+}
+
+/**
+ * Label a Student's term placement from its parts — year level and section of
+ * the enrollment row for one Academic Period. A missing placement, or a
+ * placement without a section, narrows the label instead of leaving a gap.
+ */
+export function getPlacementLabel(
+  placement: { yearLevel: YearLevel | null; section: StudentSection | null } | null | undefined
+): string {
+  if (!placement) return "—";
+  const parts = [
+    getYearLevelDisplay(placement.yearLevel),
+    getSectionLabel(placement.section),
+  ].filter((label) => label !== "—");
+  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 export function getSemesterLabel(value: AcademicSemester | null | undefined) {

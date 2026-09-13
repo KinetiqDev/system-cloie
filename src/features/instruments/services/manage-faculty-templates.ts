@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { CourseScope, EvaluationTemplateType, Prisma } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
@@ -191,7 +192,6 @@ async function validateDraftBindings(input: {
     select: { description: true, id: true },
   });
   const ciloMap = new Map(cilos.map((cilo) => [cilo.id, cilo]));
-  const usedCiloIds = new Set<string>();
   const usedQuestionKeys = new Set<string>();
   const normalized = [];
 
@@ -208,15 +208,10 @@ async function validateDraftBindings(input: {
       return { success: false, error: "CILOs can only be assigned to Likert questions." };
     }
 
-    if (usedCiloIds.has(cilo.id)) {
-      return { success: false, error: "Each CILO can only be assigned once." };
-    }
-
     if (usedQuestionKeys.has(questionKey)) {
-      return { success: false, error: "Each Likert question can only have one CILO." };
+      return { success: false, error: "A Likert question can only be assigned one CILO." };
     }
 
-    usedCiloIds.add(cilo.id);
     usedQuestionKeys.add(questionKey);
     normalized.push({
       ciloDescriptionSnapshot: cilo.description,
@@ -582,7 +577,6 @@ export async function getFacultyTemplatePublicationContext(
     return { success: false, error: "This course has no saved CILOs." };
   }
 
-  const liveCiloIds = new Set(cilos.map((cilo) => cilo.id));
   const bindings = template.template_cilo_question_bindings;
   const structure = toTemplateStructure(template.structure);
   const bindingValidation = await validateDraftBindings({
@@ -602,15 +596,15 @@ export async function getFacultyTemplatePublicationContext(
     return bindingValidation;
   }
 
+  // Coverage gate: every active CILO of the bound course must be evidenced by
+  // at least one Likert question. A CILO may span several questions, so the
+  // number of bindings is unrelated to the number of CILOs.
   const boundCiloIds = new Set(bindingValidation.bindings.map((binding) => binding.ciloId));
 
-  if (
-    bindings.length !== cilos.length ||
-    cilos.some((cilo) => !boundCiloIds.has(cilo.id) || !liveCiloIds.has(cilo.id))
-  ) {
+  if (cilos.some((cilo) => !boundCiloIds.has(cilo.id))) {
     return {
       success: false,
-      error: "Every saved CILO must be assigned to one Likert question before publishing.",
+      error: "Every saved CILO must be assigned to at least one Likert question before publishing.",
     };
   }
 

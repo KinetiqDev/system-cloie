@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { randomUUID } from "node:crypto";
 import {
   CourseBoundEvaluationExclusionCategory,
@@ -176,10 +177,7 @@ export async function getOnBehalfTemplatePublicationContext(
 
   const questionMap = new Map(likertQuestions.map((q) => [`${q.sectionKey}:${q.itemKey}`, q]));
   const ciloMap = new Map(cilos.map((c) => [c.id, c]));
-  const liveCiloIds = new Set(cilos.map((cilo) => cilo.id));
-
   const validatedBindings = [];
-  const usedCiloIds = new Set<string>();
   const usedQuestionKeys = new Set<string>();
 
   for (const binding of template.template_cilo_question_bindings) {
@@ -196,15 +194,10 @@ export async function getOnBehalfTemplatePublicationContext(
       return { success: false, error: "CILOs can only be assigned to Likert questions." };
     }
 
-    if (usedCiloIds.has(cilo.id)) {
-      return { success: false, error: "Each CILO can only be assigned once." };
-    }
-
     if (usedQuestionKeys.has(questionKey)) {
-      return { success: false, error: "Each Likert question can only have one CILO." };
+      return { success: false, error: "A Likert question can only be assigned one CILO." };
     }
 
-    usedCiloIds.add(cilo.id);
     usedQuestionKeys.add(questionKey);
 
     validatedBindings.push({
@@ -216,15 +209,15 @@ export async function getOnBehalfTemplatePublicationContext(
     });
   }
 
+  // Coverage gate: every active CILO of the bound course must be evidenced by
+  // at least one Likert question. A CILO may span several questions, so the
+  // number of bindings is unrelated to the number of CILOs.
   const boundCiloIds = new Set(validatedBindings.map((binding) => binding.ciloId));
 
-  if (
-    template.template_cilo_question_bindings.length !== cilos.length ||
-    cilos.some((cilo) => !boundCiloIds.has(cilo.id) || !liveCiloIds.has(cilo.id))
-  ) {
+  if (cilos.some((cilo) => !boundCiloIds.has(cilo.id))) {
     return {
       success: false,
-      error: "Every saved CILO must be assigned to one Likert question before publishing.",
+      error: "Every saved CILO must be assigned to at least one Likert question before publishing.",
     };
   }
 

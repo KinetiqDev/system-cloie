@@ -2,7 +2,7 @@
 title: Knowledge Base Navigation for Agents
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-11
 ---
 
 # Knowledge Base Navigation for Agents

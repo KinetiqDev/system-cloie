@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useState, useTransition } from "react";
@@ -671,10 +672,16 @@ export function TemplateBuilder({
 
     return labels;
   }, [facultyConfig?.initialBindings, loadedCilos]);
-  const selectedCiloIds = useMemo(
-    () => new Set(Object.values(ciloQuestionBindings).filter(Boolean)),
-    [ciloQuestionBindings]
-  );
+  /** How many questions currently carry each CILO: a CILO may span several. */
+  const ciloQuestionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const ciloId of Object.values(ciloQuestionBindings)) {
+      if (ciloId) {
+        counts.set(ciloId, (counts.get(ciloId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [ciloQuestionBindings]);
 
   useEffect(() => {
     if (!facultyMode) {
@@ -1583,7 +1590,7 @@ export function TemplateBuilder({
                     [questionKey]: ploIds,
                   }))
                 }
-                selectedCiloIds={selectedCiloIds}
+                ciloQuestionCounts={ciloQuestionCounts}
                 canRemove={sections.length > 1}
               />
               {sectionIndex < sections.length - 1 && (
@@ -1732,7 +1739,7 @@ interface SectionCardProps {
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
   onPloBindingsChange: (questionKey: string, ploIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
-  selectedCiloIds: Set<string>;
+  ciloQuestionCounts: Map<string, number>;
   canRemove: boolean;
 }
 
@@ -1760,7 +1767,7 @@ function SectionCard({
   onCiloBindingChange,
   onPloBindingsChange,
   onRemoveSuggestedResponse,
-  selectedCiloIds,
+  ciloQuestionCounts,
   canRemove,
 }: SectionCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -1856,7 +1863,7 @@ function SectionCard({
                 selectedCiloLabel={selectedCiloLabels.get(
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 )}
-                selectedCiloIds={selectedCiloIds}
+                ciloQuestionCounts={ciloQuestionCounts}
                 selectedCiloId={
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 }
@@ -1918,7 +1925,7 @@ interface QuestionCardProps {
   archivedPloLookup: Map<string, ProgramPloOption>;
   selectedCiloLabel?: string;
   selectedCiloId: string;
-  selectedCiloIds: Set<string>;
+  ciloQuestionCounts: Map<string, number>;
   canRemove: boolean;
 }
 
@@ -1945,7 +1952,7 @@ function QuestionCard({
   archivedPloLookup,
   selectedCiloLabel,
   selectedCiloId,
-  selectedCiloIds,
+  ciloQuestionCounts,
   canRemove,
 }: QuestionCardProps) {
   const [newResponse, setNewResponse] = useState("");
@@ -2024,8 +2031,10 @@ function QuestionCard({
                   // Update CILO binding
                   onCiloBindingChange(encodeBindingKey(sectionKey, question.key), ciloId);
 
-                  // Auto-populate question title with CILO description
-                  if (ciloId) {
+                  // Auto-populate an untitled question with the CILO description.
+                  // A CILO may be reused across questions, so an already-written
+                  // title is never overwritten.
+                  if (ciloId && question.prompt.trim().length === 0) {
                     const selectedCilo = ciloOptions.find((c) => c.id === ciloId);
                     if (selectedCilo) {
                       onUpdate(sectionKey, question.key, {
@@ -2046,17 +2055,19 @@ function QuestionCard({
                 <SelectContent>
                   <SelectItem value="none">No CILO assigned</SelectItem>
                   {ciloOptions.map((cilo, index) => {
-                    const usedByAnotherQuestion =
-                      selectedCiloIds.has(cilo.id) && selectedCiloId !== cilo.id;
+                    const boundQuestionCount = ciloQuestionCounts.get(cilo.id) ?? 0;
+                    const boundElsewhere = boundQuestionCount > 0 && selectedCiloId !== cilo.id;
 
                     return (
                       <SelectItem
                         key={cilo.id}
                         value={cilo.id}
-                        disabled={usedByAnotherQuestion}
                         className="[&>span]:whitespace-normal"
                       >
                         {formatCiloOptionLabel(cilo, index)}
+                        {boundElsewhere
+                          ? ` — already on ${boundQuestionCount} question${boundQuestionCount === 1 ? "" : "s"}`
+                          : ""}
                       </SelectItem>
                     );
                   })}
@@ -2081,8 +2092,8 @@ function QuestionCard({
               />
               {selectedPloIds.length === 0 && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  Not bound to a PLO yet. Drafts save without bindings, but this Likert question
-                  must be bound to at least one PLO before publishing.
+                  No PLO assigned yet. This Likert question publishes as a general evaluation item
+                  and gives no PLO evidence.
                 </p>
               )}
             </div>

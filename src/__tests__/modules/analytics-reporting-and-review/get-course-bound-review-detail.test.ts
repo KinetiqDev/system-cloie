@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
@@ -309,6 +310,158 @@ describe("getCourseBoundReviewDetail", () => {
     expect(serialized).not.toContain("qual_items");
     expect(serialized).not.toContain("assignments");
     expect(serialized).not.toContain("text_content");
+  });
+
+  it("pools every question bound to one CILO into a single CILO mean", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.DEAN,
+      roles: [ROLES.DEAN],
+      userId: "dean-1",
+    });
+    resolveReviewerProgramScopeMock.mockResolvedValue(null);
+    courseBoundEvaluationFindFirstMock.mockResolvedValue({
+      id: "eval-1",
+      cilos_snapshot: [
+        { description: "Apply capstone planning fundamentals.", id: "cilo-1", label: "CILO 1" },
+        { description: "Communicate results to stakeholders.", id: "cilo-2", label: "CILO 2" },
+      ],
+      term_instance: { semester: "SECOND", term: null, school_year: { code: "2025-2026" } },
+      assignments: [
+        {
+          response: {
+            id: "response-1",
+            qual_items: [],
+            quant_items: [
+              // Two questions evidence CILO 1; one evidences CILO 2.
+              {
+                cilo_question_binding_id: "binding-1",
+                item_key: "q1",
+                rating_value: 5,
+                section_key: "outcomes",
+              },
+              {
+                cilo_question_binding_id: "binding-2",
+                item_key: "q2",
+                rating_value: 2,
+                section_key: "outcomes",
+              },
+              {
+                cilo_question_binding_id: "binding-3",
+                item_key: "q3",
+                rating_value: 2,
+                section_key: "outcomes",
+              },
+            ],
+            submitted_at: new Date("2026-01-04T08:00:00.000Z"),
+          },
+        },
+        {
+          // Only the first CILO's first question, so that CILO's questions carry
+          // unequal rating counts and its mean can only be the pooled raw mean.
+          response: {
+            id: "response-2",
+            qual_items: [],
+            quant_items: [
+              {
+                cilo_question_binding_id: "binding-1",
+                item_key: "q1",
+                rating_value: 5,
+                section_key: "outcomes",
+              },
+            ],
+            submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+          },
+        },
+      ],
+      cilo_question_bindings: [
+        {
+          id: "binding-1",
+          cilo_id: "cilo-1",
+          cilo_description_snapshot: "Apply capstone planning fundamentals.",
+          item_key: "q1",
+          question_prompt_snapshot: "I applied planning fundamentals in class work.",
+          section_key: "outcomes",
+        },
+        {
+          id: "binding-2",
+          cilo_id: "cilo-1",
+          cilo_description_snapshot: "Apply capstone planning fundamentals.",
+          item_key: "q2",
+          question_prompt_snapshot: "I applied planning fundamentals in the final output.",
+          section_key: "outcomes",
+        },
+        {
+          id: "binding-3",
+          cilo_id: "cilo-2",
+          cilo_description_snapshot: "Communicate results to stakeholders.",
+          item_key: "q3",
+          question_prompt_snapshot: "I communicated results to stakeholders.",
+          section_key: "outcomes",
+        },
+      ],
+      deadline_at: null,
+      instrument: {
+        structure_snapshot: [
+          {
+            items: [
+              { key: "q1", kind: "quantitative", prompt: "Q1", scale: [1, 2, 3, 4, 5] },
+              { key: "q2", kind: "quantitative", prompt: "Q2", scale: [1, 2, 3, 4, 5] },
+              { key: "q3", kind: "quantitative", prompt: "Q3", scale: [1, 2, 3, 4, 5] },
+            ],
+            key: "outcomes",
+            title: "Outcomes",
+          },
+        ],
+        template: { name: "Post-Term CILO Evaluation Tool" },
+      },
+      course_assignment: {
+        course: { title: "Capstone 2", major: null },
+        program: { name: "BSIT" },
+      },
+    });
+
+    const result = await getCourseBoundReviewDetail("eval-1");
+
+    // Raw pooling, not a mean of question means: (5 + 5 + 2) / 3 = 4, where
+    // averaging the question means (5 and 2) would give 3.5.
+    expect(result?.ciloMetrics).toEqual([
+      {
+        ciloDescription: "Apply capstone planning fundamentals.",
+        ciloId: "cilo-1",
+        ciloLabel: "CILO 1",
+        key: "cilo-1",
+        mean: 4,
+        questions: [
+          {
+            itemKey: "q1",
+            mean: 5,
+            prompt: "I applied planning fundamentals in class work.",
+            sectionKey: "outcomes",
+          },
+          {
+            itemKey: "q2",
+            mean: 2,
+            prompt: "I applied planning fundamentals in the final output.",
+            sectionKey: "outcomes",
+          },
+        ],
+      },
+      {
+        ciloDescription: "Communicate results to stakeholders.",
+        ciloId: "cilo-2",
+        ciloLabel: "CILO 2",
+        key: "cilo-2",
+        mean: 2,
+        questions: [
+          {
+            itemKey: "q3",
+            mean: 2,
+            prompt: "I communicated results to stakeholders.",
+            sectionKey: "outcomes",
+          },
+        ],
+      },
+    ]);
   });
 
   it("does not apply program filter for dean scope", async () => {

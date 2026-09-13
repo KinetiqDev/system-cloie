@@ -2,6 +2,8 @@ import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/db/prisma";
 import { AddUserForm } from "@/features/users/components/secretary-add-user-form";
 import { createUserBySecretaryAction } from "@/lib/actions/secretary-user-crud-actions";
+import { addRoleToExistingUserAction } from "@/lib/actions/management-foundation-actions";
+import { lookupUserByEmailAction } from "@/lib/actions/secretary-user-lookup-actions";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("New User", "Secretary") };
@@ -21,7 +23,12 @@ export default async function AddNewUserPage() {
 
       <nav className="text-text-muted text-xs">User &gt; Add New User</nav>
 
-      <AddUserForm programs={programs} createAction={createUserBySecretaryAction} />
+      <AddUserForm
+        programs={programs}
+        createAction={createUserBySecretaryAction}
+        addRoleAction={addRoleToExistingUserAction}
+        lookupUserByEmailAction={lookupUserByEmailAction}
+      />
     </div>
   );
 }

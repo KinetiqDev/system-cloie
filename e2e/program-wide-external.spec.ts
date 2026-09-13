@@ -1,6 +1,13 @@
+// fallow-ignore-file code-duplication
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
-import { expectNoAxeViolations, loginAs, rateQuestion, respondentRow } from "./support/helpers";
+import {
+  expectNoAxeViolations,
+  expectNoHorizontalOverflow,
+  loginAs,
+  rateQuestion,
+  respondentRow,
+} from "./support/helpers";
 
 /**
  * §40/§46/§47: Program-wide external respondent evidence (issue #550).
@@ -63,7 +70,23 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
 
   await page.getByLabel("Deployed Evaluation Name").fill(deploymentName);
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
-  await page.getByRole("option", { name: "BSIT Alumni Evaluation Tool", exact: true }).click();
+  await page
+    .getByRole("option", { name: fx.programWidePartialMapping.templateName, exact: true })
+    .click();
+
+  // ADR 0025: the tool leaves its general satisfaction item unbound, so the
+  // publish step names it instead of blocking the deployment.
+  const partialMapping = fx.programWidePartialMapping;
+  await expect(page.getByRole("heading", { name: "PLO coverage" })).toBeVisible();
+  await expect(
+    page.getByText(
+      `${partialMapping.boundQuestionCount} of ${partialMapping.likertCount} Likert questions bound to a PLO`
+    )
+  ).toBeVisible();
+  await expect(page.getByText(partialMapping.unboundPrompt)).toBeVisible();
+  await expect(
+    page.getByText(/publish as general evaluation items and give no PLO evidence/i)
+  ).toBeVisible();
 
   // Select the PLANNED academic term
   await page.getByRole("combobox", { name: "Academic Term" }).click();
@@ -84,6 +107,8 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await page.getByRole("button", { name: "Preview Respondents" }).click();
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   await expect(page.getByText(/respondent\(s\) found/)).toBeVisible();
+  // The decision point carries the same coverage panel: configure + preview.
+  await expect(page.getByRole("heading", { name: "PLO coverage" })).toHaveCount(2);
   await expect(page.getByRole("cell", { name: "Demo Alumni", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -168,6 +193,15 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await expect(
     respondentRow(page, "Demo Alumni").getByRole("link", { name: "View Response" })
   ).toBeVisible();
+
+  // A response must stay reachable when the report is narrower than its widest
+  // table row: at 1024px the report previously clipped the link behind the
+  // table's horizontal scroll, so the Program Head could not open the answers.
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expectNoHorizontalOverflow(page);
+  await expect(
+    respondentRow(page, "Demo Alumni").getByRole("link", { name: "View Response" })
+  ).toBeInViewport({ ratio: 1 });
 
   // Cross-Program leakage: BEED Program Head gets Not Found
   await loginAs(page, fx.beedPh.email);

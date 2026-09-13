@@ -3,6 +3,7 @@ import type { StudentEvaluationListItem } from "@/features/responses/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { formatDate } from "@/lib/utils/date-format";
 
 type EvaluationListCardProps = StudentEvaluationListItem;
 
@@ -19,13 +20,7 @@ export function EvaluationListCard({
 }: EvaluationListCardProps) {
   const isResuming = status === "IN_PROGRESS";
   const isSubmitted = status === "SUBMITTED";
-  const deadline = deadlineAt
-    ? deadlineAt.toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "No deadline";
+  const deadline = deadlineAt ? formatDate(deadlineAt) : "No deadline";
 
   return (
     <div className="group border-border bg-surface hover:border-primary/30 rounded-xl border p-5 shadow-sm transition-colors">

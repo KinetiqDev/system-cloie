@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
 import type { LucideIcon } from "lucide-react";
 import {
-  getDeanActiveGroup,
   getDeanNavGroups,
   getDeanStandaloneNav,
   getHighestNavRole,
@@ -38,7 +37,6 @@ export function MobileSidebarDrawer({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const dean = getHighestNavRole(roles) === ROLES.DEAN;
-  const activeGroup = dean ? getDeanActiveGroup(pathname) : null;
   const mainNav = getMainNavByRoles(roles, pathname, activeProgramId);
   const activeItem = dean
     ? getDeanActiveItem(pathname)
@@ -179,7 +177,6 @@ export function MobileSidebarDrawer({
               <div className="flex flex-col gap-1">
                 {renderLink(getDeanStandaloneNav()[0])}
                 {getDeanNavGroups().map((group) => {
-                  const expanded = activeGroup?.href === group.href;
                   const active = activeItem?.href === group.href && activeItem.name === group.name;
                   return (
                     <div key={group.href}>
@@ -192,11 +189,9 @@ export function MobileSidebarDrawer({
                         <group.icon className="size-5" aria-hidden="true" />
                         {group.name}
                       </NavigationRow>
-                      {expanded && (
-                        <div className="border-sidebar-border mt-1 ml-4 flex flex-col gap-1 border-l pl-2">
-                          {group.items.map(renderLink)}
-                        </div>
-                      )}
+                      <div className="border-sidebar-border mt-1 ml-4 flex flex-col gap-1 border-l pl-2">
+                        {group.items.map(renderLink)}
+                      </div>
                     </div>
                   );
                 })}

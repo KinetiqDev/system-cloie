@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFacultyAnalyticsDataAction } from "@/lib/actions/faculty-analytics-actions";
 import { ROLES } from "@/lib/constants/roles";
@@ -63,6 +64,13 @@ function evaluation(assignments: ReturnType<typeof response>[]) {
       },
     },
     assignments,
+    cilos_snapshot: [
+      {
+        description: "Apply engineering methods",
+        id: "55555555-5555-4555-8555-555555555555",
+        label: "CILO 1",
+      },
+    ] as { description: string; id: string; label: string }[],
     cilo_question_bindings: [
       {
         id: "binding-1",
@@ -214,6 +222,151 @@ describe("faculty analytics serialization", () => {
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("Shorter term");
     expect(serialized).not.toContain("What should improve?");
+  });
+
+  it("pools every question bound to one CILO into a single faculty CILO metric", async () => {
+    const twoQuestionEvaluation = evaluation([]);
+    twoQuestionEvaluation.cilos_snapshot = [
+      {
+        description: "Apply engineering methods",
+        id: "55555555-5555-4555-8555-555555555555",
+        label: "CILO 1",
+      },
+    ];
+    twoQuestionEvaluation.cilo_question_bindings = [
+      ...twoQuestionEvaluation.cilo_question_bindings,
+      {
+        id: "binding-2",
+        cilo_id: "55555555-5555-4555-8555-555555555555",
+        cilo_description_snapshot: "Apply engineering methods",
+        question_prompt_snapshot: "I can defend the applied methods",
+        section_key: "outcomes",
+        item_key: "defense",
+        created_at: new Date(),
+        updated_at: new Date(),
+        course_bound_evaluation_id: "evaluation-1",
+      },
+    ];
+    twoQuestionEvaluation.instrument.structure_snapshot[0]!.items!.push({
+      key: "defense",
+      kind: "quantitative" as const,
+      prompt: "I can defend the applied methods",
+      likertDescriptors: scale,
+    });
+    // Unequal rating counts across the two questions: (5 + 5 + 2) / 3 = 4 raw,
+    // where averaging the question means (5 and 2) would give 3.5.
+    twoQuestionEvaluation.assignments = [
+      {
+        respondent_id: "student-r1",
+        response: {
+          id: "r1",
+          status: "SUBMITTED",
+          quant_items: [
+            {
+              rating_value: 5,
+              section_key: "outcomes",
+              item_key: "application",
+              cilo_question_binding_id: "binding-1",
+            },
+          ],
+          qual_items: [],
+        },
+      },
+      {
+        respondent_id: "student-r2",
+        response: {
+          id: "r2",
+          status: "SUBMITTED",
+          quant_items: [
+            {
+              rating_value: 5,
+              section_key: "outcomes",
+              item_key: "application",
+              cilo_question_binding_id: "binding-1",
+            },
+            {
+              rating_value: 2,
+              section_key: "outcomes",
+              item_key: "defense",
+              cilo_question_binding_id: "binding-2",
+            },
+          ],
+          qual_items: [],
+        },
+      },
+    ];
+
+    courseBoundEvaluationFindManyMock.mockResolvedValue([twoQuestionEvaluation]);
+
+    const result = await getFacultyAnalyticsDataAction({ view: "cilos" });
+    if (!result.success) throw new Error(result.error);
+
+    // One CILO, two questions: a single metric whose scale group pools all four
+    // raw ratings, and whose bound-question list carries both prompts.
+    expect(result.data.ciloMetrics).toHaveLength(1);
+    const [ciloMetric] = result.data.ciloMetrics;
+    expect(ciloMetric).toMatchObject({
+      ciloId: "55555555-5555-4555-8555-555555555555",
+      label: "CILO 1",
+      description: "Apply engineering methods",
+      questions: [
+        { sectionKey: "outcomes", itemKey: "application", prompt: "I can apply the methods" },
+        { sectionKey: "outcomes", itemKey: "defense", prompt: "I can defend the applied methods" },
+      ],
+    });
+    expect(ciloMetric?.scaleGroups).toHaveLength(1);
+    expect(ciloMetric?.scaleGroups[0]).toMatchObject({ mean: 4, ratingCount: 3 });
+  });
+
+  it("labels every question evidencing a CILO with that CILO's publication label", async () => {
+    const evaluationRow = evaluation([]);
+    evaluationRow.cilos_snapshot = [
+      {
+        description: "Apply engineering methods",
+        id: "55555555-5555-4555-8555-555555555555",
+        label: "CILO 1",
+      },
+      {
+        description: "Defend the applied methods",
+        id: "77777777-7777-4777-8777-777777777777",
+        label: "CILO 2",
+      },
+    ];
+    // Binding order deliberately does not match CILO order: the second CILO's
+    // question is bound first, so a position-derived label would mis-number
+    // everything.
+    evaluationRow.cilo_question_bindings = [
+      {
+        id: "binding-defense",
+        cilo_id: "77777777-7777-4777-8777-777777777777",
+        cilo_description_snapshot: "Defend the applied methods",
+        question_prompt_snapshot: "I can defend the applied methods",
+        section_key: "outcomes",
+        item_key: "defense",
+        created_at: new Date(),
+        updated_at: new Date(),
+        course_bound_evaluation_id: "evaluation-1",
+      },
+      ...evaluationRow.cilo_question_bindings,
+    ];
+    evaluationRow.instrument.structure_snapshot[0]!.items!.push({
+      key: "defense",
+      kind: "quantitative" as const,
+      prompt: "I can defend the applied methods",
+      likertDescriptors: scale,
+    });
+    courseBoundEvaluationFindManyMock.mockResolvedValue([evaluationRow]);
+
+    const result = await getFacultyAnalyticsDataAction({ view: "questions" });
+    if (!result.success) throw new Error(result.error);
+
+    const labelsByItemKey = Object.fromEntries(
+      result.data.questionMetrics.map((metric) => [metric.prompt, metric.ciloLabel])
+    );
+    expect(labelsByItemKey).toEqual({
+      "I can apply the methods": "CILO 1",
+      "I can defend the applied methods": "CILO 2",
+    });
   });
 
   it("suppresses all qualitative analytics below five submitted respondents", async () => {

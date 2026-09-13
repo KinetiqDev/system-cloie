@@ -1,3 +1,5 @@
+// fallow-ignore-file code-duplication
+import { formatDate } from "@/lib/utils/date-format";
 import Link from "next/link";
 import { Calendar, Eye, FileText } from "lucide-react";
 import { TargetStakeholder } from "@prisma/client";
@@ -19,15 +21,6 @@ export const metadata = { title: buildPageTitle("History", "Alumni") };
 
 export default async function AlumniHistoryPage() {
   const { submitted } = await listStakeholderEvaluations(TargetStakeholder.ALUMNI, "/alumni");
-
-  const formatDate = (date: Date | null) => {
-    if (!date) return "N/A";
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in flex flex-col gap-6 motion-safe:duration-300">

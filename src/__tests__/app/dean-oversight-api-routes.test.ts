@@ -8,16 +8,12 @@ const {
   resolveAuthSessionMock,
   getDashboardMock,
   getLearningOutcomesMock,
-  getEnrollmentsMock,
-  getRosterMock,
   listEligiblePeriodsMock,
   logMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
   getDashboardMock: vi.fn(),
   getLearningOutcomesMock: vi.fn(),
-  getEnrollmentsMock: vi.fn(),
-  getRosterMock: vi.fn(),
   listEligiblePeriodsMock: vi.fn(),
   logMock: vi.spyOn(console, "error").mockImplementation(() => undefined),
 }));
@@ -32,20 +28,18 @@ vi.mock("@/features/dean/services/read-dean-oversight", () => ({
   DeanReadModelUnauthorizedError: class DeanReadModelUnauthorizedError extends Error {},
   getDeanDashboard: getDashboardMock,
   getDeanLearningOutcomes: getLearningOutcomesMock,
-  getDeanEnrollments: getEnrollmentsMock,
-  getDeanRoster: getRosterMock,
   listDeanEligiblePeriods: listEligiblePeriodsMock,
 }));
 
 import { GET as getDashboard } from "@/app/api/dean/dashboard/route";
 import { GET as getLearningOutcomes } from "@/app/api/dean/learning-outcomes/route";
-import { GET as getEnrollments } from "@/app/api/dean/enrollments/route";
-import { GET as getRoster } from "@/app/api/dean/enrollments/roster/route";
 import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route";
+import {
+  DeanReadModelBadRequestError,
+  DeanReadModelNotFoundError,
+} from "@/features/dean/services/read-dean-oversight";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
-const ASSIGNMENT_ID = "22222222-2222-4222-8222-222222222222";
-const OTHER_ASSIGNMENT_ID = "33333333-3333-4333-8333-333333333333";
 
 function request(path: string) {
   return new Request(`http://localhost${path}`);
@@ -67,7 +61,12 @@ describe("Dean oversight JSON routes", () => {
       state: "ready",
       data: {
         activePeriod: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term" },
-        kpis: { activeContexts: 0, readyContexts: 0, missingCiloContexts: 0, incompleteMappingContexts: 0 },
+        kpis: {
+          activeContexts: 0,
+          readyContexts: 0,
+          missingCiloContexts: 0,
+          incompleteMappingContexts: 0,
+        },
         risks: { missingCilos: 0, incompleteMappings: 0, notReady: 0 },
       },
     });
@@ -79,31 +78,6 @@ describe("Dean oversight JSON routes", () => {
         schemaVersion: 2,
         institutionalOutcomes: [],
         programs: [],
-      },
-    });
-    getEnrollmentsMock.mockResolvedValue({
-      state: "ready",
-      data: {
-        period: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
-        programs: [],
-      },
-    });
-    getRosterMock.mockResolvedValue({
-      state: "ready",
-      data: {
-        assignment: {
-          id: ASSIGNMENT_ID,
-          courseCode: "CS101",
-          courseName: "Intro",
-          programName: "Computer Science",
-          yearLevel: "FIRST_YEAR",
-          section: "MORNING",
-        },
-        students: [{ displayName: "Ada Lovelace" }],
-        page: 1,
-        pageSize: 25,
-        totalCount: 1,
-        totalPages: 1,
       },
     });
     listEligiblePeriodsMock.mockResolvedValue([
@@ -166,9 +140,10 @@ describe("Dean oversight JSON routes", () => {
     expect(getLearningOutcomesMock).toHaveBeenCalledWith(PERIOD_ID, "missing-cilos");
   });
 
-  it("returns exact empty ready payloads for learning outcomes and enrollments", async () => {
-    const outcomes = await getLearningOutcomes(request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`));
-    const enrollments = await getEnrollments(request(`/api/dean/enrollments?period=${PERIOD_ID}`));
+  it("returns the exact empty ready learning-outcomes payload", async () => {
+    const outcomes = await getLearningOutcomes(
+      request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`)
+    );
 
     expect(outcomes.headers.get("Cache-Control")).toBe("private, no-store");
     expect(await json(outcomes)).toEqual({
@@ -181,47 +156,31 @@ describe("Dean oversight JSON routes", () => {
         programs: [],
       },
     });
-    expect(await json(enrollments)).toEqual({
-      state: "ready",
-      data: {
-        period: { id: PERIOD_ID, label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
-        programs: [],
-      },
-    });
   });
 
-  it("returns 404 for inaccessible or mismatched period resources", async () => {
-    const { DeanReadModelNotFoundError } = await import("@/features/dean/services/read-dean-oversight");
-    getEnrollmentsMock.mockRejectedValue(new DeanReadModelNotFoundError("not found"));
-    getRosterMock.mockRejectedValue(new DeanReadModelNotFoundError("mismatch"));
+  it("returns 404 for inaccessible period resources", async () => {
+    getLearningOutcomesMock.mockRejectedValue(new DeanReadModelNotFoundError("not found"));
 
-    const enrollments = await getEnrollments(request(`/api/dean/enrollments?period=${PERIOD_ID}`));
-    const roster = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}`)
+    const outcomes = await getLearningOutcomes(
+      request(`/api/dean/learning-outcomes?period=${PERIOD_ID}`)
     );
 
-    expect(enrollments.status).toBe(404);
-    expect(roster.status).toBe(404);
-    expect(enrollments.headers.get("Cache-Control")).toBe("private, no-store");
-    expect(roster.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(outcomes.status).toBe(404);
+    expect(outcomes.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
-  it("accepts valid empty ready data and no-eligible-period state", async () => {
-    getEnrollmentsMock.mockResolvedValue({ state: "ready", data: { period: {}, programs: [] } });
-    const ready = await getEnrollments(request(`/api/dean/enrollments?period=${PERIOD_ID}`));
-    expect(ready.status).toBe(200);
-    expect(await json(ready)).toEqual({ state: "ready", data: { period: {}, programs: [] } });
-
+  it("accepts the no-eligible-period state", async () => {
     getDashboardMock.mockResolvedValue({ state: "no-eligible-period" });
     const empty = await getDashboard(request("/api/dean/dashboard"));
     expect(empty.status).toBe(200);
     expect(await json(empty)).toEqual({ state: "no-eligible-period" });
   });
 
-  it("rejects missing enrollment period when eligible periods exist", async () => {
-    const { DeanReadModelBadRequestError } = await import("@/features/dean/services/read-dean-oversight");
-    getEnrollmentsMock.mockRejectedValue(new DeanReadModelBadRequestError("period is required."));
-    const response = await getEnrollments(request("/api/dean/enrollments"));
+  it("maps an omitted learning-outcomes period to 400 when eligible periods exist", async () => {
+    getLearningOutcomesMock.mockRejectedValue(
+      new DeanReadModelBadRequestError("period is required.")
+    );
+    const response = await getLearningOutcomes(request("/api/dean/learning-outcomes"));
 
     expect(response.status).toBe(400);
     expect(await json(response)).toEqual({ error: "period is required." });
@@ -248,47 +207,6 @@ describe("Dean oversight JSON routes", () => {
     );
     expect(programHead.status).toBe(403);
     expect(await json(programHead)).toEqual({ error: "College Dean access required." });
-  });
-
-  it("validates roster query trimming, length, page, and fixed page size", async () => {
-    const missingQuery = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&query=   `)
-    );
-    expect(missingQuery.status).toBe(400);
-
-    const tooLong = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&query=${"x".repeat(101)}`)
-    );
-    expect(tooLong.status).toBe(400);
-
-    const badPage = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&page=0`)
-    );
-    expect(badPage.status).toBe(400);
-
-    const valid = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}&query=%20Ada%20&page=2`)
-    );
-    expect(valid.status).toBe(200);
-    expect(getRosterMock).toHaveBeenCalledWith({
-      periodId: PERIOD_ID,
-      assignmentId: ASSIGNMENT_ID,
-      query: "Ada",
-      page: 2,
-    });
-    expect((await json(valid)).data.pageSize).toBe(25);
-  });
-
-  it("keeps roster response limited to display names and pagination metadata", async () => {
-    const response = await getRoster(
-      request(`/api/dean/enrollments/roster?period=${PERIOD_ID}&assignment=${ASSIGNMENT_ID}`)
-    );
-    const body = await json(response);
-    expect(body).toEqual(expect.objectContaining({ state: "ready" }));
-    expect(body.data.students).toEqual([{ displayName: "Ada Lovelace" }]);
-    expect(JSON.stringify(body)).not.toMatch(/studentId|email|enrollmentId|profile|source|accountId/i);
-    expect(body.data.assignment.id).toBe(ASSIGNMENT_ID);
-    expect(body.data.assignment.id).not.toBe(OTHER_ASSIGNMENT_ID);
   });
 
   it("returns generic 500 and logs no request or record data on unexpected failures", async () => {

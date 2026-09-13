@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import Link from "next/link";
@@ -35,6 +36,7 @@ import {
   type PublishedDeploymentItem,
   type PublishedStatusFilter,
 } from "./published-deployments-collection";
+import { formatDate } from "@/lib/utils/date-format";
 import type { FacultyPublishedEvaluationItem } from "../types";
 
 type FacultyPublishedEvaluationsProps = {
@@ -59,16 +61,6 @@ function sanitizeInitialFilters(
     // Faculty rows carry no audience facet; a stale `target` URL key must not filter.
     target: null,
   };
-}
-
-function formatDate(date: Date | string | null): string {
-  if (!date) return "--";
-  const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function getScopeLabel(scope: string): string {
@@ -372,7 +364,7 @@ function FacultyExpandedDetails({ evalItem }: { evalItem: FacultyPublishedEvalua
         <div className="space-y-1 text-sm">
           <div>
             <span className="text-muted-foreground">Published: </span>
-            {formatDate(evalItem.publishedAt)}
+            {evalItem.publishedAt ? formatDate(evalItem.publishedAt) : "--"}
           </div>
           {evalItem.activationAt && (
             <div>

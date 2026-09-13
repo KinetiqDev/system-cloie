@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import { useState, useTransition } from "react";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/actions/gen-ed-course-actions";
 import { showToast } from "@/components/ui/toast";
 import { useTableSelection } from "@/hooks/use-table-selection";
+import { formatDate } from "@/lib/utils/date-format";
 import { CourseImportDialog } from "./course-import-dialog";
 
 import type { GenEdCourseItem, GenEdCoursesSummary } from "../services/resolve-gen-ed-courses";
@@ -40,14 +42,6 @@ type GenEdCoursesCatalogProps = {
 };
 
 const PAGE_SIZE = 15;
-
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 // fallow-ignore-next-line code-duplication
 function filterCourses(

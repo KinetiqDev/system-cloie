@@ -13,8 +13,8 @@ import {
   Prisma,
   type TargetStakeholder,
 } from "@prisma/client";
-import { listTemplateLikertQuestions, type TemplateStructure } from "@/features/instruments/types";
 import { listEligibleStakeholderIds } from "./central-stakeholder-eligibility";
+import { planCentralPloBindings, type CentralPloSnapshotRow } from "./central-deployment-plo-plan";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
@@ -25,89 +25,6 @@ export type PublishCentralDeploymentResult = ServiceResult<{
   assignmentCount: number;
   status: "ACTIVE" | "SCHEDULED";
 }>;
-
-type CentralDeploymentPloSnapshotRow = {
-  plo_id: string;
-  plo_code: string;
-  plo_description: string;
-  section_key: string;
-  item_key: string;
-  question_prompt: string;
-};
-
-/**
- * Validates a Program-wide template's question–PLO bindings for publication:
- * every Likert question must be bound to at least one PLO and every bound PLO
- * must still be active and owned by the program. Returns the immutable
- * id/code/description snapshot rows captured at publish time.
- */
-function validatePublishPloBindings(input: {
-  bindings: Array<{ plo_id: string | null; section_key: string; item_key: string }>;
-  structure: TemplateStructure;
-  livePlos: Array<{ id: string; code: string; description: string }>;
-}):
-  | { success: true; snapshotRows: CentralDeploymentPloSnapshotRow[] }
-  | { success: false; error: string } {
-  // Template keys may contain any nonempty string, so the question identity
-  // must be a structurally encoded tuple — never a separator join.
-  const encodeQuestionKey = (sectionKey: string, itemKey: string) =>
-    JSON.stringify([sectionKey, itemKey]);
-
-  const questions = listTemplateLikertQuestions(input.structure);
-  const questionMap = new Map(
-    questions.map((question) => [
-      encodeQuestionKey(question.sectionKey, question.itemKey),
-      question,
-    ])
-  );
-  const ploMap = new Map(input.livePlos.map((plo) => [plo.id, plo]));
-  const boundQuestionKeys = new Set<string>();
-  const snapshotRows: CentralDeploymentPloSnapshotRow[] = [];
-
-  for (const binding of input.bindings) {
-    const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
-    const question = questionMap.get(questionKey);
-    const plo = binding.plo_id ? ploMap.get(binding.plo_id) : undefined;
-
-    if (!question) {
-      return {
-        success: false,
-        error: "One or more question–PLO bindings no longer match the template structure.",
-      };
-    }
-
-    if (!plo) {
-      return {
-        success: false,
-        error:
-          "One or more bound PLOs are archived or no longer available. Update the template before publishing.",
-      };
-    }
-
-    boundQuestionKeys.add(questionKey);
-    snapshotRows.push({
-      plo_id: plo.id,
-      plo_code: plo.code,
-      plo_description: plo.description,
-      section_key: binding.section_key,
-      item_key: binding.item_key,
-      question_prompt: question.prompt,
-    });
-  }
-
-  const missingQuestionKeys = questions.filter(
-    (question) => !boundQuestionKeys.has(encodeQuestionKey(question.sectionKey, question.itemKey))
-  );
-
-  if (missingQuestionKeys.length > 0) {
-    return {
-      success: false,
-      error: "Every Likert question must be assigned to at least one PLO before publishing.",
-    };
-  }
-
-  return { success: true, snapshotRows };
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -122,7 +39,7 @@ function computeDeploymentStatus(activationAt: Date | undefined): "ACTIVE" | "SC
 async function createPloSnapshotRows(
   tx: Prisma.TransactionClient,
   deploymentId: string,
-  rows: CentralDeploymentPloSnapshotRow[]
+  rows: CentralPloSnapshotRow[]
 ) {
   if (rows.length === 0) return;
 
@@ -215,45 +132,37 @@ export async function publishCentralDeployment(
     };
   }
 
-  // 4b. Validate question–PLO bindings: every Likert question must be bound to
-  // at least one active program PLO; snapshot id/code/description for the deployment.
-  if (!Array.isArray(template.structure)) {
-    return { success: false, error: "Template structure is invalid." };
-  }
-  const structure = template.structure as unknown as TemplateStructure;
+  // 4b. Plan question–PLO snapshots. Bound pairs are snapshotted; a Likert
+  // question without a binding publishes as a general evaluation item and
+  // contributes no PLO evidence.
   const bindings = template.template_plo_question_bindings;
-  let ploSnapshotRows: CentralDeploymentPloSnapshotRow[] = [];
-  if (bindings.length > 0) {
-    const livePlos = await prisma.pLO.findMany({
-      where: {
-        program_id: programId,
-        id: {
-          in: bindings
-            .map((binding) => binding.plo_id)
-            .filter((ploId): ploId is string => Boolean(ploId)),
-        },
-        is_active: true,
-      },
-      select: { id: true, code: true, description: true },
-    });
+  const livePlos =
+    bindings.length > 0
+      ? await prisma.pLO.findMany({
+          where: {
+            program_id: programId,
+            id: {
+              in: bindings
+                .map((binding) => binding.plo_id)
+                .filter((ploId): ploId is string => Boolean(ploId)),
+            },
+            is_active: true,
+          },
+          select: { id: true, code: true, description: true },
+        })
+      : [];
 
-    const ploValidation = validatePublishPloBindings({
-      bindings,
-      structure,
-      livePlos,
-    });
+  const ploBindingPlan = planCentralPloBindings({
+    bindings,
+    structure: template.structure,
+    livePlos,
+  });
 
-    if (!ploValidation.success) {
-      return { success: false, error: ploValidation.error };
-    }
-
-    ploSnapshotRows = ploValidation.snapshotRows;
-  } else if (listTemplateLikertQuestions(structure).length > 0) {
-    return {
-      success: false,
-      error: "Every Likert question must be assigned to at least one PLO before publishing.",
-    };
+  if (ploBindingPlan.error) {
+    return { success: false, error: ploBindingPlan.error };
   }
+
+  const ploSnapshotRows = ploBindingPlan.snapshotRows;
 
   // 5. Validate deadline > activation if both are set
   if (input.activation_at && input.deadline_at) {

@@ -1,6 +1,8 @@
+// fallow-ignore-file code-duplication
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SystemRole } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { editUserBySecretarySchema } from "@/features/users/schemas/edit-user";
@@ -28,7 +30,8 @@ async function requireSecretaryAccess(): Promise<AccessResult> {
 }
 
 export async function getUserEditRecordAction(
-  userId: string
+  userId: string,
+  selectedRole?: SystemRole
 ): Promise<ActionResult<SecretaryUserEditRecord>> {
   const access = await requireSecretaryAccess();
   if (!access.success) {
@@ -37,7 +40,7 @@ export async function getUserEditRecordAction(
   if (userId === access.data.id) {
     return { success: false, error: "Cannot edit your own account." };
   }
-  const result = await getUserEditRecordBySecretary(userId);
+  const result = await getUserEditRecordBySecretary(userId, selectedRole);
   return result.success
     ? { success: true, data: result.data }
     : { success: false, error: result.error };

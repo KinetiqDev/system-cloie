@@ -1,5 +1,6 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SystemRole } from "@prisma/client";
+import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -13,6 +14,14 @@ vi.mock("@/lib/db/prisma", () => ({
     academicTermInstance: { findFirst: vi.fn() },
   },
 }));
+
+/** The ACTIVE period row the list service selects when a filter needs placement. */
+const ACTIVE_PERIOD_ROW = {
+  id: "period-1",
+  semester: "SECOND",
+  term: "SECOND_TERM",
+  school_year: { code: "2026-2027" },
+};
 
 describe("listSecretaryUsersSummary", () => {
   beforeEach(async () => {
@@ -39,6 +48,7 @@ describe("listSecretaryUsersSummary", () => {
         is_active: true,
         roles: [{ role: SystemRole.STUDENT }],
         student_profile: { program: { code: "BSCE" }, major: { name: "Structural" } },
+        enrollments: [],
         faculty_program_affiliations: [],
         program_head_assignments: [],
         industry_partner_profile: null,
@@ -199,7 +209,7 @@ describe("listSecretaryUsersSummary", () => {
 
   it("filters Students awaiting placement in the active Academic Period", async () => {
     const { prisma } = await import("@/lib/db/prisma");
-    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "period-1" } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(ACTIVE_PERIOD_ROW as never);
 
     await listSecretaryUsersSummary({
       page: 1,
@@ -209,7 +219,12 @@ describe("listSecretaryUsersSummary", () => {
     });
     expect(prisma.academicTermInstance.findFirst).toHaveBeenCalledWith({
       where: { status: "ACTIVE", school_year: { is_active: true } },
-      select: { id: true },
+      select: {
+        id: true,
+        semester: true,
+        term: true,
+        school_year: { select: { code: true } },
+      },
     });
 
     expect(prisma.user.findMany).toHaveBeenCalledWith(
@@ -224,6 +239,192 @@ describe("listSecretaryUsersSummary", () => {
         },
       })
     );
+  });
+
+  it("filters Students by one placement in the active Academic Period", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(ACTIVE_PERIOD_ROW as never);
+
+    await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.STUDENT,
+      yearLevel: YearLevel.THIRD_YEAR,
+      section: StudentSection.MORNING,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            { roles: { some: { role: SystemRole.STUDENT } } },
+            {
+              enrollments: {
+                some: {
+                  is_active: true,
+                  term_instance_id: "period-1",
+                  year_level: YearLevel.THIRD_YEAR,
+                  section: StudentSection.MORNING,
+                },
+              },
+            },
+          ],
+        },
+        select: expect.objectContaining({
+          enrollments: {
+            where: { is_active: true, term_instance_id: "period-1" },
+            take: 1,
+            select: { year_level: true, section: true },
+          },
+        }),
+      })
+    );
+  });
+
+  it("projects the active period and each Student's placement", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(ACTIVE_PERIOD_ROW as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      {
+        id: "user-2",
+        name: "Jane Doe",
+        email: "jane@example.com",
+        is_active: true,
+        roles: [{ role: SystemRole.STUDENT }],
+        student_profile: { program: { code: "BSCE" }, major: { name: "Structural" } },
+        enrollments: [{ year_level: YearLevel.THIRD_YEAR, section: StudentSection.MORNING }],
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        industry_partner_profile: null,
+      },
+      {
+        id: "user-6",
+        name: "Ada Reyes",
+        email: "ada@example.com",
+        is_active: true,
+        roles: [{ role: SystemRole.STUDENT }],
+        student_profile: { program: { code: "BSCE" }, major: null },
+        enrollments: [],
+        faculty_program_affiliations: [],
+        program_head_assignments: [],
+        industry_partner_profile: null,
+      },
+    ] as never);
+
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.STUDENT,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        activePeriod: { id: "period-1", label: "2026-2027 — 2nd Semester — 2nd Term" },
+        users: [
+          {
+            id: "user-2",
+            placement: { yearLevel: YearLevel.THIRD_YEAR, section: StudentSection.MORNING },
+          },
+          { id: "user-6", placement: null },
+        ],
+      },
+    });
+  });
+
+  it("drops Student placement filters outside the Student context", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(ACTIVE_PERIOD_ROW as never);
+
+    const facultyScope = await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.FACULTY,
+      major: "Structural",
+      yearLevel: YearLevel.THIRD_YEAR,
+      section: StudentSection.MORNING,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(facultyScope).toEqual({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "role=FACULTY",
+    });
+    expect(prisma.user.count).not.toHaveBeenCalled();
+  });
+
+  it("drops placement filters when no Academic Period is active", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null);
+
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.STUDENT,
+      yearLevel: YearLevel.THIRD_YEAR,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "role=STUDENT",
+    });
+  });
+
+  it("drops placement filters while listing Students awaiting placement", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(ACTIVE_PERIOD_ROW as never);
+
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.STUDENT,
+      state: "awaiting-term-placement",
+      section: StudentSection.MORNING,
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "role=STUDENT&state=awaiting-term-placement",
+    });
+  });
+
+  it("drops a major filter that belongs to another role's context", async () => {
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      program: "BSCE",
+      major: "Structural",
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "program=BSCE",
+    });
+  });
+
+  it("drops term-placement and verification filters that the role cannot show", async () => {
+    const result = await listSecretaryUsersSummary({
+      page: 1,
+      role: SystemRole.ALUMNI,
+      state: "awaiting-term-placement",
+      sort: "name",
+      direction: "asc",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Invalid Secretary Users filters.",
+      canonicalQuery: "role=ALUMNI",
+    });
   });
 
   it("filters external accounts pending verification", async () => {
@@ -262,6 +463,7 @@ describe("listSecretaryUsersSummary", () => {
         is_active: true,
         roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
         student_profile: null,
+        enrollments: [],
         faculty_program_affiliations: [],
         program_head_assignments: [],
         industry_partner_profile: { program: { code: "BSCE" } },
@@ -294,6 +496,7 @@ describe("listSecretaryUsersSummary", () => {
         is_active: true,
         roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
         student_profile: null,
+        enrollments: [],
         faculty_program_affiliations: [],
         program_head_assignments: [],
         industry_partner_profile: { program: { code: "BSCE" } },
@@ -323,6 +526,7 @@ describe("listSecretaryUsersSummary", () => {
         is_active: true,
         roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
         student_profile: null,
+        enrollments: [],
         faculty_program_affiliations: [],
         program_head_assignments: [],
         industry_partner_profile: { program: { code: "BSCE" } },

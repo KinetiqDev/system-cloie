@@ -37,7 +37,7 @@ Section-scoped save while IN_PROGRESS: the section's existing quantitative and q
 _Avoid_: Full-response save, partial submission
 
 **Submission completeness**:
-Submission asserts every required quantitative item has a finite numeric value and every qualitative item is non-empty against the frozen structure snapshot before the status flips to SUBMITTED.
+Submission asserts every required quantitative item has a finite numeric value and every required qualitative item is non-empty against the frozen structure snapshot before the status flips to SUBMITTED; items flagged `required: false` in any snapshot format may stay blank.
 _Avoid_: Best-effort submit, optional-item submit
 
 ## Status

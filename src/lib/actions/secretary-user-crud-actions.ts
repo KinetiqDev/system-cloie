@@ -10,6 +10,15 @@ import { updateUserBySecretary } from "@/features/users/services/update-user-by-
 
 type ActionResult = { success: true } | { success: false; error: string };
 
+/**
+ * Creation result for the Secretary add-user form. `USER_EXISTS` carries the
+ * existing account's id so the caller pivots to granting the role on that
+ * account through `addRoleToExistingUserAction`.
+ */
+type CreateUserActionResult =
+  | { success: true }
+  | { success: false; error: string; existingUserId?: string };
+
 async function verifySecretaryAccess(): Promise<ActionResult> {
   const session = await resolveAuthSession();
   if (!session?.roles?.includes(ROLES.SECRETARY)) {
@@ -18,7 +27,9 @@ async function verifySecretaryAccess(): Promise<ActionResult> {
   return { success: true };
 }
 
-export async function createUserBySecretaryAction(formData: FormData): Promise<ActionResult> {
+export async function createUserBySecretaryAction(
+  formData: FormData
+): Promise<CreateUserActionResult> {
   const access = await verifySecretaryAccess();
   if (!access.success) {
     return access;
@@ -49,6 +60,16 @@ export async function createUserBySecretaryAction(formData: FormData): Promise<A
   const result = await createUserBySecretary(parsed.data);
 
   if (!result.success) {
+    // An existing account is a pivot, not a creation failure: hand the caller
+    // the account id so it can offer to grant the role instead.
+    if ("existingUserId" in result) {
+      return {
+        success: false,
+        error: result.error,
+        existingUserId: result.existingUserId,
+      };
+    }
+
     return { success: false, error: result.error };
   }
 

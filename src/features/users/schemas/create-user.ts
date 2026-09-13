@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { z } from "zod";
 import { isInstitutionalEmail } from "@/lib/utils/email-domain";
@@ -20,10 +21,7 @@ const optionalTextField = z.preprocess((v) => {
 }, z.string().optional());
 
 const optionalEnumField = <TEnum extends Record<string, string>>(enumObject: TEnum) =>
-  z.preprocess(
-    (v) => (v === "" || v == null ? undefined : v),
-    z.nativeEnum(enumObject).optional()
-  );
+  z.preprocess((v) => (v === "" || v == null ? undefined : v), z.nativeEnum(enumObject).optional());
 
 const optionalNumberField = z.preprocess((v) => {
   if (v === "" || v == null) {

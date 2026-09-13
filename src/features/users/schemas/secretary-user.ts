@@ -1,4 +1,5 @@
-import { InviteStatus, StudentSection, SystemRole, YearLevel } from "@prisma/client";
+// fallow-ignore-file code-duplication
+import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { z } from "zod";
 
 const optionalUuidField = z.preprocess(
@@ -24,9 +25,41 @@ const optionalLongTextField = z.preprocess((value) => {
   return trimmed.length > 0 ? trimmed : undefined;
 }, z.string().max(1000).optional());
 
+const optionalEnumField = <TEnum extends Record<string, string>>(enumObject: TEnum) =>
+  z.preprocess(
+    (value) => (value === "" || value == null ? undefined : value),
+    z.nativeEnum(enumObject).optional()
+  );
+
+const optionalNumberField = z.preprocess((value) => {
+  if (value === "" || value == null) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}, z.number().int().positive().optional());
+
 export const assignRoleSchema = z.object({
   user_id: z.string().uuid(),
   role: z.nativeEnum(SystemRole),
+});
+
+/**
+ * Role grant on an existing account: the account is addressed by `user_id` and
+ * the role-specific context mirrors the account-creation fields so both entry
+ * points run the same role-entry gates.
+ */
+export const addRoleToExistingUserSchema = z.object({
+  user_id: z.string().uuid(),
+  role: z.nativeEnum(SystemRole),
+  program_id: optionalUuidField,
+  major_id: optionalUuidField,
+  year_level: optionalEnumField(YearLevel),
+  section: optionalEnumField(StudentSection),
+  graduation_year: optionalNumberField,
+  company_name: optionalTextField,
+  position: optionalTextField,
 });
 
 /**
@@ -79,12 +112,8 @@ export const createExternalInviteDraftSchema = z.object({
   note: optionalLongTextField,
 });
 
-const updateExternalInviteStatusSchema = z.object({
-  id: z.string().uuid(),
-  status: z.nativeEnum(InviteStatus),
-});
-
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
+export type AddRoleToExistingUserInput = z.infer<typeof addRoleToExistingUserSchema>;
 export type UpdateStudentAcademicContextInput = z.infer<typeof updateStudentAcademicContextSchema>;
 export type CreateFacultyAffiliationInput = z.infer<typeof createFacultyAffiliationSchema>;
 export type CreateProgramHeadAssignmentInput = z.infer<typeof createProgramHeadAssignmentSchema>;

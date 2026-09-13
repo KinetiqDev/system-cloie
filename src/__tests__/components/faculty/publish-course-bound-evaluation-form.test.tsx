@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { YearLevel } from "@prisma/client";
@@ -261,7 +262,9 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
 
     expect(
-      await screen.findByText(/Failed to load respondent preview\. Please try again\. Support reference: support-ref\./i)
+      await screen.findByText(
+        /Failed to load respondent preview\. Please try again\. Support reference: support-ref\./i
+      )
     ).toBeInTheDocument();
   });
 

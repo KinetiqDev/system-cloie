@@ -2,12 +2,12 @@
 title: CLOIE Tech Stack
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-11
 ---
 
 # CLOIE Tech Stack
 
-A lean, verifiable snapshot of the stack. **Most stack rules live in [AGENTS.md](../AGENTS.md)** (Tech and Repository Conventions, Architecture, Supabase and Prisma, CI) and in `docs/adr/` — this page records versions and pointers, not a duplicate specification. Versions below are read from `package.json` (specifiers) and `pnpm-lock.yaml` (resolved), verified 2026-09-04.
+A lean, verifiable snapshot of the stack. **Most stack rules live in [AGENTS.md](../AGENTS.md)** (Tech and Repository Conventions, Architecture, Supabase and Prisma, CI) and in `docs/adr/` — this page records versions and pointers, not a duplicate specification. Versions below are read from `package.json` (specifiers) and `pnpm-lock.yaml` (resolved), verified 2026-09-11.
 
 ## Stack versions
 
@@ -33,7 +33,7 @@ A lean, verifiable snapshot of the stack. **Most stack rules live in [AGENTS.md]
 | Drag and drop             | `@dnd-kit/core` / `sortable` / `utilities`                                                                                  | `^6.3.1` / `^10.0.0` / `^3.2.2`                                            | 6.3.1 / 10.0.0 / 3.2.2                                                                            |
 | Unit/Integration Testing  | Vitest (+ Testing Library, jsdom)                                                                                           | `^4.1.4`                                                                   | 4.1.4                                                                                             |
 | E2E Testing               | Playwright (`@playwright/test`) + `@axe-core/playwright` sweep                                                              | `^1.62.1` / `^4.13.0`                                                      | 1.62.1 / 4.13.0                                                                                   |
-| Supabase CLI              | `supabase`                                                                                                                  | `^2.92.1`                                                                  | 2.92.1                                                                                            |
+| Supabase CLI              | `supabase`                                                                                                                  | `^2.116.0`                                                                 | 2.116.0                                                                                           |
 | Code Intelligence         | Fallow                                                                                                                      | `2.54.3` (pinned, [ADR 0011](adr/0011-fallow-code-intelligence-policy.md)) | 2.54.3                                                                                            |
 | Linting                   | ESLint (+ `eslint-config-next` `16.3.3`)                                                                                    | `^9`                                                                       | 9.39.4                                                                                            |
 | Formatting                | Prettier (+ `prettier-plugin-tailwindcss`)                                                                                  | `^3.8.3` / `^0.7.2`                                                        | 3.8.3 / 0.7.2                                                                                     |

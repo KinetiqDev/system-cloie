@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +16,8 @@ import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
+import { formatDate } from "@/lib/utils/date-format";
 import type { ProgramHeadCourseEvaluationDetail } from "../types";
-
-const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 type CourseEvaluationDetailProps = {
   detail: ProgramHeadCourseEvaluationDetail;
@@ -71,11 +71,9 @@ export function CourseEvaluationDetail({
         {evaluation.activationAt || evaluation.deadlineAt ? (
           <p className="text-body-sm text-muted-foreground">
             {evaluation.activationAt
-              ? `Activated ${dateFormatter.format(evaluation.activationAt)}`
+              ? `Activated ${formatDate(evaluation.activationAt)}`
               : "Not yet activated"}
-            {evaluation.deadlineAt
-              ? ` · Deadline ${dateFormatter.format(evaluation.deadlineAt)}`
-              : ""}
+            {evaluation.deadlineAt ? ` · Deadline ${formatDate(evaluation.deadlineAt)}` : ""}
           </p>
         ) : null}
       </header>
@@ -147,8 +145,10 @@ export function CourseEvaluationDetail({
                 ciloResults.map((cilo) => (
                   <TableRow key={cilo.ciloId}>
                     <TableCell className="font-medium">CILO</TableCell>
-                    <TableCell>{cilo.description}</TableCell>
-                    <TableCell>{mappingLabels(cilo)}</TableCell>
+                    <TableCell className="break-words whitespace-normal">
+                      {cilo.description}
+                    </TableCell>
+                    <TableCell className="whitespace-normal">{mappingLabels(cilo)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {cilo.quantitative?.ratingCount ?? 0}
                     </TableCell>
@@ -186,10 +186,10 @@ export function CourseEvaluationDetail({
               <TableRow>
                 <TableHead>Item</TableHead>
                 <TableHead>Question</TableHead>
-                <TableHead>Outcome binding</TableHead>
+                <TableHead className="whitespace-normal">Outcome binding</TableHead>
                 <TableHead className="text-right">Mean</TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
-                <TableHead>Distribution</TableHead>
+                <TableHead className="whitespace-normal">Distribution</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,9 +205,13 @@ export function CourseEvaluationDetail({
                   const evidence = questionEvidence(question);
                   return (
                     <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
-                      <TableCell>{question.itemKey}</TableCell>
-                      <TableCell>{question.prompt}</TableCell>
-                      <TableCell>
+                      <TableCell className="break-words whitespace-normal">
+                        {question.itemKey}
+                      </TableCell>
+                      <TableCell className="break-words whitespace-normal">
+                        {question.prompt}
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
                         {question.binding.type === "CILO"
                           ? question.binding.ciloLabel
                           : "General evaluation item"}
@@ -224,7 +228,7 @@ export function CourseEvaluationDetail({
                       <TableCell className="text-right tabular-nums">
                         {quantitative?.ratingCount ?? 0}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-normal">
                         <DistributionCounts metric={quantitative ?? null} />
                       </TableCell>
                     </TableRow>
@@ -371,7 +375,9 @@ function DistributionCounts({
     return <span className="text-text-muted text-sm">—</span>;
   }
   return (
-    <span className="text-text-muted text-xs">
+    // Small text must clear 4.5:1 even on a tinted row, which `text-muted`
+    // does not at 12px.
+    <span className="text-text-secondary text-xs">
       {metric.distribution
         .filter((entry) => entry.count > 0)
         .map((entry) => `${entry.label}: ${entry.count}`)

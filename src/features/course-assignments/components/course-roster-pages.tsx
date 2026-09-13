@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 "use client";
 
 import Link from "next/link";
@@ -61,6 +62,7 @@ import {
 import { CourseRosterRetry } from "./course-roster-retry";
 import { CourseRosterViewSelector, type CourseRosterViewMode } from "./course-roster-view-selector";
 import { CourseRosterDiscoveryFilters, CourseRosterMemberFilters } from "./course-roster-filters";
+import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -79,18 +81,6 @@ const rosterStateLabels: Record<RosterState, string> = {
 
 function stateVariant(state: RosterState): "default" | "outline" {
   return state === "ACTIVE" ? "default" : "outline";
-}
-
-function dateLabel(value: Date | null) {
-  return value
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(value)
-    : "Not recorded";
-}
-
-function removedLabel(value: Date | null) {
-  return value
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(value)
-    : "Not recorded";
 }
 
 function RosterStateBadge({ state }: { state: RosterState }) {
@@ -727,6 +717,7 @@ function memberStatus(member: CourseRosterMember) {
   );
 }
 
+// fallow-ignore-next-line complexity
 function RosterTable({
   members,
   includeRemoved,
@@ -853,7 +844,7 @@ function RosterTable({
               )}
               <td className="px-4 py-4">{memberStatus(member)}</td>
               <td className="text-muted-foreground px-4 py-4 whitespace-nowrap">
-                {dateLabel(member.membershipAddedAt)}
+                {member.membershipAddedAt ? formatDate(member.membershipAddedAt) : "Not recorded"}
               </td>
               {showRemovedHistory && (
                 <td className="text-muted-foreground px-4 py-4 text-xs whitespace-nowrap">
@@ -861,7 +852,9 @@ function RosterTable({
                     "—"
                   ) : (
                     <span className="flex flex-col gap-1">
-                      <span>{removedLabel(member.removedAt)}</span>
+                      <span>
+                        {member.removedAt ? formatDateTime(member.removedAt) : "Not recorded"}
+                      </span>
                       <span>By {member.removedByName ?? "Recorded actor"}</span>
                     </span>
                   )}

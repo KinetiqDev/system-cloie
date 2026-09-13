@@ -86,11 +86,22 @@ export const E2E_CONTRACT = {
    * owned active assignment (GESTECH BSBA EVENING) whose roster carries two
    * students. The publication journey publishes through the real service and
    * then proves the roster lock and the Student's fresh browser read.
+   *
+   * The template also evidences one CILO with two Likert questions (issue
+   * #626): `ciloCount` is the number of active GESTECH CILOs the template must
+   * cover, `questionBindingCount` is its larger binding count, and
+   * `reusedCiloQuestions` names the pair that shares a CILO.
    */
   facultyPublicationTemplate: {
     code: "FAC_GESTECH",
     name: "GESTECH Faculty CILO Evaluation",
     ciloCount: 3,
+    questionBindingCount: 4,
+    reusedCiloQuestions: {
+      sectionKey: "overall-attainment",
+      itemKey: "overall-attainment-2",
+      prompt: "I achieved the first course intended learning outcome in applied work.",
+    },
   },
   publicationTarget: {
     courseCode: "GESTECH",
@@ -108,6 +119,25 @@ export const E2E_CONTRACT = {
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
   mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
+
+  /**
+   * Relaxed PLO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
+   * alumni tool leaves its general satisfaction item unbound, and the
+   * institutional exit-survey baseline carries no PLO bindings at all. Both
+   * still publish; the publish step names the unbound questions instead.
+   */
+  programWidePartialMapping: {
+    templateCode: "BSIT_ALUMNI_EVAL",
+    templateName: "BSIT Alumni Evaluation Tool",
+    unboundPrompt: "Overall satisfaction with the program",
+    likertCount: 13,
+    boundQuestionCount: 12,
+  },
+  programWideUnboundBaseline: {
+    templateCode: "EXIT_SURVEY",
+    templateName: "Graduating Student Exit Survey",
+    likertCount: 25,
+  },
 
   /** Deterministic Academic Period fixtures for the Secretary → Dean chain (issue #549). */
   academicPeriods: {
@@ -225,4 +255,17 @@ export type FixtureData = {
   publicationTarget: { id: string; courseCode: string; programCode: string };
   publicationDeploymentName: string;
   publicationStudents: Array<{ id: string; name: string; email: string }>;
+  /** Issue #625 relaxed PLO binding gate fixtures. */
+  programWidePartialMapping: {
+    templateCode: string;
+    templateName: string;
+    unboundPrompt: string;
+    likertCount: number;
+    boundQuestionCount: number;
+  };
+  programWideUnboundBaseline: {
+    templateCode: string;
+    templateName: string;
+    likertCount: number;
+  };
 };

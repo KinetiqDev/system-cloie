@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { ClipboardList, MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

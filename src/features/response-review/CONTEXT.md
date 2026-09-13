@@ -37,5 +37,5 @@ The canonical school year — semester — term label used across review context
 _Avoid_: Raw term instance id, raw enum label
 
 **Qualitative summary**:
-Aggregate evidence over submitted qualitative answers: non-empty answer count, distinct respondent count, per-prompt counts ordered descending, identifier-redacted term prevalence (mentions and distinct responses), and the deterministic tone distribution banded at ±0.2 by the fixed word-list rule (ADR 0023). Terms feed the word clouds and the bounded AI evidence packet. Raw response rows, sentences, and comments never appear in the summary.
+Aggregate evidence over submitted qualitative answers: non-empty answer count, distinct respondent count, per-prompt counts ordered descending, and count-ordered word tokens (normalized, stopword-filtered) feeding the word clouds. Raw response rows, sentences, and comments never appear in the summary. Identifier redaction, deterministic tone bands, and the bounded AI evidence packet are owned by the Analytics aggregate contract (ADR 0023), not this summary.
 _Avoid_: Raw comment dump, per-respondent qualitative listing, provider-judged sentiment

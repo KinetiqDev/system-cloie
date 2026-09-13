@@ -10,10 +10,8 @@ its follow-up slices.
 | ------------ | ------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------- |
 | Secretary    | `/secretary/dashboard`                                             | `secretary/dashboard/loading.tsx`                                             | KPI dashboard cards                                          | route-level   |
 | Secretary    | `/secretary/courses`                                               | `secretary/courses/loading.tsx`                                               | course catalog table and filters                             | route-level   |
-| Secretary    | `/secretary/courses/new`                                           | `secretary/courses/new/loading.tsx`                                           | course form card                                             | route-level   |
-| Secretary    | `/secretary/courses/[id]/edit`                                     | `secretary/courses/[id]/edit/loading.tsx`                                     | course form card                                             | route-level   |
+| Secretary    | `/secretary/course-assignments`                                    | `secretary/course-assignments/loading.tsx`                                    | assignment filters and table                                 | route-level   |
 | Secretary    | `/secretary/programs`                                              | `secretary/programs/loading.tsx`                                              | program table and filters                                    | route-level   |
-| Secretary    | `/secretary/programs/[id]/edit`                                    | `secretary/programs/[id]/edit/loading.tsx`                                    | program form card                                            | route-level   |
 | Secretary    | `/secretary/users`                                                 | `secretary/users/loading.tsx`                                                 | four KPI cards, user filters, and responsive table/card list | route-level   |
 | Secretary    | `/secretary/users/new`                                             | `secretary/users/new/loading.tsx`                                             | account form card                                            | route-level   |
 | Secretary    | `/secretary/instruments`                                           | `secretary/instruments/loading.tsx`                                           | instrument catalog table                                     | route-level   |
@@ -46,11 +44,9 @@ its follow-up slices.
 | Program Head | `/program-head/tools/publish`                                      | `program-head/tools/publish/loading.tsx`                                      | publication form card                                        | route-level   |
 | Dean         | `/dean/dashboard`                                                  | `dean/dashboard/loading.tsx`                                                  | dashboard KPI and matrix geometry                            | route-segment |
 | Dean         | `/dean/academic-structure` catalog/list descendants                | `dean/academic-structure/loading.tsx`                                         | academic structure table geometry                            | route-segment |
-| Dean         | `/dean/academic-structure/courses/new`                             | `dean/academic-structure/courses/new/loading.tsx`                             | course form card                                             | route-level   |
 | Dean         | `/dean/academic-structure/courses/[id]/edit`                       | `dean/academic-structure/courses/[id]/edit/loading.tsx`                       | course form card                                             | route-level   |
 | Dean         | `/dean/academic-structure/instruments/new`                         | `dean/academic-structure/instruments/new/loading.tsx`                         | instrument builder card                                      | route-level   |
 | Dean         | `/dean/academic-structure/instruments/[id]/edit`                   | `dean/academic-structure/instruments/[id]/edit/loading.tsx`                   | instrument builder card                                      | route-level   |
-| Dean         | `/dean/academic-structure/programs/[id]/edit`                      | `dean/academic-structure/programs/[id]/edit/loading.tsx`                      | program form card                                            | route-level   |
 | Dean         | `/dean/college-oversight/*`                                        | `dean/college-oversight/loading.tsx`                                          | oversight filter and table geometry                          | route-segment |
 
 Each role also gets a role-level `error.tsx` owned by that role segment. These
@@ -61,9 +57,10 @@ Oversight Suspense regions belong to #191.
 
 Excluded routes are static group landings, redirect or `notFound()` polyfills,
 lightweight profiles, report/analytics stubs, and client-only create pages such
-as `/secretary/courses/new` and `/secretary/instruments/new`. Create flows that
-now live in dialogs (for example program creation) have no loading boundary of
-their own.
+as `/secretary/courses/new` and `/dean/academic-structure/courses/new`.
+`/secretary/instruments/new` is included above because it owns a loading
+boundary. Create flows that now live in dialogs (for example program creation)
+have no loading boundary of their own.
 
 ## Browser Evidence Limitation
 

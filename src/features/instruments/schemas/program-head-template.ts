@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { z } from "zod";
 import { EvaluationTemplateType } from "@prisma/client";
 

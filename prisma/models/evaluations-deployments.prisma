@@ -72,7 +72,9 @@ model CourseBoundCiloQuestionBinding {
   cilo                    CILO?                      @relation(fields: [cilo_id], references: [id], onDelete: SetNull)
   quantitative_items      QuantitativeResponseItem[]
 
-  @@unique([course_bound_evaluation_id, cilo_id], map: "course_bound_cilo_question_bindings_eval_cilo_key")
+  // One CILO may evidence several questions; a question still carries at most
+  // one CILO.
+  @@unique([course_bound_evaluation_id, cilo_id, section_key, item_key], map: "course_bound_cilo_question_bindings_eval_cilo_key")
   @@unique([course_bound_evaluation_id, section_key, item_key], map: "course_bound_cilo_question_bindings_eval_question_key")
   @@map("course_bound_cilo_question_bindings")
 }

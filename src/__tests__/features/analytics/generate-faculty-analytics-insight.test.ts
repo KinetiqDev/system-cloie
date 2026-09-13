@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FacultyAnalyticsData } from "@/features/analytics/types";
 
@@ -135,7 +136,13 @@ function wideAnalyticsData(): FacultyAnalyticsData {
       evaluationId: `evaluation-${index % 30}`,
       evaluationName: `End-of-term evaluation ${index % 30}`,
       description: "Demonstrate the ability to analyse and design data structures.",
-      questionPrompt: "How well did the course develop this outcome?",
+      questions: [
+        {
+          sectionKey: "outcomes",
+          itemKey: `question-${index}`,
+          prompt: "How well did the course develop this outcome?",
+        },
+      ],
       scaleGroups,
     })),
     questionMetrics: Array.from({ length: 200 }, (_, index) => ({

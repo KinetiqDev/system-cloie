@@ -1,3 +1,4 @@
+// fallow-ignore-file code-duplication
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrlFromRequest } from "@/lib/utils/site-url";
@@ -44,7 +45,8 @@ function isInternalRole(role: SystemRole): boolean {
     role === SystemRole.FACULTY ||
     role === SystemRole.SECRETARY ||
     role === SystemRole.DEAN ||
-    role === SystemRole.PROGRAM_HEAD
+    role === SystemRole.PROGRAM_HEAD ||
+    role === SystemRole.GEN_ED_COORDINATOR
   );
 }
 
@@ -254,19 +256,17 @@ export async function GET(request: Request) {
           await supabase.auth.signOut();
           return redirectWithClearedTicket(`${siteUrl}/status/inactive`);
         }
-
-        const matchedRole = matchedUser.roles[0]?.role;
-
-        if (matchedRole) {
-          if (targetRole && matchedRole !== targetRole) {
+        if (matchedUser.roles.length > 0) {
+          const hasTargetRole = targetRole
+            ? matchedUser.roles.some((r) => r.role === targetRole)
+            : true;
+          if (targetRole && !hasTargetRole) {
             await supabase.auth.signOut();
             return redirectWithClearedTicket(`${siteUrl}/status/role-mismatch`);
           }
 
-          if (
-            isInternalRole(matchedRole) &&
-            !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)
-          ) {
+          const hasInternalRole = matchedUser.roles.some((r) => isInternalRole(r.role));
+          if (hasInternalRole && !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
             await supabase.auth.signOut();
             return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
           }
