@@ -293,6 +293,35 @@ describe("editUserBySecretary service", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("accepts a save bound to any role the multi-role account still holds", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: USER_ID,
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }, { role: SystemRole.PROGRAM_HEAD }],
+      student_profile: null,
+      enrollments: [],
+      faculty_program_affiliations: [
+        { id: "aff-1", program_id: PROG_OLD, is_primary: true, is_active: true },
+      ],
+      program_head_assignments: [],
+      alumni_profile: null,
+      industry_partner_profile: null,
+    } as never);
+
+    const result = await editUserBySecretary({
+      id: USER_ID,
+      expectedRole: SystemRole.PROGRAM_HEAD,
+      name: "Jane Smith",
+      program_head: { program_ids: [] },
+    });
+
+    expect(result).toEqual({ success: true, data: { id: USER_ID } });
+    expect(mockTx.user.update).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      data: { name: "Jane Smith" },
+    });
+  });
+
   it("requires a confirmation token when changing student protected fields", async () => {
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: USER_ID,

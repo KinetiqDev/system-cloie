@@ -17,6 +17,13 @@ export type SecretaryUserEditRecord = {
   name: string;
   email: string;
   isActive: boolean;
+  /** The complete assigned-role set, in deterministic enum order. */
+  roles: SystemRole[];
+  /**
+   * The role whose profile slice this record targets: the caller's selected
+   * role when the account still holds it, otherwise the account's
+   * deterministic edit role (lowest enum order).
+   */
   role: SystemRole;
   // Populated only for the relevant role slices (Student in #81, etc.).
   student: {
@@ -95,7 +102,8 @@ async function getCurrentSecretaryId(): Promise<ServiceResult<{ id: string; role
 }
 
 export async function getUserEditRecordBySecretary(
-  userId: string
+  userId: string,
+  selectedRole?: SystemRole
 ): Promise<ServiceResult<SecretaryUserEditRecord>> {
   const access = await getCurrentSecretaryId();
   if (!access.success) {
@@ -155,13 +163,21 @@ export async function getUserEditRecordBySecretary(
     return { success: false, error: "User not found." };
   }
 
-  // Roles resolve in deterministic enum order so this reader and the
-  // separately executed save mutation always target the same role for
-  // multi-role accounts; System CLOIE account roles are immutable here.
-  const role = user.roles[0]?.role;
-  if (!role) {
+  // Roles resolve in deterministic enum order; the caller may target any role
+  // the account still holds. The save re-validates the same membership, so a
+  // role revoked between load and submit makes the form stale instead of
+  // retargeting it to another role.
+  const assignedRoles = user.roles.map((entry) => entry.role);
+  if (assignedRoles.length === 0) {
     return { success: false, error: "User has no assigned CLOIE account role." };
   }
+  if (selectedRole && !assignedRoles.includes(selectedRole)) {
+    return {
+      success: false,
+      error: "The account no longer holds the selected role. Reload to see its current roles.",
+    };
+  }
+  const role = selectedRole ?? assignedRoles[0];
 
   const activeEnrollment = user.enrollments?.[0] ?? null;
 
@@ -172,6 +188,7 @@ export async function getUserEditRecordBySecretary(
       name: user.name,
       email: user.email,
       isActive: user.is_active,
+      roles: assignedRoles,
       role,
       student: user.student_profile
         ? {

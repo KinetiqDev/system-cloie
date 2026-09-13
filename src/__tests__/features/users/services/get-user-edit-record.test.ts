@@ -54,6 +54,7 @@ describe("getUserEditRecordBySecretary", () => {
         name: "John Doe",
         email: "john.doe@acd.edu.ph",
         isActive: true,
+        roles: [SystemRole.DEAN],
         role: SystemRole.DEAN,
         student: null,
         activeEnrollment: null,
@@ -264,6 +265,49 @@ describe("getUserEditRecordBySecretary", () => {
         programIsActive: false,
         majorIsActive: null,
       });
+    }
+  });
+
+  it("targets any assigned role the caller selects", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: "multi-role-id",
+      name: "Maria Multi",
+      email: "maria@acd.edu.ph",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }, { role: SystemRole.PROGRAM_HEAD }],
+      faculty_program_affiliations: [{ program_id: "prog-fac" }],
+      program_head_assignments: [
+        { program_id: "prog-ph", is_active: true, program: { code: "BSIT", name: "Info Tech" } },
+      ],
+    } as never);
+
+    const selected = await getUserEditRecordBySecretary("multi-role-id", SystemRole.PROGRAM_HEAD);
+
+    expect(selected.success).toBe(true);
+    if (selected.success) {
+      expect(selected.data.roles).toEqual([SystemRole.FACULTY, SystemRole.PROGRAM_HEAD]);
+      expect(selected.data.role).toBe(SystemRole.PROGRAM_HEAD);
+      expect(selected.data.programHead?.assignments).toEqual([
+        { programId: "prog-ph", programCode: "BSIT", programName: "Info Tech" },
+      ]);
+    }
+  });
+
+  it("rejects a selected role the account does not hold", async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: "faculty-id",
+      name: "Frank Faculty",
+      email: "frank@acd.edu.ph",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+      faculty_program_affiliations: [{ program_id: "prog-fac" }],
+    } as never);
+
+    const result = await getUserEditRecordBySecretary("faculty-id", SystemRole.DEAN);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/no longer holds the selected role/i);
     }
   });
 

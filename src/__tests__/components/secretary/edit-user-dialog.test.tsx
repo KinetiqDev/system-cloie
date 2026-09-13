@@ -7,6 +7,7 @@ import {
   getUserEditRecordAction,
   editUserBySecretaryAction,
 } from "@/lib/actions/secretary-edit-user-actions";
+import type { SecretaryUserEditRecord } from "@/features/users/services/get-user-edit-record";
 
 vi.mock("@/lib/actions/secretary-edit-user-actions", () => ({
   getUserEditRecordAction: vi.fn(),
@@ -173,6 +174,7 @@ describe("EditUserDialog", () => {
         email: "john@acd.edu.ph",
         isActive: true,
         role: SystemRole.DEAN,
+        roles: [SystemRole.DEAN],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -208,6 +210,7 @@ describe("EditUserDialog", () => {
         email: "admin@acd.edu.ph",
         isActive: true,
         role: SystemRole.SECRETARY,
+        roles: [SystemRole.SECRETARY],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -250,6 +253,7 @@ describe("EditUserDialog", () => {
         email: "john@acd.edu.ph",
         isActive: true,
         role: SystemRole.DEAN,
+        roles: [SystemRole.DEAN],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -339,6 +343,7 @@ describe("EditUserDialog", () => {
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
+        roles: [SystemRole.FACULTY],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -377,6 +382,7 @@ describe("EditUserDialog", () => {
         email: "student@acd.edu.ph",
         isActive: true,
         role: SystemRole.STUDENT,
+        roles: [SystemRole.STUDENT],
         student: {
           programId: "prog-old",
           programCode: "BSIT",
@@ -435,6 +441,7 @@ describe("EditUserDialog", () => {
         email: "partner@example.com",
         isActive: true,
         role: SystemRole.INDUSTRY_PARTNER,
+        roles: [SystemRole.INDUSTRY_PARTNER],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -477,6 +484,7 @@ describe("EditUserDialog", () => {
         email: "legacy@example.com",
         isActive: true,
         role: SystemRole.INDUSTRY_PARTNER,
+        roles: [SystemRole.INDUSTRY_PARTNER],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -513,6 +521,7 @@ describe("EditUserDialog", () => {
         email: "student@acd.edu.ph",
         isActive: true,
         role: SystemRole.STUDENT,
+        roles: [SystemRole.STUDENT],
         student: {
           programId: "prog-old",
           programCode: "BSIT",
@@ -598,6 +607,7 @@ describe("EditUserDialog", () => {
         email: "student@acd.edu.ph",
         isActive: true,
         role: SystemRole.STUDENT,
+        roles: [SystemRole.STUDENT],
         student: {
           programId: "prog-old",
           programCode: "BSIT",
@@ -643,6 +653,7 @@ describe("EditUserDialog", () => {
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
+        roles: [SystemRole.FACULTY],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -710,6 +721,7 @@ describe("EditUserDialog", () => {
         email: "jane@acd.edu.ph",
         isActive: true,
         role: SystemRole.FACULTY,
+        roles: [SystemRole.FACULTY],
         student: null,
         activeEnrollment: null,
         verification: null,
@@ -769,6 +781,7 @@ describe("EditUserDialog", () => {
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
+        roles: [SystemRole.PROGRAM_HEAD],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -814,6 +827,7 @@ describe("EditUserDialog", () => {
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
+        roles: [SystemRole.PROGRAM_HEAD],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -865,6 +879,7 @@ describe("EditUserDialog", () => {
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
+        roles: [SystemRole.PROGRAM_HEAD],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -915,6 +930,7 @@ describe("EditUserDialog", () => {
         email: "ally@gmail.com",
         isActive: true,
         role: SystemRole.ALUMNI,
+        roles: [SystemRole.ALUMNI],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -960,6 +976,7 @@ describe("EditUserDialog", () => {
         email: "pat@acd.edu.ph",
         isActive: true,
         role: SystemRole.PROGRAM_HEAD,
+        roles: [SystemRole.PROGRAM_HEAD],
         student: null,
         activeEnrollment: null,
         faculty: null,
@@ -1007,5 +1024,75 @@ describe("EditUserDialog", () => {
     expect(screen.getByText("Information Technology")).toBeInTheDocument();
     expect(screen.getByText("Information Systems, Information Technology")).toBeInTheDocument();
     expect(screen.getByText(/replaces the current assignment set/i)).toBeInTheDocument();
+  });
+
+  // ─── Multi-role accounts ────────────────────────────────────────────────
+
+  it("edits the profile of the role selected from a multi-role account", async () => {
+    vi.mocked(getUserEditRecordAction).mockImplementation(async (_userId, selectedRole) => {
+      const record: SecretaryUserEditRecord = {
+        id: "target-user",
+        name: "Maria Multi",
+        email: "maria@acd.edu.ph",
+        isActive: true,
+        roles: [SystemRole.FACULTY, SystemRole.PROGRAM_HEAD],
+        role: selectedRole ?? SystemRole.FACULTY,
+        student: null,
+        activeEnrollment: null,
+        activeTerm: null,
+        faculty: { primaryProgramId: "prog-old" },
+        programHead: {
+          assignments: [
+            {
+              programId: "prog-old",
+              programCode: "BSIT",
+              programName: "Information Technology",
+            },
+          ],
+        },
+        verification: null,
+        industryPartner: null,
+        alumni: null,
+      };
+      return { success: true, data: record };
+    });
+    vi.mocked(editUserBySecretaryAction).mockResolvedValue({
+      success: true,
+      data: { id: "target-user" },
+    });
+
+    render(
+      <EditUserDialog
+        userId="target-user"
+        currentUserId="secretary-admin"
+        onClose={mockOnClose}
+        onUserUpdated={mockOnUserUpdated}
+        programs={FACULTY_PROGRAMS}
+        yearLevels={[]}
+      />
+    );
+
+    // The account's deterministic role loads first, with every assigned role
+    // offered as a switchable profile.
+    expect(await screen.findByLabelText(/primary program affiliation/i)).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /faculty/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /program head/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: /program head/i }));
+
+    await waitFor(() =>
+      expect(getUserEditRecordAction).toHaveBeenLastCalledWith(
+        "target-user",
+        SystemRole.PROGRAM_HEAD
+      )
+    );
+    expect(await screen.findByText("Managed Programs")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => {
+      const formData = vi.mocked(editUserBySecretaryAction).mock.calls[0]?.[0];
+      expect(formData?.get("expectedRole")).toBe(SystemRole.PROGRAM_HEAD);
+    });
   });
 });

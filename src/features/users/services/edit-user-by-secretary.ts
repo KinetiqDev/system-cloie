@@ -213,19 +213,22 @@ export async function editUserBySecretary(rawInput: EditUserBySecretaryInput): P
     return { success: false, error: "User not found." };
   }
 
-  // Same deterministic enum order as the edit-record reader, so both agree
-  // on the target role for multi-role accounts.
-  const existingRole = existing.roles[0]?.role;
-  if (!existingRole) {
+  // The form names the role it was loaded for; the save accepts it while the
+  // account still holds it. A revocation in between therefore makes the form
+  // stale instead of retargeting the submitted role-specific fields.
+  const assignedRoles = existing.roles.map((entry) => entry.role);
+  if (assignedRoles.length === 0) {
     return { success: false, error: "User has no assigned CLOIE account role." };
   }
 
-  if (existingRole !== expectedRole) {
+  if (!assignedRoles.includes(expectedRole)) {
     return {
       success: false,
       error: "The account roles changed since this form was loaded. Please reload and try again.",
     };
   }
+
+  const existingRole = expectedRole;
 
   // The complete reviewed before-set: every currently active assignment.
   const currentActiveProgramIds = activeAssignmentProgramIds(existing.program_head_assignments);

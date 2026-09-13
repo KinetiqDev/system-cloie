@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showToast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
@@ -136,6 +137,7 @@ export function EditUserDialog({
         <DialogContent className="flex max-h-[90dvh] flex-col gap-4 overflow-hidden p-4 sm:max-w-lg">
           {userId && (
             <EditUserDialogBody
+              key={userId}
               userId={userId}
               currentUserId={currentUserId}
               onClose={onClose}
@@ -155,6 +157,7 @@ export function EditUserDialog({
       <DrawerContent className="flex max-h-[88dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         {userId && (
           <EditUserDialogBody
+            key={userId}
             userId={userId}
             currentUserId={currentUserId}
             onClose={onClose}
@@ -200,6 +203,10 @@ function EditUserDialogBody({
   surface,
 }: EditUserDialogBodyProps) {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+
+  // The assigned role whose profile this form targets. Null means the loader
+  // resolves the account's deterministic edit role.
+  const [selectedRole, setSelectedRole] = useState<SystemRole | null>(null);
 
   // Base identity — opaque canonical account name
   const [name, setName] = useState("");
@@ -260,55 +267,68 @@ function EditUserDialogBody({
     let cancelled = false;
 
     void (async () => {
-      const result = await getUserEditRecordAction(userId);
+      const result = await getUserEditRecordAction(userId, selectedRole ?? undefined);
       if (cancelled) return;
       if (!result.success) {
         setLoadState({ status: "error", message: result.error });
         return;
       }
-      setName(result.data.name);
+      const record = result.data;
+      setName(record.name);
 
-      if (result.data.role === SystemRole.STUDENT) {
-        setProgramId(result.data.student?.programId ?? "");
-        setMajorId(result.data.student?.majorId ?? null);
-        setYearLevel((result.data.activeEnrollment?.yearLevel as YearLevel) ?? null);
-        setSection((result.data.activeEnrollment?.section as StudentSection) ?? null);
-      } else if (result.data.role === SystemRole.FACULTY) {
-        setProgramId(result.data.faculty?.primaryProgramId ?? "");
-        // Clear state that belongs to other role slices so stale IDs do not leak across user switches
-        setMajorId(null);
-        setYearLevel(null);
-        setSection(null);
-        setGraduationYear("");
-        setVerificationStatus(null);
-        setCompanyName("");
-        setPosition("");
-        setProgramHeadProgramIds([]);
-        setConfirmationToken(null);
-        setConfirmationSummary(null);
-      } else if (result.data.role === SystemRole.PROGRAM_HEAD) {
+      // Reset every role slice before filling the selected role's fields so
+      // values from a previously viewed role cannot leak into this save.
+      setProgramId("");
+      setMajorId(null);
+      setYearLevel(null);
+      setSection(null);
+      setGraduationYear("");
+      setVerificationStatus(null);
+      setCompanyName("");
+      setPosition("");
+      setProgramHeadProgramIds([]);
+      setConfirmationToken(null);
+      setConfirmationSummary(null);
+      setSubmitError(null);
+
+      if (record.role === SystemRole.STUDENT) {
+        setProgramId(record.student?.programId ?? "");
+        setMajorId(record.student?.majorId ?? null);
+        setYearLevel((record.activeEnrollment?.yearLevel as YearLevel) ?? null);
+        setSection((record.activeEnrollment?.section as StudentSection) ?? null);
+      } else if (record.role === SystemRole.FACULTY) {
+        setProgramId(record.faculty?.primaryProgramId ?? "");
+      } else if (record.role === SystemRole.PROGRAM_HEAD) {
         setProgramHeadProgramIds(
-          (result.data.programHead?.assignments ?? []).map((assignment) => assignment.programId)
+          (record.programHead?.assignments ?? []).map((assignment) => assignment.programId)
         );
-      } else if (result.data.role === SystemRole.ALUMNI) {
-        setProgramId(result.data.alumni?.programId ?? "");
-        setMajorId(result.data.alumni?.majorId ?? null);
-        setGraduationYear(result.data.alumni?.graduationYear?.toString() ?? "");
-        setVerificationStatus(result.data.verification?.status ?? null);
-      } else if (result.data.role === SystemRole.INDUSTRY_PARTNER) {
-        setCompanyName(result.data.industryPartner?.companyName ?? "");
-        setPosition(result.data.industryPartner?.position ?? "");
-        setProgramId(result.data.industryPartner?.programId ?? "");
-        setVerificationStatus(result.data.verification?.status ?? null);
+      } else if (record.role === SystemRole.ALUMNI) {
+        setProgramId(record.alumni?.programId ?? "");
+        setMajorId(record.alumni?.majorId ?? null);
+        setGraduationYear(record.alumni?.graduationYear?.toString() ?? "");
+        setVerificationStatus(record.verification?.status ?? null);
+      } else if (record.role === SystemRole.INDUSTRY_PARTNER) {
+        setCompanyName(record.industryPartner?.companyName ?? "");
+        setPosition(record.industryPartner?.position ?? "");
+        setProgramId(record.industryPartner?.programId ?? "");
+        setVerificationStatus(record.verification?.status ?? null);
       }
 
-      setLoadState({ status: "ready", record: result.data });
+      setLoadState({ status: "ready", record });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, selectedRole]);
+
+  // A role switch keeps the loaded record on screen while the next role's
+  // profile is read, so the selector never unmounts mid-change.
+  const pendingRole =
+    loadState.status === "ready" && selectedRole !== null && loadState.record.role !== selectedRole
+      ? selectedRole
+      : null;
+  const isSwitchingRole = pendingRole !== null;
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -542,6 +562,37 @@ function EditUserDialogBody({
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             <FieldGroup>
+              {loadState.record.roles.length > 1 && (
+                <FieldSet className="gap-2">
+                  <FieldLegend variant="label">Role Profile</FieldLegend>
+                  <FieldDescription>
+                    This account holds more than one role. Choose which role&apos;s profile this
+                    form edits; role assignments themselves are managed from the user list.
+                  </FieldDescription>
+                  <Tabs
+                    value={loadState.record.role}
+                    onValueChange={(value) => setSelectedRole(value as SystemRole)}
+                  >
+                    <TabsList variant="line" className="w-full">
+                      {loadState.record.roles.map((role) => (
+                        <TabsTrigger key={role} value={role} disabled={isSubmitting}>
+                          {formatRole(role)}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                  {pendingRole && (
+                    <p
+                      className="text-muted-foreground flex items-center gap-2 text-sm"
+                      role="status"
+                    >
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      Loading {formatRole(pendingRole)} profile…
+                    </p>
+                  )}
+                </FieldSet>
+              )}
+
               <Field>
                 <FieldLabel htmlFor="edit-user-name">Name</FieldLabel>
                 <Input
@@ -566,16 +617,19 @@ function EditUserDialogBody({
                   <span className="min-w-0 flex-1 truncate">{loadState.record.email}</span>
                   <LockedChip />
                 </div>
-                <div className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
-                  <Badge className={getRoleBadgeClass(loadState.record.role)}>
-                    {formatRole(loadState.record.role)}
-                  </Badge>
-                  <span className="ml-auto">
-                    <LockedChip />
-                  </span>
-                </div>
+                {loadState.record.roles.length === 1 && (
+                  <div className="bg-muted/40 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+                    <Badge className={getRoleBadgeClass(loadState.record.role)}>
+                      {formatRole(loadState.record.role)}
+                    </Badge>
+                    <span className="ml-auto">
+                      <LockedChip />
+                    </span>
+                  </div>
+                )}
                 <FieldDescription>
-                  Email comes from Google sign-in; roles are assigned by administrators.
+                  Email comes from Google sign-in. Roles are assigned by administrators; this form
+                  edits the profile each role carries.
                 </FieldDescription>
               </Field>
 
@@ -967,7 +1021,11 @@ function EditUserDialogBody({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
+            <Button
+              type="submit"
+              disabled={isSubmitting || isSwitchingRole}
+              className="flex-1 sm:flex-none"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="animate-spin" data-icon="inline-start" />
