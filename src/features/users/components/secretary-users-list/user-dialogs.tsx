@@ -303,6 +303,7 @@ function RevokeRoleButton({
   );
 }
 
+// fallow-ignore-next-line complexity
 function AddRolePopover({
   user,
   assignedRoles,
@@ -375,6 +376,7 @@ function AddRolePopover({
     setFormError(null);
   };
 
+  // fallow-ignore-next-line complexity
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!role) {

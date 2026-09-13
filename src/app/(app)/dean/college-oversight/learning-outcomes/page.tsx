@@ -26,6 +26,7 @@ const validRisks = new Set<NonNullable<DeanLearningOutcomesData["risk"]>>([
   "not-ready",
 ]);
 
+// fallow-ignore-next-line complexity
 export default async function DeanLearningOutcomesPage({
   searchParams,
 }: {
