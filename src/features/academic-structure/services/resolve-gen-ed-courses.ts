@@ -1,8 +1,9 @@
-import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
+import { CourseScope } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import type { CourseScheduleDefaults } from "./course-schedule-defaults";
 
 export type GenEdCourseItem = {
   id: string;
@@ -11,14 +12,11 @@ export type GenEdCourseItem = {
   course_scope: CourseScope;
   program_id: string | null;
   major_id: string | null;
-  default_year_level: YearLevel | null;
-  default_semester: AcademicSemester | null;
-  default_term: AcademicTerm | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
   _count: { cilos: number };
-};
+} & CourseScheduleDefaults;
 
 export type GenEdCoursesSummary = {
   total: number;

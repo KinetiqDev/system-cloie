@@ -1,5 +1,7 @@
-import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
+import { CourseScope } from "@prisma/client";
+import type { AcademicSemester, AcademicTerm, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
+import { countCourseEvaluations } from "./count-course-evaluations";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,14 +45,8 @@ export type ProgramFilterOption = {
   majors: MajorFilterOption[];
 };
 
-function countCourseEvaluations(course: {
-  course_assignments: Array<{ _count: { course_bound_evaluations: number } }>;
-}) {
-  return course.course_assignments.reduce(
-    (sum, assignment) => sum + assignment._count.course_bound_evaluations,
-    0
-  );
-}
+// Evaluation totals stay with the shared counter so secretary, program-head,
+// and course-lifecycle reads keep lockstep summation.
 
 // ---------------------------------------------------------------------------
 // Main service function

@@ -1,7 +1,9 @@
-import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
+import { CourseScope } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import type { CourseScheduleDefaults } from "./course-schedule-defaults";
+import { countCourseEvaluations } from "./count-course-evaluations";
 
 export type ProgramHeadCourseItem = {
   id: string;
@@ -10,16 +12,13 @@ export type ProgramHeadCourseItem = {
   course_scope: CourseScope;
   program_id: string | null;
   major_id: string | null;
-  default_year_level: YearLevel | null;
-  default_semester: AcademicSemester | null;
-  default_term: AcademicTerm | null;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
   program: { id: string; code: string; name: string } | null;
   major: { id: string; name: string } | null;
   _count: { cilos: number; course_bound_evaluations: number };
-};
+} & CourseScheduleDefaults;
 
 export type ProgramHeadCourseSummary = {
   total: number;
@@ -34,15 +33,6 @@ export type ProgramHeadCoursesResult = {
   program: { id: string; code: string; name: string };
   majors: Array<{ id: string; name: string; program_id: string }>;
 };
-
-function countCourseEvaluations(course: {
-  course_assignments: Array<{ _count: { course_bound_evaluations: number } }>;
-}) {
-  return course.course_assignments.reduce(
-    (sum, assignment) => sum + assignment._count.course_bound_evaluations,
-    0
-  );
-}
 
 export async function listProgramHeadCourses(
   programId: string

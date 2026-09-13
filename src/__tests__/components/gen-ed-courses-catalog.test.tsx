@@ -4,7 +4,7 @@ import type {
   GenEdCourseItem,
   GenEdCoursesSummary,
 } from "@/features/academic-structure/services/resolve-gen-ed-courses";
-import { CourseScope } from "@prisma/client";
+import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 
 import { GenEdCoursesCatalog } from "@/features/academic-structure/components/gen-ed-courses-catalog";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -32,6 +32,18 @@ function course(overrides: Partial<GenEdCourseItem> = {}): GenEdCourseItem {
     _count: { cilos: 0 },
     ...overrides,
   };
+}
+
+function sampleCourses(): GenEdCourseItem[] {
+  return [
+    course({ id: "c-1", code: "GEMATH", title: "Math", is_active: true }),
+    course({ id: "c-2", code: "GEUS", title: "Understanding the Self", is_active: false }),
+    course({ id: "c-3", code: "GENAT", title: "Science", is_active: true }),
+  ];
+}
+
+function renderCatalog(courses: GenEdCourseItem[] = sampleCourses()) {
+  render(<GenEdCoursesCatalog courses={courses} summary={summary} />);
 }
 
 const summary: GenEdCoursesSummary = { total: 3, active: 2, archived: 1 };
@@ -92,16 +104,7 @@ describe("GenEdCoursesCatalog", () => {
   });
 
   it("filters by search code/title", () => {
-    render(
-      <GenEdCoursesCatalog
-        courses={[
-          course({ id: "c-1", code: "GEMATH", title: "Math", is_active: true }),
-          course({ id: "c-2", code: "GEUS", title: "Understanding the Self", is_active: false }),
-          course({ id: "c-3", code: "GENAT", title: "Science", is_active: true }),
-        ]}
-        summary={summary}
-      />
-    );
+    renderCatalog();
 
     const search = screen.getByPlaceholderText("Search by code or title...");
     fireEvent.change(search, { target: { value: "GEUS" } });
@@ -112,16 +115,7 @@ describe("GenEdCoursesCatalog", () => {
   });
 
   it("filters by status via Select — Archived shows only archived", async () => {
-    render(
-      <GenEdCoursesCatalog
-        courses={[
-          course({ id: "c-1", code: "GEMATH", title: "Math", is_active: true }),
-          course({ id: "c-2", code: "GEUS", title: "Understanding the Self", is_active: false }),
-          course({ id: "c-3", code: "GENAT", title: "Science", is_active: true }),
-        ]}
-        summary={summary}
-      />
-    );
+    renderCatalog();
 
     const trigger = screen.getByRole("combobox", { name: /filter by course status/i });
     fireEvent.click(trigger);
@@ -131,6 +125,66 @@ describe("GenEdCoursesCatalog", () => {
     expect(screen.getByText("GEUS")).toBeInTheDocument();
     expect(screen.queryByText("GEMATH")).not.toBeInTheDocument();
     expect(screen.queryByText("GENAT")).not.toBeInTheDocument();
+  });
+  it("filters by year level via Select", async () => {
+    renderCatalog([
+      course({
+        id: "c-1",
+        code: "GEMATH",
+        title: "Math",
+        default_year_level: YearLevel.FIRST_YEAR,
+      }),
+      course({
+        id: "c-2",
+        code: "GEUS",
+        title: "Understanding the Self",
+        default_year_level: YearLevel.SECOND_YEAR,
+      }),
+    ]);
+
+    const trigger = screen.getByRole("combobox", { name: /filter by year level/i });
+    fireEvent.click(trigger);
+    const firstYear = await screen.findByRole("option", { name: "1st Year" });
+    fireEvent.mouseMove(firstYear);
+    fireEvent.click(firstYear);
+    expect(screen.getByText("GEMATH")).toBeInTheDocument();
+    expect(screen.queryByText("GEUS")).not.toBeInTheDocument();
+  });
+
+  it("selecting Summer clears the term filter because Summer has no terms", async () => {
+    renderCatalog([
+      course({
+        id: "c-1",
+        code: "GESUM",
+        title: "Summer Course",
+        default_semester: AcademicSemester.SUMMER,
+        default_term: null,
+      }),
+      course({
+        id: "c-2",
+        code: "GEFIRST",
+        title: "First Term Course",
+        default_semester: AcademicSemester.FIRST,
+        default_term: AcademicTerm.FIRST_TERM,
+      }),
+    ]);
+
+    const termTrigger = screen.getByRole("combobox", { name: /filter by term/i });
+    fireEvent.click(termTrigger);
+    const firstTerm = await screen.findByRole("option", { name: "1st Term" });
+    fireEvent.mouseMove(firstTerm);
+    fireEvent.click(firstTerm);
+    expect(screen.getByText("GEFIRST")).toBeInTheDocument();
+    expect(screen.queryByText("GESUM")).not.toBeInTheDocument();
+
+    const semesterTrigger = screen.getByRole("combobox", { name: /filter by semester/i });
+    fireEvent.click(semesterTrigger);
+    const summer = await screen.findByRole("option", { name: "Summer" });
+    fireEvent.mouseMove(summer);
+    fireEvent.click(summer);
+    expect(screen.getByText("GESUM")).toBeInTheDocument();
+    expect(screen.queryByText("GEFIRST")).not.toBeInTheDocument();
+    expect(screen.getByText("Summer semester has no terms")).toBeInTheDocument();
   });
 
   it("paginates at PAGE_SIZE=15 and navigates to page 2", () => {

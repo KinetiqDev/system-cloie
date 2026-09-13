@@ -3,13 +3,13 @@
 
 import { useState, useTransition } from "react";
 import { Archive, Edit, FileSpreadsheet, Plus, Power, RotateCcw, Search } from "lucide-react";
-import { getYearLevelDisplay, YEAR_LEVEL_OPTIONS } from "@/lib/constants/year-levels";
+import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import {
-  getSemesterLabel,
-  getTermLabel,
-  SEMESTER_OPTIONS,
-  TERM_OPTIONS,
-} from "@/lib/constants/academic";
+  CourseScheduleFilterControls,
+  SCHEDULE_FILTER_ALL,
+  matchesScheduleFilters,
+} from "./course-schedule-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -59,7 +59,6 @@ function filterCourses(
   semesterFilter: string,
   termFilter: string
 ): GenEdCourseItem[] {
-  // fallow-ignore-next-line code-duplication
   let filtered = courses;
 
   if (statusFilter === "active") {
@@ -76,19 +75,16 @@ function filterCourses(
     );
   }
 
-  if (yearLevelFilter && yearLevelFilter !== "__all__") {
-    filtered = filtered.filter((c) => c.default_year_level === yearLevelFilter);
-  }
-
-  if (semesterFilter && semesterFilter !== "__all__") {
-    filtered = filtered.filter((c) => c.default_semester === semesterFilter);
-  }
-
-  if (termFilter && termFilter !== "__all__") {
-    filtered = filtered.filter((c) => c.default_term === termFilter);
-  }
-
-  return filtered;
+  return filtered.filter((c) =>
+    matchesScheduleFilters(
+      {
+        yearLevel: c.default_year_level,
+        semester: c.default_semester,
+        term: c.default_term,
+      },
+      { yearLevel: yearLevelFilter, semester: semesterFilter, term: termFilter }
+    )
+  );
 }
 
 // fallow-ignore-next-line code-duplication
@@ -114,18 +110,25 @@ function StatCard({
 }
 
 export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogProps) {
-  const [statusFilter, setStatusFilter] = useState("__all__");
+  const [statusFilter, setStatusFilter] = useState(SCHEDULE_FILTER_ALL);
   const [search, setSearch] = useState("");
-  const [yearLevelFilter, setYearLevelFilter] = useState("__all__");
-  const [semesterFilter, setSemesterFilter] = useState("__all__");
-  const [termFilter, setTermFilter] = useState("__all__");
+  const [yearLevelFilter, setYearLevelFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [semesterFilter, setSemesterFilter] = useState(SCHEDULE_FILTER_ALL);
+  const [termFilter, setTermFilter] = useState(SCHEDULE_FILTER_ALL);
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<GenEdCourseItem | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
-  const filteredCourses = filterCourses(courses, statusFilter, search, yearLevelFilter, semesterFilter, termFilter);
+  const filteredCourses = filterCourses(
+    courses,
+    statusFilter,
+    search,
+    yearLevelFilter,
+    semesterFilter,
+    termFilter
+  );
   // fallow-ignore-next-line code-duplication
   const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
@@ -199,13 +202,13 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
         <Select
           value={statusFilter}
           onValueChange={(v) => {
-            setStatusFilter(v ?? "__all__");
+            setStatusFilter(v ?? SCHEDULE_FILTER_ALL);
             setCurrentPage(1);
           }}
         >
           <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
             <SelectValue>
-              {statusFilter === "__all__"
+              {statusFilter === SCHEDULE_FILTER_ALL
                 ? "All Statuses"
                 : statusFilter === "active"
                   ? "Active"
@@ -213,86 +216,28 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all__">All Statuses</SelectItem>
+            <SelectItem value={SCHEDULE_FILTER_ALL}>All Statuses</SelectItem>
             <SelectItem value="active">Active</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* Year Level filter */}
-        <Select
-          value={yearLevelFilter}
-          onValueChange={(v) => {
-            setYearLevelFilter(v ?? "__all__");
+        <CourseScheduleFilterControls
+          yearLevel={yearLevelFilter}
+          semester={semesterFilter}
+          term={termFilter}
+          onYearLevelChange={(v) => {
+            setYearLevelFilter(v);
             setCurrentPage(1);
           }}
-        >
-          <SelectTrigger aria-label="Filter by year level" className="w-full md:w-[160px]">
-            <SelectValue>
-              {yearLevelFilter === "__all__"
-                ? "All Year Levels"
-                : (YEAR_LEVEL_OPTIONS.find((o) => o.value === yearLevelFilter)?.label ?? "All Year Levels")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Year Levels</SelectItem>
-            {YEAR_LEVEL_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Semester filter */}
-        <Select
-          value={semesterFilter}
-          onValueChange={(v) => {
-            setSemesterFilter(v ?? "__all__");
+          onSemesterChange={(v) => {
+            setSemesterFilter(v);
             setCurrentPage(1);
           }}
-        >
-          <SelectTrigger aria-label="Filter by semester" className="w-full md:w-[160px]">
-            <SelectValue>
-              {semesterFilter === "__all__"
-                ? "All Semesters"
-                : (SEMESTER_OPTIONS.find((o) => o.value === semesterFilter)?.label ?? "All Semesters")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Semesters</SelectItem>
-            {SEMESTER_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Term filter */}
-        <Select
-          value={termFilter}
-          onValueChange={(v) => {
-            setTermFilter(v ?? "__all__");
+          onTermChange={(v) => {
+            setTermFilter(v);
             setCurrentPage(1);
           }}
-        >
-          <SelectTrigger aria-label="Filter by term" className="w-full md:w-[150px]">
-            <SelectValue>
-              {termFilter === "__all__"
-                ? "All Terms"
-                : (TERM_OPTIONS.find((o) => o.value === termFilter)?.label ?? "All Terms")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All Terms</SelectItem>
-            {TERM_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
 
         {/* fallow-ignore-next-line code-duplication */}
         <div className="relative w-full md:ml-auto md:max-w-xs">
@@ -308,17 +253,20 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
           />
         </div>
 
-        {/* Reset Filters — visible only when any filter is active */}
-        {(statusFilter !== "__all__" || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__" || search) && (
+        {(statusFilter !== SCHEDULE_FILTER_ALL ||
+          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+          semesterFilter !== SCHEDULE_FILTER_ALL ||
+          termFilter !== SCHEDULE_FILTER_ALL ||
+          search) && (
           <Button
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground"
             onClick={() => {
-              setStatusFilter("__all__");
-              setYearLevelFilter("__all__");
-              setSemesterFilter("__all__");
-              setTermFilter("__all__");
+              setStatusFilter(SCHEDULE_FILTER_ALL);
+              setYearLevelFilter(SCHEDULE_FILTER_ALL);
+              setSemesterFilter(SCHEDULE_FILTER_ALL);
+              setTermFilter(SCHEDULE_FILTER_ALL);
               setSearch("");
               setCurrentPage(1);
             }}
@@ -381,7 +329,11 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
               <TableRow>
                 {/* fallow-ignore-next-line code-duplication */}
                 <TableCell colSpan={9} className="text-muted-foreground h-24 text-center">
-                  {statusFilter !== "__all__" || search || yearLevelFilter !== "__all__" || semesterFilter !== "__all__" || termFilter !== "__all__"
+                  {statusFilter !== SCHEDULE_FILTER_ALL ||
+                  search ||
+                  yearLevelFilter !== SCHEDULE_FILTER_ALL ||
+                  semesterFilter !== SCHEDULE_FILTER_ALL ||
+                  termFilter !== SCHEDULE_FILTER_ALL
                     ? "Clear or change the filters to see more courses."
                     : "No courses found."}
                 </TableCell>
