@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -888,12 +889,14 @@ export function FacultyCilosCourseList({
             label="Academic period"
           />
         </div>
-        <div className="w-full sm:w-48 sm:shrink-0">
-          <label htmlFor="cilo-type-filter" className="text-label-md mb-2 block font-medium">
-            Course type
-          </label>
+        <div className="w-full min-w-0 space-y-2 sm:w-48 sm:shrink-0">
+          <Label htmlFor="cilo-type-filter">Course type</Label>
           <Select value={typeFilter} onValueChange={handleTypeChange}>
-            <SelectTrigger id="cilo-type-filter" aria-label="Course type" className="w-full">
+            <SelectTrigger
+              id="cilo-type-filter"
+              aria-label="Course type"
+              className="w-full min-w-0 pointer-coarse:h-11"
+            >
               <SelectValue>
                 {typeFilter === "__all__"
                   ? "All Course Types"

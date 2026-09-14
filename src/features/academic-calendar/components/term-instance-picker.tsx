@@ -75,7 +75,7 @@ export function TermInstancePicker({
       <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
         <SelectTrigger
           id={pickerId}
-          className="w-full min-w-0 truncate"
+          className="w-full min-w-0 truncate pointer-coarse:h-11"
           title={
             value === "all"
               ? "All Academic Periods"
