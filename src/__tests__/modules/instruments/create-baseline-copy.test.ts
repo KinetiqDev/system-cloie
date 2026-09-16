@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EvaluationTemplateType } from "@prisma/client";
 import {
   createBaselineCopy,
   type CreateBaselineCopyInput,
@@ -144,6 +145,62 @@ describe("createBaselineCopy", () => {
     });
 
     expect(result.success).toBe(false);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a copy whose settings carry an invalid template type", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: true,
+          is_faculty_accessible: false,
+          template_type: "INVALID_TYPE" as never,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/template_type|invalid/i);
+    }
+    expect(templateCreateMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a copy whose settings carry a non-boolean active flag", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: "true" as never,
+          is_faculty_accessible: false,
+          template_type: EvaluationTemplateType.PROGRAM_WIDE,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    expect(templateCreateMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects faculty access on a program-wide copy", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: true,
+          is_faculty_accessible: true,
+          template_type: EvaluationTemplateType.PROGRAM_WIDE,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/only course-bound templates/i);
+    }
     expect(transactionMock).not.toHaveBeenCalled();
   });
 

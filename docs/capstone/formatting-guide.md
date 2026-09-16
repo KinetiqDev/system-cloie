@@ -7,21 +7,21 @@ last_verified: 2026-09-16
 
 # System CLOIE Technical Document Formatting Guide
 
-This guide translates the [Capstone Project Technical Document Guide 2026](guide/technical-document-guide-2026.md) into a practical Google Docs setup for the System CLOIE manuscript. Where the College guide gives an explicit rule, it is marked **Official**. Where the guide is silent, the value below is a **CLOIE convention** chosen for consistency and readability.
+This guide translates the [Capstone Project Technical Document Guide 2026](guide/technical-document-guide-2026.md) into a practical Google Docs setup for the System CLOIE manuscript. Where the College guide gives an explicit rule, it is marked **Official**. Where the guide is silent, the value below is a **System CLOIE convention** chosen for consistency and readability.
 
 ## 1. Page and manuscript setup
 
-| Item                   | Setting                                | Basis                                                    |
-| ---------------------- | -------------------------------------- | -------------------------------------------------------- |
-| Paper size             | Letter, 8.5 × 11 in                    | Official                                                 |
-| Margins                | 1 in on all sides                      | Official                                                 |
-| Font                   | Times New Roman                        | CLOIE choice allowed by guide                            |
-| Body font size         | 12 pt                                  | Official                                                 |
-| Body alignment         | Justified                              | Official option, used consistently for CLOIE             |
-| Body line spacing      | 1.5                                    | Official                                                 |
-| Body paragraph spacing | 0 pt before, 6 pt after                | CLOIE convention                                         |
-| First-line indent      | None by default                        | CLOIE convention; guide says avoid excessive indentation |
-| Paragraph separation   | Use paragraph spacing, not blank lines | Official                                                 |
+| Item                   | Setting                                | Basis                                                           |
+| ---------------------- | -------------------------------------- | --------------------------------------------------------------- |
+| Paper size             | Letter, 8.5 × 11 in                    | Official                                                        |
+| Margins                | 1 in on all sides                      | Official                                                        |
+| Font                   | Times New Roman                        | System CLOIE choice allowed by guide                            |
+| Body font size         | 12 pt                                  | Official                                                        |
+| Body alignment         | Justified                              | Official option, used consistently for System CLOIE             |
+| Body line spacing      | 1.5                                    | Official                                                        |
+| Body paragraph spacing | 0 pt before, 6 pt after                | System CLOIE convention                                         |
+| First-line indent      | None by default                        | System CLOIE convention; guide says avoid excessive indentation |
+| Paragraph separation   | Use paragraph spacing, not blank lines | Official                                                        |
 
 ## 2. Google Docs heading hierarchy
 
@@ -36,7 +36,7 @@ Use Google Docs heading styles so the document outline and automatic table of co
 | Heading 5         | Rare deeper subsection           | Times New Roman | 12 pt | Bold italic | Left      |         1.15 |   6 pt |  3 pt |
 | Normal text       | Body paragraphs                  | Times New Roman | 12 pt | Regular     | Justified |          1.5 |   0 pt |  6 pt |
 
-The College guide requires a numbered hierarchical heading system and advises against unnecessary levels. The exact heading weights and point spacing above are CLOIE conventions because the guide does not prescribe them.
+The College guide requires a numbered hierarchical heading system and advises against unnecessary levels. The exact heading weights and point spacing above are System CLOIE conventions because the guide does not prescribe them.
 
 ### Chapter title format
 
@@ -112,7 +112,7 @@ For captions, use a consistent 12 pt treatment unless space requires a modest re
 - Include only sources actually cited in the manuscript
 - Use a reference manager when practical
 
-The current CLOIE manuscript places `REFERENCES` after Chapter 5 and before Chapter 6 Appendices. The College guide requires APA 7 but does not explicitly prescribe the placement of the full manuscript reference list.
+The current System CLOIE manuscript places `REFERENCES` after Chapter 5 and before Chapter 6 Appendices. The College guide requires APA 7 but does not explicitly prescribe the placement of the full manuscript reference list.
 
 ## 8. Page numbering and preliminary pages
 
@@ -165,4 +165,4 @@ Apply the same formatting rules throughout the manuscript. Do not use manual bla
 
 ## Source authority
 
-The authoritative formatting source is the [Capstone Project Technical Document Guide 2026](guide/technical-document-guide-2026.md). When this local CLOIE convention conflicts with a later College, adviser, panel, or official appendix instruction, follow the newer official instruction.
+The authoritative formatting source is the [Capstone Project Technical Document Guide 2026](guide/technical-document-guide-2026.md). When this local System CLOIE convention conflicts with a later College, adviser, panel, or official appendix instruction, follow the newer official instruction.

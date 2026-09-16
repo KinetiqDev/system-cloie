@@ -41,7 +41,8 @@ Program Head accounts:
 
 - New Program Head accounts are complete for every managed program at
   creation; no follow-up edit is required.
-- Client creation validation requires `program_ids` for Program Head while the
-  server gates keep the single-`program_id` fallback for legacy grant callers.
-- Tests cover single, multiple, duplicate, missing, and legacy-single
-  submissions at the schema, service, and form levels.
+- Creation validation accepts the managed set or a legacy single `program_id`,
+  normalized to a set by the shared role-entry gates; only active programs
+  pass validation.
+- Tests cover single, multiple, duplicate, missing, legacy-single, and
+  inactive-program submissions at the schema, service, and form levels.

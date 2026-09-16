@@ -10,6 +10,7 @@ import {
   withProgramHeadAssignment,
 } from "./manage-program-head-templates";
 import type { TemplateSettingsInput, TemplateStructure } from "../types";
+import { baselineCopySettingsSchema } from "../schemas/program-head-template";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
@@ -44,18 +45,63 @@ type BaselineCopySettings = {
   templateType: EvaluationTemplateType;
 };
 
+type CopyBaseline = {
+  id: string;
+  description: string | null;
+  template_type: EvaluationTemplateType;
+  is_active: boolean;
+  is_faculty_accessible: boolean;
+};
+
+/**
+ * Rejects a malformed builder-forwarded settings object with a usable message
+ * instead of a database failure at save time.
+ */
+function copySettingsError(settings: TemplateSettingsInput): string | null {
+  const parsed = baselineCopySettingsSchema.safeParse(settings);
+  if (parsed.success) {
+    return null;
+  }
+  return parsed.error.issues[0]?.message ?? "Invalid template settings.";
+}
+
+/**
+ * Loads the institutional baseline a copy derives from: the row must exist
+ * and must be admin-owned and program-unbound.
+ */
+async function loadCopyBaseline(baselineId: string): Promise<ServiceResult<CopyBaseline>> {
+  const baseline = await prisma.instrumentTemplate.findUnique({
+    where: { id: baselineId },
+    select: {
+      id: true,
+      description: true,
+      template_type: true,
+      is_active: true,
+      is_faculty_accessible: true,
+      faculty_owner_id: true,
+      program_id: true,
+    },
+  });
+
+  if (!baseline) {
+    return { success: false, error: "Baseline template not found." };
+  }
+  if (baseline.faculty_owner_id !== null || baseline.program_id !== null) {
+    return {
+      success: false,
+      error: "Only institutional baseline templates can be copied this way.",
+    };
+  }
+  return { success: true, data: baseline };
+}
+
 /**
  * Resolves the copy's settings: the author's edits when the builder sent them,
  * otherwise the baseline's own values. Faculty access stays limited to
  * course-bound templates.
  */
 function resolveCopySettings(
-  baseline: {
-    description: string | null;
-    is_active: boolean;
-    is_faculty_accessible: boolean;
-    template_type: EvaluationTemplateType;
-  },
+  baseline: CopyBaseline,
   settings?: TemplateSettingsInput
 ): BaselineCopySettings {
   if (!settings) {
@@ -117,36 +163,20 @@ export async function createBaselineCopy(
     return { success: false, error: nameError };
   }
 
+  if (input.settings !== undefined) {
+    const settingsError = copySettingsError(input.settings);
+    if (settingsError) {
+      return { success: false, error: settingsError };
+    }
+  }
   const { userId, selectedProgram } = authResult.data;
   const programId = selectedProgram.id;
 
-  // Fetch the baseline template
-  const baseline = await prisma.instrumentTemplate.findUnique({
-    where: { id: input.baselineId },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      template_type: true,
-      is_active: true,
-      is_faculty_accessible: true,
-      structure: true,
-      faculty_owner_id: true,
-      program_id: true,
-    },
-  });
-
-  if (!baseline) {
-    return { success: false, error: "Baseline template not found." };
+  const baselineResult = await loadCopyBaseline(input.baselineId);
+  if (!baselineResult.success) {
+    return baselineResult;
   }
-
-  // Verify this is an institutional baseline (admin-owned, program-unbound)
-  if (baseline.faculty_owner_id !== null || baseline.program_id !== null) {
-    return {
-      success: false,
-      error: "Only institutional baseline templates can be copied this way.",
-    };
-  }
+  const baseline = baselineResult.data;
 
   // Get program details for code generation
   const program = await prisma.program.findUnique({
@@ -157,7 +187,6 @@ export async function createBaselineCopy(
   if (!program) {
     return { success: false, error: "Assigned program not found." };
   }
-
   const copySettings = resolveCopySettings(baseline, input.settings);
   // Only PROGRAM_WIDE templates bind Program Learning Outcomes, so a copy the
   // author retyped as course-bound carries none.

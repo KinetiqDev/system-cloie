@@ -108,6 +108,11 @@ export const createUserBySecretarySchema = z
       if (data.role !== SystemRole.PROGRAM_HEAD) {
         return true;
       }
+      // The managed set wins when present; a legacy single selection degrades
+      // to a one-item set, normalized by the service gates.
+      if (data.program_id) {
+        return true;
+      }
       const ids = data.program_ids ?? [];
       return ids.length > 0 && new Set(ids).size === ids.length;
     },

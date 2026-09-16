@@ -225,14 +225,14 @@ describe("create-user-by-secretary schema", () => {
     }
   });
 
-  it("rejects Program Head input with only a legacy single program", () => {
+  it("accepts Program Head input with only a legacy single program", () => {
     const result = createUserBySecretarySchema.safeParse({
       name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
       program_id: programId,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("rejects Faculty input without a program", () => {
@@ -645,6 +645,7 @@ describe("createUserBySecretary service", () => {
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-ph",
+      is_active: true,
       majors: [],
     });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -686,7 +687,11 @@ describe("createUserBySecretary service", () => {
     };
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockImplementation(
-      async ({ where }: { where: { id: string } }) => ({ id: where.id, majors: [] })
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        is_active: true,
+        majors: [],
+      })
     );
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-ph" });
@@ -724,6 +729,7 @@ describe("createUserBySecretary service", () => {
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-ph",
+      is_active: true,
       majors: [],
     });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -755,6 +761,7 @@ describe("createUserBySecretary service", () => {
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-faculty",
+      is_active: true,
       majors: [],
     });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -814,6 +821,52 @@ describe("createUserBySecretary service", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("rejects a Program Head account when a managed program is inactive", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: programId,
+      is_active: false,
+      majors: [],
+    });
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [programId],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/no longer active/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Program Head account when one of several managed programs is inactive", async () => {
+    const activeProgramId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        is_active: where.id === activeProgramId,
+        majors: [],
+      })
+    );
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [activeProgramId, programId],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/no longer active/i);
+    }
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("rejects a Faculty account when the selected program was not found", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
@@ -861,6 +914,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-student" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
     (prisma.academicTermInstance.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -914,6 +968,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-student" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
     (prisma.academicTermInstance.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -990,6 +1045,7 @@ describe("createUserBySecretary service", () => {
   it("rejects a Student account when the selected program has active majors but no major is selected", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1013,6 +1069,7 @@ describe("createUserBySecretary service", () => {
   it("rejects a Student account when the selected major does not belong to the program", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1049,6 +1106,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
 
@@ -1099,6 +1157,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni-major" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1135,6 +1194,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni-2" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
 
@@ -1198,6 +1258,7 @@ describe("createUserBySecretary service", () => {
   it("rejects an Alumni account when the selected program has active majors but no major is selected", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1219,6 +1280,7 @@ describe("createUserBySecretary service", () => {
   it("rejects an Alumni account when the selected major does not belong to the program", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 

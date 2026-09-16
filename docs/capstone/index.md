@@ -33,7 +33,7 @@ Latest Google Docs export: [manuscript/current.md](manuscript/current.md); synch
 
 ### Authoring aid
 
-- [formatting-guide.md](formatting-guide.md) — Google Docs setup translating the official guide into **Official** rules vs **CLOIE conventions** for the manuscript. Companion to [manuscript/](manuscript/); [guide/](guide/) stays a faithful transcription of the institution-issued documents.
+- [formatting-guide.md](formatting-guide.md) — Google Docs setup translating the official guide into **Official** rules vs **System CLOIE conventions** for the manuscript. Companion to [manuscript/](manuscript/); [guide/](guide/) stays a faithful transcription of the institution-issued documents.
 
 ### Evidence (appendix-aligned records)
 
