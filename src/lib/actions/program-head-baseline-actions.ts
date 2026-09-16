@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createBaselineCopy } from "@/features/instruments/services/create-baseline-copy";
+import { baselineCopySettingsSchema } from "@/features/instruments/schemas/program-head-template";
 import type {
   TemplatePloQuestionBinding,
   TemplateSettingsInput,
@@ -17,6 +18,15 @@ export async function createBaselineCopyAction(
   ploBindings: TemplatePloQuestionBinding[],
   settings?: TemplateSettingsInput
 ) {
+  if (settings !== undefined) {
+    const settingsResult = baselineCopySettingsSchema.safeParse(settings);
+    if (!settingsResult.success) {
+      return {
+        success: false as const,
+        error: settingsResult.error.issues[0]?.message ?? "Invalid template settings.",
+      };
+    }
+  }
   const result = await createBaselineCopy({
     programId,
     baselineId,
