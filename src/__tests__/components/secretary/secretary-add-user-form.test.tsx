@@ -321,6 +321,10 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
     fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${programCode} —`, "i") }));
   }
 
+  function toggleManagedProgram(programCode: string) {
+    fireEvent.click(screen.getByRole("checkbox", { name: new RegExp(`^${programCode} —`, "i") }));
+  }
+
   function fillIdentity() {
     fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
     fireEvent.change(screen.getByLabelText(/email address/i), {
@@ -328,14 +332,16 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
     });
   }
 
-  it("shows a single program field and no major field for Program Head", async () => {
+  it("shows a managed programs checkbox set and no major field for Program Head", async () => {
     renderForm();
 
     selectRole("Program Head");
 
     await waitFor(() => {
-      expect(screen.getByText(/affiliated program/i)).toBeInTheDocument();
+      expect(screen.getByText(/managed programs/i)).toBeInTheDocument();
     });
+    expect(screen.getByRole("checkbox", { name: /bsit —/i })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /bsba —/i })).toBeInTheDocument();
     expect(screen.queryByText("Major")).not.toBeInTheDocument();
   });
 
@@ -350,7 +356,7 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
     expect(screen.queryByText("Major")).not.toBeInTheDocument();
   });
 
-  it("shows a validation error when Program Head program is missing", async () => {
+  it("shows a validation error when Program Head programs are missing", async () => {
     renderForm();
 
     selectRole("Program Head");
@@ -359,7 +365,7 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
     fireEvent.click(screen.getByRole("button", { name: /create user/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/select an affiliated program/i)).toBeInTheDocument();
+      expect(screen.getByText(/at least one managed program/i)).toBeInTheDocument();
     });
   });
 
@@ -376,13 +382,13 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
     });
   });
 
-  it("submits a valid Program Head account with a managed program", async () => {
+  it("submits a valid Program Head account with one managed program", async () => {
     mockCreateAction.mockResolvedValue({ success: true });
     renderForm();
 
     selectRole("Program Head");
     fillIdentity();
-    selectProgram("BSIT");
+    toggleManagedProgram("BSIT");
 
     fireEvent.click(screen.getByRole("button", { name: /create user/i }));
 
@@ -392,7 +398,31 @@ describe("SecretaryAddUserForm Program Head and Faculty", () => {
 
     const formData = mockCreateAction.mock.calls[0][0] as FormData;
     expect(formData.get("role")).toBe(SystemRole.PROGRAM_HEAD);
-    expect(formData.get("program_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+    expect(formData.getAll("program_ids")).toEqual(["a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"]);
+    expect(formData.get("program_id")).toBeNull();
+  });
+
+  it("submits a valid Program Head account with several managed programs", async () => {
+    mockCreateAction.mockResolvedValue({ success: true });
+    renderForm();
+
+    selectRole("Program Head");
+    fillIdentity();
+    toggleManagedProgram("BSIT");
+    toggleManagedProgram("BSBA");
+
+    fireEvent.click(screen.getByRole("button", { name: /create user/i }));
+
+    await waitFor(() => {
+      expect(mockCreateAction).toHaveBeenCalledTimes(1);
+    });
+
+    const formData = mockCreateAction.mock.calls[0][0] as FormData;
+    expect(formData.get("role")).toBe(SystemRole.PROGRAM_HEAD);
+    expect(formData.getAll("program_ids")).toEqual([
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+    ]);
   });
 
   it("submits a valid Faculty account with a primary program", async () => {
@@ -1084,6 +1114,31 @@ describe("SecretaryAddUserForm existing account pivot", () => {
     expect(formData.get("user_id")).toBe(existingUser.id);
     expect(formData.get("role")).toBe(SystemRole.FACULTY);
     expect(formData.get("program_id")).toBe("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11");
+    expect(createAction).not.toHaveBeenCalled();
+  });
+
+  it("submits several managed programs when granting Program Head to an existing account", async () => {
+    addRoleAction.mockResolvedValue({ success: true });
+    renderForm();
+    typeEmail(existingUser.email);
+    await screen.findByText(existingUser.name);
+
+    fireEvent.click(screen.getByRole("option", { name: /^program head$/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^bsit —/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^bsba —/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
+
+    await waitFor(() => {
+      expect(addRoleAction).toHaveBeenCalledTimes(1);
+    });
+
+    const formData = addRoleAction.mock.calls[0][0] as FormData;
+    expect(formData.get("user_id")).toBe(existingUser.id);
+    expect(formData.get("role")).toBe(SystemRole.PROGRAM_HEAD);
+    expect(formData.getAll("program_ids")).toEqual([
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+    ]);
     expect(createAction).not.toHaveBeenCalled();
   });
 

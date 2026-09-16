@@ -93,6 +93,8 @@ type RoleEntryContextInput = {
   /** Email of the account receiving the role — created or already existing. */
   email: string;
   program_id?: string;
+  /** Managed programs for a Program Head grant; legacy single `program_id` falls back to a one-item set. */
+  program_ids?: string[];
   major_id?: string;
   year_level?: YearLevel;
   section?: StudentSection;
@@ -108,21 +110,55 @@ type RoleEntryContextInput = {
  */
 export async function resolveRoleEntryContext(
   input: RoleEntryContextInput
-): Promise<ServiceResult<{ activeMajorId: string | null }>> {
-  const { role, email, program_id, major_id, year_level, section, graduation_year, company_name } =
-    input;
+): Promise<ServiceResult<{ activeMajorId: string | null; programIds: string[] }>> {
+  const {
+    role,
+    email,
+    program_id,
+    program_ids,
+    major_id,
+    year_level,
+    section,
+    graduation_year,
+    company_name,
+  } = input;
 
   // 1. Enforce institutional email for internal roles
   if (INSTITUTIONAL_EMAIL_ROLES.includes(role) && !isInstitutionalEmail(email)) {
     return { success: false, error: INSTITUTIONAL_EMAIL_MESSAGE };
   }
 
-  // 2. Enforce required program for Program Head, Faculty, Student, and Alumni
-  if (PROGRAM_REQUIRED_ROLES.includes(role) && !program_id) {
+  // 2a. Program Head takes a managed-program set: the submitted set wins, a
+  // legacy single selection degrades to a one-item set.
+  const managedProgramIds =
+    role === SystemRole.PROGRAM_HEAD
+      ? [
+          ...new Set(
+            program_ids && program_ids.length > 0 ? program_ids : program_id ? [program_id] : []
+          ),
+        ]
+      : [];
+  if (role === SystemRole.PROGRAM_HEAD && managedProgramIds.length === 0) {
+    return { success: false, error: "Select at least one managed program." };
+  }
+
+  // 2b. Enforce required program for Faculty, Student, and Alumni
+  if (role !== SystemRole.PROGRAM_HEAD && PROGRAM_REQUIRED_ROLES.includes(role) && !program_id) {
     return { success: false, error: "Select an affiliated program." };
   }
 
-  if ((role === SystemRole.PROGRAM_HEAD || role === SystemRole.FACULTY) && program_id) {
+  if (role === SystemRole.PROGRAM_HEAD) {
+    for (const managedProgramId of managedProgramIds) {
+      const programResult = await validateProgramAndMajor(managedProgramId, undefined, {
+        requireMajorIfAvailable: false,
+      });
+      if (!programResult.success) {
+        return { success: false, error: programResult.error };
+      }
+    }
+  }
+
+  if (role === SystemRole.FACULTY && program_id) {
     const programResult = await validateProgramAndMajor(program_id, undefined, {
       requireMajorIfAvailable: false,
     });
@@ -130,7 +166,6 @@ export async function resolveRoleEntryContext(
       return { success: false, error: programResult.error };
     }
   }
-
   // 3. Validate Student-specific academic context and conditional major requirement
   let activeMajorId: string | null = null;
   if (role === SystemRole.STUDENT) {
@@ -174,7 +209,7 @@ export async function resolveRoleEntryContext(
     }
   }
 
-  return { success: true, data: { activeMajorId } };
+  return { success: true, data: { activeMajorId, programIds: managedProgramIds } };
 }
 
 /**
@@ -198,6 +233,7 @@ export async function createUserBySecretary(
     email,
     role,
     program_id,
+    program_ids,
     major_id,
     year_level,
     section,
@@ -210,6 +246,7 @@ export async function createUserBySecretary(
     role,
     email,
     program_id,
+    program_ids,
     major_id,
     year_level,
     section,
@@ -222,6 +259,7 @@ export async function createUserBySecretary(
   }
 
   const activeMajorId = contextResult.data.activeMajorId;
+  const managedProgramIds = contextResult.data.programIds;
 
   // 5. An existing account is not a creation failure: the caller pivots to
   // granting the role on that account instead of duplicating the identity.
@@ -273,11 +311,13 @@ export async function createUserBySecretary(
         }
 
         case SystemRole.PROGRAM_HEAD: {
-          if (program_id) {
+          // The gate guarantees a non-empty managed set; every program is
+          // validated active before the transaction opens.
+          for (const managedProgramId of managedProgramIds) {
             await tx.programHeadAssignment.create({
               data: {
                 program_head_id: newUser.id,
-                program_id,
+                program_id: managedProgramId,
                 is_active: true,
               },
             });

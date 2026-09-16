@@ -40,6 +40,7 @@ export async function createUserBySecretaryAction(
     email: formData.get("email"),
     role: formData.get("role"),
     program_id: formData.get("program_id") || undefined,
+    program_ids: formData.getAll("program_ids"),
     major_id: formData.get("major_id") || undefined,
     year_level: formData.get("year_level") || undefined,
     section: formData.get("section") || undefined,
