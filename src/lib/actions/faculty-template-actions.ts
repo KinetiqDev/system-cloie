@@ -38,9 +38,10 @@ export async function saveFacultyTemplateDraftAction(
     bound_program_id: formData.get("bound_program_id") || null,
     cilo_question_bindings: ciloQuestionBindings,
     description: formData.get("description"),
-    id: formData.get("id"),
+    id: formData.get("id") ?? undefined,
     is_active: formData.get("is_active"),
     name: formData.get("name"),
+    source_template_id: formData.get("source_template_id") ?? undefined,
     structure,
   });
 

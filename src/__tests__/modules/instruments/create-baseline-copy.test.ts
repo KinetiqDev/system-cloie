@@ -1,6 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EvaluationTemplateType } from "@prisma/client";
+import {
+  createBaselineCopy,
+  type CreateBaselineCopyInput,
+} from "@/features/instruments/services/create-baseline-copy";
+import { REORDERED_STRUCTURE } from "@/__tests__/helpers/template-structure";
 
-const { contextMock, assignmentMock, transactionMock, templateCreateMock, versionCreateMock, programMock, ploFindManyMock, bindingDeleteManyMock, bindingCreateManyMock, templateFindUniqueMock, templateFindFirstMock } = vi.hoisted(() => ({
+/** Baseline copy input with the fixtures this suite shares across cases. */
+function copyInput(overrides: Partial<CreateBaselineCopyInput> = {}): CreateBaselineCopyInput {
+  return {
+    programId: "program-2",
+    baselineId: "baseline-1",
+    customName: "BSED Copy",
+    structure: [],
+    ploBindings: [],
+    ...overrides,
+  };
+}
+
+const {
+  contextMock,
+  assignmentMock,
+  transactionMock,
+  templateCreateMock,
+  versionCreateMock,
+  programMock,
+  ploFindManyMock,
+  bindingDeleteManyMock,
+  bindingCreateManyMock,
+  templateFindUniqueMock,
+  templateFindFirstMock,
+} = vi.hoisted(() => ({
   contextMock: vi.fn(),
   assignmentMock: vi.fn(),
   transactionMock: vi.fn(),
@@ -59,8 +89,9 @@ describe("createBaselineCopy", () => {
     });
     assignmentMock.mockResolvedValue({ id: "program-2", code: "BSED", name: "BSED" });
     programMock.mockResolvedValue({ code: "BSED" });
-    templateFindUniqueMock.mockImplementation(({ where }: { where: { id?: string; code?: string } }) =>
-      where.id ? Promise.resolve(BASELINE_ROW) : Promise.resolve(null)
+    templateFindUniqueMock.mockImplementation(
+      ({ where }: { where: { id?: string; code?: string } }) =>
+        where.id ? Promise.resolve(BASELINE_ROW) : Promise.resolve(null)
     );
     templateFindFirstMock.mockResolvedValue(null);
     transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
@@ -76,44 +107,11 @@ describe("createBaselineCopy", () => {
   });
 
   it("creates a copy and version one with the exact reordered structure", async () => {
-    const reorderedStructure = [
-      {
-        key: "section-b",
-        title: "Section B",
-        description: undefined,
-        order: 0,
-        questions: [
-          {
-            key: "question-b",
-            prompt: "Question B",
-            type: "likert" as const,
-            order: 0,
-            required: true,
-          },
-        ],
-      },
-      {
-        key: "section-a",
-        title: "Section A",
-        description: undefined,
-        order: 1,
-        questions: [
-          {
-            key: "question-a",
-            prompt: "Question A",
-            type: "likert" as const,
-            order: 0,
-            required: true,
-          },
-        ],
-      },
-    ];
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
     const result = await createBaselineCopy({
       programId: "program-2",
       baselineId: "baseline-1",
       customName: "BSED Copy",
-      structure: reorderedStructure,
+      structure: REORDERED_STRUCTURE,
       ploBindings: [],
     });
 
@@ -123,14 +121,14 @@ describe("createBaselineCopy", () => {
         code: "BSED_BSED_COPY",
         program_id: "program-2",
         source_template_id: "baseline-1",
-        structure: reorderedStructure,
+        structure: REORDERED_STRUCTURE,
       }),
     });
     expect(versionCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
         template_id: "copy-1",
         version_number: 1,
-        structure_snapshot: reorderedStructure,
+        structure_snapshot: REORDERED_STRUCTURE,
         is_active: true,
       }),
     });
@@ -138,10 +136,71 @@ describe("createBaselineCopy", () => {
 
   it("does not create a copy when the selected context is rejected", async () => {
     contextMock.mockResolvedValue({ success: false, error: "Selected Program is not assigned." });
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
-    const result = await createBaselineCopy({ programId: "program-3", baselineId: "baseline-1", customName: "Copy", structure: [], ploBindings: [] });
+    const result = await createBaselineCopy({
+      programId: "program-3",
+      baselineId: "baseline-1",
+      customName: "Copy",
+      structure: [],
+      ploBindings: [],
+    });
 
     expect(result.success).toBe(false);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a copy whose settings carry an invalid template type", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: true,
+          is_faculty_accessible: false,
+          template_type: "INVALID_TYPE" as never,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/template_type|invalid/i);
+    }
+    expect(templateCreateMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a copy whose settings carry a non-boolean active flag", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: "true" as never,
+          is_faculty_accessible: false,
+          template_type: EvaluationTemplateType.PROGRAM_WIDE,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    expect(templateCreateMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects faculty access on a program-wide copy", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        settings: {
+          description: "",
+          is_active: true,
+          is_faculty_accessible: true,
+          template_type: EvaluationTemplateType.PROGRAM_WIDE,
+        },
+      })
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/only course-bound templates/i);
+    }
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
@@ -156,13 +215,24 @@ describe("createBaselineCopy", () => {
         description: undefined,
         order: 0,
         questions: [
-          { key: "question-b", prompt: "Question B", type: "likert" as const, order: 0, required: true },
-          { key: "question-a", prompt: "Question A", type: "likert" as const, order: 1, required: true },
+          {
+            key: "question-b",
+            prompt: "Question B",
+            type: "likert" as const,
+            order: 0,
+            required: true,
+          },
+          {
+            key: "question-a",
+            prompt: "Question A",
+            type: "likert" as const,
+            order: 1,
+            required: true,
+          },
         ],
       },
     ];
 
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
     const result = await createBaselineCopy({
       programId: "program-2",
       baselineId: "baseline-1",
@@ -205,7 +275,6 @@ describe("createBaselineCopy", () => {
       },
     ];
 
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
     const result = await createBaselineCopy({
       programId: "program-2",
       baselineId: "baseline-1",
@@ -233,12 +302,17 @@ describe("createBaselineCopy", () => {
         description: undefined,
         order: 0,
         questions: [
-          { key: "question-1", prompt: "Comment", type: "guided_open_ended" as const, order: 0, required: false },
+          {
+            key: "question-1",
+            prompt: "Comment",
+            type: "guided_open_ended" as const,
+            order: 0,
+            required: false,
+          },
         ],
       },
     ];
 
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
     const result = await createBaselineCopy({
       programId: "program-2",
       baselineId: "baseline-1",
@@ -256,14 +330,7 @@ describe("createBaselineCopy", () => {
   });
 
   it("allows a second copy of the same baseline when the name differs", async () => {
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
-    const result = await createBaselineCopy({
-      programId: "program-2",
-      baselineId: "baseline-1",
-      customName: "BSED Copy 2",
-      structure: [],
-      ploBindings: [],
-    });
+    const result = await createBaselineCopy(copyInput({ customName: "BSED Copy 2" }));
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
@@ -276,14 +343,7 @@ describe("createBaselineCopy", () => {
   it("rejects a name that already exists in the program with a plain message", async () => {
     templateFindFirstMock.mockResolvedValue({ id: "existing-copy" });
 
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
-    const result = await createBaselineCopy({
-      programId: "program-2",
-      baselineId: "baseline-1",
-      customName: "BSED Copy",
-      structure: [],
-      ploBindings: [],
-    });
+    const result = await createBaselineCopy(copyInput());
 
     expect(result).toEqual({
       success: false,
@@ -293,20 +353,15 @@ describe("createBaselineCopy", () => {
   });
 
   it("suffixes the code when the name-derived code is already taken", async () => {
-    templateFindUniqueMock.mockImplementation(({ where }: { where: { id?: string; code?: string } }) => {
-      if (where.id) return Promise.resolve(BASELINE_ROW);
-      // The first candidate is taken; the suffixed one is free.
-      return Promise.resolve(where.code === "BSED_BSED_COPY" ? { id: "taken" } : null);
-    });
+    templateFindUniqueMock.mockImplementation(
+      ({ where }: { where: { id?: string; code?: string } }) => {
+        if (where.id) return Promise.resolve(BASELINE_ROW);
+        // The first candidate is taken; the suffixed one is free.
+        return Promise.resolve(where.code === "BSED_BSED_COPY" ? { id: "taken" } : null);
+      }
+    );
 
-    const { createBaselineCopy } = await import("@/features/instruments/services/create-baseline-copy");
-    const result = await createBaselineCopy({
-      programId: "program-2",
-      baselineId: "baseline-1",
-      customName: "BSED Copy",
-      structure: [],
-      ploBindings: [],
-    });
+    const result = await createBaselineCopy(copyInput());
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
@@ -314,5 +369,43 @@ describe("createBaselineCopy", () => {
         code: "BSED_BSED_COPY_2",
       }),
     });
+  });
+
+  it("persists the template settings the author edited before saving", async () => {
+    const result = await createBaselineCopy(
+      copyInput({
+        ploBindings: [{ ploId: "plo-1", itemKey: "question-b", sectionKey: "section-b" }],
+        settings: {
+          description: "Program-specific instrument",
+          is_active: false,
+          is_faculty_accessible: true,
+          template_type: "COURSE_BOUND",
+        },
+      })
+    );
+
+    expect(result).toEqual({ success: true, data: { id: "copy-1" } });
+    expect(templateCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        description: "Program-specific instrument",
+        is_active: false,
+        is_faculty_accessible: true,
+        template_type: "COURSE_BOUND",
+      }),
+    });
+    // PLO bindings belong to Program-wide templates only, so a copy the author
+    // retyped as course-bound carries none.
+    expect(ploFindManyMock).not.toHaveBeenCalled();
+    expect(bindingCreateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a copy name shorter than the create schema minimum", async () => {
+    const result = await createBaselineCopy(copyInput({ customName: "  " }));
+
+    expect(result).toEqual({
+      success: false,
+      error: "Template name must be at least 3 characters.",
+    });
+    expect(templateCreateMock).not.toHaveBeenCalled();
   });
 });

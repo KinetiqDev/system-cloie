@@ -6,31 +6,41 @@ import { render, screen } from "@testing-library/react";
 // faculty edit, secretary edit, and secretary new pages each added their own
 // link, producing a duplicate on every surface.
 
-const { notFoundMock, pushMock } = vi.hoisted(() => ({
+const { notFoundMock, pushMock, redirectMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
   pushMock: vi.fn(),
+  redirectMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
+  redirect: redirectMock,
   useRouter: () => ({ push: pushMock }),
 }));
 
-const { getFacultyTemplateMock, listFacultyCourseContextsActionMock } = vi.hoisted(
-  () => ({
-    getFacultyTemplateMock: vi.fn(),
-    listFacultyCourseContextsActionMock: vi.fn(),
-  })
-);
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: vi.fn().mockResolvedValue({ userId: "faculty-1" }),
+}));
+
+const { getFacultyTemplateMock, listFacultyCourseContextsMock } = vi.hoisted(() => ({
+  getFacultyTemplateMock: vi.fn(),
+  listFacultyCourseContextsMock: vi.fn(),
+}));
 
 vi.mock("@/features/instruments/services/list-faculty-templates", () => ({
   getFacultyTemplate: getFacultyTemplateMock,
 }));
 
+// The faculty template routes load their course contexts through the service
+// (the server action wraps it), so the loader is what needs the mock.
+vi.mock("@/features/evaluations/services/list-faculty-course-contexts", () => ({
+  listFacultyCourseContexts: listFacultyCourseContextsMock,
+}));
+
 vi.mock("@/lib/actions/course-bound-evaluation-actions", () => ({
-  listFacultyCourseContextsAction: listFacultyCourseContextsActionMock,
+  listFacultyCourseContextsAction: vi.fn(),
   loadFacultyManagedCilosAction: vi.fn(),
 }));
 
@@ -84,14 +94,14 @@ describe("template edit pages render exactly one back link", () => {
         boundProgramId: null,
         programCode: null,
         programName: null,
-        facultyOwnerId: null,
+        facultyOwnerId: "faculty-1",
         sourceTemplateId: null,
         structure: [],
         templateCiloQuestionBindings: [],
         versionCount: 1,
       },
     });
-    listFacultyCourseContextsActionMock.mockResolvedValue({ success: true, data: [] });
+    listFacultyCourseContextsMock.mockResolvedValue({ success: true, data: [] });
   });
 
   afterEach(() => {

@@ -86,14 +86,21 @@ describe("ProgramHeadTemplateBuilder", () => {
     );
 
     const structure = initialData().structure;
-    await templateBuilderProps!.onSaveAsCopy!(TEMPLATE_ID, "BSIT copy", structure, []);
+    const settings = {
+      description: "",
+      is_active: true,
+      is_faculty_accessible: false,
+      template_type: "PROGRAM_WIDE" as const,
+    };
+    await templateBuilderProps!.onSaveAsCopy!(TEMPLATE_ID, "BSIT copy", structure, [], settings);
 
     expect(createBaselineCopyActionMock).toHaveBeenCalledWith(
       PROGRAM_ID,
       TEMPLATE_ID,
       "BSIT copy",
       structure,
-      []
+      [],
+      settings
     );
     expect(createProgramHeadTemplateActionMock).not.toHaveBeenCalled();
     expect(updateProgramHeadTemplateActionMock).not.toHaveBeenCalled();

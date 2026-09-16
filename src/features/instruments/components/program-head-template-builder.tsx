@@ -7,6 +7,7 @@ import {
   createProgramHeadTemplateAction,
   updateProgramHeadTemplateAction,
 } from "@/lib/actions/program-head-template-actions";
+import { PUBLISH_FROM_BUILDER } from "@/features/evaluations/components/publish-navigation";
 import type { TemplateBuilderProps } from "./template-builder";
 import {
   buildProgramHeadPublishToolPath,
@@ -37,7 +38,9 @@ export function ProgramHeadTemplateBuilder({
 
   const handlePublish = templateId
     ? (savedTemplateId: string) =>
-        router.push(buildProgramHeadPublishToolPath(programId, savedTemplateId))
+        router.push(
+          `${buildProgramHeadPublishToolPath(programId, savedTemplateId)}&from=${PUBLISH_FROM_BUILDER}`
+        )
     : undefined;
 
   return (
@@ -45,8 +48,15 @@ export function ProgramHeadTemplateBuilder({
       {...props}
       onSave={handleSave}
       isInstitutionalBaseline={isInstitutionalBaseline}
-      onSaveAsCopy={(baselineId, customName, structure, ploBindings) =>
-        createBaselineCopyAction(programId, baselineId, customName, structure, ploBindings)
+      onSaveAsCopy={(baselineId, customName, structure, ploBindings, settings) =>
+        createBaselineCopyAction(
+          programId,
+          baselineId,
+          customName,
+          structure,
+          ploBindings,
+          settings
+        )
       }
       toolsHref={buildProgramHeadToolsPath(programId)}
       onPublish={handlePublish}

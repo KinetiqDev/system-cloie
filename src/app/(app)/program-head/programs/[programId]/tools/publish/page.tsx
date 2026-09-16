@@ -11,6 +11,11 @@ import { listProgramHeadTemplates } from "@/features/instruments/services/manage
 import { resolveCentralPublishReadiness } from "@/features/evaluations/services/resolve-central-publish-readiness";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import { YearLevel } from "@prisma/client";
+import {
+  buildProgramHeadEditToolPath,
+  buildProgramHeadToolsPath,
+} from "@/lib/constants/program-head-routes";
+import { resolvePublishBackNavigation } from "@/features/evaluations/components/publish-navigation";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Publish Tool", "Program Head") };
@@ -21,10 +26,10 @@ export default async function PublishSelectedProgramToolPage({
   searchParams,
 }: {
   params: Promise<{ programId: string }>;
-  searchParams: Promise<{ templateId?: string }>;
+  searchParams: Promise<{ templateId?: string; from?: string }>;
 }) {
   const { programId } = await params;
-  const { templateId } = await searchParams;
+  const { templateId, from } = await searchParams;
   const [contextResult, templatesResult, baselines, terms, majors, readinessResult] =
     await Promise.all([
       resolveProgramHeadContext(programId),
@@ -70,6 +75,11 @@ export default async function PublishSelectedProgramToolPage({
 
   return (
     <PublishCentralDeploymentForm
+      backNavigation={resolvePublishBackNavigation({
+        from,
+        builderHref: templateId ? buildProgramHeadEditToolPath(programId, templateId) : undefined,
+        toolsHref: buildProgramHeadToolsPath(programId),
+      })}
       templates={templates}
       yearLevels={Object.values(YearLevel)}
       majors={majors}

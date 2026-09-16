@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Edit, FileText, Send, Trash2 } from "lucide-react";
+import { Copy, Edit, FileText, Plus, Send, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -134,6 +134,14 @@ export function FacultyToolsPage({
 
       <EvaluationToolsTabs
         initialTab={initialTab}
+        action={(activeTab) =>
+          activeTab === "templates" ? (
+            <Button className="shrink-0" render={<Link href="/faculty/tools/new" />}>
+              <Plus className="size-4" data-icon="inline-start" />
+              Create New Template
+            </Button>
+          ) : null
+        }
         viewControl={
           <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />
         }
@@ -242,6 +250,21 @@ function FacultyTemplateActions({ item }: { item: TemplateCollectionItem }) {
       showToast("Template duplicated successfully.");
       router.refresh();
     });
+  }
+
+  if (item.origin !== "faculty-copy") {
+    // A shared template is never edited in place: saving creates the faculty
+    // member's own copy, so the action opens the create flow that says so.
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        render={<Link href={`/faculty/tools/new/from/${encodeURIComponent(item.id)}`} />}
+      >
+        <Copy className="size-3.5" data-icon="inline-start" />
+        Use as template
+      </Button>
+    );
   }
 
   return (

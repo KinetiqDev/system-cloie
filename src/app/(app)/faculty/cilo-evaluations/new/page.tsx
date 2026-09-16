@@ -14,12 +14,14 @@ import { prisma } from "@/lib/db/prisma";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import type { AssignmentOption } from "@/features/evaluations/components/assignment-picker";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
+import { resolvePublishBackNavigation } from "@/features/evaluations/components/publish-navigation";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("New CILO Evaluation", "Faculty") };
 
 type SearchParams = {
   templateId?: string;
+  from?: string;
 };
 
 export default async function NewFacultyCiloEvaluationPage({
@@ -171,6 +173,11 @@ export default async function NewFacultyCiloEvaluationPage({
   return (
     <PublishCourseBoundEvaluationFormV2
       assignments={assignmentOptions}
+      backNavigation={resolvePublishBackNavigation({
+        from: params.from,
+        builderHref: `/faculty/tools/${encodeURIComponent(params.templateId)}/edit`,
+        toolsHref: "/faculty/tools",
+      })}
       previewAction={previewCourseBoundRespondentsAction}
       publicationContext={formPublicationContext}
       publishAction={publishCourseBoundEvaluationAction}

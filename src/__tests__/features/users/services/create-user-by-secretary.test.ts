@@ -158,18 +158,42 @@ describe("create-user-by-secretary schema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("parses valid Program Head input with a managed program", () => {
+  it("parses valid Program Head input with managed programs", () => {
     const result = createUserBySecretarySchema.safeParse({
       name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
-      program_id: programId,
+      program_ids: [programId],
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.email).toBe("ph@acd.edu.ph");
-      expect(result.data.program_id).toBe(programId);
+      expect(result.data.program_ids).toEqual([programId]);
     }
+  });
+
+  it("parses valid Program Head input with several managed programs", () => {
+    const otherProgramId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+    const result = createUserBySecretarySchema.safeParse({
+      name: "Alice Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [programId, otherProgramId],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.program_ids).toEqual([programId, otherProgramId]);
+    }
+  });
+
+  it("rejects Program Head input with duplicate managed programs", () => {
+    const result = createUserBySecretarySchema.safeParse({
+      name: "Alice Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [programId, programId],
+    });
+    expect(result.success).toBe(false);
   });
 
   it("parses valid Faculty input with a primary program", () => {
@@ -194,11 +218,21 @@ describe("create-user-by-secretary schema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const programIssues = result.error.issues.filter((issue) =>
-        issue.path.includes("program_id")
+        issue.path.includes("program_ids")
       );
       expect(programIssues.length).toBeGreaterThan(0);
-      expect(programIssues[0]?.message).toMatch(/select an affiliated program/i);
+      expect(programIssues[0]?.message).toMatch(/at least one managed program/i);
     }
+  });
+
+  it("accepts Program Head input with only a legacy single program", () => {
+    const result = createUserBySecretarySchema.safeParse({
+      name: "Alice Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_id: programId,
+    });
+    expect(result.success).toBe(true);
   });
 
   it("rejects Faculty input without a program", () => {
@@ -222,7 +256,7 @@ describe("create-user-by-secretary schema", () => {
       name: "Alice Smith",
       email: "ph@gmail.com",
       role: SystemRole.PROGRAM_HEAD,
-      program_id: programId,
+      program_ids: [programId],
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -603,14 +637,15 @@ describe("createUserBySecretary service", () => {
       name: "Alice Smith",
       email: "ph@acd.edu.ph",
       role: SystemRole.PROGRAM_HEAD,
-      program_id: "program-ph",
+      program_ids: ["program-ph"],
       major_id: undefined,
       year_level: undefined,
       section: undefined,
-    } as const;
+    };
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-ph",
+      is_active: true,
       majors: [],
     });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -628,8 +663,81 @@ describe("createUserBySecretary service", () => {
         role: SystemRole.PROGRAM_HEAD,
       },
     });
-    // A Secretary-created Program Head account starts with exactly one active
-    // assignment; creation never seeds a second or a primary/default Program.
+    // A Secretary-created Program Head account starts with one active
+    // assignment per managed program in the submitted set.
+    expect(prisma.programHeadAssignment.create).toHaveBeenCalledTimes(1);
+    expect(prisma.programHeadAssignment.create).toHaveBeenCalledWith({
+      data: {
+        program_head_id: "user-ph",
+        program_id: "program-ph",
+        is_active: true,
+      },
+    });
+  });
+
+  it("creates an active Program Head account with several managed programs", async () => {
+    const phInput = {
+      name: "Alice Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: ["program-a", "program-b"],
+      major_id: undefined,
+      year_level: undefined,
+      section: undefined,
+    };
+
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        is_active: true,
+        majors: [],
+      })
+    );
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-ph" });
+
+    const result = await createUserBySecretary(phInput);
+
+    expect(result.success).toBe(true);
+    expect(prisma.programHeadAssignment.create).toHaveBeenCalledTimes(2);
+    expect(prisma.programHeadAssignment.create).toHaveBeenNthCalledWith(1, {
+      data: {
+        program_head_id: "user-ph",
+        program_id: "program-a",
+        is_active: true,
+      },
+    });
+    expect(prisma.programHeadAssignment.create).toHaveBeenNthCalledWith(2, {
+      data: {
+        program_head_id: "user-ph",
+        program_id: "program-b",
+        is_active: true,
+      },
+    });
+  });
+
+  it("creates an active Program Head account from a legacy single program", async () => {
+    const phInput = {
+      name: "Alice Smith",
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_id: "program-ph",
+      major_id: undefined,
+      year_level: undefined,
+      section: undefined,
+    } as const;
+
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "program-ph",
+      is_active: true,
+      majors: [],
+    });
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+    (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-ph" });
+
+    const result = await createUserBySecretary(phInput);
+
+    expect(result.success).toBe(true);
     expect(prisma.programHeadAssignment.create).toHaveBeenCalledTimes(1);
     expect(prisma.programHeadAssignment.create).toHaveBeenCalledWith({
       data: {
@@ -653,6 +761,7 @@ describe("createUserBySecretary service", () => {
 
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "program-faculty",
+      is_active: true,
       majors: [],
     });
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -689,7 +798,7 @@ describe("createUserBySecretary service", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toMatch(/select an affiliated program/i);
+      expect(result.error).toMatch(/at least one managed program/i);
     }
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
@@ -709,6 +818,52 @@ describe("createUserBySecretary service", () => {
       expect(result.error).toMatch(/selected program was not found/i);
     }
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Program Head account when a managed program is inactive", async () => {
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: programId,
+      is_active: false,
+      majors: [],
+    });
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [programId],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/no longer active/i);
+    }
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Program Head account when one of several managed programs is inactive", async () => {
+    const activeProgramId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+    (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ where }: { where: { id: string } }) => ({
+        id: where.id,
+        is_active: where.id === activeProgramId,
+        majors: [],
+      })
+    );
+
+    const result = await createUserBySecretary({
+      ...validSecretaryInput,
+      email: "ph@acd.edu.ph",
+      role: SystemRole.PROGRAM_HEAD,
+      program_ids: [activeProgramId, programId],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toMatch(/no longer active/i);
+    }
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -759,6 +914,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-student" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
     (prisma.academicTermInstance.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -812,6 +968,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-student" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
     (prisma.academicTermInstance.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(null);
@@ -888,6 +1045,7 @@ describe("createUserBySecretary service", () => {
   it("rejects a Student account when the selected program has active majors but no major is selected", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -911,6 +1069,7 @@ describe("createUserBySecretary service", () => {
   it("rejects a Student account when the selected major does not belong to the program", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -947,6 +1106,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
 
@@ -997,6 +1157,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni-major" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1033,6 +1194,7 @@ describe("createUserBySecretary service", () => {
     (prisma.user.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "user-alumni-2" });
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [],
     });
 
@@ -1096,6 +1258,7 @@ describe("createUserBySecretary service", () => {
   it("rejects an Alumni account when the selected program has active majors but no major is selected", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 
@@ -1117,6 +1280,7 @@ describe("createUserBySecretary service", () => {
   it("rejects an Alumni account when the selected major does not belong to the program", async () => {
     (prisma.program.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: programId,
+      is_active: true,
       majors: [{ id: majorId }],
     });
 

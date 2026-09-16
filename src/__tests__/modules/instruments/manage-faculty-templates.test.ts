@@ -1,6 +1,7 @@
 // fallow-ignore-file code-duplication
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
+import { saveFacultyTemplateDraft } from "@/features/instruments/services/manage-faculty-templates";
 
 const {
   resolveAuthSessionMock,
@@ -167,8 +168,6 @@ describe("manage-faculty-templates structure persistence", () => {
       })
     );
 
-    const { saveFacultyTemplateDraft } =
-      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft(draftInput());
 
     expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
@@ -220,8 +219,6 @@ describe("manage-faculty-templates structure persistence", () => {
       })
     );
 
-    const { saveFacultyTemplateDraft } =
-      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft(draftInput("baseline-1"));
 
     expect(result).toEqual({ success: true, data: { id: "faculty-copy-1" } });
@@ -282,8 +279,6 @@ describe("manage-faculty-templates structure persistence", () => {
       })
     );
 
-    const { saveFacultyTemplateDraft } =
-      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft({
       ...draftInput(),
       cilo_question_bindings: [
@@ -310,8 +305,6 @@ describe("manage-faculty-templates structure persistence", () => {
       callback({})
     );
 
-    const { saveFacultyTemplateDraft } =
-      await import("@/features/instruments/services/manage-faculty-templates");
     const result = await saveFacultyTemplateDraft({
       ...draftInput(),
       cilo_question_bindings: [
@@ -325,5 +318,99 @@ describe("manage-faculty-templates structure persistence", () => {
       error: "A Likert question can only be assigned one CILO.",
     });
     expect(bindingCreateManyMock).not.toHaveBeenCalled();
+  });
+
+  it("creates a blank draft owned by the faculty member's program", async () => {
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        instrumentTemplate: {
+          create: templateCreateMock.mockResolvedValue({ id: "faculty-blank-1" }),
+        },
+        instrumentVersion: {
+          create: versionCreateMock.mockResolvedValue({ id: "blank-version-1" }),
+        },
+        instrumentTemplateCiloQuestionBinding: {
+          deleteMany: bindingDeleteManyMock,
+          createMany: bindingCreateManyMock,
+        },
+      })
+    );
+
+    const result = await saveFacultyTemplateDraft({ ...draftInput(), id: undefined });
+
+    expect(result).toEqual({ success: true, data: { id: "faculty-blank-1" } });
+    expect(templateFindFirstMock).not.toHaveBeenCalled();
+    expect(templateCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        faculty_owner_id: FACULTY_ID,
+        program_id: "program-1",
+        source_template_id: null,
+      }),
+    });
+  });
+
+  it("copies from an explicitly selected starting template", async () => {
+    templateFindFirstMock.mockResolvedValue({
+      id: "shared-1",
+      code: "SHARED_EVAL",
+      name: "Shared",
+      description: null,
+      structure: REORDERED_STRUCTURE,
+      program_id: "program-1",
+      source_template_id: "origin-1",
+      faculty_owner_id: null,
+      template_cilo_question_bindings: [],
+      versions: [],
+    });
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        instrumentTemplate: {
+          create: templateCreateMock.mockResolvedValue({ id: "faculty-copy-2" }),
+        },
+        instrumentVersion: {
+          create: versionCreateMock.mockResolvedValue({ id: "copy-version-2" }),
+        },
+        instrumentTemplateCiloQuestionBinding: {
+          deleteMany: bindingDeleteManyMock,
+          createMany: bindingCreateManyMock,
+        },
+      })
+    );
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      id: undefined,
+      source_template_id: "shared-1",
+    });
+
+    expect(result).toEqual({ success: true, data: { id: "faculty-copy-2" } });
+    expect(templateFindFirstMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: "shared-1" }) })
+    );
+    expect(templateCreateMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        program_id: "program-1",
+        source_template_id: "origin-1",
+      }),
+    });
+  });
+
+  it("refuses a starting template this faculty account cannot access", async () => {
+    templateFindFirstMock.mockResolvedValue(null);
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({})
+    );
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      id: undefined,
+      source_template_id: "foreign-1",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Starting template not found or unavailable.",
+    });
+    expect(transactionMock).not.toHaveBeenCalled();
   });
 });

@@ -54,6 +54,10 @@ export const addRoleToExistingUserSchema = z.object({
   user_id: z.string().uuid(),
   role: z.nativeEnum(SystemRole),
   program_id: optionalUuidField,
+  program_ids: z.preprocess(
+    (value) => (value == null ? undefined : value),
+    z.array(z.string().uuid()).optional()
+  ),
   major_id: optionalUuidField,
   year_level: optionalEnumField(YearLevel),
   section: optionalEnumField(StudentSection),

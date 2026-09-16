@@ -344,6 +344,7 @@ export async function addRoleToExistingUserAction(formData: FormData): Promise<A
     user_id: formData.get("user_id"),
     role: formData.get("role"),
     program_id: formData.get("program_id"),
+    program_ids: formData.getAll("program_ids"),
     major_id: formData.get("major_id"),
     year_level: formData.get("year_level"),
     section: formData.get("section"),

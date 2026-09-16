@@ -65,6 +65,10 @@ export const addRoleToExistingUserFormSchema = z
     email: z.string().trim().email("Enter a valid email address."),
     role: z.nativeEnum(SystemRole),
     program_id: optionalUuidField,
+    program_ids: z.preprocess(
+      (v) => (v == null ? undefined : v),
+      z.array(z.string().uuid()).optional()
+    ),
     major_id: optionalUuidField,
     year_level: optionalEnumField(YearLevel),
     section: optionalEnumField(StudentSection),
@@ -86,6 +90,9 @@ export const addRoleToExistingUserFormSchema = z
   )
   .refine(
     (data) => {
+      if (data.role === SystemRole.PROGRAM_HEAD) {
+        return true;
+      }
       if (!PROGRAM_REQUIRED_ROLES.includes(data.role)) {
         return true;
       }
@@ -94,6 +101,24 @@ export const addRoleToExistingUserFormSchema = z
     {
       message: "Select an affiliated program.",
       path: ["program_id"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.role !== SystemRole.PROGRAM_HEAD) {
+        return true;
+      }
+      // The managed set wins when present; a legacy single selection degrades
+      // to a one-item set, normalized by the service gates.
+      if (data.program_id) {
+        return true;
+      }
+      const ids = data.program_ids ?? [];
+      return ids.length > 0 && new Set(ids).size === ids.length;
+    },
+    {
+      message: "Select at least one managed program.",
+      path: ["program_ids"],
     }
   )
   .refine(

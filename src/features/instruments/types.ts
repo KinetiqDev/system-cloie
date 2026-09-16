@@ -91,6 +91,26 @@ export interface TemplateSection {
 
 export type TemplateStructure = TemplateSection[];
 
+/**
+ * Template settings a builder exposes and forwards when a save derives a new
+ * template (a baseline copy or a faculty copy of a shared template).
+ */
+export type TemplateSettingsInput = {
+  description: string;
+  is_active: boolean;
+  is_faculty_accessible: boolean;
+  template_type: EvaluationTemplateType;
+};
+
+/**
+ * Reads a stored `structure` column as template sections. Templates written
+ * before the current shape, or rows whose JSON was never valid, degrade to an
+ * empty structure instead of throwing.
+ */
+export function toTemplateStructure(structure: unknown): TemplateStructure {
+  return Array.isArray(structure) ? (structure as TemplateStructure) : [];
+}
+
 // ─── Default Descriptors ──────────────────────────────────────────────────────
 
 export const DEFAULT_LIKERT_5_DESCRIPTORS: LikertDescriptor[] = [

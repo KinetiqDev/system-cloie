@@ -278,9 +278,12 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                       );
                       const cilo = binding?.ciloId ? ciloById.get(binding.ciloId) : null;
                       return (
-                        <div key={question.itemKey} className="space-y-3 rounded-lg border p-4">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
-                            <p className="text-foreground flex-1 text-sm leading-relaxed font-medium">
+                        <div
+                          key={question.itemKey}
+                          className="w-full max-w-full min-w-0 space-y-3 rounded-lg border p-4"
+                        >
+                          <div className="flex w-full max-w-full min-w-0 flex-wrap items-start justify-between gap-2">
+                            <p className="text-foreground max-w-full min-w-0 flex-1 text-sm leading-relaxed font-medium [overflow-wrap:anywhere] break-words">
                               {question.prompt}
                             </p>
                             <div className="flex shrink-0 flex-wrap gap-1.5">
@@ -300,16 +303,16 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                               <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                 Scale descriptors
                               </p>
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex w-full max-w-full min-w-0 flex-wrap gap-1.5">
                                 {question.likertDescriptors.map((descriptor) => (
                                   <span
                                     key={`${question.itemKey}-${descriptor.value}`}
-                                    className="bg-muted inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+                                    className="bg-muted inline-flex max-w-full min-w-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
                                   >
-                                    <span className="font-semibold tabular-nums">
+                                    <span className="shrink-0 font-semibold tabular-nums">
                                       {descriptor.value}
                                     </span>
-                                    <span className="text-muted-foreground">
+                                    <span className="text-muted-foreground min-w-0 [overflow-wrap:anywhere] break-words">
                                       {descriptor.label}
                                     </span>
                                   </span>
@@ -324,9 +327,12 @@ export function FacultyEvaluationDetailView({ detail }: { detail: FacultyEvaluat
                                 <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                   Suggested responses
                                 </p>
-                                <ul className="text-muted-foreground list-inside list-disc space-y-0.5 text-sm">
+                                <ul className="text-muted-foreground w-full max-w-full min-w-0 list-inside list-disc space-y-0.5 text-sm">
                                   {question.suggestedResponses.map((response, index) => (
-                                    <li key={`${question.itemKey}-suggestion-${index}`}>
+                                    <li
+                                      key={`${question.itemKey}-suggestion-${index}`}
+                                      className="min-w-0 [overflow-wrap:anywhere] break-words"
+                                    >
                                       {response}
                                     </li>
                                   ))}

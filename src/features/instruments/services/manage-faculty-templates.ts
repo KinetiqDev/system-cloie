@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
 import type { SaveFacultyTemplateDraftInput } from "../schemas/program-head-template";
-import { listTemplateLikertQuestions, type TemplateStructure } from "../types";
+import { listTemplateLikertQuestions, toTemplateStructure, type TemplateStructure } from "../types";
 
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
@@ -43,10 +43,6 @@ export type FacultyTemplatePublicationContext = {
     structure: TemplateStructure;
   };
 };
-
-function toTemplateStructure(structure: unknown): TemplateStructure {
-  return Array.isArray(structure) ? (structure as TemplateStructure) : [];
-}
 
 function slugify(text: string) {
   return text
@@ -225,6 +221,172 @@ async function validateDraftBindings(input: {
   return { success: true, bindings: normalized };
 }
 
+type FacultyDraftSource = {
+  id: string;
+  code: string;
+  program_id: string | null;
+  source_template_id: string | null;
+};
+
+type FacultyDraftTarget = {
+  /** Starting template, or null when the draft is created blank. */
+  source: FacultyDraftSource | null;
+  /** Template the caller already owns, which updates in place. */
+  ownedTemplateId: string | null;
+  owningProgramId: string | null;
+};
+
+const TEMPLATE_UNAVAILABLE = "Template not found or unavailable.";
+const STARTING_TEMPLATE_UNAVAILABLE = "Starting template not found or unavailable.";
+
+/**
+ * Resolves the stored template a draft is based on. The id wins over
+ * `source_template_id`: an id names a template the faculty member is editing or
+ * copying from the tools list, while a source id names the starting point they
+ * picked in the create flow.
+ */
+async function resolveFacultyDraftTarget(
+  input: SaveFacultyTemplateDraftInput,
+  facultyId: string
+): Promise<ServiceResult<FacultyDraftTarget>> {
+  const requestedId = input.id ?? input.source_template_id;
+  const storedTemplate = requestedId ? await canAccessSourceTemplate(requestedId, facultyId) : null;
+
+  if (requestedId && !storedTemplate) {
+    return {
+      success: false,
+      error: input.id ? TEMPLATE_UNAVAILABLE : STARTING_TEMPLATE_UNAVAILABLE,
+    };
+  }
+
+  const source: FacultyDraftSource | null = storedTemplate
+    ? {
+        code: storedTemplate.code,
+        id: storedTemplate.id,
+        program_id: storedTemplate.program_id,
+        source_template_id: storedTemplate.source_template_id,
+      }
+    : null;
+
+  // A copy belongs to its starting template's Program; a blank draft belongs to
+  // the faculty's first active affiliation, which the tools catalog reads.
+  const owningProgramId = source
+    ? source.program_id
+    : ((await getFacultyProgramIds(facultyId))[0] ?? null);
+
+  if (!source && !owningProgramId) {
+    return { success: false, error: "No active program affiliation found." };
+  }
+
+  return {
+    success: true,
+    data: {
+      source,
+      ownedTemplateId: storedTemplate?.faculty_owner_id === facultyId ? storedTemplate.id : null,
+      owningProgramId,
+    },
+  };
+}
+
+async function updateOwnedFacultyDraft(
+  tx: Prisma.TransactionClient,
+  templateId: string,
+  input: SaveFacultyTemplateDraftInput,
+  structure: TemplateStructure
+): Promise<void> {
+  await tx.instrumentTemplate.update({
+    where: { id: templateId },
+    data: {
+      bound_course_id: input.bound_course_id ?? null,
+      bound_major_id: input.bound_major_id ?? null,
+      bound_program_id: input.bound_program_id ?? null,
+      description: input.description ?? null,
+      name: input.name,
+      is_active: input.is_active,
+      structure: structure as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  const latestVersion = await tx.instrumentVersion.findFirst({
+    where: { template_id: templateId },
+    orderBy: { version_number: "desc" },
+    select: { id: true },
+  });
+
+  if (latestVersion) {
+    await tx.instrumentVersion.update({
+      where: { id: latestVersion.id },
+      data: { structure_snapshot: structure as unknown as Prisma.InputJsonValue },
+    });
+  }
+}
+
+async function createFacultyDraft(
+  tx: Prisma.TransactionClient,
+  input: SaveFacultyTemplateDraftInput,
+  structure: TemplateStructure,
+  target: FacultyDraftTarget,
+  facultyId: string
+): Promise<string> {
+  const created = await tx.instrumentTemplate.create({
+    data: {
+      bound_course_id: input.bound_course_id ?? null,
+      bound_major_id: input.bound_major_id ?? null,
+      bound_program_id: input.bound_program_id ?? null,
+      code: generateFacultyTemplateCode(target.source?.code ?? input.name, facultyId),
+      description: input.description ?? null,
+      faculty_owner_id: facultyId,
+      is_active: input.is_active,
+      is_faculty_accessible: false,
+      name: input.name,
+      program_id: target.owningProgramId,
+      source_template_id: target.source
+        ? (target.source.source_template_id ?? target.source.id)
+        : null,
+      structure: structure as unknown as Prisma.InputJsonValue,
+      template_type: EvaluationTemplateType.COURSE_BOUND,
+    },
+  });
+
+  await tx.instrumentVersion.create({
+    data: {
+      is_active: true,
+      structure_snapshot: structure as unknown as Prisma.InputJsonValue,
+      template_id: created.id,
+      version_number: 1,
+    },
+  });
+
+  return created.id;
+}
+
+async function replaceDraftBindings(
+  tx: Prisma.TransactionClient,
+  templateId: string,
+  bindings: FacultyTemplateBindingItem[]
+): Promise<void> {
+  await tx.instrumentTemplateCiloQuestionBinding.deleteMany({
+    where: { template_id: templateId },
+  });
+
+  if (bindings.length === 0) return;
+
+  await tx.instrumentTemplateCiloQuestionBinding.createMany({
+    data: bindings.map((binding) => ({
+      cilo_description_snapshot: binding.ciloDescriptionSnapshot,
+      cilo_id: binding.ciloId,
+      item_key: binding.itemKey,
+      question_prompt_snapshot: binding.questionPromptSnapshot,
+      section_key: binding.sectionKey,
+      template_id: templateId,
+    })),
+  });
+}
+
+/**
+ * Saves a faculty draft. An owned template updates in place; a faculty-unowned
+ * source becomes the caller's copy; with neither, the draft is created blank.
+ */
 export async function saveFacultyTemplateDraft(
   input: SaveFacultyTemplateDraftInput
 ): Promise<ServiceResult<{ id: string }>> {
@@ -234,11 +396,13 @@ export async function saveFacultyTemplateDraft(
     return auth;
   }
 
-  const template = await canAccessSourceTemplate(input.id, auth.data.userId);
+  const targetResult = await resolveFacultyDraftTarget(input, auth.data.userId);
 
-  if (!template) {
-    return { success: false, error: "Template not found or unavailable." };
+  if (!targetResult.success) {
+    return targetResult;
   }
+
+  const target = targetResult.data;
 
   const courseContext = await resolveFacultyCourseContext({
     boundCourseId: input.bound_course_id,
@@ -264,87 +428,17 @@ export async function saveFacultyTemplateDraft(
     return bindingValidation;
   }
 
-  const isOwnedByFaculty = template.faculty_owner_id === auth.data.userId;
-
   try {
     const savedId = await prisma.$transaction(async (tx) => {
-      let templateId = template.id;
-
-      if (isOwnedByFaculty) {
-        await tx.instrumentTemplate.update({
-          where: { id: template.id },
-          data: {
-            bound_course_id: input.bound_course_id ?? null,
-            bound_major_id: input.bound_major_id ?? null,
-            bound_program_id: input.bound_program_id ?? null,
-            description: input.description ?? null,
-            name: input.name,
-            is_active: input.is_active,
-            structure: structure as unknown as Prisma.InputJsonValue,
-          },
-        });
-
-        const latestVersion = await tx.instrumentVersion.findFirst({
-          where: { template_id: template.id },
-          orderBy: { version_number: "desc" },
-          select: { id: true },
-        });
-
-        if (latestVersion) {
-          await tx.instrumentVersion.update({
-            where: { id: latestVersion.id },
-            data: { structure_snapshot: structure as unknown as Prisma.InputJsonValue },
-          });
-        }
-      } else {
-        const created = await tx.instrumentTemplate.create({
-          data: {
-            bound_course_id: input.bound_course_id ?? null,
-            bound_major_id: input.bound_major_id ?? null,
-            bound_program_id: input.bound_program_id ?? null,
-            code: generateFacultyTemplateCode(template.code, auth.data.userId),
-            description: input.description ?? null,
-            faculty_owner_id: auth.data.userId,
-            is_active: input.is_active,
-            is_faculty_accessible: false,
-            name: input.name,
-            program_id: template.program_id,
-            source_template_id: template.source_template_id ?? template.id,
-            structure: structure as unknown as Prisma.InputJsonValue,
-            template_type: EvaluationTemplateType.COURSE_BOUND,
-          },
-        });
-
-        await tx.instrumentVersion.create({
-          data: {
-            is_active: true,
-            structure_snapshot: structure as unknown as Prisma.InputJsonValue,
-            template_id: created.id,
-            version_number: 1,
-          },
-        });
-
-        templateId = created.id;
+      if (target.ownedTemplateId) {
+        await updateOwnedFacultyDraft(tx, target.ownedTemplateId, input, structure);
+        await replaceDraftBindings(tx, target.ownedTemplateId, bindingValidation.bindings);
+        return target.ownedTemplateId;
       }
 
-      await tx.instrumentTemplateCiloQuestionBinding.deleteMany({
-        where: { template_id: templateId },
-      });
-
-      if (bindingValidation.bindings.length > 0) {
-        await tx.instrumentTemplateCiloQuestionBinding.createMany({
-          data: bindingValidation.bindings.map((binding) => ({
-            cilo_description_snapshot: binding.ciloDescriptionSnapshot,
-            cilo_id: binding.ciloId,
-            item_key: binding.itemKey,
-            question_prompt_snapshot: binding.questionPromptSnapshot,
-            section_key: binding.sectionKey,
-            template_id: templateId,
-          })),
-        });
-      }
-
-      return templateId;
+      const createdId = await createFacultyDraft(tx, input, structure, target, auth.data.userId);
+      await replaceDraftBindings(tx, createdId, bindingValidation.bindings);
+      return createdId;
     });
 
     return { success: true, data: { id: savedId } };

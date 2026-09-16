@@ -85,7 +85,6 @@ const ROLE_LABELS: Record<SystemRole, string> = {
 
 const SINGLE_SELECT_ROLES: SystemRole[] = [
   SystemRole.STUDENT,
-  SystemRole.PROGRAM_HEAD,
   SystemRole.FACULTY,
   SystemRole.ALUMNI,
   SystemRole.INDUSTRY_PARTNER,
@@ -104,8 +103,9 @@ type EmailLookupState =
   | { status: "found"; email: string; user: ExistingAccountLookup }
   | { status: "error"; email: string; error: string };
 
-function needsProgramField(role: SystemRole | undefined): "single" | "none" {
+function needsProgramField(role: SystemRole | undefined): "single" | "multi" | "none" {
   if (!role) return "none";
+  if (role === SystemRole.PROGRAM_HEAD) return "multi";
   if (SINGLE_SELECT_ROLES.includes(role)) return "single";
   return "none";
 }
@@ -140,14 +140,17 @@ function getRoleDetailsSectionTitle(role: SystemRole | undefined): string | null
  */
 // fallow-ignore-next-line complexity
 function appendRoleDetails(formData: FormData, role: SystemRole, data: CreateUserBySecretaryInput) {
-  if (needsProgramField(role) === "single" && data.program_id) {
+  if (role === SystemRole.PROGRAM_HEAD) {
+    for (const programId of new Set(data.program_ids ?? [])) {
+      formData.append("program_ids", programId);
+    }
+  } else if (needsProgramField(role) === "single" && data.program_id) {
     formData.set("program_id", data.program_id);
   }
 
   if (data.major_id) {
     formData.set("major_id", data.major_id);
   }
-
   if (isStudentRole(role)) {
     if (data.year_level) {
       formData.set("year_level", data.year_level);
@@ -371,6 +374,7 @@ export function AddUserForm({
       email: "",
       role: undefined as unknown as SystemRole,
       program_id: undefined,
+      program_ids: [],
       major_id: undefined,
       year_level: undefined,
       section: undefined,
@@ -455,6 +459,7 @@ export function AddUserForm({
   const resetRoleDetails = useCallback(() => {
     clearErrors();
     setValue("program_id", undefined);
+    setValue("program_ids", []);
     setValue("major_id", undefined);
     setValue("year_level", undefined);
     setValue("section", undefined);
@@ -498,7 +503,12 @@ export function AddUserForm({
   const hasMajors = !!selectedProgram && selectedProgram.majors.length > 0;
   const showMajor = programMode === "single" && (studentMode || alumniMode) && hasMajors;
 
-  const programLabel = studentMode ? "Academic program" : "Affiliated program";
+  const programLabel =
+    selectedRole === SystemRole.PROGRAM_HEAD
+      ? "Managed programs"
+      : studentMode
+        ? "Academic program"
+        : "Affiliated program";
 
   const roleOptions = Object.values(SystemRole)
     .filter((role) => !existingUser?.roles.includes(role))
@@ -655,7 +665,7 @@ export function AddUserForm({
           </CardTitle>
           <CardDescription>
             {existingUser
-              ? "This email already belongs to a CLOIE account. Add another role instead of creating a duplicate account."
+              ? "This email already belongs to a System CLOIE account. Add another role instead of creating a duplicate account."
               : "Create a new user account and assign their initial role."}
           </CardDescription>
         </CardHeader>
@@ -783,6 +793,104 @@ export function AddUserForm({
                     optional={industryPartnerMode}
                     error={errors.program_id?.message}
                   />
+                )}
+
+                {programMode === "multi" && (
+                  <div className="space-y-2">
+                    <Label className="text-label-sm text-muted-foreground font-semibold tracking-wider uppercase">
+                      {programLabel}
+                    </Label>
+                    <p className="text-caption text-muted-foreground">
+                      Select every program this head manages. More can be added later from Edit
+                      user.
+                    </p>
+                    <Controller
+                      name="program_ids"
+                      control={control}
+                      render={({ field }) => {
+                        const selected: string[] = Array.isArray(field.value)
+                          ? (field.value as string[])
+                          : [];
+                        function toggle(programId: string, checked: boolean) {
+                          const next = checked
+                            ? [...selected, programId]
+                            : selected.filter((value) => value !== programId);
+                          field.onChange([...new Set(next)]);
+                        }
+                        return (
+                          <div
+                            role="group"
+                            aria-label="Managed programs"
+                            aria-describedby={errors.program_ids ? "program-ids-error" : undefined}
+                            className={cn(
+                              "border-input bg-surface-input flex flex-col gap-1 rounded-xl border p-3",
+                              errors.program_ids && "border-destructive"
+                            )}
+                          >
+                            {programs.length === 0 ? (
+                              <p className="text-muted-foreground px-1 py-2 text-sm">
+                                No programs available.
+                              </p>
+                            ) : (
+                              programs.map((program) => {
+                                const checked = selected.includes(program.id);
+                                const checkboxId = `program-${program.id}`;
+                                return (
+                                  <label
+                                    key={program.id}
+                                    htmlFor={checkboxId}
+                                    className="hover:bg-surface-hover has-[input:focus-visible]:ring-ring/50 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 has-[input:focus-visible]:ring-2 pointer-coarse:py-3"
+                                  >
+                                    <input
+                                      id={checkboxId}
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => toggle(program.id, e.target.checked)}
+                                      className="peer sr-only"
+                                    />
+                                    <span
+                                      aria-hidden
+                                      className={cn(
+                                        "border-input bg-surface-input peer-focus-visible:ring-ring/50 peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-[4px] border peer-focus-visible:ring-2",
+                                        errors.program_ids && "border-destructive"
+                                      )}
+                                    >
+                                      {checked ? (
+                                        <svg
+                                          viewBox="0 0 16 16"
+                                          className="size-3.5"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth={2.5}
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          aria-hidden
+                                        >
+                                          <path d="M3 8L6.5 11.5L13 4.5" />
+                                        </svg>
+                                      ) : null}
+                                    </span>
+                                    <span className="min-w-0 flex-1 text-sm leading-snug [overflow-wrap:anywhere] break-words">
+                                      {program.code} — {program.name}
+                                    </span>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                    {errors.program_ids && (
+                      <p
+                        id="program-ids-error"
+                        className="text-destructive flex items-center gap-1 text-xs"
+                      >
+                        <AlertCircle className="size-3" />
+                        {errors.program_ids.message}
+                      </p>
+                    )}
+                  </div>
                 )}
 
                 {showMajor && (

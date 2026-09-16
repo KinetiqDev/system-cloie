@@ -145,6 +145,7 @@ export async function addRoleToExistingUser(
     role: input.role,
     email: user.email,
     program_id: input.program_id,
+    program_ids: input.program_ids,
     major_id: input.major_id,
     year_level: input.year_level,
     section: input.section,
@@ -157,6 +158,7 @@ export async function addRoleToExistingUser(
   }
 
   const activeMajorId = contextResult.data.activeMajorId;
+  const managedProgramIds = contextResult.data.programIds;
 
   try {
     // fallow-ignore-next-line complexity
@@ -205,20 +207,25 @@ export async function addRoleToExistingUser(
         }
 
         case SystemRole.PROGRAM_HEAD: {
-          await tx.programHeadAssignment.upsert({
-            where: {
-              program_head_id_program_id: {
-                program_head_id: input.user_id,
-                program_id: input.program_id!,
+          // The gate guarantees a non-empty managed set; historical rows
+          // reactivate instead of duplicating, matching assignment-set
+          // administration and the revocation gate.
+          for (const managedProgramId of managedProgramIds) {
+            await tx.programHeadAssignment.upsert({
+              where: {
+                program_head_id_program_id: {
+                  program_head_id: input.user_id,
+                  program_id: managedProgramId,
+                },
               },
-            },
-            update: { is_active: true },
-            create: {
-              program_head_id: input.user_id,
-              program_id: input.program_id!,
-              is_active: true,
-            },
-          });
+              update: { is_active: true },
+              create: {
+                program_head_id: input.user_id,
+                program_id: managedProgramId,
+                is_active: true,
+              },
+            });
+          }
           break;
         }
 

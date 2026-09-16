@@ -22,6 +22,9 @@ import FacultyReviewLoading from "@/app/(app)/faculty/cilo-evaluations/[evaluati
 import FacultyResponseReviewLoading from "@/app/(app)/faculty/cilo-evaluations/[evaluationId]/responses/[responseId]/loading";
 import FacultyCourseRostersLoading from "@/app/(app)/faculty/course-rosters/loading";
 import FacultyToolsLoading from "@/app/(app)/faculty/tools/loading";
+import FacultyToolsNewLoading from "@/app/(app)/faculty/tools/new/loading";
+import FacultyToolsNewBlankLoading from "@/app/(app)/faculty/tools/new/blank/loading";
+import FacultyToolsNewFromTemplateLoading from "@/app/(app)/faculty/tools/new/from/[templateId]/loading";
 import FacultyToolEditLoading from "@/app/(app)/faculty/tools/[id]/edit/loading";
 import ProgramHeadDashboardLoading from "@/app/(app)/program-head/dashboard/loading";
 import ProgramHeadCoursesLoading from "@/app/(app)/program-head/courses/loading";
@@ -53,6 +56,8 @@ import ProgramHeadEntryLoading from "@/app/(app)/program-head/loading";
 import ProgramHeadProfileLoading from "@/app/(app)/program-head/profile/loading";
 import SelectedProgramToolsLoading from "@/app/(app)/program-head/programs/[programId]/tools/loading";
 import SelectedProgramToolsNewLoading from "@/app/(app)/program-head/programs/[programId]/tools/new/loading";
+import SelectedProgramToolsNewBlankLoading from "@/app/(app)/program-head/programs/[programId]/tools/new/blank/loading";
+import SelectedProgramToolsNewFromBaselineLoading from "@/app/(app)/program-head/programs/[programId]/tools/new/from/[baselineId]/loading";
 import SelectedProgramToolEditLoading from "@/app/(app)/program-head/programs/[programId]/tools/[id]/edit/loading";
 import SelectedProgramToolsPublishLoading from "@/app/(app)/program-head/programs/[programId]/tools/publish/loading";
 import SelectedProgramCiloEvaluationNewLoading from "@/app/(app)/program-head/programs/[programId]/cilo-evaluations/new/loading";
@@ -85,6 +90,9 @@ const loadingRoutes = [
   [FacultyResponseReviewLoading, "Loading response review"],
   [FacultyCourseRostersLoading, "Loading records"],
   [FacultyToolsLoading, "Loading records"],
+  [FacultyToolsNewLoading, "Loading records"],
+  [FacultyToolsNewBlankLoading, "Loading form"],
+  [FacultyToolsNewFromTemplateLoading, "Loading form"],
   [FacultyToolEditLoading, "Loading form"],
   [ProgramHeadDashboardLoading, "Loading dashboard"],
   [ProgramHeadCoursesLoading, "Loading records"],
@@ -115,7 +123,9 @@ const loadingRoutes = [
   [ProgramHeadEntryLoading, "Loading records"],
   [ProgramHeadProfileLoading, "Loading profile"],
   [SelectedProgramToolsLoading, "Loading records"],
-  [SelectedProgramToolsNewLoading, "Loading form"],
+  [SelectedProgramToolsNewLoading, "Loading records"],
+  [SelectedProgramToolsNewBlankLoading, "Loading form"],
+  [SelectedProgramToolsNewFromBaselineLoading, "Loading form"],
   [SelectedProgramToolEditLoading, "Loading form"],
   [SelectedProgramToolsPublishLoading, "Loading form"],
   [SelectedProgramCiloEvaluationNewLoading, "Loading form"],

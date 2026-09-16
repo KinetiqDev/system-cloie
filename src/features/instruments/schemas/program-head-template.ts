@@ -137,6 +137,31 @@ export const createProgramHeadTemplateSchema = z
     }
   });
 
+/**
+ * Builder-forwarded settings for a baseline copy. The builder passes typed
+ * values, so booleans are strict here: a malformed direct invocation fails
+ * with a usable message instead of a database error at save time.
+ */
+export const baselineCopySettingsSchema = z
+  .object({
+    description: z.string().max(1000),
+    is_active: z.boolean(),
+    template_type: z.nativeEnum(EvaluationTemplateType),
+    is_faculty_accessible: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.template_type !== EvaluationTemplateType.COURSE_BOUND &&
+      value.is_faculty_accessible
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Only course-bound templates can be faculty-accessible.",
+        path: ["is_faculty_accessible"],
+      });
+    }
+  });
+
 export const updateProgramHeadTemplateSchema = z
   .object({
     programId: z.string().uuid(),
@@ -183,7 +208,10 @@ const ciloQuestionBindingSchema = z.object({
 });
 
 export const saveFacultyTemplateDraftSchema = z.object({
-  id: z.string().uuid(),
+  /** Existing accessible template being saved, or copied when faculty-unowned. */
+  id: z.string().uuid().optional(),
+  /** Starting template for a draft that has no owned template yet. */
+  source_template_id: z.string().uuid().optional(),
   name: z
     .string()
     .trim()

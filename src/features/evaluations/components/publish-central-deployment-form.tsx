@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, Users } from "lucide-react";
 import { type TargetStakeholder, YearLevel } from "@prisma/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { BackLink } from "@/components/ui/back-link";
+import type { PublishBackNavigation } from "@/features/evaluations/components/publish-navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +46,8 @@ interface PublishCentralDeploymentFormProps {
   majors: Array<{ id: string; name: string }>;
   programId: string;
   programLabel: string;
+  /** Server-computed upward navigation for the page-level Back control. */
+  backNavigation?: PublishBackNavigation;
   preselectedTemplateId?: string;
   termInstances: TermInstanceItem[];
   activeTermId?: string;
@@ -73,6 +77,7 @@ export function PublishCentralDeploymentForm({
   majors,
   programId,
   programLabel,
+  backNavigation,
   preselectedTemplateId,
   termInstances,
   activeTermId,
@@ -207,13 +212,16 @@ export function PublishCentralDeploymentForm({
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div className="space-y-1">
-        <h1 className="text-heading-lg">Publish Evaluation Tool</h1>
-        <p className="text-body-md text-muted-foreground">
-          Deploy an evaluation instrument to target stakeholders within{" "}
-          <span className="font-semibold">{programLabel}</span>.
-        </p>
+      <div className="space-y-3">
+        {backNavigation && <BackLink href={backNavigation.href}>{backNavigation.label}</BackLink>}
+        {/* Page header */}
+        <div className="space-y-1">
+          <h1 className="text-heading-lg">Publish Evaluation Tool</h1>
+          <p className="text-body-md text-muted-foreground">
+            Deploy an evaluation instrument to target stakeholders within{" "}
+            <span className="font-semibold">{programLabel}</span>.
+          </p>
+        </div>
       </div>
 
       {/* Form card */}
