@@ -31,6 +31,10 @@ Abstract guidance lives in the [official guide](guide/technical-document-guide-2
 
 Latest Google Docs export: [manuscript/current.md](manuscript/current.md); synchronization rules in [manuscript/README.md](manuscript/README.md). Agents review the snapshot but do not rewrite it.
 
+### Authoring aid
+
+- [formatting-guide.md](formatting-guide.md) — Google Docs setup translating the official guide into **Official** rules vs **CLOIE conventions** for the manuscript. Companion to [manuscript/](manuscript/); [guide/](guide/) stays a faithful transcription of the institution-issued documents.
+
 ### Evidence (appendix-aligned records)
 
 - [requirements-traceability.md](evidence/requirements-traceability.md) — RTM per Appendix F, with ID-stability policy and provenance rules

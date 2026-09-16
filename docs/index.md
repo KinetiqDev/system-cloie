@@ -51,7 +51,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## External Authoritative References
 
-- Capstone guide: [capstone/guide/technical-document-guide-2026.md](capstone/guide/technical-document-guide-2026.md) + appendices F/G/H ([capstone/index.md](capstone/index.md)).
+- Capstone guide: [capstone/guide/technical-document-guide-2026.md](capstone/guide/technical-document-guide-2026.md) + appendices F/G/H ([capstone/index.md](capstone/index.md)); formatting companion: [capstone/formatting-guide.md](capstone/formatting-guide.md).
 - Institutional policy: [institutional/isdrt-policy.md](institutional/isdrt-policy.md); institutional form conversions are pending (targets under `institutional/forms/`).
 
 ## Capstone Documentation
