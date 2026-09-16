@@ -1,8 +1,9 @@
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
-import { BarChart3, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
+import { BarChart3, CalendarDays, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
@@ -43,6 +44,9 @@ export default async function SelectedProgramDashboardPage({
   if (!dashboard) {
     notFound();
   }
+  const hasExplicitPeriodFilter = Boolean(
+    periodFilters.schoolYearId || periodFilters.semester || periodFilters.termInstanceId
+  );
   const workflows = [
     {
       label: "Review responses",
@@ -73,12 +77,20 @@ export default async function SelectedProgramDashboardPage({
     <div className="flex min-w-0 flex-col gap-6">
       <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <header className="border-border flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-heading-lg text-balance">{dashboard.programCode} dashboard</h1>
-          <p className="text-body-md text-text-secondary mt-2 max-w-3xl text-pretty">
-            <span className="text-foreground font-semibold">{dashboard.programLabel}</span>
-            {dashboard.periodLabel ? <span> · {dashboard.periodLabel}</span> : null}
+          <p className="text-body-md text-foreground max-w-3xl font-semibold text-pretty">
+            {dashboard.programLabel}
           </p>
+          <div className="text-text-secondary flex min-w-0 flex-wrap items-center gap-2 text-sm">
+            <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
+            <span className="text-text-primary font-medium">
+              {hasExplicitPeriodFilter ? "Selected Academic Period" : "Active Academic Period"}
+            </span>
+            <Badge variant="outline" className="max-w-full whitespace-normal">
+              {dashboard.periodLabel ?? "No active Academic Period"}
+            </Badge>
+          </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <Link

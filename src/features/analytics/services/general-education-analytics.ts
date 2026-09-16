@@ -96,12 +96,14 @@ function buildPeriodOptions(instances: TermInstanceSummary[]) {
 function buildPeriodLabel(
   filters: GeneralEducationAnalyticsFilterState,
   schoolYearLabel: string | null,
-  hasMatchingTerm: boolean
+  instances: TermInstanceSummary[]
 ): string | null {
+  if (filters.termInstanceId && instances.length === 1) {
+    return buildInstancePeriodLabel(instances[0]);
+  }
   const parts: string[] = [];
   if (schoolYearLabel) parts.push(`School Year ${schoolYearLabel}`);
   if (filters.semester) parts.push(SEMESTER_LABELS[filters.semester] ?? filters.semester);
-  if (filters.termInstanceId && hasMatchingTerm) parts.push("Selected period");
   return parts.length ? parts.join(" · ") : null;
 }
 
@@ -189,7 +191,15 @@ export async function getGeneralEducationAnalytics(
   filters: GeneralEducationAnalyticsFilterState
 ): Promise<GeneralEducationAnalyticsDTO | null> {
   const auth = await requireGenEdCoordinator();
-  if (!auth.ok) return null;
+  const [{ termInstanceWhere, schoolYearLabel, instances }, periodInstances] =
+    await Promise.all([resolveTermInstanceFilter(filters), prisma.academicTermInstance.findMany({
+      select: {
+        id: true,
+        semester: true,
+        term: true,
+        school_year: { select: { id: true, code: true } },
+      },
+    })]);
 
   const [{ termInstanceWhere, schoolYearLabel, hasMatchingTerm }, periodInstances] =
     await Promise.all([
@@ -339,7 +349,7 @@ export async function getGeneralEducationAnalytics(
       ? "no-assignments"
       : submittedResponseCount === 0
         ? "no-submissions"
-        : null;
+  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, instances);]
 
   const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
 

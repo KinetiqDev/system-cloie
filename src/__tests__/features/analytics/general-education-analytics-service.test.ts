@@ -100,4 +100,18 @@ describe("getGeneralEducationAnalytics", () => {
     // impossible term filter handled via resolveTermInstanceFilter
     expect(r).not.toBeNull();
   });
+
+  it("labels a single selected term instance with its full period label", async () => {
+    const termId = "11111111-2222-4333-8444-555555555555";
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: termId,
+        semester: "SECOND",
+        term: "SECOND_TERM",
+        school_year: { id: "sy-1", code: "2026-2027" },
+      },
+    ]);
+    const r = await getGeneralEducationAnalytics({ termInstanceId: termId });
+    expect(r!.scope.periodLabel).toBe("2026-2027 · 2nd Semester · 2nd Term");
+  });
 });

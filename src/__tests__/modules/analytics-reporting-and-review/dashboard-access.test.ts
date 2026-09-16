@@ -13,6 +13,7 @@ const {
   countEligibleMock,
   buildWordCloudTokensMock,
   getActiveTermIdMock,
+  resolveActiveTermMock,
   prismaMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
     () => []
   ),
   getActiveTermIdMock: vi.fn<() => Promise<string | null>>(async () => "term-active-1"),
+  resolveActiveTermMock: vi.fn(),
   prismaMock: {
     program: { findUniqueOrThrow: vi.fn() },
     schoolYear: { findUnique: vi.fn() },
@@ -56,6 +58,7 @@ vi.mock("@/features/analytics/services/qualitative-analytics", async (importOrig
 });
 vi.mock("@/features/academic-calendar/services/resolve-active-term", () => ({
   getActiveTermId: getActiveTermIdMock,
+  resolveActiveTerm: resolveActiveTermMock,
 }));
 vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
 
@@ -95,6 +98,7 @@ describe("analytics dashboard access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getActiveTermIdMock.mockResolvedValue("term-active-1");
+    resolveActiveTermMock.mockResolvedValue(null);
     prismaMock.academicTermInstance.findFirst.mockResolvedValue({
       id: "term-active-1",
       semester: "FIRST",
@@ -211,6 +215,41 @@ describe("analytics dashboard access", () => {
     ]) {
       expect(mock.mock.calls[0][0].where.status).toBe("ACTIVE");
     }
+  });
+
+  it("labels the dashboard with the full active period instead of a placeholder", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: "term-active-1",
+        semester: "SECOND",
+        term: "SECOND_TERM",
+        school_year: { id: "sy-1", code: "2026-2027" },
+      },
+    ]);
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result?.periodLabel).toBe("2026-2027 · 2nd Semester · 2nd Term");
+  });
+
+  it("falls back to the canonical active period when the program has no deployments in it", async () => {
+    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([]);
+    resolveActiveTermMock.mockResolvedValue({
+      termInstance: {
+        id: "term-active-1",
+        schoolYearCode: "2026-2027",
+        semester: "SECOND",
+        term: "SECOND_TERM",
+      },
+    });
+
+    const result = await getProgramHeadDashboard("program-1");
+
+    expect(result?.periodLabel).toBe("2026-2027 · 2nd Semester · 2nd Term");
   });
 
   it("preserves school-year and semester scope in active-response links", async () => {

@@ -86,6 +86,7 @@ type ProgramHeadAnalyticsReadContext = {
   selectedProgram: { id: string; code: string; name: string };
   termInstanceWhere: ResolvedTermInstanceFilter["where"];
   schoolYearLabel: string | null;
+  termInstances: TermInstanceSummary[];
   periodInstances: TermInstanceSummary[];
 };
 
@@ -360,12 +361,19 @@ const resolveProgramHeadAnalyticsReadContext = cache(
     if (!contextResult.success) return null;
 
     const { selectedProgram } = contextResult.data;
-    const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-      resolveTermInstanceFilter(selectedProgram.id, filters),
-      listProgramPeriodOptions(selectedProgram.id),
-    ]);
+    const [{ where: termInstanceWhere, schoolYearLabel, instances }, periodInstances] =
+      await Promise.all([
+        resolveTermInstanceFilter(selectedProgram.id, filters),
+        listProgramPeriodOptions(selectedProgram.id),
+      ]);
 
-    return { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances };
+    return {
+      selectedProgram,
+      termInstanceWhere,
+      schoolYearLabel,
+      termInstances: instances,
+      periodInstances,
+    };
   }
 );
 
@@ -378,16 +386,12 @@ export async function getProgramHeadAnalyticsFrame(
 } | null> {
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, schoolYearLabel, termInstances, periodInstances } = context;
   return {
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(
-        filters,
-        schoolYearLabel,
-        termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID
-      ),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
   };
@@ -396,22 +400,25 @@ export async function getProgramHeadAnalyticsFrame(
 export function buildPeriodLabel(
   filters: Pick<AnalyticsFilterState, "semester" | "termInstanceId">,
   schoolYearLabel: string | null,
-  hasMatchingTerm: boolean
+  instances: TermInstanceSummary[]
 ): string | null {
+  if (filters.termInstanceId && instances.length === 1) {
+    return buildInstancePeriodLabel(instances[0]);
+  }
   const parts: string[] = [];
   if (schoolYearLabel) parts.push(`School Year ${schoolYearLabel}`);
   if (filters.semester) parts.push(SEMESTER_LABELS[filters.semester] ?? filters.semester);
-  if (filters.termInstanceId && hasMatchingTerm) parts.push("Selected period");
   if (parts.length === 0) return null;
   return parts.join(" · ");
 }
 
 /** Readable label for one canonical AcademicTermInstance. */
-function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
+export function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
   const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
   const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
   return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");
 }
+
 
 // ---------------------------------------------------------------------------
 // Main service function
@@ -424,7 +431,7 @@ export async function getProgramHeadAnalytics(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
   // Responses tied to this program via central deployments OR course-bound evaluations,
   // following the same scope predicate as the existing dashboard service.
   const sourceScope = buildSourceScope(filters);
@@ -485,8 +492,7 @@ export async function getProgramHeadAnalytics(
     ratingCount,
     ratingSum,
   });
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
-  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
+  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, termInstances);
   const scope: ProgramHeadAnalyticsScopeSummary = {
     programCode: selectedProgram.code,
     programName: selectedProgram.name,
@@ -1186,7 +1192,7 @@ export async function getProgramHeadOutcomes(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
 
   // Course-bound PLO evidence comes from CILO bindings; program-wide PLO
   // evidence comes from published CentralDeploymentPloSnapshot bindings
@@ -1302,7 +1308,6 @@ export async function getProgramHeadOutcomes(
     },
   }));
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason = outcomesEmptyReason(
     outcomes.length,
     programWideOutcomes.length,
@@ -1315,7 +1320,7 @@ export async function getProgramHeadOutcomes(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1341,7 +1346,7 @@ export async function getProgramHeadTrends(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1432,11 +1437,10 @@ export async function getProgramHeadTrends(
 
   const { periods, breaks, emptyReason } = buildTrendSeries(inputs);
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const scope: ProgramHeadAnalyticsScopeSummary = {
     programCode: selectedProgram.code,
     programName: selectedProgram.name,
-    periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
   };
 
   return {
@@ -1570,7 +1574,7 @@ export async function getProgramHeadStakeholders(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1624,7 +1628,6 @@ export async function getProgramHeadStakeholders(
 
   const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadStakeholdersEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -1636,7 +1639,7 @@ export async function getProgramHeadStakeholders(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1694,7 +1697,7 @@ export async function getProgramHeadBreakdowns(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1763,7 +1766,6 @@ export async function getProgramHeadBreakdowns(
     YEAR_LEVEL_ATTRIBUTION_NOTE
   );
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadBreakdownsEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -1775,7 +1777,7 @@ export async function getProgramHeadBreakdowns(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1932,7 +1934,7 @@ export async function getProgramHeadFeedback(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1990,7 +1992,6 @@ export async function getProgramHeadFeedback(
 
   const aggregated = aggregateFeedbackEvidence(qualitativeRows);
   const promptProvenance = instrumentProvenanceLabels(aggregated.evidence.prompts);
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadFeedbackEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -2004,7 +2005,7 @@ export async function getProgramHeadFeedback(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,

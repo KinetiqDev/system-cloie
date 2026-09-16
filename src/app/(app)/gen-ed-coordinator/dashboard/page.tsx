@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { cn } from "@/lib/utils";
 import {
@@ -96,7 +96,7 @@ export function GenEdDashboardContent({ data }: { data: GenEdDashboardData }) {
           title="Coverage at a glance"
           description="Current-period General Education reach across the college."
         />
-        <div className="border-border bg-card grid grid-cols-2 overflow-hidden rounded-xl border shadow-sm xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Metric
             label="Active GE courses"
             value={coverage.activeCourseCount.toLocaleString()}
@@ -196,19 +196,20 @@ function Metric({
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 }) {
   return (
-    <div className="border-border flex min-w-0 flex-col gap-3 border-b p-3 odd:border-r nth-last-[-n+2]:border-b-0 sm:p-4 xl:border-r xl:border-b-0 xl:last:border-r-0">
-      <div className="text-text-secondary flex items-center gap-2 text-sm font-medium">
-        <Icon aria-hidden={true} className="size-4 shrink-0" />
-        <span>{label}</span>
-      </div>
-      <p className="font-heading text-heading-xl text-foreground break-words tabular-nums">
-        {value}
-      </p>
-      <p className="text-text-secondary text-xs leading-relaxed">{detail}</p>
-    </div>
+    <Card className="min-w-0">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <CardDescription className="text-label-sm font-semibold tracking-wider uppercase">
+            {label}
+          </CardDescription>
+          <Icon aria-hidden="true" className="text-text-secondary size-4 shrink-0" />
+        </div>
+        <CardTitle className="text-display-md break-words tabular-nums">{value}</CardTitle>
+      </CardHeader>
+      <CardContent className="text-text-secondary text-body-sm">{detail}</CardContent>
+    </Card>
   );
 }
-
 // fallow-ignore-next-line complexity
 function AttentionSection({ data }: { data: GenEdDashboardData }) {
   const { attention, coverage, emptyReason } = data;

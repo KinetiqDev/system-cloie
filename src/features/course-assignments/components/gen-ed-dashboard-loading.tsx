@@ -22,16 +22,20 @@ export function GenEdDashboardLoading() {
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </div>
-        <div className="border-border bg-card grid overflow-hidden rounded-xl border sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
-            <div
-              key={index}
-              className="border-border flex flex-col gap-3 border-b p-4 xl:border-r xl:border-b-0 xl:last:border-r-0"
-            >
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-3 w-36 max-w-full" />
-            </div>
+            <Card key={index} className="min-w-0">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="size-4 rounded-full" />
+                </div>
+                <Skeleton className="h-9 w-20" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-4 w-36 max-w-full" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       </section>

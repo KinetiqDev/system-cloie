@@ -396,6 +396,25 @@ describe("getProgramHeadAnalytics", () => {
     expect(result!.scope.periodLabel).toBe("2nd Semester");
   });
 
+  it("labels a single selected term instance with its full period label", async () => {
+    const termId = "11111111-2222-4333-8444-555555555555";
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: termId,
+        semester: "SECOND",
+        term: "SECOND_TERM",
+        school_year: { id: "sy-1", code: "2026-2027" },
+      },
+    ]);
+
+    const result = await getProgramHeadAnalytics("program-bsed", {
+      tab: "outcomes",
+      termInstanceId: termId,
+    });
+
+    expect(result!.scope.periodLabel).toBe("2026-2027 · 2nd Semester · 2nd Term");
+  });
+
   it("returns the selected program code and name in the scope summary", async () => {
     const result = await getProgramHeadAnalytics("program-bsed", defaultFilters);
 

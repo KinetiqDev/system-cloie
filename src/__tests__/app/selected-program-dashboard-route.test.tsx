@@ -234,6 +234,15 @@ describe("selected Program dashboard route", () => {
     expect(dashboardMock).toHaveBeenCalledWith("p1", {});
   });
 
+  it("shows when no active academic period is configured", async () => {
+    dashboardMock.mockResolvedValue(dashboardDataFixture({ periodLabel: null }));
+
+    await loadPage();
+
+    expect(screen.getByText("Active Academic Period")).toBeInTheDocument();
+    expect(screen.getByText("No active Academic Period")).toBeInTheDocument();
+  });
+
   it("renders the completion KPI over the raw assignment denominator with a breakdown popover", async () => {
     await loadPage();
     const card = screen.getByText("Response completion").closest<HTMLElement>("[data-slot=card]")!;

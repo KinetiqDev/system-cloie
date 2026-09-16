@@ -2,7 +2,6 @@ import { DeploymentStatus, ResponseStatus, TargetStakeholder } from "@prisma/cli
 import type { AcademicSemester } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import {
   buildProgramHeadResponsesCourseEvaluationPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
@@ -14,12 +13,14 @@ import {
   programHeadResponsesQuery,
 } from "./program-head-responses-state";
 import {
-  IMPOSSIBLE_TERM_INSTANCE_ID,
+  buildInstancePeriodLabel,
   buildPeriodLabel,
   buildProgramOpportunityScope,
   buildProgramResponseScope,
   resolveTermInstanceFilter,
+  type TermInstanceSummary,
 } from "./get-program-head-analytics";
+import { getActiveTermId, resolveActiveTerm } from "@/features/academic-calendar/services/resolve-active-term";
 import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
 import { groupRatingsByScale } from "../aggregators/quantitative";
@@ -51,6 +52,18 @@ import {
 } from "../program-head-dashboard-labels";
 export { QUALITATIVE_TOKEN_CAP };
 import type { DashboardSourceKey } from "../program-head-dashboard-labels";
+
+const SEMESTER_FALLBACK_LABELS: Record<string, string> = {
+  FIRST: "1st Semester",
+  SECOND: "2nd Semester",
+  SUMMER: "Summer",
+};
+
+const TERM_FALLBACK_LABELS: Record<string, string> = {
+  FIRST_TERM: "1st Term",
+  SECOND_TERM: "2nd Term",
+};
+
 
 export type DashboardSourceMean = {
   sourceKey: DashboardSourceKey;
@@ -628,17 +641,24 @@ export async function getProgramHeadDashboard(
     }
   }
 
-  const { where: termInstanceWhere, schoolYearLabel } = await resolveTermInstanceFilter(
+  const { where: termInstanceWhere, schoolYearLabel, instances } = await resolveTermInstanceFilter(
     scope.programId,
     effectiveFilters
   );
   const activeEvaluations = await listActiveEvaluations(scope.programId, termInstanceWhere);
 
-  const periodLabel = buildPeriodLabel(
-    effectiveFilters,
-    schoolYearLabel,
-    termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID
-  );
+  // A term filter that matches no in-Program deployments still names the
+  // canonical Academic Period it selected — never a generic placeholder.
+  let periodLabel = buildPeriodLabel(effectiveFilters, schoolYearLabel, instances);
+  if (!periodLabel && effectiveFilters.termInstanceId) {
+    const activeTerm = await resolveActiveTerm();
+    if (activeTerm?.termInstance.id === effectiveFilters.termInstanceId) {
+      const { schoolYearCode, semester, term } = activeTerm.termInstance;
+      periodLabel = [schoolYearCode, SEMESTER_FALLBACK_LABELS[semester] ?? semester, term ? (TERM_FALLBACK_LABELS[term] ?? term) : null]
+        .filter(Boolean)
+        .join(" · ");
+    }
+  }
 
   const programResponseScope = buildProgramResponseScope(scope.programId, termInstanceWhere);
   const programOpportunityScope = buildProgramOpportunityScope(scope.programId, termInstanceWhere);
