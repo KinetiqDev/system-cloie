@@ -70,5 +70,5 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Tooling
 
-- [tooling/graphify.md](tooling/graphify.md) — knowledge-graph commands and CLOIE query patterns.
+- [tooling/graphify.md](tooling/graphify.md) — knowledge-graph commands and System CLOIE query patterns.
 - [tooling/obsidian.md](tooling/obsidian.md) — vault settings; Markdown stays canonical.

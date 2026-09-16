@@ -665,7 +665,7 @@ export function AddUserForm({
           </CardTitle>
           <CardDescription>
             {existingUser
-              ? "This email already belongs to a CLOIE account. Add another role instead of creating a duplicate account."
+              ? "This email already belongs to a System CLOIE account. Add another role instead of creating a duplicate account."
               : "Create a new user account and assign their initial role."}
           </CardDescription>
         </CardHeader>
