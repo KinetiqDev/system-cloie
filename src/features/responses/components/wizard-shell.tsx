@@ -163,19 +163,47 @@ function QuantitativeItemField({
   validationError,
   onValueChange,
 }: QuantitativeItemFieldProps) {
+  const titleId = React.useId();
+  const required = isItemRequired(item);
   return (
-    <fieldset
+    <div
+      role="group"
+      aria-labelledby={titleId}
       className={cn(
-        "bg-surface rounded-xl border p-4 transition-colors",
+        "bg-surface w-full max-w-full min-w-0 overflow-x-clip rounded-xl border p-4 transition-colors [min-inline-size:0] sm:p-5",
         validationError && !currentValue ? "border-danger bg-danger-soft/30" : "border-border"
       )}
     >
-      <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
-      <div role="radiogroup" aria-label={item.prompt} className="flex flex-wrap gap-4 sm:gap-6">
+      <p
+        id={titleId}
+        className="mb-4 max-w-full min-w-0 font-semibold [overflow-wrap:anywhere] break-words"
+      >
+        {item.prompt}{" "}
+        {required ? (
+          <>
+            <span aria-hidden="true" className="text-danger font-bold">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        ) : (
+          <span className="border-border text-text-muted ml-2 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 align-middle text-xs font-medium whitespace-nowrap">
+            Optional
+          </span>
+        )}
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby={titleId}
+        className="flex w-full max-w-full min-w-0 flex-wrap gap-4 sm:gap-6"
+      >
         {item.scale.map((v, idx) => {
           const descriptorLabel = item.descriptorLabels?.[idx];
           return (
-            <label key={v} className="group flex cursor-pointer flex-col items-center gap-1">
+            <label
+              key={v}
+              className="group flex min-w-0 cursor-pointer flex-col items-center gap-1"
+            >
               <input
                 type="radio"
                 name={`q-${item.itemKey}`}
@@ -188,7 +216,7 @@ function QuantitativeItemField({
                 {v}
               </div>
               {descriptorLabel && (
-                <span className="text-text-muted text-caption mt-0.5 max-w-[80px] text-center leading-tight">
+                <span className="text-text-muted text-caption mt-0.5 max-w-[80px] min-w-0 text-center leading-tight [overflow-wrap:anywhere] break-words">
                   {descriptorLabel}
                 </span>
               )}
@@ -196,7 +224,7 @@ function QuantitativeItemField({
           );
         })}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
@@ -206,6 +234,8 @@ function QualitativeItemField({
   validationError,
   onValueChange,
 }: QualitativeItemFieldProps) {
+  const titleId = React.useId();
+  const required = isItemRequired(item);
   const handleSuggestedResponseClick = (suggestion: string) => {
     const trimmedSuggestion = suggestion.trim();
     if (!trimmedSuggestion) return;
@@ -225,25 +255,44 @@ function QualitativeItemField({
   };
 
   return (
-    <fieldset
+    <div
+      role="group"
+      aria-labelledby={titleId}
       className={cn(
-        "bg-surface rounded-xl border p-4 transition-colors",
-        validationError && isItemRequired(item) && currentValue.trim().length === 0
+        "bg-surface w-full max-w-full min-w-0 overflow-x-clip rounded-xl border p-4 transition-colors [min-inline-size:0] sm:p-5",
+        validationError && required && currentValue.trim().length === 0
           ? "border-danger bg-danger-soft/30"
           : "border-border"
       )}
     >
-      <legend className="mb-4 px-1 font-semibold">{item.prompt}</legend>
+      <p
+        id={titleId}
+        className="mb-4 max-w-full min-w-0 font-semibold [overflow-wrap:anywhere] break-words"
+      >
+        {item.prompt}{" "}
+        {required ? (
+          <>
+            <span aria-hidden="true" className="text-danger font-bold">
+              *
+            </span>
+            <span className="sr-only"> (required)</span>
+          </>
+        ) : (
+          <span className="border-border text-text-muted ml-2 inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 align-middle text-xs font-medium whitespace-nowrap">
+            Optional
+          </span>
+        )}
+      </p>
 
       {item.suggestedResponses && item.suggestedResponses.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 flex w-full max-w-full min-w-0 flex-wrap gap-2">
           {getNormalizedSuggestedResponses(item.suggestedResponses).map((suggestion, index) => (
             <button
               key={`${item.promptKey}:${index}:${suggestion}`}
               type="button"
               onClick={() => handleSuggestedResponseClick(suggestion)}
               className={cn(
-                "text-label-sm touch-manipulation rounded-full border px-3 py-1.5 font-medium transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none pointer-coarse:min-h-11 pointer-coarse:px-4",
+                "text-label-sm max-w-full min-w-0 touch-manipulation rounded-full border px-3 py-1.5 text-left font-medium [overflow-wrap:anywhere] break-all whitespace-normal transition-[color,background-color,border-color,box-shadow,transform] motion-reduce:transition-none pointer-coarse:min-h-11 pointer-coarse:px-4",
                 "hover:bg-primary-soft hover:border-primary hover:text-selected-fg",
                 "focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                 "active:scale-95 motion-reduce:active:scale-100",
@@ -262,13 +311,13 @@ function QualitativeItemField({
       )}
 
       <Textarea
-        aria-label={item.prompt}
+        aria-labelledby={titleId}
         value={currentValue}
         onChange={(e) => onValueChange(item.promptKey, e.target.value)}
         placeholder="Enter your response…"
-        className="min-h-[100px]"
+        className="min-h-[100px] w-full max-w-full min-w-0 [overflow-wrap:anywhere]"
       />
-    </fieldset>
+    </div>
   );
 }
 interface WizardShellProps {
@@ -538,7 +587,7 @@ export function WizardShell({
   }
 
   return (
-    <div className="relative flex min-h-[calc(100vh-8rem)] flex-col">
+    <div className="relative flex min-h-[calc(100vh-8rem)] w-full max-w-full min-w-0 flex-col overflow-x-clip">
       {/* Sticky Wizard Header */}
       <div className="bg-background border-border sticky top-0 z-20 mb-4 border-b pb-3 sm:mb-6 sm:pb-4">
         <div className="mb-3 flex items-center justify-between sm:mb-4">
@@ -607,9 +656,9 @@ export function WizardShell({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="w-full max-w-full min-w-0 flex-1">
         {/* Section Content */}
-        <div className="pb-32">
+        <div className="w-full max-w-full min-w-0 pb-32">
           {validationError && (
             <Alert
               variant="destructive"
@@ -634,12 +683,14 @@ export function WizardShell({
             </div>
           )}
 
-          <h2 className="text-title-lg mb-4 font-bold">{currentSection.name}</h2>
-          <p className="text-text-secondary text-body-sm mb-6 sm:mb-8">
+          <h2 className="text-title-lg mb-4 max-w-full min-w-0 font-bold [overflow-wrap:anywhere] break-words">
+            {currentSection.name}
+          </h2>
+          <p className="text-text-secondary text-body-sm mb-6 max-w-full min-w-0 [overflow-wrap:anywhere] break-words sm:mb-8">
             {currentSection.description}
           </p>
 
-          <div className="space-y-8">
+          <div className="w-full max-w-full min-w-0 space-y-6 sm:space-y-8">
             {currentSection.items.map((item) => {
               const answerKey = buildStudentEvaluationAnswerKey(
                 currentSection.id,

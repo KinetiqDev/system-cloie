@@ -53,8 +53,8 @@ export function ReviewModal({
     >
       <div className="space-y-8">
         {sections.map((s) => (
-          <div key={s.id}>
-            <h3 className="text-text-muted text-label-sm mb-4 font-bold tracking-wider uppercase">
+          <div key={s.id} className="w-full max-w-full min-w-0">
+            <h3 className="text-text-muted text-label-sm mb-4 max-w-full min-w-0 font-bold tracking-wider [overflow-wrap:anywhere] break-words uppercase">
               {s.name}
             </h3>
             <div className="space-y-4">
@@ -68,10 +68,12 @@ export function ReviewModal({
                 return (
                   <div
                     key={item.kind === "quantitative" ? item.itemKey : item.promptKey}
-                    className="border-border flex items-start justify-between gap-4 border-b py-3"
+                    className="border-border flex w-full max-w-full min-w-0 items-start justify-between gap-4 border-b py-3"
                   >
-                    <span className="text-text-secondary text-sm">{item.prompt}</span>
-                    <span className="text-selected-fg bg-primary-soft shrink-0 rounded-md px-3 py-1 font-black">
+                    <span className="text-text-secondary min-w-0 flex-1 text-sm [overflow-wrap:anywhere] break-words">
+                      {item.prompt}
+                    </span>
+                    <span className="text-selected-fg bg-primary-soft max-w-[40%] shrink-0 rounded-md px-3 py-1 font-black [overflow-wrap:anywhere] break-words">
                       {answer ?? "—"}
                     </span>
                   </div>

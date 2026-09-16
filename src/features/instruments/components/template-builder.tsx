@@ -2105,7 +2105,19 @@ function QuestionCard({
 
       {/* Prompt Input */}
       <div className="space-y-2">
-        <Label className="text-sm">Question title</Label>
+        <Label className="text-sm">
+          <span>
+            Question title{" "}
+            {question.required && (
+              <>
+                <span aria-hidden="true" className="text-danger font-bold">
+                  *
+                </span>
+                <span className="sr-only"> (required)</span>
+              </>
+            )}
+          </span>
+        </Label>
         <Textarea
           placeholder="Enter question"
           rows={1}
@@ -2217,9 +2229,11 @@ function QuestionCard({
               {question.suggestedResponses.map((resp, idx) => (
                 <div
                   key={idx}
-                  className="border-border bg-card flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  className="border-border bg-card flex max-w-full min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-sm"
                 >
-                  <span className="flex-1">{resp}</span>
+                  <span className="min-w-0 flex-1 [overflow-wrap:anywhere] break-words">
+                    {resp}
+                  </span>
                   <button
                     type="button"
                     onClick={() => onRemoveSuggestedResponse(sectionKey, question.key, idx)}
