@@ -1124,7 +1124,8 @@ describe("SecretaryAddUserForm existing account pivot", () => {
     await screen.findByText(existingUser.name);
 
     fireEvent.click(screen.getByRole("option", { name: /^program head$/i }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /^bsit —/i }));
+    const bsitCheckbox = await screen.findByRole("checkbox", { name: /^bsit —/i });
+    fireEvent.click(bsitCheckbox);
     fireEvent.click(screen.getByRole("checkbox", { name: /^bsba —/i }));
     fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
 
