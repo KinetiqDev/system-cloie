@@ -2,7 +2,7 @@
 title: Capstone Documentation Index
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-17
 ---
 
 # Capstone Documentation Index
@@ -39,6 +39,8 @@ Latest Google Docs export: [manuscript/current.md](manuscript/current.md); synch
 
 - [requirements-traceability.md](evidence/requirements-traceability.md) — RTM per Appendix F, with ID-stability policy and provenance rules
 - [testing-validation.md](evidence/testing-validation.md) — per Appendix G: automated layers (Vitest, gated DB invariants, Playwright E2E incl. mobile Pixel 7, production browser evidence) plus G-1–G-4 records
+- [alpha-testing-report-2026-09-17.md](evidence/alpha-testing-report-2026-09-17.md) — evidence-based technical alpha execution report for the current checkout, prior CI runs, and connected Google Docs records
+
 - [revision-compliance.md](evidence/revision-compliance.md) — per Appendix H: defense-stage revision log (Title / Outline / Pre-Final / Final)
 - [stakeholder-decisions.md](evidence/stakeholder-decisions.md) — stakeholder decisions traceable to current CONTEXT.md / ADRs
 - [deployment-handover.md](evidence/deployment-handover.md) — deployment evidence links and the ISDRT-policy handover checklist

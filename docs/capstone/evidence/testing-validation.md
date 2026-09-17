@@ -2,12 +2,12 @@
 title: Testing and Validation Evidence
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-17
 ---
 
 # Testing and Validation Evidence
 
-Skeleton aligned to [Appendix G — Simplified Testing and User Validation Forms](../guide/appendix-g-simplified-testing-user-validation.md). All result fields are **pending** until real runs and validation sessions are recorded; no counts, dates, versions, signatures, or approvals are fabricated. The automated layers below already exist and are linked to their real configuration; the human-validation layers have not been run yet.
+This is the Appendix G working record. The executed technical-alpha results are consolidated in [Alpha Testing Evidence Report — 2026-09-17](alpha-testing-report-2026-09-17.md). This form remains intentionally incomplete where the official Appendix G activity has not been completed or signed; no participant counts, signatures, acceptance decisions, or final-defense readiness claims are copied from projections.
 
 ## Header block (pending)
 
@@ -28,19 +28,20 @@ Skeleton aligned to [Appendix G — Simplified Testing and User Validation Forms
 - Runner: `pnpm test` ([package.json](../../../package.json)); unit/integration suites under [src/**tests**/](../../../src/__tests__/).
 - Database-invariant suites are **gated**: they run only via `RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db` against a disposable test database, so `pnpm test` never writes to a shared backend. Gate rationale and the full sixteen-suite list: [README.md](../../../README.md) ("Running Tests"). Target verification: `pnpm verify:database-target`; suite-discovery completeness: `pnpm verify:database-suites` ([scripts/verify-database-suite-completeness.ts](../../../scripts/verify-database-suite-completeness.ts)).
 - CI enforcement: the `database-integration` job applies migrations, seeds the fixture, and runs the gated suites against an ephemeral Postgres service container — never a hosted backend ([.github/workflows/ci.yml](../../../.github/workflows/ci.yml)).
-- Test evidence to record: suite counts, latest run reference, failing/flaky findings. **All pending.**
+- Test evidence is consolidated in the [alpha-testing report](alpha-testing-report-2026-09-17.md), including current-commit Vitest, tooling, build, local database, and local browser results plus prior CI run references. The current checkout is not fully green.
 
 ### Browser E2E — Playwright (CI gate, including mobile Pixel 7)
 
 - Config: [playwright.config.ts](../../../playwright.config.ts). Two required projects: `desktop` (Desktop Chrome) and `mobile` (**Pixel 7**, matching `e2e/mobile*.spec.ts`); scheduled deep runs add `firefox`/`webkit`. Retries are disabled — a red-then-green run counts as flaky evidence, not a clean pass.
 - Journeys: [e2e/](../../../e2e/) — role journeys, `cross-role-privacy.spec.ts`, `a11y.spec.ts` (axe sweeps), `mobile.spec.ts`, curated `@visual` baselines ([e2e/visual-baseline.spec.ts](../../../e2e/visual-baseline.spec.ts), [e2e/mobile-visual-baseline.spec.ts](../../../e2e/mobile-visual-baseline.spec.ts)).
 - CI: the `browser-e2e` gate runs in production mode (`next build` + `next start`) against the disposable seeded database with the isolated signed CI test session — no OAuth UI automation ([.github/workflows/ci.yml](../../../.github/workflows/ci.yml)).
-- Test evidence to record: latest CI run references per project, visual-baseline status, a11y findings. **All pending.**
+- Test evidence is consolidated in the [alpha-testing report](alpha-testing-report-2026-09-17.md), including the local desktop/mobile attempt and prior Chromium, Firefox, and WebKit CI outcomes. Current accepted browser evidence remains incomplete.
 
 ### Production browser evidence (authenticated performance / boundary checks)
 
 Process: [docs/testing/production-browser-evidence.md](../../testing/production-browser-evidence.md) — production build only (`pnpm build` + `pnpm start`), disposable environment, no-session boundary check before any authenticated trace, per-role trace capture with recorded LCP breakdown, per-run record from the template [docs/testing/templates/production-browser-evidence.md](../../testing/templates/production-browser-evidence.md).
-Evidence records: **pending** — none recorded yet.
+
+- Evidence records: no accepted production browser trace was produced; see the [alpha-testing report](alpha-testing-report-2026-09-17.md).
 
 ## G-1. System Test Record
 
