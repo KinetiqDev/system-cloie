@@ -66,8 +66,8 @@ The Secretary is the primary institutional setup and record-stewardship role. Th
 2. The Secretary opens `/secretary/users` and reviews the paginated user list and user KPIs.
 3. The Secretary creates complete accounts through one dynamic form at `/secretary/users/new`.
 4. The Secretary selects exactly one account role and enters the role-specific required information.
-5. CLOIE validates the email domain, duplicate email, program/major relationship, and role requirements before writing anything.
-6. CLOIE atomically creates the domain `User`, one `UserRole`, and the required role-specific record.
+5. System CLOIE validates the email domain, duplicate email, program/major relationship, and role requirements before writing anything.
+6. System CLOIE atomically creates the domain `User`, one `UserRole`, and the required role-specific record.
 7. The new account is active immediately. The user later enters through Google OAuth using the exact registered email.
 
 Secretary-created account requirements:
@@ -81,7 +81,7 @@ Secretary-created account requirements:
 | Alumni            | First name, last name, valid email, program, graduation year, and major when the selected program has active majors; verification starts as approved |
 | Industry Partner  | First name, last name, valid email, company or organization, optional position, optional affiliated program; verification starts as approved         |
 
-For a Secretary-created Student, an active academic term produces a `SECRETARY`-sourced `StudentEnrollment` in the same transaction. If no active term exists, CLOIE creates the static Student academic profile and leaves the Student in deferred enrollment. The selected program dynamically controls whether a major is required.
+For a Secretary-created Student, an active academic term produces a `SECRETARY`-sourced `StudentEnrollment` in the same transaction. If no active term exists, System CLOIE creates the static Student academic profile and leaves the Student in deferred enrollment. The selected program dynamically controls whether a major is required.
 
 The Secretary can also:
 
@@ -103,7 +103,7 @@ Protected edits that change academic history, current placement, managed program
 3. The Secretary adds periods under that school year.
 4. A regular semester receives a First Term or Second Term academic term. Summer is a Summer semester and does not receive a term.
 5. The Secretary sets one period active when live academic work should begin.
-6. When a new period becomes active, CLOIE atomically completes the previous active period when its end date exists and preserves its readiness snapshot.
+6. When a new period becomes active, System CLOIE atomically completes the previous active period when its end date exists and preserves its readiness snapshot.
 7. The Secretary may cancel a planned or active period within the lifecycle rules. Completed and cancelled periods are immutable.
 8. The Secretary may archive a school year only when its active-period and dependency rules allow it.
 
@@ -113,10 +113,10 @@ There is one active academic period at a time. Course assignments use a regular-
 
 1. The Secretary selects a source and target academic term from a school-year rollover screen.
 2. The Secretary previews the result without writing enrollments.
-3. CLOIE reads active Student placements from the source term and calculates the next year level.
+3. System CLOIE reads active Student placements from the source term and calculates the next year level.
 4. The Secretary reviews counts and exceptions.
 5. The Secretary runs the rollover.
-6. CLOIE creates target-term enrollments in an idempotent transaction and skips records already present.
+6. System CLOIE creates target-term enrollments in an idempotent transaction and skips records already present.
 7. Fourth-year Students are reported as `GRADUATING` exceptions rather than promoted to a fifth year. Missing program data is reported as `MISSING_DATA`; duplicate target placement is skipped.
 
 Rollover changes term-placement records. It does not create Course-assignment roster memberships. Course rosters are maintained separately by roster managers.
@@ -140,7 +140,7 @@ Catalog defaults prefill assignments but do not force the eventual assignment pe
 1. The Secretary opens `/secretary/instruments`.
 2. The Secretary creates or edits an institutional baseline template and selects its type: `COURSE_BOUND` or `PROGRAM_WIDE`.
 3. The Secretary defines the instrument structure, including supported Likert-scale and guided open-ended questions.
-4. CLOIE creates or updates an `InstrumentVersion` snapshot so later deployments retain the version used at publication.
+4. System CLOIE creates or updates an `InstrumentVersion` snapshot so later deployments retain the version used at publication.
 5. For a Course-bound baseline, the Secretary may mark the template faculty-accessible. Program-wide templates remain institutional governance records.
 6. The Secretary activates, deactivates, duplicates, or removes a baseline only when its dependency rules allow the operation.
 
@@ -178,7 +178,7 @@ The Dean has college-wide oversight and selected operational capabilities. The D
 
 1. The Secretary pre-provisions a complete Dean account with an ACD institutional email.
 2. The Dean chooses the staff portal and authenticates with Google OAuth.
-3. CLOIE matches the normalized Google email to the pre-provisioned domain account.
+3. System CLOIE matches the normalized Google email to the pre-provisioned domain account.
 4. The Dean enters `/dean/dashboard`.
 
 The Dean has no self-service role claim. The canonical Dean navigation is Dashboard, Structure, Oversight, and Profile, where Structure opens the Academic Structure group and Oversight opens the College Oversight group (currently Learning Outcomes only).
@@ -199,7 +199,7 @@ These are Dean-owned routes under `/dean/academic-structure/*`, not Secretary ro
 ### 3.3 College Oversight dashboard
 
 1. The Dean opens `/dean/dashboard`.
-2. CLOIE defaults the dashboard to the active academic period.
+2. System CLOIE defaults the dashboard to the active academic period.
 3. The Dean sees count-only readiness KPIs for active Course-Program contexts, ready contexts, contexts missing CILOs, and contexts with incomplete outcome mappings.
 4. Risk cards link to the same-period Learning Outcomes view with the selected risk filter.
 5. A program readiness matrix lets the Dean compare programs and open the relevant Learning Outcomes scope.
@@ -210,7 +210,7 @@ The dashboard is not a response-analytics dashboard. Evaluation scores, raw resp
 
 1. The Dean opens `/dean/college-oversight/learning-outcomes`.
 2. The Dean selects an eligible active or completed academic period through URL-backed state.
-3. CLOIE shows program totals and readiness coverage.
+3. System CLOIE shows program totals and readiness coverage.
 4. The Dean expands a program to see Institutional Outcome coverage and General Education gaps before Program-specific GO coverage and gaps.
 5. Archived outcomes needed for historical context are labelled `Archived`.
 6. The Dean uses risk filters for missing CILOs, incomplete mappings, or not-ready contexts.
@@ -232,7 +232,7 @@ The Program Head is the accountable owner for one or more explicitly assigned ac
 
 1. The Secretary creates a complete Program Head account with an ACD email and exactly one managed program.
 2. The Program Head chooses the staff portal and authenticates with Google OAuth.
-3. CLOIE resolves the active `ProgramHeadAssignment`.
+3. System CLOIE resolves the active `ProgramHeadAssignment`.
 4. If no active assignment exists, the Program Head sees a guidance/blocked state rather than an unscoped program dashboard.
 5. All subsequent Program Head reads and writes derive program scope from the server-side assignment, not from a client-provided program ID.
 
@@ -280,10 +280,10 @@ Program-owned templates are distinct from Graduate Outcomes. GO ownership does n
 2. The Program Head chooses a target stakeholder: Student, Alumni, or Industry Partner.
 3. For Student targets, the Program Head supplies the required academic targeting such as year level and optional major context.
 4. The Program Head selects the academic period and activation/deadline window.
-5. CLOIE validates that the template belongs to the assigned program or is an authorized institutional baseline.
-6. CLOIE previews the resolved respondent audience where the preview route is available.
+5. System CLOIE validates that the template belongs to the assigned program or is an authorized institutional baseline.
+6. System CLOIE previews the resolved respondent audience where the preview route is available.
 7. The Program Head reviews the deployment details and publishes it.
-8. CLOIE creates the central deployment and respondent assignments in one transaction, with `ACTIVE` or `SCHEDULED` status based on activation time.
+8. System CLOIE creates the central deployment and respondent assignments in one transaction, with `ACTIVE` or `SCHEDULED` status based on activation time.
 9. The Program Head can close an active or scheduled deployment before or during its response window.
 
 Program-wide deployments are the route for Alumni evaluations, Industry Partner internship/readiness evaluations, and graduating-student-targeted instruments. Graduating Students are still Students; there is no separate graduating-student role.
@@ -295,7 +295,7 @@ Program-wide deployments are the route for Alumni evaluations, Industry Partner 
 3. The service rechecks the assignment, Faculty owner, program scope, active period, template, latest version, and existing one-evaluation-per-assignment constraint.
 4. The service reads active Course-assignment roster memberships, not merely term placement.
 5. The Program Head reviews active roster members and records any evaluation-specific exclusions with a standard reason.
-6. CLOIE requires at least one recipient after exclusions, creates assignments, snapshots the CILOs and question bindings, and locks ordinary roster membership writes.
+6. System CLOIE requires at least one recipient after exclusions, creates assignments, snapshots the CILOs and question bindings, and locks ordinary roster membership writes.
 7. The Program Head can review anonymized Course-bound results and response details for the program scope.
 
 The Program Head can deploy on behalf of a Faculty Member where the shared Course-bound policy allows it. On-behalf deployment records the actual deployer separately from the Faculty being evaluated and does not give the Program Head a Faculty account role.
@@ -319,13 +319,13 @@ The Faculty Member owns the authoring and operational work for the Course contex
 1. The Faculty Member selects Faculty from the staff portal.
 2. The Faculty Member authenticates with Google using an ACD institutional email.
 3. A self-service Faculty claim collects a primary Faculty Program affiliation; a Secretary-created Faculty account already has one.
-4. CLOIE enters the Faculty dashboard once the affiliation exists.
+4. System CLOIE enters the Faculty dashboard once the affiliation exists.
 5. Course teaching capability becomes available only through a current Course assignment owned by the Faculty Member.
 
 ### 5.2 Course roster journey
 
 1. The Faculty Member opens `/faculty/course-rosters` (`My Course Rosters`).
-2. CLOIE lists current active Course assignments owned by that Faculty Member and separately shows active-roster and evaluation-eligible counts.
+2. System CLOIE lists current active Course assignments owned by that Faculty Member and separately shows active-roster and evaluation-eligible counts.
 3. The Faculty Member searches or includes historical assignments.
 4. The Faculty Member opens `/course-rosters/[assignmentId]` for one authorized Course assignment.
 5. The Faculty Member reviews Student name, email, program, major, year level, section, membership-added date, and safe eligibility state.
@@ -353,12 +353,12 @@ Roster operations are locked only when the assignment is inactive or its Academi
 
 1. The Faculty Member opens `/faculty/tools`.
 2. The Faculty Member selects an institutional or Program Head Course-bound template explicitly marked faculty-accessible, or a Faculty-owned copy.
-3. CLOIE creates a derived Faculty-owned copy when the source is not already owned by the Faculty Member; editing the copy does not overwrite the source.
+3. System CLOIE creates a derived Faculty-owned copy when the source is not already owned by the Faculty Member; editing the copy does not overwrite the source.
 4. The Faculty Member binds the derived template to an authorized Course, program, and optional major context.
 5. The Faculty Member binds each active CILO exactly once to a Likert question. A CILO cannot bind to an open-ended question, and a Likert question cannot receive two CILOs.
 6. The Faculty Member previews the Student-facing evaluation and sets the activation/deadline values.
 7. The Faculty Member publishes the evaluation once for the Course assignment.
-8. CLOIE snapshots the CILOs, Course information, question bindings, and instrument version; creates assignments for active roster members except documented exclusions; and locks ordinary roster changes.
+8. System CLOIE snapshots the CILOs, Course information, question bindings, and instrument version; creates assignments for active roster members except documented exclusions; and locks ordinary roster changes.
 9. The Faculty Member may close the evaluation, review anonymized responses, and use late inclusion for an excluded eligible Student before closure when authorized.
 
 On-behalf Course-bound publication by Program Head, Dean, or Secretary uses the Faculty's bound Course template and disables question customization. The Secretary-specific on-behalf deployment policy remains open under issue #131.
@@ -381,13 +381,13 @@ The Student role includes regular and graduating Students. Graduating status cha
 2. The Student authenticates with Google using an exact ACD institutional email.
 3. A self-service Student claim collects Student academic profile information and self-declared active-term placement when a term exists.
 4. A Secretary-created Student already has the static profile and, when possible, a Secretary-recorded active-term enrollment.
-5. If no active term exists, CLOIE places the Student in deferred enrollment and shows a dashboard-only warning until an active placement is available.
+5. If no active term exists, System CLOIE places the Student in deferred enrollment and shows a dashboard-only warning until an active placement is available.
 6. The Student profile includes academic program, applicable major, and current term placement fields such as year level and section. System CLOIE does not collect a Student-entered institutional ID.
 
 ### 6.2 Receiving assigned evaluations
 
 1. Faculty, Program Head, Secretary, or another authorized deployment path publishes a Course-bound evaluation based on a Course-assignment roster, or a Program Head publishes a central Program-wide deployment targeted to Students.
-2. CLOIE creates an `EvaluationAssignment` for the Student when the targeting and eligibility rules match.
+2. System CLOIE creates an `EvaluationAssignment` for the Student when the targeting and eligibility rules match.
 3. The Student opens `/student/dashboard` or `/student/evaluations`.
 4. The Student sees active, due-soon, in-progress, submitted, or completed evaluation states.
 5. Course-bound pending access is rechecked dynamically against active account state, Student role/profile, active term placement, program match, active roster membership, evaluation window, and exclusion state.
@@ -398,14 +398,14 @@ Student evaluation access is based on enrollment, Course-assignment membership, 
 ### 6.3 Answer, review, confirm, and submit
 
 1. The Student opens an assigned evaluation.
-2. CLOIE loads the published instrument snapshot, not a mutable current template.
+2. System CLOIE loads the published instrument snapshot, not a mutable current template.
 3. The Student completes the guided one-step-at-a-time wizard on mobile, tablet, or desktop.
 4. The Student answers required Likert and guided open-ended items. Suggested open-ended responses may populate a text field but remain editable.
 5. The Student saves progress as a draft and returns later while the evaluation remains available.
 6. The Student reviews the completed answers in the confirmation step.
-7. CLOIE validates required answers and the availability/eligibility state again.
+7. System CLOIE validates required answers and the availability/eligibility state again.
 8. The Student confirms final submission.
-9. CLOIE atomically persists the response items and changes the response to `SUBMITTED`.
+9. System CLOIE atomically persists the response items and changes the response to `SUBMITTED`.
 10. A second submission is rejected; the submitted response is immutable from the respondent workflow.
 11. The Student is sent to submission history or the submitted-response view.
 
@@ -434,11 +434,11 @@ External approval/rejection management for self-service accounts is incomplete; 
 ### 7.2 Receiving and completing evaluations
 
 1. A Program Head publishes a Program-wide deployment targeting Alumni for the assigned program and academic period.
-2. CLOIE resolves eligible Alumni respondent assignments according to the current deployment targeting path.
+2. System CLOIE resolves eligible Alumni respondent assignments according to the current deployment targeting path.
 3. The Alumni opens `/alumni/dashboard` or `/alumni/evaluations`.
 4. The Alumni sees pending and in-progress assigned evaluations.
 5. The Alumni opens an evaluation wizard, saves a draft, reviews the completed answers, confirms, and submits.
-6. CLOIE validates required answers, availability, assignment ownership, and response lifecycle before final submission.
+6. System CLOIE validates required answers, availability, assignment ownership, and response lifecycle before final submission.
 7. The Alumni sees the submitted evaluation in `/alumni/evaluations/[id]/submitted` and `/alumni/history`.
 
 The Alumni does not see student-course rosters, Course-level CILOs, or program analytics. The Alumni supplies stakeholder feedback; the Program Head and future reporting services consume scoped aggregates.
@@ -458,10 +458,10 @@ The current profile supports one optional program association. Multi-program aff
 ### 8.2 Receiving and completing evaluations
 
 1. A Program Head publishes an Industry Partner program-wide deployment, such as an internship or graduate-readiness evaluation.
-2. CLOIE resolves Industry Partner assignments from the current program-affiliation path.
+2. System CLOIE resolves Industry Partner assignments from the current program-affiliation path.
 3. The Industry Partner opens `/industry-partner/dashboard` or `/industry-partner/evaluations`.
 4. The Industry Partner completes the guided evaluation, saves drafts, reviews answers, confirms submission, and submits.
-5. CLOIE stores the final response as submitted and prevents a second submission through the respondent workflow.
+5. System CLOIE stores the final response as submitted and prevents a second submission through the respondent workflow.
 6. The Industry Partner can review submitted evaluations in `/industry-partner/evaluations/[id]/submitted` and `/industry-partner/history`.
 
 The Industry Partner does not manage academic structure, templates, rosters, outcomes, analytics, or reports.
@@ -512,7 +512,7 @@ The intended report journey is:
 1. The authorized role selects a program or college scope, academic period, evaluation/deployment, and report type.
 2. System CLOIE resolves the role and scope server-side.
 3. System CLOIE derives the report from submitted responses, instrument versions, CILO/GO snapshots, readiness snapshots, and approved privacy rules.
-4. CLOIE displays a stable report preview with generation metadata and caveats.
+4. System CLOIE displays a stable report preview with generation metadata and caveats.
 5. The user exports an authorized PDF or spreadsheet artifact.
 
 This is not complete. Program Head exports are stubbed, Dean Reports is unavailable, and report contracts are still open. Issue #133 must settle rating scales, CILO attainment, GO aggregation, weighting, minimum-response suppression, Dean drill-down, and report structure. Issue #173 tracks authoritative server-side reports and PDF/spreadsheet export. Raw qualitative comments require a separate privacy policy under issue #176 and must not be assumed safe merely because account identifiers are removed.
@@ -525,7 +525,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 2. Faculty authenticates and receives teaching capability through a Course assignment.
 3. Faculty manages Course-level CILOs and a Course roster through manual add or CSV import.
 4. Faculty creates a derived Course-bound template, binds CILOs to Likert questions, previews, and publishes.
-5. CLOIE resolves roster membership, creates Student EvaluationAssignments, records exclusions, snapshots the instrument, and locks the roster.
+5. System CLOIE resolves roster membership, creates Student EvaluationAssignments, records exclusions, snapshots the instrument, and locks the roster.
 6. Student signs in, sees the assignment, saves a draft, reviews, confirms, and submits.
 7. Faculty and authorized Program Head review anonymized results; current analytics use only their authorized evaluation scope.
 8. Future report services produce formal evidence artifacts after the report contracts are approved.
@@ -535,7 +535,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 1. Secretary creates the program and assigns a Program Head.
 2. Program Head authors Graduate Outcomes and creates or copies a Program-wide template.
 3. Program Head selects Student, Alumni, or Industry Partner targeting and an academic period/window.
-4. CLOIE creates central respondent assignments.
+4. System CLOIE creates central respondent assignments.
 5. The target respondent signs in, completes the wizard, confirms, and submits.
 6. Program Head reviews program-scoped completion and stakeholder analytics.
 7. Formal exports remain planned.
@@ -543,7 +543,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 ### 11.3 Academic period completion to Dean oversight
 
 1. Secretary completes the active academic period through the lifecycle workflow.
-2. CLOIE persists the period's readiness snapshot in the completion transaction.
+2. System CLOIE persists the period's readiness snapshot in the completion transaction.
 3. Dean opens Dashboard for the next active period or selects a completed period on Learning Outcomes.
 4. Dean reviews readiness totals and program gaps.
 5. Historical views retain the completed-period context even when current Courses, programs, or outcomes later become inactive.
@@ -553,12 +553,12 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 1. Term rollover identifies fourth-year Students as graduating exceptions.
 2. The Secretary reviews the graduating Student records.
 3. When the institution confirms graduation, the Secretary performs a managed Student-to-Alumni role transition.
-4. CLOIE retains the historical Student profile, enrollment, and evaluation history.
+4. System CLOIE retains the historical Student profile, enrollment, and evaluation history.
 5. The former Student enters future respondent journeys as Alumni, not as a second simultaneous account role.
 
 ## 12. Important Boundaries and Non-Goals
 
-- CLOIE is not an LMS, SIS, grading system, transcript system, scheduling system, or full accreditation platform.
+- System CLOIE is not an LMS, SIS, grading system, transcript system, scheduling system, or full accreditation platform.
 - StudentEnrollment is the term-placement ledger; it is not a Course roster.
 - CourseAssignmentMembership is the Course-bound evaluation recipient source.
 - Faculty Program affiliation does not grant Faculty access to every Course in that program.
