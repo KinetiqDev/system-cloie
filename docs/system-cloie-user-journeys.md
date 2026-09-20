@@ -510,8 +510,8 @@ Course-bound publication uses active Course-assignment memberships, not a broad 
 The intended report journey is:
 
 1. The authorized role selects a program or college scope, academic period, evaluation/deployment, and report type.
-2. CLOIE resolves the role and scope server-side.
-3. CLOIE derives the report from submitted responses, instrument versions, CILO/GO snapshots, readiness snapshots, and approved privacy rules.
+2. System CLOIE resolves the role and scope server-side.
+3. System CLOIE derives the report from submitted responses, instrument versions, CILO/GO snapshots, readiness snapshots, and approved privacy rules.
 4. CLOIE displays a stable report preview with generation metadata and caveats.
 5. The user exports an authorized PDF or spreadsheet artifact.
 
