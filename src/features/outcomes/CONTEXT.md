@@ -15,6 +15,7 @@ _Avoid_: Program Learning Outcome, PLO, Institutional outcome, program-level tem
 **GO compatibility boundary**:
 Current prose uses Graduate Outcome (GO), GOs, GO mapping, GO binding, and GO evidence. Stored and historical coordinates remain unchanged: `go_id` and `gos`, physical PLO-named SQL table and column names, generated Supabase identifiers, the `ploId` read-only URL alias, `GRADUATE_OUTCOME` readiness values, and `graduate-outcomes` instrument keys. Historical ADR and migration references retain their original PLO wording; these identifiers are never treated as current user-facing terminology.
 _Avoid_: Renaming persisted identifiers, rewriting historical records, surfacing compatibility names as canonical terminology
+The canonical terminology decision is [ADR 0030](../../../docs/adr/0030-graduate-outcome-canonical-terminology.md).
 
 **Course Intended Learning Outcome (CILO)**:
 A course-level learning outcome that belongs to a Course and is stable across assignment periods; it is never assignment-specific or faculty-owned. Faculty author CILOs for Courses they actively teach.
