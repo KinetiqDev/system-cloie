@@ -13,14 +13,15 @@ import {
   programHeadResponsesQuery,
 } from "./program-head-responses-state";
 import {
-  buildInstancePeriodLabel,
   buildPeriodLabel,
   buildProgramOpportunityScope,
   buildProgramResponseScope,
   resolveTermInstanceFilter,
-  type TermInstanceSummary,
 } from "./get-program-head-analytics";
-import { getActiveTermId, resolveActiveTerm } from "@/features/academic-calendar/services/resolve-active-term";
+import {
+  getActiveTermId,
+  resolveActiveTerm,
+} from "@/features/academic-calendar/services/resolve-active-term";
 import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
 import { groupRatingsByScale } from "../aggregators/quantitative";
@@ -63,7 +64,6 @@ const TERM_FALLBACK_LABELS: Record<string, string> = {
   FIRST_TERM: "1st Term",
   SECOND_TERM: "2nd Term",
 };
-
 
 export type DashboardSourceMean = {
   sourceKey: DashboardSourceKey;
@@ -641,10 +641,11 @@ export async function getProgramHeadDashboard(
     }
   }
 
-  const { where: termInstanceWhere, schoolYearLabel, instances } = await resolveTermInstanceFilter(
-    scope.programId,
-    effectiveFilters
-  );
+  const {
+    where: termInstanceWhere,
+    schoolYearLabel,
+    instances,
+  } = await resolveTermInstanceFilter(scope.programId, effectiveFilters);
   const activeEvaluations = await listActiveEvaluations(scope.programId, termInstanceWhere);
 
   // A term filter that matches no in-Program deployments still names the
@@ -654,7 +655,11 @@ export async function getProgramHeadDashboard(
     const activeTerm = await resolveActiveTerm();
     if (activeTerm?.termInstance.id === effectiveFilters.termInstanceId) {
       const { schoolYearCode, semester, term } = activeTerm.termInstance;
-      periodLabel = [schoolYearCode, SEMESTER_FALLBACK_LABELS[semester] ?? semester, term ? (TERM_FALLBACK_LABELS[term] ?? term) : null]
+      periodLabel = [
+        schoolYearCode,
+        SEMESTER_FALLBACK_LABELS[semester] ?? semester,
+        term ? (TERM_FALLBACK_LABELS[term] ?? term) : null,
+      ]
         .filter(Boolean)
         .join(" · ");
     }

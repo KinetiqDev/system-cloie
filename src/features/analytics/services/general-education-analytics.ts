@@ -191,28 +191,19 @@ export async function getGeneralEducationAnalytics(
   filters: GeneralEducationAnalyticsFilterState
 ): Promise<GeneralEducationAnalyticsDTO | null> {
   const auth = await requireGenEdCoordinator();
-  const [{ termInstanceWhere, schoolYearLabel, instances }, periodInstances] =
-    await Promise.all([resolveTermInstanceFilter(filters), prisma.academicTermInstance.findMany({
+  if (!auth.ok) return null;
+
+  const [{ termInstanceWhere, schoolYearLabel, instances }, periodInstances] = await Promise.all([
+    resolveTermInstanceFilter(filters),
+    prisma.academicTermInstance.findMany({
       select: {
         id: true,
         semester: true,
         term: true,
         school_year: { select: { id: true, code: true } },
       },
-    })]);
-
-  const [{ termInstanceWhere, schoolYearLabel, hasMatchingTerm }, periodInstances] =
-    await Promise.all([
-      resolveTermInstanceFilter(filters),
-      prisma.academicTermInstance.findMany({
-        select: {
-          id: true,
-          semester: true,
-          term: true,
-          school_year: { select: { id: true, code: true } },
-        },
-      }),
-    ]);
+    }),
+  ]);
 
   // Course-bound, GE-only, submitted only
   const geResponseScope = {
@@ -349,11 +340,10 @@ export async function getGeneralEducationAnalytics(
       ? "no-assignments"
       : submittedResponseCount === 0
         ? "no-submissions"
-  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, instances);]
+        : null;
 
-  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
+  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, instances);
 
-  // ponytail: loose casts bridge row shapes until Prisma selections are typed end-to-end
   const anyRatingRows = ratingRows as unknown as GeRatingRow[];
   const courseBreakdowns = buildCourseBreakdowns(
     anyRatingRows,
@@ -383,7 +373,6 @@ export async function getGeneralEducationAnalytics(
 
 // -- Course breakdowns (GE-only helpers) -----------------------------------
 
-// ponytail: helpers intentionally accept loose row shapes via casts; typed precisely when Prisma selections stabilize
 type GeRatingRow = {
   rating_value: number;
   response_id: string;

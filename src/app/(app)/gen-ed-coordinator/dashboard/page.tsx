@@ -202,7 +202,7 @@ function Metric({
           <CardDescription className="text-label-sm font-semibold tracking-wider uppercase">
             {label}
           </CardDescription>
-          <Icon aria-hidden="true" className="text-text-secondary size-4 shrink-0" />
+          <Icon aria-hidden={true} className="text-text-secondary size-4 shrink-0" />
         </div>
         <CardTitle className="text-display-md break-words tabular-nums">{value}</CardTitle>
       </CardHeader>

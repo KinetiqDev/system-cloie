@@ -70,7 +70,7 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type TermInstanceSummary = {
+export type TermInstanceSummary = {
   id: string;
   semester: string;
   term: string | null;
@@ -419,7 +419,6 @@ export function buildInstancePeriodLabel(instance: TermInstanceSummary): string 
   return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");
 }
 
-
 // ---------------------------------------------------------------------------
 // Main service function
 // ---------------------------------------------------------------------------
@@ -431,7 +430,8 @@ export async function getProgramHeadAnalytics(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
   // Responses tied to this program via central deployments OR course-bound evaluations,
   // following the same scope predicate as the existing dashboard service.
   const sourceScope = buildSourceScope(filters);
@@ -1192,7 +1192,8 @@ export async function getProgramHeadOutcomes(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   // Course-bound PLO evidence comes from CILO bindings; program-wide PLO
   // evidence comes from published CentralDeploymentPloSnapshot bindings
@@ -1346,7 +1347,8 @@ export async function getProgramHeadTrends(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1574,7 +1576,8 @@ export async function getProgramHeadStakeholders(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1697,7 +1700,8 @@ export async function getProgramHeadBreakdowns(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1934,7 +1938,8 @@ export async function getProgramHeadFeedback(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(

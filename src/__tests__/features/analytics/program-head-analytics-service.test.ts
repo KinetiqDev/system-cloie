@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildProgramOpportunityScope, buildProgramResponseScope, getProgramHeadAnalytics } from "@/features/analytics/services/get-program-head-analytics";
+import {
+  buildProgramOpportunityScope,
+  buildProgramResponseScope,
+  getProgramHeadAnalytics,
+} from "@/features/analytics/services/get-program-head-analytics";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   resolveProgramHeadContextMock: vi.fn(),
@@ -132,7 +136,9 @@ describe("getProgramHeadAnalytics", () => {
     const aggregateOr = aggregateCall.where.response.OR;
     expect(aggregateOr).toHaveLength(2);
     expect(aggregateOr[0].assignment.central_deployment.program_id).toBe("program-bsed");
-    expect(aggregateOr[1].assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
+    expect(aggregateOr[1].assignment.course_bound.course_assignment.program_id).toBe(
+      "program-bsed"
+    );
   });
 
   // ── Submitted semantics through shared participation aggregator ─────────
@@ -318,8 +324,9 @@ describe("getProgramHeadAnalytics", () => {
       },
     });
     expect(result!.scope.periodLabel).toBe("School Year 2025-2026");
-    expect(prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where.OR[0].central_deployment)
-      .toMatchObject({ term_instance_id: { in: [termId] } });
+    expect(
+      prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where.OR[0].central_deployment
+    ).toMatchObject({ term_instance_id: { in: [termId] } });
   });
 
   it("preserves the selected school-year label when no term instances match", async () => {
@@ -454,20 +461,32 @@ describe("evidence-source scope predicates", () => {
   });
 
   it("narrows to course-bound evidence for COURSE", () => {
-    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "COURSE_BOUND" }) as {
+    const response = buildProgramResponseScope(
+      "program-bsed",
+      {},
+      { deployment_type: "COURSE_BOUND" }
+    ) as {
       deployment_type: string;
       assignment: { course_bound: { course_assignment: { program_id: string } } };
     };
     expect(response.deployment_type).toBe("COURSE_BOUND");
     expect(response.assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
-    const opportunity = buildProgramOpportunityScope("program-bsed", {}, { deployment_type: "COURSE_BOUND" }) as {
+    const opportunity = buildProgramOpportunityScope(
+      "program-bsed",
+      {},
+      { deployment_type: "COURSE_BOUND" }
+    ) as {
       course_bound: { course_assignment: { program_id: string } };
     };
     expect(opportunity.course_bound.course_assignment.program_id).toBe("program-bsed");
   });
 
   it("narrows to the matched central stakeholder for central sources", () => {
-    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "CENTRAL", target_stakeholder: "ALUMNI" }) as {
+    const response = buildProgramResponseScope(
+      "program-bsed",
+      {},
+      { deployment_type: "CENTRAL", target_stakeholder: "ALUMNI" }
+    ) as {
       deployment_type: string;
       assignment: { central_deployment: { program_id: string; target_stakeholder?: string } };
     };
@@ -477,9 +496,17 @@ describe("evidence-source scope predicates", () => {
   });
 
   it("keeps both deployment kinds when a bare STUDENT stakeholder is selected", () => {
-    const response = buildProgramResponseScope("program-bsed", {}, { deployment_type: "ANY", target_stakeholder: "STUDENT" }) as { OR: unknown[] };
+    const response = buildProgramResponseScope(
+      "program-bsed",
+      {},
+      { deployment_type: "ANY", target_stakeholder: "STUDENT" }
+    ) as { OR: unknown[] };
     expect(response.OR).toHaveLength(2);
-    const opportunity = buildProgramOpportunityScope("program-bsed", {}, { deployment_type: "ANY", target_stakeholder: "STUDENT" }) as { OR: unknown[] };
+    const opportunity = buildProgramOpportunityScope(
+      "program-bsed",
+      {},
+      { deployment_type: "ANY", target_stakeholder: "STUDENT" }
+    ) as { OR: unknown[] };
     expect(opportunity.OR).toHaveLength(2);
   });
 });
