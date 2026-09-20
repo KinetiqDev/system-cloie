@@ -7,22 +7,22 @@ import {
   buildProgramHeadOutcomesPath,
 } from "@/lib/constants/program-head-routes";
 import {
-  createPLOSchema,
-  programHeadPLOActionSchema,
-  reorderPLOsSchema,
-  updatePLOSchema,
-} from "@/features/outcomes/schemas/plo";
-import { ploImportRequestSchema } from "@/features/outcomes/schemas/plo-import";
+  createGOSchema,
+  programHeadGOActionSchema,
+  reorderGOsSchema,
+  updateGOSchema,
+} from "@/features/outcomes/schemas/go";
+import { goImportRequestSchema } from "@/features/outcomes/schemas/go-import";
 import {
-  createPLO,
-  deletePLO,
-  reorderPLOs,
-  restorePLO,
-  updatePLO,
+  createGO,
+  deleteGO,
+  reorderGOs,
+  restoreGO,
+  updateGO,
 } from "@/features/outcomes/services/manage-program-head-outcomes";
-import { previewPLOImport } from "@/features/outcomes/services/preview-plo-import";
-import { confirmPLOImport } from "@/features/outcomes/services/confirm-plo-import";
-import type { PLOImportPreview, PLOImportResult } from "@/features/outcomes/types/plo-import";
+import { previewGOImport } from "@/features/outcomes/services/preview-go-import";
+import { confirmGOImport } from "@/features/outcomes/services/confirm-go-import";
+import type { GOImportPreview, GOImportResult } from "@/features/outcomes/types/go-import";
 import type { ServiceResult } from "@/lib/utils/service-result";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -48,29 +48,29 @@ function revalidateOutcomes(programId: string) {
   revalidatePath(buildProgramHeadOutcomeMappingPath(programId));
 }
 function firstImportIssue(error: { issues: Array<{ message?: string }> }): string {
-  return error.issues[0]?.message ?? "Enter a valid PLO import.";
+  return error.issues[0]?.message ?? "Enter a valid GO import.";
 }
 
-export async function previewPLOImportAction(
+export async function previewGOImportAction(
   input: unknown
-): Promise<ServiceResult<PLOImportPreview>> {
-  const parsed = ploImportRequestSchema.safeParse(input);
+): Promise<ServiceResult<GOImportPreview>> {
+  const parsed = goImportRequestSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: firstImportIssue(parsed.error) };
-  return previewPLOImport(parsed.data);
+  return previewGOImport(parsed.data);
 }
 
-export async function confirmPLOImportAction(
+export async function confirmGOImportAction(
   input: unknown
-): Promise<ServiceResult<PLOImportResult>> {
-  const parsed = ploImportRequestSchema.safeParse(input);
+): Promise<ServiceResult<GOImportResult>> {
+  const parsed = goImportRequestSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: firstImportIssue(parsed.error) };
-  const result = await confirmPLOImport(parsed.data);
+  const result = await confirmGOImport(parsed.data);
   if (result.success && result.data.summary.created > 0) revalidateOutcomes(parsed.data.programId);
   return result;
 }
 
-export async function createPLOAction(formData: FormData): Promise<ActionResult> {
-  const parsed = parseWithSchema(createPLOSchema, {
+export async function createGOAction(formData: FormData): Promise<ActionResult> {
+  const parsed = parseWithSchema(createGOSchema, {
     code: formData.get("code"),
     description: formData.get("description"),
     order: formData.get("order"),
@@ -81,7 +81,7 @@ export async function createPLOAction(formData: FormData): Promise<ActionResult>
     return parsed;
   }
 
-  const result = await createPLO(parsed.data);
+  const result = await createGO(parsed.data);
 
   if (!result.success) {
     return { success: false, error: result.error };
@@ -91,8 +91,8 @@ export async function createPLOAction(formData: FormData): Promise<ActionResult>
   return { success: true };
 }
 
-export async function updatePLOAction(formData: FormData): Promise<ActionResult> {
-  const parsed = parseWithSchema(updatePLOSchema, {
+export async function updateGOAction(formData: FormData): Promise<ActionResult> {
+  const parsed = parseWithSchema(updateGOSchema, {
     id: formData.get("id"),
     code: formData.get("code"),
     description: formData.get("description"),
@@ -104,7 +104,7 @@ export async function updatePLOAction(formData: FormData): Promise<ActionResult>
     return parsed;
   }
 
-  const result = await updatePLO(parsed.data);
+  const result = await updateGO(parsed.data);
 
   if (!result.success) {
     return { success: false, error: result.error };
@@ -114,10 +114,10 @@ export async function updatePLOAction(formData: FormData): Promise<ActionResult>
   return { success: true };
 }
 
-export async function deletePLOAction(programId: string, id: string): Promise<ActionResult> {
-  const parsed = parseWithSchema(programHeadPLOActionSchema, { programId, id });
+export async function deleteGOAction(programId: string, id: string): Promise<ActionResult> {
+  const parsed = parseWithSchema(programHeadGOActionSchema, { programId, id });
   if (!parsed.success) return parsed;
-  const result = await deletePLO(parsed.data.programId, parsed.data.id);
+  const result = await deleteGO(parsed.data.programId, parsed.data.id);
 
   if (!result.success) {
     return { success: false, error: result.error };
@@ -127,10 +127,10 @@ export async function deletePLOAction(programId: string, id: string): Promise<Ac
   return { success: true };
 }
 
-export async function restorePLOAction(programId: string, id: string): Promise<ActionResult> {
-  const parsed = parseWithSchema(programHeadPLOActionSchema, { programId, id });
+export async function restoreGOAction(programId: string, id: string): Promise<ActionResult> {
+  const parsed = parseWithSchema(programHeadGOActionSchema, { programId, id });
   if (!parsed.success) return parsed;
-  const result = await restorePLO(parsed.data.programId, parsed.data.id);
+  const result = await restoreGO(parsed.data.programId, parsed.data.id);
 
   if (!result.success) {
     return { success: false, error: result.error };
@@ -140,13 +140,13 @@ export async function restorePLOAction(programId: string, id: string): Promise<A
   return { success: true };
 }
 
-export async function reorderPLOsAction(
+export async function reorderGOsAction(
   programId: string,
   orderedIds: string[]
 ): Promise<ActionResult> {
-  const parsed = parseWithSchema(reorderPLOsSchema, { programId, orderedIds });
+  const parsed = parseWithSchema(reorderGOsSchema, { programId, orderedIds });
   if (!parsed.success) return parsed;
-  const result = await reorderPLOs(parsed.data.programId, parsed.data.orderedIds);
+  const result = await reorderGOs(parsed.data.programId, parsed.data.orderedIds);
 
   if (!result.success) {
     return { success: false, error: result.error };

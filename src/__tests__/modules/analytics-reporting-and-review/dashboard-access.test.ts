@@ -34,10 +34,10 @@ const {
     evaluationAssignment: { count: vi.fn(), findMany: vi.fn() },
     quantitativeResponseItem: { aggregate: vi.fn(), findMany: vi.fn() },
     qualitativeResponseItem: { findMany: vi.fn() },
-    pLO: { findMany: vi.fn() },
+    gO: { findMany: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
-    centralDeploymentPloSnapshot: { findMany: vi.fn() },
+    centralDeploymentGoSnapshot: { findMany: vi.fn() },
     academicTermInstance: { findFirst: vi.fn(), findMany: vi.fn() },
     facultyProgramAffiliation: { findFirst: vi.fn() },
   },
@@ -87,11 +87,11 @@ function mockEmptyDashboardReads() {
   prismaMock.evaluationAssignment.findMany.mockResolvedValue([]);
   prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
   prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-  prismaMock.pLO.findMany.mockResolvedValue([]);
+  prismaMock.gO.findMany.mockResolvedValue([]);
   prismaMock.centralDeployment.findMany.mockResolvedValue([]);
   prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([]);
   prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
-  prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+  prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
 }
 
 describe("analytics dashboard access", () => {
@@ -304,7 +304,7 @@ describe("analytics dashboard access", () => {
       prismaMock.evaluationAssignment.findMany,
       prismaMock.quantitativeResponseItem.findMany,
       prismaMock.qualitativeResponseItem.findMany,
-      prismaMock.pLO.findMany,
+      prismaMock.gO.findMany,
       prismaMock.centralDeployment.findMany,
       prismaMock.courseBoundEvaluation.findMany,
       prismaMock.academicTermInstance.findMany,

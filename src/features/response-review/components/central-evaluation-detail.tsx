@@ -42,7 +42,7 @@ export function CentralEvaluationDetail({
     evaluation,
     summary,
     participation,
-    ploResults,
+    goResults,
     questionResults,
     qualitative,
     respondents,
@@ -100,7 +100,7 @@ export function CentralEvaluationDetail({
                   : "Raw mean of all valid quantitative ratings from submitted responses; general items are included and qualitative answers are excluded.",
           }}
         />
-        <SummaryStat label="PLOs" value={`${ploResults.length}`} />
+        <SummaryStat label="GOs" value={`${goResults.length}`} />
         <SummaryStat label="Qualitative answers" value={`${summary.qualitativeAnswerCount}`} />
         <SummaryStat
           label="Qualitative respondents"
@@ -129,17 +129,17 @@ export function CentralEvaluationDetail({
         )}
       />
 
-      {/* Direct PLO results (§26) */}
+      {/* Direct GO results (§26) */}
       <Card>
         <CardHeader>
-          <CardTitle>Direct PLO results</CardTitle>
+          <CardTitle>Direct GO results</CardTitle>
           <CardDescription>Publication-time outcome evidence for this deployment.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>PLO</TableHead>
+                <TableHead>GO</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
@@ -147,37 +147,37 @@ export function CentralEvaluationDetail({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {ploResults.length === 0 ? (
+              {goResults.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-text-muted text-center">
-                    No PLO-bound ratings yet.
+                    No GO-bound ratings yet.
                   </TableCell>
                 </TableRow>
               ) : (
-                ploResults.map((plo) => {
+                goResults.map((go) => {
                   const evidence = {
-                    ratingCount: plo.ratingCount,
-                    responseCount: plo.responseCount,
-                    evaluationCount: plo.evaluationCount,
-                    questionCount: plo.questionCount,
+                    ratingCount: go.ratingCount,
+                    responseCount: go.responseCount,
+                    evaluationCount: go.evaluationCount,
+                    questionCount: go.questionCount,
                     scaleLabel:
-                      plo.scaleGroups.length === 1 && plo.scaleGroups[0].scale
-                        ? describeScale(plo.scaleGroups[0].scale.descriptors)
+                      go.scaleGroups.length === 1 && go.scaleGroups[0].scale
+                        ? describeScale(go.scaleGroups[0].scale.descriptors)
                         : undefined,
-                    explanation: `Mean of ${plo.ratingCount} valid ratings from ${plo.questionCount} bound question(s); unbound items are excluded.`,
+                    explanation: `Mean of ${go.ratingCount} valid ratings from ${go.questionCount} bound question(s); unbound items are excluded.`,
                   };
                   return (
-                    <TableRow key={plo.ploId}>
-                      <TableCell className="font-medium">{plo.ploCode}</TableCell>
+                    <TableRow key={go.goId}>
+                      <TableCell className="font-medium">{go.goCode}</TableCell>
                       <TableCell className="min-w-72 break-words whitespace-normal">
-                        {plo.ploDescription}
+                        {go.goDescription}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{plo.ratingCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{plo.responseCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{go.ratingCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{go.responseCount}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         <span className="inline-flex items-center gap-1">
-                          {formatMean(plo.mean)}
-                          <HowCalculatedPopover metric={evidence} label={`${plo.ploCode} mean`} />
+                          {formatMean(go.mean)}
+                          <HowCalculatedPopover metric={evidence} label={`${go.goCode} mean`} />
                         </span>
                       </TableCell>
                     </TableRow>
@@ -226,8 +226,8 @@ export function CentralEvaluationDetail({
                         {question.prompt}
                       </TableCell>
                       <TableCell className="whitespace-normal">
-                        {question.ploBindings.length > 0
-                          ? question.ploBindings.map((binding) => binding.code).join(", ")
+                        {question.goBindings.length > 0
+                          ? question.goBindings.map((binding) => binding.code).join(", ")
                           : "General evaluation item"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">

@@ -8,9 +8,9 @@ import {
   type OutcomeItemRatingRow,
 } from "@/features/analytics/aggregators/cilo";
 import {
-  buildProgramWidePloMetrics,
-  type CentralPloRatingRow,
-} from "@/features/analytics/aggregators/plo";
+  buildProgramWideGoMetrics,
+  type CentralGoRatingRow,
+} from "@/features/analytics/aggregators/go";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
@@ -28,14 +28,14 @@ import type {
   ProgramHeadAssignmentRespondentRow,
   ProgramHeadCentralEvaluationDetail,
   ProgramHeadCentralQuestionResult,
-  ProgramWidePloBinding,
+  ProgramWideGoBinding,
 } from "../types";
 
 // ---------------------------------------------------------------------------
 // Program Head program-wide evaluation detail (spec §26)
 //
-// Direct PLO results come from CentralDeploymentPloSnapshot bindings (§5.9)
-// grouped by plo_id ?? plo_code_snapshot; question results use the same
+// Direct GO results come from CentralDeploymentGoSnapshot bindings (§5.9)
+// grouped by go_id ?? go_code_snapshot; question results use the same
 // canonical aggregators with cilo:null; participation holds over raw
 // EvaluationAssignment rows; respondents are identified. IN_PROGRESS bodies
 // are never fetched.
@@ -63,7 +63,7 @@ export async function getProgramHeadCentralEvaluationDetail(
       program: { select: { name: true } },
       major: { select: { name: true } },
       term_instance: { include: { school_year: true } },
-      plo_snapshots: true,
+      go_snapshots: true,
     },
   });
 
@@ -99,25 +99,25 @@ export async function getProgramHeadCentralEvaluationDetail(
   ]);
 
   const snapshot = deployment.instrument.structure_snapshot;
-  const { snapshotItems, ploByQuestionKey, ploDisplayByQuestionKey } = buildCentralIndexes(
+  const { snapshotItems, goByQuestionKey, goDisplayByQuestionKey } = buildCentralIndexes(
     snapshot,
-    deployment.plo_snapshots
+    deployment.go_snapshots
   );
 
-  const { ratingRows, centralPloRows, meanByResponse } = buildCentralRatingRows(
+  const { ratingRows, centralGoRows, meanByResponse } = buildCentralRatingRows(
     submittedResponses,
     snapshot,
     snapshotItems,
-    ploByQuestionKey
+    goByQuestionKey
   );
 
-  const ploResults = buildProgramWidePloMetrics(centralPloRows);
+  const goResults = buildProgramWideGoMetrics(centralGoRows);
   const questionResultsBase = buildQuestionMetrics(ratingRows);
 
-  // Attach PLO bindings to question results
+  // Attach GO bindings to question results
   const questionResults: ProgramHeadCentralQuestionResult[] = questionResultsBase.map((q) => ({
     ...q,
-    ploBindings: ploDisplayByQuestionKey.get(`${q.sectionKey}|${q.itemKey}`) ?? [],
+    goBindings: goDisplayByQuestionKey.get(`${q.sectionKey}|${q.itemKey}`) ?? [],
   }));
 
   const scaleGroups = groupRatingsByScale(
@@ -179,7 +179,7 @@ export async function getProgramHeadCentralEvaluationDetail(
       qualitativeRespondentCount: qualitative.respondentCount,
     },
     participation,
-    ploResults,
+    goResults,
     questionResults,
     qualitative,
     respondents,
@@ -256,14 +256,14 @@ function buildCentralRatingRows(
   }>,
   snapshot: unknown,
   snapshotItems: Map<string, { prompt: string }>,
-  ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>
+  goByQuestionKey: Map<string, CentralGoRatingRow["goBindings"]>
 ): {
   ratingRows: OutcomeItemRatingRow[];
-  centralPloRows: CentralPloRatingRow[];
+  centralGoRows: CentralGoRatingRow[];
   meanByResponse: Map<string, number | null>;
 } {
   const ratingRows: OutcomeItemRatingRow[] = [];
-  const centralPloRows: CentralPloRatingRow[] = [];
+  const centralGoRows: CentralGoRatingRow[] = [];
   const meanByResponse = new Map<string, number | null>();
 
   for (const response of submittedResponses) {
@@ -274,7 +274,7 @@ function buildCentralRatingRows(
         return [];
       }
       scaleKeys.add(scale.key);
-      const ploBindings = ploByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
+      const goBindings = goByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
       ratingRows.push({
         sectionKey: item.section_key,
         itemKey: item.item_key,
@@ -283,15 +283,15 @@ function buildCentralRatingRows(
         responseId: response.id,
         scale,
         cilo: null,
-        ploMappings: [],
+        goMappings: [],
       });
-      centralPloRows.push({
+      centralGoRows.push({
         sectionKey: item.section_key,
         itemKey: item.item_key,
         ratingValue: item.rating_value,
         responseId: response.id,
         scale,
-        ploBindings,
+        goBindings,
       });
       return [item.rating_value];
     });
@@ -303,22 +303,22 @@ function buildCentralRatingRows(
     );
   }
 
-  return { ratingRows, centralPloRows, meanByResponse };
+  return { ratingRows, centralGoRows, meanByResponse };
 }
 
 function buildCentralIndexes(
   snapshot: unknown,
-  ploSnapshots: Array<{
-    plo_id: string | null;
-    plo_code_snapshot: string;
-    plo_description_snapshot: string;
+  goSnapshots: Array<{
+    go_id: string | null;
+    go_code_snapshot: string;
+    go_description_snapshot: string;
     section_key: string;
     item_key: string;
   }>
 ): {
   snapshotItems: Map<string, { prompt: string }>;
-  ploByQuestionKey: Map<string, CentralPloRatingRow["ploBindings"]>;
-  ploDisplayByQuestionKey: Map<string, ProgramWidePloBinding[]>;
+  goByQuestionKey: Map<string, CentralGoRatingRow["goBindings"]>;
+  goDisplayByQuestionKey: Map<string, ProgramWideGoBinding[]>;
 } {
   const snapshotItems = new Map<string, { prompt: string }>();
   for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
@@ -326,32 +326,32 @@ function buildCentralIndexes(
       snapshotItems.set(`${section.key}|${item.key}`, { prompt: item.prompt });
     }
   }
-  const ploByQuestionKey = new Map<string, CentralPloRatingRow["ploBindings"]>();
-  const ploDisplayByQuestionKey = new Map<string, ProgramWidePloBinding[]>();
-  for (const sb of ploSnapshots) {
+  const goByQuestionKey = new Map<string, CentralGoRatingRow["goBindings"]>();
+  const goDisplayByQuestionKey = new Map<string, ProgramWideGoBinding[]>();
+  for (const sb of goSnapshots) {
     const key = `${sb.section_key}|${sb.item_key}`;
     const entry = {
-      ploId: sb.plo_id ?? sb.plo_code_snapshot,
-      ploCode: sb.plo_code_snapshot,
-      ploDescription: sb.plo_description_snapshot,
+      goId: sb.go_id ?? sb.go_code_snapshot,
+      goCode: sb.go_code_snapshot,
+      goDescription: sb.go_description_snapshot,
     };
-    const group = ploByQuestionKey.get(key);
+    const group = goByQuestionKey.get(key);
     if (group) {
       group.push(entry);
     } else {
-      ploByQuestionKey.set(key, [entry]);
+      goByQuestionKey.set(key, [entry]);
     }
-    const displayEntry: ProgramWidePloBinding = {
-      key: sb.plo_id ?? sb.plo_code_snapshot,
-      code: sb.plo_code_snapshot,
-      description: sb.plo_description_snapshot,
+    const displayEntry: ProgramWideGoBinding = {
+      key: sb.go_id ?? sb.go_code_snapshot,
+      code: sb.go_code_snapshot,
+      description: sb.go_description_snapshot,
     };
-    const displayGroup = ploDisplayByQuestionKey.get(key);
+    const displayGroup = goDisplayByQuestionKey.get(key);
     if (displayGroup) {
       displayGroup.push(displayEntry);
     } else {
-      ploDisplayByQuestionKey.set(key, [displayEntry]);
+      goDisplayByQuestionKey.set(key, [displayEntry]);
     }
   }
-  return { snapshotItems, ploByQuestionKey, ploDisplayByQuestionKey };
+  return { snapshotItems, goByQuestionKey, goDisplayByQuestionKey };
 }

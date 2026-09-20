@@ -6,7 +6,7 @@ import { expectNoAxeViolations, expectNoHorizontalOverflow, loginAs } from "./su
 /**
  * Issue #625 / ADR 0025: a Program-wide template with unbound Likert questions
  * publishes, and the publish step names them on a phone viewport. The
- * institution-owned exit-survey baseline carries no PLO bindings at all, so
+ * institution-owned exit-survey baseline carries no GO bindings at all, so
  * every Likert question publishes as a general evaluation item.
  */
 
@@ -15,7 +15,7 @@ function localDateTimeInputValue(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-test("mobile publish names unbound PLO questions and publishes", async ({ page }) => {
+test("mobile publish names unbound GO questions and publishes", async ({ page }) => {
   const fx = fixture();
   const baseline = fx.programWideUnboundBaseline;
   const deploymentName = `BSIT Exit Survey (Mobile ${Date.now()})`;
@@ -28,18 +28,16 @@ test("mobile publish names unbound PLO questions and publishes", async ({ page }
   await page.getByRole("combobox", { name: "Evaluation Template" }).click();
   await page.getByRole("option", { name: baseline.templateName, exact: true }).click();
 
-  // No PLO bindings: the coverage panel states the count and folds the list.
-  await expect(page.getByRole("heading", { name: "PLO coverage" })).toBeVisible();
+  // No GO bindings: the coverage panel states the count and folds the list.
+  await expect(page.getByRole("heading", { name: "GO coverage" })).toBeVisible();
   await expect(
-    page.getByText(`0 of ${baseline.likertCount} Likert questions bound to a PLO.`)
+    page.getByText(`0 of ${baseline.likertCount} Likert questions bound to a GO.`)
   ).toBeVisible();
   await expect(
-    page.getByText(/publish as general evaluation items and give no PLO evidence/i)
+    page.getByText(/publish as general evaluation items and give no GO evidence/i)
   ).toBeVisible();
   await expect(page.getByText(`Show all ${baseline.likertCount} unbound questions`)).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Assign PLOs in the template editor" })
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Assign GOs in the template editor" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   await page.getByRole("combobox", { name: "Academic Term" }).click();
@@ -61,7 +59,7 @@ test("mobile publish names unbound PLO questions and publishes", async ({ page }
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   await expect(page.getByText(/respondent\(s\) found/)).toBeVisible();
   // The decision point carries the same coverage panel: configure + preview.
-  await expect(page.getByRole("heading", { name: "PLO coverage" })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "GO coverage" })).toHaveCount(2);
   await expectNoHorizontalOverflow(page);
   await expectNoAxeViolations(page);
 

@@ -241,7 +241,7 @@ export async function getGeneralEducationAnalytics(
         item_key: true,
         cilo_question_binding: {
           select: {
-            cilo: { select: { cilo_mappings: { select: { plo: { select: { code: true } } } } } },
+            cilo: { select: { cilo_mappings: { select: { go: { select: { code: true } } } } } },
           },
         },
         response: {
@@ -392,7 +392,7 @@ type GeRatingRow = {
     };
   };
   cilo_question_binding?: {
-    cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } | null;
+    cilo?: { cilo_mappings?: Array<{ go: { code: string } }> } | null;
   } | null;
 };
 
@@ -449,19 +449,19 @@ function buildCourseBreakdowns(
       byCourse.set(course.id, agg);
     }
     // Keep full-precision mean; include only ratings that have an instrument snapshot match handled below
-    // For GE analytics we treat all ratings as valid (no defensive PLO mapping filter unlike Program Head outcomes)
+    // For GE analytics we treat all ratings as valid (no defensive GO mapping filter unlike Program Head outcomes)
     agg.ratingSum += row.rating_value;
     agg.ratingCount += 1;
     agg.responseIds.add(row.response_id);
     agg.instruments.set(cb.instrument.id, instrumentLabel(cb.instrument));
     agg.snapshotByInstrument.set(cb.instrument.id, cb.instrument.structure_snapshot);
-    const ploCodes =
+    const goCodes =
       (
         row as unknown as {
-          cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } };
+          cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ go: { code: string } }> } };
         }
-      ).cilo_question_binding?.cilo?.cilo_mappings?.map((m) => m.plo.code) ?? [];
-    for (const c of ploCodes) agg.outcomeCodes.add(c);
+      ).cilo_question_binding?.cilo?.cilo_mappings?.map((m) => m.go.code) ?? [];
+    for (const c of goCodes) agg.outcomeCodes.add(c);
   }
   for (const row of responseRows as Array<{
     id: string;
@@ -526,7 +526,7 @@ async function buildTrends(
   ratingRows: Array<{
     rating_value: number;
     response_id: string;
-    cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ plo: { code: string } }> } };
+    cilo_question_binding?: { cilo?: { cilo_mappings?: Array<{ go: { code: string } }> } };
     response: {
       assignment: {
         course_bound: { term_instance_id: string; instrument_version_id: string | null } | null;
@@ -576,7 +576,7 @@ async function buildTrends(
     e.responseIds.add(row.response_id);
     if (ivId) e.instrumentVersionIds.add(ivId);
     for (const m of row.cilo_question_binding?.cilo?.cilo_mappings ?? [])
-      e.outcomeCodes.add(m.plo.code);
+      e.outcomeCodes.add(m.go.code);
   }
   for (const row of responseRows) {
     const tid = row.assignment.course_bound?.term_instance_id;

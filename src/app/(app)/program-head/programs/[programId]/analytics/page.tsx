@@ -29,7 +29,7 @@ import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Analytics", "Program Head") };
 
-type ResolvedTabContent = { children: ReactNode; ploCode?: string };
+type ResolvedTabContent = { children: ReactNode; goCode?: string };
 
 async function withData<T>(
   programId: string,
@@ -48,18 +48,18 @@ async function resolveOutcomesTab(
 ): Promise<ResolvedTabContent> {
   const data = await getProgramHeadOutcomes(programId, filters);
   if (!data) notFound();
-  const ploCode = filters.ploId
-    ? (data.outcomes.find((outcome) => outcome.ploId === filters.ploId)?.code ??
-      data.programWideOutcomes.find((outcome) => outcome.ploId === filters.ploId)?.code)
+  const goCode = filters.goId
+    ? (data.outcomes.find((outcome) => outcome.goId === filters.goId)?.code ??
+      data.programWideOutcomes.find((outcome) => outcome.goId === filters.goId)?.code)
     : undefined;
   return {
-    ploCode,
+    goCode,
     children: (
       <ProgramHeadOutcomesView
         programId={programId}
         data={data}
         resetHref={buildAnalyticsUrl(programId, { tab: "outcomes" })}
-        selectedPloId={filters.ploId}
+        selectedGoId={filters.goId}
         aiFilters={toInsightFilters(filters)}
       />
     ),
@@ -184,7 +184,7 @@ export default async function SelectedProgramAnalyticsPage({
       programId={programId}
       filters={effectiveFilters}
       scope={frame.scope}
-      ploCode={tab.ploCode}
+      goCode={tab.goCode}
       periodOptions={frame.periodOptions}
     >
       {tab.children}

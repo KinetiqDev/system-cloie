@@ -142,18 +142,18 @@ model CentralDeployment {
   program       Program?                       @relation(fields: [program_id], references: [id], onDelete: Restrict)
   major         Major?                         @relation(fields: [major_id], references: [id], onDelete: SetNull)
   assignments   EvaluationAssignment[]         @relation("CentralDeployments")
-  plo_snapshots CentralDeploymentPloSnapshot[]
+  go_snapshots CentralDeploymentGoSnapshot[]
 
   @@index([term_instance_id])
   @@map("central_deployments")
 }
 
-model CentralDeploymentPloSnapshot {
+model CentralDeploymentGoSnapshot {
   id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   central_deployment_id    String   @db.Uuid
-  plo_id                   String?  @db.Uuid
-  plo_code_snapshot        String
-  plo_description_snapshot String
+  go_id                   String?  @map("plo_id") @db.Uuid
+  go_code_snapshot        String   @map("plo_code_snapshot")
+  go_description_snapshot String   @map("plo_description_snapshot")
   section_key              String
   item_key                 String
   question_prompt_snapshot String
@@ -161,9 +161,9 @@ model CentralDeploymentPloSnapshot {
   updated_at               DateTime @updatedAt
 
   central_deployment CentralDeployment @relation(fields: [central_deployment_id], references: [id], onDelete: Cascade)
-  plo                PLO?              @relation(fields: [plo_id], references: [id], onDelete: SetNull)
+  go                GO?              @relation(fields: [go_id], references: [id], onDelete: SetNull)
 
-  @@unique([central_deployment_id, plo_id, section_key, item_key], map: "cdps_deployment_plo_question_key")
+  @@unique([central_deployment_id, go_id, section_key, item_key], map: "cdps_deployment_plo_question_key")
   @@map("central_deployment_plo_snapshots")
 }
 

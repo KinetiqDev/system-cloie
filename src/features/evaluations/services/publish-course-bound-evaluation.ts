@@ -62,7 +62,7 @@ function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE"
  * evaluation may be published. General Education follows the at-least-one
  * active Institutional Outcome rule with a non-null manifestation;
  * Program-specific Courses require a non-null manifestation for every active
- * PLO of the Course's owning Academic Program (zero active PLOs with active
+ * GO of the Course's owning Academic Program (zero active GOs with active
  * CILOs is incomplete). Archived targets, wrong-program rows, and rows without
  * a manifestation never satisfy the gate.
  */
@@ -72,7 +72,7 @@ async function classifyPublicationAlignment(
   courseScope: CourseScope,
   owningProgramId: string | null
 ): Promise<CourseAlignmentState> {
-  const [cilos, activePloIds] = await Promise.all([
+  const [cilos, activeGoIds] = await Promise.all([
     db.cILO.findMany({
       where: { course_id: courseId, is_active: true },
       select: {
@@ -80,7 +80,7 @@ async function classifyPublicationAlignment(
         cilo_mappings: {
           select: {
             manifestation: true,
-            plo: { select: { id: true, program_id: true, is_active: true } },
+            go: { select: { id: true, program_id: true, is_active: true } },
           },
         },
         cilo_institutional_outcome_mappings: {
@@ -93,7 +93,7 @@ async function classifyPublicationAlignment(
     }),
     courseScope === CourseScope.GENERAL_EDUCATION || owningProgramId === null
       ? []
-      : db.pLO.findMany({
+      : db.gO.findMany({
           where: { program_id: owningProgramId, is_active: true },
           select: { id: true },
         }),
@@ -102,7 +102,7 @@ async function classifyPublicationAlignment(
     cilos,
     courseScope,
     owningProgramId,
-    activePloIds.map((plo) => plo.id)
+    activeGoIds.map((go) => go.id)
   );
 }
 
@@ -447,7 +447,7 @@ export async function publishCourseBoundEvaluation({
               const requirement =
                 courseScope === CourseScope.GENERAL_EDUCATION
                   ? "map to at least one active Institutional Outcome"
-                  : "have a manifestation of every active Program Learning Outcome of the Course's owning Academic Program";
+                  : "have a manifestation of every active Graduate Outcome of the Course's owning Academic Program";
               throw new PublicationValidationError(
                 isFacultyPublisher
                   ? `Every active CILO must ${requirement} before publishing. Complete the Course alignment to continue.`

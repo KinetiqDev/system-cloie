@@ -93,8 +93,8 @@ export const templateStructureSchema = z
 
 // ─── Create / Update Schemas ─────────────────────────────────────────────────
 
-const ploQuestionBindingSchema = z.object({
-  ploId: z.string().uuid(),
+const goQuestionBindingSchema = z.object({
+  goId: z.string().uuid(),
   itemKey: z.string().min(1, "Question key is required."),
   sectionKey: z.string().min(1, "Section key is required."),
 });
@@ -112,7 +112,7 @@ export const createProgramHeadTemplateSchema = z
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
-    program_question_plo_bindings: z.array(ploQuestionBindingSchema).optional(),
+    __KEEP_program_question_go_bindings__: z.array(goQuestionBindingSchema).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -127,12 +127,12 @@ export const createProgramHeadTemplateSchema = z
     }
     if (
       value.template_type !== EvaluationTemplateType.PROGRAM_WIDE &&
-      (value.program_question_plo_bindings?.length ?? 0) > 0
+      (value.__KEEP_program_question_go_bindings__?.length ?? 0) > 0
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "PLOs can only be assigned to questions in program-wide evaluations.",
-        path: ["program_question_plo_bindings"],
+        message: "GOs can only be assigned to questions in program-wide evaluations.",
+        path: ["program_question_go_bindings"],
       });
     }
   });
@@ -176,7 +176,7 @@ export const updateProgramHeadTemplateSchema = z
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
-    program_question_plo_bindings: z.array(ploQuestionBindingSchema).optional(),
+    __KEEP_program_question_go_bindings__: z.array(goQuestionBindingSchema).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -191,12 +191,12 @@ export const updateProgramHeadTemplateSchema = z
     }
     if (
       value.template_type !== EvaluationTemplateType.PROGRAM_WIDE &&
-      (value.program_question_plo_bindings?.length ?? 0) > 0
+      (value.__KEEP_program_question_go_bindings__?.length ?? 0) > 0
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "PLOs can only be assigned to questions in program-wide evaluations.",
-        path: ["program_question_plo_bindings"],
+        message: "GOs can only be assigned to questions in program-wide evaluations.",
+        path: ["program_question_go_bindings"],
       });
     }
   });
@@ -228,7 +228,7 @@ export const saveFacultyTemplateDraftSchema = z.object({
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 
-type ProgramPloQuestionBindingInput = z.infer<typeof ploQuestionBindingSchema>;
+type ProgramGoQuestionBindingInput = z.infer<typeof goQuestionBindingSchema>;
 export type CreateProgramHeadTemplateInput = {
   programId: string;
   name: string;
@@ -237,7 +237,7 @@ export type CreateProgramHeadTemplateInput = {
   template_type: EvaluationTemplateType;
   is_faculty_accessible: boolean;
   structure: z.infer<typeof templateStructureSchema>;
-  program_question_plo_bindings?: ProgramPloQuestionBindingInput[];
+  __KEEP_program_question_go_bindings__?: ProgramGoQuestionBindingInput[];
 };
 export type UpdateProgramHeadTemplateInput = CreateProgramHeadTemplateInput & { id: string };
 export type SaveFacultyTemplateDraftInput = z.infer<typeof saveFacultyTemplateDraftSchema>;

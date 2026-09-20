@@ -91,9 +91,9 @@ type AlignmentCiloRow = {
   id: string;
   description: string;
   cilo_mappings: Array<{
-    plo_id: string;
+    go_id: string;
     manifestation: CILOMappingManifestation | null;
-    plo: { id: string; code: string; description: string; is_active: boolean };
+    go: { id: string; code: string; description: string; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome_id: string;
@@ -128,7 +128,7 @@ function freshnessMappingsForScope(
     : rows.flatMap((cilo) =>
         cilo.cilo_mappings.map((mapping) => ({
           ciloId: cilo.id,
-          targetId: mapping.plo_id,
+          targetId: mapping.go_id,
           manifestation: mapping.manifestation ?? null,
         }))
       );
@@ -164,19 +164,19 @@ function freshnessTokenOf(
 function catalogError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
     ? "Submit manifestations only for active Institutional Outcomes."
-    : "Submit manifestations only for active Program Learning Outcomes of this Course's Program.";
+    : "Submit manifestations only for active Graduate Outcomes of this Course's Program.";
 }
 
 function completeError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
     ? "Map every active CILO to at least one Institutional Outcome before publishing."
-    : "Complete every required CILO-to-PLO pair before publishing.";
+    : "Complete every required CILO-to-GO pair before publishing.";
 }
 
 function nullManifestationError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
     ? "Every mapped Institutional Outcome needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation."
-    : "Every required CILO-to-PLO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.";
+    : "Every required CILO-to-GO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.";
 }
 
 // Each check is a distinct acceptance rule: coverage, uniqueness, catalog validity,
@@ -251,9 +251,9 @@ function existingManifestationState(
               }))
               .sort((left, right) => left.targetId.localeCompare(right.targetId))
           : cilo.cilo_mappings
-              .filter((mapping) => activeTargetIds.has(mapping.plo_id))
+              .filter((mapping) => activeTargetIds.has(mapping.go_id))
               .map((mapping) => ({
-                targetId: mapping.plo_id,
+                targetId: mapping.go_id,
                 manifestation: mapping.manifestation ?? null,
               }))
               .sort((left, right) => left.targetId.localeCompare(right.targetId)),
@@ -348,7 +348,7 @@ async function applyManifestationDiff(
     await tx.cILOMapping.createMany({
       data: diff.additions.map((item) => ({
         cilo_id: item.ciloId,
-        plo_id: item.targetId,
+        go_id: item.targetId,
         manifestation: item.manifestation,
         created_by: userId,
         updated_by: userId,
@@ -357,14 +357,14 @@ async function applyManifestationDiff(
   }
   for (const update of diff.updates) {
     await tx.cILOMapping.updateMany({
-      where: { cilo_id: update.ciloId, plo_id: update.targetId },
+      where: { cilo_id: update.ciloId, go_id: update.targetId },
       data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
     });
   }
   if (diff.removals.length > 0) {
     await tx.cILOMapping.deleteMany({
       where: {
-        OR: diff.removals.map((item) => ({ cilo_id: item.ciloId, plo_id: item.targetId })),
+        OR: diff.removals.map((item) => ({ cilo_id: item.ciloId, go_id: item.targetId })),
       },
     });
   }
@@ -405,15 +405,15 @@ function postWriteMappings(
       : rows.flatMap((cilo) =>
           cilo.cilo_mappings
             .filter((mapping) => {
-              const key = `${cilo.id}:${mapping.plo_id}`;
+              const key = `${cilo.id}:${mapping.go_id}`;
               return (
                 !writtenPairs.has(key) &&
-                (!activeTargetIds.has(mapping.plo_id) || mapping.manifestation === null)
+                (!activeTargetIds.has(mapping.go_id) || mapping.manifestation === null)
               );
             })
             .map((mapping) => ({
               ciloId: cilo.id,
-              targetId: mapping.plo_id,
+              targetId: mapping.go_id,
               manifestation: mapping.manifestation ?? null,
             }))
         );
@@ -489,9 +489,9 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
           description: true,
           cilo_mappings: {
             select: {
-              plo_id: true,
+              go_id: true,
               manifestation: true,
-              plo: { select: { id: true, code: true, description: true, is_active: true } },
+              go: { select: { id: true, code: true, description: true, is_active: true } },
             },
           },
           cilo_institutional_outcome_mappings: {
@@ -531,7 +531,7 @@ async function readValidTargets(
         select: { id: true, code: true, description: true },
         orderBy: [{ order: "asc" }, { code: "asc" }],
       })
-    : db.pLO.findMany({
+    : db.gO.findMany({
         where: { program_id: course.program_id!, is_active: true },
         select: { id: true, code: true, description: true },
         orderBy: [{ order: "asc" }, { code: "asc" }],
@@ -543,7 +543,7 @@ function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<stri
   const mappedTargets = course.cilos.flatMap((cilo) =>
     scope === "GENERAL_EDUCATION"
       ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome)
-      : cilo.cilo_mappings.map((mapping) => mapping.plo)
+      : cilo.cilo_mappings.map((mapping) => mapping.go)
   );
   return mappedTargets
     .filter((target) => !validTargetIds.has(target.id))
@@ -614,7 +614,7 @@ export async function readCourseAlignment(
             manifestation: mapping.manifestation ?? null,
           }))
         : cilo.cilo_mappings.map((mapping) => ({
-            targetId: mapping.plo_id,
+            targetId: mapping.go_id,
             manifestation: mapping.manifestation ?? null,
           })),
   }));

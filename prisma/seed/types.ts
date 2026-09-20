@@ -50,7 +50,7 @@ export interface CourseAssignmentContext {
 }
 
 export interface OutcomeContext {
-  ploMap: Map<string, { id: string }>;
+  goMap: Map<string, { id: string }>;
   iloMap: Map<string, { id: string }>;
   ciloMap: Map<string, { id: string; description: string; order: number }[]>;
 }

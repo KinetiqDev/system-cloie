@@ -130,7 +130,7 @@ describe("getProgramHeadResponseDetail", () => {
     ciloMappingFindManyMock.mockResolvedValue([
       {
         cilo_id: "cilo-1",
-        plo: { id: "plo-1", code: "PLO-1", description: "Communicate effectively" },
+        go: { id: "plo-1", code: "GO-1", description: "Communicate effectively" },
         manifestation: "LEARNING",
       },
     ]);
@@ -226,8 +226,8 @@ describe("getProgramHeadResponseDetail", () => {
       expect(quant.binding.type).toBe("CILO");
       if (quant.binding.type === "CILO") {
         expect(quant.binding.ciloLabel).toBe("CILO 1");
-        expect(quant.binding.ploMappings).toHaveLength(1);
-        expect(quant.binding.ploMappings[0].ploCode).toBe("PLO-1");
+        expect(quant.binding.goMappings).toHaveLength(1);
+        expect(quant.binding.goMappings[0].goCode).toBe("GO-1");
       }
     }
     // Qualitative answer
@@ -345,7 +345,7 @@ describe("getProgramHeadResponseDetail", () => {
             semester: "FIRST",
             term: null,
           },
-          plo_snapshots: [],
+          go_snapshots: [],
         },
       },
       quant_items: [],
@@ -391,7 +391,7 @@ describe("getProgramHeadResponseDetail", () => {
             semester: "FIRST",
             term: null,
           },
-          plo_snapshots: [],
+          go_snapshots: [],
         },
       },
       quant_items: [],

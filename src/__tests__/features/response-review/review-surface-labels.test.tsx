@@ -92,7 +92,7 @@ function centralDetail(): ProgramHeadCentralEvaluationDetail {
       stakeholders: [],
       respondents: { total: 0, complete: 0, partial: 0, notStarted: 0 },
     },
-    ploResults: [],
+    goResults: [],
     questionResults: [],
     qualitative: { answerCount: 0, respondentCount: 0, prompts: [], topTerms: [] },
     respondents: [],

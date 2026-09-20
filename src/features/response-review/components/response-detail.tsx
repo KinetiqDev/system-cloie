@@ -41,8 +41,8 @@ export function ResponseDetail({
           termInstanceId: evaluation.context.termInstanceId,
         };
 
-  const outcomeHref = (ploId: string): string =>
-    buildAnalyticsUrl(programId, { tab: "outcomes", ploId, ...outcomeScope });
+  const outcomeHref = (goId: string): string =>
+    buildAnalyticsUrl(programId, { tab: "outcomes", goId, ...outcomeScope });
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -125,7 +125,7 @@ function QuantitativeAnswerCard({
   outcomeHref,
 }: {
   item: QuantitativeSubmittedAnswer;
-  outcomeHref: (ploId: string) => string;
+  outcomeHref: (goId: string) => string;
 }) {
   const { binding } = item;
   return (
@@ -144,18 +144,18 @@ function QuantitativeAnswerCard({
             <span>
               <span className="font-semibold">CILO:</span> {binding.ciloLabel}
             </span>
-            {binding.ploMappings.length > 0 && (
+            {binding.goMappings.length > 0 && (
               <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
                 <span>→</span>
-                {binding.ploMappings.map((m, index) => (
-                  <Fragment key={m.ploId}>
+                {binding.goMappings.map((m, index) => (
+                  <Fragment key={m.goId}>
                     {index > 0 ? ", " : null}
                     <span>
                       <Link
-                        href={outcomeHref(m.ploId)}
+                        href={outcomeHref(m.goId)}
                         className="hover:text-foreground font-medium underline underline-offset-2"
                       >
-                        {m.ploCode}
+                        {m.goCode}
                       </Link>
                     </span>
                   </Fragment>
@@ -164,14 +164,14 @@ function QuantitativeAnswerCard({
             )}
           </Badge>
         )}
-        {binding.type === "PLO" && (
+        {binding.type === "GO" && (
           <Badge
             variant="outline"
             className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
           >
             <span>
-              <span className="font-semibold">PLO:</span>{" "}
-              {binding.ploBindings.map((p, index) => (
+              <span className="font-semibold">GO:</span>{" "}
+              {binding.goBindings.map((p, index) => (
                 <Fragment key={p.key}>
                   {index > 0 ? ", " : null}
                   <span>

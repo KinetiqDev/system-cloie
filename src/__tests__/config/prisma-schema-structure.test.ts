@@ -47,7 +47,7 @@ const expectedModels = [
   "CILOInstitutionalOutcomeMapping",
   "CILOMapping",
   "CentralDeployment",
-  "CentralDeploymentPloSnapshot",
+  "CentralDeploymentGoSnapshot",
   "Course",
   "CourseAssignment",
   "CourseAssignmentMembership",
@@ -58,13 +58,13 @@ const expectedModels = [
   "EvaluationAssignment",
   "ExternalStakeholderInvite",
   "FacultyProgramAffiliation",
-  "PLO",
+  "GO",
   "IndustryPartnerProfile",
   "IndustryPartnerProgramAffiliation",
   "InstitutionalOutcome",
   "InstrumentTemplate",
   "InstrumentTemplateCiloQuestionBinding",
-  "InstrumentTemplatePloQuestionBinding",
+  "InstrumentTemplateGoQuestionBinding",
   "InstrumentVersion",
   "Major",
   "Program",
@@ -133,7 +133,7 @@ describe("Prisma schema structure", () => {
     expect(model).toContain("updated_by");
     expect(model).toContain('@relation("CILOMappingCreator", fields: [created_by]');
     expect(model).toContain('@relation("CILOMappingUpdater", fields: [updated_by]');
-    expect(model).toContain("@@unique([cilo_id, plo_id])");
+    expect(model).toContain("@@unique([cilo_id, go_id])");
     expect(model).toContain('@@map("cilo_mappings")');
   });
 

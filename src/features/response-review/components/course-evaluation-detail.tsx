@@ -128,7 +128,7 @@ export function CourseEvaluationDetail({
               <TableRow>
                 <TableHead>CILO</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>PLO mappings</TableHead>
+                <TableHead>GO mappings</TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
                 <TableHead className="text-right">Mean</TableHead>
@@ -359,11 +359,11 @@ function SummaryStat({
 }
 
 function mappingLabels(cilo: {
-  mappings: Array<{ ploCode: string; manifestation: string }>;
+  mappings: Array<{ goCode: string; manifestation: string }>;
 }): string {
   return cilo.mappings.length === 0
     ? "—"
-    : cilo.mappings.map((mapping) => `${mapping.ploCode} (${mapping.manifestation})`).join(", ");
+    : cilo.mappings.map((mapping) => `${mapping.goCode} (${mapping.manifestation})`).join(", ");
 }
 
 function DistributionCounts({

@@ -77,15 +77,15 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   // ADR 0025: the tool leaves its general satisfaction item unbound, so the
   // publish step names it instead of blocking the deployment.
   const partialMapping = fx.programWidePartialMapping;
-  await expect(page.getByRole("heading", { name: "PLO coverage" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "GO coverage" })).toBeVisible();
   await expect(
     page.getByText(
-      `${partialMapping.boundQuestionCount} of ${partialMapping.likertCount} Likert questions bound to a PLO`
+      `${partialMapping.boundQuestionCount} of ${partialMapping.likertCount} Likert questions bound to a GO`
     )
   ).toBeVisible();
   await expect(page.getByText(partialMapping.unboundPrompt)).toBeVisible();
   await expect(
-    page.getByText(/publish as general evaluation items and give no PLO evidence/i)
+    page.getByText(/publish as general evaluation items and give no GO evidence/i)
   ).toBeVisible();
 
   // Select the PLANNED academic term
@@ -108,7 +108,7 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   await expect(page.getByText(/respondent\(s\) found/)).toBeVisible();
   // The decision point carries the same coverage panel: configure + preview.
-  await expect(page.getByRole("heading", { name: "PLO coverage" })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "GO coverage" })).toHaveCount(2);
   await expect(page.getByRole("cell", { name: "Demo Alumni", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 

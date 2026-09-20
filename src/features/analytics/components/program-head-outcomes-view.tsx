@@ -23,16 +23,16 @@ import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
-import { ProgramHeadPLODetail } from "./program-head-plo-detail";
-import { LazyProgramHeadPloLollipopChart } from "./program-head-analytics-visualizations";
+import { ProgramHeadGODetail } from "./program-head-go-detail";
+import { LazyProgramHeadGoLollipopChart } from "./program-head-analytics-visualizations";
 import { ProgramHeadContributorMatrix } from "./program-head-contributor-matrix";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 import { HowCalculatedPopover } from "./how-calculated-popover";
-import { SelectedPloScrollTarget } from "./selected-plo-scroll-target";
+import { SelectedGoScrollTarget } from "./selected-go-scroll-target";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
- * selected-Program Program Learning Outcomes counts once in each mapped outcome row.
+ * selected-Program Graduate Outcomes counts once in each mapped outcome row.
  */
 const STAKEHOLDER_LABELS: Record<"STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER", string> = {
   STUDENT: "Students",
@@ -41,14 +41,14 @@ const STAKEHOLDER_LABELS: Record<"STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER", stri
 };
 
 const MANY_TO_MANY_DISCLOSURE =
-  "A rating bound to a CILO mapped to more than one Program Learning Outcome contributes to each mapped outcome row.";
+  "A rating bound to a CILO mapped to more than one Graduate Outcome contributes to each mapped outcome row.";
 
 type ProgramHeadOutcomesViewProps = {
   programId: string;
   data: ProgramHeadOutcomesDTO;
   resetHref: string;
-  /** When set, the matching PLO row is expanded and highlighted (§16.2). */
-  selectedPloId?: string;
+  /** When set, the matching GO row is expanded and highlighted (§16.2). */
+  selectedGoId?: string;
   aiFilters?: ProgramHeadInsightFilters;
 };
 
@@ -56,7 +56,7 @@ export function ProgramHeadOutcomesView({
   programId,
   data,
   resetHref,
-  selectedPloId,
+  selectedGoId,
   aiFilters,
 }: ProgramHeadOutcomesViewProps) {
   const { emptyReason, outcomes, currentMappingDisclosure, manyToManyDisclosure } = data;
@@ -76,7 +76,7 @@ export function ProgramHeadOutcomesView({
             <EmptyTitle>No evaluation assignments</EmptyTitle>
             <EmptyDescription>
               This Program has no course-bound evaluation assignments in the selected scope, so
-              there is no course-bound evidence to map to Program Learning Outcomes.
+              there is no course-bound evidence to map to Graduate Outcomes.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -116,9 +116,9 @@ export function ProgramHeadOutcomesView({
             <EmptyTitle>No mapped outcome evidence</EmptyTitle>
             <EmptyDescription>
               Submitted course-bound ratings exist in this scope, but none are bound to a CILO with
-              a canonical mapping to a Program Learning Outcome of this Program. Central instrument
-              questions and Institutional Outcome evidence are never assigned to a Program Learning
-              Outcome by wording or item key.
+              a canonical mapping to a Graduate Outcome of this Program. Central instrument
+              questions and Institutional Outcome evidence are never assigned to a Graduate Outcome
+              by wording or item key.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -135,11 +135,11 @@ export function ProgramHeadOutcomesView({
             <EmptyMedia variant="icon">
               <Target aria-hidden="true" />
             </EmptyMedia>
-            <EmptyTitle>No program-wide PLO evidence</EmptyTitle>
+            <EmptyTitle>No program-wide GO evidence</EmptyTitle>
             <EmptyDescription>
-              No central-deployment ratings in the selected scope are bound to a Program Learning
-              Outcome through a published deployment PLO snapshot. Program-wide outcome evidence is
-              reported by Stakeholder when snapshot bindings exist.
+              No central-deployment ratings in the selected scope are bound to a Graduate Outcome
+              through a published deployment GO snapshot. Program-wide outcome evidence is reported
+              by Stakeholder when snapshot bindings exist.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
@@ -154,23 +154,23 @@ export function ProgramHeadOutcomesView({
         <>
           <div className="flex flex-col gap-3">
             <Alert variant="information">
-              <AlertTitle>Current CILO-to-PLO mappings</AlertTitle>
+              <AlertTitle>Current CILO-to-GO mappings</AlertTitle>
               <AlertDescription>{currentMappingDisclosure}</AlertDescription>
             </Alert>
             {manyToManyDisclosure && (
               <Alert variant="information">
-                <AlertTitle>Multiple Program Learning Outcome mapping</AlertTitle>
+                <AlertTitle>Multiple Graduate Outcome mapping</AlertTitle>
                 <AlertDescription>{MANY_TO_MANY_DISCLOSURE}</AlertDescription>
               </Alert>
             )}
           </div>
 
-          <LazyProgramHeadPloLollipopChart
-            title="Mean Rating by Program Learning Outcome"
+          <LazyProgramHeadGoLollipopChart
+            title="Mean Rating by Graduate Outcome"
             outcomes={outcomes}
           />
 
-          <ProgramHeadContributorMatrix outcomes={outcomes} selectedPloId={selectedPloId} />
+          <ProgramHeadContributorMatrix outcomes={outcomes} selectedGoId={selectedGoId} />
 
           {aiFilters ? (
             <ProgramHeadInlineAiInsight
@@ -184,19 +184,19 @@ export function ProgramHeadOutcomesView({
           <OutcomesExactValueTable
             programId={programId}
             outcomes={outcomes}
-            selectedPloId={selectedPloId}
+            selectedGoId={selectedGoId}
           />
         </>
       )}
 
       {data.programWideOutcomes.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h3 className="text-title-sm text-foreground">Program-wide PLO evidence</h3>
+          <h3 className="text-title-sm text-foreground">Program-wide GO evidence</h3>
           <div className="border-border overflow-x-auto rounded-lg border">
             <Table aria-label="Program-wide evidence by graduate outcome">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Program Learning Outcome</TableHead>
+                  <TableHead>Graduate Outcome</TableHead>
                   <TableHead>Stakeholder</TableHead>
                   <TableHead className="text-right">Mean Rating</TableHead>
                   <TableHead className="text-right">Rating Count</TableHead>
@@ -208,9 +208,9 @@ export function ProgramHeadOutcomesView({
               <TableBody>
                 {data.programWideOutcomes.map((row) => (
                   <TableRow
-                    key={`${row.stakeholder}-${row.ploId}`}
-                    data-plo-row={row.ploId}
-                    className={cn(row.ploId === selectedPloId && "bg-primary-soft/40")}
+                    key={`${row.stakeholder}-${row.goId}`}
+                    data-go-row={row.goId}
+                    className={cn(row.goId === selectedGoId && "bg-primary-soft/40")}
                   >
                     <TableCell className="align-top">
                       <div className="flex flex-col">
@@ -246,7 +246,7 @@ export function ProgramHeadOutcomesView({
           </div>
         </div>
       )}
-      <SelectedPloScrollTarget ploId={selectedPloId} />
+      <SelectedGoScrollTarget goId={selectedGoId} />
     </div>
   );
 }
@@ -254,20 +254,20 @@ export function ProgramHeadOutcomesView({
 function OutcomesExactValueTable({
   programId,
   outcomes,
-  selectedPloId,
+  selectedGoId,
 }: {
   programId: string;
   outcomes: ProgramHeadOutcomesDTO["outcomes"];
-  selectedPloId?: string;
+  selectedGoId?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-title-sm text-foreground">Exact values by Program Learning Outcome</h3>
+      <h3 className="text-title-sm text-foreground">Exact values by Graduate Outcome</h3>
       <div className="border-border overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by graduate outcome">
           <TableHeader>
             <TableRow>
-              <TableHead>Program Learning Outcome</TableHead>
+              <TableHead>Graduate Outcome</TableHead>
               <TableHead className="text-right">Mean Rating</TableHead>
               <TableHead className="text-right">Rating Count</TableHead>
               <TableHead className="text-right">Submitted Responses</TableHead>
@@ -276,12 +276,12 @@ function OutcomesExactValueTable({
           </TableHeader>
           <TableBody>
             {outcomes.flatMap((outcome) => {
-              const detailId = `plo-detail-${outcome.ploId}`;
-              const isSelected = outcome.ploId === selectedPloId;
+              const detailId = `go-detail-${outcome.goId}`;
+              const isSelected = outcome.goId === selectedGoId;
               const rows = [
                 <TableRow
-                  key={outcome.ploId}
-                  data-plo-row={outcome.ploId}
+                  key={outcome.goId}
+                  data-go-row={outcome.goId}
                   className={cn(isSelected && "bg-primary-soft/40")}
                 >
                   <TableCell className="align-top">
@@ -324,14 +324,14 @@ function OutcomesExactValueTable({
                     )}
                   </TableCell>
                 </TableRow>,
-                <TableRow key={`${outcome.ploId}-detail`}>
+                <TableRow key={`${outcome.goId}-detail`}>
                   <TableCell colSpan={5}>
                     <Disclosure open={isSelected}>
                       <DisclosureTrigger variant="link" id={detailId}>
                         Details for {outcome.code}
                       </DisclosureTrigger>
                       <DisclosureContent>
-                        <ProgramHeadPLODetail outcome={outcome} />
+                        <ProgramHeadGODetail outcome={outcome} />
                       </DisclosureContent>
                     </Disclosure>
                   </TableCell>

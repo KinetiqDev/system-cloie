@@ -11,8 +11,8 @@ import type {
 } from "../schemas/program-head-template";
 import {
   listTemplateLikertQuestions,
-  type ProgramPloOption,
-  type TemplatePloQuestionBinding,
+  type ProgramGoOption,
+  type TemplateGoQuestionBinding,
   type TemplateStructure,
 } from "../types";
 
@@ -21,27 +21,27 @@ import {
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
-type ProgramHeadPloBindingItem = {
-  ploCodeSnapshot: string;
-  ploDescriptionSnapshot: string;
-  ploId: string;
+type ProgramHeadGoBindingItem = {
+  goCodeSnapshot: string;
+  goDescriptionSnapshot: string;
+  goId: string;
   itemKey: string;
   questionPromptSnapshot: string;
   sectionKey: string;
 };
 
 /**
- * Normalizes and validates draft question–PLO bindings against the template
- * structure and the program's active PLO catalog. Only the bindings actually
+ * Normalizes and validates draft question–GO bindings against the template
+ * structure and the program's active GO catalog. Only the bindings actually
  * provided are validated (drafts may be incomplete — the UI surfaces a
  * missing-binding warning); full Likert coverage is enforced at publication.
  */
-export function normalizePloQuestionBindings(input: {
-  bindings: Array<{ ploId: string; itemKey: string; sectionKey: string }>;
+export function normalizeGoQuestionBindings(input: {
+  bindings: Array<{ goId: string; itemKey: string; sectionKey: string }>;
   structure: TemplateStructure;
-  plos: Array<{ id: string; code: string; description: string }>;
+  gos: Array<{ id: string; code: string; description: string }>;
 }):
-  | { success: true; bindings: ProgramHeadPloBindingItem[]; missingQuestionKeys: string[] }
+  | { success: true; bindings: ProgramHeadGoBindingItem[]; missingQuestionKeys: string[] }
   | { success: false; error: string } {
   // Template keys may contain any nonempty string, so the question identity
   // must be a structurally encoded tuple — never a separator join.
@@ -54,44 +54,44 @@ export function normalizePloQuestionBindings(input: {
       question,
     ])
   );
-  const ploMap = new Map(input.plos.map((plo) => [plo.id, plo]));
+  const goMap = new Map(input.gos.map((go) => [go.id, go]));
   const seenPairs = new Set<string>();
   const boundQuestionKeys = new Set<string>();
-  const normalized: ProgramHeadPloBindingItem[] = [];
+  const normalized: ProgramHeadGoBindingItem[] = [];
 
   for (const binding of input.bindings) {
     const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
     const question = questionMap.get(questionKey);
-    const plo = ploMap.get(binding.ploId);
+    const go = goMap.get(binding.goId);
 
     if (!question) {
       return {
         success: false,
-        error: "PLOs can only be assigned to Likert questions.",
+        error: "GOs can only be assigned to Likert questions.",
       };
     }
 
-    if (!plo) {
+    if (!go) {
       return {
         success: false,
-        error: "One or more selected PLOs are invalid or no longer active.",
+        error: "One or more selected GOs are invalid or no longer active.",
       };
     }
 
-    const pairKey = `${questionKey}|${binding.ploId}`;
+    const pairKey = `${questionKey}|${binding.goId}`;
     if (seenPairs.has(pairKey)) {
       return {
         success: false,
-        error: "Each Likert question can only be assigned to a PLO once.",
+        error: "Each Likert question can only be assigned to a GO once.",
       };
     }
 
     seenPairs.add(pairKey);
     boundQuestionKeys.add(questionKey);
     normalized.push({
-      ploCodeSnapshot: plo.code,
-      ploDescriptionSnapshot: plo.description,
-      ploId: plo.id,
+      goCodeSnapshot: go.code,
+      goDescriptionSnapshot: go.description,
+      goId: go.id,
       itemKey: binding.itemKey,
       questionPromptSnapshot: question.prompt,
       sectionKey: binding.sectionKey,
@@ -103,47 +103,47 @@ export function normalizePloQuestionBindings(input: {
   return { success: true, bindings: normalized, missingQuestionKeys };
 }
 
-async function validateProgramPloBindingsForProgram(input: {
-  bindings?: UpdateProgramHeadTemplateInput["program_question_plo_bindings"];
+async function validateProgramGoBindingsForProgram(input: {
+  bindings?: UpdateProgramHeadTemplateInput["__KEEP_program_question_go_bindings__"];
   programId: string;
   structure: TemplateStructure;
 }) {
   const requestedBindings = input.bindings ?? [];
-  const plos =
+  const gos =
     requestedBindings.length > 0
-      ? await prisma.pLO.findMany({
+      ? await prisma.gO.findMany({
           where: {
             program_id: input.programId,
-            id: { in: requestedBindings.map((binding) => binding.ploId) },
+            id: { in: requestedBindings.map((binding) => binding.goId) },
             is_active: true,
           },
           select: { id: true, code: true, description: true },
         })
       : [];
 
-  return normalizePloQuestionBindings({
+  return normalizeGoQuestionBindings({
     bindings: requestedBindings,
     structure: input.structure,
-    plos,
+    gos,
   });
 }
 
-export async function syncTemplatePloBindings(
+export async function syncTemplateGoBindings(
   tx: Prisma.TransactionClient,
   templateId: string,
-  bindings: ProgramHeadPloBindingItem[]
+  bindings: ProgramHeadGoBindingItem[]
 ) {
-  await tx.instrumentTemplatePloQuestionBinding.deleteMany({
+  await tx.instrumentTemplateGoQuestionBinding.deleteMany({
     where: { template_id: templateId },
   });
 
   if (bindings.length > 0) {
-    await tx.instrumentTemplatePloQuestionBinding.createMany({
+    await tx.instrumentTemplateGoQuestionBinding.createMany({
       data: bindings.map((binding) => ({
         template_id: templateId,
-        plo_id: binding.ploId,
-        plo_code_snapshot: binding.ploCodeSnapshot,
-        plo_description_snapshot: binding.ploDescriptionSnapshot,
+        go_id: binding.goId,
+        go_code_snapshot: binding.goCodeSnapshot,
+        go_description_snapshot: binding.goDescriptionSnapshot,
         section_key: binding.sectionKey,
         item_key: binding.itemKey,
         question_prompt_snapshot: binding.questionPromptSnapshot,
@@ -311,8 +311,8 @@ export async function createProgramHeadTemplate(
 
   const code = generateTemplateCode(program.code, input.name);
 
-  const bindingValidation = await validateProgramPloBindingsForProgram({
-    bindings: input.program_question_plo_bindings,
+  const bindingValidation = await validateProgramGoBindingsForProgram({
+    bindings: input.__KEEP_program_question_go_bindings__,
     programId,
     structure: input.structure,
   });
@@ -347,25 +347,12 @@ export async function createProgramHeadTemplate(
         },
       });
 
-      if (bindingValidation.bindings.length > 0) {
-        await tx.instrumentTemplatePloQuestionBinding.createMany({
-          data: bindingValidation.bindings.map((binding) => ({
-            template_id: createdTemplate.id,
-            plo_id: binding.ploId,
-            plo_code_snapshot: binding.ploCodeSnapshot,
-            plo_description_snapshot: binding.ploDescriptionSnapshot,
-            section_key: binding.sectionKey,
-            item_key: binding.itemKey,
-            question_prompt_snapshot: binding.questionPromptSnapshot,
-          })),
-        });
-      }
+      await syncTemplateGoBindings(tx, createdTemplate.id, bindingValidation.bindings);
 
       return createdTemplate;
     });
 
     if (!created.success) return created;
-
     return { success: true, data: { id: created.data.id } };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -423,8 +410,8 @@ export async function updateProgramHeadTemplate(
     };
   }
 
-  const bindingValidation = await validateProgramPloBindingsForProgram({
-    bindings: input.program_question_plo_bindings,
+  const bindingValidation = await validateProgramGoBindingsForProgram({
+    bindings: input.__KEEP_program_question_go_bindings__,
     programId: selectedProgram.id,
     structure: input.structure,
   });
@@ -488,7 +475,7 @@ export async function updateProgramHeadTemplate(
             is_active: true,
           },
         });
-        await syncTemplatePloBindings(tx, input.id, bindingValidation.bindings);
+        await syncTemplateGoBindings(tx, input.id, bindingValidation.bindings);
         return true;
       });
       if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
@@ -536,7 +523,7 @@ export async function updateProgramHeadTemplate(
             },
           });
         }
-        await syncTemplatePloBindings(tx, input.id, bindingValidation.bindings);
+        await syncTemplateGoBindings(tx, input.id, bindingValidation.bindings);
         return true;
       });
       if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
@@ -589,7 +576,7 @@ export async function duplicateTemplate(
       is_faculty_accessible: true,
       program_id: true,
       faculty_owner_id: true,
-      template_plo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -648,19 +635,19 @@ export async function duplicateTemplate(
         },
       });
 
-      // Institutional baseline copies drop question–PLO bindings: PLOs are
+      // Institutional baseline copies drop question–GO bindings: GOs are
       // program-owned, so a copied baseline must be re-bound to this program's
-      // active PLO catalog before it can be published.
+      // active GO catalog before it can be published.
       if (
         source.program_id === currentProgram.id &&
-        source.template_plo_question_bindings.length > 0
+        source.template_go_question_bindings.length > 0
       ) {
-        await tx.instrumentTemplatePloQuestionBinding.createMany({
-          data: source.template_plo_question_bindings.map((binding) => ({
+        await tx.instrumentTemplateGoQuestionBinding.createMany({
+          data: source.template_go_question_bindings.map((binding) => ({
             template_id: createdTemplate.id,
-            plo_id: binding.plo_id,
-            plo_code_snapshot: binding.plo_code_snapshot,
-            plo_description_snapshot: binding.plo_description_snapshot,
+            go_id: binding.go_id,
+            go_code_snapshot: binding.go_code_snapshot,
+            go_description_snapshot: binding.go_description_snapshot,
             section_key: binding.section_key,
             item_key: binding.item_key,
             question_prompt_snapshot: binding.question_prompt_snapshot,
@@ -899,9 +886,9 @@ export async function getProgramHeadTemplate(
       is_active: boolean;
       is_faculty_accessible: boolean;
       program_id: string | null;
-      ploBindings: TemplatePloQuestionBinding[];
+      goBindings: TemplateGoQuestionBinding[];
     };
-    ploOptions: ProgramPloOption[];
+    goOptions: ProgramGoOption[];
     program: { id: string; code: string; name: string };
   }>
 > {
@@ -935,7 +922,7 @@ export async function getProgramHeadTemplate(
       is_faculty_accessible: true,
       program_id: true,
       faculty_owner_id: true,
-      template_plo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -954,7 +941,7 @@ export async function getProgramHeadTemplate(
     };
   }
 
-  const plos = await prisma.pLO.findMany({
+  const gos = await prisma.gO.findMany({
     where: { program_id: selectedProgram.id, is_active: true },
     orderBy: [{ order: "asc" }, { code: "asc" }],
     select: { id: true, code: true, description: true },
@@ -966,30 +953,30 @@ export async function getProgramHeadTemplate(
       template: {
         ...template,
         structure: (template.structure as unknown as TemplateStructure) ?? [],
-        ploBindings:
+        goBindings:
           template.program_id === null
             ? []
-            : template.template_plo_question_bindings
-                .filter((binding) => binding.plo_id)
+            : template.template_go_question_bindings
+                .filter((binding) => binding.go_id)
                 .map((binding) => ({
-                  ploId: binding.plo_id!,
+                  goId: binding.go_id!,
                   itemKey: binding.item_key,
                   sectionKey: binding.section_key,
-                  ploCodeSnapshot: binding.plo_code_snapshot,
-                  ploDescriptionSnapshot: binding.plo_description_snapshot,
+                  goCodeSnapshot: binding.go_code_snapshot,
+                  goDescriptionSnapshot: binding.go_description_snapshot,
                 })),
       },
-      ploOptions: plos,
+      goOptions: gos,
       program,
     },
   };
 }
 
-// ─── List Program PLO Options (for question binding pickers) ─────────────────
+// ─── List Program GO Options (for question binding pickers) ─────────────────
 
-export async function listProgramPloOptions(
+export async function listProgramGoOptions(
   programId: string
-): Promise<ServiceResult<{ plos: ProgramPloOption[] }>> {
+): Promise<ServiceResult<{ gos: ProgramGoOption[] }>> {
   const authResult = await requirePHSession(programId);
 
   if (!authResult.success) {
@@ -998,11 +985,11 @@ export async function listProgramPloOptions(
 
   const { selectedProgram } = authResult.data;
 
-  const plos = await prisma.pLO.findMany({
+  const gos = await prisma.gO.findMany({
     where: { program_id: selectedProgram.id, is_active: true },
     orderBy: [{ order: "asc" }, { code: "asc" }],
     select: { id: true, code: true, description: true },
   });
 
-  return { success: true, data: { plos } };
+  return { success: true, data: { gos } };
 }

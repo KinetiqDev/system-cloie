@@ -112,7 +112,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     ciloMappingFindManyMock.mockResolvedValue([
       {
         cilo_id: "cilo-1",
-        plo: { id: "plo-1", code: "PLO-1", description: "Communicate" },
+        go: { id: "plo-1", code: "GO-1", description: "Communicate" },
         manifestation: "LEARNING",
       },
     ]);
@@ -237,7 +237,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(result!.evaluation.yearLevel).toBe("THIRD_YEAR");
     expect(result!.evaluation.section).toBe("MORNING");
     expect(result!.ciloResults[0].quantitative?.mean).toBe(4);
-    expect(result!.ciloResults[0].mappings[0].ploCode).toBe("PLO-1");
+    expect(result!.ciloResults[0].mappings[0].goCode).toBe("GO-1");
     // Question metric
     expect(result!.questionResults).toHaveLength(1);
     expect(result!.questionResults[0].binding.type).toBe("CILO");

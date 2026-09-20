@@ -42,35 +42,35 @@ import {
 } from "@/components/ui/empty";
 import { OutcomeKpiGrid } from "./outcome-kpi-grid";
 import {
-  deletePLOAction,
-  reorderPLOsAction,
-  restorePLOAction,
+  deleteGOAction,
+  reorderGOsAction,
+  restoreGOAction,
 } from "@/lib/actions/program-head-outcome-actions";
 import { showToast } from "@/components/ui/toast";
-import { PLOFormDialog } from "./plo-form-dialog";
-import { PLOImportDialog } from "./plo-import-dialog";
-import type { ProgramPLOItem } from "../services/manage-program-head-outcomes";
+import { GOFormDialog } from "./go-form-dialog";
+import { GOImportDialog } from "./go-import-dialog";
+import type { ProgramGOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 import { cn } from "@/lib/utils";
 
 type ProgramHeadOutcomesPageProps = {
-  plos: ProgramPLOItem[];
+  gos: ProgramGOItem[];
   program: { id: string; code: string; name: string };
 };
 
-function SortablePLORow({
-  plo,
+function SortableGORow({
+  go,
   onEdit,
   onDelete,
   onRestore,
 }: {
-  plo: ProgramPLOItem;
-  onEdit: (plo: ProgramPLOItem) => void;
-  onDelete: (plo: ProgramPLOItem) => void;
-  onRestore: (plo: ProgramPLOItem) => void;
+  go: ProgramGOItem;
+  onEdit: (go: ProgramGOItem) => void;
+  onDelete: (go: ProgramGOItem) => void;
+  onRestore: (go: ProgramGOItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: plo.id,
+    id: go.id,
   });
 
   const style = {
@@ -102,17 +102,16 @@ function SortablePLORow({
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Badge variant="default" className="shrink-0 font-semibold">
-              {plo.code}
+              {go.code}
             </Badge>
-            {!plo.is_active && (
+            {!go.is_active && (
               <Badge variant="outline" className="text-muted-foreground shrink-0">
                 Archived
               </Badge>
             )}
-            {plo._count.cilo_mappings > 0 ? (
+            {go._count.cilo_mappings > 0 ? (
               <Badge variant="success" className="shrink-0">
-                {plo._count.cilo_mappings} {plo._count.cilo_mappings === 1 ? "CILO" : "CILOs"}{" "}
-                mapped
+                {go._count.cilo_mappings} {go._count.cilo_mappings === 1 ? "CILO" : "CILOs"} mapped
               </Badge>
             ) : (
               <Badge variant="outline" className="text-muted-foreground shrink-0">
@@ -124,20 +123,20 @@ function SortablePLORow({
             <Button
               variant="ghost"
               size="icon"
-              aria-label={`Edit ${plo.code}`}
+              aria-label={`Edit ${go.code}`}
               title="Edit"
-              onClick={() => onEdit(plo)}
+              onClick={() => onEdit(go)}
             >
               <Edit className="size-4" aria-hidden="true" />
             </Button>
-            {plo.is_active ? (
+            {go.is_active ? (
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-destructive"
-                aria-label={`Archive ${plo.code}`}
+                aria-label={`Archive ${go.code}`}
                 title="Archive"
-                onClick={() => onDelete(plo)}
+                onClick={() => onDelete(go)}
               >
                 <Trash2 className="size-4" aria-hidden="true" />
               </Button>
@@ -145,9 +144,9 @@ function SortablePLORow({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Restore ${plo.code}`}
+                aria-label={`Restore ${go.code}`}
                 title="Restore"
-                onClick={() => onRestore(plo)}
+                onClick={() => onRestore(go)}
               >
                 <RotateCcw className="size-4" aria-hidden="true" />
               </Button>
@@ -155,7 +154,7 @@ function SortablePLORow({
           </div>
         </div>
         <p className="text-body-md text-muted-foreground mt-2 leading-relaxed text-pretty break-words">
-          {plo.description}
+          {go.description}
         </p>
       </div>
     </div>
@@ -163,18 +162,18 @@ function SortablePLORow({
 }
 
 export function ProgramHeadOutcomesPage({
-  plos: initialPLOs,
+  gos: initialGOs,
   program,
 }: ProgramHeadOutcomesPageProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [orderedPLOs, setOrderedPLOs] = useState<ProgramPLOItem[]>(initialPLOs);
+  const [orderedGOs, setOrderedGOs] = useState<ProgramGOItem[]>(initialGOs);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [editingPLO, setEditingPLO] = useState<ProgramPLOItem | null>(null);
-  const [deletingPLO, setDeletingPLO] = useState<ProgramPLOItem | null>(null);
+  const [editingGO, setEditingGO] = useState<ProgramGOItem | null>(null);
+  const [deletingGO, setDeletingGO] = useState<ProgramGOItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [restoringPLO, setRestoringPLO] = useState<ProgramPLOItem | null>(null);
+  const [restoringGO, setRestoringGO] = useState<ProgramGOItem | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
   const reorderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -190,14 +189,14 @@ export function ProgramHeadOutcomesPage({
   useEffect(() => {
     // Reconcile optimistic drag state after router.refresh() returns authoritative server props.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOrderedPLOs(initialPLOs);
-  }, [initialPLOs]);
+    setOrderedGOs(initialGOs);
+  }, [initialGOs]);
 
-  const totalPLOs = orderedPLOs.length;
-  const withMappings = orderedPLOs.filter((plo) => plo._count.cilo_mappings > 0).length;
-  const unmappedCount = totalPLOs - withMappings;
+  const totalGOs = orderedGOs.length;
+  const withMappings = orderedGOs.filter((go) => go._count.cilo_mappings > 0).length;
+  const unmappedCount = totalGOs - withMappings;
   const mappingStats = [
-    { label: "Total PLOs", value: totalPLOs, tone: "default" as const },
+    { label: "Total GOs", value: totalGOs, tone: "default" as const },
     { label: "Mapped to CILOs", value: withMappings, tone: "success" as const },
     ...(unmappedCount > 0
       ? [{ label: "Unmapped", value: unmappedCount, tone: "muted" as const }]
@@ -213,18 +212,18 @@ export function ProgramHeadOutcomesPage({
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      const oldIndex = orderedPLOs.findIndex((g) => g.id === active.id);
-      const newIndex = orderedPLOs.findIndex((g) => g.id === over.id);
-      const reordered = arrayMove(orderedPLOs, oldIndex, newIndex);
+      const oldIndex = orderedGOs.findIndex((g) => g.id === active.id);
+      const newIndex = orderedGOs.findIndex((g) => g.id === over.id);
+      const reordered = arrayMove(orderedGOs, oldIndex, newIndex);
       const generation = ++reorderGenerationRef.current;
-      setOrderedPLOs(reordered);
+      setOrderedGOs(reordered);
       setReorderError(null);
 
       if (reorderTimerRef.current) clearTimeout(reorderTimerRef.current);
       reorderTimerRef.current = setTimeout(() => {
         startTransition(async () => {
           try {
-            const result = await reorderPLOsAction(
+            const result = await reorderGOsAction(
               program.id,
               reordered.map((g) => g.id)
             );
@@ -234,20 +233,20 @@ export function ProgramHeadOutcomesPage({
             }
           } catch {
             if (reorderGenerationRef.current === generation) {
-              setReorderError("Program Learning Outcome order could not be saved. Try again.");
+              setReorderError("Graduate Outcome order could not be saved. Try again.");
               router.refresh();
             }
           }
         });
       }, 600);
     },
-    [orderedPLOs, program.id, router]
+    [orderedGOs, program.id, router]
   );
 
-  function handleDelete(plo: ProgramPLOItem) {
+  function handleDelete(go: ProgramGOItem) {
     setDeleteError(null);
     startTransition(async () => {
-      const result = await deletePLOAction(program.id, plo.id);
+      const result = await deleteGOAction(program.id, go.id);
 
       if (!result.success) {
         setDeleteError(result.error);
@@ -255,16 +254,16 @@ export function ProgramHeadOutcomesPage({
         return;
       }
 
-      setDeletingPLO(null);
-      showToast("Program Learning Outcome archived.", "success");
+      setDeletingGO(null);
+      showToast("Graduate Outcome archived.", "success");
       router.refresh();
     });
   }
 
-  function handleRestore(plo: ProgramPLOItem) {
+  function handleRestore(go: ProgramGOItem) {
     setRestoreError(null);
     startTransition(async () => {
-      const result = await restorePLOAction(program.id, plo.id);
+      const result = await restoreGOAction(program.id, go.id);
 
       if (!result.success) {
         setRestoreError(result.error);
@@ -272,8 +271,8 @@ export function ProgramHeadOutcomesPage({
         return;
       }
 
-      setRestoringPLO(null);
-      showToast("Program Learning Outcome restored.", "success");
+      setRestoringGO(null);
+      showToast("Graduate Outcome restored.", "success");
       router.refresh();
     });
   }
@@ -282,7 +281,7 @@ export function ProgramHeadOutcomesPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-heading-xl text-foreground text-pretty">Program Learning Outcomes</h1>
+          <h1 className="text-heading-xl text-foreground text-pretty">Graduate Outcomes</h1>
           <p className="text-body-sm text-muted-foreground mt-1">{program.name}</p>
         </div>
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -308,12 +307,12 @@ export function ProgramHeadOutcomesPage({
             className="w-full justify-center sm:w-auto"
           >
             <Plus className="size-4" aria-hidden="true" />
-            Add PLO
+            Add GO
           </Button>
         </div>
       </div>
 
-      {totalPLOs > 0 && (
+      {totalGOs > 0 && (
         <div className="flex flex-col gap-2">
           <OutcomeKpiGrid items={mappingStats} />
           <p className="text-caption text-muted-foreground">Drag rows to reorder</p>
@@ -325,20 +324,20 @@ export function ProgramHeadOutcomesPage({
           <AlertDescription>{reorderError}</AlertDescription>
         </Alert>
       )}
-      {orderedPLOs.length === 0 ? (
+      {orderedGOs.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <ListChecks className="size-6" aria-hidden="true" />
             </EmptyMedia>
-            <EmptyTitle>No Program Learning Outcomes yet</EmptyTitle>
+            <EmptyTitle>No Graduate Outcomes yet</EmptyTitle>
             <EmptyDescription>
-              Add your first PLO to start tracking program outcomes.
+              Add your first GO to start tracking program outcomes.
             </EmptyDescription>
           </EmptyHeader>
           <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
-            Add PLO
+            Add GO
           </Button>
           <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
             <FileUp className="size-4" aria-hidden="true" />
@@ -348,22 +347,22 @@ export function ProgramHeadOutcomesPage({
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
-            items={orderedPLOs.map((g) => g.id)}
+            items={orderedGOs.map((g) => g.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="flex flex-col gap-3">
-              {orderedPLOs.map((plo) => (
-                <SortablePLORow
-                  key={plo.id}
-                  plo={plo}
-                  onEdit={setEditingPLO}
+              {orderedGOs.map((go) => (
+                <SortableGORow
+                  key={go.id}
+                  go={go}
+                  onEdit={setEditingGO}
                   onDelete={(g) => {
                     setDeleteError(null);
-                    setDeletingPLO(g);
+                    setDeletingGO(g);
                   }}
                   onRestore={(g) => {
                     setRestoreError(null);
-                    setRestoringPLO(g);
+                    setRestoringGO(g);
                   }}
                 />
               ))}
@@ -372,46 +371,46 @@ export function ProgramHeadOutcomesPage({
         </DndContext>
       )}
 
-      <PLOFormDialog
+      <GOFormDialog
         mode="create"
         programId={program.id}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
-      <PLOImportDialog
+      <GOImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         program={program}
       />
 
-      {editingPLO && (
-        <PLOFormDialog
+      {editingGO && (
+        <GOFormDialog
           mode="edit"
           programId={program.id}
-          plo={editingPLO}
-          open={!!editingPLO}
+          go={editingGO}
+          open={!!editingGO}
           onOpenChange={(open) => {
-            if (!open) setEditingPLO(null);
+            if (!open) setEditingGO(null);
           }}
         />
       )}
 
       <AlertDialog
-        open={!!deletingPLO}
+        open={!!deletingGO}
         onOpenChange={(open) => {
           if (!open) {
-            setDeletingPLO(null);
+            setDeletingGO(null);
             setDeleteError(null);
           }
         }}
       >
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Program Learning Outcome</AlertDialogTitle>
+            <AlertDialogTitle>Archive Graduate Outcome</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to archive{" "}
-              <strong className="text-foreground">{deletingPLO?.code}</strong>? This action cannot
-              be undone from this screen.
+              <strong className="text-foreground">{deletingGO?.code}</strong>? This action cannot be
+              undone from this screen.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {deleteError && (
@@ -422,7 +421,7 @@ export function ProgramHeadOutcomesPage({
           <AlertDialogFooter className="flex justify-end gap-2 pt-2">
             <AlertDialogCancel
               onClick={() => {
-                setDeletingPLO(null);
+                setDeletingGO(null);
                 setDeleteError(null);
               }}
             >
@@ -431,7 +430,7 @@ export function ProgramHeadOutcomesPage({
             <Button
               variant="destructive"
               loading={isPending}
-              onClick={() => deletingPLO && handleDelete(deletingPLO)}
+              onClick={() => deletingGO && handleDelete(deletingGO)}
             >
               {isPending ? "Archiving…" : "Archive"}
             </Button>
@@ -440,20 +439,20 @@ export function ProgramHeadOutcomesPage({
       </AlertDialog>
 
       <AlertDialog
-        open={!!restoringPLO}
+        open={!!restoringGO}
         onOpenChange={(open) => {
           if (!open) {
-            setRestoringPLO(null);
+            setRestoringGO(null);
             setRestoreError(null);
           }
         }}
       >
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore Program Learning Outcome</AlertDialogTitle>
+            <AlertDialogTitle>Restore Graduate Outcome</AlertDialogTitle>
             <AlertDialogDescription>
-              Restore <strong className="text-foreground">{restoringPLO?.code}</strong> to the
-              active catalog? It becomes available for Course alignment again.
+              Restore <strong className="text-foreground">{restoringGO?.code}</strong> to the active
+              catalog? It becomes available for Course alignment again.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {restoreError && (
@@ -464,13 +463,13 @@ export function ProgramHeadOutcomesPage({
           <AlertDialogFooter className="flex justify-end gap-2 pt-2">
             <AlertDialogCancel
               onClick={() => {
-                setRestoringPLO(null);
+                setRestoringGO(null);
                 setRestoreError(null);
               }}
             >
               Cancel
             </AlertDialogCancel>
-            <Button loading={isPending} onClick={() => restoringPLO && handleRestore(restoringPLO)}>
+            <Button loading={isPending} onClick={() => restoringGO && handleRestore(restoringGO)}>
               {isPending ? "Restoring…" : "Restore"}
             </Button>
           </AlertDialogFooter>

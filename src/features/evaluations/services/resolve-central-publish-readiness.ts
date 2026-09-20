@@ -1,16 +1,16 @@
 import { EvaluationTemplateType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import { planCentralPloBindings } from "./central-deployment-plo-plan";
+import { planCentralGoBindings } from "./central-deployment-go-plan";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import type { CentralPublishReadiness } from "../types";
 
 /**
- * Server-prepared PLO binding readiness for the Program Head publish step:
- * which Likert questions the selected template leaves unbound, which PLOs it
+ * Server-prepared GO binding readiness for the Program Head publish step:
+ * which Likert questions the selected template leaves unbound, which GOs it
  * covers, and any binding problem that still blocks publication. Unbound
  * questions do not block publication; they publish as general evaluation
- * items and produce no PLO evidence.
+ * items and produce no GO evidence.
  */
 export async function resolveCentralPublishReadiness(
   programId: string
@@ -27,23 +27,23 @@ export async function resolveCentralPublishReadiness(
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       OR: [{ program_id: selectedProgram.id }, { program_id: null }],
     },
-    select: { id: true, structure: true, template_plo_question_bindings: true },
+    select: { id: true, structure: true, template_go_question_bindings: true },
   });
 
-  const boundPloIds = [
+  const boundGoIds = [
     ...new Set(
       templates.flatMap((template) =>
-        template.template_plo_question_bindings.map((binding) => binding.plo_id)
+        template.template_go_question_bindings.map((binding) => binding.go_id)
       )
     ),
-  ].filter((ploId): ploId is string => Boolean(ploId));
+  ].filter((goId): goId is string => Boolean(goId));
 
-  const livePlos =
-    boundPloIds.length > 0
-      ? await prisma.pLO.findMany({
+  const liveGos =
+    boundGoIds.length > 0
+      ? await prisma.gO.findMany({
           where: {
             program_id: selectedProgram.id,
-            id: { in: boundPloIds },
+            id: { in: boundGoIds },
             is_active: true,
           },
           select: { id: true, code: true, description: true },
@@ -52,16 +52,16 @@ export async function resolveCentralPublishReadiness(
 
   const readiness: Record<string, CentralPublishReadiness> = {};
   for (const template of templates) {
-    const plan = planCentralPloBindings({
-      bindings: template.template_plo_question_bindings,
+    const plan = planCentralGoBindings({
+      bindings: template.template_go_question_bindings,
       structure: template.structure,
-      livePlos,
+      liveGos,
     });
     readiness[template.id] = {
       templateId: template.id,
       likertCount: plan.likertCount,
       boundQuestionCount: plan.likertCount - plan.unboundQuestions.length,
-      coveredPlos: plan.coveredPlos.map(({ code, description }) => ({ code, description })),
+      coveredGos: plan.coveredGos.map(({ code, description }) => ({ code, description })),
       unboundQuestions: plan.unboundQuestions,
       blockingError: plan.error,
     };

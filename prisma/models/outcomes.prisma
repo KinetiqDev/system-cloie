@@ -4,7 +4,7 @@ enum CILOMappingManifestation {
   OPPORTUNITY
 }
 
-model PLO {
+model GO {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String
   description String
@@ -16,8 +16,8 @@ model PLO {
 
   program                      Program                                @relation(fields: [program_id], references: [id], onDelete: Restrict)
   cilo_mappings                CILOMapping[]
-  template_question_bindings   InstrumentTemplatePloQuestionBinding[]
-  central_deployment_snapshots CentralDeploymentPloSnapshot[]
+  template_question_bindings   InstrumentTemplateGoQuestionBinding[]
+  central_deployment_snapshots CentralDeploymentGoSnapshot[]
 
   @@unique([program_id, code])
   @@map("gos")
@@ -80,7 +80,7 @@ model CILOInstitutionalOutcomeMapping {
 model CILOMapping {
   id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cilo_id       String                    @db.Uuid
-  plo_id        String                    @map("go_id") @db.Uuid
+  go_id         String                    @map("go_id") @db.Uuid
   manifestation CILOMappingManifestation?
   created_by    String?                   @db.Uuid
   updated_by    String?                   @db.Uuid
@@ -88,11 +88,11 @@ model CILOMapping {
   updated_at    DateTime?
 
   cilo    CILO  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
-  plo     PLO   @relation(fields: [plo_id], references: [id], onDelete: Cascade)
+  go      GO    @relation(fields: [go_id], references: [id], onDelete: Cascade)
   creator User? @relation("CILOMappingCreator", fields: [created_by], references: [id], onDelete: SetNull)
   updater User? @relation("CILOMappingUpdater", fields: [updated_by], references: [id], onDelete: SetNull)
 
-  @@unique([cilo_id, plo_id])
+  @@unique([cilo_id, go_id])
   @@index([created_by])
   @@index([updated_by])
   @@map("cilo_mappings")

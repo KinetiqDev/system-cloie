@@ -33,9 +33,9 @@ function manifestationLabel(value: CILOMappingManifestation | null): string {
 
 function manifestationFor(
   cilo: CourseCILOMappings["cilos"][number],
-  ploId: string
+  goId: string
 ): CILOMappingManifestation | null {
-  return cilo.manifestations.find((m) => m.ploId === ploId)?.manifestation ?? null;
+  return cilo.manifestations.find((m) => m.goId === goId)?.manifestation ?? null;
 }
 
 export default async function SelectedProgramOutcomeMappingPage({
@@ -52,13 +52,13 @@ export default async function SelectedProgramOutcomeMappingPage({
     <div className="flex flex-col gap-6">
       <div className="max-w-3xl">
         <BackLink href={buildProgramHeadOutcomesPath(programId)}>
-          Back to Program Learning Outcomes
+          Back to Graduate Outcomes
         </BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-muted-foreground mt-2 text-pretty">
-          Review how Course Intended Learning Outcomes manifest across this program&apos;s Program
-          Learning Outcomes. Faculty manage these classifications in Course alignment. This review
-          is read-only.
+          Review how Course Intended Learning Outcomes manifest across this program&apos;s Graduate
+          Outcomes. Faculty manage these classifications in Course alignment. This review is
+          read-only.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default async function SelectedProgramOutcomeMappingPage({
             </EmptyMedia>
             <EmptyTitle>No CILO mappings found</EmptyTitle>
             <EmptyDescription>
-              Faculty classify CILO-to-PLO manifestations through Course alignment. Classified CILOs
+              Faculty classify CILO-to-GO manifestations through Course alignment. Classified CILOs
               appear here for readiness review.
             </EmptyDescription>
           </EmptyHeader>
@@ -78,7 +78,7 @@ export default async function SelectedProgramOutcomeMappingPage({
             render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
             variant="outline"
           >
-            Review Program Learning Outcomes
+            Review Graduate Outcomes
           </Button>
         </Empty>
       ) : (
@@ -103,15 +103,15 @@ export default async function SelectedProgramOutcomeMappingPage({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-4">
-                  {course.plos.length === 0 && (
+                  {course.gos.length === 0 && (
                     <Alert>
                       <AlertDescription>
-                        No Program Learning Outcomes have been defined for this program. A Program
-                        Head must create PLOs before Course alignment can be completed.
+                        No Graduate Outcomes have been defined for this program. A Program Head must
+                        create GOs before Course alignment can be completed.
                       </AlertDescription>
                     </Alert>
                   )}
-                  {course.plos.length > 0 && (
+                  {course.gos.length > 0 && (
                     <div className="hidden md:block">
                       <div className="border-border overflow-x-auto rounded-lg border">
                         <table className="w-full min-w-[38rem] border-collapse">
@@ -123,20 +123,20 @@ export default async function SelectedProgramOutcomeMappingPage({
                               >
                                 CILO
                               </th>
-                              {course.plos.map((plo) => (
+                              {course.gos.map((go) => (
                                 <th
-                                  key={plo.id}
+                                  key={go.id}
                                   scope="col"
                                   className="text-text-primary py-3 pr-4 pl-4 text-left"
                                 >
                                   <span className="text-label-sm block font-semibold">
-                                    {plo.code}
+                                    {go.code}
                                   </span>
                                   <span
                                     className="text-text-muted text-caption block max-w-44 truncate font-normal"
-                                    title={plo.description}
+                                    title={go.description}
                                   >
-                                    {plo.description}
+                                    {go.description}
                                   </span>
                                 </th>
                               ))}
@@ -162,10 +162,10 @@ export default async function SelectedProgramOutcomeMappingPage({
                                     {cilo.description}
                                   </span>
                                 </th>
-                                {course.plos.map((plo) => (
-                                  <td key={plo.id} className="text-text-primary py-3 pr-4 pl-4">
+                                {course.gos.map((go) => (
+                                  <td key={go.id} className="text-text-primary py-3 pr-4 pl-4">
                                     <span className="text-label-sm">
-                                      {manifestationLabel(manifestationFor(cilo, plo.id))}
+                                      {manifestationLabel(manifestationFor(cilo, go.id))}
                                     </span>
                                   </td>
                                 ))}
@@ -178,7 +178,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                   )}
                   <div
                     className={
-                      course.plos.length > 0
+                      course.gos.length > 0
                         ? "flex flex-col gap-4 md:hidden"
                         : "flex flex-col gap-4"
                     }
@@ -207,19 +207,19 @@ export default async function SelectedProgramOutcomeMappingPage({
                           </Badge>
                         </div>
                         <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
-                        {course.plos.length > 0 && (
+                        {course.gos.length > 0 && (
                           <ul className="mt-3 flex flex-col gap-2">
-                            {course.plos.map((plo) => {
-                              const manifestation = manifestationFor(cilo, plo.id);
+                            {course.gos.map((go) => {
+                              const manifestation = manifestationFor(cilo, go.id);
                               return (
                                 <li
-                                  key={plo.id}
+                                  key={go.id}
                                   className="border-border bg-card flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5"
                                 >
                                   <span className="flex min-w-0 flex-col gap-0.5">
-                                    <span className="text-label-sm font-semibold">{plo.code}</span>
+                                    <span className="text-label-sm font-semibold">{go.code}</span>
                                     <span className="text-text-muted text-body-sm">
-                                      {plo.description}
+                                      {go.description}
                                     </span>
                                   </span>
                                   <span className="text-label-sm shrink-0">
@@ -233,36 +233,34 @@ export default async function SelectedProgramOutcomeMappingPage({
                       </div>
                     ))}
                   </div>
-                  {course.archivedPlos.length > 0 && (
+                  {course.archivedGos.length > 0 && (
                     <div
                       className="border-border bg-muted/30 rounded-lg border border-dashed p-4"
                       role="region"
-                      aria-label="Archived Program Learning Outcome manifestations, read-only"
+                      aria-label="Archived Graduate Outcome manifestations, read-only"
                       data-testid="archived-mapping-rows"
                     >
-                      <p className="text-label-sm font-semibold">
-                        Archived Program Learning Outcomes
-                      </p>
+                      <p className="text-label-sm font-semibold">Archived Graduate Outcomes</p>
                       <p className="text-text-muted text-body-sm">
-                        Historical manifestations on archived PLOs are read-only and do not count
+                        Historical manifestations on archived GOs are read-only and do not count
                         toward completeness.
                       </p>
                       <ul className="mt-3 flex flex-col gap-2">
                         {course.cilos.flatMap((cilo, index) =>
                           cilo.archivedManifestations.map((mapping) => {
-                            const archivedPlo = course.archivedPlos.find(
-                              (plo) => plo.id === mapping.ploId
+                            const archivedGo = course.archivedGos.find(
+                              (go) => go.id === mapping.goId
                             );
                             return (
                               <li
-                                key={`${cilo.id}:${mapping.ploId}`}
+                                key={`${cilo.id}:${mapping.goId}`}
                                 className="flex flex-wrap items-center gap-2"
                               >
                                 <span className="text-label-sm font-semibold">
                                   CILO {index + 1}
                                 </span>
                                 <span className="text-body-sm">
-                                  {archivedPlo?.code ?? mapping.ploId}
+                                  {archivedGo?.code ?? mapping.goId}
                                 </span>
                                 <Badge variant="outline" className="text-text-muted">
                                   Archived

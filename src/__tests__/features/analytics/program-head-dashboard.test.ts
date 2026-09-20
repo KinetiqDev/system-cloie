@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { DeploymentStatus } from "@prisma/client";
 import {
-  buildCentralPloRatingRows,
+  buildCentralGoRatingRows,
   type AttentionDeployment,
   type CentralBindingsByDeployment,
   type CourseBindingRow,
   type DashboardRatingRow,
-  buildCoursePloRatingRows,
+  buildCourseGoRatingRows,
   buildDashboardSourceMeans,
   buildNeedsAttentionItems,
   isClosingWithinSevenDays,
   QUALITATIVE_TOKEN_CAP,
   summarizeQualitativePulse,
-  toCentralDashboardPloRows,
-  toDashboardPloRows,
+  toCentralDashboardGoRows,
+  toDashboardGoRows,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import {
-  buildCourseDerivedPloMetrics,
-  buildProgramWidePloMetrics,
-} from "@/features/analytics/aggregators/plo";
+  buildCourseDerivedGoMetrics,
+  buildProgramWideGoMetrics,
+} from "@/features/analytics/aggregators/go";
 
 // ---------------------------------------------------------------------------
 // Fixtures mirroring the service's Prisma projections
@@ -190,10 +190,10 @@ describe("buildDashboardSourceMeans", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PLO row normalization into the shared aggregators (§13.8, §5.8, §5.9, §7)
+// GO row normalization into the shared aggregators (§13.8, §5.8, §5.9, §7)
 // ---------------------------------------------------------------------------
 
-describe("PLO row normalization", () => {
+describe("GO row normalization", () => {
   const binding: CourseBindingRow = {
     course_bound_evaluation_id: "cb-1",
     section_key: "cilo-items",
@@ -204,11 +204,11 @@ describe("PLO row normalization", () => {
       cilo_mappings: [
         {
           manifestation: "LEARNING",
-          plo: { id: "plo-1", code: "PLO 1", description: "Communicate." },
+          go: { id: "plo-1", code: "GO 1", description: "Communicate." },
         },
         {
           manifestation: "OPPORTUNITY",
-          plo: { id: "plo-2", code: "PLO 2", description: "Collaborate." },
+          go: { id: "plo-2", code: "GO 2", description: "Collaborate." },
         },
       ],
     },
@@ -216,22 +216,22 @@ describe("PLO row normalization", () => {
 
   it("routes course ratings through publication-time bindings; manifestations stay descriptive", () => {
     const bindingByKey = new Map([["cb-1:cilo-items:q-cilo-a", binding]]);
-    const normalized = buildCoursePloRatingRows(
+    const normalized = buildCourseGoRatingRows(
       [courseRow({ rating_value: 1 })],
       bindingByKey,
       SNAPSHOT_MAP
     );
     expect(normalized).toHaveLength(1);
     expect(normalized[0].evaluationId).toBe("cb-1");
-    expect(normalized[0].ploMappings.map((mapping) => mapping.ploId)).toEqual(["plo-1", "plo-2"]);
-    expect(normalized[0].ploMappings.map((mapping) => mapping.manifestation)).toEqual([
+    expect(normalized[0].goMappings.map((mapping) => mapping.goId)).toEqual(["plo-1", "plo-2"]);
+    expect(normalized[0].goMappings.map((mapping) => mapping.manifestation)).toEqual([
       "LEARNING",
       "OPPORTUNITY",
     ]);
 
-    const metrics = buildCourseDerivedPloMetrics(normalized);
-    expect(metrics.find((metric) => metric.ploId === "plo-1")!.ratingCount).toBe(1);
-    expect(metrics.find((metric) => metric.ploId === "plo-2")!.ratingCount).toBe(1);
+    const metrics = buildCourseDerivedGoMetrics(normalized);
+    expect(metrics.find((metric) => metric.goId === "plo-1")!.ratingCount).toBe(1);
+    expect(metrics.find((metric) => metric.goId === "plo-2")!.ratingCount).toBe(1);
   });
 
   it("skips items without a live binding or without selected-Program mappings", () => {
@@ -240,7 +240,7 @@ describe("PLO row normalization", () => {
       ...binding,
       cilo: { ...binding.cilo!, cilo_mappings: [] },
     };
-    const normalized = buildCoursePloRatingRows(
+    const normalized = buildCourseGoRatingRows(
       [courseRow()],
       new Map([
         ["cb-1:cilo-items:q-cilo-a", unbound],
@@ -256,14 +256,11 @@ describe("PLO row normalization", () => {
       [
         "cd-STUDENT",
         new Map([
-          [
-            "plo-items:q-plo",
-            [{ ploId: "plo-1", ploCode: "PLO 1", ploDescription: "Communicate." }],
-          ],
+          ["plo-items:q-plo", [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }]],
         ]),
       ],
     ]);
-    const studentOnly = buildCentralPloRatingRows(
+    const studentOnly = buildCentralGoRatingRows(
       [centralRow("STUDENT"), centralRow("ALUMNI")],
       bindings,
       SNAPSHOT_MAP
@@ -271,18 +268,18 @@ describe("PLO row normalization", () => {
     expect(studentOnly).toHaveLength(1);
     expect(studentOnly[0].evaluationId).toBe("cd-STUDENT");
 
-    const metrics = buildProgramWidePloMetrics(studentOnly);
-    expect(metrics.find((metric) => metric.ploId === "plo-1")!.questionCount).toBe(1);
-    expect(metrics.find((metric) => metric.ploId === "plo-1")!.evaluationCount).toBe(1);
+    const metrics = buildProgramWideGoMetrics(studentOnly);
+    expect(metrics.find((metric) => metric.goId === "plo-1")!.questionCount).toBe(1);
+    expect(metrics.find((metric) => metric.goId === "plo-1")!.evaluationCount).toBe(1);
   });
 });
 
-describe("PLO summary projections", () => {
+describe("GO summary projections", () => {
   const metrics = [
     {
-      ploId: "plo-1",
-      ploCode: "PLO 1",
-      ploDescription: "",
+      goId: "plo-1",
+      goCode: "GO 1",
+      goDescription: "",
       mean: 4,
       ratingCount: 6,
       responseCount: 3,
@@ -299,7 +296,7 @@ describe("PLO summary projections", () => {
   ];
 
   it("exposes CILO contributors for course evidence", () => {
-    const row = toDashboardPloRows(
+    const row = toDashboardGoRows(
       metrics,
       () => "/program-head/programs/p1/analytics?tab=outcomes"
     )[0];
@@ -311,7 +308,7 @@ describe("PLO summary projections", () => {
   });
 
   it("exposes bound-question counts for program-wide evidence", () => {
-    const row = toCentralDashboardPloRows(
+    const row = toCentralDashboardGoRows(
       metrics,
       () => "/program-head/programs/p1/analytics?tab=outcomes"
     )[0];
@@ -368,8 +365,8 @@ describe("buildNeedsAttentionItems", () => {
       now,
       deployments,
       submittedCountsByDeployment: submittedCounts,
-      programPlos: [],
-      ploRowsBySource: {},
+      programGos: [],
+      goRowsBySource: {},
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
     expect(items.filter((item) => item.rule === "closing-soon").map((item) => item.id)).toEqual([
@@ -383,8 +380,8 @@ describe("buildNeedsAttentionItems", () => {
       now,
       deployments,
       submittedCountsByDeployment: submittedCounts,
-      programPlos: [],
-      ploRowsBySource: {},
+      programGos: [],
+      goRowsBySource: {},
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
     expect(items.filter((item) => item.rule === "zero-submissions").map((item) => item.id)).toEqual(
@@ -392,21 +389,21 @@ describe("buildNeedsAttentionItems", () => {
     );
   });
 
-  it("reports every live PLO without ratings for each evidence source", () => {
+  it("reports every live GO without ratings for each evidence source", () => {
     const items = buildNeedsAttentionItems({
       programId: "program-1",
       now,
       deployments: [],
       submittedCountsByDeployment: new Map(),
-      programPlos: [
-        { id: "plo-1", code: "PLO 1" },
-        { id: "plo-2", code: "PLO 2" },
+      programGos: [
+        { id: "plo-1", code: "GO 1" },
+        { id: "plo-2", code: "GO 2" },
       ],
-      ploRowsBySource: {
+      goRowsBySource: {
         COURSE_STUDENT: [
           {
-            ploId: "plo-1",
-            ploCode: "PLO 1",
+            goId: "plo-1",
+            goCode: "GO 1",
             mean: 4,
             ratingCount: 8,
             responseCount: 2,
@@ -422,16 +419,16 @@ describe("buildNeedsAttentionItems", () => {
       },
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
-    const zeroRatings = items.filter((item) => item.rule === "zero-plo-ratings");
-    // Only COURSE_STUDENT:PLO 1 has evidence; every other source/PLO pair is flagged.
+    const zeroRatings = items.filter((item) => item.rule === "zero-go-ratings");
+    // Only COURSE_STUDENT:GO 1 has evidence; every other source/GO pair is flagged.
     expect(zeroRatings.map((item) => item.id)).toEqual([
-      "zero-plo-ratings:COURSE_STUDENT:plo-2",
-      "zero-plo-ratings:CENTRAL_STUDENT:plo-1",
-      "zero-plo-ratings:CENTRAL_STUDENT:plo-2",
-      "zero-plo-ratings:ALUMNI:plo-1",
-      "zero-plo-ratings:ALUMNI:plo-2",
-      "zero-plo-ratings:INDUSTRY_PARTNER:plo-1",
-      "zero-plo-ratings:INDUSTRY_PARTNER:plo-2",
+      "zero-go-ratings:COURSE_STUDENT:plo-2",
+      "zero-go-ratings:CENTRAL_STUDENT:plo-1",
+      "zero-go-ratings:CENTRAL_STUDENT:plo-2",
+      "zero-go-ratings:ALUMNI:plo-1",
+      "zero-go-ratings:ALUMNI:plo-2",
+      "zero-go-ratings:INDUSTRY_PARTNER:plo-1",
+      "zero-go-ratings:INDUSTRY_PARTNER:plo-2",
     ]);
     expect(zeroRatings[0].href).toBe("/analytics?tab=outcomes");
   });
@@ -442,8 +439,8 @@ describe("buildNeedsAttentionItems", () => {
       now,
       deployments,
       submittedCountsByDeployment: submittedCounts,
-      programPlos: [],
-      ploRowsBySource: {},
+      programGos: [],
+      goRowsBySource: {},
       analyticsOutcomesHref: "/outcomes",
       periodFilters: {
         schoolYearId: "00000000-0000-4000-8000-000000000009",

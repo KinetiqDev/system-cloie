@@ -14,7 +14,7 @@ import {
   type TargetStakeholder,
 } from "@prisma/client";
 import { listEligibleStakeholderIds } from "./central-stakeholder-eligibility";
-import { planCentralPloBindings, type CentralPloSnapshotRow } from "./central-deployment-plo-plan";
+import { planCentralGoBindings, type CentralGoSnapshotRow } from "./central-deployment-go-plan";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
@@ -36,19 +36,19 @@ function computeDeploymentStatus(activationAt: Date | undefined): "ACTIVE" | "SC
   return DeploymentStatus.ACTIVE;
 }
 
-async function createPloSnapshotRows(
+async function createGoSnapshotRows(
   tx: Prisma.TransactionClient,
   deploymentId: string,
-  rows: CentralPloSnapshotRow[]
+  rows: CentralGoSnapshotRow[]
 ) {
   if (rows.length === 0) return;
 
-  await tx.centralDeploymentPloSnapshot.createMany({
+  await tx.centralDeploymentGoSnapshot.createMany({
     data: rows.map((row) => ({
       central_deployment_id: deploymentId,
-      plo_id: row.plo_id,
-      plo_code_snapshot: row.plo_code,
-      plo_description_snapshot: row.plo_description,
+      go_id: row.go_id,
+      go_code_snapshot: row.go_code,
+      go_description_snapshot: row.go_description,
       section_key: row.section_key,
       item_key: row.item_key,
       question_prompt_snapshot: row.question_prompt,
@@ -104,7 +104,7 @@ export async function publishCentralDeployment(
       program_id: true,
       template_type: true,
       structure: true,
-      template_plo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -132,19 +132,19 @@ export async function publishCentralDeployment(
     };
   }
 
-  // 4b. Plan question–PLO snapshots. Bound pairs are snapshotted; a Likert
+  // 4b. Plan question–GO snapshots. Bound pairs are snapshotted; a Likert
   // question without a binding publishes as a general evaluation item and
-  // contributes no PLO evidence.
-  const bindings = template.template_plo_question_bindings;
-  const livePlos =
+  // contributes no GO evidence.
+  const bindings = template.template_go_question_bindings;
+  const liveGos =
     bindings.length > 0
-      ? await prisma.pLO.findMany({
+      ? await prisma.gO.findMany({
           where: {
             program_id: programId,
             id: {
               in: bindings
-                .map((binding) => binding.plo_id)
-                .filter((ploId): ploId is string => Boolean(ploId)),
+                .map((binding) => binding.go_id)
+                .filter((goId): goId is string => Boolean(goId)),
             },
             is_active: true,
           },
@@ -152,17 +152,17 @@ export async function publishCentralDeployment(
         })
       : [];
 
-  const ploBindingPlan = planCentralPloBindings({
+  const goBindingPlan = planCentralGoBindings({
     bindings,
     structure: template.structure,
-    livePlos,
+    liveGos,
   });
 
-  if (ploBindingPlan.error) {
-    return { success: false, error: ploBindingPlan.error };
+  if (goBindingPlan.error) {
+    return { success: false, error: goBindingPlan.error };
   }
 
-  const ploSnapshotRows = ploBindingPlan.snapshotRows;
+  const goSnapshotRows = goBindingPlan.snapshotRows;
 
   // 5. Validate deadline > activation if both are set
   if (input.activation_at && input.deadline_at) {
@@ -303,7 +303,7 @@ export async function publishCentralDeployment(
         },
       });
 
-      await createPloSnapshotRows(tx, deployment.id, ploSnapshotRows);
+      await createGoSnapshotRows(tx, deployment.id, goSnapshotRows);
 
       // 8b. Create EvaluationAssignment records for target respondents
       let respondentIds: string[] = [];

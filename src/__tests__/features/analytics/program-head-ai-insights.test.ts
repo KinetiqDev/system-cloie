@@ -76,11 +76,11 @@ const outcomesDTO = () => ({
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
   manyToManyDisclosure: false,
   outcomes: [
     {
-      ploId: "go-1",
+      goId: "go-1",
       code: "GO-1",
       name: "Effective communicator",
       meanRating: 4.25,

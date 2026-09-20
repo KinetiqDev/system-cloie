@@ -1,5 +1,13 @@
 import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
 
+export type CourseAlignmentTargetLayer = "INSTITUTIONAL_OUTCOME" | "GRADUATE_OUTCOME";
+
+export function targetLayerForScope(courseScope: CourseScope): CourseAlignmentTargetLayer {
+  return courseScope === "GENERAL_EDUCATION" ? "INSTITUTIONAL_OUTCOME" : "GRADUATE_OUTCOME";
+}
+
+export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mapping";
+
 /**
  * Shared typed-alignment predicate for live readiness and evaluation publication.
  *
@@ -7,38 +15,28 @@ import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
  * - General Education CILOs require at least one active Institutional Outcome
  *   mapping with a non-null manifestation ("at-least-one" rule).
  * - Program-specific CILOs require a non-null manifestation for EVERY active
- *   Program Learning Outcome owned by the Course's owning Academic Program.
- *   A Program with zero active PLOs alongside active CILOs is incomplete, not
+ *   Graduate Outcome owned by the Course's owning Academic Program.
+ *   A Program with zero active GOs alongside active CILOs is incomplete, not
  *   vacuously ready.
  *
  * Archived targets, wrong-program targets, and rows without a manifestation
  * never satisfy alignment, regardless of any historical relation elsewhere.
  */
-
-export type CourseAlignmentTargetLayer = "INSTITUTIONAL_OUTCOME" | "GRADUATE_OUTCOME";
-
-export function targetLayerForScope(courseScope: CourseScope): CourseAlignmentTargetLayer {
-  return courseScope === "GENERAL_EDUCATION"
-    ? "INSTITUTIONAL_OUTCOME"
-    : "GRADUATE_OUTCOME";
-}
-
 type CiloAlignmentRow = {
   cilo_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
-    plo: { id: string; program_id: string | null; is_active: boolean };
+    go: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
     institutional_outcome: { is_active: boolean };
   }>;
 };
-
 export function ciloIsAligned(
   cilo: CiloAlignmentRow,
   courseScope: CourseScope,
   owningProgramId: string | null,
-  activePloIds: string[]
+  activeGoIds: string[]
 ): boolean {
   if (courseScope === "GENERAL_EDUCATION") {
     return cilo.cilo_institutional_outcome_mappings.some(
@@ -46,44 +44,38 @@ export function ciloIsAligned(
         institutional_outcome.is_active && manifestation !== null
     );
   }
-  return hasExhaustivePloCoverage(
+  return hasExhaustiveGoCoverage(
     cilo.cilo_mappings
       .filter(
-        ({ manifestation, plo }) =>
-          manifestation !== null && plo.is_active && plo.program_id === owningProgramId
+        ({ manifestation, go }) =>
+          manifestation !== null && go.is_active && go.program_id === owningProgramId
       )
-      .map(({ plo }) => plo.id),
-    activePloIds
+      .map(({ go }) => go.id),
+    activeGoIds
   );
 }
-
-export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mapping";
-
 /**
- * Exhaustive PLO coverage rule shared by live readiness, the publication
- * gate, and snapshot-derived Dean oversight: every active owning-Program PLO
- * id must be classified. Zero active PLOs is NOT vacuously complete — active
+ * Exhaustive GO coverage rule shared by live readiness, the publication
+ * gate, and snapshot-derived Dean oversight: every active owning-Program GO
+ * id must be classified. Zero active GOs is NOT vacuously complete — active
  * CILOs require targets, so an empty active set is incomplete.
  */
-export function hasExhaustivePloCoverage(
-  classifiedPloIds: Iterable<string>,
-  activePloIds: readonly string[]
+export function hasExhaustiveGoCoverage(
+  classifiedGoIds: Iterable<string>,
+  activeGoIds: readonly string[]
 ): boolean {
-  if (activePloIds.length === 0) return false;
-  const classified = new Set(classifiedPloIds);
-  return activePloIds.every((ploId) => classified.has(ploId));
+  if (activeGoIds.length === 0) return false;
+  const classified = new Set(classifiedGoIds);
+  return activeGoIds.every((goId) => classified.has(goId));
 }
-
 export function classifyCourseAlignment(
   cilos: CiloAlignmentRow[],
   courseScope: CourseScope,
   owningProgramId: string | null,
-  activePloIds: string[]
+  activeGoIds: string[]
 ): CourseAlignmentState {
   if (cilos.length === 0) return "missing-cilos";
-  if (
-    cilos.some((cilo) => !ciloIsAligned(cilo, courseScope, owningProgramId, activePloIds))
-  ) {
+  if (cilos.some((cilo) => !ciloIsAligned(cilo, courseScope, owningProgramId, activeGoIds))) {
     return "incomplete-mapping";
   }
   return "ready";

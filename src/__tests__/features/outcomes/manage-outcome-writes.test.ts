@@ -3,7 +3,7 @@ import { ROLES } from "@/lib/constants/roles";
 
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
-  plo: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  go: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   assignment: { findFirst: vi.fn() },
   selectedContext: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    pLO: mocks.plo,
+    gO: mocks.go,
     cILO: mocks.cilo,
     courseAssignment: mocks.assignment,
     $transaction: mocks.transaction,
@@ -78,12 +78,12 @@ describe("manage-outcome-writes", () => {
     });
     mocks.transaction.mockImplementation(async (callback) =>
       callback({
-        pLO: mocks.plo,
+        gO: mocks.go,
         cILO: mocks.cilo,
         courseAssignment: mocks.assignment,
       })
     );
-    mocks.plo.findUnique.mockResolvedValue({
+    mocks.go.findUnique.mockResolvedValue({
       id: "go-1",
       code: "GO-1",
       description: "Old",
@@ -97,7 +97,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -139,7 +139,7 @@ describe("manage-outcome-writes", () => {
       await import("@/features/outcomes/services/manage-outcome-writes");
     expect(
       await prepareOutcomeWrite({
-        kind: "PLO",
+        kind: "GO",
         action: "update",
         programId: "program-1",
         id: "go-1",
@@ -147,21 +147,21 @@ describe("manage-outcome-writes", () => {
         description: "New",
       })
     ).toEqual({ success: false, error: "You do not have permission to modify this outcome." });
-    expect(mocks.plo.findUnique).not.toHaveBeenCalled();
+    expect(mocks.go.findUnique).not.toHaveBeenCalled();
   });
 
   it("rejects stale confirmation and preserves database write", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "update",
       programId: "program-1",
       id: "go-1",
       code: "GO-2",
       description: "New",
     });
-    mocks.plo.findUnique.mockResolvedValue({
+    mocks.go.findUnique.mockResolvedValue({
       id: "go-1",
       code: "GO-CHANGED",
       description: "Changed",
@@ -173,14 +173,14 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "Outcome changed after review. Prepare a new review.",
     });
-    expect(mocks.plo.update).not.toHaveBeenCalled();
+    expect(mocks.go.update).not.toHaveBeenCalled();
   });
 
   it("rejects forged review payload before opening a transaction", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -194,7 +194,7 @@ describe("manage-outcome-writes", () => {
         {
           ...review.data,
           input: {
-            kind: "PLO",
+            kind: "GO",
             action: "update",
             programId: "program-1",
             id: "go-1",
@@ -212,14 +212,14 @@ describe("manage-outcome-writes", () => {
   });
 
   it("rejects partial GO reorder without changing an order", async () => {
-    mocks.plo.findMany.mockResolvedValue([
+    mocks.go.findMany.mockResolvedValue([
       { id: "go-1", order: 0 },
       { id: "go-2", order: 1 },
     ]);
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "reorder",
       programId: "program-1",
       orderedIds: ["go-1"],
@@ -228,9 +228,9 @@ describe("manage-outcome-writes", () => {
 
     expect(await commitOutcomeWrite(review.data, true)).toEqual({
       success: false,
-      error: "Program Learning Outcomes must be a complete unique program order.",
+      error: "Graduate Outcomes must be a complete unique program order.",
     });
-    expect(mocks.plo.update).not.toHaveBeenCalled();
+    expect(mocks.go.update).not.toHaveBeenCalled();
   });
 
   it("requires Faculty active assignment-period scope", async () => {
@@ -259,7 +259,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "update",
       programId: "program-1",
       id: "go-1",
@@ -272,7 +272,7 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.plo.update).not.toHaveBeenCalled();
+    expect(mocks.go.update).not.toHaveBeenCalled();
   });
 
   it("rolls back a failed GO reorder", async () => {
@@ -280,12 +280,12 @@ describe("manage-outcome-writes", () => {
       { id: "go-1", order: 0 },
       { id: "go-2", order: 1 },
     ];
-    mocks.plo.findMany.mockResolvedValue(persisted);
+    mocks.go.findMany.mockResolvedValue(persisted);
     mocks.transaction.mockImplementation(async (callback) => {
       const staged = persisted.map((go) => ({ ...go }));
       let calls = 0;
       const tx = {
-        pLO: {
+        gO: {
           findMany: vi.fn().mockResolvedValue(staged),
           update: vi.fn(async ({ where, data }) => {
             calls += 1;
@@ -300,7 +300,7 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "PLO",
+      kind: "GO",
       action: "reorder",
       programId: "program-1",
       orderedIds: ["go-2", "go-1"],
@@ -314,13 +314,13 @@ describe("manage-outcome-writes", () => {
     ]);
   });
 
-  it("denies Secretary PLO writes before reading state", async () => {
+  it("denies Secretary GO writes before reading state", async () => {
     mocks.session.mockResolvedValue(SECRETARY);
     const { prepareOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     await expect(
       prepareOutcomeWrite({
-        kind: "PLO",
+        kind: "GO",
         action: "update",
         programId: "program-1",
         id: "go-1",
@@ -331,7 +331,7 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.plo.findUnique).not.toHaveBeenCalled();
+    expect(mocks.go.findUnique).not.toHaveBeenCalled();
     expect(mocks.selectedContext).not.toHaveBeenCalled();
   });
 
@@ -361,7 +361,7 @@ describe("manage-outcome-writes", () => {
     expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
     await expect(
       prepareOutcomeWrite({
-        kind: "PLO",
+        kind: "GO",
         action: "update",
         programId: "program-1",
         id: "go-1",
@@ -372,7 +372,7 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.plo.findUnique).not.toHaveBeenCalled();
+    expect(mocks.go.findUnique).not.toHaveBeenCalled();
   });
 });
 

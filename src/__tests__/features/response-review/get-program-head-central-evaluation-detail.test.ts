@@ -56,12 +56,12 @@ const MOCK_DEPLOYMENT = {
     structure_snapshot: [
       {
         key: "plo-items",
-        title: "PLO Attainment",
+        title: "GO Attainment",
         items: [
           {
             key: "q-plo-a",
             kind: "quantitative",
-            prompt: "PLO A was achieved.",
+            prompt: "GO A was achieved.",
             likertDescriptors: [
               { value: 1, label: "Strongly Disagree" },
               { value: 2, label: "Disagree" },
@@ -73,7 +73,7 @@ const MOCK_DEPLOYMENT = {
           {
             key: "q-plo-b",
             kind: "quantitative",
-            prompt: "PLO B was achieved.",
+            prompt: "GO B was achieved.",
             likertDescriptors: [
               { value: 1, label: "Strongly Disagree" },
               { value: 2, label: "Disagree" },
@@ -95,20 +95,20 @@ const MOCK_DEPLOYMENT = {
     semester: "FIRST",
     term: null,
   },
-  plo_snapshots: [
-    // q-plo-a → PLO-1 (snapshotted with id)
+  go_snapshots: [
+    // q-go-a → GO-1 (snapshotted with id)
     {
-      plo_id: "plo-1",
-      plo_code_snapshot: "PLO-1",
-      plo_description_snapshot: "Communicate effectively",
+      go_id: "plo-1",
+      go_code_snapshot: "GO-1",
+      go_description_snapshot: "Communicate effectively",
       section_key: "plo-items",
       item_key: "q-plo-a",
     },
-    // q-plo-b → snapshot with null plo_id, keyed by code
+    // q-go-b → snapshot with null go_id, keyed by code
     {
-      plo_id: null,
-      plo_code_snapshot: "PLO-2",
-      plo_description_snapshot: "Demonstrate leadership",
+      go_id: null,
+      go_code_snapshot: "GO-2",
+      go_description_snapshot: "Demonstrate leadership",
       section_key: "plo-items",
       item_key: "q-plo-b",
     },
@@ -160,7 +160,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     );
   });
 
-  it("groups direct PLO results by plo_id ?? plo_code_snapshot", async () => {
+  it("groups direct GO results by go_id ?? go_code_snapshot", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue(MOCK_DEPLOYMENT);
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {
@@ -213,21 +213,21 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    // PLO-1 from snapshotted plo_id, PLO-2 from plo_code_snapshot fallback
-    expect(result!.ploResults).toHaveLength(2);
-    const plo1 = result!.ploResults.find((plo) => plo.ploCode === "PLO-1");
-    const plo2 = result!.ploResults.find((plo) => plo.ploCode === "PLO-2");
-    expect(plo1).toBeDefined();
-    expect(plo1!.mean).toBe(4);
-    expect(plo2).toBeDefined();
-    expect(plo2!.mean).toBe(5);
+    // GO-1 from snapshotted go_id, GO-2 from go_code_snapshot fallback
+    expect(result!.goResults).toHaveLength(2);
+    const go1 = result!.goResults.find((go) => go.goCode === "GO-1");
+    const go2 = result!.goResults.find((go) => go.goCode === "GO-2");
+    expect(go1).toBeDefined();
+    expect(go1!.mean).toBe(4);
+    expect(go2).toBeDefined();
+    expect(go2!.mean).toBe(5);
     // Question results carry the binding badges
     const questionA = result!.questionResults.find((q) => q.itemKey === "q-plo-a");
-    expect(questionA!.ploBindings).toHaveLength(1);
-    expect(questionA!.ploBindings[0].code).toBe("PLO-1");
-    expect(questionA!.ploBindings[0].key).toBe("plo-1");
+    expect(questionA!.goBindings).toHaveLength(1);
+    expect(questionA!.goBindings[0].code).toBe("GO-1");
+    expect(questionA!.goBindings[0].key).toBe("plo-1");
     const questionB = result!.questionResults.find((q) => q.itemKey === "q-plo-b");
-    expect(questionB!.ploBindings[0].key).toBe("PLO-2");
+    expect(questionB!.goBindings[0].key).toBe("GO-2");
     // Identified respondent
     expect(result!.respondents[0].name).toBe("Juan dela Cruz");
   });
@@ -300,7 +300,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
   it("labels unbound central questions as General evaluation items", async () => {
     const deploymentWithoutBindings = {
       ...MOCK_DEPLOYMENT,
-      plo_snapshots: [],
+      go_snapshots: [],
     };
     centralDeploymentFindFirstMock.mockResolvedValue(deploymentWithoutBindings);
     evaluationAssignmentFindManyMock.mockResolvedValue([
@@ -337,17 +337,17 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    expect(result!.ploResults).toEqual([]);
+    expect(result!.goResults).toEqual([]);
     const questionA = result!.questionResults.find((q) => q.itemKey === "q-plo-a");
-    expect(questionA!.ploBindings).toEqual([]);
+    expect(questionA!.goBindings).toEqual([]);
     // buildQuestionMetrics gives GENERAL binding for unbound items
     expect(questionA!.binding.type).toBe("GENERAL");
   });
 
-  it("keeps an unbound question's ratings in the evaluation mean and out of PLO evidence", async () => {
+  it("keeps an unbound question's ratings in the evaluation mean and out of GO evidence", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue({
       ...MOCK_DEPLOYMENT,
-      plo_snapshots: [MOCK_DEPLOYMENT.plo_snapshots[0]],
+      go_snapshots: [MOCK_DEPLOYMENT.go_snapshots[0]],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {
@@ -389,12 +389,12 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    // Only the bound question reaches PLO evidence.
-    expect(result!.ploResults).toEqual([
-      expect.objectContaining({ ploId: "plo-1", ploCode: "PLO-1", ratingCount: 1, mean: 4 }),
+    // Only the bound question reaches GO evidence.
+    expect(result!.goResults).toEqual([
+      expect.objectContaining({ goId: "plo-1", goCode: "GO-1", ratingCount: 1, mean: 4 }),
     ]);
     const questionB = result!.questionResults.find((q) => q.itemKey === "q-plo-b");
-    expect(questionB!.ploBindings).toEqual([]);
+    expect(questionB!.goBindings).toEqual([]);
     expect(questionB!.binding.type).toBe("GENERAL");
     // The deployment mean keeps the unbound rating: (4 + 2) / 2.
     expect(result!.summary.evaluationMean).toBeCloseTo(3, 12);
@@ -405,7 +405,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     centralDeploymentFindFirstMock.mockResolvedValue({
       ...MOCK_DEPLOYMENT,
       target_stakeholder: "ALUMNI",
-      plo_snapshots: [],
+      go_snapshots: [],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {

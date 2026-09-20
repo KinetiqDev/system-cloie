@@ -8,7 +8,7 @@ import {
   buildQuestionMetrics,
   type OutcomeItemRatingRow,
 } from "@/features/analytics/aggregators/cilo";
-import type { CiloPloMapping } from "@/features/analytics/aggregators/types";
+import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import {
@@ -235,7 +235,7 @@ function buildCourseRatingRows(
   snapshot: unknown,
   snapshotItems: Map<string, { prompt: string }>,
   bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
-  ciloMappings: Map<string, CiloPloMapping[]>
+  ciloMappings: Map<string, CiloGoMapping[]>
 ): {
   ratingRows: OutcomeItemRatingRow[];
   meanByResponse: Map<string, number | null>;
@@ -281,7 +281,7 @@ function toCourseRatingRow(
   responseId: string,
   snapshotItems: Map<string, { prompt: string }>,
   bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
-  ciloMappings: Map<string, CiloPloMapping[]>
+  ciloMappings: Map<string, CiloGoMapping[]>
 ): OutcomeItemRatingRow {
   const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
   return {
@@ -298,6 +298,6 @@ function toCourseRatingRow(
           description: binding.cilo_description_snapshot,
         }
       : null,
-    ploMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
+    goMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
   };
 }

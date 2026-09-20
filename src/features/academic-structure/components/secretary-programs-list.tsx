@@ -449,10 +449,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                     <span className="text-text-secondary font-medium">{program.facultyCount}</span>{" "}
                     faculty
                   </span>
-                  <span>
-                    <span className="text-text-secondary font-medium">{program.ploCount}</span>{" "}
-                    {program.ploCount === 1 ? "PLO" : "PLOs"}
-                  </span>
+                  <span>{program.goCount === 1 ? "GO" : "GOs"}</span>
                 </div>
               </div>
               {/* Right: actions */}
@@ -480,7 +477,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                 <TableHead>Program Name</TableHead>
                 <TableHead>Majors</TableHead>
                 <TableHead className="text-right">Courses</TableHead>
-                <TableHead className="text-right">PLOs</TableHead>
+                <TableHead className="text-right">GOs</TableHead>
                 <TableHead className="text-right">Students</TableHead>
                 <TableHead className="text-right">Faculty</TableHead>
                 <TableHead>Status</TableHead>
@@ -515,7 +512,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                       {program.majorNames.length > 0 ? program.majorNames.join(", ") : "—"}
                     </TableCell>
                     <TableCell className="text-right">{program.courseCount}</TableCell>
-                    <TableCell className="text-right">{program.ploCount}</TableCell>
+                    <TableCell className="text-right">{program.goCount}</TableCell>
                     <TableCell className="text-right">{program.studentCount}</TableCell>
                     <TableCell className="text-right">{program.facultyCount}</TableCell>
                     <TableCell>
@@ -683,8 +680,8 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                                 className="flex justify-between gap-3 rounded-md border px-3 py-2"
                               >
                                 <span>
-                                  {label === "plos"
-                                    ? "Program Learning Outcomes"
+                                  {label === "gos"
+                                    ? "Graduate Outcomes"
                                     : label.replaceAll(/([A-Z])/g, " $1")}
                                 </span>
                                 <strong>{count}</strong>

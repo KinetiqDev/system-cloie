@@ -8,10 +8,10 @@ import {
 import { buildQuantitativeMetric } from "@/features/analytics/aggregators/quantitative";
 import { buildCiloMetrics, buildQuestionMetrics } from "@/features/analytics/aggregators/cilo";
 import {
-  buildCourseDerivedPloMetrics,
-  buildProgramWidePloMetrics,
-  type CentralPloRatingRow,
-} from "@/features/analytics/aggregators/plo";
+  buildCourseDerivedGoMetrics,
+  buildProgramWideGoMetrics,
+  type CentralGoRatingRow,
+} from "@/features/analytics/aggregators/go";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import {
   AGREEMENT5,
@@ -20,15 +20,21 @@ import {
   SCALE4,
   SCALE5,
   SNAPSHOTS,
-  centralPloRows,
+  centralGoRows,
   ciloRows,
   participationRows,
 } from "./ph-evidence-fixture";
 
 const TOLERANCE = 1e-9;
 
-function weightedMean(metric: { distribution: Array<{ value: number; count: number }>; ratingCount: number }) {
-  return metric.distribution.reduce((sum, entry) => sum + entry.value * entry.count, 0) / metric.ratingCount;
+function weightedMean(metric: {
+  distribution: Array<{ value: number; count: number }>;
+  ratingCount: number;
+}) {
+  return (
+    metric.distribution.reduce((sum, entry) => sum + entry.value * entry.count, 0) /
+    metric.ratingCount
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -122,8 +128,12 @@ describe("participation summary", () => {
     expect(industry.assigned).toBe(1);
     expect(industry.submitted).toBe(1);
     expect(industry.completionRate).toBe(1);
-    expect(summary.stakeholders.reduce((sum, entry) => sum + entry.assigned, 0)).toBe(summary.assigned);
-    expect(summary.stakeholders.reduce((sum, entry) => sum + entry.submitted, 0)).toBe(summary.submitted);
+    expect(summary.stakeholders.reduce((sum, entry) => sum + entry.assigned, 0)).toBe(
+      summary.assigned
+    );
+    expect(summary.stakeholders.reduce((sum, entry) => sum + entry.submitted, 0)).toBe(
+      summary.submitted
+    );
   });
 
   it("has no response rate when nothing is assigned, and a real zero when opportunities exist", () => {
@@ -174,7 +184,8 @@ describe("question metrics", () => {
 
     const ciloItems = buildCiloMetrics(rows);
     const pooledCiloRatingCount = ciloItems.reduce(
-      (sum, metric) => sum + metric.scaleGroups.reduce((inner, group) => inner + group.ratingCount, 0),
+      (sum, metric) =>
+        sum + metric.scaleGroups.reduce((inner, group) => inner + group.ratingCount, 0),
       0
     );
     // Only bound items contribute to CILO metrics: 24 - 5 unbound ratings = 19? No:
@@ -220,8 +231,18 @@ describe("CILO metrics", () => {
       (metric) => metric.ciloId === "cilo-a"
     )!;
     expect(ciloA.mappings).toEqual([
-      { ploId: "plo-1", ploCode: "PLO1", ploDescription: "Communicate effectively.", manifestation: "LEARNING" },
-      { ploId: "plo-2", ploCode: "PLO2", ploDescription: "Solve problems creatively.", manifestation: "OPPORTUNITY" },
+      {
+        goId: "plo-1",
+        goCode: "GO1",
+        goDescription: "Communicate effectively.",
+        manifestation: "LEARNING",
+      },
+      {
+        goId: "plo-2",
+        goCode: "GO2",
+        goDescription: "Solve problems creatively.",
+        manifestation: "OPPORTUNITY",
+      },
     ]);
     expect(ciloA.contributingQuestions.map((question) => question.itemKey)).toEqual([
       "q-cilo-a",
@@ -231,33 +252,33 @@ describe("CILO metrics", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PLO metrics (§5.8, §5.9, §7)
+// GO metrics (§5.8, §5.9, §7)
 // ---------------------------------------------------------------------------
 
-describe("course-derived PLO metrics", () => {
-  it("contributes each mapped rating once to every mapped PLO regardless of manifestation", () => {
-    const metrics = buildCourseDerivedPloMetrics(ciloRows("e1", "e2"));
-    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
-    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
+describe("course-derived GO metrics", () => {
+  it("contributes each mapped rating once to every mapped GO regardless of manifestation", () => {
+    const metrics = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
+    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
+    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
 
-    // Many-to-many: PLO1 receives CILO-a (qA 5,4 + qA2 3 + e2's 2) and
-    // CILO-b (qB 3,4 + e2's 4); PLO2 receives CILO-a's ratings only.
+    // Many-to-many: GO1 receives CILO-a (qA 5,4 + qA2 3 + e2's 2) and
+    // CILO-b (qB 3,4 + e2's 4); GO2 receives CILO-a's ratings only.
     // The OPPORTUNITY mapping filters nothing (§7).
-    expect(plo1.ratingCount).toBe(7);
-    expect(plo2.ratingCount).toBe(4);
-    expect(plo1.contributingCilos.map((cilo) => cilo.id).sort()).toEqual(["cilo-a", "cilo-b"]);
-    expect(plo2.contributingCilos.map((cilo) => cilo.id)).toEqual(["cilo-a"]);
+    expect(go1.ratingCount).toBe(7);
+    expect(go2.ratingCount).toBe(4);
+    expect(go1.contributingCilos.map((cilo) => cilo.id).sort()).toEqual(["cilo-a", "cilo-b"]);
+    expect(go2.contributingCilos.map((cilo) => cilo.id)).toEqual(["cilo-a"]);
   });
 
   it("keeps cross-period incompatible scales as separate groups with no combined mean", () => {
-    const plo1 = buildCourseDerivedPloMetrics(ciloRows("e1", "e2")).find(
-      (metric) => metric.ploId === "plo-1"
+    const go1 = buildCourseDerivedGoMetrics(ciloRows("e1", "e2")).find(
+      (metric) => metric.goId === "plo-1"
     )!;
-    expect(plo1.spansMultipleScales).toBe(true);
-    expect(plo1.mean).toBeNull();
+    expect(go1.spansMultipleScales).toBe(true);
+    expect(go1.mean).toBeNull();
 
-    const scale5 = plo1.scaleGroups.find((group) => group.scale?.max === 5)!;
-    const scale4 = plo1.scaleGroups.find((group) => group.scale?.max === 4)!;
+    const scale5 = go1.scaleGroups.find((group) => group.scale?.max === 5)!;
+    const scale4 = go1.scaleGroups.find((group) => group.scale?.max === 4)!;
     // Raw pooled SCALE5: (5+4+3+3+4)/5 = 3.8; mean-of-means (4 + 3.5)/2 differs.
     expect(scale5.mean).toBeCloseTo(3.8, 12);
     expect(scale5.ratingCount).toBe(5);
@@ -265,7 +286,6 @@ describe("course-derived PLO metrics", () => {
     expect(scale4.mean).toBeCloseTo(3, 12);
     expect(scale4.ratingCount).toBe(2);
   });
-
 
   it("counts out-of-scale ratings diagnostically instead of aggregating them", () => {
     const rows = [
@@ -278,35 +298,40 @@ describe("course-derived PLO metrics", () => {
         responseId: "resp-corrupt",
         scale: resolveItemScaleIdentity(SNAPSHOTS.cbV1, "cilo-items", "q-cilo-a"),
         cilo: { id: "cilo-a", label: "CILO 1", description: "Apply computational thinking." },
-        ploMappings: [
-          { ploId: "plo-1", ploCode: "PLO1", ploDescription: "Communicate effectively.", manifestation: "LEARNING" as const },
+        goMappings: [
+          {
+            goId: "plo-1",
+            goCode: "GO1",
+            goDescription: "Communicate effectively.",
+            manifestation: "LEARNING" as const,
+          },
         ],
       },
     ];
-    const plo1 = buildCourseDerivedPloMetrics(rows).find((metric) => metric.ploId === "plo-1")!;
-    expect(plo1.excludedRatingCount).toBe(1);
-    expect(plo1.scaleGroups.every((group) => group.ratingCount < 6)).toBe(true);
+    const go1 = buildCourseDerivedGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
+    expect(go1.excludedRatingCount).toBe(1);
+    expect(go1.scaleGroups.every((group) => group.ratingCount < 6)).toBe(true);
   });
 });
 
-describe("program-wide PLO metrics", () => {
-  it("aggregates through direct deployment PLO snapshots, including multi-PLO questions", () => {
-    const metrics = buildProgramWidePloMetrics(centralPloRows());
-    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
-    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
+describe("program-wide GO metrics", () => {
+  it("aggregates through direct deployment GO snapshots, including multi-GO questions", () => {
+    const metrics = buildProgramWideGoMetrics(centralGoRows());
+    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
+    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
 
-    // One response rated q-plo-single=4 and q-plo-multi=2; both reach PLO1,
-    // only the multi item reaches PLO2.
-    expect(plo1.mean).toBeCloseTo(3, 12);
-    expect(plo1.ratingCount).toBe(2);
-    expect(plo1.responseCount).toBe(1);
-    expect(plo2.ratingCount).toBe(1);
-    expect(plo2.mean).toBeCloseTo(2, 12);
+    // One response rated q-go-single=4 and q-go-multi=2; both reach GO1,
+    // only the multi item reaches GO2.
+    expect(go1.mean).toBeCloseTo(3, 12);
+    expect(go1.ratingCount).toBe(2);
+    expect(go1.responseCount).toBe(1);
+    expect(go2.ratingCount).toBe(1);
+    expect(go2.mean).toBeCloseTo(2, 12);
   });
 
   it("keeps central evidence separate from course-derived evidence and scales labeled", () => {
-    const central = buildProgramWidePloMetrics(centralPloRows());
-    const courseDerived = buildCourseDerivedPloMetrics(ciloRows("e1", "e2"));
+    const central = buildProgramWideGoMetrics(centralGoRows());
+    const courseDerived = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
     // Agreement scale identity differs from the course instruments' scales.
     const centralScaleKeys = new Set(
       central.flatMap((metric) => metric.scaleGroups.map((group) => group.scale?.key))
@@ -320,53 +345,54 @@ describe("program-wide PLO metrics", () => {
   });
 
   it("counts unresolvable-scale ratings diagnostically", () => {
-    const rows: CentralPloRatingRow[] = [
-      ...centralPloRows(),
+    const rows: CentralGoRatingRow[] = [
+      ...centralGoRows(),
       {
         sectionKey: "plo-items",
         itemKey: "q-plo-single",
         ratingValue: 3,
         responseId: "resp-unresolved",
         scale: null,
-        ploBindings: [{ ploId: "plo-1", ploCode: "PLO1", ploDescription: "Communicate effectively." }],
+        goBindings: [{ goId: "plo-1", goCode: "GO1", goDescription: "Communicate effectively." }],
       },
     ];
-    const plo1 = buildProgramWidePloMetrics(rows).find((metric) => metric.ploId === "plo-1")!;
-    expect(plo1.excludedRatingCount).toBe(1);
-    expect(plo1.ratingCount).toBe(2);
+    const go1 = buildProgramWideGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
+    expect(go1.excludedRatingCount).toBe(1);
+    expect(go1.ratingCount).toBe(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// PLO provenance counts behind the dashboard's evidence details (§13.8)
+// GO provenance counts behind the dashboard's evidence details (§13.8)
 // ---------------------------------------------------------------------------
 
-describe("PLO provenance counts", () => {
-  it("counts distinct evaluations and bound questions per course-derived PLO", () => {
-    const metrics = buildCourseDerivedPloMetrics(ciloRows("e1", "e2"));
-    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
+describe("GO provenance counts", () => {
+  it("counts distinct evaluations and bound questions per course-derived GO", () => {
+    const metrics = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
+    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
     // Valid mapped ratings come from e1 (q-cilo-a ×2, q-cilo-a2, q-cilo-b ×2)
     // and e2 (q-cilo-a, q-cilo-b): two evaluations, three distinct questions.
-    expect(plo1.evaluationCount).toBe(2);
-    expect(plo1.questionCount).toBe(3);
-    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
-    // PLO2 receives only CILO-a's ratings; CILO-a binds two questions
+    expect(go1.evaluationCount).toBe(2);
+    expect(go1.questionCount).toBe(3);
+    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
+    // GO2 receives only CILO-a's ratings; CILO-a binds two questions
     // (q-cilo-a and q-cilo-a2) that both contribute valid ratings in e1.
-    expect(plo2.evaluationCount).toBe(2);
-    expect(plo2.questionCount).toBe(2);
+    expect(go2.evaluationCount).toBe(2);
+    expect(go2.questionCount).toBe(2);
   });
-  it("counts distinct deployments and directly bound questions per program-wide PLO", () => {
-    const metrics = buildProgramWidePloMetrics(centralPloRows());
-    const plo1 = metrics.find((metric) => metric.ploId === "plo-1")!;
-    expect(plo1.evaluationCount).toBe(1);
-    expect(plo1.questionCount).toBe(2);
-    const plo2 = metrics.find((metric) => metric.ploId === "plo-2")!;
-    expect(plo2.evaluationCount).toBe(1);
-    expect(plo2.questionCount).toBe(1);
+
+  it("counts distinct deployments and directly bound questions per program-wide GO", () => {
+    const metrics = buildProgramWideGoMetrics(centralGoRows());
+    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
+    expect(go1.evaluationCount).toBe(1);
+    expect(go1.questionCount).toBe(2);
+    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
+    expect(go2.evaluationCount).toBe(1);
+    expect(go2.questionCount).toBe(1);
   });
 
   it("never counts evidence that was excluded as out-of-scale", () => {
-    const rows: CentralPloRatingRow[] = [
+    const rows: CentralGoRatingRow[] = [
       {
         sectionKey: "plo-items",
         itemKey: "q-plo-single",
@@ -374,13 +400,13 @@ describe("PLO provenance counts", () => {
         responseId: "resp-corrupt",
         evaluationId: "cd-x",
         scale: toScaleIdentity([...AGREEMENT5]),
-        ploBindings: [{ ploId: "plo-1", ploCode: "PLO1", ploDescription: "Communicate effectively." }],
+        goBindings: [{ goId: "plo-1", goCode: "GO1", goDescription: "Communicate effectively." }],
       },
     ];
-    const plo1 = buildProgramWidePloMetrics(rows).find((metric) => metric.ploId === "plo-1")!;
-    expect(plo1.ratingCount).toBe(0);
-    expect(plo1.evaluationCount).toBe(0);
-    expect(plo1.questionCount).toBe(0);
+    const go1 = buildProgramWideGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
+    expect(go1.ratingCount).toBe(0);
+    expect(go1.evaluationCount).toBe(0);
+    expect(go1.questionCount).toBe(0);
   });
 });
 
@@ -406,25 +432,29 @@ describe("question metrics across incompatible instrument versions", () => {
 });
 
 describe("duplicate contribution prevention", () => {
-  it("counts a rating once per PLO when binding arrays repeat a ploId", () => {
+  it("counts a rating once per GO when binding arrays repeat a goId", () => {
     const duplicated = ciloRows("e1").map((row) =>
-      row.ploMappings.length > 0
-        ? { ...row, ploMappings: [...row.ploMappings, ...row.ploMappings] }
+      row.goMappings.length > 0
+        ? { ...row, goMappings: [...row.goMappings, ...row.goMappings] }
         : row
     );
-    const clean = buildCourseDerivedPloMetrics(ciloRows("e1"));
-    const dirty = buildCourseDerivedPloMetrics(duplicated);
-    expect(dirty.map((metric) => metric.ratingCount)).toEqual(clean.map((metric) => metric.ratingCount));
+    const clean = buildCourseDerivedGoMetrics(ciloRows("e1"));
+    const dirty = buildCourseDerivedGoMetrics(duplicated);
+    expect(dirty.map((metric) => metric.ratingCount)).toEqual(
+      clean.map((metric) => metric.ratingCount)
+    );
   });
 
-  it("counts a central rating once per PLO when snapshot bindings repeat a ploId", () => {
-    const dirtyRows = centralPloRows().map((row) => ({
+  it("counts a central rating once per GO when snapshot bindings repeat a goId", () => {
+    const dirtyRows = centralGoRows().map((row) => ({
       ...row,
-      ploBindings: [...row.ploBindings, ...row.ploBindings],
+      goBindings: [...row.goBindings, ...row.goBindings],
     }));
-    const clean = buildProgramWidePloMetrics(centralPloRows());
-    const dirty = buildProgramWidePloMetrics(dirtyRows);
-    expect(dirty.map((metric) => metric.ratingCount)).toEqual(clean.map((metric) => metric.ratingCount));
+    const clean = buildProgramWideGoMetrics(centralGoRows());
+    const dirty = buildProgramWideGoMetrics(dirtyRows);
+    expect(dirty.map((metric) => metric.ratingCount)).toEqual(
+      clean.map((metric) => metric.ratingCount)
+    );
   });
 });
 
@@ -437,12 +467,12 @@ describe("reconciliation invariants", () => {
   const allCiloGroups = buildCiloMetrics(ciloRows("e1", "e2")).flatMap(
     (metric) => metric.scaleGroups
   );
-  const allPloGroups = [
-    ...buildCourseDerivedPloMetrics(ciloRows("e1", "e2")),
-    ...buildProgramWidePloMetrics(centralPloRows()),
+  const allGoGroups = [
+    ...buildCourseDerivedGoMetrics(ciloRows("e1", "e2")),
+    ...buildProgramWideGoMetrics(centralGoRows()),
   ].flatMap((metric) => metric.scaleGroups);
   const allQuestionGroups = allQuestionMetrics.flatMap((question) => question.scaleGroups);
-  const everyMetric = [...allQuestionGroups, ...allCiloGroups, ...allPloGroups];
+  const everyMetric = [...allQuestionGroups, ...allCiloGroups, ...allGoGroups];
 
   it("every distribution sums to its ratingCount", () => {
     for (const metric of everyMetric) {
@@ -464,7 +494,10 @@ describe("reconciliation invariants", () => {
   it("distribution percentages sum to 1 whenever ratings exist", () => {
     for (const metric of everyMetric) {
       if (metric.ratingCount === 0) continue;
-      const percentageSum = metric.distribution.reduce((total, entry) => total + entry.percentage, 0);
+      const percentageSum = metric.distribution.reduce(
+        (total, entry) => total + entry.percentage,
+        0
+      );
       expect(percentageSum).toBeCloseTo(1, 12);
     }
   });
@@ -500,8 +533,8 @@ describe("reconciliation invariants", () => {
       ...participationRows(CENTRAL_EVALUATIONS.alumni),
     ]);
     expect(summary.respondents).toEqual({ total: 5, complete: 3, partial: 1, notStarted: 1 });
-    expect(summary.respondents.complete + summary.respondents.partial + summary.respondents.notStarted).toBe(
-      summary.respondents.total
-    );
+    expect(
+      summary.respondents.complete + summary.respondents.partial + summary.respondents.notStarted
+    ).toBe(summary.respondents.total);
   });
 });

@@ -158,7 +158,7 @@ async function loadActiveTermSource(activeTermId: string) {
   const activeCentral = await prisma.centralDeployment.findMany({
     where: { term_instance_id: activeTermId },
     include: {
-      plo_snapshots: true,
+      go_snapshots: true,
       assignments: { include: { response: { include: { quant_items: true, qual_items: true } } } },
     },
   });
@@ -368,12 +368,12 @@ async function cloneCourseBoundEvaluations(
   }
 }
 
-async function clonePloSnapshots(
+async function cloneGoSnapshots(
   clonedDeploymentId: string,
-  snapshots: ActiveTermSource["activeCentral"][number]["plo_snapshots"]
+  snapshots: ActiveTermSource["activeCentral"][number]["go_snapshots"]
 ): Promise<void> {
   for (const snapshot of snapshots) {
-    const existingSnapshot = await prisma.centralDeploymentPloSnapshot.findFirst({
+    const existingSnapshot = await prisma.centralDeploymentGoSnapshot.findFirst({
       where: {
         central_deployment_id: clonedDeploymentId,
         section_key: snapshot.section_key,
@@ -381,12 +381,12 @@ async function clonePloSnapshots(
       },
     });
     if (!existingSnapshot) {
-      await prisma.centralDeploymentPloSnapshot.create({
+      await prisma.centralDeploymentGoSnapshot.create({
         data: {
           central_deployment_id: clonedDeploymentId,
-          plo_id: snapshot.plo_id,
-          plo_code_snapshot: snapshot.plo_code_snapshot,
-          plo_description_snapshot: snapshot.plo_description_snapshot,
+          go_id: snapshot.go_id,
+          go_code_snapshot: snapshot.go_code_snapshot,
+          go_description_snapshot: snapshot.go_description_snapshot,
           section_key: snapshot.section_key,
           item_key: snapshot.item_key,
           question_prompt_snapshot: snapshot.question_prompt_snapshot,
@@ -464,7 +464,7 @@ async function cloneCentralDeployment(
       })
     : await prisma.centralDeployment.create({ data: deploymentData });
 
-  await clonePloSnapshots(cloned.id, source.plo_snapshots);
+  await cloneGoSnapshots(cloned.id, source.go_snapshots);
   await cloneCentralAssignments(hist, cloned.id, source.assignments);
 }
 

@@ -33,7 +33,7 @@ describe("SecretaryProgramsList", () => {
         revision: "2026-07-11T00:00:00.000Z",
         blockers: { inactive: false, linkedRecords: false },
         dependencies: {
-          academicSetup: { majors: 0, courses: 0, plos: 0 },
+          academicSetup: { majors: 0, courses: 0, gos: 0 },
           peopleAndHistory: { studentProfiles: 0, enrollments: 0, alumniProfiles: 0 },
           teaching: { courseAssignments: 0, facultyAffiliations: 0, programHeadAssignments: 0 },
           evaluation: { evaluationTargets: 0, centralDeployments: 0, instrumentTemplates: 0 },
@@ -55,7 +55,7 @@ describe("SecretaryProgramsList", () => {
       majorNames: ["Structural Engineering", "Water Resources"],
       majorCount: 2,
       courseCount: 45,
-      ploCount: 12,
+      goCount: 12,
       studentCount: 250,
       facultyCount: 18,
       majors: [
@@ -71,7 +71,7 @@ describe("SecretaryProgramsList", () => {
       majorNames: ["Electronics", "Power Systems"],
       majorCount: 2,
       courseCount: 42,
-      ploCount: 10,
+      goCount: 10,
       studentCount: 200,
       facultyCount: 15,
       majors: [
@@ -175,7 +175,7 @@ describe("SecretaryProgramsList", () => {
         revision: "2026-07-11T00:00:00.000Z",
         blockers: { inactive: false, linkedRecords: false },
         dependencies: {
-          academicSetup: { majors: 0, courses: 0, plos: 0 },
+          academicSetup: { majors: 0, courses: 0, gos: 0 },
           peopleAndHistory: { studentProfiles: 0, enrollments: 0, alumniProfiles: 0 },
           teaching: { courseAssignments: 0, facultyAffiliations: 0, programHeadAssignments: 0 },
           evaluation: { evaluationTargets: 0, centralDeployments: 0, instrumentTemplates: 0 },

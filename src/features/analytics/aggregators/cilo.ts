@@ -4,7 +4,7 @@ import { groupRatingsByScale, type QuantitativeRating } from "./quantitative";
 import type {
   CiloContributingQuestion,
   CiloMetric,
-  CiloPloMapping,
+  CiloGoMapping,
   MetricEvidenceSummary,
   QuestionBinding,
   QuestionMetric,
@@ -19,7 +19,7 @@ import type {
  * rating with its snapshot-resolved scale identity and binding. The service
  * read resolves `scale` via resolveItemScaleIdentity so these aggregators
  * stay pure. `cilo` null marks an explicit or effective GENERAL item;
- * `ploMappings` carries the selected Program's current mappings.
+ * `goMappings` carries the selected Program's current mappings.
  */
 export type OutcomeItemRatingRow = {
   sectionKey: string;
@@ -30,7 +30,7 @@ export type OutcomeItemRatingRow = {
   scale: ScaleIdentity | null;
   cilo: { id: string; label: string; description: string } | null;
   evaluationId?: string;
-  ploMappings: CiloPloMapping[];
+  goMappings: CiloGoMapping[];
 };
 
 /** A rating contributes only when its value belongs to the item's frozen scale. */
@@ -45,7 +45,7 @@ function toRating(row: OutcomeItemRatingRow): QuantitativeRating {
 type CiloAggregate = {
   ratings: Array<{ rating: QuantitativeRating; scale: ScaleIdentity | null }>;
   questions: Map<string, CiloContributingQuestion>;
-  mappings: Map<string, CiloPloMapping>;
+  mappings: Map<string, CiloGoMapping>;
 };
 
 function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow): void {
@@ -58,9 +58,9 @@ function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow):
       prompt: row.prompt,
     });
   }
-  for (const mapping of row.ploMappings) {
-    if (!aggregate.mappings.has(mapping.ploId)) {
-      aggregate.mappings.set(mapping.ploId, mapping);
+  for (const mapping of row.goMappings) {
+    if (!aggregate.mappings.has(mapping.goId)) {
+      aggregate.mappings.set(mapping.goId, mapping);
     }
   }
 }
@@ -132,7 +132,7 @@ export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
         scaleGroups,
         mappings: [...aggregate.mappings.values()].sort(
           (left, right) =>
-            left.ploCode.localeCompare(right.ploCode) || left.ploId.localeCompare(right.ploId)
+            left.goCode.localeCompare(right.goCode) || left.goId.localeCompare(right.goId)
         ),
         contributingQuestions: questions,
         evidenceSummary,

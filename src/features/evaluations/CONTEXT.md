@@ -13,8 +13,8 @@ A per-class deployment bound to exactly one Course Assignment and offered to tha
 _Avoid_: Class evaluation when the Central Deployment distinction matters
 
 **Central deployment**:
-A program-wide deployment bound to a term instance, the owning program, and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by major and year level; year level is required when targeting students. Publishing snapshots each bound PLO's code, description, and question prompt into `CentralDeploymentPloSnapshot` rows; a Likert question with no PLO question binding writes no snapshot row and publishes as a general evaluation item.
-_Avoid_: Program-wide evaluation when stakeholder targeting matters
+A program-wide deployment bound to a term instance, the owning program, and one TargetStakeholder — `STUDENT`, `ALUMNI`, or `INDUSTRY_PARTNER` — optionally narrowed by major and year level; year level is required when targeting students. Publishing snapshots each bound GO's code, description, and question prompt into the current `CentralDeploymentGoSnapshot` Prisma model mapped to the physical `central_deployment_plo_snapshots` table; that physical PLO-named table remains unchanged for compatibility. A Likert question with no GO question binding writes no snapshot row and publishes as a general evaluation item.
+
 
 ## Lifecycle and gating
 
@@ -23,7 +23,7 @@ The status progression is `DRAFT -> SCHEDULED -> ACTIVE -> CLOSED`, with the con
 _Avoid_: PENDING, EXPIRED, resetting responses on reopen
 
 **Publication alignment gate**:
-Before a Course-bound evaluation publishes, every active CILO must satisfy the Course scope's typed alignment rule. General Education requires at least one active Institutional Outcome alignment with a manifestation; Program-specific courses require a manifestation on every active PLO of the owning program, and zero active PLOs with active CILOs is incomplete.
+Before a Course-bound evaluation publishes, every active CILO must satisfy the Course scope's typed alignment rule. General Education requires at least one active Institutional Outcome alignment with a manifestation; Program-specific courses require a manifestation on every active GO of the owning program, and zero active GOs with active CILOs is incomplete.
 _Avoid_: Partial alignment, publish-with-warnings
 
 ## Roster exclusions

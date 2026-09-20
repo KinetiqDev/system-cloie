@@ -68,12 +68,12 @@ function participationFixture(): ParticipationSummary {
   };
 }
 
-function ploRow(
-  overrides: Partial<ProgramHeadDashboardData["ploSources"]["COURSE_STUDENT"][number]>
+function goRow(
+  overrides: Partial<ProgramHeadDashboardData["goSources"]["COURSE_STUDENT"][number]>
 ) {
   return {
-    ploId: "plo-x",
-    ploCode: "PLO X",
+    goId: "go-x",
+    goCode: "GO X",
     mean: null,
     ratingCount: 0,
     responseCount: 0,
@@ -136,11 +136,11 @@ function dashboardDataFixture(
         evidenceSummary: { explanation: "No valid ratings from this evidence source." },
       },
     ],
-    ploSources: {
+    goSources: {
       COURSE_STUDENT: [
-        ploRow({
-          ploId: "plo-1",
-          ploCode: "PLO 1",
+        goRow({
+          goId: "go-1",
+          goCode: "GO 1",
           mean: 4.42,
           ratingCount: 614,
           responseCount: 163,
@@ -155,9 +155,9 @@ function dashboardDataFixture(
       ALUMNI: [],
       INDUSTRY_PARTNER: [],
     },
-    ploCatalog: [
-      { id: "plo-1", code: "PLO 1" },
-      { id: "plo-2", code: "PLO 2" },
+    goCatalog: [
+      { id: "go-1", code: "GO 1" },
+      { id: "go-2", code: "GO 2" },
     ],
     needsAttention: [
       {
@@ -168,9 +168,9 @@ function dashboardDataFixture(
         href: "/program-head/programs/p1/responses/course/cb-1",
       },
       {
-        id: "zero-plo-ratings:ALUMNI:plo-2",
-        rule: "zero-plo-ratings",
-        title: "PLO 2 has no ratings yet",
+        id: "zero-go-ratings:ALUMNI:go-2",
+        rule: "zero-go-ratings",
+        title: "GO 2 has no ratings yet",
         note: "No Alumni ratings in this period",
         href: "/program-head/programs/p1/analytics?tab=outcomes",
       },
@@ -301,7 +301,7 @@ describe("selected Program dashboard route", () => {
     expect(within(card).getByText(/88 assignments still open/)).toBeInTheDocument();
   });
 
-  it("switches PLO evidence sources client-side without attainment status", async () => {
+  it("switches GO evidence sources client-side without attainment status", async () => {
     await loadPage();
     expect(screen.getByText("4.42")).toBeInTheDocument();
 
@@ -317,7 +317,7 @@ describe("selected Program dashboard route", () => {
     expect(screen.queryByText(/Fully Achieved|Mostly Achieved/i)).not.toBeInTheDocument();
   });
 
-  it("exposes per-PLO evidence details with rating/response/evaluation/contributor counts", async () => {
+  it("exposes per-GO evidence details with rating/response/evaluation/contributor counts", async () => {
     await loadPage();
     const firstDetails = screen.getAllByText("Evidence details")[0].closest("details")!;
     fireEvent.click(screen.getAllByText("Evidence details")[0]);

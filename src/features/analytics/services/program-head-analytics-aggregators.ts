@@ -29,7 +29,7 @@ import type {
  * Identity of a period's evidence for trend comparability. Two periods are
  * comparable only when every dimension matches: immutable instrument version
  * IDs, the source-to-instrument relation and normalized response share, Likert
- * scale identities, mapped Program Learning Outcome codes, and normalized
+ * scale identities, mapped Graduate Outcome codes, and normalized
  * source composition. The relation prevents two sources exchanging instrument
  * versions from appearing comparable merely because the unordered source and
  * instrument sets still match. All arrays are sorted for order-independent
@@ -277,10 +277,10 @@ export function buildProgramHeadOverviewKpi(input: {
 }
 
 // ---------------------------------------------------------------------------
-// Program PLO outcome evidence
+// Program GO outcome evidence
 // ---------------------------------------------------------------------------
 
-/** One normalized course-bound rating row ready for Program PLO aggregation. */
+/** One normalized course-bound rating row ready for Program GO aggregation. */
 export type OutcomeEvidenceRow = {
   ratingValue: number;
   responseId: string;
@@ -295,9 +295,9 @@ export type OutcomeEvidenceRow = {
     description: string;
     course: { id: string; code: string; title: string } | null;
   } | null;
-  /** Current CILO-to-PLO mappings for the selected Program only. */
-  ploMappings: Array<{
-    ploId: string;
+  /** Current CILO-to-GO mappings for the selected Program only. */
+  goMappings: Array<{
+    goId: string;
     code: string;
     name: string;
     manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
@@ -306,9 +306,9 @@ export type OutcomeEvidenceRow = {
   deploymentName: string;
 };
 
-/** Accumulated evidence behind one Program Learning Outcome row. */
+/** Accumulated evidence behind one Graduate Outcome row. */
 type OutcomeEvidenceAggregate = {
-  ploId: string;
+  goId: string;
   code: string;
   name: string;
   ratingSum: number;
@@ -317,7 +317,7 @@ type OutcomeEvidenceAggregate = {
   cilos: Map<string, string>;
   courses: Map<string, { code: string; title: string }>;
   evaluations: Map<string, string>;
-  /** CILO id -> valid-rating-only contribution behind this PLO row. */
+  /** CILO id -> valid-rating-only contribution behind this GO row. */
   contributors: Map<
     string,
     {
@@ -335,20 +335,20 @@ type OutcomeEvidenceAggregate = {
 };
 
 type OutcomeEvidenceAggregation = {
-  /** Aggregates keyed by PLO id. */
+  /** Aggregates keyed by GO id. */
   outcomes: Map<string, OutcomeEvidenceAggregate>;
-  /** True when any contributing CILO maps to more than one selected-Program PLO. */
+  /** True when any contributing CILO maps to more than one selected-Program GO. */
   hasMultiMappedCilo: boolean;
 };
 
 function getOrCreateOutcomeAggregate(
   outcomes: Map<string, OutcomeEvidenceAggregate>,
-  mapping: OutcomeEvidenceRow["ploMappings"][number]
+  mapping: OutcomeEvidenceRow["goMappings"][number]
 ): OutcomeEvidenceAggregate {
-  let aggregate = outcomes.get(mapping.ploId);
+  let aggregate = outcomes.get(mapping.goId);
   if (!aggregate) {
     aggregate = {
-      ploId: mapping.ploId,
+      goId: mapping.goId,
       code: mapping.code,
       name: mapping.name,
       ratingSum: 0,
@@ -361,7 +361,7 @@ function getOrCreateOutcomeAggregate(
       distributions: new Map(),
       excludedRatingCount: 0,
     };
-    outcomes.set(mapping.ploId, aggregate);
+    outcomes.set(mapping.goId, aggregate);
   }
   return aggregate;
 }
@@ -430,8 +430,8 @@ function accumulateOutcomeRow(
 }
 
 /**
- * Aggregate course-bound ratings into Program PLO rows. Each rating contributes
- * once to every mapped PLO (many-to-many). Ratings are valid only when their
+ * Aggregate course-bound ratings into Program GO rows. Each rating contributes
+ * once to every mapped GO (many-to-many). Ratings are valid only when their
  * value belongs to the applicable item's frozen snapshot scale; unresolvable
  * or out-of-scale ratings are excluded from the valid aggregate and counted
  * diagnostically. Central items and unmapped CILOs never create rows because
@@ -442,17 +442,17 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
   let hasMultiMappedCilo = false;
 
   for (const row of rows) {
-    if (!row.cilo || row.ploMappings.length === 0) {
+    if (!row.cilo || row.goMappings.length === 0) {
       continue;
     }
-    if (row.ploMappings.length > 1) {
+    if (row.goMappings.length > 1) {
       hasMultiMappedCilo = true;
     }
 
     const descriptors = resolveRatingScale(row);
     const isValidRating = ratingIsValid(descriptors, row.ratingValue);
 
-    for (const mapping of row.ploMappings) {
+    for (const mapping of row.goMappings) {
       const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
       accumulateOutcomeRow(
         aggregate,
@@ -469,8 +469,8 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
 }
 
 /**
- * Convert PLO evidence aggregates into ranked, closed DTO rows. Rows rank by
- * mean rating descending (stronger evidence first), then PLO code for stable
+ * Convert GO evidence aggregates into ranked, closed DTO rows. Rows rank by
+ * mean rating descending (stronger evidence first), then GO code for stable
  * ordering. Distribution percentages are computed at full precision and
  * rounded only for display.
  */
@@ -499,7 +499,7 @@ export function buildProgramHeadOutcomeDtos(
     distributions.sort((left, right) => left.scaleLabel.localeCompare(right.scaleLabel));
 
     rows.push({
-      ploId: aggregate.ploId,
+      goId: aggregate.goId,
       code: aggregate.code,
       name: aggregate.name,
       meanRating: aggregate.ratingCount === 0 ? null : aggregate.ratingSum / aggregate.ratingCount,
@@ -552,7 +552,7 @@ export function buildProgramHeadOutcomeDtos(
     return (
       rightMean - leftMean ||
       left.code.localeCompare(right.code) ||
-      left.ploId.localeCompare(right.ploId)
+      left.goId.localeCompare(right.goId)
     );
   });
 

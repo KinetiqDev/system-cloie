@@ -91,8 +91,8 @@ import type {
   LikertDescriptor,
   EvaluationTemplateType,
   TemplateCiloQuestionBinding,
-  ProgramPloOption,
-  TemplatePloQuestionBinding,
+  ProgramGoOption,
+  TemplateGoQuestionBinding,
   TemplateSettingsInput,
 } from "../types";
 import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
@@ -140,7 +140,7 @@ export interface TemplateBuilderProps {
     baselineId: string,
     customName: string,
     structure: TemplateStructure,
-    ploBindings: TemplatePloQuestionBinding[],
+    goBindings: TemplateGoQuestionBinding[],
     settings: TemplateSettingsInput
   ) => Promise<ActionResult<{ id: string }>>;
   /**
@@ -156,12 +156,12 @@ export interface TemplateBuilderProps {
   };
   onPublish?: (templateId: string) => void;
   /**
-   * Server-prepared active PLOs (canonical order) offered to Program-wide
+   * Server-prepared active GOs (canonical order) offered to Program-wide
    * templates. Absent in faculty/COURSE_BOUND mode.
    */
-  ploOptions?: ProgramPloOption[];
-  /** Existing Program-wide question–PLO bindings loaded for this template. */
-  initialPloBindings?: TemplatePloQuestionBinding[];
+  goOptions?: ProgramGoOption[];
+  /** Existing Program-wide question–GO bindings loaded for this template. */
+  initialGoBindings?: TemplateGoQuestionBinding[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -344,21 +344,21 @@ function encodeBindingKey(sectionKey: string, itemKey: string): string {
 }
 
 /**
- * Collects Program-wide question–PLO bindings from the live structure:
+ * Collects Program-wide question–GO bindings from the live structure:
  * deleting a question or switching it to open-ended automatically drops its
  * bindings. Shared by the save-draft and save-as-copy payloads.
  */
-function collectPloBindings(
+function collectGoBindings(
   structure: TemplateStructure,
-  ploQuestionBindings: Record<string, string[]>
-): TemplatePloQuestionBinding[] {
+  goQuestionBindings: Record<string, string[]>
+): TemplateGoQuestionBinding[] {
   return structure.flatMap((section) =>
     section.questions.flatMap((question) => {
       if (question.type !== "likert") return [];
-      const ploIds = ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? [];
-      return ploIds
+      const goIds = goQuestionBindings[encodeBindingKey(section.key, question.key)] ?? [];
+      return goIds
         .filter(Boolean)
-        .map((ploId) => ({ itemKey: question.key, ploId, sectionKey: section.key }));
+        .map((goId) => ({ itemKey: question.key, goId, sectionKey: section.key }));
     })
   );
 }
@@ -407,7 +407,7 @@ function serializeBuilderDraft(draft: {
   isActive: boolean;
   isFacultyAccessible: boolean;
   name: string;
-  ploQuestionBindings: Record<string, string[]>;
+  goQuestionBindings: Record<string, string[]>;
   sections: TemplateStructure;
   templateType: EvaluationTemplateType;
 }) {
@@ -436,8 +436,8 @@ export function TemplateBuilder({
   onSaveAsCopy,
   startingFrom,
   onPublish,
-  ploOptions,
-  initialPloBindings,
+  goOptions,
+  initialGoBindings,
 }: TemplateBuilderProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -475,29 +475,29 @@ export function TemplateBuilder({
       ])
     )
   );
-  const [ploQuestionBindings, setPloQuestionBindings] = useState<Record<string, string[]>>(() => {
+  const [goQuestionBindings, setGoQuestionBindings] = useState<Record<string, string[]>>(() => {
     const map: Record<string, string[]> = {};
-    for (const binding of initialPloBindings ?? []) {
+    for (const binding of initialGoBindings ?? []) {
       const key = encodeBindingKey(binding.sectionKey, binding.itemKey);
       if (!map[key]) map[key] = [];
-      map[key].push(binding.ploId);
+      map[key].push(binding.goId);
     }
     return map;
   });
-  /** Archived PLOs bound to questions: rendered as removable archived chips. */
-  const archivedPloLookup = useMemo(() => {
-    const lookup = new Map<string, ProgramPloOption>();
-    const activeIds = new Set((ploOptions ?? []).map((plo) => plo.id));
-    for (const binding of initialPloBindings ?? []) {
-      if (activeIds.has(binding.ploId)) continue;
-      lookup.set(binding.ploId, {
-        id: binding.ploId,
-        code: binding.ploCodeSnapshot ?? "Archived PLO",
-        description: binding.ploDescriptionSnapshot ?? "",
+  /** Archived GOs bound to questions: rendered as removable archived chips. */
+  const archivedGoLookup = useMemo(() => {
+    const lookup = new Map<string, ProgramGoOption>();
+    const activeIds = new Set((goOptions ?? []).map((go) => go.id));
+    for (const binding of initialGoBindings ?? []) {
+      if (activeIds.has(binding.goId)) continue;
+      lookup.set(binding.goId, {
+        id: binding.goId,
+        code: binding.goCodeSnapshot ?? "Archived GO",
+        description: binding.goDescriptionSnapshot ?? "",
       });
     }
     return lookup;
-  }, [initialPloBindings, ploOptions]);
+  }, [initialGoBindings, goOptions]);
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -510,11 +510,11 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
-  /** PLO question bindings belong to Program-owned templates. The owning
-   *  Program Head flow supplies `ploOptions`, including an empty catalog when
-   *  no active PLOs exist. Institution-level builders do not supply it. */
+  /** GO question bindings belong to Program-owned templates. The owning
+   * Program Head flow supplies `goOptions`, including an empty catalog when
+   *  no active GOs exist. Institution-level builders do not supply it. */
   const programWideMode =
-    ploOptions !== undefined &&
+    goOptions !== undefined &&
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
@@ -529,7 +529,7 @@ export function TemplateBuilder({
         isActive,
         isFacultyAccessible,
         name,
-        ploQuestionBindings,
+        goQuestionBindings,
         sections,
         templateType: effectiveTemplateType,
       }),
@@ -543,7 +543,7 @@ export function TemplateBuilder({
       isActive,
       isFacultyAccessible,
       name,
-      ploQuestionBindings,
+      goQuestionBindings,
       sections,
     ]
   );
@@ -665,7 +665,7 @@ export function TemplateBuilder({
     setPendingNavigationHref(null);
     router.push(destination);
   }, [pendingNavigationHref, router, toolsHref]);
-  const programPloOptions = ploOptions ?? [];
+  const programGoOptions = goOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
   const selectedCourseContext =
@@ -792,7 +792,7 @@ export function TemplateBuilder({
     setSections((prev) => {
       const removed = prev.find((s) => s.key === key);
       if (removed) {
-        setPloQuestionBindings((current) => {
+        setGoQuestionBindings((current) => {
           const next = { ...current };
           for (const question of removed.questions) {
             delete next[encodeBindingKey(key, question.key)];
@@ -826,7 +826,7 @@ export function TemplateBuilder({
   }, []);
 
   const removeQuestion = useCallback((sectionKey: string, questionKey: string) => {
-    setPloQuestionBindings((current) => {
+    setGoQuestionBindings((current) => {
       const next = { ...current };
       delete next[encodeBindingKey(sectionKey, questionKey)];
       return next;
@@ -858,7 +858,7 @@ export function TemplateBuilder({
 
   const changeQuestionType = useCallback(
     (sectionKey: string, questionKey: string, newType: QuestionType) => {
-      setPloQuestionBindings((current) => {
+      setGoQuestionBindings((current) => {
         const next = { ...current };
         delete next[encodeBindingKey(sectionKey, questionKey)];
         return next;
@@ -1089,10 +1089,8 @@ export function TemplateBuilder({
 
     if (programWideMode) {
       formData.set(
-        "program_question_plo_bindings",
-        JSON.stringify(
-          collectPloBindings(normalizeTemplateStructure(sections), ploQuestionBindings)
-        )
+        "program_question_go_bindings",
+        JSON.stringify(collectGoBindings(normalizeTemplateStructure(sections), goQuestionBindings))
       );
     }
 
@@ -1125,7 +1123,7 @@ export function TemplateBuilder({
     isActive,
     isFacultyAccessible,
     name,
-    ploQuestionBindings,
+    goQuestionBindings,
     programWideMode,
     sections,
     startingFrom,
@@ -1156,8 +1154,8 @@ export function TemplateBuilder({
 
     setIsCopyPending(true);
     const structure = normalizeTemplateStructure(sections);
-    const ploBindings = programWideMode ? collectPloBindings(structure, ploQuestionBindings) : [];
-    const result = await onSaveAsCopy(templateId, copyName, structure, ploBindings, {
+    const goBindings = programWideMode ? collectGoBindings(structure, goQuestionBindings) : [];
+    const result = await onSaveAsCopy(templateId, copyName, structure, goBindings, {
       description,
       is_active: isActive,
       is_faculty_accessible: isFacultyAccessible,
@@ -1184,7 +1182,7 @@ export function TemplateBuilder({
     router,
     onSaveResult,
     programWideMode,
-    ploQuestionBindings,
+    goQuestionBindings,
     description,
     isActive,
     isFacultyAccessible,
@@ -1212,10 +1210,8 @@ export function TemplateBuilder({
 
       startTransition(async () => {
         const structure = normalizeTemplateStructure(sections);
-        const ploBindings = programWideMode
-          ? collectPloBindings(structure, ploQuestionBindings)
-          : [];
-        const result = await onSaveAsCopy(startingFrom.id, copyNameInput, structure, ploBindings, {
+        const goBindings = programWideMode ? collectGoBindings(structure, goQuestionBindings) : [];
+        const result = await onSaveAsCopy(startingFrom.id, copyNameInput, structure, goBindings, {
           description,
           is_active: isActive,
           is_faculty_accessible: isFacultyAccessible,
@@ -1265,7 +1261,7 @@ export function TemplateBuilder({
     onSaveResult,
     startingFrom,
     programWideMode,
-    ploQuestionBindings,
+    goQuestionBindings,
     sections,
   ]);
 
@@ -1449,7 +1445,7 @@ export function TemplateBuilder({
                   setIsFacultyAccessible(false);
                 }
                 if (nextType !== "PROGRAM_WIDE") {
-                  setPloQuestionBindings({});
+                  setGoQuestionBindings({});
                 }
               }}
             >
@@ -1686,14 +1682,14 @@ export function TemplateBuilder({
                     [questionKey]: ciloId,
                   }))
                 }
-                ploOptions={programPloOptions}
-                ploQuestionBindings={ploQuestionBindings}
+                goOptions={programGoOptions}
+                goQuestionBindings={goQuestionBindings}
                 programWideMode={programWideMode}
-                archivedPloLookup={archivedPloLookup}
-                onPloBindingsChange={(questionKey, ploIds) =>
-                  setPloQuestionBindings((current) => ({
+                archivedGoLookup={archivedGoLookup}
+                onGoBindingsChange={(questionKey, goIds) =>
+                  setGoQuestionBindings((current) => ({
                     ...current,
-                    [questionKey]: ploIds,
+                    [questionKey]: goIds,
                   }))
                 }
                 ciloQuestionCounts={ciloQuestionCounts}
@@ -1817,10 +1813,10 @@ interface SectionCardProps {
   ciloOptions: Array<{ description: string; id: string }>;
   ciloQuestionBindings: Record<string, string>;
   selectedCiloLabels: Map<string, string>;
-  ploOptions: ProgramPloOption[];
-  ploQuestionBindings: Record<string, string[]>;
+  goOptions: ProgramGoOption[];
+  goQuestionBindings: Record<string, string[]>;
   programWideMode: boolean;
-  archivedPloLookup: Map<string, ProgramPloOption>;
+  archivedGoLookup: Map<string, ProgramGoOption>;
   section: TemplateSection;
   sectionIndex: number;
   sortableId: string;
@@ -1847,7 +1843,7 @@ interface SectionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
-  onPloBindingsChange: (questionKey: string, ploIds: string[]) => void;
+  onGoBindingsChange: (questionKey: string, goIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
   ciloQuestionCounts: Map<string, number>;
   canRemove: boolean;
@@ -1857,10 +1853,10 @@ function SectionCard({
   ciloOptions,
   ciloQuestionBindings,
   selectedCiloLabels,
-  ploOptions,
-  ploQuestionBindings,
+  goOptions,
+  goQuestionBindings,
   programWideMode,
-  archivedPloLookup,
+  archivedGoLookup,
   section,
   sectionIndex,
   sortableId,
@@ -1875,7 +1871,7 @@ function SectionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
-  onPloBindingsChange,
+  onGoBindingsChange,
   onRemoveSuggestedResponse,
   ciloQuestionCounts,
   canRemove,
@@ -1977,13 +1973,13 @@ function SectionCard({
                 selectedCiloId={
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 }
-                ploOptions={ploOptions}
-                selectedPloIds={
-                  ploQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []
+                goOptions={goOptions}
+                selectedGoIds={
+                  goQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []
                 }
                 programWideMode={programWideMode}
-                archivedPloLookup={archivedPloLookup}
-                onPloBindingsChange={onPloBindingsChange}
+                archivedGoLookup={archivedGoLookup}
+                onGoBindingsChange={onGoBindingsChange}
                 canRemove={section.questions.length > 1}
               />
             ))}
@@ -2027,12 +2023,12 @@ interface QuestionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
-  onPloBindingsChange: (questionKey: string, ploIds: string[]) => void;
+  onGoBindingsChange: (questionKey: string, goIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
-  ploOptions: ProgramPloOption[];
-  selectedPloIds: string[];
+  goOptions: ProgramGoOption[];
+  selectedGoIds: string[];
   programWideMode: boolean;
-  archivedPloLookup: Map<string, ProgramPloOption>;
+  archivedGoLookup: Map<string, ProgramGoOption>;
   selectedCiloLabel?: string;
   selectedCiloId: string;
   ciloQuestionCounts: Map<string, number>;
@@ -2054,12 +2050,12 @@ function QuestionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
-  onPloBindingsChange,
+  onGoBindingsChange,
   onRemoveSuggestedResponse,
-  ploOptions,
-  selectedPloIds,
+  goOptions,
+  selectedGoIds,
   programWideMode,
-  archivedPloLookup,
+  archivedGoLookup,
   selectedCiloLabel,
   selectedCiloId,
   ciloQuestionCounts,
@@ -2199,23 +2195,23 @@ function QuestionCard({
           )}
           {programWideMode && (
             <div className="space-y-2">
-              <span id={`plo-binding-label-${question.key}`} className="text-sm font-medium">
-                PLO Binding
+              <span id={`go-binding-label-${question.key}`} className="text-sm font-medium">
+                GO Binding
               </span>
-              <PloMultiSelect
-                options={ploOptions}
-                selectedIds={selectedPloIds}
+              <GoMultiSelect
+                options={goOptions}
+                selectedIds={selectedGoIds}
                 questionKey={question.key}
-                labelId={`plo-binding-label-${question.key}`}
-                archivedPloLookup={archivedPloLookup}
-                onChange={(ploIds) =>
-                  onPloBindingsChange(encodeBindingKey(sectionKey, question.key), ploIds)
+                labelId={`go-binding-label-${question.key}`}
+                archivedGoLookup={archivedGoLookup}
+                onChange={(goIds) =>
+                  onGoBindingsChange(encodeBindingKey(sectionKey, question.key), goIds)
                 }
               />
-              {selectedPloIds.length === 0 && (
+              {selectedGoIds.length === 0 && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  No PLO assigned yet. This Likert question publishes as a general evaluation item
-                  and gives no PLO evidence.
+                  No GO assigned yet. This Likert question publishes as a general evaluation item
+                  and gives no GO evidence.
                 </p>
               )}
             </div>
@@ -2379,51 +2375,51 @@ function LikertDescriptorsEditor({
   );
 }
 
-// ─── PLO Multi-Select ────────────────────────────────────────────────────────
+// ─── GO Multi-Select ─────────────────────────────────────────────────────────
 
-interface PloMultiSelectProps {
-  options: ProgramPloOption[];
+interface GoMultiSelectProps {
+  options: ProgramGoOption[];
   selectedIds: string[];
   questionKey: string;
   labelId: string;
-  archivedPloLookup: Map<string, ProgramPloOption>;
-  onChange: (ploIds: string[]) => void;
+  archivedGoLookup: Map<string, ProgramGoOption>;
+  onChange: (goIds: string[]) => void;
 }
 
 /**
- * Likert question PLO multi-select for Program-wide templates. Desktop shows a
+ * Likert question GO multi-select for Program-wide templates. Desktop shows a
  * searchable popover; mobile shows a bottom drawer surface. Selection is
  * keyboard-accessible (real checkboxes), chips are individually removable,
  * and a Clear action empties the selection.
  */
-function PloMultiSelect({
+function GoMultiSelect({
   options,
   selectedIds,
   questionKey,
   labelId,
-  archivedPloLookup,
+  archivedGoLookup,
   onChange,
-}: PloMultiSelectProps) {
+}: GoMultiSelectProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [query, setQuery] = useState("");
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const searchInputId = `plo-search-${questionKey}`;
-  const listboxId = `plo-listbox-${questionKey}`;
+  const searchInputId = `go-search-${questionKey}`;
+  const listboxId = `go-listbox-${questionKey}`;
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return options;
     return options.filter(
-      (plo) =>
-        plo.code.toLowerCase().includes(normalizedQuery) ||
-        plo.description.toLowerCase().includes(normalizedQuery)
+      (go) =>
+        go.code.toLowerCase().includes(normalizedQuery) ||
+        go.description.toLowerCase().includes(normalizedQuery)
     );
   }, [options, query]);
 
   const toggle = useCallback(
-    (ploId: string) => {
+    (goId: string) => {
       onChange(
-        selectedSet.has(ploId) ? selectedIds.filter((id) => id !== ploId) : [...selectedIds, ploId]
+        selectedSet.has(goId) ? selectedIds.filter((id) => id !== goId) : [...selectedIds, goId]
       );
     },
     [onChange, selectedIds, selectedSet]
@@ -2432,24 +2428,24 @@ function PloMultiSelect({
   // Removing a chip unmounts its remove button; return focus to the trigger so
   // keyboard users are not left with focus on the document body.
   const removeChip = useCallback(
-    (ploId: string) => {
-      toggle(ploId);
-      document.getElementById(`plo-binding-${questionKey}`)?.focus();
+    (goId: string) => {
+      toggle(goId);
+      document.getElementById(`go-binding-${questionKey}`)?.focus();
     },
     [questionKey, toggle]
   );
 
-  const selectedPlos = useMemo(
+  const selectedGos = useMemo(
     () =>
       selectedIds
-        .map((id) => options.find((plo) => plo.id === id) ?? archivedPloLookup.get(id))
-        .filter((plo): plo is ProgramPloOption => Boolean(plo)),
-    [archivedPloLookup, options, selectedIds]
+        .map((id) => options.find((go) => go.id === id) ?? archivedGoLookup.get(id))
+        .filter((go): go is ProgramGoOption => Boolean(go)),
+    [archivedGoLookup, options, selectedIds]
   );
 
   const trigger = (
     <Button
-      id={`plo-binding-${questionKey}`}
+      id={`go-binding-${questionKey}`}
       type="button"
       variant="outline"
       className="border-input w-full justify-between text-left font-normal"
@@ -2459,8 +2455,8 @@ function PloMultiSelect({
     >
       <span className="min-w-0 flex-1 truncate">
         {selectedIds.length === 0
-          ? "Select PLOs…"
-          : `${selectedIds.length} PLO${selectedIds.length === 1 ? "" : "s"} selected`}
+          ? "Select GOs…"
+          : `${selectedIds.length} GO${selectedIds.length === 1 ? "" : "s"} selected`}
       </span>
       <SearchIcon className="text-muted-foreground size-4 shrink-0" />
     </Button>
@@ -2472,8 +2468,8 @@ function PloMultiSelect({
         id={searchInputId}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search PLOs by code or description…"
-        aria-label="Search PLOs"
+        placeholder="Search GOs by code or description…"
+        aria-label="Search GOs"
       />
     </div>
   );
@@ -2481,24 +2477,24 @@ function PloMultiSelect({
     <div
       id={listboxId}
       role="listbox"
-      aria-label="Program Learning Outcomes"
+      aria-label="Graduate Outcomes"
       className="h-64 overflow-y-auto"
     >
       {options.length === 0 ? (
         <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-          No active PLOs available for this program.
+          No active GOs available for this program.
         </p>
       ) : filteredOptions.length === 0 ? (
         <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-          No PLOs match your search.
+          No GOs match your search.
         </p>
       ) : (
         <ul className="space-y-1.5">
-          {filteredOptions.map((plo) => {
-            const isSelected = selectedSet.has(plo.id);
+          {filteredOptions.map((go) => {
+            const isSelected = selectedSet.has(go.id);
             return (
               <li
-                key={plo.id}
+                key={go.id}
                 data-state={isSelected ? "selected" : undefined}
                 className={`flex items-start gap-2 rounded-md border px-2 py-1.5 transition-colors motion-reduce:transition-none pointer-coarse:py-2.5 ${
                   isSelected
@@ -2510,20 +2506,20 @@ function PloMultiSelect({
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => toggle(plo.id)}
+                    onChange={() => toggle(go.id)}
                     className="accent-primary mt-0.5 size-5 shrink-0 cursor-pointer focus-visible:outline-none pointer-coarse:size-6"
-                    aria-label={`${plo.code}: ${plo.description}`}
+                    aria-label={`${go.code}: ${go.description}`}
                   />
                   <span className="min-w-0 flex-1">
                     <span
                       className={`text-sm font-semibold ${isSelected ? "text-selected-fg" : ""}`}
                     >
-                      {plo.code}
+                      {go.code}
                     </span>
                     <span
                       className={`ml-2 text-sm ${isSelected ? "text-selected-fg/80" : "text-muted-foreground"}`}
                     >
-                      {plo.description}
+                      {go.description}
                     </span>
                   </span>
                 </label>
@@ -2569,13 +2565,13 @@ function PloMultiSelect({
           <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden">
             <DrawerHeader className="flex shrink-0 items-start justify-between gap-4 text-left">
               <div className="min-w-0 space-y-1">
-                <DrawerTitle>PLO Binding</DrawerTitle>
+                <DrawerTitle>GO Binding</DrawerTitle>
                 <DrawerDescription>
-                  Choose one or more active Program Learning Outcomes this Likert question covers.
+                  Choose one or more active Graduate Outcomes this Likert question covers.
                 </DrawerDescription>
               </div>
               <DrawerClose
-                render={<Button variant="ghost" size="icon-sm" aria-label="Close PLO binding" />}
+                render={<Button variant="ghost" size="icon-sm" aria-label="Close GO binding" />}
               >
                 <XIcon aria-hidden="true" />
               </DrawerClose>
@@ -2589,22 +2585,22 @@ function PloMultiSelect({
         </Drawer>
       )}
 
-      {selectedPlos.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected PLOs">
-          {selectedPlos.map((plo) => {
-            const isArchived = archivedPloLookup.has(plo.id);
+      {selectedGos.length > 0 && (
+        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected GOs">
+          {selectedGos.map((go) => {
+            const isArchived = archivedGoLookup.has(go.id);
             return (
               <li
-                key={plo.id}
+                key={go.id}
                 className={`${isArchived ? "border-destructive/40 bg-destructive/10" : "bg-muted"} text-foreground inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-xs font-medium`}
               >
-                <span className="font-semibold">{plo.code}</span>
+                <span className="font-semibold">{go.code}</span>
                 {isArchived && <span className="text-destructive">Archived</span>}
                 <button
                   type="button"
-                  onClick={() => removeChip(plo.id)}
+                  onClick={() => removeChip(go.id)}
                   className="text-muted-foreground hover:text-danger focus-visible:ring-ring rounded-sm p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
-                  aria-label={`Remove ${plo.code}`}
+                  aria-label={`Remove ${go.code}`}
                 >
                   <XIcon className="size-3" />
                 </button>

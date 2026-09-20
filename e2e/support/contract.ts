@@ -6,7 +6,7 @@ import { D, U } from "../../prisma/seed/constants/ids";
  * Every value below is a HUMAN-REVIEWED expectation, not a value read from the
  * database under test. The deterministic Prisma seed (`prisma/seed`) is the
  * source of these SystemRole identities and deployment identifiers; the
- * response values (ratings, qualitative answers, CILO→PLO evidence links) are
+ * response values (ratings, qualitative answers, CILO→GO evidence links) are
  * reviewed against the seed fixtures and pinned here. If a seed row or a
  * query-under-test drifts, the contract check in `global-setup` (or a journey
  * assertion) fails before the browser journey completes, naming the affected
@@ -121,9 +121,9 @@ export const E2E_CONTRACT = {
   mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
 
   /**
-   * Relaxed PLO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
+   * Relaxed GO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
    * alumni tool leaves its general satisfaction item unbound, and the
-   * institutional exit-survey baseline carries no PLO bindings at all. Both
+   * institutional exit-survey baseline carries no GO bindings at all. Both
    * still publish; the publish step names the unbound questions instead.
    */
   programWidePartialMapping: {
@@ -191,12 +191,12 @@ export const E2E_CONTRACT = {
     ],
   },
 
-  /** Reviewed expectations for the ITRES1 response and its bottom-up PLO evidence link (journey B). */
+  /** Reviewed expectations for the ITRES1 response and its bottom-up GO evidence link (journey B). */
   bottomUpResponse: {
     respondentName: "Demo Student",
-    ploLinks: [
+    goLinks: [
       {
-        ploCode: "BSIT-GO1",
+        goCode: "BSIT-GO1",
         ciloLabel: "Defend the proposed capstone scope and methodology.",
       },
     ],
@@ -245,7 +245,7 @@ export type FixtureData = {
   bottomUpResponse: {
     id: string;
     respondentName: string;
-    ploLinks: Array<{ ploId: string; ploCode: string; ciloLabel: string }>;
+    goLinks: Array<{ goId: string; goCode: string; ciloLabel: string }>;
   };
   gestechEval: { id: string; title: string };
   gestechAssignment: { id: string };
@@ -255,7 +255,7 @@ export type FixtureData = {
   publicationTarget: { id: string; courseCode: string; programCode: string };
   publicationDeploymentName: string;
   publicationStudents: Array<{ id: string; name: string; email: string }>;
-  /** Issue #625 relaxed PLO binding gate fixtures. */
+  /** Issue #625 relaxed GO binding gate fixtures. */
   programWidePartialMapping: {
     templateCode: string;
     templateName: string;

@@ -14,7 +14,7 @@ import {
 
 import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
-import { ProgramHeadPloSummary } from "@/features/analytics/components/program-head-plo-summary";
+import { ProgramHeadGoSummary } from "@/features/analytics/components/program-head-go-summary";
 import { ProgramHeadNeedsAttention } from "@/features/analytics/components/program-head-needs-attention";
 import { ProgramHeadQualitativePulse } from "@/features/analytics/components/program-head-qualitative-pulse";
 import { buildPageTitle } from "@/lib/page-title";
@@ -68,7 +68,7 @@ export default async function SelectedProgramDashboardPage({
     },
     {
       label: "Manage learning outcomes",
-      detail: "Maintain the program PLO catalog.",
+      detail: "Maintain the program GO catalog.",
       href: buildProgramHeadOutcomesPath(programId),
       icon: Layers3,
     },
@@ -126,9 +126,9 @@ export default async function SelectedProgramDashboardPage({
 
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
         <div className="flex min-w-0 flex-col gap-6">
-          <ProgramHeadPloSummary
-            sources={dashboard.ploSources}
-            ploCatalog={dashboard.ploCatalog}
+          <ProgramHeadGoSummary
+            sources={dashboard.goSources}
+            goCatalog={dashboard.goCatalog}
             programId={programId}
             periodFilters={periodFilters}
           />

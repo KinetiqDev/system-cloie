@@ -17,7 +17,7 @@ import {
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
 import {
-  hasExhaustivePloCoverage,
+  hasExhaustiveGoCoverage,
   type CourseAlignmentTargetLayer,
 } from "@/features/outcomes/services/classify-course-alignment";
 
@@ -105,7 +105,7 @@ type DeanMappingGap = {
   ciloStatement: string | null;
   ciloIsArchived: boolean | null;
   reason: "missing-cilos" | "incomplete-mapping";
-  missingPloIds: string[];
+  missingGoIds: string[];
   missingInstitutionalOutcomeIds: string[];
 };
 
@@ -117,12 +117,12 @@ export type DeanLearningOutcomesData = {
   programs: Array<{
     id: string;
     name: string;
-    ploCount: number;
+    goCount: number;
     activeContexts: number;
     readyContexts: number;
     missingCiloContexts: number;
     incompleteMappingContexts: number;
-    plos: DeanOutcomeCatalogEntry[];
+    gos: DeanOutcomeCatalogEntry[];
     mappingGaps: DeanMappingGap[];
   }>;
 };
@@ -291,24 +291,24 @@ function v2CiloIsIncomplete(
   context: ReadinessContext
 ): boolean {
   if (!Array.isArray(cilo.mappedTargets)) {
-    return (cilo.missingPloIds?.length ?? 0) > 0;
+    return (cilo.missingGoIds?.length ?? 0) > 0;
   }
   if (context.courseScope === "GENERAL_EDUCATION") {
     return !cilo.mappedTargets.some((target) => !target.isArchived);
   }
   // Program-specific CILOs share the classifier's exhaustive rule: a CILO
-  // is a gap unless it classifies every active owning-Program PLO, and
-  // zero active PLOs alongside an active CILO is incomplete, not ready.
-  return !hasExhaustivePloCoverage(
+  // is a gap unless it classifies every active owning-Program GO, and
+  // zero active GOs alongside an active CILO is incomplete, not ready.
+  return !hasExhaustiveGoCoverage(
     (cilo.mappedTargets ?? []).filter((target) => !target.isArchived).map((target) => target.id),
-    (context.plos ?? []).filter((plo) => !plo.isArchived).map((plo) => plo.id)
+    (context.gos ?? []).filter((go) => !go.isArchived).map((go) => go.id)
   );
 }
 
 function incompleteCilos(context: ReadinessContext, schemaVersion: number) {
   return context.cilos.filter((cilo) => {
     if (cilo.isArchived) return false;
-    if (schemaVersion < 2) return (cilo.missingPloIds?.length ?? 0) > 0;
+    if (schemaVersion < 2) return (cilo.missingGoIds?.length ?? 0) > 0;
     return v2CiloIsIncomplete(cilo, context);
   });
 }
@@ -324,7 +324,7 @@ function mappingGapBase(
   | "ciloStatement"
   | "ciloIsArchived"
   | "reason"
-  | "missingPloIds"
+  | "missingGoIds"
   | "missingInstitutionalOutcomeIds"
 > {
   return {
@@ -417,7 +417,6 @@ export async function getDeanLearningOutcomes(
   const period = await requirePeriod(periodId, "active");
   if (!period && periodId === undefined) return { state: "no-eligible-period" };
   if (periodId === undefined && period) {
-    // Caller must make period selection explicit whenever an eligible period exists.
     throw new DeanReadModelBadRequestError("period is required.");
   }
   if (!period) return { state: "no-eligible-period" };
@@ -440,17 +439,17 @@ export async function getDeanLearningOutcomes(
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
-      ploCount: 0,
+      goCount: 0,
       activeContexts: total.activeContexts,
       readyContexts: total.readyContexts,
       missingCiloContexts: total.missingCiloContexts,
       incompleteMappingContexts: total.incompleteMappingContexts,
-      plos: [],
+      gos: [],
       mappingGaps: [],
     };
-    if (program.plos.length === 0 && (context.plos?.length ?? 0) > 0) {
-      program.plos = visibleCatalog(context.plos, period.status);
-      program.ploCount = program.plos.length;
+    if (program.gos.length === 0 && (context.gos?.length ?? 0) > 0) {
+      program.gos = visibleCatalog(context.gos, period.status);
+      program.goCount = program.gos.length;
     }
     if (context.state === "missing-cilos") {
       program.mappingGaps.push({
@@ -459,7 +458,7 @@ export async function getDeanLearningOutcomes(
         ciloStatement: null,
         ciloIsArchived: null,
         reason: "missing-cilos",
-        missingPloIds: [],
+        missingGoIds: [],
         missingInstitutionalOutcomeIds: [],
       });
     } else if (context.state === "incomplete-mapping") {
@@ -470,7 +469,7 @@ export async function getDeanLearningOutcomes(
           ciloStatement: cilo.description,
           ciloIsArchived: cilo.isArchived,
           reason: "incomplete-mapping",
-          missingPloIds: cilo.missingPloIds ?? [],
+          missingGoIds: cilo.missingGoIds ?? [],
           missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
         });
       }

@@ -17,11 +17,11 @@ const MANIFESTATION_LABELS = {
 
 type ProgramHeadContributorMatrixProps = {
   outcomes: ProgramHeadOutcomeDTO[];
-  selectedPloId?: string;
+  selectedGoId?: string;
 };
 
 /**
- * Expandable CILO contributor matrix. Each PLO discloses the CILOs behind
+ * Expandable CILO contributor matrix. Each GO discloses the CILOs behind
  * its mean: the contributing CILO, its course, the descriptive mapping
  * manifestation, and the valid-rating-only mean and count. Manifestation
  * never filters or weights the numbers; it only labels how the CILO
@@ -29,23 +29,23 @@ type ProgramHeadContributorMatrixProps = {
  */
 export function ProgramHeadContributorMatrix({
   outcomes,
-  selectedPloId,
+  selectedGoId,
 }: ProgramHeadContributorMatrixProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h3 className="text-title-sm text-foreground">CILO contributor matrix</h3>
         <p className="text-body-sm text-text-secondary">
-          Every Program Learning Outcome mean below is built from these CILO-level contributions.
-          Means and counts pool valid in-scale ratings only.
+          Every Graduate Outcome mean below is built from these CILO-level contributions. Means and
+          counts pool valid in-scale ratings only.
         </p>
       </div>
       <div className="flex flex-col gap-3">
         {outcomes.map((outcome) => {
-          const isSelected = outcome.ploId === selectedPloId;
+          const isSelected = outcome.goId === selectedGoId;
           return (
             <Disclosure
-              key={outcome.ploId}
+              key={outcome.goId}
               open={isSelected || undefined}
               className="border-border/80 bg-card rounded-xl border px-4 py-3 shadow-xs sm:px-5"
             >

@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   getProgramHeadTemplateMock,
-  listProgramPloOptionsMock,
+  listProgramGoOptionsMock,
   notFoundMock,
   resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
   getProgramHeadTemplateMock: vi.fn(),
-  listProgramPloOptionsMock: vi.fn(),
+  listProgramGoOptionsMock: vi.fn(),
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
@@ -17,7 +17,7 @@ const {
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/instruments/services/manage-program-head-templates", () => ({
   getProgramHeadTemplate: getProgramHeadTemplateMock,
-  listProgramPloOptions: listProgramPloOptionsMock,
+  listProgramGoOptions: listProgramGoOptionsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -55,7 +55,7 @@ describe("selected Program template edit route", () => {
         },
       },
     });
-    listProgramPloOptionsMock.mockResolvedValue({ success: true, data: { plos: [] } });
+    listProgramGoOptionsMock.mockResolvedValue({ success: true, data: { gos: [] } });
   });
 
   it("passes only serializable data to the client builder for an institutional baseline", async () => {

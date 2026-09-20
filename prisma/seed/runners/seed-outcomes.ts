@@ -6,7 +6,7 @@ import {
   ciloDefsMKT,
   ciloDefsNewCourses,
   ciloMappingDefs,
-  ploDefs,
+  goDefs,
   iloDefs,
 } from "../fixtures/outcomes";
 import type { FoundationContext, OutcomeContext } from "../types";
@@ -15,16 +15,16 @@ export async function seedOutcomes({
   pMap,
   cMap,
 }: Pick<FoundationContext, "pMap" | "cMap">): Promise<OutcomeContext> {
-  console.log("  → Program Learning Outcomes...");
-  const ploMap = new Map<string, { id: string }>();
-  for (const g of ploDefs) {
+  console.log("  → Graduate Outcomes...");
+  const goMap = new Map<string, { id: string }>();
+  for (const g of goDefs) {
     const prog = pMap.get(g.pc)!;
-    const plo = await prisma.pLO.upsert({
+    const go = await prisma.gO.upsert({
       where: { program_id_code: { program_id: prog.id, code: g.code } },
       update: { description: g.desc, is_active: true },
       create: { code: g.code, description: g.desc, program_id: prog.id },
     });
-    ploMap.set(g.code, plo);
+    goMap.set(g.code, go);
   }
 
   console.log("  → Institutional Outcomes...");
@@ -72,13 +72,13 @@ export async function seedOutcomes({
   console.log("  → CILO Mappings...");
   for (const def of ciloMappingDefs) {
     const cilo = (ciloMap.get(def.courseCode) ?? []).find((c) => c.order === def.ciloOrder);
-    const plo = ploMap.get(def.ploCode)!;
+    const go = goMap.get(def.goCode)!;
     const existing = await prisma.cILOMapping.findFirst({
-      where: { cilo_id: cilo!.id, plo_id: plo.id },
+      where: { cilo_id: cilo!.id, go_id: go.id },
     });
     if (!existing) {
       await prisma.cILOMapping.create({
-        data: { cilo_id: cilo!.id, plo_id: plo.id, manifestation: def.manifestation },
+        data: { cilo_id: cilo!.id, go_id: go.id, manifestation: def.manifestation },
       });
     } else if (existing.manifestation === null) {
       // Classify legacy rows created before the manifestation column existed.
@@ -122,5 +122,5 @@ export async function seedOutcomes({
     }
   }
 
-  return { ploMap, iloMap, ciloMap };
+  return { goMap, iloMap, ciloMap };
 }

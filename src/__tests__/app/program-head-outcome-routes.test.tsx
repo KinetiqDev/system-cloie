@@ -12,7 +12,7 @@ const { notFoundMock, listGOsMock, listMappingsMock } = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/outcomes/services/manage-program-head-outcomes", () => ({
-  listProgramPLOs: listGOsMock,
+  listProgramGOs: listGOsMock,
   listCILOMappingsForProgram: listMappingsMock,
 }));
 
@@ -39,7 +39,7 @@ describe("selected Program Outcome routes", () => {
   it("passes the route Program to the Outcome read", async () => {
     listGOsMock.mockResolvedValue({
       success: true,
-      data: { plos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
+      data: { gos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
     });
     const Page = (await import("@/app/(app)/program-head/programs/[programId]/outcomes/page"))
       .default;
@@ -64,7 +64,7 @@ describe("selected Program Outcome routes", () => {
     expect(notFoundMock).toHaveBeenCalled();
   });
 
-  it("renders a read-only manifestation review with every PLO, full labels, and exhaustive readiness", async () => {
+  it("renders a read-only manifestation review with every GO, full labels, and exhaustive readiness", async () => {
     listMappingsMock.mockResolvedValue({
       success: true,
       data: [
@@ -72,30 +72,28 @@ describe("selected Program Outcome routes", () => {
           courseId: "course-ps",
           courseCode: "CS101",
           courseTitle: "Introduction to Computing",
-          plos: [
-            { id: "plo-1", code: "PLO-1", description: "Analyze problems" },
-            { id: "plo-2", code: "PLO-2", description: "Design solutions" },
+          gos: [
+            { id: "go-1", code: "GO-1", description: "Analyze problems" },
+            { id: "go-2", code: "GO-2", description: "Design solutions" },
           ],
-          archivedPlos: [
-            { id: "plo-9", code: "PLO-9", description: "Retired outcome" },
-          ],
+          archivedGos: [{ id: "go-9", code: "GO-9", description: "Retired outcome" }],
           cilos: [
             {
               id: "cilo-complete",
               description: "Design a solution",
               manifestations: [
-                { ploId: "plo-1", manifestation: "LEARNING" },
-                { ploId: "plo-2", manifestation: "PRACTICE" },
+                { goId: "go-1", manifestation: "LEARNING" },
+                { goId: "go-2", manifestation: "PRACTICE" },
               ],
-              archivedManifestations: [{ ploId: "plo-9", manifestation: "OPPORTUNITY" }],
+              archivedManifestations: [{ goId: "go-9", manifestation: "OPPORTUNITY" }],
               readiness: "ready",
             },
             {
               id: "cilo-gap",
               description: "Evaluate outcomes",
               manifestations: [
-                { ploId: "plo-1", manifestation: null },
-                { ploId: "plo-2", manifestation: null },
+                { goId: "go-1", manifestation: null },
+                { goId: "go-2", manifestation: null },
               ],
               archivedManifestations: [],
               readiness: "incomplete-mapping",
@@ -117,8 +115,8 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("CILO Mapping Review");
     expect(html).not.toContain("Shared General Education");
     expect(html).not.toContain("ILO-1");
-    expect(html).toContain("PLO-1");
-    expect(html).toContain("PLO-2");
+    expect(html).toContain("GO-1");
+    expect(html).toContain("GO-2");
     expect(html).toContain("Analyze problems");
     expect(html).toContain("Design solutions");
     expect(html).toContain("Learning (L)");
@@ -128,8 +126,8 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("Needs mapping");
     expect(html).toContain("bg-success-soft");
     expect(html).toContain("bg-warning-soft");
-    expect(html).toContain("PLO-9");
-    expect(html).toContain("Archived Program Learning Outcomes");
+    expect(html).toContain("GO-9");
+    expect(html).toContain("Archived Graduate Outcomes");
     expect(html).toContain("Opportunity (O)");
     expect(html).toContain("This review is read-only.");
     expect(html).not.toContain("Secretary");
