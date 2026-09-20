@@ -23,3 +23,10 @@ The program-level outcome concept was previously called Program Learning Outcome
 - Physical migration SQL is not changed and no database migration is required.
 - Callers of renamed application symbols are updated in the same cutover. The legacy `ploId` URL alias is intentionally retained only at the parsing boundary.
 - `GRADUATE_OUTCOME`, `GO-*` codes, historical snapshots, and `graduate-outcomes` answer keys remain readable after deployment.
+
+## Related issue sequencing
+
+- Issue #603 is superseded and closed by this decision.
+- Issues #625 and #626 remain separate behavior changes; their current titles and follow-up notes use Graduate Outcome (GO) terminology while preserving their existing physical and persisted compatibility identifiers.
+
+Related: [#627](https://github.com/KinetiqDev/system-cloie/issues/627), [#625](https://github.com/KinetiqDev/system-cloie/issues/625), [#626](https://github.com/KinetiqDev/system-cloie/issues/626).
