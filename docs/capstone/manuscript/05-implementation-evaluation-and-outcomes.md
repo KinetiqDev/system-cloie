@@ -55,7 +55,7 @@ Per the [official guide, Chapter 5](../guide/technical-document-guide-2026.md): 
 
 ### Working notes (from repository evidence)
 
-- Known deferred/unsuitable areas already recorded in domain docs must be disclosed, not hidden: e.g. the ILO-to-PLO crosswalk is explicitly deferred ([src/features/outcomes/CONTEXT.md](../../../src/features/outcomes/CONTEXT.md)); readiness snapshot legacy semantics ([src/features/outcomes/CONTEXT.md](../../../src/features/outcomes/CONTEXT.md)); outstanding operational backup readiness ([docs/operations/deployment-inventory.md](../../operations/deployment-inventory.md))
+- Known deferred/unsuitable areas already recorded in domain docs must be disclosed, not hidden: e.g. the ILO-to-GO crosswalk is explicitly deferred ([src/features/outcomes/CONTEXT.md](../../../src/features/outcomes/CONTEXT.md)); readiness snapshot legacy semantics ([src/features/outcomes/CONTEXT.md](../../../src/features/outcomes/CONTEXT.md)); outstanding operational backup readiness ([docs/operations/deployment-inventory.md](../../operations/deployment-inventory.md))
 - Defects and technical debt discussion draws from the issue/revision log: [docs/capstone/evidence/testing-validation.md](../evidence/testing-validation.md) (Appendix G-3)
 
 ## 5.6 Deployment, Handover and Operational Readiness
@@ -75,4 +75,4 @@ Per the [official guide, Chapter 5](../guide/technical-document-guide-2026.md): 
 ### Working notes (from repository evidence)
 
 - Conclusions must be evidence-based against the objectives and success criteria defined in Chapter 1 ([01-project-context-and-definition.md](01-project-context-and-definition.md)) and verified in the RTM ([docs/capstone/evidence/requirements-traceability.md](../evidence/requirements-traceability.md))
-- Recommendations may draw on explicitly deferred work already documented in ADRs and CONTEXT.md files (e.g. ILO-to-PLO crosswalk, backup scheduling); do not invent future-scope commitments.
+- Recommendations may draw on explicitly deferred work already documented in ADRs and CONTEXT.md files (e.g. ILO-to-GO crosswalk, backup scheduling); do not invent future-scope commitments.

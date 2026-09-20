@@ -846,7 +846,7 @@ Columns:
 | Evaluation | Stakeholder | Bound question | Ratings | Responses | Mean | Action |
 | ---------- | ----------- | -------------- | ------: | --------: | ---: | ------ |
 
-Use publication-time `CentralDeploymentPloSnapshot` to trace the exact question.
+Use publication-time `CentralDeploymentGoSnapshot` to trace the exact question.
 
 ---
 
@@ -1563,7 +1563,7 @@ src/features/analytics/aggregators/
   participation.ts
   quantitative.ts
   cilo.ts
-  plo.ts
+  go.ts
   qualitative.ts
   trends.ts
 
@@ -1700,8 +1700,8 @@ type CiloMetric = {
 
   mappings: Array<{
     goId: string;
-    ploCode: string;
-    ploDescription: string;
+    goCode: string;
+    goDescription: string;
     manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY";
   }>;
 

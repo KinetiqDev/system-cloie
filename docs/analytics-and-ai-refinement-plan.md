@@ -14,7 +14,7 @@ Based on a comprehensive audit of the repository, the brainstorming session, and
 
 ### Data & Analytics Correctness
 
-- **Historical PLO Traceability Gap:** Course-derived PLO metrics (`buildCourseDerivedPloMetrics`) join publication-time question-to-CILO bindings with the **current, live** `CILOMapping` table. If a Program Head edits a CILO-to-PLO mapping today, historical course evidence from two years ago is reinterpreted under the new mapping. (Program-wide central deployments correctly use `CentralDeploymentPloSnapshot`).
+- **Historical GO Traceability Gap:** Course-derived GO metrics (`buildCourseDerivedGoMetrics`) join publication-time question-to-CILO bindings with the **current, live** `CILOMapping` table. If a Program Head edits a CILO-to-GO mapping today, historical course evidence from two years ago is reinterpreted under the new mapping. (Program-wide central deployments correctly use `CentralDeploymentGoSnapshot`).
 - **Incomparable Visual Rankings:** The Program Head "Stakeholders" and "Courses" tabs visually rank evidence sources (e.g., Course-Bound vs. Industry Partner) side-by-side in single bar charts, implying an apples-to-apples comparison despite different instruments, scales, and respondent populations.
 
 ### UX & Data Visualization
@@ -28,7 +28,7 @@ Based on a comprehensive audit of the repository, the brainstorming session, and
 
 - **Monolithic PH AI Packet:** The PH AI service rebuilds all six analytics domains and sends one massive bounded packet to the LLM, regardless of which tab the user is viewing. It also lacks caching and in-flight deduplication (unlike the Faculty implementation).
 - **Misleading Sentiment Contracts:** Both Faculty and PH AI schemas force the LLM to output `sentiment` (positive/negative/neutral) or generic `strengths`/`areasForReview`. This encourages "management-consultant sludge" and misapplies stock-market sentiment analysis to educational Likert scales.
-- **Coupled Evidence Thresholds:** PH AI requires _both_ sufficient quantitative responses and sufficient qualitative items before generating anything. A lack of written feedback blocks Outcomes AI, even if quantitative PLO evidence is robust.
+- **Coupled Evidence Thresholds:** PH AI requires _both_ sufficient quantitative responses and sufficient qualitative items before generating anything. A lack of written feedback blocks Outcomes AI, even if quantitative GO evidence is robust.
 
 ### Seed & Demo Data
 
@@ -41,16 +41,16 @@ Based on a comprehensive audit of the repository, the brainstorming session, and
 - **Faculty AI Caching Pattern:** The SHA-256 LRU cache with in-flight request deduplication (`generate-faculty-analytics-insight.ts`) is excellent. It will be ported to the Program Head.
 - **Server-Side Evidence Rebuilding:** The strict rule that AI evidence must be rebuilt and authorized server-side (never trusting client aggregates) remains inviolable.
 - **Recharts Monopoly:** We will use the existing Recharts infrastructure and shared System CLOIE chart primitives. No new charting libraries (e.g., D3, Nivo, Chart.js) will be introduced.
-- **Manifestations as Descriptive:** `CILOMappingManifestation` (LEARNING, PRACTICE, OPPORTUNITY) will remain a descriptive classification. We will **not** invent numerical weights (e.g., Learning = 25%) to calculate PLO attainment.
+- **Manifestations as Descriptive:** `CILOMappingManifestation` (LEARNING, PRACTICE, OPPORTUNITY) will remain a descriptive classification. We will **not** invent numerical weights (e.g., Learning = 25%) to calculate GO attainment.
 - **Qualitative Privacy Boundaries:** The existing respondent-count thresholds that suppress raw comments and expose only redacted aggregate term frequencies will be strictly preserved.
 
 ---
 
 ## 3. Ideas to Reject or Modify
 
-- **Reject: Pie/Donut/Radar Charts for PH Analytics.** Radar charts obscure exact values and make comparing CILO/PLO attainment difficult. We will use Lollipop/Dot plots and Horizontal Bars.
+- **Reject: Pie/Donut/Radar Charts for PH Analytics.** Radar charts obscure exact values and make comparing CILO/GO attainment difficult. We will use Lollipop/Dot plots and Horizontal Bars.
 - **Reject: AI Sentiment Analysis.** We will completely remove `sentiment`, `positive`, `negative`, and `mixed` from the AI Zod schemas. Educational evidence requires evidence-backed observations, not sentiment badges.
-- **Modify: Publication-Time CILO-to-PLO Snapshots.** While adding a `cilo_plo_mappings_snapshot` JSON column to `CourseBoundEvaluation` is the correct long-term fix for historical traceability, it requires a complex schema migration and backfill. **Decision:** Defer the schema migration to a future phase. For this refinement, we will retain the live-mapping join but ensure the UI prominently discloses this limitation (as current tests enforce) and document it as a known capstone boundary.
+- **Modify: Publication-Time CILO-to-GO Snapshots.** While adding a `cilo_go_mappings_snapshot` JSON column to `CourseBoundEvaluation` is the correct long-term fix for historical traceability, it requires a complex schema migration and backfill. **Decision:** Defer the schema migration to a future phase. For this refinement, we will retain the live-mapping join but ensure the UI prominently discloses this limitation (as current tests enforce) and document it as a known capstone boundary.
 - **Modify: Monolithic PH AI.** Instead of one giant report, we will split PH AI into view-specific packets (Outcomes, Courses, Stakeholders, Trends, Qualitative).
 
 ---
@@ -67,7 +67,7 @@ Based on a comprehensive audit of the repository, the brainstorming session, and
 
 ### Program Head Analytics
 
-1. **Outcomes:** PLO Lollipop/Dot Plot -> Click to expand CILO Contributor Matrix (Course, Manifestation, Mean, N).
+1. **Outcomes:** GO Lollipop/Dot Plot -> Click to expand CILO Contributor Matrix (Course, Manifestation, Mean, N).
 2. **Courses:** Horizontal Ranked Bar (Course-Bound evidence only).
 3. **Stakeholders:** Separate Summary Cards per source (Mean, N, Instrument). **No cross-source ranking.**
 4. **Trends:** Source-specific Line Chart with comparability breaks.
@@ -85,29 +85,29 @@ Based on a comprehensive audit of the repository, the brainstorming session, and
 | **Faculty CILO**     | Outcome attainment  | Mean per CILO      | Horizontal Bar          | Same scale         | CILO, N, Scale            | "No mapped CILOs"         |
 | **Faculty Question** | Outliers            | Mean per Question  | Horizontal Bar + Expand | Same instrument    | Question, Section, N      | "X questions unrated"     |
 | **Faculty Trends**   | Change over time    | Mean per period    | Line + Dots             | Fingerprint match  | Period, Break reason      | "Select one course"       |
-| **PH Outcomes**      | PLO status          | Mean per PLO       | Lollipop / Dot Plot     | Current mappings   | PLO, CILO contributors    | "No mapped evidence"      |
+| **PH Outcomes**      | GO status           | Mean per GO        | Lollipop / Dot Plot     | Current mappings   | GO, CILO contributors     | "No mapped evidence"      |
 | **PH Courses**       | Course differences  | Mean per Course    | Horizontal Bar          | Course-bound only  | Course, Instrument, N     | "No course evaluations"   |
 | **PH Stakeholders**  | Source evidence     | Mean per Source    | Summary Cards           | N/A (Never rank)   | Source, Instrument, N     | "No source data"          |
 | **PH Trends**        | Construct change    | Mean per period    | Line + Dots             | Fingerprint match  | Source, Period, Break     | "Select evidence source"  |
 
 ---
 
-## 6. Traceability Model: CILO → PLO Evidence Chain
+## 6. Traceability Model: CILO → GO Evidence Chain
 
-The Program Head must be able to trace a PLO result to its concrete course-level evidence.
+The Program Head must be able to trace a GO result to its concrete course-level evidence.
 
 **The Evidence Path:**
-`Evaluation Response` → `Quantitative Question` → `CourseBoundCiloQuestionBinding` → `CILO` → `CILOMapping` (Manifestation) → `PLO Aggregate`
+`Evaluation Response` → `Quantitative Question` → `CourseBoundCiloQuestionBinding` → `CILO` → `CILOMapping` (Manifestation) → `GO Aggregate`
 
 **UI Implementation:**
 
-1. **PLO Lollipop Chart:** Shows overall PLO means.
-2. **CILO Contributor Table:** Clicking a PLO expands a table showing:
+1. **GO Lollipop Chart:** Shows overall GO means.
+2. **CILO Contributor Table:** Clicking a GO expands a table showing:
    - Contributing CILO Code & Description
    - Course Code & Title
    - Manifestation (Learning / Practice / Opportunity)
    - Mean Rating & Valid Rating Count
-3. **CILO-PLO Matrix (Optional/Secondary):** A read-only grid showing how CILOs map to PLOs via manifestations for the selected program.
+3. **CILO-GO Matrix (Optional/Secondary):** A read-only grid showing how CILOs map to GOs via manifestations for the selected program.
 
 ---
 
@@ -121,7 +121,7 @@ Both Faculty and PH will use a unified, evidence-bound schema. Sections return `
 type InsightSection = {
   observation: string; // What stands out
   evidence: string[]; // Exact numbers anchoring the claim
-  connection?: string; // (PH Outcomes) How CILOs map to PLO
+  connection?: string; // (PH Outcomes) How CILOs map to GO
   limitation: string | null; // Evidence boundary (e.g., small N, self-reported)
   reviewQuestion: string | null; // Question for human academic review
 } | null;
@@ -144,7 +144,7 @@ type AIInsightResponse = {
 
 The PH AI service will accept an `analyticsView` parameter.
 
-- **Outcomes Packet:** PLO means, CILO contributors, manifestations, rating counts.
+- **Outcomes Packet:** GO means, CILO contributors, manifestations, rating counts.
 - **Stakeholders Packet:** Source buckets, instrument contexts, response counts.
 - **Trends Packet:** Comparable runs, fingerprint breaks, period deltas.
 - **Qualitative Packet:** Ranked term frequencies, prompt coverage.
@@ -168,12 +168,12 @@ Decouple quantitative and qualitative thresholds.
 
 ## 8. Historical-Data Decision (Snapshots)
 
-**Problem:** `CourseBoundEvaluation` snapshots the CILOs and Course Info, but relies on the live `CILOMapping` table to route historical ratings to PLOs.
+**Problem:** `CourseBoundEvaluation` snapshots the CILOs and Course Info, but relies on the live `CILOMapping` table to route historical ratings to GOs.
 **Decision:** **Defer Schema Migration.**
-Adding `cilo_plo_mappings_snapshot Json` to `CourseBoundEvaluation` is the correct architectural fix, but it carries high migration risk and backfill complexity for this sprint.
+Adding `cilo_go_mappings_snapshot Json` to `CourseBoundEvaluation` is the correct architectural fix, but it carries high migration risk and backfill complexity for this sprint.
 **Mitigation:**
 
-1. Retain the live-mapping join in `buildCourseDerivedPloMetrics`.
+1. Retain the live-mapping join in `buildCourseDerivedGoMetrics`.
 2. Ensure the UI displays the existing "Publication-time mapping snapshots are not yet available" disclosure.
 3. Document this explicitly in the Capstone Technical Document as a known boundary and future engineering task.
 
@@ -219,7 +219,7 @@ To demonstrate Trends and AI edge cases, the seed orchestrator (`prisma/seed.ts`
 ### Phase 4: Program Head UX & Traceability
 
 - Replace PH Outcomes chart with Lollipop/Dot plot.
-- Implement CILO Contributor Matrix expansion for PLOs.
+- Implement CILO Contributor Matrix expansion for GOs.
 - Refactor PH Stakeholders tab to use Summary Cards instead of ranked cross-source bars.
 - Refactor PH Courses tab to horizontal bars (course-bound only).
 - **Deliverable:** Traceable, comparable PH analytics dashboard.
@@ -235,7 +235,7 @@ To demonstrate Trends and AI edge cases, the seed orchestrator (`prisma/seed.ts`
 
 ## 11. Test & Verification Requirements
 
-- **Analytics Correctness:** Vitest unit tests for `buildCourseDerivedPloMetrics` ensuring live mappings are used correctly and scale validation is enforced.
+- **Analytics Correctness:** Vitest unit tests for `buildCourseDerivedGoMetrics` ensuring live mappings are used correctly and scale validation is enforced.
 - **Comparability:** Unit tests for `splitComparableRuns` and fingerprint logic ensuring lines never connect across instrument/scale/outcome changes.
 - **Cache Invalidation:** Tests verifying that changing a CILO mapping or receiving a new response changes the SHA-256 evidence hash and triggers a new provider call.
 - **Privacy:** Tests ensuring qualitative AI packets never contain raw comments or respondent identifiers, and suppress output below the threshold.
@@ -246,10 +246,10 @@ To demonstrate Trends and AI edge cases, the seed orchestrator (`prisma/seed.ts`
 
 ## 12. Risks & Unresolved Questions
 
-- **Risk:** The deferred `cilo_plo_mappings_snapshot` means historical PLO analytics remain technically mutable if mappings are edited. The UI disclosure must be prominent and understood by the client/adviser.
+- **Risk:** The deferred `cilo_go_mappings_snapshot` means historical GO analytics remain technically mutable if mappings are edited. The UI disclosure must be prominent and understood by the client/adviser.
 - **Risk:** Moving PH AI to inline automatic generation increases Groq API calls. The process-local LRU cache and in-flight deduplication are critical to prevent token waste and rate limiting.
 - **Client Decision:** Confirm that the client accepts the removal of the "AI Insights" tab and the "Sentiment" badges in favor of the evidence-bound `InsightSection` contract.
-- **Client Decision:** Confirm that the descriptive nature of Manifestations (Learning/Practice/Opportunity) should not be converted into numerical weights for PLO attainment calculations.
+- **Client Decision:** Confirm that the descriptive nature of Manifestations (Learning/Practice/Opportunity) should not be converted into numerical weights for GO attainment calculations.
 
 ---
 

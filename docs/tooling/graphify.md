@@ -77,9 +77,9 @@ Typical CLOIE starting points:
 - Domain-contract lookup: `graphify query "responses one-response invariant lifecycle"`
 - Response-to-analytics flow: `graphify path "Responses" "Analytics"` or `graphify query "how do submitted responses become analytics evidence"`
 - Role-scope control: `graphify query "role scope authorization program head"`
-- CILO-to-PLO mapping: `graphify path "CILO" "PLO"`
+- CILO-to-GO mapping: `graphify path "CILO" "GO"`
 - CourseAssignment contract: `graphify explain "CourseAssignment"`
-- Response-to-PLO evidence trail: `graphify path "Response" "PLO"`
+- Response-to-GO evidence trail: `graphify path "Response" "GO"`
 
 Query results name nodes with `source_file`/location and edge confidence tags (`EXTRACTED`/`INFERRED`); always open the cited source before trusting a conclusion.
 
