@@ -7,8 +7,11 @@ import {
   exitSurveyStructure,
   industryEvalStructure,
 } from "../fixtures/instruments";
-import { listTemplateLikertQuestions } from "../../../src/features/instruments/types";
-import type { FoundationContext, OutcomeContext, TemplateStructure } from "../types";
+import {
+  listTemplateLikertQuestions,
+  type TemplateStructure,
+} from "../../../src/features/instruments/types";
+import type { FoundationContext, OutcomeContext } from "../types";
 
 export async function seedInstruments(
   _outcomeContext?: OutcomeContext,

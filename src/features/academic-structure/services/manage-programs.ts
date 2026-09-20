@@ -172,25 +172,6 @@ export async function deleteProgram(input: {
   }
 }
 
-export async function getProgram(id: string) {
-  return prisma.program.findUnique({
-    where: { id },
-    include: {
-      majors: {
-        orderBy: { name: "asc" },
-      },
-      _count: {
-        select: {
-          courses: true,
-          gos: true,
-          student_profiles: true,
-          faculty_program_affiliations: true,
-        },
-      },
-    },
-  });
-}
-
 export async function createProgram(
   input: CreateProgramInput
 ): Promise<ServiceResult<{ id: string }>> {

@@ -70,7 +70,7 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-export type TermInstanceSummary = {
+type TermInstanceSummary = {
   id: string;
   semester: string;
   term: string | null;
@@ -107,7 +107,7 @@ function buildTermInstanceWhere(
 }
 
 /** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
-export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
+const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
  * Evidence-source narrowing for analytics reads (§15). COURSE keeps only
@@ -413,7 +413,7 @@ export function buildPeriodLabel(
 }
 
 /** Readable label for one canonical AcademicTermInstance. */
-export function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
+function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
   const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
   const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
   return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");

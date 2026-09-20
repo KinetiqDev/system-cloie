@@ -66,7 +66,7 @@ type GoAggregate = {
 };
 
 /** One rating reaching one GO through one binding row. */
-export type GoBinding = {
+type GoBinding = {
   goId: string;
   goCode: string;
   goDescription: string;
