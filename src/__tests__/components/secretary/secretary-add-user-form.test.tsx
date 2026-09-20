@@ -1103,7 +1103,7 @@ describe("SecretaryAddUserForm existing account pivot", () => {
     await screen.findByText(existingUser.name);
 
     fireEvent.click(screen.getByRole("option", { name: /^faculty$/i }));
-    fireEvent.click(screen.getByRole("option", { name: /^BSIT —/i }));
+    fireEvent.click(await screen.findByRole("option", { name: /^BSIT —/i }));
     fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
 
     await waitFor(() => {
