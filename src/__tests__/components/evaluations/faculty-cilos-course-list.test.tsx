@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
@@ -75,8 +75,20 @@ async function openModal() {
 }
 
 describe("FacultyCilosCourseList", () => {
+  let toastMessages: Array<{ kind: string; message: string }> = [];
+  const toastListener = ((event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    toastMessages.push({ kind: detail.kind, message: detail.message });
+  }) as EventListener;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    toastMessages = [];
+    window.addEventListener("cloie-toast", toastListener);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("cloie-toast", toastListener);
   });
 
   it("renders course cards with scope badges and preparation status", () => {
@@ -126,17 +138,65 @@ describe("FacultyCilosCourseList", () => {
       expect(screen.getByRole("status")).toHaveTextContent("CILOs saved successfully.");
     });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "CILOs saved successfully.",
+      });
+    });
   });
 
   it("surfaces a failed save without closing the modal", async () => {
     renderList();
     await openModal();
-
     saveCilosAction.mockResolvedValue({ success: false, error: "Failed to save CILOs." });
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save CILOs.");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({ kind: "error", message: "Failed to save CILOs." });
+    });
+  });
+
+  it("warns when the save succeeds but the list cannot be refreshed", async () => {
+    renderList();
+    await openModal();
+
+    saveCilosAction.mockResolvedValue({ success: true });
+    loadCilosAction.mockResolvedValueOnce({ success: false, error: "Refresh unavailable." });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "warning",
+        message:
+          "CILOs saved, but the list could not be refreshed. Retry refresh before saving again.",
+      });
+    });
+    expect(screen.getByText(/could not be refreshed\. Saving again before/)).toBeInTheDocument();
+  });
+
+  it("announces a successful refresh retry after a partial save", async () => {
+    renderList();
+    await openModal();
+
+    saveCilosAction.mockResolvedValue({ success: true });
+    loadCilosAction.mockResolvedValueOnce({ success: false, error: "Refresh unavailable." });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    await screen.findByRole("button", { name: "Retry refresh" });
+
+    loadCilosAction.mockResolvedValueOnce({
+      success: true,
+      cilos: [{ id: "cilo-1", description: "Apply core concepts" }],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry refresh" }));
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "CILO list refreshed.",
+      });
+    });
   });
 
   it("links General Education courses to the alignment workspace", async () => {

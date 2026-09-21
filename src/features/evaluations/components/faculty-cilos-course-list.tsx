@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Input } from "@/components/ui/input";
+import { showToast } from "@/components/ui/toast";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -128,7 +129,10 @@ function ViewEditCilosModal({
   const [needsReconcile, setNeedsReconcile] = useState(false);
 
   // Load CILOs when modal opens
-  const handleLoad = async () => {
+  const handleLoad = async (options?: {
+    afterSave?: boolean;
+    retryRefresh?: boolean;
+  }): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -142,11 +146,27 @@ function ViewEditCilosModal({
         );
         setLoaded(true);
         setNeedsReconcile(false);
+        if (options?.retryRefresh) {
+          showToast("CILO list refreshed.", "success");
+        }
+        return true;
       } else {
-        setError(result.error ?? "Failed to load CILOs.");
+        if (options?.afterSave) {
+          return false;
+        }
+        const message = result.error ?? "Failed to load CILOs.";
+        setError(message);
+        showToast(message, "error");
+        return false;
       }
     } catch {
-      setError("Failed to load CILOs.");
+      const message = "Failed to load CILOs.";
+      if (options?.afterSave) {
+        return false;
+      }
+      setError(message);
+      showToast(message, "error");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -213,17 +233,29 @@ function ViewEditCilosModal({
       }));
       const result = await saveCilosAction(course.id, payload);
       if (result.success) {
-        setSuccessMessage("CILOs saved successfully.");
         // Entries stay isNew until the reload below assigns persisted IDs;
         // fence Save until that reconciliation lands.
         setNeedsReconcile(true);
         // Reload to get fresh IDs
-        await handleLoad();
+        const reconciled = await handleLoad({ afterSave: true });
+        if (reconciled) {
+          setSuccessMessage("CILOs saved successfully.");
+          showToast("CILOs saved successfully.", "success");
+        } else {
+          showToast(
+            "CILOs saved, but the list could not be refreshed. Retry refresh before saving again.",
+            "warning"
+          );
+        }
       } else {
-        setError(result.error ?? "Failed to save CILOs.");
+        const message = result.error ?? "Failed to save CILOs.";
+        setError(message);
+        showToast(message, "error");
       }
     } catch {
-      setError("Failed to save CILOs.");
+      const message = "Failed to save CILOs.";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setIsSaving(false);
     }
@@ -250,7 +282,11 @@ function ViewEditCilosModal({
               Your changes were saved, but the list could not be refreshed. Saving again before
               refreshing would create duplicates.
             </span>
-            <Button variant="outline" size="sm" onClick={() => void handleLoad()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleLoad({ retryRefresh: true })}
+            >
               Retry refresh
             </Button>
           </AlertDescription>
