@@ -22,7 +22,7 @@ function roleCardCopy(role: Role, isActive: boolean): RoleCardCopy {
   if (isActive) {
     return {
       frame: "border-primary/50",
-      badge: <span className="text-caption text-primary font-semibold">Current</span>,
+      badge: <span className="text-caption text-link font-semibold">Current</span>,
       description: "You are currently working in this role.",
       variant: "secondary",
       action: "Continue",

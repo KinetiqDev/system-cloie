@@ -43,10 +43,10 @@
    * 2. Semantic Surfaces (Light Defaults)
    * ======================================== */
   --surface-primary: #ffffff;
-  --surface-secondary: #f8fafc;
-  --surface-tertiary: #f1f5f9;
-  --surface-muted: #e2e8f0;
-  --surface-hover: #f1f5f9;
+  --surface-secondary: #f4f7fb;
+  --surface-tertiary: #e9eef6;
+  --surface-muted: #dde5ef;
+  --surface-hover: #eef3f9;
   --surface-input: #ffffff;
   --surface-popover: #ffffff;
   --surface-overlay: #ffffff;
@@ -61,8 +61,8 @@
   /* ========================================
    * 3. Borders (Light Defaults)
    * ======================================== */
-  --border-default: #e2e8f0;
-  --border-strong: #cbd5e1;
+  --border-default: #d3dbe5;
+  --border-strong: #a9b6c6;
   --input-border: #64748b;
 
   --color-border: var(--border-default);
@@ -73,8 +73,8 @@
    * ======================================== */
   --text-primary: #0f172a;
   --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-disabled: #94a3b8;
+  --text-muted: #4d5c72;
+  --text-disabled: #78899f;
 
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
@@ -92,7 +92,7 @@
 
   --secondary-bg: #f1f5f9;
   --secondary-hover: #e2e8f0;
-  --secondary-border: #cbd5e1;
+  --secondary-border: #a9b6c6;
   --secondary-fg: #0f172a;
 
   /* Legacy alias for secondary action variables */
@@ -204,22 +204,22 @@
   --surface-secondary: #0b1120;
   --surface-tertiary: #172033;
   --surface-muted: #1e293b;
-  --surface-hover: #273449;
+  --surface-hover: #28344c;
   --surface-input: #0f172a;
   --surface-popover: #172033;
   --surface-overlay: #172033;
   --scrim: rgba(2, 6, 23, 0.6);
 
   /* Borders (Dark) */
-  --border-default: #334155;
-  --border-strong: #475569;
+  --border-default: #3b4b64;
+  --border-strong: #5f7288;
   --input-border: #64748b;
 
   /* Text / Foregrounds (Dark) */
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-disabled: #64748b;
+  --text-muted: #9dabbd;
+  --text-disabled: #8494a8;
 
   /* Interactive & Neutral Secondary (Dark) */
   --link-color: #60a5fa;
@@ -229,8 +229,8 @@
   --selected-fg: #bfdbfe;
 
   --secondary-bg: #1e293b;
-  --secondary-hover: #273449;
-  --secondary-border: #475569;
+  --secondary-hover: #28344c;
+  --secondary-border: #5f7288;
   --secondary-fg: #f8fafc;
 
   /* Status Roles (Dark) */

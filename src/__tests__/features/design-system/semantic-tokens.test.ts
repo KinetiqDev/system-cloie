@@ -71,9 +71,9 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
     it("defines approved Light variables in :root", () => {
       // Surface roles
       expect(tokensCss).toContain("--surface-primary: #ffffff");
-      expect(tokensCss).toContain("--surface-secondary: #f8fafc");
-      expect(tokensCss).toContain("--surface-tertiary: #f1f5f9");
-      expect(tokensCss).toContain("--surface-hover: #f1f5f9");
+      expect(tokensCss).toContain("--surface-secondary: #f4f7fb");
+      expect(tokensCss).toContain("--surface-tertiary: #e9eef6");
+      expect(tokensCss).toContain("--surface-hover: #eef3f9");
       expect(tokensCss).toContain("--surface-overlay: #ffffff");
       expect(tokensCss).toContain("--surface-input: #ffffff");
       expect(tokensCss).toContain("--surface-popover: #ffffff");
@@ -84,12 +84,12 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       // Text roles
       expect(tokensCss).toContain("--text-primary: #0f172a");
       expect(tokensCss).toContain("--text-secondary: #334155");
-      expect(tokensCss).toContain("--text-muted: #64748b");
-      expect(tokensCss).toContain("--text-disabled: #94a3b8");
+      expect(tokensCss).toContain("--text-muted: #4d5c72");
+      expect(tokensCss).toContain("--text-disabled: #78899f");
 
       // Border roles
-      expect(tokensCss).toContain("--border-default: #e2e8f0");
-      expect(tokensCss).toContain("--border-strong: #cbd5e1");
+      expect(tokensCss).toContain("--border-default: #d3dbe5");
+      expect(tokensCss).toContain("--border-strong: #a9b6c6");
       expect(tokensCss).toContain("--input-border: #64748b");
 
       // Status roles (Light)
@@ -121,7 +121,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       expect(tokensCss).toContain("--surface-primary: #111827");
       expect(tokensCss).toContain("--surface-secondary: #0b1120");
       expect(tokensCss).toContain("--surface-tertiary: #172033");
-      expect(tokensCss).toContain("--surface-hover: #273449");
+      expect(tokensCss).toContain("--surface-hover: #28344c");
       expect(tokensCss).toContain("--surface-overlay: #172033");
       expect(tokensCss).toContain("--surface-input: #0f172a");
       expect(tokensCss).toContain("--surface-popover: #172033");
@@ -132,12 +132,12 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
       // Text roles (Dark)
       expect(tokensCss).toContain("--text-primary: #f8fafc");
       expect(tokensCss).toContain("--text-secondary: #cbd5e1");
-      expect(tokensCss).toContain("--text-muted: #94a3b8");
-      expect(tokensCss).toContain("--text-disabled: #64748b");
+      expect(tokensCss).toContain("--text-muted: #9dabbd");
+      expect(tokensCss).toContain("--text-disabled: #8494a8");
 
       // Border roles (Dark)
-      expect(tokensCss).toContain("--border-default: #334155");
-      expect(tokensCss).toContain("--border-strong: #475569");
+      expect(tokensCss).toContain("--border-default: #3b4b64");
+      expect(tokensCss).toContain("--border-strong: #5f7288");
       expect(tokensCss).toContain("--input-border: #64748b");
 
       // Status roles (Dark)

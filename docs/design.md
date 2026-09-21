@@ -201,6 +201,7 @@ Exact sizes live in `globals.css`.
 
 - Use token utilities, not ad hoc type scales.
 - Body copy stays at least `0.875rem`; no text below `0.75rem`.
+- Decision text (KPI labels, status, nav labels, auth constraints, action links, chart axes) targets at least `0.875rem` as surfaces migrate; `0.75rem` (`text-label-sm`, `text-caption`) is reserved for tertiary metadata, timestamps, and non-decision annotations. New surfaces MUST meet the target; existing 12px decision text is queued for the typeset pass.
 - Headings use primary foreground, not cyan decoration.
 - Legal content uses `.legal-prose`.
 
@@ -338,6 +339,8 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Navy is limited to formal institutional/report content.
 - Portal cards may use slightly stronger hover elevation.
 - Numeric values use tabular figures.
+- Card edges carry grouping: `border-default` deepens until the border reads against both card and page in both themes; `border-strong` holds ≥3:1 on card surfaces where it marks control boundaries.
+- Primary-tint chips (`bg-primary/10`) pair with `text-link`, never `text-primary`. Muted chips keep `text-muted-foreground`; the retuned muted tokens clear AA on muted fills in both themes. Every tint pairing is verified, not inherited from the card.
 
 ### 8.6 Tables and Lists
 
@@ -356,7 +359,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - One recipe owns tab geometry: `src/components/ui/tabs-styles.ts`. Surfaces never patch tab size, gap, padding, or indicator at the callsite.
 - A line row scrolls its own overflow rather than the page; its underline sits outside the trigger box inside reserved row padding.
 - Choose the tab contract by what the view does: panel switchers render `Tabs` with `TabsContent` (`role="tab"`); view switchers that navigate render `ViewTabs`, a labelled `nav` of links that reuses the same recipe and marks the active view with `aria-current="page"`.
-- Cyan badges are categorical; semantic badges indicate status.
+- Cyan badges are categorical; semantic badges indicate status. Primary-tint chips use link text (see §8.5).
 - Progress includes a text/count/percentage.
 - Structure remains identical across themes.
 
@@ -379,6 +382,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - New/reworked charts should use shared shadcn-style wrappers when available.
 - Prepare and authorize data on the server; keep chart client boundaries narrow.
 - Use `--chart-*`, legends, tooltips, tabular values, low-contrast grids, and text summaries.
+- Axis ticks and legend text resolve through `fill-muted-foreground` on the recharts 3.x class names (`.recharts-cartesian-axis-tick-value`, `.recharts-legend-item-text`); every categorical chart keeps pattern/marker/line distinction plus direct labels and an exact-values table or summary so categories survive color-vision deficiency.
 - Export may be offered for data-heavy views.
 - Qualitative word clouds are single-series magnitude encodings: words may cycle
   the approved `--chart-1…5` tokens as solid fills (every token clears 4.5:1 on
@@ -447,6 +451,8 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 - Normal text: ≥4.5:1 contrast.
 - Large text and meaningful non-text boundaries: ≥3:1 where applicable.
 - Adjacent dark surfaces need visible luminance/border separation.
+- Disabled text is nonessential and never the sole carrier of meaning; it still clears ≥3:1 on its surface.
+- Tinted-surface pairings (primary washes, muted fills, soft status) each carry their own verified ink — never the card ink by inheritance.
 - All controls are keyboard-operable with logical, visible focus.
 - Overlays trap and restore focus appropriately.
 - Never communicate status or chart series by color alone.
