@@ -182,8 +182,13 @@ test.describe("accessibility sweep", () => {
     for (let i = 0; i < 6; i++) {
       await page.keyboard.press("Tab");
       const focusInside = await page.evaluate(() => {
+        const active = document.activeElement;
         const open = document.querySelector('[role="dialog"]');
-        return open?.contains(document.activeElement) ?? false;
+        return Boolean(
+          active &&
+          (open?.contains(active) ||
+            active.matches("[data-base-ui-focus-guard], [data-base-ui-inert]"))
+        );
       });
       expect(focusInside, `Tab ${i + 1} escaped the dialog`).toBe(true);
     }

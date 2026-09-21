@@ -815,6 +815,10 @@ describe("course roster pages", () => {
     expect(screen.getAllByText(/maria santos/i).length).toBeGreaterThan(0);
     expect(screen.getByText("Exact match")).toBeInTheDocument();
     expect(screen.getByText("No match")).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "Roster preview: All" })).toBeInTheDocument();
+    for (const column of ["Uploaded name", "System account", "Match and result", "Action"]) {
+      expect(screen.getByRole("columnheader", { name: column })).toBeInTheDocument();
+    }
     expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
     expect(screen.getAllByText("Invalid name").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Resolve: 1" })).toBeInTheDocument();
@@ -952,15 +956,19 @@ describe("course roster pages", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled()
     );
 
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ready: 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Roster preview: All" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Filter preview rows" })).toHaveTextContent(
+      "All (1)"
+    );
     expect(screen.getByText("Exact match")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
     await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(document.querySelector('[data-slot="drawer-popup"]')).toBeInTheDocument();
@@ -1034,11 +1042,11 @@ describe("course roster pages", () => {
       )
     );
     // The unresolved no-match row must be explicitly skipped before review completion.
-    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
-    expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
     await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(screen.getByText("Added to roster")).toBeInTheDocument();
     expect(screen.getAllByText("Not processed").length).toBeGreaterThan(0);
@@ -1167,15 +1175,13 @@ describe("course roster pages", () => {
       )
     );
     // Suggested matches and unresolved rows gate review completion.
-    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(/Acknowledge 1 suggested match/i);
     expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
 
     expect(screen.getByText("Suggested match")).toBeInTheDocument();
     expect(screen.getByText("extra or omitted middle names")).toBeInTheDocument();
-    expect(
-      screen.getByText("This confirmation will not add or restore any Students.")
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No Students will be added or restored/)).toBeInTheDocument();
     // Suggested rows need review even when the disposition is ready.
     expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Ready: 0" })).toBeInTheDocument();
@@ -1211,12 +1217,12 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Unskip" }));
     expect(screen.getByRole("button", { name: "Skipped: 0" })).toBeInTheDocument();
     // Acknowledgement plus an explicit skip satisfy the review guards.
-    const ack = screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ });
+    const ack = screen.getByRole("checkbox", { name: /I reviewed 1 suggested account/ });
     fireEvent.click(ack);
     expect(ack).toBeChecked();
-    expect(screen.getByRole("button", { name: /review complete/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeDisabled();
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
-    expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled();
   });
 
   it("blocks closing while a preview is pending", async () => {
@@ -1357,8 +1363,8 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() => expect(screen.getByText("Suggested match")).toBeInTheDocument());
 
-    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
-    const ack = screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ });
+    const reviewComplete = screen.getByRole("button", { name: /add \d+ students?/i });
+    const ack = screen.getByRole("checkbox", { name: /I reviewed 1 suggested account/ });
     expect(reviewComplete).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(
       /Acknowledge 1 suggested match before continuing/i
@@ -1368,9 +1374,7 @@ describe("course roster pages", () => {
     fireEvent.click(ack);
     expect(ack).toBeChecked();
     expect(reviewComplete).toBeEnabled();
-    expect(
-      screen.getByText("This confirmation will add or restore 1 Student.")
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 Student is ready to add or restore/)).toBeInTheDocument();
 
     // Changing the suggested account clears the acknowledgement.
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
@@ -1383,7 +1387,7 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: "Change" }));
     expect(screen.getByRole("button", { name: "Review: 1" })).toBeInTheDocument();
     expect(
-      screen.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ })
+      screen.getByRole("checkbox", { name: /I reviewed 1 suggested account/ })
     ).not.toBeChecked();
     expect(reviewComplete).toBeDisabled();
   });
@@ -1447,7 +1451,7 @@ describe("course roster pages", () => {
       )
     );
 
-    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    const reviewComplete = screen.getByRole("button", { name: /add \d+ students?/i });
     expect(reviewComplete).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
 
@@ -1549,7 +1553,7 @@ describe("course roster pages", () => {
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "John" } });
     fireEvent.click(await screen.findByRole("button", { name: /john.paul.santos@acd.edu.ph/i }));
 
-    const reviewComplete = screen.getByRole("button", { name: /review complete/i });
+    const reviewComplete = screen.getByRole("button", { name: /add \d+ students?/i });
     expect(reviewComplete).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(
       /The same Student is selected for rows 2 and 3/
@@ -1632,7 +1636,7 @@ describe("course roster pages", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
-    const reviewComplete = await screen.findByRole("button", { name: /review complete/i });
+    const reviewComplete = await screen.findByRole("button", { name: /add \d+ students?/i });
 
     // Two identical exact names prepare the same account; the duplicate blocks review.
     expect(reviewComplete).toBeDisabled();
@@ -2133,9 +2137,9 @@ describe("course roster confirmation results", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled()
     );
-    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
     await waitFor(() =>
       expect(
         screen.getAllByText(/Confirmation complete|Confirmation stopped/).length
@@ -2218,9 +2222,9 @@ describe("course roster confirmation results", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled()
     );
-    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /download failed rows/i })).toBeEnabled()
     );
@@ -2375,9 +2379,9 @@ describe("course roster confirmation results", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
+      expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled()
     );
-    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
+    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
     await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);

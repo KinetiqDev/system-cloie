@@ -1,6 +1,11 @@
 "use client";
 
-import type { DragEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
+import {
+  Fragment,
+  type DragEvent,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { YearLevel, StudentSection } from "@prisma/client";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -31,26 +36,36 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { showToast } from "@/components/ui/toast";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { useMediaQuery } from "@/components/ui/use-media-query";
+import { cn } from "@/lib/utils";
 import {
   addRosterMembershipAction,
   confirmRosterResolutionAction,
@@ -378,16 +393,16 @@ function CandidateContext({ candidate }: { candidate: CourseRosterPreviewCandida
     : null;
   const section = candidate.section ? getSectionLabel(candidate.section as StudentSection) : null;
   return (
-    <div className="text-body-sm flex flex-col gap-0.5">
-      <p className="font-medium">{candidate.name}</p>
-      <p className="text-muted-foreground">{candidate.email}</p>
-      <p className="text-muted-foreground">
+    <div className="text-body-sm min-w-0">
+      <p className="font-medium break-words">{candidate.name}</p>
+      <p className="text-muted-foreground break-all">{candidate.email}</p>
+      <p className="text-muted-foreground break-words">
         {[candidate.programName ?? candidate.programCode, yearLevel, section, candidate.majorName]
           .filter(Boolean)
           .join(" · ") || "—"}
       </p>
       {!candidate.selectable && candidate.reason && (
-        <p className="text-destructive">{candidate.reason}</p>
+        <p className="text-destructive break-words">{candidate.reason}</p>
       )}
     </div>
   );
@@ -411,7 +426,7 @@ function ReviewRowControls({
   onToggleSkip: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 md:justify-end">
       {!skipped && (
         <>
           {needsSearch && !hasSelection && (
@@ -433,7 +448,7 @@ function ReviewRowControls({
           )}
         </>
       )}
-      <Button type="button" variant="outline" size="sm" onClick={onToggleSkip}>
+      <Button type="button" variant="ghost" size="sm" onClick={onToggleSkip}>
         {skipped ? "Unskip" : "Skip"}
       </Button>
     </div>
@@ -508,9 +523,11 @@ function RowCandidateDisplay({
   candidates: CourseRosterPreviewCandidate[];
 }) {
   if (candidate) return <CandidateContext candidate={candidate} />;
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {
+    return <p className="text-body-sm text-muted-foreground">No account selected</p>;
+  }
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       {candidates.map((item) => (
         <CandidateContext key={item.userId} candidate={item} />
       ))}
@@ -518,8 +535,9 @@ function RowCandidateDisplay({
   );
 }
 
-function ReviewRowCard({
+function ReviewRow({
   row,
+  isDesktop,
   assignment,
   programId,
   selectedCandidate,
@@ -528,6 +546,7 @@ function ReviewRowCard({
   onClearSelection,
   onToggleSkip,
 }: {
+  isDesktop: boolean;
   row: CourseRosterPreviewRow;
   assignment: CourseRosterAssignmentSummary | undefined;
   programId?: string;
@@ -545,45 +564,90 @@ function ReviewRowCard({
   const isPrepared =
     row.resolution.status === "SUGGESTED_MATCH" || row.resolution.status === "EXACT_MATCH";
   const isAlreadyActive = row.disposition === "ALREADY_ACTIVE";
-
-  return (
-    <div className={`flex flex-col gap-3 rounded-lg border p-3 ${skipped ? "opacity-60" : ""}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-label-md text-muted-foreground">#{row.sourceIndex}</span>
-        <p className="text-body-sm min-w-0 flex-1 truncate font-medium">{row.submittedName}</p>
-        <RowStatusBadges
-          skipped={skipped}
-          selected={selectedCandidate !== undefined}
-          resolution={row.resolution}
-          disposition={row.disposition}
-        />
-      </div>
-
-      <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
-
-      {!isAlreadyActive && (
-        <ReviewRowControls
-          skipped={skipped}
-          hasSelection={selectedCandidate !== undefined}
-          needsSearch={needsSearch}
-          isPrepared={isPrepared}
-          onClearSelection={onClearSelection}
-          onOpenSearch={() => setSearchOpen(true)}
-          onToggleSkip={onToggleSkip}
-        />
-      )}
-
-      <RowSearchPanel
-        open={searchOpen}
+  const status = (
+    <div className="flex flex-wrap gap-1.5">
+      <RowStatusBadges
         skipped={skipped}
-        assignmentId={assignment?.assignmentId ?? ""}
-        programId={programId}
-        onSelect={(candidate) => {
-          onSelect(candidate);
-          setSearchOpen(false);
-        }}
+        selected={selectedCandidate !== undefined}
+        resolution={row.resolution}
+        disposition={row.disposition}
       />
     </div>
+  );
+  const controls = !isAlreadyActive && (
+    <ReviewRowControls
+      skipped={skipped}
+      hasSelection={selectedCandidate !== undefined}
+      needsSearch={needsSearch}
+      isPrepared={isPrepared}
+      onClearSelection={onClearSelection}
+      onOpenSearch={() => setSearchOpen(true)}
+      onToggleSkip={onToggleSkip}
+    />
+  );
+  const search = (
+    <RowSearchPanel
+      open={searchOpen}
+      skipped={skipped}
+      assignmentId={assignment?.assignmentId ?? ""}
+      programId={programId}
+      onSelect={(candidate) => {
+        onSelect(candidate);
+        setSearchOpen(false);
+      }}
+    />
+  );
+
+  if (isDesktop) {
+    return (
+      <Fragment>
+        <TableRow className={cn("align-top", skipped && "opacity-60")}>
+          <TableCell className="w-[24%] whitespace-normal">
+            <span className="text-label-sm text-muted-foreground block tabular-nums">
+              CSV row {row.sourceIndex}
+            </span>
+            <span className="font-medium break-words">{row.submittedName}</span>
+          </TableCell>
+          <TableCell className="w-[35%] whitespace-normal">
+            <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
+          </TableCell>
+          <TableCell className="w-[23%] whitespace-normal">{status}</TableCell>
+          <TableCell className="w-[18%] whitespace-normal">{controls}</TableCell>
+        </TableRow>
+        {searchOpen && !skipped && (
+          <TableRow>
+            <TableCell colSpan={4} className="bg-muted/30 p-3 whitespace-normal">
+              {search}
+            </TableCell>
+          </TableRow>
+        )}
+      </Fragment>
+    );
+  }
+
+  return (
+    <li
+      className={cn(
+        "border-border flex flex-col gap-3 border-b px-0.5 py-4",
+        skipped && "opacity-60"
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-label-sm text-muted-foreground block tabular-nums">
+            CSV row {row.sourceIndex}
+          </span>
+          <p className="font-medium break-words">{row.submittedName}</p>
+        </div>
+        {status}
+      </div>
+      <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
+        <span className="text-label-sm text-muted-foreground">System account</span>
+        <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
+      </div>
+      {controls}
+      {search}
+    </li>
   );
 }
 
@@ -629,45 +693,102 @@ function ReviewPreviewBlock({
       suggestionsAcknowledged,
     })
   ).length;
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const filterLabel = PREVIEW_FILTERS.find((item) => item.key === filter)?.label ?? "All";
+  const attentionCount = counts.review + counts.resolve;
+  const [filterOpen, setFilterOpen] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      {assignment && (
-        <p className="text-body-sm text-muted-foreground">
-          {assignment.courseCode} — {assignment.courseTitle} ({assignment.programCode},{" "}
-          {getYearLevelDisplay(assignment.yearLevel)}, {getSectionLabel(assignment.section)},{" "}
-          {assignment.termLabel})
-        </p>
-      )}
-      <p className="text-body-sm">
-        {confirmCount === 0
-          ? "This confirmation will not add or restore any Students."
-          : confirmCount === 1
-            ? "This confirmation will add or restore 1 Student."
-            : `This confirmation will add or restore ${confirmCount} Students.`}
-      </p>
-      {counts.review + counts.resolve > 0 && (
-        <p className="text-body-sm text-muted-foreground">
-          {counts.review + counts.resolve}{" "}
-          {counts.review + counts.resolve === 1 ? "row needs" : "rows need"} attention. Start with
-          the Review and Resolve filters below.
-        </p>
-      )}
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Preview filters">
-        {PREVIEW_FILTERS.map((item) => (
-          <Button
-            key={item.key}
-            type="button"
-            variant={filter === item.key ? "default" : "outline"}
-            size="sm"
-            aria-label={`${item.label}: ${counts[item.key]}`}
-            aria-pressed={filter === item.key}
-            onClick={() => onFilterChange(item.key)}
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="min-w-0">
+          {assignment && (
+            <p className="text-body-sm text-muted-foreground break-words">
+              <span className="text-foreground font-medium">
+                {assignment.courseCode} — {assignment.courseTitle}
+              </span>{" "}
+              · {assignment.programCode} · {getYearLevelDisplay(assignment.yearLevel)} ·{" "}
+              {getSectionLabel(assignment.section)} · {assignment.termLabel}
+            </p>
+          )}
+          <p className="text-body-sm mt-1">
+            {confirmCount === 0
+              ? "No Students will be added or restored."
+              : confirmCount === 1
+                ? "1 Student is ready to add or restore."
+                : `${confirmCount} Students are ready to add or restore.`}
+            {attentionCount > 0 && (
+              <span className="text-muted-foreground">
+                {" "}
+                {attentionCount} {attentionCount === 1 ? "row needs" : "rows need"} attention.
+              </span>
+            )}
+          </p>
+        </div>
+        {isDesktop ? (
+          <div
+            className="flex flex-wrap justify-end gap-2"
+            role="group"
+            aria-label="Preview filters"
           >
-            {item.label}
-            <span className="text-label-sm ml-1">{counts[item.key]}</span>
-          </Button>
-        ))}
+            {PREVIEW_FILTERS.map((item) => (
+              <Button
+                key={item.key}
+                type="button"
+                variant={filter === item.key ? "default" : "outline"}
+                size="sm"
+                aria-label={`${item.label}: ${counts[item.key]}`}
+                aria-pressed={filter === item.key}
+                onClick={() => onFilterChange(item.key)}
+              >
+                {item.label}
+                <span className="text-label-sm ml-1 tabular-nums">{counts[item.key]}</span>
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
+            <label htmlFor="roster-preview-filter" className="text-label-sm text-muted-foreground">
+              Show rows
+            </label>
+            <Select
+              open={filterOpen}
+              value={filter}
+              onOpenChange={(nextOpen) => setFilterOpen(nextOpen)}
+              onValueChange={(value) => onFilterChange(value as PreviewFilter)}
+            >
+              <SelectTrigger
+                id="roster-preview-filter"
+                className="h-11 w-full min-w-0 md:h-8 md:w-44"
+                aria-label="Filter preview rows"
+              >
+                <SelectValue>{`${filterLabel} (${counts[filter]})`}</SelectValue>
+              </SelectTrigger>
+              <SelectContent
+                side="bottom"
+                align="start"
+                alignItemWithTrigger={false}
+                onKeyDownCapture={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.nativeEvent.stopImmediatePropagation();
+                    setFilterOpen(false);
+                  }
+                }}
+                className="w-[min(22rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] md:w-44 md:max-w-none"
+              >
+                <SelectGroup>
+                  {PREVIEW_FILTERS.map((item) => (
+                    <SelectItem key={item.key} value={item.key}>
+                      {item.label} ({counts[item.key]})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {suggestedCount > 0 && (
@@ -678,21 +799,56 @@ function ReviewPreviewBlock({
             onCheckedChange={(checked) => onAcknowledgeSuggestions(checked === true)}
           />
           <Label htmlFor="acknowledge-suggested" className="text-body-sm cursor-pointer leading-6">
-            I acknowledge {suggestedCount} suggested {suggestedCount === 1 ? "match" : "matches"} —
-            review each suggested account before confirming.
+            I reviewed {suggestedCount} suggested {suggestedCount === 1 ? "account" : "accounts"}
+            and confirm the selected Students are correct.
           </Label>
         </div>
       )}
 
-      <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
         {visibleRows.length === 0 ? (
-          <li className="text-body-sm text-muted-foreground p-4 text-center">
+          <p className="text-body-sm text-muted-foreground p-6 text-center">
             No rows in this group.
-          </li>
+          </p>
+        ) : isDesktop ? (
+          <Table
+            aria-label={`Roster preview: ${filterLabel}`}
+            containerClassName="h-full overflow-auto"
+          >
+            <TableHeader className="bg-muted sticky top-0 z-10">
+              <TableRow>
+                <TableHead>Uploaded name</TableHead>
+                <TableHead>System account</TableHead>
+                <TableHead>Match and result</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleRows.map((row) => (
+                <ReviewRow
+                  isDesktop
+                  key={row.sourceIndex}
+                  row={row}
+                  assignment={assignment}
+                  programId={programId}
+                  selectedCandidate={selectedCandidateByIndex[row.sourceIndex]}
+                  skipped={skipped.has(row.sourceIndex)}
+                  onSelect={(candidate) => onSelect(row.sourceIndex, candidate)}
+                  onClearSelection={() => onClearSelection(row.sourceIndex)}
+                  onToggleSkip={() => onToggleSkip(row.sourceIndex)}
+                />
+              ))}
+            </TableBody>
+          </Table>
         ) : (
-          visibleRows.map((row) => (
-            <li key={row.sourceIndex}>
-              <ReviewRowCard
+          <ul
+            className="h-full overflow-y-auto overscroll-contain px-3"
+            aria-label={`Roster preview: ${filterLabel}`}
+          >
+            {visibleRows.map((row) => (
+              <ReviewRow
+                isDesktop={false}
+                key={row.sourceIndex}
                 row={row}
                 assignment={assignment}
                 programId={programId}
@@ -702,10 +858,13 @@ function ReviewPreviewBlock({
                 onClearSelection={() => onClearSelection(row.sourceIndex)}
                 onToggleSkip={() => onToggleSkip(row.sourceIndex)}
               />
-            </li>
-          ))
+            ))}
+          </ul>
         )}
-      </ul>
+      </div>
+      <p className="text-caption text-muted-foreground" aria-live="polite">
+        Showing {visibleRows.length} of {preview.rows.length} uploaded rows.
+      </p>
     </div>
   );
 }
@@ -902,8 +1061,8 @@ function ManagementFooter({
   showBack: boolean;
 }) {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
+    <div className="flex w-full shrink-0 items-center justify-between gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         {showBack && (
           <Button type="button" variant="ghost" onClick={onBack} disabled={isPending}>
             Back
@@ -988,7 +1147,12 @@ function ManagementBody({
   confirmation: CourseRosterConfirmation | null;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-0.5 py-1">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-3 px-0.5 py-1",
+        phase === "review" ? "overflow-hidden" : "overflow-y-auto"
+      )}
+    >
       {!(phase === "add" && method === "single") && (
         <WizardStepper
           steps={[
@@ -1033,14 +1197,12 @@ function ManagementBody({
       {phase === "review" && preview && (
         <>
           {reviewBlockers.length > 0 && (
-            <Alert variant="warning" aria-live="polite">
+            <Alert variant="warning" aria-live="polite" className="shrink-0">
               <AlertTitle>Review not complete</AlertTitle>
               <AlertDescription>
-                <ul className="list-disc pl-5">
-                  {reviewBlockers.map((blocker) => (
-                    <li key={blocker}>{blocker}</li>
-                  ))}
-                </ul>
+                {reviewBlockers.map((blocker) => (
+                  <p key={blocker}>{blocker}</p>
+                ))}
               </AlertDescription>
             </Alert>
           )}
@@ -1088,7 +1250,6 @@ export function RosterManagementDialog({
   assignmentId: string;
   programId?: string;
 }) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<RosterManagementMethod>("import");
   const [file, setFile] = useState<File | null>(null);
@@ -1264,8 +1425,24 @@ export function RosterManagementDialog({
     });
   }
 
+  const confirmCount = preview
+    ? Object.keys(
+        effectiveCandidateByIndexFor({
+          preview,
+          skippedIndexes,
+          selectedCandidateByIndex,
+          suggestionsAcknowledged,
+        })
+      ).length
+    : 0;
   const primaryLabel =
-    phase === "add" ? "Prepare preview" : phase === "review" ? "Review complete" : "Done";
+    phase === "add"
+      ? "Prepare preview"
+      : phase === "review"
+        ? confirmCount === 1
+          ? "Add 1 Student"
+          : `Add ${confirmCount} Students`
+        : "Done";
   const primaryDisabled = isPending || (phase === "review" && reviewBlockers.length > 0);
 
   const body = (
@@ -1300,24 +1477,36 @@ export function RosterManagementDialog({
     </div>
   );
 
+  const workspaceTitle = "Manage roster";
+  const workspaceDescription =
+    phase === "review"
+      ? "Compare each uploaded name with its System CLOIE account before adding anyone."
+      : phase === "results"
+        ? "Review what changed and any rows that still need attention."
+        : `Add one Student directly, or check a CSV list of up to ${COURSE_ROSTER_MAX_ROWS} names.`;
+
   return (
     <>
       <Button size="lg" ref={triggerRef} onClick={() => handleOpenChange(true)}>
         <ManagementTriggerContent />
       </Button>
 
-      {open && isDesktop && (
-        <Dialog open onOpenChange={handleOpenChange}>
-          <DialogContent className="flex max-h-[min(90dvh,52rem)] flex-col">
-            <DialogHeader className="shrink-0">
-              <DialogTitle>Manage roster</DialogTitle>
-              <DialogDescription>
-                Add one student directly, or check a CSV list of up to {COURSE_ROSTER_MAX_ROWS}{" "}
-                names before anyone is added.
-              </DialogDescription>
-            </DialogHeader>
-            {body}
-            <DialogFooter className="shrink-0">
+      {open && (
+        <ResponsiveDialog open onOpenChange={handleOpenChange}>
+          <ResponsiveDialogContent
+            showCloseButton={false}
+            className="gap-0 p-0"
+            desktopClassName="h-[min(90dvh,56rem)] sm:max-w-6xl"
+            mobileClassName="h-[calc(100dvh-0.5rem)] max-h-[calc(100dvh-0.5rem)]"
+          >
+            <ResponsiveDialogHeader className="border-border shrink-0 border-b px-4 py-3 text-left sm:px-6">
+              <ResponsiveDialogTitle>{workspaceTitle}</ResponsiveDialogTitle>
+              <ResponsiveDialogDescription>{workspaceDescription}</ResponsiveDialogDescription>
+            </ResponsiveDialogHeader>
+            <ResponsiveDialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-6 sm:py-4">
+              {body}
+            </ResponsiveDialogBody>
+            <ResponsiveDialogFooter className="border-border bg-background mx-0 mb-0 shrink-0 flex-row border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
               <ManagementFooter
                 closeDisabled={pendingRef.current}
                 isPending={isPending}
@@ -1337,45 +1526,9 @@ export function RosterManagementDialog({
                 primaryLabel={primaryLabel}
                 showBack={phase === "review"}
               />
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {open && !isDesktop && (
-        <Drawer open onOpenChange={handleOpenChange} showSwipeHandle>
-          <DrawerContent className="flex max-h-[min(90dvh,48rem)] flex-col px-4 pb-4 motion-reduce:data-ending-style:transition-none motion-reduce:data-starting-style:transition-none">
-            <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
-              <DrawerTitle>Manage roster</DrawerTitle>
-              <DrawerDescription>
-                Add one student directly, or check a CSV list of up to {COURSE_ROSTER_MAX_ROWS}{" "}
-                names before anyone is added.
-              </DrawerDescription>
-            </DrawerHeader>
-            {body}
-            <DrawerFooter className="shrink-0 px-0 pt-3">
-              <ManagementFooter
-                closeDisabled={pendingRef.current}
-                isPending={isPending}
-                phase={phase}
-                onBack={() => setPhase(phase === "results" ? "review" : "add")}
-                onClose={requestClose}
-                onPrimary={() => {
-                  if (phase === "add") {
-                    preparePreview();
-                  } else if (phase === "review") {
-                    runConfirmation();
-                  } else {
-                    requestClose();
-                  }
-                }}
-                primaryDisabled={primaryDisabled}
-                primaryLabel={primaryLabel}
-                showBack={phase === "review"}
-              />
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+            </ResponsiveDialogFooter>
+          </ResponsiveDialogContent>
+        </ResponsiveDialog>
       )}
 
       <AlertDialog
