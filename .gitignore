@@ -94,3 +94,6 @@ graphify-out/
 
 # Private working notes never committed
 docs/_private/
+
+#test accounts
+test-accounts.txt
