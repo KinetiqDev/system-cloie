@@ -15,6 +15,7 @@ import {
 } from "@/features/auth/services/resolve-program-head-context";
 import {
   getFacultyTemplatePublicationContext,
+  validateCourseBoundGoBindings,
   type FacultyTemplatePublicationContext,
 } from "@/features/instruments/services/manage-faculty-templates";
 import { ROLES } from "@/lib/constants/roles";
@@ -128,6 +129,7 @@ export async function getOnBehalfTemplatePublicationContext(
         },
       },
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -221,11 +223,32 @@ export async function getOnBehalfTemplatePublicationContext(
     };
   }
 
+  // Direct question–GO bindings are optional and validated through the same
+  // Course-bound rule the faculty save path uses, so an on-behalf publication
+  // can never publish a GO the bound Course's owning Program does not own.
+  const goBindingValidation = await validateCourseBoundGoBindings({
+    bindings: template.template_go_question_bindings
+      .filter((binding) => binding.go_id)
+      .map((binding) => ({
+        goId: binding.go_id!,
+        itemKey: binding.item_key,
+        sectionKey: binding.section_key,
+      })),
+    boundCourseId: template.bound_course_id,
+    structure,
+    db,
+  });
+
+  if (!goBindingValidation.success) {
+    return goBindingValidation;
+  }
+
   return {
     success: true,
     data: {
       bindings: validatedBindings,
       cilos,
+      goBindings: goBindingValidation.bindings,
       course: {
         code: template.bound_course.code,
         courseType: template.bound_course.course_scope,
@@ -585,6 +608,24 @@ export async function publishCourseBoundEvaluation({
                 section_key: binding.sectionKey,
               })),
             });
+
+            // Direct question–GO bindings are frozen here: evidence for the
+            // selected-Program GO rows must not change when the GO catalog is
+            // later edited. An unbound Likert question writes no row and
+            // contributes no GO evidence, exactly like the Program-wide path.
+            if (contextData.goBindings.length > 0) {
+              await tx.courseBoundGoQuestionBinding.createMany({
+                data: contextData.goBindings.map((binding) => ({
+                  course_bound_evaluation_id: evaluation.id,
+                  go_code_snapshot: binding.goCodeSnapshot,
+                  go_description_snapshot: binding.goDescriptionSnapshot,
+                  go_id: binding.goId,
+                  item_key: binding.itemKey,
+                  question_prompt_snapshot: binding.questionPromptSnapshot,
+                  section_key: binding.sectionKey,
+                })),
+              });
+            }
 
             await tx.courseBoundEvaluationExclusion.createMany({
               data: normalizedExclusions.map((exclusion) => ({

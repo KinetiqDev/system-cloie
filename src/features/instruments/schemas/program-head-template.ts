@@ -224,6 +224,7 @@ export const saveFacultyTemplateDraftSchema = z.object({
   bound_program_id: z.string().uuid().optional().nullable(),
   bound_major_id: z.string().uuid().optional().nullable(),
   cilo_question_bindings: z.array(ciloQuestionBindingSchema).default([]),
+  go_question_bindings: z.array(goQuestionBindingSchema).default([]),
 });
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────

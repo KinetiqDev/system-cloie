@@ -162,6 +162,22 @@ function QuantitativeAnswerCard({
                 ))}
               </span>
             )}
+            {binding.directGoBindings.length > 0 && (
+              <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
+                <span>· Direct GO:</span>
+                {binding.directGoBindings.map((go, index) => (
+                  <Fragment key={go.key}>
+                    {index > 0 ? ", " : null}
+                    <Link
+                      href={outcomeHref(go.key)}
+                      className="hover:text-foreground font-medium underline underline-offset-2"
+                    >
+                      {go.code}
+                    </Link>
+                  </Fragment>
+                ))}
+              </span>
+            )}
           </Badge>
         )}
         {binding.type === "GO" && (

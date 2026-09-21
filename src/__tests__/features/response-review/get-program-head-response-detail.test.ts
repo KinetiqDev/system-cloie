@@ -88,6 +88,7 @@ const MOCK_EVALUATION_SHAPE = {
       item_key: "clarity",
     },
   ],
+  go_question_bindings: [],
 };
 
 const MOCK_RESPONSE_DATA = {
@@ -236,6 +237,50 @@ describe("getProgramHeadResponseDetail", () => {
     if (qual?.kind === "qualitative") {
       expect(qual.text).toBe("Very clear delivery.");
     }
+  });
+
+  it("shows frozen direct GO evidence on a course-bound response answer", async () => {
+    responseFindFirstMock.mockResolvedValue({
+      ...MOCK_RESPONSE_DATA,
+      assignment: {
+        ...MOCK_RESPONSE_DATA.assignment,
+        course_bound: {
+          ...MOCK_EVALUATION_SHAPE,
+          cilo_question_bindings: [],
+          go_question_bindings: [
+            {
+              go_id: "go-direct",
+              go_code_snapshot: "GO-3",
+              go_description_snapshot: "Design sustainable solutions",
+              section_key: "teaching",
+              item_key: "clarity",
+            },
+          ],
+        },
+      },
+      quant_items: [
+        {
+          cilo_question_binding_id: null,
+          section_key: "teaching",
+          item_key: "clarity",
+          rating_value: 4,
+        },
+      ],
+    });
+
+    const result = await getProgramHeadResponseDetail("prog-beed", "response-1");
+    const quantitative = result!.sections[0].items.find((item) => item.kind === "quantitative");
+
+    expect(quantitative?.binding).toEqual({
+      type: "GO",
+      goBindings: [
+        {
+          key: "go-direct",
+          code: "GO-3",
+          description: "Design sustainable solutions",
+        },
+      ],
+    });
   });
 
   it("loads student context from term-scoped StudentEnrollment", async () => {

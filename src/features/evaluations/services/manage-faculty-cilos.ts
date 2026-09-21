@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { listFacultyCourseContexts } from "./list-faculty-course-contexts";
-import { commitOutcomeWrite, prepareOutcomeWrite } from "@/features/outcomes/services/manage-outcome-writes";
+import { resolveFacultyCourseContextScope } from "./resolve-faculty-course-context-scope";
+import {
+  commitOutcomeWrite,
+  prepareOutcomeWrite,
+} from "@/features/outcomes/services/manage-outcome-writes";
 import type {
   FacultyManagedCiloContext,
   FacultyManagedCiloLoadResult,
@@ -10,31 +13,8 @@ import type {
   FacultyManagedCiloSaveResult,
 } from "../types";
 
-async function assertFacultyManagedCiloScope(
-  context: FacultyManagedCiloContext
-): Promise<{ courseId: string; majorId: string | null; programId: string } | null> {
-  const availableContexts = await listFacultyCourseContexts();
-
-  if (!availableContexts.success) {
-    return null;
-  }
-
-  const matchingContext = availableContexts.data.find(
-    (candidate) =>
-      candidate.courseId === context.courseId &&
-      candidate.programId === context.programId &&
-      candidate.majorId === context.majorId
-  );
-
-  if (!matchingContext) {
-    return null;
-  }
-
-  return {
-    courseId: matchingContext.courseId,
-    majorId: matchingContext.majorId,
-    programId: matchingContext.programId,
-  };
+async function assertFacultyManagedCiloScope(context: FacultyManagedCiloContext) {
+  return resolveFacultyCourseContextScope(context);
 }
 
 export async function loadFacultyManagedCilos(
@@ -118,9 +98,21 @@ export async function saveFacultyManagedCilos(
   }
 
   const writes = [
-    ...existingCilos.filter((cilo) => !keepIds.has(cilo.id)).map((cilo) => ({ kind: "CILO" as const, action: "archive" as const, id: cilo.id })),
-    ...toUpdate.map((item) => ({ kind: "CILO" as const, action: "update" as const, id: item.id!, description: item.description })),
-    ...toCreate.map((item) => ({ kind: "CILO" as const, action: "create" as const, courseId: scopedContext.courseId, description: item.description })),
+    ...existingCilos
+      .filter((cilo) => !keepIds.has(cilo.id))
+      .map((cilo) => ({ kind: "CILO" as const, action: "archive" as const, id: cilo.id })),
+    ...toUpdate.map((item) => ({
+      kind: "CILO" as const,
+      action: "update" as const,
+      id: item.id!,
+      description: item.description,
+    })),
+    ...toCreate.map((item) => ({
+      kind: "CILO" as const,
+      action: "create" as const,
+      courseId: scopedContext.courseId,
+      description: item.description,
+    })),
   ];
   for (const input of writes) {
     const review = await prepareOutcomeWrite(input);

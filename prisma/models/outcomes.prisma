@@ -18,6 +18,7 @@ model GO {
   cilo_mappings                CILOMapping[]
   template_question_bindings   InstrumentTemplateGoQuestionBinding[]
   central_deployment_snapshots CentralDeploymentGoSnapshot[]
+  course_bound_question_bindings CourseBoundGoQuestionBinding[]
 
   @@unique([program_id, code])
   @@map("gos")

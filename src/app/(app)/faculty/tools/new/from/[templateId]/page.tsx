@@ -35,6 +35,7 @@ export default async function FacultyNewFromTemplatePage({
         }}
         initialData={seed.initialData}
         initialBindings={seed.initialBindings}
+        initialGoBindings={seed.initialGoBindings}
         saveSuccessConfig={{
           toastMessage: "Your template copy was saved.",
         }}

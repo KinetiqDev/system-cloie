@@ -37,6 +37,7 @@ const {
     gO: { findMany: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
+    courseBoundGoQuestionBinding: { findMany: vi.fn() },
     centralDeploymentGoSnapshot: { findMany: vi.fn() },
     academicTermInstance: { findFirst: vi.fn(), findMany: vi.fn() },
     facultyProgramAffiliation: { findFirst: vi.fn() },
@@ -91,6 +92,7 @@ function mockEmptyDashboardReads() {
   prismaMock.centralDeployment.findMany.mockResolvedValue([]);
   prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([]);
   prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
+  prismaMock.courseBoundGoQuestionBinding.findMany.mockResolvedValue([]);
   prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
 }
 

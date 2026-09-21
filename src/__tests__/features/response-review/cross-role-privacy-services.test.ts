@@ -110,6 +110,7 @@ const MOCK_COURSE_BOUND_RESPONSE = {
         },
       },
       cilo_question_bindings: [],
+      go_question_bindings: [],
     },
     central_deployment: null,
   },

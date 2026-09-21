@@ -288,7 +288,8 @@ export type OutcomeEvidenceRow = {
   itemKey: string;
   /** Frozen structure snapshot of the instrument version that produced the rating. */
   instrumentVersion: { id: string; structureSnapshot: unknown } | null;
-  /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
+  course: { id: string; code: string; title: string } | null;
+  /** CILO provenance for current CILO-to-GO mappings, when present. */
   cilo: {
     id: string;
     code: string;
@@ -302,8 +303,38 @@ export type OutcomeEvidenceRow = {
     name: string;
     manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
   }>;
+  /** Frozen direct question-to-GO bindings published with the evaluation. */
+  directGoBindings: Array<{
+    goId: string;
+    code: string;
+    name: string;
+    questionPrompt: string;
+  }>;
   evaluationId: string;
   deploymentName: string;
+};
+
+type CiloContributorAggregate = {
+  kind: "CILO";
+  ciloId: string;
+  ciloCode: string;
+  ciloDescription: string;
+  course: { id: string; code: string; title: string } | null;
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  ratingSum: number;
+  ratingCount: number;
+};
+
+type DirectGoContributorAggregate = {
+  kind: "DIRECT_GO";
+  evaluationId: string;
+  deploymentName: string;
+  sectionKey: string;
+  itemKey: string;
+  questionPrompt: string;
+  course: { id: string; code: string; title: string } | null;
+  ratingSum: number;
+  ratingCount: number;
 };
 
 /** Accumulated evidence behind one Graduate Outcome row. */
@@ -317,18 +348,7 @@ type OutcomeEvidenceAggregate = {
   cilos: Map<string, string>;
   courses: Map<string, { code: string; title: string }>;
   evaluations: Map<string, string>;
-  /** CILO id -> valid-rating-only contribution behind this GO row. */
-  contributors: Map<
-    string,
-    {
-      ciloCode: string;
-      ciloDescription: string;
-      course: { id: string; code: string; title: string } | null;
-      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      ratingSum: number;
-      ratingCount: number;
-    }
-  >;
+  contributors: Map<string, CiloContributorAggregate | DirectGoContributorAggregate>;
   /** scaleKey (sorted descriptor JSON) -> per-category counts */
   distributions: Map<string, { descriptors: ScaleDescriptor[]; counts: Map<number, number> }>;
   excludedRatingCount: number;
@@ -341,9 +361,13 @@ type OutcomeEvidenceAggregation = {
   hasMultiMappedCilo: boolean;
 };
 
+type OutcomeGoBinding =
+  | OutcomeEvidenceRow["goMappings"][number]
+  | OutcomeEvidenceRow["directGoBindings"][number];
+
 function getOrCreateOutcomeAggregate(
   outcomes: Map<string, OutcomeEvidenceAggregate>,
-  mapping: OutcomeEvidenceRow["goMappings"][number]
+  mapping: OutcomeGoBinding
 ): OutcomeEvidenceAggregate {
   let aggregate = outcomes.get(mapping.goId);
   if (!aggregate) {
@@ -378,33 +402,48 @@ function ratingIsValid(descriptors: ScaleDescriptor[] | null, value: number): bo
   return descriptors !== null && descriptors.some((descriptor) => descriptor.value === value);
 }
 
-function accumulateOutcomeRow(
+function accumulateOutcomeValue(
   aggregate: OutcomeEvidenceAggregate,
   row: OutcomeEvidenceRow,
-  cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
-  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null,
   descriptors: ScaleDescriptor[] | null,
   isValidRating: boolean
-): void {
-  aggregate.cilos.set(cilo.id, cilo.description);
-  if (cilo.course) {
-    aggregate.courses.set(cilo.course.id, {
-      code: cilo.course.code,
-      title: cilo.course.title,
-    });
+): boolean {
+  if (row.course) {
+    aggregate.courses.set(row.course.id, { code: row.course.code, title: row.course.title });
   }
   aggregate.evaluations.set(row.evaluationId, row.deploymentName);
-
   if (!isValidRating) {
     aggregate.excludedRatingCount += 1;
-    return;
+    return false;
   }
   aggregate.ratingSum += row.ratingValue;
   aggregate.ratingCount += 1;
   aggregate.responseIds.add(row.responseId);
-  let contributor = aggregate.contributors.get(cilo.id);
+  if (descriptors) {
+    const scaleKey = JSON.stringify(descriptors);
+    let distribution = aggregate.distributions.get(scaleKey);
+    if (!distribution) {
+      distribution = { descriptors, counts: new Map() };
+      aggregate.distributions.set(scaleKey, distribution);
+    }
+    distribution.counts.set(row.ratingValue, (distribution.counts.get(row.ratingValue) ?? 0) + 1);
+  }
+  return true;
+}
+
+function accumulateCiloContributor(
+  aggregate: OutcomeEvidenceAggregate,
+  row: OutcomeEvidenceRow,
+  cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null
+): void {
+  aggregate.cilos.set(cilo.id, cilo.description);
+  const key = `cilo:${cilo.id}`;
+  let contributor = aggregate.contributors.get(key) as CiloContributorAggregate | undefined;
   if (!contributor) {
     contributor = {
+      kind: "CILO",
+      ciloId: cilo.id,
       ciloCode: cilo.code,
       ciloDescription: cilo.description,
       course: cilo.course,
@@ -412,56 +451,71 @@ function accumulateOutcomeRow(
       ratingSum: 0,
       ratingCount: 0,
     };
-    aggregate.contributors.set(cilo.id, contributor);
+    aggregate.contributors.set(key, contributor);
   }
   contributor.ratingSum += row.ratingValue;
   contributor.ratingCount += 1;
+}
 
-  if (!descriptors) {
-    return;
+function accumulateDirectContributor(
+  aggregate: OutcomeEvidenceAggregate,
+  row: OutcomeEvidenceRow,
+  binding: OutcomeEvidenceRow["directGoBindings"][number]
+): void {
+  const key = `direct:${row.evaluationId}:${row.sectionKey}:${row.itemKey}`;
+  let contributor = aggregate.contributors.get(key) as DirectGoContributorAggregate | undefined;
+  if (!contributor) {
+    contributor = {
+      kind: "DIRECT_GO",
+      evaluationId: row.evaluationId,
+      deploymentName: row.deploymentName,
+      sectionKey: row.sectionKey,
+      itemKey: row.itemKey,
+      questionPrompt: binding.questionPrompt,
+      course: row.course,
+      ratingSum: 0,
+      ratingCount: 0,
+    };
+    aggregate.contributors.set(key, contributor);
   }
-  const scaleKey = JSON.stringify(descriptors);
-  let distribution = aggregate.distributions.get(scaleKey);
-  if (!distribution) {
-    distribution = { descriptors, counts: new Map() };
-    aggregate.distributions.set(scaleKey, distribution);
-  }
-  distribution.counts.set(row.ratingValue, (distribution.counts.get(row.ratingValue) ?? 0) + 1);
+  contributor.ratingSum += row.ratingValue;
+  contributor.ratingCount += 1;
 }
 
 /**
- * Aggregate course-bound ratings into Program GO rows. Each rating contributes
- * once to every mapped GO (many-to-many). Ratings are valid only when their
- * value belongs to the applicable item's frozen snapshot scale; unresolvable
- * or out-of-scale ratings are excluded from the valid aggregate and counted
- * diagnostically. Central items and unmapped CILOs never create rows because
- * the caller supplies only course-bound rows with canonical mappings.
+ * Aggregate course-bound ratings into Program GO rows through current CILO
+ * mappings and frozen direct question bindings. One response item contributes
+ * once per GO even when both paths name the same GO.
  */
 export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvidenceAggregation {
   const outcomes = new Map<string, OutcomeEvidenceAggregate>();
+  const seenContributions = new Set<string>();
   let hasMultiMappedCilo = false;
 
   for (const row of rows) {
-    if (!row.cilo || row.goMappings.length === 0) {
-      continue;
-    }
-    if (row.goMappings.length > 1) {
+    if (row.cilo && row.goMappings.length > 1) {
       hasMultiMappedCilo = true;
     }
-
     const descriptors = resolveRatingScale(row);
     const isValidRating = ratingIsValid(descriptors, row.ratingValue);
-
-    for (const mapping of row.goMappings) {
+    const ciloMappings = row.cilo ? row.goMappings : [];
+    for (const mapping of ciloMappings) {
+      const contributionKey = `${row.responseId}:${row.evaluationId}:${row.sectionKey}:${row.itemKey}:${mapping.goId}`;
+      if (seenContributions.has(contributionKey)) continue;
+      seenContributions.add(contributionKey);
       const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
-      accumulateOutcomeRow(
-        aggregate,
-        row,
-        row.cilo,
-        mapping.manifestation,
-        descriptors,
-        isValidRating
-      );
+      if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+        accumulateCiloContributor(aggregate, row, row.cilo!, mapping.manifestation);
+      }
+    }
+    for (const binding of row.directGoBindings) {
+      const contributionKey = `${row.responseId}:${row.evaluationId}:${row.sectionKey}:${row.itemKey}:${binding.goId}`;
+      if (seenContributions.has(contributionKey)) continue;
+      seenContributions.add(contributionKey);
+      const aggregate = getOrCreateOutcomeAggregate(outcomes, binding);
+      if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+        accumulateDirectContributor(aggregate, row, binding);
+      }
     }
   }
 
@@ -511,22 +565,42 @@ export function buildProgramHeadOutcomeDtos(
       contributingCourses: [...aggregate.courses.entries()]
         .map(([id, course]) => ({ id, code: course.code, title: course.title }))
         .sort((left, right) => left.code.localeCompare(right.code)),
-      contributors: [...aggregate.contributors.entries()]
-        .map(([ciloId, contributor]) => ({
-          ciloId,
-          ciloCode: contributor.ciloCode,
-          ciloDescription: contributor.ciloDescription,
-          course: contributor.course,
-          manifestation: contributor.manifestation,
-          meanRating: contributor.ratingSum / contributor.ratingCount,
-          ratingCount: contributor.ratingCount,
-        }))
-        .sort(
-          (left, right) =>
-            (left.course?.code ?? "").localeCompare(right.course?.code ?? "") ||
-            left.ciloCode.localeCompare(right.ciloCode) ||
-            left.ciloId.localeCompare(right.ciloId)
-        ),
+      contributors: [...aggregate.contributors.values()]
+        .map((contributor) =>
+          contributor.kind === "CILO"
+            ? {
+                kind: "CILO" as const,
+                ciloId: contributor.ciloId,
+                ciloCode: contributor.ciloCode,
+                ciloDescription: contributor.ciloDescription,
+                course: contributor.course,
+                manifestation: contributor.manifestation,
+                meanRating: contributor.ratingSum / contributor.ratingCount,
+                ratingCount: contributor.ratingCount,
+              }
+            : {
+                kind: "DIRECT_GO" as const,
+                evaluationId: contributor.evaluationId,
+                deploymentName: contributor.deploymentName,
+                sectionKey: contributor.sectionKey,
+                itemKey: contributor.itemKey,
+                questionPrompt: contributor.questionPrompt,
+                course: contributor.course,
+                meanRating: contributor.ratingSum / contributor.ratingCount,
+                ratingCount: contributor.ratingCount,
+              }
+        )
+        .sort((left, right) => {
+          const courseOrder = (left.course?.code ?? "").localeCompare(right.course?.code ?? "");
+          if (courseOrder !== 0) return courseOrder;
+          if (left.kind !== right.kind) return left.kind.localeCompare(right.kind);
+          return left.kind === "CILO" && right.kind === "CILO"
+            ? left.ciloCode.localeCompare(right.ciloCode) || left.ciloId.localeCompare(right.ciloId)
+            : left.kind === "DIRECT_GO" && right.kind === "DIRECT_GO"
+              ? left.deploymentName.localeCompare(right.deploymentName) ||
+                left.itemKey.localeCompare(right.itemKey)
+              : 0;
+        }),
       evidenceEvaluations: [...aggregate.evaluations.entries()]
         .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
         .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),

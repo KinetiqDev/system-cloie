@@ -223,7 +223,7 @@ export function ProgramHeadGoSummary({
         )}
         <p className="text-muted-foreground text-label-sm mt-2">
           {sourceKey === "COURSE_STUDENT"
-            ? "Only quantitative answers bound to a CILO flow through CILO-to-GO mappings into course-derived GO means."
+            ? "Course-bound GO means use published direct question bindings and current CILO-to-GO mappings."
             : "Directly bound questions on published deployments feed this source's GO means."}
         </p>
       </CardContent>

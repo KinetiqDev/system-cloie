@@ -52,6 +52,7 @@ const expectedModels = [
   "CourseAssignment",
   "CourseAssignmentMembership",
   "CourseBoundCiloQuestionBinding",
+  "CourseBoundGoQuestionBinding",
   "CourseBoundEvaluation",
   "CourseBoundEvaluationExclusion",
   "CourseBoundEvaluationTarget",

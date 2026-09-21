@@ -9,6 +9,7 @@ const {
   templateFindFirstMock,
   courseFindUniqueMock,
   ciloFindManyMock,
+  goFindManyMock,
   listFacultyCourseContextsMock,
   transactionMock,
   templateUpdateMock,
@@ -18,12 +19,15 @@ const {
   versionCreateMock,
   bindingDeleteManyMock,
   bindingCreateManyMock,
+  goBindingDeleteManyMock,
+  goBindingCreateManyMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
   affiliationFindManyMock: vi.fn(),
   templateFindFirstMock: vi.fn(),
   courseFindUniqueMock: vi.fn(),
   ciloFindManyMock: vi.fn(),
+  goFindManyMock: vi.fn(),
   listFacultyCourseContextsMock: vi.fn(),
   transactionMock: vi.fn(),
   templateUpdateMock: vi.fn(),
@@ -33,6 +37,8 @@ const {
   versionCreateMock: vi.fn(),
   bindingDeleteManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
+  goBindingDeleteManyMock: vi.fn(),
+  goBindingCreateManyMock: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
@@ -47,6 +53,7 @@ vi.mock("@/lib/db/prisma", () => ({
     instrumentTemplate: { findFirst: templateFindFirstMock },
     course: { findUnique: courseFindUniqueMock },
     cILO: { findMany: ciloFindManyMock },
+    gO: { findMany: goFindManyMock },
     $transaction: transactionMock,
   },
 }));
@@ -98,6 +105,7 @@ function draftInput(id = TEMPLATE_ID) {
     bound_program_id: "program-1",
     structure: REORDERED_STRUCTURE,
     cilo_question_bindings: [{ ciloId: "cilo-1", itemKey: "question-b", sectionKey: "section-b" }],
+    go_question_bindings: [],
   };
 }
 
@@ -111,7 +119,10 @@ function setSharedMocks() {
     profileGate: null,
   });
   affiliationFindManyMock.mockResolvedValue([{ program_id: "program-1" }]);
-  courseFindUniqueMock.mockResolvedValue({ course_scope: "PROGRAM_SPECIFIC" });
+  courseFindUniqueMock.mockResolvedValue({
+    course_scope: "PROGRAM_SPECIFIC",
+    program_id: "program-1",
+  });
   listFacultyCourseContextsMock.mockResolvedValue({
     success: true,
     data: [
@@ -128,8 +139,11 @@ function setSharedMocks() {
     ],
   });
   ciloFindManyMock.mockResolvedValue([{ id: "cilo-1", description: "Communicates clearly" }]);
+  goFindManyMock.mockResolvedValue([]);
   bindingDeleteManyMock.mockResolvedValue({ count: 1 });
   bindingCreateManyMock.mockResolvedValue({ count: 1 });
+  goBindingDeleteManyMock.mockResolvedValue({ count: 0 });
+  goBindingCreateManyMock.mockResolvedValue({ count: 0 });
 }
 
 describe("manage-faculty-templates structure persistence", () => {
@@ -165,6 +179,10 @@ describe("manage-faculty-templates structure persistence", () => {
           deleteMany: bindingDeleteManyMock,
           createMany: bindingCreateManyMock,
         },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
+        },
       })
     );
 
@@ -191,6 +209,111 @@ describe("manage-faculty-templates structure persistence", () => {
     });
   });
 
+  it("persists Course-bound GO bindings against the bound Course's owning Program", async () => {
+    templateFindFirstMock.mockResolvedValue({
+      id: TEMPLATE_ID,
+      code: "SOURCE_EVAL",
+      name: "Source",
+      description: null,
+      structure: REORDERED_STRUCTURE,
+      program_id: "program-1",
+      source_template_id: null,
+      faculty_owner_id: FACULTY_ID,
+      template_cilo_question_bindings: [],
+      template_go_question_bindings: [],
+      versions: [{ id: "version-1", version_number: 1 }],
+    });
+    versionFindFirstMock.mockResolvedValue({ id: "version-1" });
+    goFindManyMock.mockResolvedValue([{ id: "go-1", code: "GO1", description: "Collaborates" }]);
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        instrumentTemplate: {
+          update: templateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID }),
+        },
+        instrumentVersion: {
+          findFirst: versionFindFirstMock,
+          update: versionUpdateMock.mockResolvedValue({ id: "version-1" }),
+        },
+        instrumentTemplateCiloQuestionBinding: {
+          deleteMany: bindingDeleteManyMock,
+          createMany: bindingCreateManyMock,
+        },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
+        },
+      })
+    );
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      go_question_bindings: [
+        { goId: "go-1", itemKey: "question-b", sectionKey: "section-b" },
+        { goId: "go-1", itemKey: "question-a", sectionKey: "section-a" },
+      ],
+    });
+
+    expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
+    // One GO may span several questions, and the snapshot comes from the live
+    // GO, not from the client payload.
+    expect(goBindingCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          go_id: "go-1",
+          go_code_snapshot: "GO1",
+          go_description_snapshot: "Collaborates",
+          section_key: "section-b",
+          item_key: "question-b",
+          question_prompt_snapshot: "Question B",
+          template_id: TEMPLATE_ID,
+        }),
+        expect.objectContaining({
+          go_id: "go-1",
+          section_key: "section-a",
+          item_key: "question-a",
+          template_id: TEMPLATE_ID,
+        }),
+      ],
+    });
+  });
+
+  it("rejects a Course-bound GO binding for a General Education course", async () => {
+    courseFindUniqueMock.mockResolvedValue({
+      course_scope: "GENERAL_EDUCATION",
+      program_id: null,
+    });
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      go_question_bindings: [{ goId: "go-1", itemKey: "question-b", sectionKey: "section-b" }],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Graduate Outcomes can only be assigned to questions in program-specific courses.",
+    });
+    expect(goBindingCreateManyMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Course-bound GO whose GO is outside the Course's owning Program", async () => {
+    goFindManyMock.mockResolvedValue([]);
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      go_question_bindings: [
+        { goId: "go-foreign", itemKey: "question-b", sectionKey: "section-b" },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    });
+    expect(goBindingCreateManyMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
   it("creates an accessible-source faculty copy and version one with stable binding keys", async () => {
     templateFindFirstMock.mockResolvedValue({
       id: "baseline-1",
@@ -215,6 +338,10 @@ describe("manage-faculty-templates structure persistence", () => {
         instrumentTemplateCiloQuestionBinding: {
           deleteMany: bindingDeleteManyMock,
           createMany: bindingCreateManyMock,
+        },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
         },
       })
     );
@@ -276,6 +403,10 @@ describe("manage-faculty-templates structure persistence", () => {
           deleteMany: bindingDeleteManyMock,
           createMany: bindingCreateManyMock,
         },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
+        },
       })
     );
 
@@ -333,6 +464,10 @@ describe("manage-faculty-templates structure persistence", () => {
           deleteMany: bindingDeleteManyMock,
           createMany: bindingCreateManyMock,
         },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
+        },
       })
     );
 
@@ -373,6 +508,10 @@ describe("manage-faculty-templates structure persistence", () => {
         instrumentTemplateCiloQuestionBinding: {
           deleteMany: bindingDeleteManyMock,
           createMany: bindingCreateManyMock,
+        },
+        instrumentTemplateGoQuestionBinding: {
+          deleteMany: goBindingDeleteManyMock,
+          createMany: goBindingCreateManyMock,
         },
       })
     );

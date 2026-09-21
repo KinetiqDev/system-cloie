@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   template: { findFirst: vi.fn() },
   course: { findUnique: vi.fn() },
   cilo: { findMany: vi.fn() },
+  go: { findMany: vi.fn() },
   contexts: vi.fn(),
 }));
 
@@ -21,6 +22,7 @@ vi.mock("@/lib/db/prisma", () => ({
     instrumentTemplate: mocks.template,
     course: mocks.course,
     cILO: mocks.cilo,
+    gO: mocks.go,
   },
 }));
 
@@ -31,6 +33,7 @@ const COURSE_ID = "bbbbbbb2-2222-4222-8222-222222222222";
 const CILO_ID = "ccccccc3-3333-4333-8333-333333333333";
 const PROGRAM_ID = "ddddddd4-4444-4444-8444-444444444444";
 const FACULTY_ID = "eeeeeee5-5555-4555-8555-555555555555";
+const GO_ID = "ffffff06-6666-4666-8666-666666666666";
 
 const FACULTY_SESSION = {
   userId: FACULTY_ID,
@@ -81,6 +84,7 @@ function template(overrides: Record<string, unknown> = {}) {
       program: { id: PROGRAM_ID, code: "BSIT", name: "Information Technology" },
       major: null,
     },
+    template_go_question_bindings: [],
     template_cilo_question_bindings: [
       {
         id: "f1",
@@ -99,6 +103,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.session.mockResolvedValue(FACULTY_SESSION);
+    mocks.go.findMany.mockResolvedValue([]);
   });
 
   it("resolves a General Education Course on Course alone when it has no owning Program", async () => {
@@ -222,6 +227,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
             ],
           },
         ],
+        template_go_question_bindings: [],
         template_cilo_question_bindings: [
           {
             id: "f1",
@@ -316,5 +322,156 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
         "Every saved CILO must be assigned to at least one Likert question before publishing."
       );
     }
+  });
+});
+
+describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.session.mockResolvedValue(FACULTY_SESSION);
+    mocks.course.findUnique.mockResolvedValue({
+      id: COURSE_ID,
+      course_scope: "PROGRAM_SPECIFIC",
+      program_id: PROGRAM_ID,
+    });
+    mocks.contexts.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          courseCode: "ITRES1",
+          courseId: COURSE_ID,
+          courseTitle: "Capstone Project 1",
+          courseType: "PROGRAM_SPECIFIC",
+          majorId: null,
+          majorName: null,
+          programCode: "BSIT",
+          programId: PROGRAM_ID,
+          programName: "Information Technology",
+          scopeLabel: "BSIT - Program Course",
+        },
+      ],
+    });
+    mocks.cilo.findMany.mockResolvedValue([
+      { id: CILO_ID, description: "Apply capstone planning fundamentals." },
+    ]);
+  });
+
+  it("returns direct GO bindings frozen from the live GO catalog", async () => {
+    mocks.template.findFirst.mockResolvedValue({
+      ...template(),
+      template_go_question_bindings: [
+        {
+          id: "g1",
+          go_id: GO_ID,
+          go_code_snapshot: "STALE",
+          go_description_snapshot: "Stale description",
+          section_key: "cilo-items",
+          item_key: "cilo-attainment-1",
+          question_prompt_snapshot: "Stale prompt",
+        },
+      ],
+    });
+    mocks.go.findMany.mockResolvedValue([
+      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      // Snapshot labels come from the live GO at publication, never the stored draft row.
+      expect(result.data.goBindings).toEqual([
+        {
+          goId: GO_ID,
+          goCodeSnapshot: "GO1",
+          goDescriptionSnapshot: "Communicates solutions effectively.",
+          itemKey: "cilo-attainment-1",
+          questionPromptSnapshot: "I achieved the first course intended learning outcome.",
+          sectionKey: "cilo-items",
+        },
+      ]);
+      expect(mocks.go.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ program_id: PROGRAM_ID, is_active: true }),
+        })
+      );
+    }
+  });
+
+  it("rejects publication when a bound GO is outside the course's owning program", async () => {
+    mocks.template.findFirst.mockResolvedValue({
+      ...template(),
+      template_go_question_bindings: [
+        {
+          id: "g1",
+          go_id: GO_ID,
+          go_code_snapshot: "GO1",
+          go_description_snapshot: "Communicates solutions effectively.",
+          section_key: "cilo-items",
+          item_key: "cilo-attainment-1",
+          question_prompt_snapshot: "Question prompt",
+        },
+      ],
+    });
+    mocks.go.findMany.mockResolvedValue([]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    });
+  });
+
+  it("rejects publication when a General Education course carries a GO binding", async () => {
+    mocks.template.findFirst.mockResolvedValue({
+      ...template(),
+      bound_course: {
+        ...template().bound_course,
+        course_scope: "GENERAL_EDUCATION",
+        program_id: null,
+      },
+      template_go_question_bindings: [
+        {
+          id: "g1",
+          go_id: GO_ID,
+          go_code_snapshot: "GO1",
+          go_description_snapshot: "Communicates solutions effectively.",
+          section_key: "cilo-items",
+          item_key: "cilo-attainment-1",
+          question_prompt_snapshot: "Question prompt",
+        },
+      ],
+    });
+    mocks.course.findUnique.mockResolvedValue({
+      id: COURSE_ID,
+      course_scope: "GENERAL_EDUCATION",
+      program_id: null,
+    });
+    mocks.contexts.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          courseCode: "ITRES1",
+          courseId: COURSE_ID,
+          courseTitle: "Capstone Project 1",
+          courseType: "GENERAL_EDUCATION",
+          majorId: null,
+          majorName: null,
+          programCode: "",
+          programId: "",
+          programName: "",
+          scopeLabel: " - General Education",
+        },
+      ],
+    });
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Graduate Outcomes can only be assigned to questions in program-specific courses.",
+    });
+    expect(mocks.go.findMany).not.toHaveBeenCalled();
   });
 });

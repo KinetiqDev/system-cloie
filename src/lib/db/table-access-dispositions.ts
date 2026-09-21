@@ -142,6 +142,7 @@ export const TABLE_ACCESS_DISPOSITIONS = {
   cilo_mappings: { kind: "server-only" },
 
   // evaluations-deployments.prisma
+  course_bound_plo_question_bindings: { kind: "server-only" },
   course_bound_evaluations: { kind: "server-only" },
   course_bound_cilo_question_bindings: { kind: "server-only" },
   course_bound_evaluation_targets: { kind: "server-only" },

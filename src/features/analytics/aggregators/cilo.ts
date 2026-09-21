@@ -31,6 +31,7 @@ export type OutcomeItemRatingRow = {
   cilo: { id: string; label: string; description: string } | null;
   evaluationId?: string;
   goMappings: CiloGoMapping[];
+  directGoMappings?: CiloGoMapping[];
 };
 
 /** A rating contributes only when its value belongs to the item's frozen scale. */
@@ -213,8 +214,17 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
   return [...byQuestion.values()]
     .map(({ row, entries }) => {
       const binding: QuestionBinding = row.cilo
-        ? { type: "CILO", ciloId: row.cilo.id, ciloLabel: row.cilo.label }
-        : { type: "GENERAL" };
+        ? {
+            type: "CILO",
+            ciloId: row.cilo.id,
+            ciloLabel: row.cilo.label,
+            ...(row.directGoMappings && row.directGoMappings.length > 0
+              ? { directGoMappings: row.directGoMappings }
+              : {}),
+          }
+        : row.directGoMappings && row.directGoMappings.length > 0
+          ? { type: "GO", goMappings: row.directGoMappings }
+          : { type: "GENERAL" };
       const scaleGroups = groupRatingsByScale(entries).map((group) => group.metric);
       scaleGroups.sort((left, right) =>
         (left.scale?.key ?? "").localeCompare(right.scale?.key ?? "")

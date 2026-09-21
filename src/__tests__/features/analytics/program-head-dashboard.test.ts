@@ -234,6 +234,27 @@ describe("GO row normalization", () => {
     expect(metrics.find((metric) => metric.goId === "plo-2")!.ratingCount).toBe(1);
   });
 
+  it("routes direct course question bindings without a fake CILO", () => {
+    const normalized = buildCourseGoRatingRows(
+      [courseRow({ rating_value: 2 })],
+      new Map([
+        [
+          "cb-1:cilo-items:q-cilo-a",
+          {
+            ...binding,
+            cilo: null,
+            directGoMappings: [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }],
+          },
+        ],
+      ]),
+      SNAPSHOT_MAP
+    );
+
+    expect(normalized[0].cilo).toBeNull();
+    expect(normalized[0].directGoMappings?.[0].goId).toBe("plo-1");
+    expect(buildCourseDerivedGoMetrics(normalized)[0].ratingCount).toBe(1);
+  });
+
   it("skips items without a live binding or without selected-Program mappings", () => {
     const unbound: CourseBindingRow = { ...binding, cilo: null };
     const unmapped: CourseBindingRow = {

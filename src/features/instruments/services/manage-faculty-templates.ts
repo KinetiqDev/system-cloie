@@ -20,9 +20,20 @@ export type FacultyTemplateBindingItem = {
   sectionKey: string;
 };
 
+export type FacultyTemplateGoBindingItem = {
+  goId: string;
+  goCodeSnapshot: string;
+  goDescriptionSnapshot: string;
+  itemKey: string;
+  questionPromptSnapshot: string;
+  sectionKey: string;
+};
+
 export type FacultyTemplatePublicationContext = {
   bindings: FacultyTemplateBindingItem[];
   cilos: Array<{ description: string; id: string }>;
+  /** Direct question–GO bindings, frozen into snapshots at publication. */
+  goBindings: FacultyTemplateGoBindingItem[];
   course: {
     code: string;
     courseType: string;
@@ -102,6 +113,7 @@ async function canAccessSourceTemplate(templateId: string, userId: string) {
     },
     include: {
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
       versions: {
         orderBy: { version_number: "desc" },
         take: 1,
@@ -212,6 +224,114 @@ async function validateDraftBindings(input: {
     normalized.push({
       ciloDescriptionSnapshot: cilo.description,
       ciloId: cilo.id,
+      itemKey: binding.itemKey,
+      questionPromptSnapshot: question.prompt,
+      sectionKey: binding.sectionKey,
+    });
+  }
+
+  return { success: true, bindings: normalized };
+}
+
+/**
+ * Validates draft question–GO bindings for a Course-bound template. The GO
+ * pool is the bound Course's owning Program, never the client payload, and
+ * General Education Courses are rejected outright: they have no owning Program
+ * and their CILOs align to Institutional Outcomes (ADR 0005, ADR 0031).
+ *
+ * Coverage is not required. A Likert question without a GO binding saves and
+ * publishes as a general evaluation item, mirroring the Program-wide rule.
+ */
+export async function validateCourseBoundGoBindings(input: {
+  bindings: SaveFacultyTemplateDraftInput["go_question_bindings"];
+  boundCourseId?: string | null;
+  structure: TemplateStructure;
+  db?: PublicationContextDb;
+}): Promise<
+  { success: true; bindings: FacultyTemplateGoBindingItem[] } | { success: false; error: string }
+> {
+  if (input.bindings.length === 0) {
+    return { success: true, bindings: [] };
+  }
+
+  if (!input.boundCourseId) {
+    return {
+      success: false,
+      error: "Select a course before assigning Graduate Outcomes to questions.",
+    };
+  }
+
+  const db = input.db ?? prisma;
+  const course = await db.course.findUnique({
+    where: { id: input.boundCourseId },
+    select: { course_scope: true, program_id: true },
+  });
+
+  if (!course) {
+    return { success: false, error: "Selected course is unavailable." };
+  }
+
+  if (course.course_scope === CourseScope.GENERAL_EDUCATION) {
+    return {
+      success: false,
+      error: "Graduate Outcomes can only be assigned to questions in program-specific courses.",
+    };
+  }
+
+  if (!course.program_id) {
+    return {
+      success: false,
+      error: "This course has no owning program, so Graduate Outcomes cannot be assigned.",
+    };
+  }
+
+  const likertQuestions = listTemplateLikertQuestions(input.structure);
+  const questionMap = new Map(
+    likertQuestions.map((question) => [`${question.sectionKey}:${question.itemKey}`, question])
+  );
+  const gos = await db.gO.findMany({
+    where: {
+      id: { in: input.bindings.map((binding) => binding.goId) },
+      program_id: course.program_id,
+      is_active: true,
+    },
+    select: { code: true, description: true, id: true },
+  });
+  const goMap = new Map(gos.map((go) => [go.id, go]));
+  const usedPairs = new Set<string>();
+  const normalized: FacultyTemplateGoBindingItem[] = [];
+
+  for (const binding of input.bindings) {
+    const go = goMap.get(binding.goId);
+    const question = questionMap.get(`${binding.sectionKey}:${binding.itemKey}`);
+
+    if (!go) {
+      return {
+        success: false,
+        error: "One or more selected Graduate Outcomes are not available to this course.",
+      };
+    }
+
+    if (!question) {
+      return {
+        success: false,
+        error: "Graduate Outcomes can only be assigned to Likert questions.",
+      };
+    }
+
+    const pairKey = `${binding.goId}:${binding.sectionKey}:${binding.itemKey}`;
+    if (usedPairs.has(pairKey)) {
+      return {
+        success: false,
+        error: "A Graduate Outcome can only be assigned once to the same question.",
+      };
+    }
+    usedPairs.add(pairKey);
+
+    normalized.push({
+      goCodeSnapshot: go.code,
+      goDescriptionSnapshot: go.description,
+      goId: go.id,
       itemKey: binding.itemKey,
       questionPromptSnapshot: question.prompt,
       sectionKey: binding.sectionKey,
@@ -363,24 +483,42 @@ async function createFacultyDraft(
 async function replaceDraftBindings(
   tx: Prisma.TransactionClient,
   templateId: string,
-  bindings: FacultyTemplateBindingItem[]
+  bindings: FacultyTemplateBindingItem[],
+  goBindings: FacultyTemplateGoBindingItem[] = []
 ): Promise<void> {
   await tx.instrumentTemplateCiloQuestionBinding.deleteMany({
     where: { template_id: templateId },
   });
-
-  if (bindings.length === 0) return;
-
-  await tx.instrumentTemplateCiloQuestionBinding.createMany({
-    data: bindings.map((binding) => ({
-      cilo_description_snapshot: binding.ciloDescriptionSnapshot,
-      cilo_id: binding.ciloId,
-      item_key: binding.itemKey,
-      question_prompt_snapshot: binding.questionPromptSnapshot,
-      section_key: binding.sectionKey,
-      template_id: templateId,
-    })),
+  await tx.instrumentTemplateGoQuestionBinding.deleteMany({
+    where: { template_id: templateId },
   });
+
+  if (bindings.length > 0) {
+    await tx.instrumentTemplateCiloQuestionBinding.createMany({
+      data: bindings.map((binding) => ({
+        cilo_description_snapshot: binding.ciloDescriptionSnapshot,
+        cilo_id: binding.ciloId,
+        item_key: binding.itemKey,
+        question_prompt_snapshot: binding.questionPromptSnapshot,
+        section_key: binding.sectionKey,
+        template_id: templateId,
+      })),
+    });
+  }
+
+  if (goBindings.length > 0) {
+    await tx.instrumentTemplateGoQuestionBinding.createMany({
+      data: goBindings.map((binding) => ({
+        go_code_snapshot: binding.goCodeSnapshot,
+        go_description_snapshot: binding.goDescriptionSnapshot,
+        go_id: binding.goId,
+        item_key: binding.itemKey,
+        question_prompt_snapshot: binding.questionPromptSnapshot,
+        section_key: binding.sectionKey,
+        template_id: templateId,
+      })),
+    });
+  }
 }
 
 /**
@@ -428,16 +566,36 @@ export async function saveFacultyTemplateDraft(
     return bindingValidation;
   }
 
+  const goBindingValidation = await validateCourseBoundGoBindings({
+    bindings: input.go_question_bindings,
+    boundCourseId: input.bound_course_id,
+    structure,
+  });
+
+  if (!goBindingValidation.success) {
+    return goBindingValidation;
+  }
+
   try {
     const savedId = await prisma.$transaction(async (tx) => {
       if (target.ownedTemplateId) {
         await updateOwnedFacultyDraft(tx, target.ownedTemplateId, input, structure);
-        await replaceDraftBindings(tx, target.ownedTemplateId, bindingValidation.bindings);
+        await replaceDraftBindings(
+          tx,
+          target.ownedTemplateId,
+          bindingValidation.bindings,
+          goBindingValidation.bindings
+        );
         return target.ownedTemplateId;
       }
 
       const createdId = await createFacultyDraft(tx, input, structure, target, auth.data.userId);
-      await replaceDraftBindings(tx, createdId, bindingValidation.bindings);
+      await replaceDraftBindings(
+        tx,
+        createdId,
+        bindingValidation.bindings,
+        goBindingValidation.bindings
+      );
       return createdId;
     });
 
@@ -502,6 +660,20 @@ export async function duplicateFacultyTemplate(
         data: source.template_cilo_question_bindings.map((binding) => ({
           cilo_description_snapshot: binding.cilo_description_snapshot,
           cilo_id: binding.cilo_id,
+          item_key: binding.item_key,
+          question_prompt_snapshot: binding.question_prompt_snapshot,
+          section_key: binding.section_key,
+          template_id: created.id,
+        })),
+      });
+    }
+
+    if (source.template_go_question_bindings.length > 0) {
+      await tx.instrumentTemplateGoQuestionBinding.createMany({
+        data: source.template_go_question_bindings.map((binding) => ({
+          go_code_snapshot: binding.go_code_snapshot,
+          go_description_snapshot: binding.go_description_snapshot,
+          go_id: binding.go_id,
           item_key: binding.item_key,
           question_prompt_snapshot: binding.question_prompt_snapshot,
           section_key: binding.section_key,
@@ -645,6 +817,7 @@ export async function getFacultyTemplatePublicationContext(
     include: {
       bound_course: true,
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -702,11 +875,33 @@ export async function getFacultyTemplatePublicationContext(
     };
   }
 
+  // Direct question–GO bindings are optional: a Likert question without one
+  // publishes as a general evaluation item. They are re-validated here against
+  // the Course's owning Program, so an archived or foreign GO keeps blocking
+  // publication instead of silently dropping its evidence.
+  const goBindingValidation = await validateCourseBoundGoBindings({
+    bindings: template.template_go_question_bindings
+      .filter((binding) => binding.go_id)
+      .map((binding) => ({
+        goId: binding.go_id!,
+        itemKey: binding.item_key,
+        sectionKey: binding.section_key,
+      })),
+    boundCourseId: template.bound_course_id,
+    structure,
+    db,
+  });
+
+  if (!goBindingValidation.success) {
+    return goBindingValidation;
+  }
+
   return {
     success: true,
     data: {
       bindings: bindingValidation.bindings,
       cilos,
+      goBindings: goBindingValidation.bindings,
       course: {
         code: template.bound_course.code,
         courseType: courseContext.courseType,

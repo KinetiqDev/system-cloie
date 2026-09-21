@@ -89,7 +89,7 @@ export type CiloGoMapping = {
   goId: string;
   goCode: string;
   goDescription: string;
-  manifestation: CILOMappingManifestation;
+  manifestation: CILOMappingManifestation | null;
 };
 
 /** One quantitative question bound to a CILO and contributing to its metric. */
@@ -132,7 +132,13 @@ export type CiloMetric = {
  * GENERAL rather than null so UI components never interpret absence.
  */
 export type QuestionBinding =
-  | { type: "CILO"; ciloId: string; ciloLabel: string }
+  | {
+      type: "CILO";
+      ciloId: string;
+      ciloLabel: string;
+      directGoMappings?: CiloGoMapping[];
+    }
+  | { type: "GO"; goMappings: CiloGoMapping[] }
   | { type: "GENERAL" };
 
 /**

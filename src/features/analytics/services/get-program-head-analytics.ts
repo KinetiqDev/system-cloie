@@ -810,6 +810,20 @@ type OutcomeBindingRow = {
   } | null;
 };
 
+type OutcomeDirectGoBindingRow = {
+  section_key: string;
+  item_key: string;
+  course_bound_evaluation_id: string;
+  go_id: string | null;
+  go_code_snapshot: string;
+  go_description_snapshot: string;
+  question_prompt_snapshot: string;
+  course_bound_evaluation: {
+    deployment_name: string;
+    course_assignment: { course: { id: string; code: string; title: string } };
+  };
+};
+
 function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: string): string {
   if (!course) return "—";
   const position = course.cilos.findIndex((cilo) => cilo.id === ciloId);
@@ -841,24 +855,24 @@ function resolveInstrumentSnapshot(
   };
 }
 
-/**
- * Map one course-bound rating to its normalized GO evidence row through the
- * publication-time binding identified by evaluation plus section/item keys.
- * Returns null when the item has no binding, the bound CILO was deleted, or
- * the CILO has no canonical mapping for the selected Program.
- */
+/** Map one course-bound rating to its CILO and/or direct GO evidence. */
 function toOutcomeEvidenceRow(
   row: OutcomeRatingRow,
-  bindingByItemKey: Map<string, OutcomeBindingRow>,
+  ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
+  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
   snapshotById: Map<string, unknown>
 ): OutcomeEvidenceRow | null {
-  const binding = bindingByItemKey.get(
-    `${row.response.assignment.course_bound_id ?? ""}:${row.section_key}:${row.item_key}`
-  );
-  const cilo = binding?.cilo;
-  if (!cilo || cilo.cilo_mappings.length === 0) {
-    return null;
-  }
+  const key = `${row.response.assignment.course_bound_id ?? ""}:${row.section_key}:${row.item_key}`;
+  const ciloBinding = ciloBindingByItemKey.get(key);
+  const directBindings = directBindingsByItemKey.get(key) ?? [];
+  const cilo = ciloBinding?.cilo;
+  if ((!cilo || cilo.cilo_mappings.length === 0) && directBindings.length === 0) return null;
+  const directContext = directBindings[0]?.course_bound_evaluation;
+  const course = cilo?.course
+    ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
+    : directContext
+      ? directContext.course_assignment.course
+      : null;
   return {
     ratingValue: row.rating_value,
     responseId: row.response_id,
@@ -868,17 +882,27 @@ function toOutcomeEvidenceRow(
       row.response.assignment.course_bound?.instrument_version_id ?? null,
       snapshotById
     ),
-    cilo: {
-      id: cilo.id,
-      code: ciloCodeFor(cilo.course, cilo.id),
-      description: cilo.description,
-      course: cilo.course
-        ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
-        : null,
-    },
-    goMappings: cilo.cilo_mappings.map(toGoMapping),
-    evaluationId: binding.course_bound_evaluation_id,
-    deploymentName: binding.course_bound_evaluation.deployment_name,
+    course,
+    cilo: cilo
+      ? {
+          id: cilo.id,
+          code: ciloCodeFor(cilo.course, cilo.id),
+          description: cilo.description,
+          course,
+        }
+      : null,
+    goMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
+    directGoBindings: directBindings.map((binding) => ({
+      goId:
+        binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
+      code: binding.go_code_snapshot,
+      name: binding.go_description_snapshot,
+      questionPrompt: binding.question_prompt_snapshot,
+    })),
+    evaluationId:
+      ciloBinding?.course_bound_evaluation_id ?? directBindings[0].course_bound_evaluation_id,
+    deploymentName:
+      ciloBinding?.course_bound_evaluation.deployment_name ?? directContext!.deployment_name,
   };
 }
 
@@ -1208,11 +1232,8 @@ export async function getProgramHeadOutcomes(
     wantsCourse,
   } = await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
 
-  // Publication-time CILO question bindings are resolved by evaluation +
-  // section/item keys, because the current student submission flow writes
-  // ratings without a binding ID. This mirrors the existing review and faculty
-  // analytics compensation and honors the binding's unique
-  // (evaluation, section_key, item_key) identity.
+  // Resolve both CILO bindings and frozen direct GO bindings by the same
+  // evaluation plus section/item identity written on submitted ratings.
   const evaluationIds = [
     ...new Set(
       ratingRows
@@ -1220,45 +1241,72 @@ export async function getProgramHeadOutcomes(
         .filter((id): id is string => Boolean(id))
     ),
   ];
-  const bindings =
+  const [bindings, directBindings] =
     evaluationIds.length > 0
-      ? await prisma.courseBoundCiloQuestionBinding.findMany({
-          where: { course_bound_evaluation_id: { in: evaluationIds }, cilo_id: { not: null } },
-          select: {
-            section_key: true,
-            item_key: true,
-            course_bound_evaluation_id: true,
-            course_bound_evaluation: { select: { deployment_name: true } },
-            cilo: {
-              select: {
-                id: true,
-                description: true,
-                course: {
-                  select: {
-                    id: true,
-                    code: true,
-                    title: true,
-                    cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
+      ? await Promise.all([
+          prisma.courseBoundCiloQuestionBinding.findMany({
+            where: { course_bound_evaluation_id: { in: evaluationIds }, cilo_id: { not: null } },
+            select: {
+              section_key: true,
+              item_key: true,
+              course_bound_evaluation_id: true,
+              course_bound_evaluation: { select: { deployment_name: true } },
+              cilo: {
+                select: {
+                  id: true,
+                  description: true,
+                  course: {
+                    select: {
+                      id: true,
+                      code: true,
+                      title: true,
+                      cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
+                    },
                   },
-                },
-                cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: {
-                    manifestation: true,
-                    go: { select: { id: true, code: true, description: true } },
+                  cilo_mappings: {
+                    where: { go: { program_id: selectedProgram.id } },
+                    select: {
+                      manifestation: true,
+                      go: { select: { id: true, code: true, description: true } },
+                    },
                   },
                 },
               },
             },
-          },
-        })
-      : [];
+          }),
+          prisma.courseBoundGoQuestionBinding.findMany({
+            where: { course_bound_evaluation_id: { in: evaluationIds } },
+            select: {
+              section_key: true,
+              item_key: true,
+              course_bound_evaluation_id: true,
+              go_id: true,
+              go_code_snapshot: true,
+              go_description_snapshot: true,
+              question_prompt_snapshot: true,
+              course_bound_evaluation: {
+                select: {
+                  deployment_name: true,
+                  course_assignment: {
+                    select: { course: { select: { id: true, code: true, title: true } } },
+                  },
+                },
+              },
+            },
+          }),
+        ])
+      : [[], []];
   const bindingByItemKey = new Map<string, (typeof bindings)[number]>();
   for (const binding of bindings) {
     const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
-    if (!bindingByItemKey.has(key)) {
-      bindingByItemKey.set(key, binding);
-    }
+    if (!bindingByItemKey.has(key)) bindingByItemKey.set(key, binding);
+  }
+  const directBindingsByItemKey = new Map<string, OutcomeDirectGoBindingRow[]>();
+  for (const binding of directBindings) {
+    const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
+    const bucket = directBindingsByItemKey.get(key) ?? [];
+    bucket.push(binding);
+    directBindingsByItemKey.set(key, bucket);
   }
 
   const instrumentVersionIds = [
@@ -1283,7 +1331,9 @@ export async function getProgramHeadOutcomes(
   );
 
   const evidenceRows: OutcomeEvidenceRow[] = ratingRows
-    .map((row) => toOutcomeEvidenceRow(row, bindingByItemKey, snapshotById))
+    .map((row) =>
+      toOutcomeEvidenceRow(row, bindingByItemKey, directBindingsByItemKey, snapshotById)
+    )
     .filter((row): row is OutcomeEvidenceRow => row !== null);
 
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
