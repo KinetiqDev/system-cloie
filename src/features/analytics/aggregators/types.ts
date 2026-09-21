@@ -45,6 +45,8 @@ export type QuantitativeMetric = {
 /** Stakeholder-scoped participation slice (spec §13.2 breakdown). */
 export type StakeholderParticipation = {
   stakeholder: TargetStakeholder;
+  /** Distinct people represented by this stakeholder's assignment rows. */
+  respondentCount: number;
   assigned: number;
   submitted: number;
   inProgress: number;
