@@ -75,7 +75,12 @@ export function ProgramHeadContributorMatrix({
                             key={
                               contributor.kind === "CILO"
                                 ? `cilo:${contributor.ciloId}`
-                                : `direct:${contributor.evaluationId}:${contributor.sectionKey}:${contributor.itemKey}`
+                                : JSON.stringify([
+                                    "direct",
+                                    contributor.evaluationId,
+                                    contributor.sectionKey,
+                                    contributor.itemKey,
+                                  ])
                             }
                           >
                             <TableCell className="align-top">

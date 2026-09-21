@@ -23,6 +23,7 @@ import {
   type OutcomeEvidenceRow,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
+import { encodeBindingKey, encodeQuestionKey } from "../aggregators/question-identity";
 import {
   buildScaleIdentities,
   describeScales,
@@ -855,6 +856,17 @@ function resolveInstrumentSnapshot(
   };
 }
 
+/** Course behind one rating row: CILO course wins, else the direct binding's course. */
+function courseForOutcomeRow(
+  cilo: OutcomeBindingRow["cilo"] | null | undefined,
+  directBindings: OutcomeDirectGoBindingRow[]
+): OutcomeEvidenceRow["course"] {
+  if (cilo?.course) {
+    return { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title };
+  }
+  return directBindings[0]?.course_bound_evaluation.course_assignment.course ?? null;
+}
+
 /** Map one course-bound rating to its CILO and/or direct GO evidence. */
 function toOutcomeEvidenceRow(
   row: OutcomeRatingRow,
@@ -862,17 +874,16 @@ function toOutcomeEvidenceRow(
   directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
   snapshotById: Map<string, unknown>
 ): OutcomeEvidenceRow | null {
-  const key = `${row.response.assignment.course_bound_id ?? ""}:${row.section_key}:${row.item_key}`;
+  const key = encodeBindingKey(
+    row.response.assignment.course_bound_id ?? "",
+    row.section_key,
+    row.item_key
+  );
   const ciloBinding = ciloBindingByItemKey.get(key);
   const directBindings = directBindingsByItemKey.get(key) ?? [];
   const cilo = ciloBinding?.cilo;
   if ((!cilo || cilo.cilo_mappings.length === 0) && directBindings.length === 0) return null;
-  const directContext = directBindings[0]?.course_bound_evaluation;
-  const course = cilo?.course
-    ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
-    : directContext
-      ? directContext.course_assignment.course
-      : null;
+  const course = courseForOutcomeRow(cilo, directBindings);
   return {
     ratingValue: row.rating_value,
     responseId: row.response_id,
@@ -902,7 +913,8 @@ function toOutcomeEvidenceRow(
     evaluationId:
       ciloBinding?.course_bound_evaluation_id ?? directBindings[0].course_bound_evaluation_id,
     deploymentName:
-      ciloBinding?.course_bound_evaluation.deployment_name ?? directContext!.deployment_name,
+      ciloBinding?.course_bound_evaluation.deployment_name ??
+      directBindings[0].course_bound_evaluation.deployment_name,
   };
 }
 
@@ -965,7 +977,7 @@ async function loadCentralGoBindings(
       byQuestion = new Map();
       byDeployment.set(snapshot.central_deployment_id, byQuestion);
     }
-    const questionKey = `${snapshot.section_key}:${snapshot.item_key}`;
+    const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     // Identity and labels come from the immutable snapshot fields, never the
     // live GO relation: renaming or deleting a GO must not rewrite or drop
@@ -1147,7 +1159,9 @@ async function buildProgramWideOutcomeDtos(
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     const bindings = deployment
-      ? bindingsByDeployment.get(deployment.id)?.get(`${row.section_key}:${row.item_key}`)
+      ? bindingsByDeployment
+          .get(deployment.id)
+          ?.get(encodeQuestionKey(row.section_key, row.item_key))
       : undefined;
     if (!deployment || !bindings || bindings.length === 0) continue;
     const bucket = byStakeholder.get(deployment.target_stakeholder) ?? [];
@@ -1298,12 +1312,20 @@ export async function getProgramHeadOutcomes(
       : [[], []];
   const bindingByItemKey = new Map<string, (typeof bindings)[number]>();
   for (const binding of bindings) {
-    const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
+    const key = encodeBindingKey(
+      binding.course_bound_evaluation_id,
+      binding.section_key,
+      binding.item_key
+    );
     if (!bindingByItemKey.has(key)) bindingByItemKey.set(key, binding);
   }
   const directBindingsByItemKey = new Map<string, OutcomeDirectGoBindingRow[]>();
   for (const binding of directBindings) {
-    const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
+    const key = encodeBindingKey(
+      binding.course_bound_evaluation_id,
+      binding.section_key,
+      binding.item_key
+    );
     const bucket = directBindingsByItemKey.get(key) ?? [];
     bucket.push(binding);
     directBindingsByItemKey.set(key, bucket);

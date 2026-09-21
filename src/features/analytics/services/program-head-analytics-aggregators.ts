@@ -3,6 +3,10 @@ import {
   resolveSnapshotItemScale,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
+import {
+  encodeContributionKey,
+  encodeDirectContributorKey,
+} from "../aggregators/question-identity";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -462,7 +466,7 @@ function accumulateDirectContributor(
   row: OutcomeEvidenceRow,
   binding: OutcomeEvidenceRow["directGoBindings"][number]
 ): void {
-  const key = `direct:${row.evaluationId}:${row.sectionKey}:${row.itemKey}`;
+  const key = encodeDirectContributorKey(row.evaluationId, row.sectionKey, row.itemKey);
   let contributor = aggregate.contributors.get(key) as DirectGoContributorAggregate | undefined;
   if (!contributor) {
     contributor = {
@@ -487,6 +491,69 @@ function accumulateDirectContributor(
  * mappings and frozen direct question bindings. One response item contributes
  * once per GO even when both paths name the same GO.
  */
+/** Accumulate one rating row's CILO-derived contributions. */
+function accumulateCiloRowContributions(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow,
+  descriptors: ScaleDescriptor[] | null,
+  isValidRating: boolean
+): void {
+  if (!row.cilo) return;
+  for (const mapping of row.goMappings) {
+    const contributionKey = encodeContributionKey(
+      row.responseId,
+      row.evaluationId,
+      row.sectionKey,
+      row.itemKey,
+      mapping.goId
+    );
+    if (seenContributions.has(contributionKey)) continue;
+    seenContributions.add(contributionKey);
+    const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
+    if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+      accumulateCiloContributor(aggregate, row, row.cilo, mapping.manifestation);
+    }
+  }
+}
+
+/** Accumulate one rating row's frozen direct-question contributions. */
+function accumulateDirectRowContributions(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow,
+  descriptors: ScaleDescriptor[] | null,
+  isValidRating: boolean
+): void {
+  for (const binding of row.directGoBindings) {
+    const contributionKey = encodeContributionKey(
+      row.responseId,
+      row.evaluationId,
+      row.sectionKey,
+      row.itemKey,
+      binding.goId
+    );
+    if (seenContributions.has(contributionKey)) continue;
+    seenContributions.add(contributionKey);
+    const aggregate = getOrCreateOutcomeAggregate(outcomes, binding);
+    if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+      accumulateDirectContributor(aggregate, row, binding);
+    }
+  }
+}
+
+/** Accumulate one outcome rating row across both CILO and direct GO paths. */
+function accumulateOutcomeEvidenceRow(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow
+): void {
+  const descriptors = resolveRatingScale(row);
+  const isValidRating = ratingIsValid(descriptors, row.ratingValue);
+  accumulateCiloRowContributions(outcomes, seenContributions, row, descriptors, isValidRating);
+  accumulateDirectRowContributions(outcomes, seenContributions, row, descriptors, isValidRating);
+}
+
 export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvidenceAggregation {
   const outcomes = new Map<string, OutcomeEvidenceAggregate>();
   const seenContributions = new Set<string>();
@@ -496,27 +563,7 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
     if (row.cilo && row.goMappings.length > 1) {
       hasMultiMappedCilo = true;
     }
-    const descriptors = resolveRatingScale(row);
-    const isValidRating = ratingIsValid(descriptors, row.ratingValue);
-    const ciloMappings = row.cilo ? row.goMappings : [];
-    for (const mapping of ciloMappings) {
-      const contributionKey = `${row.responseId}:${row.evaluationId}:${row.sectionKey}:${row.itemKey}:${mapping.goId}`;
-      if (seenContributions.has(contributionKey)) continue;
-      seenContributions.add(contributionKey);
-      const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
-      if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
-        accumulateCiloContributor(aggregate, row, row.cilo!, mapping.manifestation);
-      }
-    }
-    for (const binding of row.directGoBindings) {
-      const contributionKey = `${row.responseId}:${row.evaluationId}:${row.sectionKey}:${row.itemKey}:${binding.goId}`;
-      if (seenContributions.has(contributionKey)) continue;
-      seenContributions.add(contributionKey);
-      const aggregate = getOrCreateOutcomeAggregate(outcomes, binding);
-      if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
-        accumulateDirectContributor(aggregate, row, binding);
-      }
-    }
+    accumulateOutcomeEvidenceRow(outcomes, seenContributions, row);
   }
 
   return { outcomes, hasMultiMappedCilo };

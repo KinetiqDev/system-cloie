@@ -38,6 +38,10 @@ import {
   type GoMetric,
 } from "../aggregators/go";
 import type { OutcomeItemRatingRow } from "../aggregators/cilo";
+import {
+  encodeBindingKey as encodeCourseBindingKey,
+  encodeQuestionKey,
+} from "../aggregators/question-identity";
 import type { MetricEvidenceSummary, ParticipationSummary } from "../aggregators/types";
 import type { WordCloudToken } from "../types";
 
@@ -291,8 +295,8 @@ export function toDashboardGoRows(
     ratingCount: metric.ratingCount,
     responseCount: metric.responseCount,
     evaluationCount: metric.evaluationCount,
-    contributorCount: metric.contributingCilos.length,
-    contributorKind: "cilos" as const,
+    contributorCount: metric.questionCount,
+    contributorKind: "questions" as const,
     spansMultipleScales: metric.spansMultipleScales,
     scaleMax: singleScaleMax(metric),
     hasEvidence: metric.ratingCount > 0,
@@ -300,9 +304,9 @@ export function toDashboardGoRows(
       ratingCount: metric.ratingCount,
       responseCount: metric.responseCount,
       evaluationCount: metric.evaluationCount,
-      questionCount: metric.contributingCilos.length,
+      questionCount: metric.questionCount,
       scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.contributingCilos.length} contributing CILO(s); unbound and general items are excluded.`,
+      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); unbound and general items are excluded.`,
       evidenceHref: evidenceHrefFor(metric.goId),
     },
   }));
@@ -373,7 +377,9 @@ export function buildCourseGoRatingRows(
   for (const row of rows) {
     const courseBoundId = row.response.assignment.course_bound_id;
     if (!courseBoundId) continue;
-    const binding = bindingByKey.get(`${courseBoundId}:${row.section_key}:${row.item_key}`);
+    const binding = bindingByKey.get(
+      encodeCourseBindingKey(courseBoundId, row.section_key, row.item_key)
+    );
     const cilo = binding?.cilo;
     const directGoMappings = binding?.directGoMappings ?? [];
     if ((!cilo || cilo.cilo_mappings.length === 0) && directGoMappings.length === 0) continue;
@@ -424,7 +430,7 @@ export function buildCentralGoRatingRows(
     if (!deployment) continue;
     const bindings = bindingsByDeployment
       .get(deployment.id)
-      ?.get(`${row.section_key}:${row.item_key}`);
+      ?.get(encodeQuestionKey(row.section_key, row.item_key));
     if (!bindings || bindings.length === 0) continue;
     normalized.push({
       sectionKey: row.section_key,
@@ -985,13 +991,24 @@ async function loadCourseBindings(
   ]);
   const byKey = new Map<string, CourseBindingRow>();
   for (const binding of ciloBindings) {
-    byKey.set(`${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`, {
-      ...binding,
-      directGoMappings: [],
-    });
+    byKey.set(
+      encodeCourseBindingKey(
+        binding.course_bound_evaluation_id,
+        binding.section_key,
+        binding.item_key
+      ),
+      {
+        ...binding,
+        directGoMappings: [],
+      }
+    );
   }
   for (const binding of directBindings) {
-    const key = `${binding.course_bound_evaluation_id}:${binding.section_key}:${binding.item_key}`;
+    const key = encodeCourseBindingKey(
+      binding.course_bound_evaluation_id,
+      binding.section_key,
+      binding.item_key
+    );
     const existing = byKey.get(key) ?? {
       course_bound_evaluation_id: binding.course_bound_evaluation_id,
       section_key: binding.section_key,
@@ -1041,7 +1058,7 @@ async function loadCentralGoBindings(
       byQuestion = new Map();
       byDeployment.set(snapshot.central_deployment_id, byQuestion);
     }
-    const questionKey = `${snapshot.section_key}:${snapshot.item_key}`;
+    const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     bindings.push({
       goId: snapshot.go!.id,

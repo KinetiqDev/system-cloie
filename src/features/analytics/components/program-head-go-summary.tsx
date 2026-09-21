@@ -35,8 +35,7 @@ function mergeCatalogRows(
         responseCount: 0,
         evaluationCount: 0,
         contributorCount: 0,
-        contributorKind:
-          sourceKey === "COURSE_STUDENT" ? ("cilos" as const) : ("questions" as const),
+        contributorKind: "questions" as const,
         spansMultipleScales: false,
         scaleMax: null,
         hasEvidence: false,

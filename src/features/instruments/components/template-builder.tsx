@@ -103,7 +103,7 @@ type ActionResult<T = void> = { success: true; data?: T } | { success: false; er
 
 const EMPTY_FACULTY_COURSE_CONTEXTS: FacultyCourseContext[] = [];
 
-export type FacultyBuilderCourseGoOptionsResult =
+type FacultyBuilderCourseGoOptionsResult =
   | {
       success: true;
       data: { items: ProgramGoOption[]; unavailableReason: "general-education" | null };
@@ -391,7 +391,7 @@ function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: st
  * owning Program and align to Institutional Outcomes (ADR 0005, ADR 0031). The
  * reason union is shared with the builder's GO catalog state below.
  */
-export type CourseGoCatalogReason =
+type CourseGoCatalogReason =
   | "general-education"
   | "unselected-course"
   | "unresolved-course"
@@ -562,20 +562,6 @@ export function TemplateBuilder({
     }
     return map;
   });
-  /** Archived GOs bound to questions: rendered as removable archived chips. */
-  const archivedGoLookup = useMemo(() => {
-    const lookup = new Map<string, ProgramGoOption>();
-    const activeIds = new Set((goOptions ?? []).map((go) => go.id));
-    for (const binding of initialGoBindings ?? []) {
-      if (activeIds.has(binding.goId)) continue;
-      lookup.set(binding.goId, {
-        id: binding.goId,
-        code: binding.goCodeSnapshot ?? "Archived GO",
-        description: binding.goDescriptionSnapshot ?? "",
-      });
-    }
-    return lookup;
-  }, [initialGoBindings, goOptions]);
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -617,6 +603,27 @@ export function TemplateBuilder({
   const [courseGoOptionsReason, setCourseGoOptionsReason] =
     useState<CourseGoCatalogReason>("unselected-course");
   const [isLoadingGoOptions, setIsLoadingGoOptions] = useState(false);
+  /** Archived GOs bound to questions: rendered as removable archived chips. */
+  const archivedGoLookup = useMemo(() => {
+    const lookup = new Map<string, ProgramGoOption>();
+    const seededBindings = [
+      ...(initialGoBindings ?? []),
+      ...(facultyConfig?.initialGoBindings ?? []),
+    ];
+    const activeIds = new Set([
+      ...(goOptions ?? []).map((go) => go.id),
+      ...courseGoOptions.map((go) => go.id),
+    ]);
+    for (const binding of seededBindings) {
+      if (activeIds.has(binding.goId)) continue;
+      lookup.set(binding.goId, {
+        id: binding.goId,
+        code: binding.goCodeSnapshot ?? "Archived GO",
+        description: binding.goDescriptionSnapshot ?? "",
+      });
+    }
+    return lookup;
+  }, [initialGoBindings, facultyConfig?.initialGoBindings, goOptions, courseGoOptions]);
   const currentDraftSnapshot = useMemo(
     () =>
       serializeBuilderDraft({
@@ -962,20 +969,6 @@ export function TemplateBuilder({
 
         const { items, unavailableReason } = result.data;
         setCourseGoOptions(items);
-        setCourseGoBindings((current) => {
-          const activeIds = new Set(items.map((go) => go.id));
-          const next: Record<string, string[]> = {};
-          for (const [key, goIds] of Object.entries(current)) {
-            const retained = goIds.filter((goId) => activeIds.has(goId));
-            if (retained.length > 0) next[key] = retained;
-          }
-          const changed =
-            Object.keys(next).length !== Object.keys(current).length ||
-            Object.entries(next).some(
-              (entry) => (current[entry[0]] ?? []).join() !== entry[1].join()
-            );
-          return changed ? next : current;
-        });
         setCourseGoOptionsReason(
           unavailableReason ?? (items.length === 0 ? "empty-catalog" : null)
         );

@@ -15,7 +15,7 @@ function evidenceRow(overrides: Partial<DashboardGoSummaryRow> = {}): DashboardG
     responseCount: 163,
     evaluationCount: 8,
     contributorCount: 11,
-    contributorKind: "cilos",
+    contributorKind: "questions",
     spansMultipleScales: false,
     scaleMax: 5,
     hasEvidence: true,

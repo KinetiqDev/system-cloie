@@ -215,7 +215,7 @@ describe("GO row normalization", () => {
   };
 
   it("routes course ratings through publication-time bindings; manifestations stay descriptive", () => {
-    const bindingByKey = new Map([["cb-1:cilo-items:q-cilo-a", binding]]);
+    const bindingByKey = new Map([[JSON.stringify(["cb-1", "cilo-items", "q-cilo-a"]), binding]]);
     const normalized = buildCourseGoRatingRows(
       [courseRow({ rating_value: 1 })],
       bindingByKey,
@@ -239,7 +239,7 @@ describe("GO row normalization", () => {
       [courseRow({ rating_value: 2 })],
       new Map([
         [
-          "cb-1:cilo-items:q-cilo-a",
+          JSON.stringify(["cb-1", "cilo-items", "q-cilo-a"]),
           {
             ...binding,
             cilo: null,
@@ -264,8 +264,8 @@ describe("GO row normalization", () => {
     const normalized = buildCourseGoRatingRows(
       [courseRow()],
       new Map([
-        ["cb-1:cilo-items:q-cilo-a", unbound],
-        ["cb-2:cilo-items:q-cilo-a", unmapped],
+        [JSON.stringify(["cb-1", "cilo-items", "q-cilo-a"]), unbound],
+        [JSON.stringify(["cb-2", "cilo-items", "q-cilo-a"]), unmapped],
       ]),
       SNAPSHOT_MAP
     );
@@ -277,7 +277,10 @@ describe("GO row normalization", () => {
       [
         "cd-STUDENT",
         new Map([
-          ["plo-items:q-plo", [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }]],
+          [
+            JSON.stringify(["plo-items", "q-plo"]),
+            [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }],
+          ],
         ]),
       ],
     ]);
@@ -316,13 +319,13 @@ describe("GO summary projections", () => {
     },
   ];
 
-  it("exposes CILO contributors for course evidence", () => {
+  it("exposes bound-question counts for course evidence", () => {
     const row = toDashboardGoRows(
       metrics,
       () => "/program-head/programs/p1/analytics?tab=outcomes"
     )[0];
-    expect(row.contributorKind).toBe("cilos");
-    expect(row.contributorCount).toBe(2);
+    expect(row.contributorKind).toBe("questions");
+    expect(row.contributorCount).toBe(3);
     expect(row.hasEvidence).toBe(true);
     expect(row.scaleMax).toBeNull();
     expect(row.evidenceSummary.evidenceHref).toContain("tab=outcomes");
@@ -430,7 +433,7 @@ describe("buildNeedsAttentionItems", () => {
             responseCount: 2,
             evaluationCount: 1,
             contributorCount: 2,
-            contributorKind: "cilos",
+            contributorKind: "questions",
             spansMultipleScales: false,
             scaleMax: 5,
             hasEvidence: true,

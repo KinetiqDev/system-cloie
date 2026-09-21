@@ -82,7 +82,7 @@ function goRow(
     responseCount: 0,
     evaluationCount: 0,
     contributorCount: 0,
-    contributorKind: "cilos" as const,
+    contributorKind: "questions" as const,
     spansMultipleScales: false,
     scaleMax: null,
     hasEvidence: false,
@@ -149,7 +149,7 @@ function dashboardDataFixture(
           responseCount: 163,
           evaluationCount: 8,
           contributorCount: 11,
-          contributorKind: "cilos",
+          contributorKind: "questions",
           scaleMax: 5,
           hasEvidence: true,
         }),
@@ -331,7 +331,7 @@ describe("selected Program dashboard route", () => {
     expect(text).toContain("614 ratings");
     expect(text).toContain("163 responses");
     expect(text).toContain("8 evaluations");
-    expect(text).toContain("11 contributing CILOs");
+    expect(text).toContain("11 bound questions");
   });
 
   it("lists needs-attention items with text status labels and canonical links", async () => {

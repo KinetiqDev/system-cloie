@@ -17,7 +17,7 @@ import type { ProgramGoOption } from "../types";
  * has no active GOs reports an empty list with no reason, because that is a
  * catalog state the Program Head can change.
  */
-export type FacultyCourseGoOptions = {
+type FacultyCourseGoOptions = {
   items: ProgramGoOption[];
   unavailableReason: "general-education" | null;
 };

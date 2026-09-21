@@ -162,7 +162,7 @@ export type ProgramHeadOutcomeDTO = {
 };
 
 /** One valid-rating contribution behind a Program GO row. */
-export type ProgramHeadOutcomeContributorDTO =
+type ProgramHeadOutcomeContributorDTO =
   | {
       kind: "CILO";
       ciloId: string;

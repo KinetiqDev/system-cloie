@@ -3,6 +3,7 @@ import { ratingBelongsToScale } from "./scale-identity";
 import { buildQuantitativeMetric, type QuantitativeRating } from "./quantitative";
 import type { QuantitativeMetric } from "./types";
 import type { OutcomeItemRatingRow } from "./cilo";
+import { encodeContributionKey, encodeQuestionKey } from "./question-identity";
 
 // ---------------------------------------------------------------------------
 // GO metric aggregation (spec §5.8, §5.9, §7, §9)
@@ -177,7 +178,13 @@ export function buildCourseDerivedGoMetrics(rows: OutcomeItemRatingRow[]): GoMet
     ];
     for (const { mappings, cilo: contributionCilo } of mappingGroups) {
       for (const mapping of mappings) {
-        const contributionKey = `${row.responseId}:${row.evaluationId ?? ""}:${row.sectionKey}:${row.itemKey}:${mapping.goId}`;
+        const contributionKey = encodeContributionKey(
+          row.responseId,
+          row.evaluationId ?? "",
+          row.sectionKey,
+          row.itemKey,
+          mapping.goId
+        );
         if (seenContributions.has(contributionKey)) {
           continue;
         }
@@ -193,7 +200,7 @@ export function buildCourseDerivedGoMetrics(rows: OutcomeItemRatingRow[]): GoMet
           row.responseId,
           row.scale,
           contributionCilo,
-          `${row.sectionKey}:${row.itemKey}`,
+          encodeQuestionKey(row.sectionKey, row.itemKey),
           row.evaluationId
         );
       }
@@ -244,7 +251,7 @@ export function buildProgramWideGoMetrics(rows: CentralGoRatingRow[]): GoMetric[
         row.responseId,
         row.scale,
         null,
-        `${row.sectionKey}:${row.itemKey}`,
+        encodeQuestionKey(row.sectionKey, row.itemKey),
         row.evaluationId
       );
     }

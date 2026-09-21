@@ -177,7 +177,10 @@ export async function getOnBehalfTemplatePublicationContext(
     }
   }
 
-  const questionMap = new Map(likertQuestions.map((q) => [`${q.sectionKey}:${q.itemKey}`, q]));
+  // Question identity is a structural tuple, never a separator join.
+  const questionMap = new Map(
+    likertQuestions.map((q) => [JSON.stringify([q.sectionKey, q.itemKey]), q])
+  );
   const ciloMap = new Map(cilos.map((c) => [c.id, c]));
   const validatedBindings = [];
   const usedQuestionKeys = new Set<string>();
@@ -185,7 +188,7 @@ export async function getOnBehalfTemplatePublicationContext(
   for (const binding of template.template_cilo_question_bindings) {
     if (!binding.cilo_id) continue;
     const cilo = ciloMap.get(binding.cilo_id);
-    const questionKey = `${binding.section_key}:${binding.item_key}`;
+    const questionKey = JSON.stringify([binding.section_key, binding.item_key]);
     const question = questionMap.get(questionKey);
 
     if (!cilo) {

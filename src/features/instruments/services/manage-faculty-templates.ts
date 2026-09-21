@@ -20,7 +20,7 @@ export type FacultyTemplateBindingItem = {
   sectionKey: string;
 };
 
-export type FacultyTemplateGoBindingItem = {
+type FacultyTemplateGoBindingItem = {
   goId: string;
   goCodeSnapshot: string;
   goDescriptionSnapshot: string;
@@ -164,6 +164,16 @@ async function resolveFacultyCourseContext(input: {
   );
 }
 
+/** Question identity as a structural tuple, never a separator join. */
+function encodeQuestionKey(sectionKey: string, itemKey: string): string {
+  return JSON.stringify([sectionKey, itemKey]);
+}
+
+/** Binding identity as a structural tuple, never a separator join. */
+function encodeGoBindingKey(goId: string, sectionKey: string, itemKey: string): string {
+  return JSON.stringify([goId, sectionKey, itemKey]);
+}
+
 async function validateDraftBindings(input: {
   bindings: SaveFacultyTemplateDraftInput["cilo_question_bindings"];
   boundCourseId?: string | null;
@@ -189,7 +199,10 @@ async function validateDraftBindings(input: {
 
   const likertQuestions = listTemplateLikertQuestions(input.structure);
   const questionMap = new Map(
-    likertQuestions.map((question) => [`${question.sectionKey}:${question.itemKey}`, question])
+    likertQuestions.map((question) => [
+      encodeQuestionKey(question.sectionKey, question.itemKey),
+      question,
+    ])
   );
   const cilos = await (input.db ?? prisma).cILO.findMany({
     where: {
@@ -205,7 +218,7 @@ async function validateDraftBindings(input: {
 
   for (const binding of input.bindings) {
     const cilo = ciloMap.get(binding.ciloId);
-    const questionKey = `${binding.sectionKey}:${binding.itemKey}`;
+    const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
     const question = questionMap.get(questionKey);
 
     if (!cilo) {
@@ -287,7 +300,10 @@ export async function validateCourseBoundGoBindings(input: {
 
   const likertQuestions = listTemplateLikertQuestions(input.structure);
   const questionMap = new Map(
-    likertQuestions.map((question) => [`${question.sectionKey}:${question.itemKey}`, question])
+    likertQuestions.map((question) => [
+      encodeQuestionKey(question.sectionKey, question.itemKey),
+      question,
+    ])
   );
   const gos = await db.gO.findMany({
     where: {
@@ -303,7 +319,7 @@ export async function validateCourseBoundGoBindings(input: {
 
   for (const binding of input.bindings) {
     const go = goMap.get(binding.goId);
-    const question = questionMap.get(`${binding.sectionKey}:${binding.itemKey}`);
+    const question = questionMap.get(encodeQuestionKey(binding.sectionKey, binding.itemKey));
 
     if (!go) {
       return {
@@ -319,7 +335,7 @@ export async function validateCourseBoundGoBindings(input: {
       };
     }
 
-    const pairKey = `${binding.goId}:${binding.sectionKey}:${binding.itemKey}`;
+    const pairKey = encodeGoBindingKey(binding.goId, binding.sectionKey, binding.itemKey);
     if (usedPairs.has(pairKey)) {
       return {
         success: false,

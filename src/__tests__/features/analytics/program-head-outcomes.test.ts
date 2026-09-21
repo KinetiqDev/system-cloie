@@ -972,6 +972,37 @@ describe("direct course-bound GO evidence", () => {
     };
   }
 
+  it("keeps colon-bearing question pairs distinct in GO aggregation", () => {
+    // Regression: separator-joined identities merged (a, b:c) with (a:b, c).
+    const collisionStructure = [
+      {
+        key: "a",
+        title: "A",
+        items: [{ key: "b:c", kind: "quantitative", prompt: "Q1", scale: [1, 2, 3, 4, 5] }],
+      },
+      {
+        key: "a:b",
+        title: "AB",
+        items: [{ key: "c", kind: "quantitative", prompt: "Q2", scale: [1, 2, 3, 4, 5] }],
+      },
+    ];
+    const collisions = aggregateOutcomeEvidence([
+      directRow({
+        sectionKey: "a",
+        itemKey: "b:c",
+        instrumentVersion: { id: "iv-collision", structureSnapshot: collisionStructure },
+      }),
+      directRow({
+        sectionKey: "a:b",
+        itemKey: "c",
+        instrumentVersion: { id: "iv-collision", structureSnapshot: collisionStructure },
+      }),
+    ]);
+    const [dto] = buildProgramHeadOutcomeDtos(collisions);
+    expect(dto.ratingCount).toBe(2);
+    expect(dto.contributors).toHaveLength(2);
+  });
+
   it("aggregates a direct GO rating without fabricating a CILO contributor", () => {
     const outcomes = aggregateOutcomeEvidence([directRow()]);
     const [dto] = buildProgramHeadOutcomeDtos(outcomes);
