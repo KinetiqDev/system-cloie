@@ -237,10 +237,10 @@ function ProgramDetail({
         <span className="flex min-w-0 flex-col gap-1">
           <span className="text-title-md truncate">{program.name}</span>
           <span className="text-caption text-text-secondary tabular-nums">
-            {program.goCount} Program Learning {program.goCount === 1 ? "Outcome" : "Outcomes"} ·{" "}
+            {program.goCount} Graduate {program.goCount === 1 ? "Outcome" : "Outcomes"} ·{" "}
             {institutionalGaps.length} Institutional Outcome{" "}
-            {institutionalGaps.length === 1 ? "gap" : "gaps"} · {goGaps.length} Program Learning
-            Outcome {goGaps.length === 1 ? "gap" : "gaps"}
+            {institutionalGaps.length === 1 ? "gap" : "gaps"} · {goGaps.length} Graduate Outcome{" "}
+            {goGaps.length === 1 ? "gap" : "gaps"}
           </span>
           <span className="text-caption text-text-secondary tabular-nums">
             {program.activeContexts} active · {program.readyContexts} ready ·{" "}

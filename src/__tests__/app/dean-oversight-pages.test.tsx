@@ -292,6 +292,7 @@ describe("Dean oversight pages", () => {
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
+    expect(screen.queryByText(/Program Learning Outcome/i)).not.toBeInTheDocument();
     expect(
       await screen.findByText(/Incomplete Institutional Outcome mapping:/)
     ).toBeInTheDocument();
