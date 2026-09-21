@@ -580,6 +580,9 @@ Each row displays:
 - stakeholder;
 - completion percentage;
 - submitted / assigned raw count.
+- distinct respondent count for that stakeholder;
+
+Keep the respondent count visibly separate from `submitted / assigned`. One person may hold several evaluation assignments, so these denominators are not expected to match.
 
 Tooltip/focus details expose exact segment counts.
 

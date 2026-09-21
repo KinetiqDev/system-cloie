@@ -46,6 +46,7 @@ function participationFixture(): ParticipationSummary {
         inProgress: 28,
         notStarted: 47,
         completionRate: 0.779,
+        respondentCount: 205,
       },
       {
         stakeholder: STAKEHOLDER.ALUMNI,
@@ -54,6 +55,7 @@ function participationFixture(): ParticipationSummary {
         inProgress: 3,
         notStarted: 5,
         completionRate: 0.771,
+        respondentCount: 18,
       },
       {
         stakeholder: STAKEHOLDER.INDUSTRY_PARTNER,
@@ -62,6 +64,7 @@ function participationFixture(): ParticipationSummary {
         inProgress: 3,
         notStarted: 2,
         completionRate: 0.8,
+        respondentCount: 8,
       },
     ],
     respondents: { total: 231, complete: 184, partial: 31, notStarted: 16 },
@@ -277,12 +280,15 @@ describe("selected Program dashboard route", () => {
     expect(screen.getByText("Multiple scales")).toBeInTheDocument();
   });
 
-  it("exposes keyboard-operable stakeholder progress rows with counts and percentage", async () => {
+  it("reconciles assignment progress with distinct respondent counts per stakeholder", async () => {
     await loadPage();
-    const row = screen.getByRole("link", { name: /Students: 265 of 340 submitted/ });
+    const row = screen.getByRole("link", {
+      name: /Students: 205 respondents, 265 of 340 assignments submitted/,
+    });
     expect(row).toHaveAttribute("href", "/program-head/programs/p1/analytics?tab=stakeholders");
     expect(within(row).getByText("78%")).toBeInTheDocument();
-    expect(within(row).getByText("265 / 340")).toBeInTheDocument();
+    expect(within(row).getByText("205 respondents")).toBeInTheDocument();
+    expect(within(row).getByText("265 / 340 assignments")).toBeInTheDocument();
   });
 
   it("links the active evaluations card into Responses with the ACTIVE status filter", async () => {

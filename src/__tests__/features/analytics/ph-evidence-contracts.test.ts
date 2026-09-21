@@ -106,6 +106,17 @@ describe("participation summary", () => {
     expect(summary.assigned).toBe(6);
     expect(summary.respondents).toEqual({ total: 4, complete: 2, partial: 1, notStarted: 1 });
     expect(summary.submitted + summary.inProgress + summary.notStarted).toBe(summary.assigned);
+    expect(summary.stakeholders).toEqual([
+      {
+        stakeholder: "STUDENT",
+        assigned: 6,
+        submitted: 3,
+        inProgress: 1,
+        notStarted: 2,
+        completionRate: 0.5,
+        respondentCount: 4,
+      },
+    ]);
   });
 
   it("splits participation per stakeholder and the split sums back to the totals", () => {

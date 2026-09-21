@@ -27,7 +27,7 @@ export function ProgramHeadStakeholderProgress({
       <CardHeader>
         <CardTitle className="text-base font-bold">Response progress by stakeholder</CardTitle>
         <CardDescription>
-          Assignment completion per stakeholder; the raw denominator stays visible.
+          Assignment completion by stakeholder, paired with distinct respondent counts.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
@@ -43,12 +43,18 @@ export function ProgramHeadStakeholderProgress({
             <Link
               key={row.stakeholder}
               href={stakeholdersHref}
-              className="focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(5rem,auto)_minmax(3rem,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] sm:gap-3 pointer-coarse:min-h-11"
-              aria-label={`${STAKEHOLDER_LABELS[row.stakeholder] ?? row.stakeholder.replaceAll("_", " ").toLowerCase()}: ${row.submitted} of ${row.assigned} submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
+              className="focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(6rem,auto)_minmax(3rem,1fr)_auto] items-center gap-2 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:gap-3 pointer-coarse:min-h-11"
+              aria-label={`${STAKEHOLDER_LABELS[row.stakeholder] ?? row.stakeholder.replaceAll("_", " ").toLowerCase()}: ${row.respondentCount} ${row.respondentCount === 1 ? "respondent" : "respondents"}, ${row.submitted} of ${row.assigned} assignments submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress} in progress, ${row.notStarted} not started`}
             >
-              <span className="text-label-sm sm:text-label-md min-w-0 font-semibold break-words">
-                {STAKEHOLDER_LABELS[row.stakeholder] ??
-                  row.stakeholder.replaceAll("_", " ").toLowerCase()}
+              <span className="min-w-0">
+                <span className="text-label-sm sm:text-label-md block font-semibold break-words">
+                  {STAKEHOLDER_LABELS[row.stakeholder] ??
+                    row.stakeholder.replaceAll("_", " ").toLowerCase()}
+                </span>
+                <span className="text-muted-foreground text-label-sm block tabular-nums">
+                  {row.respondentCount.toLocaleString()}{" "}
+                  {row.respondentCount === 1 ? "respondent" : "respondents"}
+                </span>
               </span>
               <span aria-hidden="true" className="bg-muted flex h-3 overflow-hidden rounded-full">
                 <span
@@ -74,8 +80,8 @@ export function ProgramHeadStakeholderProgress({
                 <span className="block font-bold tabular-nums">
                   {Math.round((row.completionRate ?? 0) * 100)}%
                 </span>
-                <span className="text-muted-foreground block tabular-nums">
-                  {row.submitted} / {row.assigned}
+                <span className="text-muted-foreground block whitespace-nowrap tabular-nums">
+                  {row.submitted} / {row.assigned} assignments
                 </span>
               </span>
             </Link>

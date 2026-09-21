@@ -60,6 +60,7 @@ function completionRateOf(counts: ParticipationCounts): number | null {
 export function buildParticipationSummary(rows: ParticipationRow[]): ParticipationSummary {
   const totals = emptyCounts();
   const byStakeholder = new Map<TargetStakeholder, ParticipationCounts>();
+  const respondentsByStakeholder = new Map<TargetStakeholder, Set<string>>();
   // respondentId -> [assignments seen, submissions seen, responses seen]
   const byRespondent = new Map<string, [number, number, number]>();
 
@@ -72,6 +73,13 @@ export function buildParticipationSummary(rows: ParticipationRow[]): Participati
       byStakeholder.set(row.stakeholder, stakeholderCounts);
     }
     accumulate(stakeholderCounts, row);
+
+    let stakeholderRespondents = respondentsByStakeholder.get(row.stakeholder);
+    if (!stakeholderRespondents) {
+      stakeholderRespondents = new Set<string>();
+      respondentsByStakeholder.set(row.stakeholder, stakeholderRespondents);
+    }
+    stakeholderRespondents.add(row.respondentId);
 
     const person = byRespondent.get(row.respondentId) ?? [0, 0, 0];
     person[0] += 1;
@@ -101,7 +109,12 @@ export function buildParticipationSummary(rows: ParticipationRow[]): Participati
     byStakeholder.has(stakeholder)
   ).map((stakeholder) => {
     const counts = byStakeholder.get(stakeholder)!;
-    return { stakeholder, ...counts, completionRate: completionRateOf(counts) };
+    return {
+      stakeholder,
+      ...counts,
+      respondentCount: respondentsByStakeholder.get(stakeholder)!.size,
+      completionRate: completionRateOf(counts),
+    };
   });
 
   return {
