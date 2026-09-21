@@ -37,10 +37,18 @@ function responseDTO(
             rating: 5,
             scaleLabel: null,
             binding: {
-              type: "PLO",
-              ploBindings: [
-                { key: "22222222-2222-4222-8222-222222222222", code: "PLO-1", description: "Graduate outcomes" },
-                { key: "snapshot:PLO-9:Retired outcome", code: "PLO-9", description: "Retired outcome" },
+              type: "GO",
+              goBindings: [
+                {
+                  key: "22222222-2222-4222-8222-222222222222",
+                  code: "GO-1",
+                  description: "Graduate outcomes",
+                },
+                {
+                  key: "snapshot:GO-9:Retired outcome",
+                  code: "GO-9",
+                  description: "Retired outcome",
+                },
               ],
             },
           },
@@ -52,7 +60,7 @@ function responseDTO(
 }
 
 describe("ResponseDetail reverse trace links", () => {
-  it("deep-links PLO bindings with a live plo id and preserves source and period", () => {
+  it("deep-links GO bindings with a live GO id and preserves source and period", () => {
     render(
       <ResponseDetail
         response={responseDTO()}
@@ -62,16 +70,16 @@ describe("ResponseDetail reverse trace links", () => {
       />
     );
 
-    const ploLink = screen.getByRole("link", { name: "PLO-1" });
-    const href = ploLink.getAttribute("href") ?? "";
+    const goLink = screen.getByRole("link", { name: "GO-1" });
+    const href = goLink.getAttribute("href") ?? "";
     expect(href).toContain("tab=outcomes");
     expect(href).toContain("evidenceSource=ALUMNI");
     expect(href).toContain("stakeholder=ALUMNI");
-    expect(href).toContain("ploId=22222222-2222-4222-8222-222222222222");
+    expect(href).toContain("goId=22222222-2222-4222-8222-222222222222");
     expect(href).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
   });
 
-  it("deep-links retired snapshot PLOs through their analytics snapshot key", () => {
+  it("deep-links retired snapshot GOs through their analytics snapshot key", () => {
     render(
       <ResponseDetail
         response={responseDTO()}
@@ -81,11 +89,11 @@ describe("ResponseDetail reverse trace links", () => {
       />
     );
 
-    const retiredLink = screen.getByRole("link", { name: "PLO-9" });
+    const retiredLink = screen.getByRole("link", { name: "GO-9" });
     const href = retiredLink.getAttribute("href") ?? "";
     expect(href).toContain("tab=outcomes");
     expect(href).toContain("evidenceSource=ALUMNI");
-    expect(href).toContain("ploId=snapshot%3APLO-9%3ARetired+outcome");
+    expect(href).toContain("goId=snapshot%3AGO-9%3ARetired+outcome");
   });
 
   it("keeps course-bound responses scoped to the COURSE source without a stakeholder", () => {
@@ -120,7 +128,14 @@ describe("ResponseDetail reverse trace links", () => {
                 type: "CILO",
                 ciloId: "cilo-1",
                 ciloLabel: "Achieve outcomes",
-                ploMappings: [{ ploId: "33333333-3333-4333-8333-333333333333", ploCode: "PLO 1", ploDescription: "Outcome", manifestation: "LEARNING" }],
+                goMappings: [
+                  {
+                    goId: "33333333-3333-4333-8333-333333333333",
+                    goCode: "GO 1",
+                    goDescription: "Outcome",
+                    manifestation: "LEARNING",
+                  },
+                ],
               },
             },
           ],
@@ -136,9 +151,9 @@ describe("ResponseDetail reverse trace links", () => {
       />
     );
 
-    const href = screen.getByRole("link", { name: "PLO 1" }).getAttribute("href") ?? "";
+    const href = screen.getByRole("link", { name: "GO 1" }).getAttribute("href") ?? "";
     expect(href).toContain("evidenceSource=COURSE");
     expect(href).not.toContain("stakeholder=");
-    expect(href).toContain("ploId=33333333-3333-4333-8333-333333333333");
+    expect(href).toContain("goId=33333333-3333-4333-8333-333333333333");
   });
 });

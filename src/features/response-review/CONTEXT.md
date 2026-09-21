@@ -23,12 +23,12 @@ _Avoid_: Draft response review
 ## Outcome binding
 
 **Submitted-answer binding**:
-The outcome binding of one submitted quantitative answer: CILO (with the Program's current CILO-to-PLO manifestation mappings), PLO (publication-time program-wide bindings), or GENERAL (no matching binding). Bindings govern how ratings are attributed to outcomes.
+The outcome binding of one submitted quantitative answer: CILO (with the Program's current CILO-to-GO manifestation mappings), GO (publication-time program-wide bindings), or GENERAL (no matching binding). Bindings govern how ratings are attributed to outcomes.
 _Avoid_: Raw question outcome, unbound rating
 
-**Program-wide PLO binding**:
-A publication-time PLO binding sourced from CentralDeploymentPloSnapshot rows, keyed by `plo_id` for live PLOs and by `snapshot:<code>:<description>` so retired PLOs stay reachable through their grouping key.
-_Avoid_: Current PLO binding, live PLO reference
+**Program-wide GO binding**:
+A publication-time GO binding sourced from the current `CentralDeploymentGoSnapshot` Prisma model mapped to the physical `central_deployment_plo_snapshots` table, keyed by the physical `plo_id` column for live GOs and by `snapshot:<code>:<description>` so retired GOs stay reachable through their grouping key. The physical table and column names remain unchanged as persisted compatibility identifiers.
+_Avoid_: Current GO binding, live GO reference
 
 ## Summarization and context
 

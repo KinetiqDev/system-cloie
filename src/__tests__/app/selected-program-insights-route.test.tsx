@@ -175,8 +175,8 @@ describe("selected Program insights routes", () => {
       ...bsedOutcomes,
       outcomes: [
         {
-          ploId: "11111111-1111-4111-8111-111111111111",
-          code: "PLO 2",
+          goId: "11111111-1111-4111-8111-111111111111",
+          code: "GO 2",
           name: "Graduate attribute",
           meanRating: 4.2,
           ratingCount: 10,
@@ -203,8 +203,8 @@ describe("selected Program insights routes", () => {
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
     // Deterministic evidence renders without waiting on the AI insight. The chart
     // itself loads dynamically, so its title resolves asynchronously.
-    expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
-    expect(screen.getByText("Exact values by Program Learning Outcome")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
+    expect(screen.getByText("Exact values by Graduate Outcome")).toBeInTheDocument();
     // The default view owns one inline evidence-bound insight requested for its view.
     expect(generateInsightActionMock).toHaveBeenCalledWith({
       programId: "program-bsed",
@@ -311,7 +311,7 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
-  it("shows the selected PLO as the deepest breadcrumb step when ploId is present", async () => {
+  it("shows the selected GO as the deepest breadcrumb step when goId is present", async () => {
     const Page = await loadAnalyticsPage();
     outcomesMock.mockResolvedValue({
       scope: {
@@ -326,8 +326,8 @@ describe("selected Program insights routes", () => {
       manyToManyDisclosure: false,
       outcomes: [
         {
-          ploId: "11111111-1111-4111-8111-111111111111",
-          code: "PLO 2",
+          goId: "11111111-1111-4111-8111-111111111111",
+          code: "GO 2",
           name: "Graduate attribute",
           meanRating: 4.2,
           ratingCount: 10,
@@ -346,14 +346,14 @@ describe("selected Program insights routes", () => {
     analyticsFrameMock.mockResolvedValue({
       scope: bsedOverview.scope,
       periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
-      ploCode: "PLO 2",
+      goCode: "GO 2",
     });
 
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
       searchParams: Promise.resolve({
         tab: "outcomes",
-        ploId: "11111111-1111-4111-8111-111111111111",
+        goId: "11111111-1111-4111-8111-111111111111",
       }),
     });
     render(page);
@@ -361,8 +361,8 @@ describe("selected Program insights routes", () => {
     const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
     expect(breadcrumb.textContent).toContain("Analytics");
     expect(breadcrumb.textContent).toContain("Outcomes");
-    expect(within(breadcrumb).getByText("PLO 2")).toHaveAttribute("aria-current", "page");
-    // The Outcomes step links back up without the PLO selection.
+    expect(within(breadcrumb).getByText("GO 2")).toHaveAttribute("aria-current", "page");
+    // The Outcomes step links back up without the GO selection.
     const outcomesStep = within(breadcrumb).getByRole("link", { name: "Outcomes" });
     expect(outcomesStep.getAttribute("href")).toContain("tab=outcomes");
     expect(outcomesStep.getAttribute("href")).not.toContain("ploId=");

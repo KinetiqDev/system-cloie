@@ -71,7 +71,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     expectTypeOf<ProgramHeadTrendsDTO>().not.toHaveProperty("text_content");
     expectTypeOf<ProgramHeadTrendsDTO>().not.toHaveProperty("respondent");
 
-    // Outcomes: means per PLO, no raw comments
+    // Outcomes: means per GO, no raw comments
     expectTypeOf<ProgramHeadOutcomesDTO>().not.toHaveProperty("text_content");
     expectTypeOf<ProgramHeadOutcomesDTO>().not.toHaveProperty("respondent");
 

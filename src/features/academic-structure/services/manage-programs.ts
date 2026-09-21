@@ -6,7 +6,7 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 export type ProgramDependencyCounts = {
-  academicSetup: { majors: number; courses: number; plos: number };
+  academicSetup: { majors: number; courses: number; gos: number };
   peopleAndHistory: { studentProfiles: number; enrollments: number; alumniProfiles: number };
   teaching: {
     courseAssignments: number;
@@ -44,7 +44,7 @@ async function countProgramDependencies(
   const [
     majors,
     courses,
-    plos,
+    gos,
     studentProfiles,
     enrollments,
     alumniProfiles,
@@ -61,7 +61,7 @@ async function countProgramDependencies(
   ] = await Promise.all([
     db.major.count({ where: { program_id: programId } }),
     db.course.count({ where: { program_id: programId } }),
-    db.pLO.count({ where: { program_id: programId } }),
+    db.gO.count({ where: { program_id: programId } }),
     db.studentAcademicProfile.count({ where: { program_id: programId } }),
     db.studentEnrollment.count({ where: { program_id: programId } }),
     db.alumniProfile.count({ where: { program_id: programId } }),
@@ -82,7 +82,7 @@ async function countProgramDependencies(
   });
 
   return {
-    academicSetup: { majors, courses, plos },
+    academicSetup: { majors, courses, gos },
     peopleAndHistory: { studentProfiles, enrollments, alumniProfiles },
     teaching: { courseAssignments, facultyAffiliations, programHeadAssignments },
     evaluation: {
@@ -170,25 +170,6 @@ export async function deleteProgram(input: {
     }
     throw error;
   }
-}
-
-export async function getProgram(id: string) {
-  return prisma.program.findUnique({
-    where: { id },
-    include: {
-      majors: {
-        orderBy: { name: "asc" },
-      },
-      _count: {
-        select: {
-          courses: true,
-          plos: true,
-          student_profiles: true,
-          faculty_program_affiliations: true,
-        },
-      },
-    },
-  });
 }
 
 export async function createProgram(

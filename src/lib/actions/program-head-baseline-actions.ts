@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createBaselineCopy } from "@/features/instruments/services/create-baseline-copy";
 import { baselineCopySettingsSchema } from "@/features/instruments/schemas/program-head-template";
 import type {
-  TemplatePloQuestionBinding,
+  TemplateGoQuestionBinding,
   TemplateSettingsInput,
   TemplateStructure,
 } from "@/features/instruments/types";
@@ -15,7 +15,7 @@ export async function createBaselineCopyAction(
   baselineId: string,
   customName: string,
   structure: TemplateStructure,
-  ploBindings: TemplatePloQuestionBinding[],
+  goBindings: TemplateGoQuestionBinding[],
   settings?: TemplateSettingsInput
 ) {
   if (settings !== undefined) {
@@ -32,7 +32,7 @@ export async function createBaselineCopyAction(
     baselineId,
     customName,
     structure,
-    ploBindings,
+    goBindings,
     settings,
   });
   if (result.success) revalidatePath(buildProgramHeadToolsPath(programId));

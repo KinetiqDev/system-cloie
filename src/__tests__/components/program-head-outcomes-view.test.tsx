@@ -16,11 +16,11 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     emptyReason: null,
     programWideOutcomes: [],
     currentMappingDisclosure:
-      "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
+      "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
     manyToManyDisclosure: false,
     outcomes: [
       {
-        ploId: "go-a",
+        goId: "go-a",
         code: "GO-1",
         name: "Effective communicator",
         meanRating: 13 / 3, // 4.3333... full precision
@@ -90,7 +90,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         },
       },
       {
-        ploId: "go-b",
+        goId: "go-b",
         code: "GO-2",
         name: "Critical thinker",
         meanRating: 2,
@@ -120,19 +120,19 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
   };
 }
 
-function renderView(dto: ProgramHeadOutcomesDTO, selectedPloId?: string) {
+function renderView(dto: ProgramHeadOutcomesDTO, selectedGoId?: string) {
   return render(
     <ProgramHeadOutcomesView
       programId={PROGRAM_ID}
       data={dto}
       resetHref="/program-head/programs/program-bsed/analytics?tab=outcomes"
-      selectedPloId={selectedPloId}
+      selectedGoId={selectedGoId}
     />
   );
 }
 
 describe("ProgramHeadOutcomesView", () => {
-  it("renders the program-wide PLO evidence table when program-wide outcomes exist", () => {
+  it("renders the program-wide GO evidence table when program-wide outcomes exist", () => {
     render(
       <ProgramHeadOutcomesView
         programId={PROGRAM_ID}
@@ -141,8 +141,8 @@ describe("ProgramHeadOutcomesView", () => {
           programWideOutcomes: [
             {
               stakeholder: "ALUMNI",
-              ploId: "plo-1",
-              code: "PLO-1",
+              goId: "plo-1",
+              code: "GO-1",
               name: "Graduate outcomes",
               meanRating: 4.5,
               ratingCount: 10,
@@ -157,8 +157,8 @@ describe("ProgramHeadOutcomesView", () => {
       />
     );
 
-    expect(screen.getByText("Program-wide PLO evidence")).toBeInTheDocument();
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("Program-wide GO evidence")).toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
     expect(screen.getByText("Alumni")).toBeInTheDocument();
     expect(screen.getByText("4.50")).toBeInTheDocument();
   });
@@ -185,7 +185,7 @@ describe("ProgramHeadOutcomesView", () => {
   it("discloses current-mapping interpretation whenever outcome rows exist", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Current CILO-to-PLO mappings")).toBeInTheDocument();
+    expect(screen.getByText("Current CILO-to-GO mappings")).toBeInTheDocument();
     expect(
       screen.getByText(/Publication-time mapping snapshots are not yet available/)
     ).toBeInTheDocument();
@@ -193,12 +193,12 @@ describe("ProgramHeadOutcomesView", () => {
 
   it("discloses the many-to-many contribution rule only when it applies", () => {
     const { unmount } = renderView(outcomeDTO({ manyToManyDisclosure: true }));
-    expect(screen.getByText("Multiple Program Learning Outcome mapping")).toBeInTheDocument();
+    expect(screen.getByText("Multiple Graduate Outcome mapping")).toBeInTheDocument();
     expect(screen.getByText(/contributes to each mapped outcome row/)).toBeInTheDocument();
     unmount();
 
     renderView(outcomeDTO({ manyToManyDisclosure: false }));
-    expect(screen.queryByText("Multiple Program Learning Outcome mapping")).not.toBeInTheDocument();
+    expect(screen.queryByText("Multiple Graduate Outcome mapping")).not.toBeInTheDocument();
   });
   it("exposes a CILO contributor matrix with course, manifestation, mean, and valid count", () => {
     renderView(outcomeDTO());
@@ -234,7 +234,7 @@ describe("ProgramHeadOutcomesView", () => {
   it("shows the lollipop chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
-    expect(await screen.findByText("Mean Rating by Program Learning Outcome")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
     expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });
@@ -267,13 +267,13 @@ describe("ProgramHeadOutcomesView", () => {
     expect(screen.getByText(/1 rating was excluded from the valid aggregate/)).toBeInTheDocument();
   });
 
-  it("expands and highlights the PLO selected through a deep link", () => {
+  it("expands and highlights the GO selected through a deep link", () => {
     const dto = outcomeDTO();
     dto.programWideOutcomes = [
       {
         stakeholder: "ALUMNI",
-        ploId: "go-a",
-        code: "PLO-1",
+        goId: "go-a",
+        code: "GO-1",
         name: "Graduate outcomes",
         meanRating: 4.5,
         ratingCount: 10,
@@ -291,11 +291,14 @@ describe("ProgramHeadOutcomesView", () => {
     // The selected row carries the highlight; other rows stay closed.
     expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
     // Program-wide row also highlights.
-    const pwRow = screen.getByText("PLO-1").closest("tr");
-    expect(pwRow?.className).toContain("bg-primary-soft");
+    const programWideTable = screen.getByRole("table", {
+      name: "Program-wide evidence by graduate outcome",
+    });
+    const pwRow = within(programWideTable).getByRole("row", { name: /GO-1.*Alumni/ });
+    expect(pwRow.className).toContain("bg-primary-soft");
   });
 
-  it("leaves every row closed without a selected PLO", () => {
+  it("leaves every row closed without a selected GO", () => {
     renderView(outcomeDTO());
 
     expect(screen.getByText("Details for GO-1").closest("details")).not.toHaveAttribute("open");

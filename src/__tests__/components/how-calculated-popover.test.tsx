@@ -6,7 +6,7 @@ describe("HowCalculatedPopover", () => {
   it("opens a disclosure with explanation, counts, and scale label", () => {
     render(
       <HowCalculatedPopover
-        label="PLO 1"
+        label="GO 1"
         metric={{
           ratingCount: 614,
           responseCount: 163,
@@ -18,11 +18,13 @@ describe("HowCalculatedPopover", () => {
       />
     );
 
-    const trigger = screen.getByRole("button", { name: "How calculated: PLO 1" });
+    const trigger = screen.getByRole("button", { name: "How calculated: GO 1" });
     fireEvent.click(trigger);
 
-    expect(screen.getByText("How plo 1 is calculated")).toBeInTheDocument();
-    expect(screen.getByText("Raw mean of 614 valid ratings from 11 contributing CILO(s).")).toBeInTheDocument();
+    expect(screen.getByText("How go 1 is calculated")).toBeInTheDocument();
+    expect(
+      screen.getByText("Raw mean of 614 valid ratings from 11 contributing CILO(s).")
+    ).toBeInTheDocument();
     expect(screen.getByText("Scale:")).toBeInTheDocument();
     expect(screen.getByText("1–5 (5-point)")).toBeInTheDocument();
     expect(screen.getByText("614")).toBeInTheDocument();
@@ -60,6 +62,8 @@ describe("HowCalculatedPopover", () => {
     fireEvent.click(screen.getByRole("button", { name: "How calculated: Active evaluations" }));
     expect(screen.getByText("ACTIVE deployments for the selected period.")).toBeInTheDocument();
     expect(screen.queryByText("Scale:")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "View underlying evidence" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "View underlying evidence" })
+    ).not.toBeInTheDocument();
   });
 });

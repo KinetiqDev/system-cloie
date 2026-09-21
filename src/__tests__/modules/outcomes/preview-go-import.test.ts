@@ -12,13 +12,13 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     program: { findUnique: programFindMock },
-    pLO: { findMany: findManyMock },
+    gO: { findMany: findManyMock },
   },
 }));
 
 const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
 
-describe("previewPLOImport", () => {
+describe("previewGOImport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveContextMock.mockResolvedValue({
@@ -27,22 +27,22 @@ describe("previewPLOImport", () => {
     });
     programFindMock.mockResolvedValue({ id: PROGRAM_ID, is_active: true });
     findManyMock.mockResolvedValue([
-      { code: "PLO-2", is_active: true },
-      { code: "PLO-3", is_active: false },
+      { code: "GO-2", is_active: true },
+      { code: "GO-3", is_active: false },
     ]);
   });
 
   it("classifies valid, invalid, repeated, active-existing, and archived-existing rows", async () => {
-    const { previewPLOImport } = await import("@/features/outcomes/services/preview-plo-import");
-    const result = await previewPLOImport({
+    const { previewGOImport } = await import("@/features/outcomes/services/preview-go-import");
+    const result = await previewGOImport({
       programId: PROGRAM_ID,
       rows: [
-        { sourceIndex: 2, input: { plo_code: " plo-1 ", description: "Valid outcome" } },
-        { sourceIndex: 3, input: { plo_code: "PLO-2", description: "Different text" } },
-        { sourceIndex: 4, input: { plo_code: "PLO-3", description: "Archived code" } },
-        { sourceIndex: 5, input: { plo_code: "dup", description: "First duplicate" } },
-        { sourceIndex: 6, input: { plo_code: " DUP ", description: "Second duplicate" } },
-        { sourceIndex: 7, input: { plo_code: "", description: "Missing code" } },
+        { sourceIndex: 2, input: { go_code: " go-1 ", description: "Valid outcome" } },
+        { sourceIndex: 3, input: { go_code: "GO-2", description: "Different text" } },
+        { sourceIndex: 4, input: { go_code: "GO-3", description: "Archived code" } },
+        { sourceIndex: 5, input: { go_code: "dup", description: "First duplicate" } },
+        { sourceIndex: 6, input: { go_code: " DUP ", description: "Second duplicate" } },
+        { sourceIndex: 7, input: { go_code: "", description: "Missing code" } },
       ],
     });
 
@@ -58,7 +58,7 @@ describe("previewPLOImport", () => {
           notCreated: 0,
         },
         rows: [
-          expect.objectContaining({ ploCode: "PLO-1", status: "READY", error: null }),
+          expect.objectContaining({ goCode: "GO-1", status: "READY", error: null }),
           expect.objectContaining({
             status: "DUPLICATE_EXISTING_ACTIVE",
             error: expect.stringContaining("already exists"),
@@ -69,7 +69,7 @@ describe("previewPLOImport", () => {
           }),
           expect.objectContaining({ status: "DUPLICATE_IN_FILE" }),
           expect.objectContaining({ status: "DUPLICATE_IN_FILE" }),
-          expect.objectContaining({ status: "INVALID", error: "PLO code is required." }),
+          expect.objectContaining({ status: "INVALID", error: "GO code is required." }),
         ],
       },
     });
@@ -77,11 +77,11 @@ describe("previewPLOImport", () => {
 
   it("rejects an inactive selected Program", async () => {
     programFindMock.mockResolvedValue({ id: PROGRAM_ID, is_active: false });
-    const { previewPLOImport } = await import("@/features/outcomes/services/preview-plo-import");
+    const { previewGOImport } = await import("@/features/outcomes/services/preview-go-import");
     await expect(
-      previewPLOImport({
+      previewGOImport({
         programId: PROGRAM_ID,
-        rows: [{ sourceIndex: 2, input: { plo_code: "PLO-1", description: "Valid outcome" } }],
+        rows: [{ sourceIndex: 2, input: { go_code: "GO-1", description: "Valid outcome" } }],
       })
     ).resolves.toEqual({ success: false, error: "Active Academic Program is required." });
     expect(findManyMock).not.toHaveBeenCalled();

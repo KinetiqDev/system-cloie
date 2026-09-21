@@ -32,7 +32,7 @@ import {
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
 import { buildParticipationSummary } from "../aggregators/participation";
-import { buildProgramWidePloMetrics, type CentralPloRatingRow } from "../aggregators/plo";
+import { buildProgramWideGoMetrics, type CentralGoRatingRow } from "../aggregators/go";
 import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
@@ -86,6 +86,7 @@ type ProgramHeadAnalyticsReadContext = {
   selectedProgram: { id: string; code: string; name: string };
   termInstanceWhere: ResolvedTermInstanceFilter["where"];
   schoolYearLabel: string | null;
+  termInstances: TermInstanceSummary[];
   periodInstances: TermInstanceSummary[];
 };
 
@@ -106,7 +107,7 @@ function buildTermInstanceWhere(
 }
 
 /** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
-export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
+const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
  * Evidence-source narrowing for analytics reads (§15). COURSE keeps only
@@ -360,12 +361,19 @@ const resolveProgramHeadAnalyticsReadContext = cache(
     if (!contextResult.success) return null;
 
     const { selectedProgram } = contextResult.data;
-    const [{ where: termInstanceWhere, schoolYearLabel }, periodInstances] = await Promise.all([
-      resolveTermInstanceFilter(selectedProgram.id, filters),
-      listProgramPeriodOptions(selectedProgram.id),
-    ]);
+    const [{ where: termInstanceWhere, schoolYearLabel, instances }, periodInstances] =
+      await Promise.all([
+        resolveTermInstanceFilter(selectedProgram.id, filters),
+        listProgramPeriodOptions(selectedProgram.id),
+      ]);
 
-    return { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances };
+    return {
+      selectedProgram,
+      termInstanceWhere,
+      schoolYearLabel,
+      termInstances: instances,
+      periodInstances,
+    };
   }
 );
 
@@ -378,16 +386,12 @@ export async function getProgramHeadAnalyticsFrame(
 } | null> {
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, schoolYearLabel, termInstances, periodInstances } = context;
   return {
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(
-        filters,
-        schoolYearLabel,
-        termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID
-      ),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
   };
@@ -396,12 +400,14 @@ export async function getProgramHeadAnalyticsFrame(
 export function buildPeriodLabel(
   filters: Pick<AnalyticsFilterState, "semester" | "termInstanceId">,
   schoolYearLabel: string | null,
-  hasMatchingTerm: boolean
+  instances: TermInstanceSummary[]
 ): string | null {
+  if (filters.termInstanceId && instances.length === 1) {
+    return buildInstancePeriodLabel(instances[0]);
+  }
   const parts: string[] = [];
   if (schoolYearLabel) parts.push(`School Year ${schoolYearLabel}`);
   if (filters.semester) parts.push(SEMESTER_LABELS[filters.semester] ?? filters.semester);
-  if (filters.termInstanceId && hasMatchingTerm) parts.push("Selected period");
   if (parts.length === 0) return null;
   return parts.join(" · ");
 }
@@ -424,7 +430,8 @@ export async function getProgramHeadAnalytics(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
   // Responses tied to this program via central deployments OR course-bound evaluations,
   // following the same scope predicate as the existing dashboard service.
   const sourceScope = buildSourceScope(filters);
@@ -485,8 +492,7 @@ export async function getProgramHeadAnalytics(
     ratingCount,
     ratingSum,
   });
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
-  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm);
+  const periodLabel = buildPeriodLabel(filters, schoolYearLabel, termInstances);
   const scope: ProgramHeadAnalyticsScopeSummary = {
     programCode: selectedProgram.code,
     programName: selectedProgram.name,
@@ -521,7 +527,7 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
         cilo: {
           select: {
             cilo_mappings: {
-              select: { plo: { select: { code: true } } };
+              select: { go: { select: { code: true } } };
             };
           };
         };
@@ -675,7 +681,7 @@ function accumulateRatingRow(
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
   trackRatedSourceResponse(evidence, context.source, context.instrumentVersionId, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
-    evidence.outcomeCodes.add(mapping.plo.code);
+    evidence.outcomeCodes.add(mapping.go.code);
   }
 }
 
@@ -773,7 +779,7 @@ function buildCourseBoundResponseScope(
   };
 }
 
-/** Narrow projection of a course-bound rating row for PLO evidence. */
+/** Narrow projection of a course-bound rating row for GO evidence. */
 type OutcomeRatingRow = {
   rating_value: number;
   response_id: string;
@@ -799,7 +805,7 @@ type OutcomeBindingRow = {
     course: { id: string; code: string; title: string; cilos: Array<{ id: string }> } | null;
     cilo_mappings: Array<{
       manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      plo: { id: string; code: string; description: string };
+      go: { id: string; code: string; description: string };
     }>;
   } | null;
 };
@@ -810,14 +816,14 @@ function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: st
   return position < 0 ? "—" : `CILO ${position + 1}`;
 }
 
-function toPloMapping(mapping: {
+function toGoMapping(mapping: {
   manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-  plo: { id: string; code: string; description: string };
+  go: { id: string; code: string; description: string };
 }) {
   return {
-    ploId: mapping.plo.id,
-    code: mapping.plo.code,
-    name: mapping.plo.description,
+    goId: mapping.go.id,
+    code: mapping.go.code,
+    name: mapping.go.description,
     manifestation: mapping.manifestation,
   };
 }
@@ -836,7 +842,7 @@ function resolveInstrumentSnapshot(
 }
 
 /**
- * Map one course-bound rating to its normalized PLO evidence row through the
+ * Map one course-bound rating to its normalized GO evidence row through the
  * publication-time binding identified by evaluation plus section/item keys.
  * Returns null when the item has no binding, the bound CILO was deleted, or
  * the CILO has no canonical mapping for the selected Program.
@@ -870,7 +876,7 @@ function toOutcomeEvidenceRow(
         ? { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title }
         : null,
     },
-    ploMappings: cilo.cilo_mappings.map(toPloMapping),
+    goMappings: cilo.cilo_mappings.map(toGoMapping),
     evaluationId: binding.course_bound_evaluation_id,
     deploymentName: binding.course_bound_evaluation.deployment_name,
   };
@@ -878,15 +884,15 @@ function toOutcomeEvidenceRow(
 
 /**
  * Disclosure that historical ratings are grouped by the Program's current
- * CILO-to-PLO mappings. Publication-time mapping snapshots do not exist yet,
+ * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
  * so later mapping edits may reinterpret historical outcome rows.
  */
 const CURRENT_MAPPING_DISCLOSURE =
-  "Outcome rows group historical ratings using the Program's current CILO-to-PLO mappings. " +
+  "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. " +
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
 /**
- * One central-deployment rating row narrowed for program-wide PLO evidence.
+ * One central-deployment rating row narrowed for program-wide GO evidence.
  * The select mirrors the fields program-wide aggregation needs: deployment
  * identity, stakeholder, instrument version, and the rating coordinates.
  */
@@ -907,28 +913,28 @@ type CentralOutcomeRatingRow = {
   };
 };
 
-type CentralPloSnapshotBinding = { ploId: string; ploCode: string; ploDescription: string };
-type CentralPloBindingsByDeployment = Map<string, Map<string, CentralPloSnapshotBinding[]>>;
+type CentralGoSnapshotBinding = { goId: string; goCode: string; goDescription: string };
+type CentralGoBindingsByDeployment = Map<string, Map<string, CentralGoSnapshotBinding[]>>;
 
-/** Published CentralDeploymentPloSnapshot bindings keyed by deployment then section:item. */
-async function loadCentralPloBindings(
+/** Published CentralDeploymentGoSnapshot bindings keyed by deployment then section:item. */
+async function loadCentralGoBindings(
   deploymentIds: string[]
-): Promise<CentralPloBindingsByDeployment> {
+): Promise<CentralGoBindingsByDeployment> {
   if (deploymentIds.length === 0) {
     return new Map();
   }
-  const snapshots = await prisma.centralDeploymentPloSnapshot.findMany({
+  const snapshots = await prisma.centralDeploymentGoSnapshot.findMany({
     where: { central_deployment_id: { in: deploymentIds } },
     select: {
       central_deployment_id: true,
-      plo_id: true,
-      plo_code_snapshot: true,
-      plo_description_snapshot: true,
+      go_id: true,
+      go_code_snapshot: true,
+      go_description_snapshot: true,
       section_key: true,
       item_key: true,
     },
   });
-  const byDeployment: CentralPloBindingsByDeployment = new Map();
+  const byDeployment: CentralGoBindingsByDeployment = new Map();
   for (const snapshot of snapshots) {
     let byQuestion = byDeployment.get(snapshot.central_deployment_id);
     if (!byQuestion) {
@@ -938,15 +944,15 @@ async function loadCentralPloBindings(
     const questionKey = `${snapshot.section_key}:${snapshot.item_key}`;
     const bindings = byQuestion.get(questionKey) ?? [];
     // Identity and labels come from the immutable snapshot fields, never the
-    // live PLO relation: renaming or deleting a PLO must not rewrite or drop
-    // previously published analytics evidence. A deleted PLO keeps its frozen
+    // live GO relation: renaming or deleting a GO must not rewrite or drop
+    // previously published analytics evidence. A deleted GO keeps its frozen
     // label under a stable snapshot-derived identity.
     bindings.push({
-      ploId:
-        snapshot.plo_id ??
-        `snapshot:${snapshot.plo_code_snapshot}:${snapshot.plo_description_snapshot}`,
-      ploCode: snapshot.plo_code_snapshot,
-      ploDescription: snapshot.plo_description_snapshot,
+      goId:
+        snapshot.go_id ??
+        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
+      goCode: snapshot.go_code_snapshot,
+      goDescription: snapshot.go_description_snapshot,
     });
     byQuestion.set(questionKey, bindings);
   }
@@ -1096,9 +1102,9 @@ function outcomesEmptyReason(
   return "no-program-wide-evidence";
 }
 /**
- * Program-wide PLO evidence through published deployment PLO snapshots
+ * Program-wide GO evidence through published deployment GO snapshots
  * (§5.9, §16.6). Ratings are grouped by stakeholder so source populations are
- * never pooled; a question the deployment never bound to a live PLO
+ * never pooled; a question the deployment never bound to a live GO
  * contributes nothing.
  */
 async function buildProgramWideOutcomeDtos(
@@ -1112,8 +1118,8 @@ async function buildProgramWideOutcomeDtos(
         .filter((id): id is string => Boolean(id))
     ),
   ];
-  const bindingsByDeployment = await loadCentralPloBindings(deploymentIds);
-  const byStakeholder = new Map<TargetStakeholder, CentralPloRatingRow[]>();
+  const bindingsByDeployment = await loadCentralGoBindings(deploymentIds);
+  const byStakeholder = new Map<TargetStakeholder, CentralGoRatingRow[]>();
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     const bindings = deployment
@@ -1133,18 +1139,18 @@ async function buildProgramWideOutcomeDtos(
         row.item_key,
         snapshotById
       ),
-      ploBindings: bindings,
+      goBindings: bindings,
     });
     byStakeholder.set(deployment.target_stakeholder, bucket);
   }
   const dtos: ProgramHeadProgramWideOutcomeDTO[] = [];
   for (const [stakeholder, ratingRows] of byStakeholder) {
-    for (const metric of buildProgramWidePloMetrics(ratingRows)) {
+    for (const metric of buildProgramWideGoMetrics(ratingRows)) {
       dtos.push({
         stakeholder,
-        ploId: metric.ploId,
-        code: metric.ploCode,
-        name: metric.ploDescription,
+        goId: metric.goId,
+        code: metric.goCode,
+        name: metric.goDescription,
         meanRating: metric.mean,
         ratingCount: metric.ratingCount,
         submittedResponseCount: metric.responseCount,
@@ -1156,7 +1162,7 @@ async function buildProgramWideOutcomeDtos(
           evaluationCount: metric.evaluationCount,
           questionCount: metric.questionCount,
           scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Learning Outcome; unbound items are excluded.`,
+          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Graduate Outcome; unbound items are excluded.`,
         },
       });
     }
@@ -1165,10 +1171,10 @@ async function buildProgramWideOutcomeDtos(
 }
 
 /**
- * Authorized Program PLO evidence read for the selected Program. Course-bound
+ * Authorized Program GO evidence read for the selected Program. Course-bound
  * quantitative items contribute through a publication-time CILO question
- * binding and a canonical selected-Program CILO-to-PLO mapping; program-wide
- * evidence contributes through published CentralDeploymentPloSnapshot
+ * binding and a canonical selected-Program CILO-to-GO mapping; program-wide
+ * evidence contributes through published CentralDeploymentGoSnapshot
  * bindings (§16.6). Bindings are resolved by evaluation plus section/item
  * keys because the live student submission flow writes ratings without a
  * binding ID, mirroring the existing review evidence compensation.
@@ -1186,10 +1192,11 @@ export async function getProgramHeadOutcomes(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
-  // Course-bound PLO evidence comes from CILO bindings; program-wide PLO
-  // evidence comes from published CentralDeploymentPloSnapshot bindings
+  // Course-bound GO evidence comes from CILO bindings; program-wide GO
+  // evidence comes from published CentralDeploymentGoSnapshot bindings
   // (§5.9, §16.6). The evidence-source selection gates which read runs so one
   // source's evidence never leaks into the other section.
   const sourceScope = buildSourceScope(filters);
@@ -1235,10 +1242,10 @@ export async function getProgramHeadOutcomes(
                   },
                 },
                 cilo_mappings: {
-                  where: { plo: { program_id: selectedProgram.id } },
+                  where: { go: { program_id: selectedProgram.id } },
                   select: {
                     manifestation: true,
-                    plo: { select: { id: true, code: true, description: true } },
+                    go: { select: { id: true, code: true, description: true } },
                   },
                 },
               },
@@ -1302,7 +1309,6 @@ export async function getProgramHeadOutcomes(
     },
   }));
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason = outcomesEmptyReason(
     outcomes.length,
     programWideOutcomes.length,
@@ -1315,7 +1321,7 @@ export async function getProgramHeadOutcomes(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1341,7 +1347,8 @@ export async function getProgramHeadTrends(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1361,8 +1368,8 @@ export async function getProgramHeadTrends(
             cilo: {
               select: {
                 cilo_mappings: {
-                  where: { plo: { program_id: selectedProgram.id } },
-                  select: { plo: { select: { code: true } } },
+                  where: { go: { program_id: selectedProgram.id } },
+                  select: { go: { select: { code: true } } },
                 },
               },
             },
@@ -1432,11 +1439,10 @@ export async function getProgramHeadTrends(
 
   const { periods, breaks, emptyReason } = buildTrendSeries(inputs);
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const scope: ProgramHeadAnalyticsScopeSummary = {
     programCode: selectedProgram.code,
     programName: selectedProgram.name,
-    periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+    periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
   };
 
   return {
@@ -1570,7 +1576,8 @@ export async function getProgramHeadStakeholders(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1624,7 +1631,6 @@ export async function getProgramHeadStakeholders(
 
   const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadStakeholdersEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -1636,7 +1642,7 @@ export async function getProgramHeadStakeholders(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1694,7 +1700,8 @@ export async function getProgramHeadBreakdowns(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1763,7 +1770,6 @@ export async function getProgramHeadBreakdowns(
     YEAR_LEVEL_ATTRIBUTION_NOTE
   );
 
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadBreakdownsEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -1775,7 +1781,7 @@ export async function getProgramHeadBreakdowns(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,
@@ -1932,7 +1938,8 @@ export async function getProgramHeadFeedback(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, periodInstances } = context;
+  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+    context;
 
   const sourceScope = buildSourceScope(filters);
   const programResponseScope = buildProgramResponseScope(
@@ -1990,7 +1997,6 @@ export async function getProgramHeadFeedback(
 
   const aggregated = aggregateFeedbackEvidence(qualitativeRows);
   const promptProvenance = instrumentProvenanceLabels(aggregated.evidence.prompts);
-  const hasMatchingTerm = termInstanceWhere.term_instance_id !== IMPOSSIBLE_TERM_INSTANCE_ID;
   const emptyReason: ProgramHeadFeedbackEmptyReason =
     evaluationOpportunityCount === 0
       ? "no-assignments"
@@ -2004,7 +2010,7 @@ export async function getProgramHeadFeedback(
     scope: {
       programCode: selectedProgram.code,
       programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, hasMatchingTerm),
+      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
     },
     periodOptions: buildPeriodOptions(periodInstances),
     emptyReason,

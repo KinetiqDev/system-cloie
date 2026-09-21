@@ -7,8 +7,11 @@ import {
   exitSurveyStructure,
   industryEvalStructure,
 } from "../fixtures/instruments";
-import { listTemplateLikertQuestions } from "../../../src/features/instruments/types";
-import type { FoundationContext, OutcomeContext, TemplateStructure } from "../types";
+import {
+  listTemplateLikertQuestions,
+  type TemplateStructure,
+} from "../../../src/features/instruments/types";
+import type { FoundationContext, OutcomeContext } from "../types";
 
 export async function seedInstruments(
   _outcomeContext?: OutcomeContext,
@@ -51,18 +54,17 @@ export async function seedInstruments(
     code: "BSIT_ALUMNI_EVAL",
     name: "BSIT Alumni Evaluation Tool",
     description:
-      "BSIT-owned Alumni evaluation tool with Program Learning Outcome bindings; the general satisfaction item is deliberately left unbound.",
+      "BSIT-owned Alumni evaluation tool with Graduate Outcome bindings; the general satisfaction item is deliberately left unbound.",
     programId: bsitProgram.id,
     structure: alumniEvalStructure,
-    // A general item that measures no PLO: it publishes as a general
+    // A general item that measures no GO: it publishes as a general
     // evaluation item instead of blocking publication (ADR 0025).
     unboundItemKeys: ["overall-assessment-1"],
   });
   await upsertProgramPublicationTemplate({
     code: "BSIT_INDUSTRY_EVAL",
     name: "BSIT Industry Partner Internship Evaluation Tool",
-    description:
-      "BSIT-owned Industry Partner evaluation tool with Program Learning Outcome bindings.",
+    description: "BSIT-owned Industry Partner evaluation tool with Graduate Outcome bindings.",
     programId: bsitProgram.id,
     structure: industryEvalStructure,
   });
@@ -74,7 +76,7 @@ async function upsertProgramPublicationTemplate(input: {
   description: string;
   programId: string;
   structure: TemplateStructure;
-  /** Likert items left without a PLO binding (general evaluation items). */
+  /** Likert items left without a GO binding (general evaluation items). */
   unboundItemKeys?: readonly string[];
 }) {
   const structureJson = input.structure as unknown as Prisma.InputJsonValue;
@@ -104,12 +106,11 @@ async function upsertProgramPublicationTemplate(input: {
     create: {
       template_id: template.id,
       version_number: 1,
-      is_active: true,
       structure_snapshot: structureJson,
     },
   });
 
-  const plos = await prisma.pLO.findMany({
+  const gos = await prisma.gO.findMany({
     where: { program_id: input.programId, is_active: true },
     orderBy: { code: "asc" },
     select: { id: true, code: true, description: true },
@@ -118,18 +119,18 @@ async function upsertProgramPublicationTemplate(input: {
   const questions = listTemplateLikertQuestions(input.structure).filter(
     (question) => !unboundItemKeys.has(question.itemKey)
   );
-  await prisma.instrumentTemplatePloQuestionBinding.deleteMany({
+  await prisma.instrumentTemplateGoQuestionBinding.deleteMany({
     where: { template_id: template.id },
   });
-  if (plos.length === 0) return;
-  await prisma.instrumentTemplatePloQuestionBinding.createMany({
+  if (gos.length === 0) return;
+  await prisma.instrumentTemplateGoQuestionBinding.createMany({
     data: questions.map((question, index) => {
-      const plo = plos[index % plos.length];
+      const go = gos[index % gos.length];
       return {
         template_id: template.id,
-        plo_id: plo.id,
-        plo_code_snapshot: plo.code,
-        plo_description_snapshot: plo.description,
+        go_id: go.id,
+        go_code_snapshot: go.code,
+        go_description_snapshot: go.description,
         section_key: question.sectionKey,
         item_key: question.itemKey,
         question_prompt_snapshot: question.prompt,

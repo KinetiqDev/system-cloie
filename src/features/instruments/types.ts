@@ -36,26 +36,26 @@ export type TemplateCiloQuestionBinding = {
 };
 
 /**
- * An active Program Learning Outcome offered to a Program-wide template
- * editor. The list is server-prepared in canonical PLO order.
+ * An active Graduate Outcome offered to a Program-wide template editor.
+ * The list is server-prepared in canonical GO order.
  */
-export type ProgramPloOption = {
+export type ProgramGoOption = {
   id: string;
   code: string;
   description: string;
 };
 
 /**
- * A draft Program-wide question–PLO binding. Serialized as
- * `program_question_plo_bindings` in template FormData and persisted by the
+ * A draft Program-wide question–GO binding. Serialized as
+ * `program_question_go_bindings` in template FormData and persisted by the
  * Program Head template services.
  */
-export type TemplatePloQuestionBinding = {
-  ploId: string;
+export type TemplateGoQuestionBinding = {
+  goId: string;
   itemKey: string;
   sectionKey: string;
-  ploCodeSnapshot?: string;
-  ploDescriptionSnapshot?: string;
+  goCodeSnapshot?: string;
+  goDescriptionSnapshot?: string;
 };
 
 export type TemplateLikertQuestionOption = {

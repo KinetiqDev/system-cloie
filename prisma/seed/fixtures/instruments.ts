@@ -1,4 +1,8 @@
-import type { LikertDescriptor, TemplateQuestion, TemplateStructure } from "../types";
+import type {
+  LikertDescriptor,
+  TemplateQuestion,
+  TemplateStructure,
+} from "../../../src/features/instruments/types";
 
 const CILO_LK: LikertDescriptor[] = [
   { value: 1, label: "Not Achieved" },

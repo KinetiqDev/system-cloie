@@ -51,14 +51,14 @@ Course-bound General Education evidence only — submitted `Response.status == S
 _Avoid_: Central Deployment as General Education evidence, Program-specific evidence in Coordinator analytics
 
 **Coordinator analytics scope**:
-Cross-Program (not selected-Program) read path gated by the shared college-wide `GEN_ED_COORDINATOR` role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes evidence outside that authorized scope. The current Program-PLO selected-Program evidence (Course-bound evidence through CILO question bindings plus current CILOMapping rows; Program-scoped Central Deployments through published CentralDeploymentPloSnapshot bindings resolved by section:item key) is unchanged for non-Coordinator contexts.
-_Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PLO attainment rollup
+Cross-Program (not selected-Program) read path gated by the shared college-wide `GEN_ED_COORDINATOR` role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes evidence outside that authorized scope. The current Program-GO selected-Program evidence (Course-bound evidence through CILO question bindings plus current CILOMapping rows; Program-scoped Central Deployments through published `CentralDeploymentGoSnapshot` bindings mapped to the physical `central_deployment_plo_snapshots` table and resolved by section:item key) is unchanged for non-Coordinator contexts.
+_Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-GO attainment rollup
 
 **Coordinator analytics boundaries (for issue #477 approval)**:
 The first release supports academic-period filtering, overview counts and means, Course breakdowns, comparable trends, and aggregate qualitative feedback. Means retain server precision; rating counts remain distinct from submitted response counts; rating categories derive from the instrument structure snapshot. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
 _Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests
 
-**Deferred**: ILO attainment, ILO-to-PLO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide via the subsequent approved change `transfer-ilo-catalog-to-gen-ed-coordinator` (ADR 0018); that change — not this one — owns the `GEN_ED_COORDINATOR` ILO CRUD/reorder/archive/restore surface.
+**Deferred**: ILO attainment, ILO-to-GO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide via the subsequent approved change `transfer-ilo-catalog-to-gen-ed-coordinator` (ADR 0018); that change — not this one — owns the `GEN_ED_COORDINATOR` ILO CRUD/reorder/archive/restore surface.
 _Avoid_: ILO analytics assumption, Coordinator ILO catalog editor in this change
 
 ## Evidence language
@@ -105,21 +105,21 @@ _Avoid_: Raw comment text on the dashboard
 
 ## Outcome evidence
 
-**Program PLO evidence**:
-Course-bound quantitative evidence connected through a published evaluation's CILO question binding to a CILO and that CILO's PLO mapping in the selected Program. Central instrument questions and Institutional Outcome evidence are not Program PLO evidence.
-_Avoid_: Universal outcome attainment, ILO-to-PLO evidence
+**Program GO evidence**:
+Course-bound quantitative evidence connected through a published evaluation's CILO question binding to a CILO and that CILO's GO mapping in the selected Program. Central instrument questions and Institutional Outcome evidence are not Program GO evidence.
+_Avoid_: Universal outcome attainment, ILO-to-GO evidence
 
 **Current-mapping interpretation**:
-The grouping of historical Course-bound ratings by the selected Program's current CILO-to-PLO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
-_Avoid_: Publication-time PLO result, immutable historical mapping result
+The grouping of historical Course-bound ratings by the selected Program's current CILO-to-GO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
+_Avoid_: Publication-time GO result, immutable historical mapping result
 
 **Current-mapping disclosure**:
-The user-facing notice that historical ratings group by the Program's current CILO-to-PLO mappings because publication-time mapping snapshots are not yet available, so later mapping edits reinterpret history. The same notice is forwarded into AI limitations.
+The user-facing notice that historical ratings group by the Program's current CILO-to-GO mappings because publication-time mapping snapshots are not yet available, so later mapping edits reinterpret history. The same notice is forwarded into AI limitations.
 _Avoid_: Publication-time mapping guarantee
 
 **Many-to-many disclosure**:
-Shown when a CILO maps to more than one selected-Program PLO. Each rating contributes once per mapped PLO, so outcome rows are not additive across PLOs.
-_Avoid_: Summing ratings across PLO rows
+Shown when a CILO maps to more than one selected-Program GO. Each rating contributes once per mapped GO, so outcome rows are not additive across GOs.
+_Avoid_: Summing ratings across GO rows
 
 **Spans multiple scales**:
 A flag set when a pooled mean would combine ratings from more than one instrument-version scale identity. Scales stay reported separately rather than merged.

@@ -1,22 +1,22 @@
 import { z } from "zod";
 
-import { PLO_IMPORT_MAX_ROWS } from "../types/plo-import";
+import { GO_IMPORT_MAX_ROWS } from "../types/go-import";
 
 const sourceRowSchema = z.object({
   sourceIndex: z.number().int().min(2).max(100_000),
   input: z.object({
-    plo_code: z.string(),
+    go_code: z.string(),
     description: z.string(),
   }),
 });
 
-export const ploImportRequestSchema = z
+export const goImportRequestSchema = z
   .object({
     programId: z.string().uuid("Invalid Program ID."),
     rows: z
       .array(sourceRowSchema)
-      .min(1, "Add at least one PLO row.")
-      .max(PLO_IMPORT_MAX_ROWS, `Imports are limited to ${PLO_IMPORT_MAX_ROWS} PLO rows.`),
+      .min(1, "Add at least one GO row.")
+      .max(GO_IMPORT_MAX_ROWS, `Imports are limited to ${GO_IMPORT_MAX_ROWS} GO rows.`),
   })
   .superRefine((value, context) => {
     const sourceIndexes = value.rows.map((row) => row.sourceIndex);
@@ -24,9 +24,9 @@ export const ploImportRequestSchema = z
       context.addIssue({
         code: "custom",
         path: ["rows"],
-        message: "Each PLO row must have a unique source row number.",
+        message: "Each GO row must have a unique source row number.",
       });
     }
   });
 
-export type PLOImportRequest = z.infer<typeof ploImportRequestSchema>;
+export type GOImportRequest = z.infer<typeof goImportRequestSchema>;

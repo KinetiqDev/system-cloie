@@ -54,6 +54,15 @@ describe("parseAnalyticsSearchParams", () => {
       { tab: "outcomes", evidenceSource: "ALUMNI", stakeholder: "ALUMNI" }
     );
   });
+  it("accepts the legacy ploId alias and gives canonical goId precedence", () => {
+    expect(parseAnalyticsSearchParams({ ploId: "legacy-outcome" })).toEqual({
+      tab: "outcomes",
+      goId: "legacy-outcome",
+    });
+    expect(
+      parseAnalyticsSearchParams({ goId: "canonical-outcome", ploId: "legacy-outcome" })
+    ).toEqual({ tab: "outcomes", goId: "canonical-outcome" });
+  });
 });
 
 describe("analytics URLs", () => {
@@ -87,6 +96,12 @@ describe("analytics URLs", () => {
     expect(rawAnalyticsSearchParamsToQueryString({ tab: ["trends", "outcomes"] })).toBe(
       "tab=trends&tab=outcomes"
     ));
+  it("serializes legacy raw links through the canonical goId key", () => {
+    const query = rawAnalyticsSearchParamsToQueryString({ ploId: "legacy-outcome" });
+    expect(query).toBe("goId=legacy-outcome");
+    expect(query).not.toContain("ploId=");
+  });
+
   it("builds stable scope fingerprints from period and evidence fields", () => {
     expect(
       buildAnalyticsFilterFingerprint({

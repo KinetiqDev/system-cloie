@@ -53,7 +53,7 @@ const FULLY_BOUND_READINESS: CentralPublishReadiness = {
   templateId: "template-1",
   likertCount: 3,
   boundQuestionCount: 3,
-  coveredPlos: [{ code: "BSIT-GO1", description: "Communicate effectively" }],
+  coveredGos: [{ code: "BSIT-GO1", description: "Communicate effectively" }],
   unboundQuestions: [],
   blockingError: null,
 };
@@ -137,28 +137,29 @@ describe("PublishCentralDeploymentForm", () => {
       },
     });
 
-    expect(screen.queryByText("PLO coverage")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO coverage")).not.toBeInTheDocument();
 
     await selectTemplate();
 
-    expect(screen.getByRole("heading", { name: "PLO coverage" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "GO coverage" })).toBeInTheDocument();
     expect(
-      screen.getByText("2 of 3 Likert questions bound to a PLO, covering 1 PLO.")
+      screen.getByText("2 of 3 Likert questions bound to a GO, covering 1 GO.")
     ).toBeInTheDocument();
     expect(screen.getByText("Overall Assessment")).toBeInTheDocument();
     expect(screen.getByText("Overall satisfaction with the program")).toBeInTheDocument();
     expect(
-      screen.getByText(/publish as general evaluation items and give no PLO evidence/i)
+      screen.getByText(/publish as general evaluation items and give no GO evidence/i)
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Assign PLOs in the template editor" })
-    ).toHaveAttribute("href", "/program-head/programs/program-1/tools/template-1/edit");
+    expect(screen.getByRole("link", { name: "Assign GOs in the template editor" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/tools/template-1/edit"
+    );
   });
 
   it("surfaces a readiness failure instead of hiding the coverage panel", () => {
-    renderForm({ readinessError: "Unable to load PLO coverage right now." });
+    renderForm({ readinessError: "Unable to load GO coverage right now." });
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Unable to load PLO coverage right now.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to load GO coverage right now.");
   });
 
   it("shows the binding problem that still blocks publication", async () => {
@@ -168,7 +169,7 @@ describe("PublishCentralDeploymentForm", () => {
           ...FULLY_BOUND_READINESS,
           boundQuestionCount: 2,
           blockingError:
-            "One or more bound PLOs are archived or no longer available. Update the template before publishing.",
+            "One or more bound GOs are archived or no longer available. Update the template before publishing.",
           unboundQuestions: [
             {
               itemKey: "q-1",
@@ -184,7 +185,7 @@ describe("PublishCentralDeploymentForm", () => {
     await selectTemplate();
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "One or more bound PLOs are archived or no longer available."
+      "One or more bound GOs are archived or no longer available."
     );
     expect(screen.getByText("The program prepared me for employment")).toBeInTheDocument();
   });

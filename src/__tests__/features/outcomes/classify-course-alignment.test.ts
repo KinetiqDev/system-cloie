@@ -5,7 +5,7 @@ import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
 type CiloRow = {
   cilo_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
-    plo: { id: string; program_id: string | null; is_active: boolean };
+    go: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
@@ -16,14 +16,14 @@ type CiloRow = {
 const PROGRAM = "program-1";
 
 function mappedCilo(
-  ploId: string,
+  goId: string,
   manifestation: CILOMappingManifestation,
   programId = PROGRAM,
   isActive = true
 ): CiloRow {
   return {
     cilo_mappings: [
-      { manifestation, plo: { id: ploId, program_id: programId, is_active: isActive } },
+      { manifestation, go: { id: goId, program_id: programId, is_active: isActive } },
     ],
     cilo_institutional_outcome_mappings: [],
   };
@@ -50,97 +50,95 @@ function classify(
   cilos: CiloRow[],
   courseScope: CourseScope,
   owningProgramId: string | null,
-  activePloIds: string[]
+  activeGoIds: string[]
 ) {
-  return classifyCourseAlignment(cilos, courseScope, owningProgramId, activePloIds);
+  return classifyCourseAlignment(cilos, courseScope, owningProgramId, activeGoIds);
 }
 
 describe("classifyCourseAlignment exhaustive readiness", () => {
-  it("classifies a Program-specific Course incomplete when one active CILO lacks a PLO manifestation", () => {
+  it("classifies a Program-specific Course incomplete when one active CILO lacks a GO manifestation", () => {
     const state = classify(
-      [mappedCilo("plo-1", "LEARNING"), unmappedCilo()],
+      [mappedCilo("go-1", "LEARNING"), unmappedCilo()],
       "PROGRAM_SPECIFIC",
       PROGRAM,
-      ["plo-1"]
+      ["go-1"]
     );
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("classifies a Program-specific Course incomplete when a CILO classifies only one of two active PLOs", () => {
-    const state = classify(
-      [mappedCilo("plo-1", "LEARNING")],
-      "PROGRAM_SPECIFIC",
-      PROGRAM,
-      ["plo-1", "plo-2"]
-    );
+  it("classifies a Program-specific Course incomplete when a CILO classifies only one of two active GOs", () => {
+    const state = classify([mappedCilo("go-1", "LEARNING")], "PROGRAM_SPECIFIC", PROGRAM, [
+      "go-1",
+      "go-2",
+    ]);
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("flips a fully classified Course back to incomplete when a new PLO is added", () => {
-    const cilos = [mappedCilo("plo-1", "LEARNING")];
-    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["plo-1"])).toBe("ready");
-    // A newly created PLO joins the active catalog, so the same rows no longer
-    // cover every required pair until Faculty classify the new PLO.
-    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["plo-1", "plo-2"])).toBe(
+  it("flips a fully classified Course back to incomplete when a new GO is added", () => {
+    const cilos = [mappedCilo("go-1", "LEARNING")];
+    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["go-1"])).toBe("ready");
+    // A newly created GO joins the active catalog, so the same rows no longer
+    // cover every required pair until Faculty classify the new GO.
+    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["go-1", "go-2"])).toBe(
       "incomplete-mapping"
     );
   });
 
-  it("classifies incomplete, not ready, when the Program has zero active PLOs alongside active CILOs", () => {
+  it("classifies incomplete, not ready, when the Program has zero active GOs alongside active CILOs", () => {
     const state = classify([unmappedCilo()], "PROGRAM_SPECIFIC", PROGRAM, []);
     expect(state).toBe("incomplete-mapping");
   });
 
   it("classifies incomplete when a mapping row carries a null manifestation", () => {
-const cilo: CiloRow = {
+    const cilo: CiloRow = {
       cilo_mappings: [
-        { manifestation: null, plo: { id: "plo-1", program_id: PROGRAM, is_active: true } },
+        { manifestation: null, go: { id: "go-1", program_id: PROGRAM, is_active: true } },
       ],
       cilo_institutional_outcome_mappings: [],
     };
-    const state = classify([cilo], "PROGRAM_SPECIFIC", PROGRAM, ["plo-1"]);
+    const state = classify([cilo], "PROGRAM_SPECIFIC", PROGRAM, ["go-1"]);
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("does not count a mapping to a PLO outside the owning Program", () => {
+  it("does not count a mapping to a GO outside the owning Program", () => {
     const state = classify(
-      [mappedCilo("plo-1", "LEARNING", "program-2")],
+      [mappedCilo("go-1", "LEARNING", "program-2")],
       "PROGRAM_SPECIFIC",
       PROGRAM,
-      ["plo-1"]
+      ["go-1"]
     );
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("does not count a mapping to an archived PLO", () => {
+  it("does not count a mapping to an archived GO", () => {
     const state = classify(
-      [mappedCilo("plo-1", "LEARNING", PROGRAM, false)],
+      [mappedCilo("go-1", "LEARNING", PROGRAM, false)],
       "PROGRAM_SPECIFIC",
       PROGRAM,
-      ["plo-1"]
+      ["go-1"]
     );
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("classifies ready when every active CILO has a manifestation for every active PLO", () => {
+  it("classifies ready when every active CILO has a manifestation for every active GO", () => {
     const state = classify(
-      [mappedCilo("plo-1", "LEARNING"), mappedCilo("plo-1", "PRACTICE")],
+      [mappedCilo("go-1", "LEARNING"), mappedCilo("go-1", "PRACTICE")],
       "PROGRAM_SPECIFIC",
       PROGRAM,
-      ["plo-1"]
+      ["go-1"]
     );
     expect(state).toBe("ready");
   });
 
-  it("classifies ready when a CILO covers every active PLO even when archived PLOs exist", () => {
+  it("classifies ready when a CILO covers every active GO even when archived GOs exist", () => {
     const state = classify(
       [
         {
           cilo_mappings: [
-            { manifestation: "LEARNING", plo: { id: "plo-1", program_id: PROGRAM, is_active: true } },
+            { manifestation: "LEARNING", go: { id: "go-1", program_id: PROGRAM, is_active: true } },
             {
               manifestation: "OPPORTUNITY",
-              plo: { id: "plo-2", program_id: PROGRAM, is_active: false },
+              go: { id: "go-2", program_id: PROGRAM, is_active: false },
             },
           ],
           cilo_institutional_outcome_mappings: [],
@@ -148,7 +146,7 @@ const cilo: CiloRow = {
       ],
       "PROGRAM_SPECIFIC",
       PROGRAM,
-      ["plo-1"]
+      ["go-1"]
     );
     expect(state).toBe("ready");
   });

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ProgramHeadTemplateBuilder } from "@/features/instruments/components/program-head-template-builder";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { getInstitutionalBaseline } from "@/features/instruments/services/list-institutional-baselines";
-import { listProgramPloOptions } from "@/features/instruments/services/manage-program-head-templates";
+import { listProgramGoOptions } from "@/features/instruments/services/manage-program-head-templates";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("New Template", "Program Head") };
@@ -14,10 +14,10 @@ export default async function NewSelectedProgramToolFromBaselinePage({
   params: Promise<{ programId: string; baselineId: string }>;
 }) {
   const { programId, baselineId } = await params;
-  const [contextResult, baseline, ploOptionsResult] = await Promise.all([
+  const [contextResult, baseline, goOptionsResult] = await Promise.all([
     resolveProgramHeadContext(programId),
     getInstitutionalBaseline(baselineId),
-    listProgramPloOptions(programId),
+    listProgramGoOptions(programId),
   ]);
 
   if (!contextResult.success || !baseline) notFound();
@@ -27,7 +27,7 @@ export default async function NewSelectedProgramToolFromBaselinePage({
   return (
     <ProgramHeadTemplateBuilder
       programId={programId}
-      ploOptions={ploOptionsResult.success ? ploOptionsResult.data.plos : []}
+      goOptions={goOptionsResult.success ? goOptionsResult.data.gos : []}
       programLabel={`${program.code} — ${program.name}`}
       startingFrom={{
         id: baseline.id,

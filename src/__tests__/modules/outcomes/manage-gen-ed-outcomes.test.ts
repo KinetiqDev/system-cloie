@@ -43,7 +43,7 @@ vi.mock("@/lib/db/prisma", () => ({
       create: institutionalOutcomeCreateMock,
       update: institutionalOutcomeUpdateMock,
     },
-    pLO: {
+    gO: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
@@ -72,8 +72,13 @@ vi.mock("@/lib/db/prisma", () => ({
           create: institutionalOutcomeCreateMock,
           update: institutionalOutcomeUpdateMock,
         },
-        pLO: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-        cILO: { findUnique: ciloFindUniqueMock, findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+        gO: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+        cILO: {
+          findUnique: ciloFindUniqueMock,
+          findMany: vi.fn(),
+          create: vi.fn(),
+          update: vi.fn(),
+        },
         program: { findUnique: programFindUniqueMock },
         courseAssignment: { findFirst: courseAssignmentFindFirstMock },
         programHeadAssignment: { findFirst: vi.fn() },
@@ -105,7 +110,6 @@ function nonCoordinatorSession(role: (typeof ROLES)[keyof typeof ROLES]) {
 describe("manage-gen-ed-outcomes", () => {
   let listInstitutionalOutcomes: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").listInstitutionalOutcomes;
   let createILO: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").createILO;
-  let updateILO: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").updateILO;
   let archiveILO: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").archiveILO;
   let restoreILO: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").restoreILO;
   let reorderILOs: typeof import("@/features/outcomes/services/manage-gen-ed-outcomes").reorderILOs;
@@ -131,7 +135,6 @@ describe("manage-gen-ed-outcomes", () => {
     const mod = await import("@/features/outcomes/services/manage-gen-ed-outcomes");
     listInstitutionalOutcomes = mod.listInstitutionalOutcomes;
     createILO = mod.createILO;
-    updateILO = mod.updateILO;
     archiveILO = mod.archiveILO;
     restoreILO = mod.restoreILO;
     reorderILOs = mod.reorderILOs;

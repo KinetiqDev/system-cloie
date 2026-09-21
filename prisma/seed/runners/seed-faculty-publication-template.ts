@@ -2,7 +2,8 @@ import { EvaluationTemplateType, Prisma } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
 import { U } from "../constants/ids";
 import { ciloEvalStructure } from "../fixtures/instruments";
-import type { FoundationContext, TemplateStructure } from "../types";
+import type { FoundationContext } from "../types";
+import type { TemplateStructure } from "../../../src/features/instruments/types";
 
 /**
  * Publication-slice fixture (issue #546): a faculty-owned Course-bound

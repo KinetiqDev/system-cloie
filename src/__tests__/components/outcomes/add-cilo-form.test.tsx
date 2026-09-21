@@ -157,7 +157,7 @@ describe("AddCiloForm", () => {
       "CS101 — Intro to Computing"
     );
 
-    const mapLink = screen.getAllByRole("link", { name: /Map CILOs to PLOs/ });
+    const mapLink = screen.getAllByRole("link", { name: /Map CILOs to GOs/ });
     expect(mapLink.length).toBeGreaterThan(0);
     for (const link of mapLink) {
       expect(link).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");

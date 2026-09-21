@@ -13,11 +13,11 @@ An immutable, numbered edition of a template (`version_number`) that freezes the
 _Avoid_: Template revision, live snapshot
 
 **Template type**:
-`PROGRAM_WIDE` or `COURSE_BOUND`, which gates what a template may carry: only PROGRAM_WIDE templates bind questions to the program's PLO catalog, and only COURSE_BOUND templates can be faculty-accessible and bind questions to course CILOs.
+`PROGRAM_WIDE` or `COURSE_BOUND`, which gates what a template may carry: only PROGRAM_WIDE templates bind questions to the program's GO catalog, and only COURSE_BOUND templates can be faculty-accessible and bind questions to course CILOs.
 _Avoid_: Survey category, evaluation kind
 
 **Institutional baseline**:
-An institution-owned template with no program and no faculty owner, offered to Program Heads for copying. A Program Head copies it into a program-owned template via `source_template_id` with a generated unique code (name-derived, suffixed on collision), and the copy owns its PLO bindings. Choosing a baseline in the creation flow only pre-fills the template builder: the program-owned copy is created on the first save, so an abandoned selection leaves no record and the baseline is never modified.
+An institution-owned template with no program and no faculty owner, offered to Program Heads for copying. A Program Head copies it into a program-owned template via `source_template_id` with a generated unique code (name-derived, suffixed on collision), and the copy owns its GO bindings. Choosing a baseline in the creation flow only pre-fills the template builder: the program-owned copy is created on the first save, so an abandoned selection leaves no record and the baseline is never modified.
 _Avoid_: Admin template, starter template
 
 **Blank draft**:
@@ -37,6 +37,6 @@ _Avoid_: Item type, response type
 Associates a Likert question with a course CILO — at most one CILO per question, and a CILO may be evidenced by one or more questions. Every active CILO of the bound course must be covered by at least one question before publication; the binding snapshots the CILO description and question prompt, so one CILO with several questions carries several snapshot rows that all pool into that CILO's single mean.
 _Avoid_: CILO mapping, outcome link
 
-**PLO question binding**:
-Associates a Likert question in a PROGRAM_WIDE template with an active PLO from the program's catalog; one question may carry several PLOs. Drafts may be partial, and publication does not require full Likert coverage: a Likert question with no binding publishes as a general evaluation item and produces no PLO evidence. Publication rejects bindings that no longer match the template structure and bindings whose PLO is archived or outside the program, and it snapshots the bound PLO code, description, and question prompt.
-_Avoid_: PLO mapping, outcome link
+**GO question binding**:
+Associates a Likert question in a PROGRAM_WIDE template with an active GO from the program's catalog; one question may carry several GOs. Drafts may be partial, and publication does not require full Likert coverage: a Likert question with no binding publishes as a general evaluation item and produces no GO evidence. Publication rejects bindings that no longer match the template structure and bindings whose GO is archived or outside the program, and it snapshots the bound GO code, description, and question prompt.
+_Avoid_: GO mapping, outcome link

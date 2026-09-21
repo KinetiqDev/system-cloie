@@ -9,10 +9,10 @@
 **Review resolutions (2026-08-24):**
 
 - Eligible assignment = any in-scope `EvaluationAssignment` row. Exclusion ledgers do not affect Program Head metrics (§5.12).
-- Manifestations remain descriptive labels; all mapped ratings contribute to PLO means; no numeric weights (§7).
+- Manifestations remain descriptive labels; all mapped ratings contribute to GO means; no numeric weights (§7).
 - Needs attention uses three concrete rules; the low-evidence heuristic is dropped (§13.9).
 - Filter state couples stakeholder to evidence source; the stakeholder control hides for Course source (§15).
-- Upward navigation preserves period, source, stakeholder, and `ploId`; class-level filters reset (§12).
+- Upward navigation preserves period, source, stakeholder, and `goId`; class-level filters reset (§12).
 - Visual regression is deferred; Playwright journeys and the DB-integration CI job stay in scope (§52, §62).
 - Identified-response access is not separately audit-logged in v1.
 - The prototype's Analytics "Export view" action is out of scope.
@@ -39,8 +39,8 @@ The reverse journey must also work:
 ```text
 Exact answer
   -> Question
-  -> CILO or direct PLO binding
-  -> Course / PLO / stakeholder aggregate
+  -> CILO or direct GO binding
+  -> Course / GO / stakeholder aggregate
   -> Analytics
   -> Dashboard
 ```
@@ -53,7 +53,7 @@ The implementation should make every important analytical number traceable. A Pr
 4. How was it calculated?
 5. How many assignments, responses, and ratings contributed?
 6. Which scale was used?
-7. Which evaluations, questions, CILOs, PLOs, or respondents produced it?
+7. Which evaluations, questions, CILOs, GOs, or respondents produced it?
 8. Where can the Program Head inspect the underlying submitted answers?
 
 The prototype defines the intended front-facing hierarchy and interaction. This specification defines the behavior, calculation contracts, authorization boundaries, service responsibilities, data requirements, tests, and implementation constraints.
@@ -85,7 +85,7 @@ The existing Analytics area contains:
 
 Course-bound review already exists under `cilo-reviews`, including evaluation detail and individual response routes.
 
-The current system therefore has many of the required domain pieces, but the user journey is fragmented. Dashboard and Analytics overlap, current metric labels are too vague, Program-wide PLO evidence needs to be integrated more clearly, and response review does not yet provide the full Program Head-specific identified evidence workflow required here.
+The current system therefore has many of the required domain pieces, but the user journey is fragmented. Dashboard and Analytics overlap, current metric labels are too vague, Program-wide GO evidence needs to be integrated more clearly, and response review does not yet provide the full Program Head-specific identified evidence workflow required here.
 
 This implementation should refactor existing capability rather than build a second analytics system.
 
@@ -102,7 +102,7 @@ The implementation must:
 - make Responses the canonical evidence browser;
 - allow Program Heads to inspect identified submitted responses;
 - preserve faculty restrictions outside this scope;
-- distinguish evaluation quantitative means from CILO and PLO means;
+- distinguish evaluation quantitative means from CILO and GO means;
 - separate stakeholder and evidence-source results;
 - make major, year, section, faculty, and course context available where meaningful;
 - preserve exact scale identity;
@@ -136,14 +136,14 @@ The following are explicitly deferred:
 - predictive analytics;
 - automated intervention recommendations;
 - arbitrary stakeholder weighting;
-- one combined Program-wide PLO score across Course, Alumni, Industry, and other sources;
+- one combined Program-wide GO score across Course, Alumni, Industry, and other sources;
 - new attainment thresholds or interpretation bands;
 - red/green academic performance classification;
 - direct assessment data such as grades, exams, capstone rubrics, or LMS scores;
 - faculty access redesign;
 - Dean analytics redesign;
 - persisted analytics snapshots unless later performance testing proves they are needed;
-- historical course CILO-to-PLO mapping snapshots;
+- historical course CILO-to-GO mapping snapshots;
 - a new chart library;
 - a separate analytics backend service.
 
@@ -189,21 +189,21 @@ Mean of all valid submitted ratings for one quantitative question.
 
 Mean of valid ratings from quantitative questions explicitly bound to that CILO.
 
-### 5.8 Course-derived PLO mean
+### 5.8 Course-derived GO mean
 
-Mean of eligible course-bound ratings that reach a PLO through:
+Mean of eligible course-bound ratings that reach a GO through:
 
 ```text
 Question
   -> CILO binding
   -> CILO
-  -> CILO-to-PLO mapping
-  -> PLO
+  -> CILO-to-GO mapping
+  -> GO
 ```
 
-### 5.9 Program-wide PLO mean
+### 5.9 Program-wide GO mean
 
-Mean of valid ratings from Program-wide quantitative questions directly bound to a PLO through the published deployment PLO snapshot.
+Mean of valid ratings from Program-wide quantitative questions directly bound to a GO through the published deployment GO snapshot.
 
 ### 5.10 Rating count
 
@@ -280,7 +280,7 @@ Unbound quantitative questions:
 - contribute to Evaluation quantitative mean;
 - contribute to section means where relevant;
 - do not contribute to CILO means;
-- do not contribute to course-derived PLO means.
+- do not contribute to course-derived GO means.
 
 UI label:
 
@@ -308,7 +308,7 @@ Round only at the presentation boundary.
 
 ---
 
-## 7. CILO-to-PLO manifestation rules
+## 7. CILO-to-GO manifestation rules
 
 Existing manifestation values:
 
@@ -318,7 +318,7 @@ Existing manifestation values:
 
 For this implementation, manifestations are descriptive labels only. Wherever a mapping is displayed (evaluation details, CILO tables, evidence tables, trace UI), the manifestation badge is shown as context.
 
-Every valid rating from a CILO-bound quantitative question contributes to each mapped PLO regardless of manifestation, matching current production aggregation. Manifestations never become numeric weights, and they never filter contributions.
+Every valid rating from a CILO-bound quantitative question contributes to each mapped GO regardless of manifestation, matching current production aggregation. Manifestations never become numeric weights, and they never filter contributions.
 
 Do not implement:
 
@@ -330,7 +330,7 @@ Opportunity = 3
 
 or any other implied weighting.
 
-Excluding Opportunity-mapped ratings from PLO means was considered in the 2026-08-24 review and rejected: it would restate published history and complicate aggregation for no v1 benefit. Revisit only if academic policy formally distinguishes manifestations; the upgrade path is a single manifestation predicate in the course-derived PLO aggregator.
+Excluding Opportunity-mapped ratings from GO means was considered in the 2026-08-24 review and rejected: it would restate published history and complicate aggregation for no v1 benefit. Revisit only if academic policy formally distinguishes manifestations; the upgrade path is a single manifestation predicate in the course-derived GO aggregator.
 
 ---
 
@@ -345,7 +345,7 @@ Primary sources:
 - Alumni evaluations;
 - Industry Partner evaluations.
 
-Do not create one global PLO mean or one global stakeholder mean from these sources.
+Do not create one global GO mean or one global stakeholder mean from these sources.
 
 Compact surfaces may display the sources side by side.
 
@@ -439,7 +439,7 @@ Analytics > Outcomes
 ```
 
 ```text
-Analytics > Outcomes > PLO 2
+Analytics > Outcomes > GO 2
 ```
 
 ```text
@@ -458,7 +458,7 @@ Responses > Course evaluations > EDUC 7 · Morning > Maria Santos
 Responses > Program-wide evaluations > Alumni Survey
 ```
 
-Upward navigation preserves academic period, evidence source, stakeholder, and `ploId` where meaningful. Class-level filters (course, faculty, major, year level, section) reset to defaults.
+Upward navigation preserves academic period, evidence source, stakeholder, and `goId` where meaningful. Class-level filters (course, faculty, major, year level, section) reset to defaults.
 
 ---
 
@@ -594,7 +594,7 @@ Include:
 - Manage Course Assignments;
 - Manage Learning Outcomes.
 
-## 13.8 PLO summary
+## 13.8 GO summary
 
 Evidence source selector:
 
@@ -607,7 +607,7 @@ Industry
 
 Show one source at a time.
 
-For each PLO:
+For each GO:
 
 - code;
 - compact horizontal bar or dot-bar;
@@ -621,7 +621,7 @@ Details expose:
 - evaluation count;
 - contributing CILO count or directly bound question count.
 
-Click opens Analytics > Outcomes with period, source, and PLO preserved.
+Click opens Analytics > Outcomes with period, source, and GO preserved.
 
 Do not show attainment status.
 
@@ -633,7 +633,7 @@ Concrete rules (period-scoped, selected Program):
 
 - an ACTIVE deployment whose deadline is within 7 days;
 - an ACTIVE deployment with zero submitted responses;
-- a PLO with zero ratings for the selected evidence source in the period.
+- a GO with zero ratings for the selected evidence source in the period.
 
 Do not classify academic performance without an approved rule.
 
@@ -715,7 +715,7 @@ type ProgramHeadAnalyticsFilterState = {
   facultyId?: string;
   section?: StudentSection;
 
-  ploId?: string;
+  goId?: string;
   evaluationId?: string;
 };
 ```
@@ -738,16 +738,16 @@ Rules:
 
 Purpose:
 
-> Explain Program Learning Outcome evidence and where it comes from.
+> Explain Graduate Outcome evidence and where it comes from.
 
-## 16.1 PLO comparison chart
+## 16.1 GO comparison chart
 
 Use horizontal bars or dot-bars.
 
 Default order:
 
 ```text
-Institutional PLO order
+Institutional GO order
 ```
 
 Optional sort:
@@ -760,11 +760,11 @@ Optional sort:
 
 Each row includes the exact mean.
 
-## 16.2 Selected PLO summary
+## 16.2 Selected GO summary
 
 Show:
 
-- PLO code;
+- GO code;
 - description;
 - evidence source;
 - scale;
@@ -800,11 +800,11 @@ Example:
 
 The mean displayed above must derive from these same counts.
 
-## 16.4 PLO evidence coverage matrix
+## 16.4 GO evidence coverage matrix
 
 Rows:
 
-- PLOs.
+- GOs.
 
 Columns:
 
@@ -818,7 +818,7 @@ Each cell shows or exposes:
 - rating count;
 - response count.
 
-Clicking a cell selects that PLO and source.
+Clicking a cell selects that GO and source.
 
 The matrix communicates evidence volume, not attainment.
 
@@ -846,7 +846,7 @@ Columns:
 | Evaluation | Stakeholder | Bound question | Ratings | Responses | Mean | Action |
 | ---------- | ----------- | -------------- | ------: | --------: | ---: | ------ |
 
-Use publication-time `CentralDeploymentPloSnapshot` to trace the exact question.
+Use publication-time `CentralDeploymentGoSnapshot` to trace the exact question.
 
 ---
 
@@ -956,7 +956,7 @@ Metric selector:
 
 - source quantitative mean;
 - response completion;
-- selected PLO mean.
+- selected GO mean.
 
 Use a line chart.
 
@@ -1189,10 +1189,10 @@ Summary:
 
 Table:
 
-| CILO | Description | PLO mappings | Ratings | Responses | Mean |
-| ---- | ----------- | ------------ | ------: | --------: | ---: |
+| CILO | Description | GO mappings | Ratings | Responses | Mean |
+| ---- | ----------- | ----------- | ------: | --------: | ---: |
 
-PLO mappings display manifestation.
+GO mappings display manifestation.
 
 Only CILO-bound questions contribute.
 
@@ -1284,13 +1284,13 @@ Summary:
 
 Sections:
 
-- direct PLO results;
+- direct GO results;
 - question results;
 - Likert distributions;
 - qualitative summary;
 - submitted respondents.
 
-Direct PLO evidence uses the publication-time PLO snapshot.
+Direct GO evidence uses the publication-time GO snapshot.
 
 ---
 
@@ -1342,7 +1342,7 @@ For each answer show:
 - selected numeric value;
 - scale label;
 - CILO binding when present;
-- PLO mapping when present;
+- GO mapping when present;
 - manifestation when applicable;
 - `General evaluation item` when unbound.
 
@@ -1369,7 +1369,7 @@ Examples:
 - View evaluation results;
 - View Course analytics;
 - View CILO analytics;
-- View PLO analytics.
+- View GO analytics.
 
 ---
 
@@ -1457,7 +1457,7 @@ Use client components for:
 - interactive filters;
 - Analytics tabs when needed;
 - mobile filter drawer;
-- PLO evidence matrix interactions;
+- GO evidence matrix interactions;
 - word-count slider;
 - pagination;
 - details popovers.
@@ -1550,8 +1550,8 @@ participation
 quantitative metrics
 course evaluation metrics
 CILO metrics
-course-derived PLO metrics
-Program-wide PLO metrics
+course-derived GO metrics
+Program-wide GO metrics
 qualitative metrics
 trend metrics
 ```
@@ -1563,7 +1563,7 @@ src/features/analytics/aggregators/
   participation.ts
   quantitative.ts
   cilo.ts
-  plo.ts
+  go.ts
   qualitative.ts
   trends.ts
 
@@ -1699,9 +1699,9 @@ type CiloMetric = {
   quantitative: QuantitativeMetric;
 
   mappings: Array<{
-    ploId: string;
-    ploCode: string;
-    ploDescription: string;
+    goId: string;
+    goCode: string;
+    goDescription: string;
     manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY";
   }>;
 
@@ -1837,9 +1837,9 @@ Existing model already provides the main relationships needed:
 - Student enrollment;
 - CILO question binding;
 - CILO;
-- CILO-to-PLO mapping;
+- CILO-to-GO mapping;
 - Program-wide deployment;
-- Program-wide PLO snapshot.
+- Program-wide GO snapshot.
 
 The implementation agent must verify current schema and migrations before deciding that no migration is needed.
 
@@ -1863,7 +1863,7 @@ Likely query paths to inspect:
 - Student enrollment by student/term/Program/Major;
 - Course assignments by Program/term/course/faculty/section;
 - Program-wide deployments by Program/term/stakeholder;
-- PLO snapshots by deployment/section/item/PLO.
+- GO snapshots by deployment/section/item/GO.
 
 Avoid speculative index migrations.
 
@@ -1871,17 +1871,17 @@ Avoid speculative index migrations.
 
 # 44. Historical mapping limitation
 
-Course historical PLO evidence may still interpret older CILO-bound answers through the current CILO-to-PLO mapping.
+Course historical GO evidence may still interpret older CILO-bound answers through the current CILO-to-GO mapping.
 
 Do not add historical course mapping snapshots in this implementation.
 
 Instead:
 
 - document the limitation;
-- disclose it in detailed Course-derived PLO Analytics;
+- disclose it in detailed Course-derived GO Analytics;
 - do not describe current mapping as publication-time mapping.
 
-Program-wide PLO snapshots already give stronger publication-time traceability.
+Program-wide GO snapshots already give stronger publication-time traceability.
 
 ---
 
@@ -1997,7 +1997,7 @@ Requirements:
 
 - every chart has precise text/table equivalent;
 - Likert distribution has exact category table;
-- PLO bars include code and numeric mean;
+- GO bars include code and numeric mean;
 - participation charts expose exact counts;
 - trends have exact period table;
 - evidence matrix is keyboard-operable;
@@ -2025,7 +2025,7 @@ Evaluations exist, but no responses have been submitted.
 ```
 
 ```text
-Submitted responses exist, but this PLO has no mapped quantitative evidence.
+Submitted responses exist, but this GO has no mapped quantitative evidence.
 ```
 
 ```text
@@ -2108,12 +2108,12 @@ Create one reusable reference dataset containing:
 - bound quantitative questions;
 - unbound quantitative questions;
 - qualitative questions;
-- one CILO mapped to several PLOs;
-- several CILOs mapped to one PLO;
+- one CILO mapped to several GOs;
+- several CILOs mapped to one GO;
 - Learning mapping;
 - Practice mapping;
 - Opportunity mapping;
-- direct Program-wide PLO bindings;
+- direct Program-wide GO bindings;
 - incompatible scale example;
 - multiple academic periods.
 
@@ -2131,10 +2131,10 @@ Test:
 - CILO mean;
 - unbound question inclusion in evaluation mean;
 - unbound question exclusion from CILO;
-- Course-derived PLO mean;
-- Program-wide PLO mean;
+- Course-derived GO mean;
+- Program-wide GO mean;
 - manifestation behavior;
-- many-to-many PLO mappings;
+- many-to-many GO mappings;
 - duplicate contribution prevention;
 - rating count;
 - response count;
@@ -2202,7 +2202,7 @@ Responses evaluation quantitative mean
 ```
 
 ```text
-PLO rating count
+GO rating count
 =
 number of exact eligible mapped ratings
 ```
@@ -2249,7 +2249,7 @@ Cover:
 
 - completion details popover;
 - keyboard-readable stakeholder progress;
-- PLO source switch;
+- GO source switch;
 - Likert exact-value disclosure;
 - `General evaluation item` labeling;
 - Major filter omission for no-Major Programs;
@@ -2282,7 +2282,7 @@ Cover:
 - missing Evaluation;
 - missing Response;
 - zero-response Evaluation;
-- no-evidence PLO.
+- no-evidence GO.
 
 ---
 
@@ -2312,13 +2312,13 @@ QuantitativeResponseItem
   -> CILO question binding
   -> CILO
   -> CILO mapping
-  -> PLO
+  -> GO
 ```
 
 ```text
 QuantitativeResponseItem
   -> Program-wide deployment
-  -> PLO snapshot
+  -> GO snapshot
 ```
 
 Mocked Prisma tests alone are not sufficient for these relationships.
@@ -2348,7 +2348,7 @@ Program Head login
 ```text
 Individual response
   -> CILO
-  -> PLO
+  -> GO
   -> Outcomes Analytics
   -> Dashboard
 ```
@@ -2363,7 +2363,7 @@ Individual response
 - cross-Program denial;
 - mobile navigation;
 - filter persistence;
-- direct PLO Program-wide drilldown.
+- direct GO Program-wide drilldown.
 
 Do not automate Google OAuth UI.
 
@@ -2506,7 +2506,7 @@ The coding agent must inspect actual imports and consumers before editing.
 - new KPI model;
 - participation by stakeholder;
 - source-specific quantitative summary;
-- PLO source summary;
+- GO source summary;
 - needs attention;
 - qualitative pulse.
 
@@ -2559,7 +2559,7 @@ The coding agent must inspect actual imports and consumers before editing.
 - [ ] Active evaluations are period-scoped.
 - [ ] Quantitative results remain source-specific.
 - [ ] stakeholder progress shows counts and percentage.
-- [ ] PLO summary requires selected evidence source.
+- [ ] GO summary requires selected evidence source.
 - [ ] qualitative summary includes provenance.
 - [ ] Dashboard links into matching Analytics/Responses state.
 
@@ -2567,10 +2567,10 @@ The coding agent must inspect actual imports and consumers before editing.
 
 - [ ] Evaluation quantitative mean uses all valid quantitative items.
 - [ ] unbound quantitative items are included in Evaluation mean.
-- [ ] unbound items are excluded from CILO/PLO.
+- [ ] unbound items are excluded from CILO/GO.
 - [ ] CILO means use only bound questions.
-- [ ] Course PLO uses eligible CILO-derived evidence.
-- [ ] Program-wide PLO uses published direct PLO bindings.
+- [ ] Course GO uses eligible CILO-derived evidence.
+- [ ] Program-wide GO uses published direct GO bindings.
 - [ ] incompatible scales are not merged.
 - [ ] distributions and means reconcile.
 - [ ] no mean-of-means shortcut when raw ratings exist.
@@ -2588,8 +2588,8 @@ The coding agent must inspect actual imports and consumers before editing.
 
 ## Analytics
 
-- [ ] PLO results are traceable.
-- [ ] PLO evidence coverage matrix works.
+- [ ] GO results are traceable.
+- [ ] GO evidence coverage matrix works.
 - [ ] Courses uses CourseAssignment identity.
 - [ ] Stakeholders keeps source separation.
 - [ ] Major analytics is contextually correct.
@@ -2657,8 +2657,8 @@ Question analytics
 If Q1 is CILO-bound:
   CILO aggregate includes it
 
-If the CILO maps to a PLO through eligible manifestation:
-  Course PLO evidence includes it
+If the CILO maps to a GO through eligible manifestation:
+  Course GO evidence includes it
 
 Course evaluation detail
   has the correct Evaluation quantitative mean
@@ -2670,7 +2670,7 @@ Responses list
   reports the same submission count
 
 Outcomes Analytics
-  reports the correct PLO rating count
+  reports the correct GO rating count
 
 Dashboard
   summarizes the same evidence

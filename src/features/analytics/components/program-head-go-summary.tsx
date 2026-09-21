@@ -8,28 +8,28 @@ import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   DASHBOARD_SOURCE_ORDER,
   DASHBOARD_SOURCE_TO_ANALYTICS_FILTER,
-  PLO_SOURCE_LABELS,
+  GO_SOURCE_LABELS,
   type DashboardSourceKey,
 } from "@/features/analytics/program-head-dashboard-labels";
 import type {
   DashboardPeriodFilters,
-  DashboardPloSummaryRow,
-  PloCatalogEntry,
+  DashboardGoSummaryRow,
+  GoCatalogEntry,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 
 function mergeCatalogRows(
   sourceKey: DashboardSourceKey,
-  catalog: PloCatalogEntry[],
-  evidenceRows: DashboardPloSummaryRow[]
-): DashboardPloSummaryRow[] {
-  const byPloId = new Map(evidenceRows.map((row) => [row.ploId, row]));
+  catalog: GoCatalogEntry[],
+  evidenceRows: DashboardGoSummaryRow[]
+): DashboardGoSummaryRow[] {
+  const byGoId = new Map(evidenceRows.map((row) => [row.goId, row]));
   const merged = catalog.map(
     (entry) =>
-      byPloId.get(entry.id) ?? {
-        ploId: entry.id,
-        ploCode: entry.code,
+      byGoId.get(entry.id) ?? {
+        goId: entry.id,
+        goCode: entry.code,
         mean: null,
         ratingCount: 0,
         responseCount: 0,
@@ -42,14 +42,14 @@ function mergeCatalogRows(
         hasEvidence: false,
         evidenceSummary: {
           explanation:
-            "No evidence from this source for this Program Learning Outcome in the selected period.",
+            "No evidence from this source for this Graduate Outcome in the selected period.",
         },
       }
   );
   const catalogIds = new Set(catalog.map((entry) => entry.id));
-  // Historical evidence may reference PLOs no longer active in the catalog.
+  // Historical evidence may reference GOs no longer active in the catalog.
   for (const row of evidenceRows) {
-    if (!catalogIds.has(row.ploId)) {
+    if (!catalogIds.has(row.goId)) {
       merged.push(row);
     }
   }
@@ -57,39 +57,39 @@ function mergeCatalogRows(
 }
 
 /**
- * Program Learning Outcome summary (spec §13.8): one evidence source at a
+ * Graduate Outcome summary (spec §13.8): one evidence source at a
  * time; details expose rating/response/evaluation plus contributing-CILO or
  * bound-question counts. Rows deep-link into Analytics > Outcomes with
- * period, source, and PLO preserved (§12 upward navigation). No attainment
+ * period, source, and GO preserved (§12 upward navigation). No attainment
  * status is shown anywhere.
  */
-export function ProgramHeadPloSummary({
+export function ProgramHeadGoSummary({
   sources,
-  ploCatalog,
+  goCatalog,
   programId,
   periodFilters,
 }: {
-  sources: Record<DashboardSourceKey, DashboardPloSummaryRow[]>;
-  ploCatalog: PloCatalogEntry[];
+  sources: Record<DashboardSourceKey, DashboardGoSummaryRow[]>;
+  goCatalog: GoCatalogEntry[];
   programId: string;
   periodFilters: DashboardPeriodFilters;
 }) {
   const [sourceKey, setSourceKey] = useState<DashboardSourceKey>("COURSE_STUDENT");
-  const rows = mergeCatalogRows(sourceKey, ploCatalog, sources[sourceKey] ?? []);
-  const rowHref = (ploId: string): string =>
+  const rows = mergeCatalogRows(sourceKey, goCatalog, sources[sourceKey] ?? []);
+  const rowHref = (goId: string): string =>
     buildAnalyticsUrl(programId, {
       ...periodFilters,
       tab: "outcomes",
-      ploId,
+      goId,
       ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
     });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Program Learning Outcome summary</CardTitle>
+        <CardTitle className="text-base font-bold">Graduate Outcome summary</CardTitle>
         <CardDescription>
-          One evidence source at a time; select a PLO to open Analytics.
+          One evidence source at a time; select a GO to open Analytics.
         </CardDescription>
         <div
           role="group"
@@ -108,7 +108,7 @@ export function ProgramHeadPloSummary({
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               }`}
             >
-              <span className="line-clamp-2">{PLO_SOURCE_LABELS[key]}</span>
+              <span className="line-clamp-2">{GO_SOURCE_LABELS[key]}</span>
             </button>
           ))}
         </div>
@@ -116,22 +116,22 @@ export function ProgramHeadPloSummary({
       <CardContent className="flex flex-col gap-1">
         {rows.length === 0 ? (
           <Empty>
-            <EmptyTitle>No active Program Learning Outcomes</EmptyTitle>
+            <EmptyTitle>No active Graduate Outcomes</EmptyTitle>
             <EmptyDescription>
-              Define the program&rsquo;s learning outcomes before interpreting PLO evidence.
+              Define the program&rsquo;s Graduate Outcomes before interpreting GO evidence.
             </EmptyDescription>
           </Empty>
         ) : (
           rows.map((row) => (
-            <div key={row.ploId} className="border-border/60 border-b py-2 last:border-b-0">
+            <div key={row.goId} className="border-border/60 border-b py-2 last:border-b-0">
               <div className="focus-within:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-2 focus-within:ring-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_5rem]">
-                <span className="text-label-md min-w-0 truncate font-bold" title={row.ploCode}>
-                  <Link href={rowHref(row.ploId)} className="hover:underline">
-                    {row.ploCode}
+                <span className="text-label-md min-w-0 truncate font-bold" title={row.goCode}>
+                  <Link href={rowHref(row.goId)} className="hover:underline">
+                    {row.goCode}
                   </Link>
                 </span>
                 <Link
-                  href={rowHref(row.ploId)}
+                  href={rowHref(row.goId)}
                   aria-hidden="true"
                   tabIndex={-1}
                   className="bg-muted relative col-span-2 row-start-2 block h-3.5 overflow-hidden rounded border sm:col-span-1 sm:row-start-auto"
@@ -161,8 +161,8 @@ export function ProgramHeadPloSummary({
                     row.mean.toFixed(2)
                   )}
                   <HowCalculatedPopover
-                    metric={{ ...row.evidenceSummary, evidenceHref: rowHref(row.ploId) }}
-                    label={row.ploCode}
+                    metric={{ ...row.evidenceSummary, evidenceHref: rowHref(row.goId) }}
+                    label={row.goCode}
                   />
                 </span>
               </div>
@@ -223,8 +223,8 @@ export function ProgramHeadPloSummary({
         )}
         <p className="text-muted-foreground text-label-sm mt-2">
           {sourceKey === "COURSE_STUDENT"
-            ? "Only quantitative answers bound to a CILO flow through CILO-to-PLO mappings into course-derived PLO means."
-            : "Directly bound questions on published deployments feed this source's PLO means."}
+            ? "Only quantitative answers bound to a CILO flow through CILO-to-GO mappings into course-derived GO means."
+            : "Directly bound questions on published deployments feed this source's GO means."}
         </p>
       </CardContent>
     </Card>

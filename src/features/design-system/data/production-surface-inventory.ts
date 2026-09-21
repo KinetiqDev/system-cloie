@@ -2393,11 +2393,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #521 how-calculated disclosure on the shared Base UI popover primitive; spec §41 presentation metadata only",
   },
   {
-    path: "src/features/analytics/components/selected-plo-scroll-target.tsx",
+    path: "src/features/analytics/components/selected-go-scroll-target.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #521 scrolls the deep-linked PLO row into view after mount; matches data-plo-row by value to avoid selector escaping",
+      "Slice #521 scrolls the deep-linked GO row into view after mount; matches data-go-row by value to avoid selector escaping",
   },
   {
     path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
@@ -2414,11 +2414,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
   },
   {
-    path: "src/features/analytics/components/program-head-plo-summary.tsx",
+    path: "src/features/analytics/components/program-head-go-summary.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 PLO summary with evidence-source selector and details disclosure; no attainment status",
+      "Slice #519 GO summary with evidence-source selector and details disclosure; no attainment status",
   },
   {
     path: "src/features/analytics/components/program-head-needs-attention.tsx",
@@ -2501,21 +2501,21 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
-    path: "src/features/analytics/components/program-head-plo-lollipop-chart.tsx",
+    path: "src/features/analytics/components/program-head-go-lollipop-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client lollipop chart rendering PLO means on the fixed 1-5 scale with exact-value disclosure alternative",
+      "Client lollipop chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
   },
   {
     path: "src/features/analytics/components/program-head-contributor-matrix.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Server component exposing per-PLO CILO contributor matrix with course, manifestation, mean, and valid count",
+      "Server component exposing per-GO CILO contributor matrix with course, manifestation, mean, and valid count",
   },
   {
-    path: "src/features/analytics/components/program-head-plo-detail.tsx",
+    path: "src/features/analytics/components/program-head-go-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
@@ -2753,7 +2753,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/central-plo-binding-checklist.tsx",
+    path: "src/features/evaluations/components/central-go-binding-checklist.tsx",
     disposition: "task",
     taskId: 21,
     category: "feature_component",
@@ -2963,7 +2963,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/plo-form-dialog.tsx",
+    path: "src/features/outcomes/components/go-form-dialog.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",
@@ -2975,7 +2975,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/plo-import-dialog.tsx",
+    path: "src/features/outcomes/components/go-import-dialog.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",

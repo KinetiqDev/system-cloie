@@ -317,7 +317,7 @@ export type PreviewCentralDeploymentRespondent = {
 export type PreviewCentralDeploymentResult = ServiceResult<PreviewCentralDeploymentRespondent[]>;
 
 /**
- * Publication-time PLO binding readiness for one PROGRAM_WIDE template, shown
+ * Publication-time GO binding readiness for one PROGRAM_WIDE template, shown
  * on the Program Head publish step. Unbound Likert questions do not block
  * publication; `blockingError` carries a binding problem that does.
  */
@@ -325,7 +325,7 @@ export type CentralPublishReadiness = {
   templateId: string;
   likertCount: number;
   boundQuestionCount: number;
-  coveredPlos: Array<{ code: string; description: string }>;
+  coveredGos: Array<{ code: string; description: string }>;
   unboundQuestions: Array<{
     itemKey: string;
     prompt: string;

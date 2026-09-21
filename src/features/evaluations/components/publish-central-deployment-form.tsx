@@ -22,7 +22,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
-import { CentralPloBindingChecklist } from "./central-plo-binding-checklist";
+import { CentralGoBindingChecklist } from "./central-go-binding-checklist";
 import type {
   CentralPublishReadiness,
   PreviewCentralDeploymentInput,
@@ -51,7 +51,7 @@ interface PublishCentralDeploymentFormProps {
   preselectedTemplateId?: string;
   termInstances: TermInstanceItem[];
   activeTermId?: string;
-  /** Server-prepared PLO binding coverage per selectable template. */
+  /** Server-prepared GO binding coverage per selectable template. */
   readinessByTemplateId: Record<string, CentralPublishReadiness>;
   /** Set when coverage could not be prepared; the checklist is then hidden. */
   readinessError?: string | null;
@@ -296,7 +296,7 @@ export function PublishCentralDeploymentForm({
         ) : null}
 
         {selectedReadiness ? (
-          <CentralPloBindingChecklist
+          <CentralGoBindingChecklist
             instanceKey="configure"
             programId={programId}
             readiness={selectedReadiness}
@@ -603,7 +603,7 @@ export function PublishCentralDeploymentForm({
           )}
 
           {selectedReadiness ? (
-            <CentralPloBindingChecklist
+            <CentralGoBindingChecklist
               instanceKey="preview"
               programId={programId}
               readiness={selectedReadiness}

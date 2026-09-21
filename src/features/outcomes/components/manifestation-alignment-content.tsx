@@ -5,10 +5,20 @@ import { Target } from "lucide-react";
 import type { CILOMappingManifestation } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import type { CourseAlignment } from "@/features/outcomes/services/manage-course-alignment";
 import { cn } from "@/lib/utils";
-import { MANIFESTATION_OPTIONS, ManifestationPicker, manifestationLabel } from "./manifestation-picker";
+import {
+  MANIFESTATION_OPTIONS,
+  ManifestationPicker,
+  manifestationLabel,
+} from "./manifestation-picker";
 
 export type ManifestationDraftState = Record<string, Record<string, CILOMappingManifestation>>;
 
@@ -53,23 +63,23 @@ function targetCopy(scope: CourseAlignment["course"]["scope"]): TargetCopy {
     };
   }
   return {
-    shortNoun: "PLO",
-    header: "CILO / PLO",
-    caption: "CILO to Program Learning Outcome manifestation matrix.",
+    shortNoun: "GO",
+    header: "CILO / GO",
+    caption: "CILO to Graduate Outcome manifestation matrix.",
     incompleteMessage:
-      "Choose Learning, Practice, or Opportunity for all PLOs before reviewing this alignment.",
-    emptyTitle: "No Program Learning Outcomes have been defined for this program.",
-    emptyDescription: "A Program Head must create PLOs before Course alignment can be completed.",
-    archivedTitle: "Archived Program Learning Outcomes",
+      "Choose Learning, Practice, or Opportunity for every GO before reviewing this alignment.",
+    emptyTitle: "No Graduate Outcomes have been defined for this program.",
+    emptyDescription: "A Program Head must create GOs before Course alignment can be completed.",
+    archivedTitle: "Archived Graduate Outcomes",
     archivedDescription:
-      "Historical manifestations on archived PLOs are read-only and do not count toward completeness.",
-    archivedLabel: "Archived Program Learning Outcome manifestations, read-only",
+      "Historical manifestations on archived GOs are read-only and do not count toward completeness.",
+    archivedLabel: "Archived Graduate Outcome manifestations, read-only",
   };
 }
 
 function manifestLegend() {
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-body-sm text-muted-foreground">
+    <ul className="text-body-sm text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
       {MANIFESTATION_OPTIONS.map((option) => (
         <li key={option.value} className="flex items-center gap-1.5">
           <span
@@ -88,7 +98,7 @@ function manifestLegend() {
 /**
  * Course alignment matrix: a desktop table (`hidden md:block`) and mobile CILO
  * cards (`md:hidden`), both driving the same draft state through `onChangeCell`.
- * Copy follows Course scope so Program-specific columns are PLOs and General
+ * Copy follows Course scope so Program-specific columns are GOs and General
  * Education columns are Institutional Outcomes.
  */
 export function ManifestationAlignmentContent({
@@ -130,7 +140,7 @@ export function ManifestationAlignmentContent({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <p
-          className="text-muted-foreground flex flex-wrap items-baseline gap-x-2 text-body-sm"
+          className="text-muted-foreground text-body-sm flex flex-wrap items-baseline gap-x-2"
           aria-live="polite"
         >
           <span className="text-foreground font-medium">
@@ -157,7 +167,7 @@ export function ManifestationAlignmentContent({
               <tr className="border-b">
                 <th
                   scope="col"
-                  className="text-muted-foreground sticky left-0 z-10 h-10 bg-background px-3 text-left font-medium"
+                  className="text-muted-foreground bg-background sticky left-0 z-10 h-10 px-3 text-left font-medium"
                 >
                   {copy.header}
                 </th>
@@ -169,7 +179,7 @@ export function ManifestationAlignmentContent({
                     className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
                   >
                     <span className="block">{target.code}</span>
-                    <span className="mt-1 block text-xs leading-snug break-words font-normal text-muted-foreground">
+                    <span className="text-muted-foreground mt-1 block text-xs leading-snug font-normal break-words">
                       {target.description}
                     </span>
                   </th>
@@ -181,7 +191,7 @@ export function ManifestationAlignmentContent({
                 <tr key={cilo.id} className="border-b">
                   <th
                     scope="row"
-                    className="sticky left-0 z-10 max-w-56 bg-background px-3 py-3 text-left align-top font-medium"
+                    className="bg-background sticky left-0 z-10 max-w-56 px-3 py-3 text-left align-top font-medium"
                   >
                     <span className="text-foreground">CILO {ciloIndex + 1}</span>
                     <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
@@ -200,7 +210,7 @@ export function ManifestationAlignmentContent({
                           className={cn(
                             "flex min-h-9 items-center justify-center rounded-lg border px-1.5",
                             unanswered
-                              ? "border-dashed border-border text-muted-foreground"
+                              ? "border-border text-muted-foreground border-dashed"
                               : "border-border bg-surface-input"
                           )}
                         >
@@ -241,15 +251,13 @@ export function ManifestationAlignmentContent({
                     className={cn(
                       "flex flex-col gap-2 rounded-lg border p-3",
                       unanswered
-                        ? "border-dashed border-border bg-muted/40"
+                        ? "border-border bg-muted/40 border-dashed"
                         : "border-border bg-surface-input"
                     )}
                   >
                     <p className="text-label-lg font-medium">{target.code}</p>
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>
-                    {unanswered && (
-                      <p className="text-muted-foreground text-body-sm">Unanswered</p>
-                    )}
+                    {unanswered && <p className="text-muted-foreground text-body-sm">Unanswered</p>}
                     <ManifestationPicker
                       ciloIndex={ciloIndex + 1}
                       targetIndex={targetIndex + 1}
@@ -304,7 +312,7 @@ const ArchivedManifestationRows = memo(function ArchivedManifestationRows({
   if (rows.length === 0) return null;
   return (
     <div
-      className="rounded-xl border border-dashed border-border bg-muted/30 p-4"
+      className="border-border bg-muted/30 rounded-xl border border-dashed p-4"
       data-testid="archived-manifestation-rows"
       aria-label={copy.archivedLabel}
     >

@@ -49,11 +49,11 @@ const outcomes: ProgramHeadOutcomesDTO = {
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-  currentMappingDisclosure: "Current CILO-to-PLO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
   manyToManyDisclosure: true,
   outcomes: [
     {
-      ploId: "go-1",
+      goId: "go-1",
       code: "GO-1",
       name: "Effective communicator",
       meanRating: 11 / 3,

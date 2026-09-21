@@ -26,7 +26,7 @@ type ManifestationPickerProps = {
   ciloIndex: number;
   /** 1-based target position, used in the accessible names. */
   targetIndex: number;
-  /** Short target noun in accessible names, e.g. PLO or ILO. */
+  /** Short target noun in accessible names, e.g. GO or ILO. */
   targetNoun?: string;
   value: CILOMappingManifestation | null;
   disabled?: boolean;
@@ -37,14 +37,14 @@ type ManifestationPickerProps = {
 
 /**
  * Per-pair Learning/Practice/Opportunity control.
- * Every option carries the full accessible name "CILO n, PLO m, manifestation: <label>";
+ * Every option carries the full accessible name "CILO n, GO m, manifestation: <label>";
  * letters and color are never the sole communication. Clearing is available through
  * the explicit clear button or by activating the already-selected option.
  */
 export function ManifestationPicker({
   ciloIndex,
   targetIndex,
-  targetNoun = "PLO",
+  targetNoun = "GO",
   value,
   disabled = false,
   onChange,
@@ -58,10 +58,7 @@ export function ManifestationPicker({
     <div
       role="group"
       aria-label={`CILO ${ciloIndex}, ${targetNoun} ${targetIndex}, manifestation`}
-      className={cn(
-        "flex min-w-0 items-center gap-1",
-        variant === "full" && "flex-wrap gap-1.5"
-      )}
+      className={cn("flex min-w-0 items-center gap-1", variant === "full" && "flex-wrap gap-1.5")}
     >
       {MANIFESTATION_OPTIONS.map((option) => {
         const selected = value === option.value;
@@ -78,7 +75,8 @@ export function ManifestationPicker({
             onClick={() => onChange(selected ? null : option.value)}
             className={cn(
               "min-w-9",
-              variant === "full" && "min-h-11 flex-1 min-w-0 px-2.5 text-label-lg text-primary-foreground",
+              variant === "full" &&
+                "text-label-lg text-primary-foreground min-h-11 min-w-0 flex-1 px-2.5",
               !selected && "text-muted-foreground"
             )}
           >

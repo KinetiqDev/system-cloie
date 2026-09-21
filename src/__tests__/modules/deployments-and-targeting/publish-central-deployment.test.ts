@@ -9,7 +9,7 @@ const {
   assignmentCreateManyMock,
   centralDeploymentCreateMock,
   centralDeploymentFindFirstMock,
-  centralDeploymentPloSnapshotCreateManyMock,
+  centralDeploymentGoSnapshotCreateManyMock,
   academicTermInstanceFindUniqueMock,
   alumniProfileFindManyMock,
   externalStakeholderInviteFindManyMock,
@@ -17,7 +17,7 @@ const {
   instrumentTemplateFindFirstMock,
   instrumentVersionFindFirstMock,
   listStudentsForClassMock,
-  ploFindManyMock,
+  goFindManyMock,
   programHeadAssignmentFindFirstMock,
   resolveAuthSessionMock,
   studentAcademicProfileFindManyMock,
@@ -32,7 +32,7 @@ const {
   assignmentCreateManyMock: vi.fn(),
   centralDeploymentCreateMock: vi.fn(),
   centralDeploymentFindFirstMock: vi.fn(),
-  centralDeploymentPloSnapshotCreateManyMock: vi.fn(),
+  centralDeploymentGoSnapshotCreateManyMock: vi.fn(),
   academicTermInstanceFindUniqueMock: vi.fn(),
   alumniProfileFindManyMock: vi.fn(),
   externalStakeholderInviteFindManyMock: vi.fn(),
@@ -40,7 +40,7 @@ const {
   instrumentTemplateFindFirstMock: vi.fn(),
   instrumentVersionFindFirstMock: vi.fn(),
   listStudentsForClassMock: vi.fn(),
-  ploFindManyMock: vi.fn(),
+  goFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   studentAcademicProfileFindManyMock: vi.fn(),
@@ -68,8 +68,8 @@ vi.mock("@/lib/db/prisma", () => ({
     instrumentVersion: {
       findFirst: instrumentVersionFindFirstMock,
     },
-    pLO: {
-      findMany: ploFindManyMock,
+    gO: {
+      findMany: goFindManyMock,
     },
     programHeadAssignment: {
       findFirst: programHeadAssignmentFindFirstMock,
@@ -112,7 +112,7 @@ function mockTemplate(overrides: Record<string, unknown> = {}) {
     program_id: "program-1",
     template_type: "PROGRAM_WIDE",
     structure: [],
-    template_plo_question_bindings: [],
+    template_go_question_bindings: [],
     ...overrides,
   });
 }
@@ -152,8 +152,8 @@ function setupTransaction() {
           template_type: "PROGRAM_WIDE",
         }),
       },
-      centralDeploymentPloSnapshot: {
-        createMany: centralDeploymentPloSnapshotCreateManyMock,
+      centralDeploymentGoSnapshot: {
+        createMany: centralDeploymentGoSnapshotCreateManyMock,
       },
       major: {
         findUnique: vi.fn().mockResolvedValue({ program_id: "program-1", is_active: true }),
@@ -291,7 +291,7 @@ describe("publishCentralDeployment", () => {
         program_id: true,
         template_type: true,
         structure: true,
-        template_plo_question_bindings: true,
+        template_go_question_bindings: true,
       },
     });
   });
@@ -628,7 +628,7 @@ describe("publishCentralDeployment", () => {
     });
   });
 
-  // ─── Question–PLO Binding Validation ────────────────────────────────────
+  // ─── Question–GO Binding Validation ────────────────────────────────────
 
   const LIKERT_STRUCTURE = [
     {
@@ -682,9 +682,9 @@ describe("publishCentralDeployment", () => {
     mockPHAssignment();
     mockTemplate({
       structure: PARTIAL_LIKERT_STRUCTURE,
-      template_plo_question_bindings: [{ plo_id: "plo-1", section_key: "sec-1", item_key: "q-1" }],
+      template_go_question_bindings: [{ go_id: "plo-1", section_key: "sec-1", item_key: "q-1" }],
     });
-    ploFindManyMock.mockResolvedValue([
+    goFindManyMock.mockResolvedValue([
       { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
     ]);
     mockVersion();
@@ -699,13 +699,13 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-partial", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentPloSnapshotCreateManyMock).toHaveBeenCalledWith({
+    expect(centralDeploymentGoSnapshotCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
           central_deployment_id: "deployment-partial",
-          plo_id: "plo-1",
-          plo_code_snapshot: "BSIT-GO1",
-          plo_description_snapshot: "Communicate effectively",
+          go_id: "plo-1",
+          go_code_snapshot: "BSIT-GO1",
+          go_description_snapshot: "Communicate effectively",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",
@@ -714,10 +714,10 @@ describe("publishCentralDeployment", () => {
     });
   });
 
-  it("publishes a template whose Likert questions have no PLO bindings and writes no snapshot rows", async () => {
+  it("publishes a template whose Likert questions have no GO bindings and writes no snapshot rows", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
-    mockTemplate({ structure: LIKERT_STRUCTURE, template_plo_question_bindings: [] });
+    mockTemplate({ structure: LIKERT_STRUCTURE, template_go_question_bindings: [] });
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
@@ -730,7 +730,7 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-unbound", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentPloSnapshotCreateManyMock).not.toHaveBeenCalled();
+    expect(centralDeploymentGoSnapshotCreateManyMock).not.toHaveBeenCalled();
   });
 
   it("rejects publication when a binding no longer matches the template structure", async () => {
@@ -738,11 +738,11 @@ describe("publishCentralDeployment", () => {
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_plo_question_bindings: [
-        { plo_id: "plo-1", section_key: "sec-1", item_key: "q-deleted" },
+      template_go_question_bindings: [
+        { go_id: "plo-1", section_key: "sec-1", item_key: "q-deleted" },
       ],
     });
-    ploFindManyMock.mockResolvedValue([
+    goFindManyMock.mockResolvedValue([
       { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
     ]);
     mockVersion();
@@ -751,25 +751,25 @@ describe("publishCentralDeployment", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "One or more question–PLO bindings no longer match the template structure.",
+      error: "One or more question–GO bindings no longer match the template structure.",
     });
     expect(centralDeploymentCreateMock).not.toHaveBeenCalled();
   });
 
-  it("rejects publication when a bound PLO is archived or not program-owned", async () => {
+  it("rejects publication when a bound GO is archived or not program-owned", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_plo_question_bindings: [
+      template_go_question_bindings: [
         {
-          plo_id: "plo-archived",
+          go_id: "plo-archived",
           section_key: "sec-1",
           item_key: "q-1",
         },
       ],
     });
-    ploFindManyMock.mockResolvedValue([]);
+    goFindManyMock.mockResolvedValue([]);
     mockVersion();
 
     const result = await publishCentralDeployment(baseInput);
@@ -777,26 +777,26 @@ describe("publishCentralDeployment", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "One or more bound PLOs are archived or no longer available. Update the template before publishing.",
+        "One or more bound GOs are archived or no longer available. Update the template before publishing.",
     });
-    expect(ploFindManyMock).toHaveBeenCalledWith(
+    expect(goFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ program_id: "program-1", is_active: true }),
       })
     );
   });
 
-  it("creates immutable PLO snapshot rows when publishing bound Likert questions", async () => {
+  it("creates immutable GO snapshot rows when publishing bound Likert questions", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_plo_question_bindings: [
-        { plo_id: "plo-1", section_key: "sec-1", item_key: "q-1" },
-        { plo_id: "plo-2", section_key: "sec-1", item_key: "q-1" },
+      template_go_question_bindings: [
+        { go_id: "plo-1", section_key: "sec-1", item_key: "q-1" },
+        { go_id: "plo-2", section_key: "sec-1", item_key: "q-1" },
       ],
     });
-    ploFindManyMock.mockResolvedValue([
+    goFindManyMock.mockResolvedValue([
       { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
       { id: "plo-2", code: "BSIT-GO2", description: "Apply technical skills" },
     ]);
@@ -812,22 +812,22 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-bound", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentPloSnapshotCreateManyMock).toHaveBeenCalledWith({
+    expect(centralDeploymentGoSnapshotCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
           central_deployment_id: "deployment-bound",
-          plo_id: "plo-1",
-          plo_code_snapshot: "BSIT-GO1",
-          plo_description_snapshot: "Communicate effectively",
+          go_id: "plo-1",
+          go_code_snapshot: "BSIT-GO1",
+          go_description_snapshot: "Communicate effectively",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",
         },
         {
           central_deployment_id: "deployment-bound",
-          plo_id: "plo-2",
-          plo_code_snapshot: "BSIT-GO2",
-          plo_description_snapshot: "Apply technical skills",
+          go_id: "plo-2",
+          go_code_snapshot: "BSIT-GO2",
+          go_description_snapshot: "Apply technical skills",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",

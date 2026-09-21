@@ -13,7 +13,7 @@ const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
     schoolYear: { findUnique: vi.fn() },
     quantitativeResponseItem: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
-    centralDeploymentPloSnapshot: { findMany: vi.fn() },
+    centralDeploymentGoSnapshot: { findMany: vi.fn() },
     evaluationAssignment: { count: vi.fn() },
     response: { count: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
@@ -113,15 +113,15 @@ function prismaRatingRow(opts: {
   };
 }
 
-const ploA = { plo: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
-const ploB = { plo: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
+const goA = { go: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
+const goB = { go: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
 
 function ciloRow(
   opts: {
     ciloId?: string;
     ciloDescription?: string;
     courseCode?: string;
-    ploMappings?: Array<typeof ploA>;
+    goMappings?: Array<typeof goA>;
   } = {}
 ) {
   const {
@@ -133,7 +133,7 @@ function ciloRow(
     id: ciloId,
     description: ciloDescription,
     course: { id: "course-1", code: courseCode, title: "Education 101", cilos: [{ id: ciloId }] },
-    cilo_mappings: opts.ploMappings ?? [ploA],
+    cilo_mappings: opts.goMappings ?? [goA],
   };
 }
 
@@ -227,7 +227,7 @@ describe("getProgramHeadOutcomes", () => {
   it("returns the no-program-wide-evidence empty state when a central source has no snapshot-bound ratings", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
-    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
 
     const result = await getProgramHeadOutcomes("program-bsed", {
       ...outcomesFilters,
@@ -240,7 +240,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(result?.programWideOutcomes).toEqual([]);
   });
 
-  it("builds program-wide PLO rows from central ratings through deployment snapshots", async () => {
+  it("builds program-wide GO rows from central ratings through deployment snapshots", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
@@ -261,12 +261,12 @@ describe("getProgramHeadOutcomes", () => {
         },
       },
     ]);
-    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([
+    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([
       {
         central_deployment_id: "deployment-1",
-        plo_id: "plo-1",
-        plo_code_snapshot: "PLO-1",
-        plo_description_snapshot: "Graduate outcomes",
+        go_id: "plo-1",
+        go_code_snapshot: "GO-1",
+        go_description_snapshot: "Graduate outcomes",
         section_key: "cilo-items",
         item_key: "cilo-attainment-1",
       },
@@ -282,8 +282,8 @@ describe("getProgramHeadOutcomes", () => {
     expect(result?.programWideOutcomes).toEqual([
       {
         stakeholder: "ALUMNI",
-        ploId: "plo-1",
-        code: "PLO-1",
+        goId: "plo-1",
+        code: "GO-1",
         name: "Graduate outcomes",
         meanRating: 5,
         ratingCount: 1,
@@ -297,7 +297,7 @@ describe("getProgramHeadOutcomes", () => {
           questionCount: 1,
           scaleLabel: "1–5 (5-point)",
           explanation:
-            "Mean of 1 valid ratings from 1 bound question(s) published to this Program Learning Outcome; unbound items are excluded.",
+            "Mean of 1 valid ratings from 1 bound question(s) published to this Graduate Outcome; unbound items are excluded.",
           evidenceHref:
             "/program-head/programs/program-bsed/responses?tab=program-wide&stakeholder=ALUMNI",
         },
@@ -305,7 +305,7 @@ describe("getProgramHeadOutcomes", () => {
     ]);
   });
 
-  it("keeps published evidence when the live PLO was deleted, using frozen snapshot labels", async () => {
+  it("keeps published evidence when the live GO was deleted, using frozen snapshot labels", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
@@ -326,12 +326,12 @@ describe("getProgramHeadOutcomes", () => {
         },
       },
     ]);
-    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([
+    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([
       {
         central_deployment_id: "deployment-1",
-        plo_id: null,
-        plo_code_snapshot: "PLO-9",
-        plo_description_snapshot: "Retired outcome",
+        go_id: null,
+        go_code_snapshot: "GO-9",
+        go_description_snapshot: "Retired outcome",
         section_key: "cilo-items",
         item_key: "cilo-attainment-1",
       },
@@ -343,15 +343,15 @@ describe("getProgramHeadOutcomes", () => {
     });
 
     expect(result?.programWideOutcomes).toHaveLength(1);
-    expect(result?.programWideOutcomes[0].code).toBe("PLO-9");
+    expect(result?.programWideOutcomes[0].code).toBe("GO-9");
     expect(result?.programWideOutcomes[0].name).toBe("Retired outcome");
-    expect(result?.programWideOutcomes[0].ploId).toContain("snapshot:");
+    expect(result?.programWideOutcomes[0].goId).toContain("snapshot:");
   });
 
   it("reads both course-bound and central evidence for a bare STUDENT stakeholder", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
-    prismaMock.centralDeploymentPloSnapshot.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
 
     await getProgramHeadOutcomes("program-bsed", {
       ...outcomesFilters,
@@ -496,10 +496,10 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", ploMappings: [ploA] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", goMappings: [goA] }) }),
       bindingRow({
         evaluationId: "eval-2",
-        cilo: ciloRow({ ciloId: "cilo-b", ploMappings: [ploB] }),
+        cilo: ciloRow({ ciloId: "cilo-b", goMappings: [goB] }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
@@ -522,7 +522,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", ploMappings: [ploA, ploB] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", goMappings: [goA, goB] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -549,7 +549,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ploMappings: [ploA] }) }),
+      bindingRow({ cilo: ciloRow({ goMappings: [goA] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -603,7 +603,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", ploMappings: [] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", goMappings: [] }) }),
     ]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
 
@@ -755,7 +755,7 @@ describe("getProgramHeadOutcomes", () => {
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
-    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-PLO mappings/i);
+    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-GO mappings/i);
     expect(result!.currentMappingDisclosure).toMatch(/publication-time/i);
   });
 
@@ -904,8 +904,8 @@ describe("aggregateOutcomeEvidence", () => {
         description: "Achieve the outcome",
         course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
       },
-      ploMappings: [
-        { ploId: "go-a", code: "GO-1", name: "Effective communicator", manifestation: "PRACTICE" },
+      goMappings: [
+        { goId: "go-a", code: "GO-1", name: "Effective communicator", manifestation: "PRACTICE" },
       ],
       evaluationId: "eval-1",
       deploymentName: "CILO Evaluation",
@@ -916,7 +916,7 @@ describe("aggregateOutcomeEvidence", () => {
   it("skips rows without a CILO or without any mapped GO", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({ cilo: null }),
-      evidenceRow({ ploMappings: [] }),
+      evidenceRow({ goMappings: [] }),
     ]);
 
     expect(aggregation.outcomes.size).toBe(0);
@@ -926,9 +926,9 @@ describe("aggregateOutcomeEvidence", () => {
   it("flags many-to-many mapping when one CILO maps to multiple GOs", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({
-        ploMappings: [
-          { ploId: "go-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
-          { ploId: "go-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
+        goMappings: [
+          { goId: "go-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
+          { goId: "go-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
         ],
       }),
     ]);

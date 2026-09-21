@@ -1,6 +1,6 @@
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
 import { prisma } from "../../../src/lib/db/prisma";
-import type { TemplateStructure } from "../types";
+import type { TemplateStructure } from "../../../src/features/instruments/types";
 
 export async function upsertTemplate(
   code: string,

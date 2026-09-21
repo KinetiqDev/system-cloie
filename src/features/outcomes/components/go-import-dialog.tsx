@@ -36,23 +36,23 @@ import { Progress } from "@/components/ui/progress";
 import { showToast } from "@/components/ui/toast";
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import {
-  confirmPLOImportAction,
-  previewPLOImportAction,
+  confirmGOImportAction,
+  previewGOImportAction,
 } from "@/lib/actions/program-head-outcome-actions";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 import {
-  exportFailedPLOImportRows,
-  parsePLOImportCsv,
-  PLO_IMPORT_TEMPLATE,
-} from "../services/plo-import-csv";
-import type { PLOImportPreview, PLOImportPreviewRow, PLOImportResult } from "../types/plo-import";
+  exportFailedGOImportRows,
+  parseGOImportCsv,
+  GO_IMPORT_TEMPLATE,
+} from "../services/go-import-csv";
+import type { GOImportPreview, GOImportPreviewRow, GOImportResult } from "../types/go-import";
 
 type Step = "file" | "review" | "results";
 type Program = { id: string; code: string; name: string };
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void; program: Program };
 
-const STATUS_LABEL: Record<PLOImportPreviewRow["status"], string> = {
+const STATUS_LABEL: Record<GOImportPreviewRow["status"], string> = {
   READY: "Ready",
   INVALID: "Needs attention",
   DUPLICATE_IN_FILE: "Repeated in file",
@@ -69,7 +69,7 @@ function fileRejection(candidate: File): string | null {
   return null;
 }
 
-function rowPresentation(row: PLOImportPreviewRow & { outcome?: string }, results: boolean) {
+function rowPresentation(row: GOImportPreviewRow & { outcome?: string }, results: boolean) {
   const status = results ? (row.outcome ?? row.status) : row.status;
   const successful = status === "READY" || status === "CREATED";
   return {
@@ -104,13 +104,13 @@ function RowList({
   rows,
   results = false,
 }: {
-  rows: Array<PLOImportPreviewRow & { outcome?: string }>;
+  rows: Array<GOImportPreviewRow & { outcome?: string }>;
   results?: boolean;
 }) {
   return (
     <div
       className="flex flex-col gap-2"
-      aria-label={results ? "PLO import results" : "PLO import preview"}
+      aria-label={results ? "GO import results" : "GO import preview"}
     >
       {rows.map((row) => {
         const { successful, label } = rowPresentation(row, results);
@@ -130,7 +130,7 @@ function RowList({
                 <Badge variant={successful ? "success" : "outline"}>{label}</Badge>
               </div>
               <p className="text-body-sm mt-1 font-semibold break-words">
-                {row.ploCode || "PLO code not provided"}
+                {row.goCode || "GO code not provided"}
               </p>
               <p className="text-body-sm text-muted-foreground mt-1 break-words whitespace-pre-wrap">
                 {row.description || "Description not provided"}
@@ -163,7 +163,7 @@ function FileStep({
             {program.code} · {program.name}
           </strong>
           <br />
-          This import adds new active PLOs. It never changes or restores existing PLOs.
+          This import adds new active GOs. It never changes or restores existing GOs.
         </AlertDescription>
       </Alert>
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
@@ -172,23 +172,23 @@ function FileStep({
           variant="outline"
           onClick={() =>
             downloadCsv(
-              `system-cloie-${program.code.toLowerCase()}-plo-import.csv`,
-              PLO_IMPORT_TEMPLATE
+              `system-cloie-${program.code.toLowerCase()}-go-import.csv`,
+              GO_IMPORT_TEMPLATE
             )
           }
         >
           <Download data-icon="inline-start" />
           Download template
         </Button>
-        <span className="text-body-sm text-muted-foreground">CSV, up to 20 PLOs and 1 MB</span>
+        <span className="text-body-sm text-muted-foreground">CSV, up to 20 GOs and 1 MB</span>
       </div>
       <div className="border-border rounded-lg border">
         <h2 className="text-label-md border-border border-b px-3 py-2">Column guide</h2>
         <dl className="divide-border divide-y">
           <div className="grid gap-1 px-3 py-2 sm:grid-cols-[9rem_1fr]">
-            <dt className="text-label-sm">PLO Code</dt>
+            <dt className="text-label-sm">GO Code</dt>
             <dd className="text-body-sm text-muted-foreground">
-              Required, up to 20 characters. Example: PLO-1. Codes become uppercase.
+              Required, up to 20 characters. Example: GO-1. Codes become uppercase.
             </dd>
           </div>
           <div className="grid gap-1 px-3 py-2 sm:grid-cols-[9rem_1fr]">
@@ -198,7 +198,7 @@ function FileStep({
         </dl>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="plo-import-file">PLO CSV file</Label>
+        <Label htmlFor="go-import-file">GO CSV file</Label>
         <button
           type="button"
           className="border-border focus-visible:ring-ring flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 focus-visible:ring-2 focus-visible:outline-none"
@@ -217,8 +217,8 @@ function FileStep({
         </button>
         <input
           ref={inputRef}
-          id="plo-import-file"
-          aria-label="PLO CSV file"
+          id="go-import-file"
+          aria-label="GO CSV file"
           className="sr-only"
           type="file"
           accept=".csv,text/csv"
@@ -229,11 +229,11 @@ function FileStep({
   );
 }
 
-function ReviewStep({ preview }: { preview: PLOImportPreview }) {
+function ReviewStep({ preview }: { preview: GOImportPreview }) {
   return (
     <>
       <div>
-        <h2 className="text-title-md">Review PLOs</h2>
+        <h2 className="text-title-md">Review GOs</h2>
         <p className="text-body-sm text-muted-foreground mt-1">
           Check every row before creating anything.
         </p>
@@ -249,7 +249,7 @@ function ReviewStep({ preview }: { preview: PLOImportPreview }) {
       <Alert variant="warning">
         <AlertTriangle aria-hidden="true" />
         <AlertDescription>
-          New active PLOs may show incomplete CILO mappings and block new Course-bound evaluation
+          New active GOs may show incomplete CILO mappings and block new Course-bound evaluation
           publication until Faculty members classify the mappings.
         </AlertDescription>
       </Alert>
@@ -258,7 +258,7 @@ function ReviewStep({ preview }: { preview: PLOImportPreview }) {
   );
 }
 
-function ResultsStep({ result }: { result: PLOImportResult }) {
+function ResultsStep({ result }: { result: GOImportResult }) {
   return (
     <>
       <div>
@@ -269,7 +269,7 @@ function ResultsStep({ result }: { result: PLOImportResult }) {
       </div>
       <Progress
         value={result.summary.total ? (result.summary.created / result.summary.total) * 100 : 0}
-        aria-label="PLOs created"
+        aria-label="GOs created"
       />
       <Summary
         values={[
@@ -282,14 +282,14 @@ function ResultsStep({ result }: { result: PLOImportResult }) {
   );
 }
 
-export function PLOImportDialog({ open, onOpenChange, program }: Props) {
+export function GOImportDialog({ open, onOpenChange, program }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [step, setStep] = useState<Step>("file");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [preview, setPreview] = useState<PLOImportPreview | null>(null);
-  const [result, setResult] = useState<PLOImportResult | null>(null);
+  const [preview, setPreview] = useState<GOImportPreview | null>(null);
+  const [result, setResult] = useState<GOImportResult | null>(null);
   const [pending, startTransition] = useTransition();
 
   function reset() {
@@ -320,9 +320,9 @@ export function PLOImportDialog({ open, onOpenChange, program }: Props) {
   function checkFile() {
     if (!file) return setError("Choose a CSV file before continuing.");
     startTransition(async () => {
-      const parsed = parsePLOImportCsv(new Uint8Array(await file.arrayBuffer()));
+      const parsed = parseGOImportCsv(new Uint8Array(await file.arrayBuffer()));
       if (!parsed.success) return setError(parsed.error);
-      const response = await previewPLOImportAction({ programId: program.id, rows: parsed.rows });
+      const response = await previewGOImportAction({ programId: program.id, rows: parsed.rows });
       if (!response.success) return setError(response.error);
       setPreview(response.data);
       setStep("review");
@@ -332,7 +332,7 @@ export function PLOImportDialog({ open, onOpenChange, program }: Props) {
   function confirm() {
     if (!preview?.summary.ready) return;
     startTransition(async () => {
-      const response = await confirmPLOImportAction({
+      const response = await confirmGOImportAction({
         programId: program.id,
         rows: preview.rows.map((row) => ({ sourceIndex: row.sourceIndex, input: row.input })),
       });
@@ -344,7 +344,7 @@ export function PLOImportDialog({ open, onOpenChange, program }: Props) {
       setResult(response.data);
       setStep("results");
       showToast(
-        `${response.data.summary.created} PLO${response.data.summary.created === 1 ? "" : "s"} created.`,
+        `${response.data.summary.created} GO${response.data.summary.created === 1 ? "" : "s"} created.`,
         response.data.summary.notCreated ? "warning" : "success"
       );
       router.refresh();
@@ -393,7 +393,7 @@ export function PLOImportDialog({ open, onOpenChange, program }: Props) {
           <DrawerHeader className="text-left">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <DrawerTitle>Import Program Learning Outcomes</DrawerTitle>
+                <DrawerTitle>Import Graduate Outcomes</DrawerTitle>
                 <DrawerDescription>
                   {program.code} · {program.name}. Step {STEP_NUMBER[step]} of 3.
                 </DrawerDescription>
@@ -421,7 +421,7 @@ export function PLOImportDialog({ open, onOpenChange, program }: Props) {
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Import Program Learning Outcomes</DialogTitle>
+          <DialogTitle>Import Graduate Outcomes</DialogTitle>
           <DialogDescription>
             {program.code} · {program.name}. Step {STEP_NUMBER[step]} of 3.
           </DialogDescription>
@@ -458,7 +458,7 @@ function ReviewActions({
   onConfirm,
 }: {
   pending: boolean;
-  preview: PLOImportPreview;
+  preview: GOImportPreview;
   onBack: () => void;
   onConfirm: () => void;
 }) {
@@ -468,7 +468,7 @@ function ReviewActions({
         Back
       </Button>
       <Button onClick={onConfirm} disabled={!preview.summary.ready || pending} loading={pending}>
-        Create {preview.summary.ready} PLO{preview.summary.ready === 1 ? "" : "s"}
+        Create {preview.summary.ready} GO{preview.summary.ready === 1 ? "" : "s"}
       </Button>
     </div>
   );
@@ -480,7 +480,7 @@ function ResultsActions({
   onDone,
   onReviewMappings,
 }: {
-  result: PLOImportResult;
+  result: GOImportResult;
   onReset: () => void;
   onDone: () => void;
   onReviewMappings: () => void;
@@ -493,10 +493,10 @@ function ResultsActions({
           variant="outline"
           onClick={() =>
             downloadCsv(
-              "system-cloie-plo-import-rows-to-fix.csv",
-              exportFailedPLOImportRows(
+              "system-cloie-go-import-rows-to-fix.csv",
+              exportFailedGOImportRows(
                 rowsToFix.map((row) => ({
-                  ploCode: row.ploCode,
+                  goCode: row.goCode,
                   description: row.description,
                   error: row.error ?? "Not created.",
                 }))
@@ -537,8 +537,8 @@ function DialogActions({
   step: Step;
   pending: boolean;
   file: File | null;
-  preview: PLOImportPreview | null;
-  result: PLOImportResult | null;
+  preview: GOImportPreview | null;
+  result: GOImportResult | null;
   onCheckFile: () => void;
   onBack: () => void;
   onConfirm: () => void;

@@ -7,7 +7,7 @@ const {
   revalidateAssignmentMock,
   transactionMock,
   programFindMock,
-  ploFindManyMock,
+  goFindManyMock,
   createManyMock,
 } = vi.hoisted(() => ({
   previewMock: vi.fn(),
@@ -15,13 +15,13 @@ const {
   revalidateAssignmentMock: vi.fn(),
   transactionMock: vi.fn(),
   programFindMock: vi.fn(),
-  ploFindManyMock: vi.fn(),
+  goFindManyMock: vi.fn(),
   createManyMock: vi.fn(),
 }));
 
-vi.mock("@/features/outcomes/services/preview-plo-import", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/outcomes/services/preview-plo-import")>()),
-  previewPLOImport: previewMock,
+vi.mock("@/features/outcomes/services/preview-go-import", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/outcomes/services/preview-go-import")>()),
+  previewGOImport: previewMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveContextMock,
@@ -33,23 +33,23 @@ const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
 const request = {
   programId: PROGRAM_ID,
   rows: [
-    { sourceIndex: 2, input: { plo_code: "PLO-1", description: "First outcome" } },
-    { sourceIndex: 3, input: { plo_code: "PLO-2", description: "Second outcome" } },
+    { sourceIndex: 2, input: { go_code: "GO-1", description: "First outcome" } },
+    { sourceIndex: 3, input: { go_code: "GO-2", description: "Second outcome" } },
   ],
 };
 
-function readyRow(sourceIndex: number, ploCode: string, description: string) {
+function readyRow(sourceIndex: number, goCode: string, description: string) {
   return {
     sourceIndex,
-    input: { plo_code: ploCode, description },
-    ploCode,
+    input: { go_code: goCode, description },
+    goCode,
     description,
     status: "READY" as const,
     error: null,
   };
 }
 
-describe("confirmPLOImport", () => {
+describe("confirmGOImport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveContextMock.mockResolvedValue({
@@ -59,7 +59,7 @@ describe("confirmPLOImport", () => {
     previewMock.mockResolvedValue({
       success: true,
       data: {
-        rows: [readyRow(2, "PLO-1", "First outcome"), readyRow(3, "PLO-2", "Second outcome")],
+        rows: [readyRow(2, "GO-1", "First outcome"), readyRow(3, "GO-2", "Second outcome")],
         summary: {
           total: 2,
           ready: 2,
@@ -72,33 +72,33 @@ describe("confirmPLOImport", () => {
     });
     revalidateAssignmentMock.mockResolvedValue({ id: PROGRAM_ID });
     programFindMock.mockResolvedValue({ is_active: true });
-    ploFindManyMock.mockResolvedValue([{ code: "OLD", order: 4, is_active: true }]);
+    goFindManyMock.mockResolvedValue([{ code: "OLD", order: 4, is_active: true }]);
     createManyMock.mockResolvedValue({ count: 2 });
     transactionMock.mockImplementation(async (callback) =>
       callback({
         programHeadAssignment: { findFirst: vi.fn() },
         program: { findUnique: programFindMock },
-        pLO: { findMany: ploFindManyMock, createMany: createManyMock },
+        gO: { findMany: goFindManyMock, createMany: createManyMock },
       })
     );
   });
 
-  it("atomically appends ready PLOs in file order", async () => {
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport(request);
+  it("atomically appends ready GOs in file order", async () => {
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport(request);
 
     expect(createManyMock).toHaveBeenCalledWith({
       data: [
-        { code: "PLO-1", description: "First outcome", order: 5, program_id: PROGRAM_ID },
-        { code: "PLO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID },
+        { code: "GO-1", description: "First outcome", order: 5, program_id: PROGRAM_ID },
+        { code: "GO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID },
       ],
     });
     expect(result).toEqual({
       success: true,
       data: {
         rows: [
-          expect.objectContaining({ outcome: "CREATED", ploCode: "PLO-1" }),
-          expect.objectContaining({ outcome: "CREATED", ploCode: "PLO-2" }),
+          expect.objectContaining({ outcome: "CREATED", goCode: "GO-1" }),
+          expect.objectContaining({ outcome: "CREATED", goCode: "GO-2" }),
         ],
         summary: {
           total: 2,
@@ -113,16 +113,16 @@ describe("confirmPLOImport", () => {
   });
 
   it("reclassifies a code created after preview without updating it", async () => {
-    ploFindManyMock.mockResolvedValue([
+    goFindManyMock.mockResolvedValue([
       { code: "OLD", order: 4, is_active: true },
-      { code: "PLO-2", order: 5, is_active: false },
+      { code: "GO-2", order: 5, is_active: false },
     ]);
     createManyMock.mockResolvedValue({ count: 1 });
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport(request);
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport(request);
 
     expect(createManyMock).toHaveBeenCalledWith({
-      data: [{ code: "PLO-1", description: "First outcome", order: 6, program_id: PROGRAM_ID }],
+      data: [{ code: "GO-1", description: "First outcome", order: 6, program_id: PROGRAM_ID }],
     });
     expect(result).toMatchObject({
       success: true,
@@ -135,15 +135,15 @@ describe("confirmPLOImport", () => {
 
   it("creates nothing when Program authority is lost before confirmation", async () => {
     revalidateAssignmentMock.mockResolvedValue(null);
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    await expect(confirmPLOImport(request)).resolves.toEqual({
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    await expect(confirmGOImport(request)).resolves.toEqual({
       success: false,
-      error: "You do not have permission to import Program Learning Outcomes for this Program.",
+      error: "You do not have permission to import Graduate Outcomes for this Program.",
     });
     expect(createManyMock).not.toHaveBeenCalled();
   });
   it("treats whitespace-equivalent codes created after preview as existing", async () => {
-    ploFindManyMock.mockResolvedValue([{ code: "AB  C", order: 4, is_active: true }]);
+    goFindManyMock.mockResolvedValue([{ code: "AB  C", order: 4, is_active: true }]);
     previewMock.mockResolvedValue({
       success: true,
       data: {
@@ -151,10 +151,10 @@ describe("confirmPLOImport", () => {
         summary: { total: 1, ready: 1, attention: 0, existing: 0, created: 0, notCreated: 0 },
       },
     });
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport({
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport({
       programId: PROGRAM_ID,
-      rows: [{ sourceIndex: 2, input: { plo_code: "AB C", description: "Collapsed code" } }],
+      rows: [{ sourceIndex: 2, input: { go_code: "AB C", description: "Collapsed code" } }],
     });
 
     expect(createManyMock).not.toHaveBeenCalled();
@@ -168,8 +168,8 @@ describe("confirmPLOImport", () => {
   });
 
   it("reports no not-processed rows because confirmation is atomic", async () => {
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport(request);
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport(request);
     expect(result.success && result.data.summary).toEqual({
       total: 2,
       ready: 0,
@@ -192,27 +192,27 @@ describe("confirmPLOImport", () => {
         callback({
           programHeadAssignment: { findFirst: vi.fn() },
           program: { findUnique: programFindMock },
-          pLO: { findMany: ploFindManyMock, createMany: createManyMock },
+          gO: { findMany: goFindManyMock, createMany: createManyMock },
         })
       );
-    ploFindManyMock.mockResolvedValue([
+    goFindManyMock.mockResolvedValue([
       { code: "OLD", order: 4, is_active: true },
-      { code: "PLO-1", order: 5, is_active: true },
+      { code: "GO-1", order: 5, is_active: true },
     ]);
     createManyMock.mockResolvedValue({ count: 1 });
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport(request);
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport(request);
 
     expect(transactionMock).toHaveBeenCalledTimes(2);
     expect(createManyMock).toHaveBeenCalledWith({
-      data: [{ code: "PLO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID }],
+      data: [{ code: "GO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID }],
     });
     expect(result).toMatchObject({
       success: true,
       data: {
         rows: [
-          { ploCode: "PLO-1", outcome: "DUPLICATE_EXISTING_ACTIVE" },
-          { ploCode: "PLO-2", outcome: "CREATED" },
+          { goCode: "GO-1", outcome: "DUPLICATE_EXISTING_ACTIVE" },
+          { goCode: "GO-2", outcome: "CREATED" },
         ],
         summary: { created: 1, notCreated: 1 },
       },
@@ -226,13 +226,13 @@ describe("confirmPLOImport", () => {
         clientVersion: "test",
       });
     });
-    const { confirmPLOImport } = await import("@/features/outcomes/services/confirm-plo-import");
-    const result = await confirmPLOImport(request);
+    const { confirmGOImport } = await import("@/features/outcomes/services/confirm-go-import");
+    const result = await confirmGOImport(request);
 
     expect(transactionMock).toHaveBeenCalledTimes(2);
     expect(result).toEqual({
       success: false,
-      error: "Program Learning Outcomes could not be imported. No PLOs were created. Try again.",
+      error: "Graduate Outcomes could not be imported. No GOs were created. Try again.",
     });
   });
 });

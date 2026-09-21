@@ -82,7 +82,7 @@ describe("TemplateBuilder", () => {
     pushMock.mockClear();
     dndCapture.handlers.clear();
     sortableCapture.contexts.clear();
-    // PloMultiSelect chooses Popover vs Drawer via useMediaQuery; jsdom has no
+    // GoMultiSelect chooses Popover vs Drawer via useMediaQuery; jsdom has no
     // matchMedia, so stub a desktop viewport (matches: true) by default.
     vi.stubGlobal(
       "matchMedia",
@@ -1073,18 +1073,18 @@ describe("TemplateBuilder", () => {
     expect(keyboardTarget).toEqual({ x: 0, y: 20 });
   });
 
-  test("binds PLOs to a program-wide likert question and persists them on save", async () => {
+  test("binds GOs to a program-wide likert question and persists them on save", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
-    const ploOptions = [
-      { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
-      { id: "plo-2", code: "PLO-2", description: "Demonstrate professional skills" },
+    const goOptions = [
+      { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+      { id: "go-2", code: "GO-2", description: "Demonstrate professional skills" },
     ];
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        ploOptions={ploOptions}
+        goOptions={goOptions}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1120,53 +1120,53 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("PLO Binding")).toBeInTheDocument();
-    expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
+    expect(screen.getByText("GO Binding")).toBeInTheDocument();
+    expect(screen.getByText("Select GOs…")).toBeInTheDocument();
     expect(
-      screen.getByText(/publishes as a general evaluation item and gives no PLO evidence/i)
+      screen.getByText(/publishes as a general evaluation item and gives no GO evidence/i)
     ).toBeInTheDocument();
 
-    // The trigger button is labelled by the "PLO Binding" label
-    const trigger = screen.getByRole("button", { name: "PLO Binding" });
+    // The trigger button is labelled by the "GO Binding" label
+    const trigger = screen.getByRole("button", { name: "GO Binding" });
     fireEvent.click(trigger);
     const checkbox = await screen.findByRole("checkbox", {
-      name: /PLO-1: Apply discipline knowledge/,
+      name: /GO-1: Apply discipline knowledge/,
     });
     fireEvent.click(checkbox);
     fireEvent.click(trigger); // close the picker
 
     // Chip appears; warning clears
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
-    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
     expect(
-      screen.queryByText(/publishes as a general evaluation item and gives no PLO evidence/i)
+      screen.queryByText(/publishes as a general evaluation item and gives no GO evidence/i)
     ).not.toBeInTheDocument();
 
     // Save payload carries the binding keyed to the likert question
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const formData = onSave.mock.calls[0][0] as FormData;
-    expect(formData.get("program_question_plo_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }])
+    expect(formData.get("program_question_go_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }])
     );
 
     // Clear action empties the selection
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     fireEvent.click(trigger);
-    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
-    expect(screen.getByText("Select PLOs…")).toBeInTheDocument();
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    expect(screen.getByText("Select GOs…")).toBeInTheDocument();
   });
 
-  test("loads existing PLO bindings as removable chips on edit", async () => {
+  test("loads existing GO bindings as removable chips on edit", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
+        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1202,34 +1202,34 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
-    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const formData = onSave.mock.calls[0][0] as FormData;
-    expect(formData.get("program_question_plo_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }])
+    expect(formData.get("program_question_go_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }])
     );
 
     // Chip removal drops the binding from the next save
-    fireEvent.click(screen.getByRole("button", { name: "Remove PLO-1" }));
-    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove GO-1" }));
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
-    expect((onSave.mock.calls[1][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+    expect((onSave.mock.calls[1][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
-  test("drops PLO bindings when a likert question becomes guided open-ended", async () => {
+  test("drops GO bindings when a likert question becomes guided open-ended", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
+        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1265,7 +1265,7 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
 
     // Switch the question type to guided open-ended
     fireEvent.click(screen.getByRole("combobox", { name: "Question type" }));
@@ -1274,23 +1274,23 @@ describe("TemplateBuilder", () => {
     fireEvent.click(guidedOption);
 
     // Binding UI and chips disappear for the non-likert question
-    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect((onSave.mock.calls[0][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+    expect((onSave.mock.calls[0][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
-  test("drops PLO bindings when the bound question is deleted", async () => {
+  test("drops GO bindings when the bound question is deleted", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[{ ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
+        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1342,27 +1342,27 @@ describe("TemplateBuilder", () => {
 
     // Delete the bound question (first question card's delete action)
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
-    expect(screen.queryByText("PLO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect((onSave.mock.calls[0][0] as FormData).get("program_question_plo_bindings")).toBe("[]");
+    expect((onSave.mock.calls[0][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
-  test("renders archived PLO bindings as removable archived chips", () => {
+  test("renders archived GO bindings as removable archived chips", () => {
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={vi.fn().mockResolvedValue({ success: true })}
-        ploOptions={[{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }]}
-        initialPloBindings={[
-          { ploId: "plo-1", itemKey: "question-1", sectionKey: "section-1" },
+        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
+        initialGoBindings={[
+          { goId: "go-1", itemKey: "question-1", sectionKey: "section-1" },
           {
-            ploId: "plo-archived",
+            goId: "go-archived",
             itemKey: "question-1",
             sectionKey: "section-1",
-            ploCodeSnapshot: "PLO-OLD",
-            ploDescriptionSnapshot: "Retired outcome",
+            goCodeSnapshot: "GO-OLD",
+            goDescriptionSnapshot: "Retired outcome",
           },
         ]}
         initialData={{
@@ -1401,17 +1401,17 @@ describe("TemplateBuilder", () => {
     );
 
     // Active chip renders normally; archived chip is visible with a label.
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
-    expect(screen.getByText("PLO-OLD")).toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("GO-OLD")).toBeInTheDocument();
     expect(screen.getByText("Archived")).toBeInTheDocument();
 
     // Removing the archived chip keeps the active selection.
-    fireEvent.click(screen.getByRole("button", { name: "Remove PLO-OLD" }));
-    expect(screen.queryByText("PLO-OLD")).not.toBeInTheDocument();
-    expect(screen.getByText("PLO-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove GO-OLD" }));
+    expect(screen.queryByText("GO-OLD")).not.toBeInTheDocument();
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
   });
 
-  test("hides PLO binding UI in course-bound and faculty modes", () => {
+  test("hides GO binding UI in course-bound and faculty modes", () => {
     const facultyConfig = {
       courseContexts: [],
       initialBindings: [],
@@ -1464,7 +1464,7 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
     unmount();
 
     render(
@@ -1507,13 +1507,13 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("Select PLOs…")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select GOs…")).not.toBeInTheDocument();
   });
 
-  test("shows the PLO picker when program heads copy an institutional baseline", async () => {
+  test("shows the GO picker when program heads copy an institutional baseline", async () => {
     const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
-    const ploOptions = [{ id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" }];
+    const goOptions = [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }];
 
     const { unmount } = render(
       <TemplateBuilder
@@ -1521,7 +1521,7 @@ describe("TemplateBuilder", () => {
         isInstitutionalBaseline
         onSaveAsCopy={onSaveAsCopy}
         onSave={vi.fn()}
-        ploOptions={ploOptions}
+        goOptions={goOptions}
         initialData={{
           id: "baseline-1",
           name: "Institutional Baseline",
@@ -1565,13 +1565,13 @@ describe("TemplateBuilder", () => {
     );
 
     // Likert question gets the picker; the guided-open-ended question does not.
-    expect(screen.getAllByText("PLO Binding")).toHaveLength(1);
+    expect(screen.getAllByText("GO Binding")).toHaveLength(1);
 
-    // Select a PLO, then save via the copy dialog.
-    const trigger = screen.getByRole("button", { name: "PLO Binding" });
+    // Select a GO, then save via the copy dialog.
+    const trigger = screen.getByRole("button", { name: "GO Binding" });
     fireEvent.click(trigger);
     fireEvent.click(
-      await screen.findByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })
+      await screen.findByRole("checkbox", { name: /GO-1: Apply discipline knowledge/ })
     );
     fireEvent.click(trigger); // close the picker
 
@@ -1582,7 +1582,7 @@ describe("TemplateBuilder", () => {
       "baseline-1",
       "Institutional Baseline",
       expect.any(Array),
-      [{ itemKey: "question-1", ploId: "plo-1", sectionKey: "section-1" }],
+      [{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }],
       {
         description: "",
         is_active: true,
@@ -1593,14 +1593,14 @@ describe("TemplateBuilder", () => {
 
     unmount();
 
-    // Course-bound baselines stay gated: no PLO picker even with onSaveAsCopy.
+    // Course-bound baselines stay gated: no GO picker even with onSaveAsCopy.
     render(
       <TemplateBuilder
         programLabel="BSIT"
         isInstitutionalBaseline
         onSaveAsCopy={onSaveAsCopy}
         onSave={vi.fn()}
-        ploOptions={ploOptions}
+        goOptions={goOptions}
         initialData={{
           id: "baseline-2",
           name: "Course Baseline",
@@ -1636,11 +1636,11 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("PLO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("Select PLOs…")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select GOs…")).not.toBeInTheDocument();
   });
 
-  test("renders the PLO picker as a mobile drawer with search and close action", async () => {
+  test("renders the GO picker as a mobile drawer with search and close action", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
@@ -1659,9 +1659,9 @@ describe("TemplateBuilder", () => {
       <TemplateBuilder
         programLabel="BSIT"
         onSave={vi.fn().mockResolvedValue({ success: true })}
-        ploOptions={[
-          { id: "plo-1", code: "PLO-1", description: "Apply discipline knowledge" },
-          { id: "plo-2", code: "PLO-2", description: "Demonstrate professional skills" },
+        goOptions={[
+          { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+          { id: "go-2", code: "GO-2", description: "Demonstrate professional skills" },
         ]}
         initialData={{
           id: "template-1",
@@ -1698,28 +1698,28 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    // Drawer trigger (labelled "PLO Binding") opens the mobile surface
-    fireEvent.click(screen.getByRole("button", { name: "PLO Binding" }));
-    expect(await screen.findByRole("heading", { name: "PLO Binding" })).toBeInTheDocument();
+    // Drawer trigger (labelled "GO Binding") opens the mobile surface
+    fireEvent.click(screen.getByRole("button", { name: "GO Binding" }));
+    expect(await screen.findByRole("heading", { name: "GO Binding" })).toBeInTheDocument();
 
     // Search narrows the checkbox list
-    fireEvent.change(screen.getByPlaceholderText(/search plos/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search gos/i), {
       target: { value: "skills" },
     });
     expect(
-      screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })
+      screen.getByRole("checkbox", { name: /GO-2: Demonstrate professional skills/ })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("checkbox", { name: /PLO-1: Apply discipline knowledge/ })
+      screen.queryByRole("checkbox", { name: /GO-1: Apply discipline knowledge/ })
     ).not.toBeInTheDocument();
 
     // Selecting inside the drawer shows a chip after closing
     fireEvent.click(
-      screen.getByRole("checkbox", { name: /PLO-2: Demonstrate professional skills/ })
+      screen.getByRole("checkbox", { name: /GO-2: Demonstrate professional skills/ })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Close PLO binding" }));
-    expect(screen.getByText("PLO-2")).toBeInTheDocument();
-    expect(screen.getByText("1 PLO selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close GO binding" }));
+    expect(screen.getByText("GO-2")).toBeInTheDocument();
+    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
   });
   test("keeps a CILO bound to another question selectable and reports its reuse count", async () => {
     render(
@@ -1817,7 +1817,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         onSaveAsCopy={onSaveAsCopy}
-        ploOptions={[]}
+        goOptions={[]}
         startingFrom={{
           id: "baseline-1",
           name: "CILO Evaluation",
@@ -1885,7 +1885,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         onSaveAsCopy={onSaveAsCopy}
-        ploOptions={[]}
+        goOptions={[]}
         startingFrom={{
           id: "baseline-1",
           name: "CILO Evaluation",

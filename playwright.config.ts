@@ -113,13 +113,13 @@ export default defineConfig({
   webServer: {
     command: isCiTestProduction ? `pnpm build && pnpm start -p ${PORT}` : `pnpm dev -p ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // A fresh Next process is required after resetting the disposable fixture;
+    // opt into reuse only for an intentionally long-lived local server.
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "true" && !process.env.CI,
     timeout: 240_000,
-    env: isCiTestProduction
-      ? {
-          ...process.env,
-          NODE_ENV: "production",
-        }
-      : undefined,
+    env: {
+      ...process.env,
+      NODE_ENV: isCiTestProduction ? "production" : "development",
+    },
   },
 });

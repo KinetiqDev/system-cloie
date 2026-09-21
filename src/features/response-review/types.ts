@@ -6,11 +6,11 @@ import type {
 } from "@prisma/client";
 import type {
   CiloMetric,
-  CiloPloMapping,
+  CiloGoMapping,
   ParticipationSummary,
   QuestionMetric,
 } from "@/features/analytics/aggregators/types";
-import type { PloMetric } from "@/features/analytics/aggregators/plo";
+import type { GoMetric } from "@/features/analytics/aggregators/go";
 import type { WordCloudToken } from "@/features/analytics/types";
 
 // ---------------------------------------------------------------------------
@@ -22,11 +22,11 @@ import type { WordCloudToken } from "@/features/analytics/types";
 // to a shared DTO consumed by Faculty").
 // ---------------------------------------------------------------------------
 
-/** One publication-time PLO binding from `CentralDeploymentPloSnapshot`. */
-export type ProgramWidePloBinding = {
+/** One publication-time GO binding from `CentralDeploymentGoSnapshot`. */
+export type ProgramWideGoBinding = {
   /**
-   * Grouping key: `plo_id` for live PLOs, else the analytics snapshot key
-   * `snapshot:<code>:<description>` so retired PLOs stay deep-linkable.
+   * Grouping key: `go_id` for live GOs, else the analytics snapshot key
+   * `snapshot:<code>:<description>` so retired GOs stay deep-linkable.
    */
   key: string;
   code: string;
@@ -39,10 +39,10 @@ export type SubmittedAnswerBinding =
       type: "CILO";
       ciloId: string | null;
       ciloLabel: string;
-      /** Selected Program's current CILO→PLO mappings, with manifestation. */
-      ploMappings: CiloPloMapping[];
+      /** Selected Program's current CILO→GO mappings, with manifestation. */
+      goMappings: CiloGoMapping[];
     }
-  | { type: "PLO"; ploBindings: ProgramWidePloBinding[] }
+  | { type: "GO"; goBindings: ProgramWideGoBinding[] }
   | { type: "GENERAL" };
 
 export type QuantitativeSubmittedAnswer = {
@@ -220,9 +220,9 @@ export type ProgramHeadCourseEvaluationDetail = {
   respondents: ProgramHeadRespondentRow[];
 };
 
-/** Program-wide question result with its publication-time PLO bindings. */
+/** Program-wide question result with its publication-time GO bindings. */
 export type ProgramHeadCentralQuestionResult = QuestionMetric & {
-  ploBindings: ProgramWidePloBinding[];
+  goBindings: ProgramWideGoBinding[];
 };
 
 /** Program-wide evaluation detail (spec §26). */
@@ -251,7 +251,7 @@ export type ProgramHeadCentralEvaluationDetail = {
   };
   participation: ParticipationSummary;
   respondents: ProgramHeadAssignmentRespondentRow[];
-  ploResults: PloMetric[];
+  goResults: GoMetric[];
   questionResults: ProgramHeadCentralQuestionResult[];
   qualitative: QualitativeSummary;
 };

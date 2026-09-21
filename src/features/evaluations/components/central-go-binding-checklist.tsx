@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buildProgramHeadEditToolPath } from "@/lib/constants/program-head-routes";
-import { encodeQuestionKey } from "../services/central-deployment-plo-plan";
+import { encodeQuestionKey } from "../services/central-deployment-go-plan";
 import type { CentralPublishReadiness } from "../types";
 
 /** Unbound questions listed inline before the rest fold into a disclosure. */
 const INLINE_QUESTION_LIMIT = 5;
 
 /**
- * PLO binding coverage for the selected Program-wide template: which Likert
- * questions stay unbound, which PLOs the template covers, and any binding
+ * GO binding coverage for the selected Program-wide template: which Likert
+ * questions stay unbound, which GOs the template covers, and any binding
  * problem that still blocks publication. Unbound questions publish as general
  * evaluation items, so they are named here instead of blocking the publish.
  *
@@ -19,7 +19,7 @@ const INLINE_QUESTION_LIMIT = 5;
  * Text stays on the default foreground over the page background; the tinted
  * muted surface made secondary text fail the color-contrast sweep.
  */
-export function CentralPloBindingChecklist({
+export function CentralGoBindingChecklist({
   instanceKey,
   programId,
   readiness,
@@ -30,16 +30,16 @@ export function CentralPloBindingChecklist({
 }) {
   if (readiness.likertCount === 0 && !readiness.blockingError) return null;
 
-  const headingId = `plo-coverage-${readiness.templateId}-${instanceKey}`;
+  const headingId = `go-coverage-${readiness.templateId}-${instanceKey}`;
   const visible = readiness.unboundQuestions.slice(0, INLINE_QUESTION_LIMIT);
   const folded = readiness.unboundQuestions.slice(INLINE_QUESTION_LIMIT);
   const questionNoun = readiness.likertCount === 1 ? "question" : "questions";
-  const ploNoun = readiness.coveredPlos.length === 1 ? "PLO" : "PLOs";
+  const goNoun = readiness.coveredGos.length === 1 ? "GO" : "GOs";
 
   return (
     <section aria-labelledby={headingId} className="border-border space-y-3 rounded-lg border p-4">
       <h3 id={headingId} className="text-sm font-semibold">
-        PLO coverage
+        GO coverage
       </h3>
 
       {readiness.blockingError ? (
@@ -49,16 +49,16 @@ export function CentralPloBindingChecklist({
       ) : null}
 
       <p className="text-sm">
-        {`${readiness.boundQuestionCount} of ${readiness.likertCount} Likert ${questionNoun} bound to a PLO`}
-        {readiness.coveredPlos.length > 0
-          ? `, covering ${readiness.coveredPlos.length} ${ploNoun}.`
+        {`${readiness.boundQuestionCount} of ${readiness.likertCount} Likert ${questionNoun} bound to a GO`}
+        {readiness.coveredGos.length > 0
+          ? `, covering ${readiness.coveredGos.length} ${goNoun}.`
           : "."}
       </p>
 
       {readiness.unboundQuestions.length > 0 ? (
         <div className="space-y-2">
           <p className="text-sm">
-            Unbound questions publish as general evaluation items and give no PLO evidence.
+            Unbound questions publish as general evaluation items and give no GO evidence.
           </p>
           <ul className="space-y-1.5 text-sm">
             {visible.map((question) => (
@@ -87,7 +87,7 @@ export function CentralPloBindingChecklist({
             className="text-sm font-medium underline underline-offset-4"
             href={buildProgramHeadEditToolPath(programId, readiness.templateId)}
           >
-            Assign PLOs in the template editor
+            Assign GOs in the template editor
           </Link>
         </div>
       ) : null}

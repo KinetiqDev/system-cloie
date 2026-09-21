@@ -565,7 +565,7 @@ export function CourseAlignmentEditor({
           <p className="text-muted-foreground text-body-sm mt-1">
             {alignment.course.scope === "GENERAL_EDUCATION"
               ? "Classify each CILO against at least one active Institutional Outcome from the college-wide catalog."
-              : `Classify each CILO against every active Program Learning Outcome owned by ${alignment.course.program?.code ?? "the program"}.`}
+              : `Classify each CILO against every active Graduate Outcome owned by ${alignment.course.program?.code ?? "the program"}.`}
           </p>
         </div>
         <Badge variant={readiness === "ready" ? "default" : "outline"}>

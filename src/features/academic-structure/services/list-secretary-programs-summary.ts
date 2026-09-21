@@ -12,7 +12,7 @@ export type SecretaryProgramSummaryItem = {
   majorNames: string[]; // e.g., ["English", "Mathematics", ...]
   majorCount: number;
   courseCount: number;
-  ploCount: number;
+  goCount: number;
   studentCount: number;
   facultyCount: number;
   majors: Array<{ id: string; name: string; is_active: boolean }>;
@@ -42,7 +42,7 @@ export async function listSecretaryProgramsSummary(): Promise<{
       _count: {
         select: {
           courses: true,
-          plos: true,
+          gos: true,
           student_profiles: true,
           faculty_program_affiliations: true,
         },
@@ -71,7 +71,7 @@ export async function listSecretaryProgramsSummary(): Promise<{
       majorNames: activeMajorNames,
       majorCount: p.majors.length,
       courseCount: p._count.courses,
-      ploCount: p._count.plos,
+      goCount: p._count.gos,
       studentCount: p._count.student_profiles,
       facultyCount: p._count.faculty_program_affiliations,
       majors: p.majors,

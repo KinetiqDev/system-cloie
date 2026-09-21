@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resolveCentralPublishReadiness } from "@/features/evaluations/services/resolve-central-publish-readiness";
 
-const { instrumentTemplateFindManyMock, ploFindManyMock, resolveProgramHeadContextMock } =
+const { instrumentTemplateFindManyMock, goFindManyMock, resolveProgramHeadContextMock } =
   vi.hoisted(() => ({
     instrumentTemplateFindManyMock: vi.fn(),
-    ploFindManyMock: vi.fn(),
+    goFindManyMock: vi.fn(),
     resolveProgramHeadContextMock: vi.fn(),
   }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     instrumentTemplate: { findMany: instrumentTemplateFindManyMock },
-    pLO: { findMany: ploFindManyMock },
+    gO: { findMany: goFindManyMock },
   },
 }));
 
@@ -51,12 +51,12 @@ const STRUCTURE = [
   },
 ];
 
-function mockTemplate(bindings: Array<{ plo_id: string | null; item_key: string }>) {
+function mockTemplate(bindings: Array<{ go_id: string | null; item_key: string }>) {
   instrumentTemplateFindManyMock.mockResolvedValue([
     {
       id: "template-1",
       structure: STRUCTURE,
-      template_plo_question_bindings: bindings.map((binding) => ({
+      template_go_question_bindings: bindings.map((binding) => ({
         ...binding,
         section_key: "sec-1",
       })),
@@ -67,7 +67,7 @@ function mockTemplate(bindings: Array<{ plo_id: string | null; item_key: string 
 describe("resolveCentralPublishReadiness", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    ploFindManyMock.mockResolvedValue([]);
+    goFindManyMock.mockResolvedValue([]);
     resolveProgramHeadContextMock.mockResolvedValue({
       success: true,
       data: {
@@ -78,9 +78,9 @@ describe("resolveCentralPublishReadiness", () => {
     });
   });
 
-  it("reports the Likert questions a template leaves unbound and the PLOs it covers", async () => {
-    mockTemplate([{ plo_id: "plo-1", item_key: "q-1" }]);
-    ploFindManyMock.mockResolvedValue([
+  it("reports the Likert questions a template leaves unbound and the GOs it covers", async () => {
+    mockTemplate([{ go_id: "plo-1", item_key: "q-1" }]);
+    goFindManyMock.mockResolvedValue([
       { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
     ]);
 
@@ -93,7 +93,7 @@ describe("resolveCentralPublishReadiness", () => {
           templateId: "template-1",
           likertCount: 2,
           boundQuestionCount: 1,
-          coveredPlos: [{ code: "BSIT-GO1", description: "Communicate effectively" }],
+          coveredGos: [{ code: "BSIT-GO1", description: "Communicate effectively" }],
           unboundQuestions: [
             {
               itemKey: "q-2",
@@ -109,8 +109,8 @@ describe("resolveCentralPublishReadiness", () => {
   });
 
   it("reports a blocking binding problem without hiding the unbound questions", async () => {
-    mockTemplate([{ plo_id: "plo-archived", item_key: "q-1" }]);
-    ploFindManyMock.mockResolvedValue([]);
+    mockTemplate([{ go_id: "plo-archived", item_key: "q-1" }]);
+    goFindManyMock.mockResolvedValue([]);
 
     const result = await resolveCentralPublishReadiness("program-1");
 
@@ -118,9 +118,9 @@ describe("resolveCentralPublishReadiness", () => {
     if (!result.success) return;
     const readiness = result.data["template-1"];
     expect(readiness.blockingError).toBe(
-      "One or more bound PLOs are archived or no longer available. Update the template before publishing."
+      "One or more bound GOs are archived or no longer available. Update the template before publishing."
     );
     expect(readiness.unboundQuestions.map((question) => question.itemKey)).toEqual(["q-1", "q-2"]);
-    expect(readiness.coveredPlos).toEqual([]);
+    expect(readiness.coveredGos).toEqual([]);
   });
 });

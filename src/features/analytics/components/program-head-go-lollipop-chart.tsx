@@ -27,20 +27,20 @@ type LollipopDatum = {
   value: number;
 };
 
-type ProgramHeadPloLollipopChartProps = {
+type ProgramHeadGoLollipopChartProps = {
   title: string;
   outcomes: ProgramHeadOutcomeDTO[];
 };
 
 /**
- * PLO means as a lollipop/dot plot on the fixed 1–5 rating scale. Stems mark
+ * GO means as a lollipop/dot plot on the fixed 1–5 rating scale. Stems mark
  * the distance from the scale floor and dots mark the exact mean, so
  * outcomes stay comparable at a glance. Rows without a mean carry no
  * defensible position and are never drawn (they remain in the exact table).
  */
-export function ProgramHeadPloLollipopChart({ title, outcomes }: ProgramHeadPloLollipopChartProps) {
+export function ProgramHeadGoLollipopChart({ title, outcomes }: ProgramHeadGoLollipopChartProps) {
   const instanceId = useId().replace(/[:]/g, "");
-  const chartId = `plo-lollipop-${instanceId}`;
+  const chartId = `go-lollipop-${instanceId}`;
   const titleId = `${chartId}-title`;
   const insightId = `${chartId}-insight`;
 
@@ -165,7 +165,7 @@ export function ProgramHeadPloLollipopChart({ title, outcomes }: ProgramHeadPloL
             <Table aria-label="Mean ratings by graduate outcome on the fixed 1–5 scale">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Program Learning Outcome</TableHead>
+                  <TableHead>Graduate Outcome</TableHead>
                   <TableHead className="text-right">Mean Rating</TableHead>
                   <TableHead className="text-right">Rating Count</TableHead>
                   <TableHead className="text-right">Submitted Responses</TableHead>

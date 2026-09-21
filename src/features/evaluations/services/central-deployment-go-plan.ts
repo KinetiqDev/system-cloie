@@ -4,34 +4,34 @@ import {
   type TemplateStructure,
 } from "@/features/instruments/types";
 
-type CentralPloBindingRow = {
-  plo_id: string | null;
+type CentralGoBindingRow = {
+  go_id: string | null;
   section_key: string;
   item_key: string;
 };
 
-type CentralPloOption = {
+type CentralGoOption = {
   id: string;
   code: string;
   description: string;
 };
 
-export type CentralPloSnapshotRow = {
-  plo_id: string;
-  plo_code: string;
-  plo_description: string;
+export type CentralGoSnapshotRow = {
+  go_id: string;
+  go_code: string;
+  go_description: string;
   section_key: string;
   item_key: string;
   question_prompt: string;
 };
 
-type CentralPloBindingPlan = {
+type CentralGoBindingPlan = {
   /** First blocking binding problem, or null when the template can publish. */
   error: string | null;
   likertCount: number;
-  snapshotRows: CentralPloSnapshotRow[];
+  snapshotRows: CentralGoSnapshotRow[];
   unboundQuestions: TemplateLikertQuestionOption[];
-  coveredPlos: CentralPloOption[];
+  coveredGos: CentralGoOption[];
 };
 
 /**
@@ -44,26 +44,26 @@ export function encodeQuestionKey(sectionKey: string, itemKey: string): string {
 }
 
 /**
- * Plans the publication-time PLO snapshot rows for a PROGRAM_WIDE template.
+ * Plans the publication-time GO snapshot rows for a PROGRAM_WIDE template.
  *
- * A Likert question does not need a PLO question binding to publish: an
+ * A Likert question does not need a GO question binding to publish: an
  * unbound question publishes as a general evaluation item and contributes no
- * PLO evidence, so it is reported instead of rejected. Publication still
+ * GO evidence, so it is reported instead of rejected. Publication still
  * rejects bindings that no longer match the template structure and bindings
- * whose PLO is archived or outside the publishing program.
+ * whose GO is archived or outside the publishing program.
  */
-export function planCentralPloBindings(input: {
-  bindings: CentralPloBindingRow[];
+export function planCentralGoBindings(input: {
+  bindings: CentralGoBindingRow[];
   structure: unknown;
-  livePlos: CentralPloOption[];
-}): CentralPloBindingPlan {
+  liveGos: CentralGoOption[];
+}): CentralGoBindingPlan {
   if (!Array.isArray(input.structure)) {
     return {
       error: "Template structure is invalid.",
       likertCount: 0,
       snapshotRows: [],
       unboundQuestions: [],
-      coveredPlos: [],
+      coveredGos: [],
     };
   }
 
@@ -74,34 +74,34 @@ export function planCentralPloBindings(input: {
       question,
     ])
   );
-  const ploMap = new Map(input.livePlos.map((plo) => [plo.id, plo]));
+  const goMap = new Map(input.liveGos.map((go) => [go.id, go]));
   const boundQuestionKeys = new Set<string>();
-  const coveredPlos = new Map<string, CentralPloOption>();
-  const snapshotRows: CentralPloSnapshotRow[] = [];
+  const coveredGos = new Map<string, CentralGoOption>();
+  const snapshotRows: CentralGoSnapshotRow[] = [];
   let error: string | null = null;
 
   for (const binding of input.bindings) {
     const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
     const question = questionMap.get(questionKey);
-    const plo = binding.plo_id ? ploMap.get(binding.plo_id) : undefined;
+    const go = binding.go_id ? goMap.get(binding.go_id) : undefined;
 
     if (!question) {
-      error ??= "One or more question–PLO bindings no longer match the template structure.";
+      error ??= "One or more question–GO bindings no longer match the template structure.";
       continue;
     }
 
-    if (!plo) {
+    if (!go) {
       error ??=
-        "One or more bound PLOs are archived or no longer available. Update the template before publishing.";
+        "One or more bound GOs are archived or no longer available. Update the template before publishing.";
       continue;
     }
 
     boundQuestionKeys.add(questionKey);
-    coveredPlos.set(plo.id, plo);
+    coveredGos.set(go.id, go);
     snapshotRows.push({
-      plo_id: plo.id,
-      plo_code: plo.code,
-      plo_description: plo.description,
+      go_id: go.id,
+      go_code: go.code,
+      go_description: go.description,
       section_key: binding.section_key,
       item_key: binding.item_key,
       question_prompt: question.prompt,
@@ -117,6 +117,6 @@ export function planCentralPloBindings(input: {
     likertCount: questions.length,
     snapshotRows,
     unboundQuestions,
-    coveredPlos: [...coveredPlos.values()],
+    coveredGos: [...coveredGos.values()],
   };
 }

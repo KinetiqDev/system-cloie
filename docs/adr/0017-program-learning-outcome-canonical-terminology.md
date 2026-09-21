@@ -1,8 +1,8 @@
 # Program Learning Outcome Canonical Terminology
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 0030](0030-graduate-outcome-canonical-terminology.md)
 
-System CLOIE renames the "Graduate Outcome" (GO) concept to "Program Learning Outcome" (PLO) across the application. PLO is the canonical term in code, contracts, documentation, and user-visible copy; the Prisma model `GO` is renamed to `PLO` behind the existing physical table (`@@map("gos")`) and column (`@map("go_id")`) names so no database migration or physical rename is required.
+This ADR records the superseded PLO terminology decision. It remains as historical context for the prior GO-to-PLO cutover and its compatibility boundaries.
 
 ## Context
 

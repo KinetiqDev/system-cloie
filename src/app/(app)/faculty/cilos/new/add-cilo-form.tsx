@@ -78,7 +78,7 @@ function MapCilosButton({
       href={href}
       className={cn(buttonVariants({ variant, size: "sm", className: "max-sm:w-full" }))}
     >
-      Map CILOs to {course.courseScope === "PROGRAM_SPECIFIC" ? "PLOs" : "ILOs"}
+      Map CILOs to {course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}
       <ArrowRight className="size-4" />
     </Link>
   );
@@ -374,7 +374,7 @@ export function AddCiloForm({
                   <p className="text-caption text-muted-foreground">
                     Aligns to{" "}
                     {selectedCourse.courseScope === "PROGRAM_SPECIFIC"
-                      ? `PLOs of ${
+                      ? `GOs of ${
                           selectedCourse.programName ?? selectedCourse.programCode ?? "the program"
                         }`
                       : "Institutional Learning Outcomes"}{" "}

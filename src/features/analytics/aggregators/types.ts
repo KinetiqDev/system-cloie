@@ -82,11 +82,11 @@ export type ParticipationSummary = {
   };
 };
 
-/** One CILO-to-PLO mapping with its descriptive manifestation label. */
-export type CiloPloMapping = {
-  ploId: string;
-  ploCode: string;
-  ploDescription: string;
+/** One CILO-to-GO mapping with its descriptive manifestation label. */
+export type CiloGoMapping = {
+  goId: string;
+  goCode: string;
+  goDescription: string;
   manifestation: CILOMappingManifestation;
 };
 
@@ -114,7 +114,7 @@ export type CiloMetric = {
   /** One entry per compatible scale identity; length 1 mirrors `quantitative`. */
   scaleGroups: QuantitativeMetric[];
 
-  mappings: CiloPloMapping[];
+  mappings: CiloGoMapping[];
 
   contributingQuestions: CiloContributingQuestion[];
 

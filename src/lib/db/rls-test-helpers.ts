@@ -28,8 +28,8 @@ export async function runRlsProbe<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    // Set GUC while still superuser, then switch to the authenticated role.
     await tx.$executeRaw`SELECT set_config('app.test_auth_uid', ${authUid}, true)`;
+    await tx.$executeRaw`SELECT set_config('request.jwt.claim.sub', ${authUid}, true)`;
     await tx.$executeRawUnsafe(`SET LOCAL ROLE ${RLS_TEST_ROLE}`);
     return fn(tx);
   });
