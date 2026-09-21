@@ -867,13 +867,17 @@ function courseForOutcomeRow(
   return directBindings[0]?.course_bound_evaluation.course_assignment.course ?? null;
 }
 
-/** Map one course-bound rating to its CILO and/or direct GO evidence. */
-function toOutcomeEvidenceRow(
+type OutcomeRowBindings = {
+  ciloBinding: OutcomeBindingRow | undefined;
+  directBindings: OutcomeDirectGoBindingRow[];
+  cilo: OutcomeBindingRow["cilo"] | null | undefined;
+};
+
+function lookupOutcomeBindings(
   row: OutcomeRatingRow,
   ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
-  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
-  snapshotById: Map<string, unknown>
-): OutcomeEvidenceRow | null {
+  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>
+): OutcomeRowBindings {
   const key = encodeBindingKey(
     row.response.assignment.course_bound_id ?? "",
     row.section_key,
@@ -881,9 +885,67 @@ function toOutcomeEvidenceRow(
   );
   const ciloBinding = ciloBindingByItemKey.get(key);
   const directBindings = directBindingsByItemKey.get(key) ?? [];
-  const cilo = ciloBinding?.cilo;
+  return { ciloBinding, directBindings, cilo: ciloBinding?.cilo };
+}
+
+function ciloEvidenceFor(
+  cilo: OutcomeRowBindings["cilo"],
+  course: OutcomeEvidenceRow["course"]
+): OutcomeEvidenceRow["cilo"] {
+  if (!cilo) return null;
+  return {
+    id: cilo.id,
+    code: ciloCodeFor(cilo.course, cilo.id),
+    description: cilo.description,
+    course,
+  };
+}
+
+function directEvidenceFor(
+  directBindings: OutcomeDirectGoBindingRow[]
+): OutcomeEvidenceRow["directGoBindings"] {
+  return directBindings.map((binding) => ({
+    goId:
+      binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
+    code: binding.go_code_snapshot,
+    name: binding.go_description_snapshot,
+    questionPrompt: binding.question_prompt_snapshot,
+  }));
+}
+
+type OutcomeEvaluationIdentity = {
+  evaluationId: string;
+  deploymentName: string;
+};
+
+function evaluationIdentityFor(
+  ciloBinding: OutcomeBindingRow | undefined,
+  directBindings: OutcomeDirectGoBindingRow[]
+): OutcomeEvaluationIdentity {
+  return {
+    evaluationId:
+      ciloBinding?.course_bound_evaluation_id ?? directBindings[0].course_bound_evaluation_id,
+    deploymentName:
+      ciloBinding?.course_bound_evaluation.deployment_name ??
+      directBindings[0].course_bound_evaluation.deployment_name,
+  };
+}
+
+/** Map one course-bound rating to its CILO and/or direct GO evidence. */
+function toOutcomeEvidenceRow(
+  row: OutcomeRatingRow,
+  ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
+  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
+  snapshotById: Map<string, unknown>
+): OutcomeEvidenceRow | null {
+  const { ciloBinding, directBindings, cilo } = lookupOutcomeBindings(
+    row,
+    ciloBindingByItemKey,
+    directBindingsByItemKey
+  );
   if ((!cilo || cilo.cilo_mappings.length === 0) && directBindings.length === 0) return null;
   const course = courseForOutcomeRow(cilo, directBindings);
+  const { evaluationId, deploymentName } = evaluationIdentityFor(ciloBinding, directBindings);
   return {
     ratingValue: row.rating_value,
     responseId: row.response_id,
@@ -894,27 +956,11 @@ function toOutcomeEvidenceRow(
       snapshotById
     ),
     course,
-    cilo: cilo
-      ? {
-          id: cilo.id,
-          code: ciloCodeFor(cilo.course, cilo.id),
-          description: cilo.description,
-          course,
-        }
-      : null,
+    cilo: ciloEvidenceFor(cilo, course),
     goMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
-    directGoBindings: directBindings.map((binding) => ({
-      goId:
-        binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
-      code: binding.go_code_snapshot,
-      name: binding.go_description_snapshot,
-      questionPrompt: binding.question_prompt_snapshot,
-    })),
-    evaluationId:
-      ciloBinding?.course_bound_evaluation_id ?? directBindings[0].course_bound_evaluation_id,
-    deploymentName:
-      ciloBinding?.course_bound_evaluation.deployment_name ??
-      directBindings[0].course_bound_evaluation.deployment_name,
+    directGoBindings: directEvidenceFor(directBindings),
+    evaluationId,
+    deploymentName,
   };
 }
 

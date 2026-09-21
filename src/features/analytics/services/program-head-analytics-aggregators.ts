@@ -575,6 +575,69 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
  * ordering. Distribution percentages are computed at full precision and
  * rounded only for display.
  */
+/** Project one accumulated contributor into its DTO shape. */
+function contributorDtoFor(
+  contributor: CiloContributorAggregate | DirectGoContributorAggregate
+): ProgramHeadOutcomeDTO["contributors"][number] {
+  const meanRating = contributor.ratingSum / contributor.ratingCount;
+  const ratingCount = contributor.ratingCount;
+  return contributor.kind === "CILO"
+    ? {
+        kind: "CILO" as const,
+        ciloId: contributor.ciloId,
+        ciloCode: contributor.ciloCode,
+        ciloDescription: contributor.ciloDescription,
+        course: contributor.course,
+        manifestation: contributor.manifestation,
+        meanRating,
+        ratingCount,
+      }
+    : {
+        kind: "DIRECT_GO" as const,
+        evaluationId: contributor.evaluationId,
+        deploymentName: contributor.deploymentName,
+        sectionKey: contributor.sectionKey,
+        itemKey: contributor.itemKey,
+        questionPrompt: contributor.questionPrompt,
+        course: contributor.course,
+        meanRating,
+        ratingCount,
+      };
+}
+
+/** Rank contributors: course, then kind, then stable identity. */
+function compareContributorDtos(
+  left: ProgramHeadOutcomeDTO["contributors"][number],
+  right: ProgramHeadOutcomeDTO["contributors"][number]
+): number {
+  const courseOrder = (left.course?.code ?? "").localeCompare(right.course?.code ?? "");
+  if (courseOrder !== 0) return courseOrder;
+  if (left.kind !== right.kind) return left.kind.localeCompare(right.kind);
+  return compareSameKindContributors(left, right);
+}
+
+function compareSameKindContributors(
+  left: ProgramHeadOutcomeDTO["contributors"][number],
+  right: ProgramHeadOutcomeDTO["contributors"][number]
+): number {
+  if (left.kind === "CILO" && right.kind === "CILO") {
+    return left.ciloCode.localeCompare(right.ciloCode) || left.ciloId.localeCompare(right.ciloId);
+  }
+  if (left.kind === "DIRECT_GO" && right.kind === "DIRECT_GO") {
+    return (
+      left.deploymentName.localeCompare(right.deploymentName) ||
+      left.itemKey.localeCompare(right.itemKey)
+    );
+  }
+  return 0;
+}
+
+function contributorDtosFor(
+  aggregate: OutcomeEvidenceAggregate
+): ProgramHeadOutcomeDTO["contributors"] {
+  return [...aggregate.contributors.values()].map(contributorDtoFor).sort(compareContributorDtos);
+}
+
 export function buildProgramHeadOutcomeDtos(
   aggregation: OutcomeEvidenceAggregation
 ): ProgramHeadOutcomeDTO[] {
@@ -612,42 +675,7 @@ export function buildProgramHeadOutcomeDtos(
       contributingCourses: [...aggregate.courses.entries()]
         .map(([id, course]) => ({ id, code: course.code, title: course.title }))
         .sort((left, right) => left.code.localeCompare(right.code)),
-      contributors: [...aggregate.contributors.values()]
-        .map((contributor) =>
-          contributor.kind === "CILO"
-            ? {
-                kind: "CILO" as const,
-                ciloId: contributor.ciloId,
-                ciloCode: contributor.ciloCode,
-                ciloDescription: contributor.ciloDescription,
-                course: contributor.course,
-                manifestation: contributor.manifestation,
-                meanRating: contributor.ratingSum / contributor.ratingCount,
-                ratingCount: contributor.ratingCount,
-              }
-            : {
-                kind: "DIRECT_GO" as const,
-                evaluationId: contributor.evaluationId,
-                deploymentName: contributor.deploymentName,
-                sectionKey: contributor.sectionKey,
-                itemKey: contributor.itemKey,
-                questionPrompt: contributor.questionPrompt,
-                course: contributor.course,
-                meanRating: contributor.ratingSum / contributor.ratingCount,
-                ratingCount: contributor.ratingCount,
-              }
-        )
-        .sort((left, right) => {
-          const courseOrder = (left.course?.code ?? "").localeCompare(right.course?.code ?? "");
-          if (courseOrder !== 0) return courseOrder;
-          if (left.kind !== right.kind) return left.kind.localeCompare(right.kind);
-          return left.kind === "CILO" && right.kind === "CILO"
-            ? left.ciloCode.localeCompare(right.ciloCode) || left.ciloId.localeCompare(right.ciloId)
-            : left.kind === "DIRECT_GO" && right.kind === "DIRECT_GO"
-              ? left.deploymentName.localeCompare(right.deploymentName) ||
-                left.itemKey.localeCompare(right.itemKey)
-              : 0;
-        }),
+      contributors: contributorDtosFor(aggregate),
       evidenceEvaluations: [...aggregate.evaluations.entries()]
         .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
         .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),

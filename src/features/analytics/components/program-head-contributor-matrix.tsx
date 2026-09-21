@@ -20,6 +20,71 @@ type ProgramHeadContributorMatrixProps = {
   selectedGoId?: string;
 };
 
+type OutcomeContributor = ProgramHeadOutcomeDTO["contributors"][number];
+
+function contributorKey(contributor: OutcomeContributor): string {
+  return contributor.kind === "CILO"
+    ? `cilo:${contributor.ciloId}`
+    : JSON.stringify([
+        "direct",
+        contributor.evaluationId,
+        contributor.sectionKey,
+        contributor.itemKey,
+      ]);
+}
+
+function ContributorName({ contributor }: { contributor: OutcomeContributor }) {
+  return (
+    <div className="flex flex-col">
+      <span className="font-semibold">
+        {contributor.kind === "CILO" ? contributor.ciloCode : "Direct GO question"}
+      </span>
+      <span className="text-text-secondary">
+        {contributor.kind === "CILO" ? contributor.ciloDescription : contributor.questionPrompt}
+      </span>
+    </div>
+  );
+}
+
+function ContributorCourse({ contributor }: { contributor: OutcomeContributor }) {
+  return (
+    <div className="flex flex-col">
+      <span className="font-semibold">{contributor.course?.code ?? "—"}</span>
+      <span className="text-text-secondary">
+        {contributor.kind === "CILO"
+          ? (contributor.course?.title ?? "Course unavailable")
+          : contributor.deploymentName}
+      </span>
+    </div>
+  );
+}
+
+function ContributorBinding({ contributor }: { contributor: OutcomeContributor }) {
+  if (contributor.kind !== "CILO") return <>Direct at publication</>;
+  if (!contributor.manifestation) return <>Not classified</>;
+  return <>{MANIFESTATION_LABELS[contributor.manifestation]}</>;
+}
+
+function ContributorRow({ contributor }: { contributor: OutcomeContributor }) {
+  return (
+    <TableRow>
+      <TableCell className="align-top">
+        <ContributorName contributor={contributor} />
+      </TableCell>
+      <TableCell className="align-top">
+        <ContributorCourse contributor={contributor} />
+      </TableCell>
+      <TableCell className="align-top">
+        <ContributorBinding contributor={contributor} />
+      </TableCell>
+      <TableCell className="text-right align-top tabular-nums">
+        {contributor.meanRating.toFixed(2)}
+      </TableCell>
+      <TableCell className="text-right align-top tabular-nums">{contributor.ratingCount}</TableCell>
+    </TableRow>
+  );
+}
+
 /**
  * Expandable outcome contributor matrix. CILO-derived rows retain course and
  * manifestation context; direct GO rows retain their frozen question prompt.
@@ -71,58 +136,10 @@ export function ProgramHeadContributorMatrix({
                       </TableHeader>
                       <TableBody>
                         {outcome.contributors.map((contributor) => (
-                          <TableRow
-                            key={
-                              contributor.kind === "CILO"
-                                ? `cilo:${contributor.ciloId}`
-                                : JSON.stringify([
-                                    "direct",
-                                    contributor.evaluationId,
-                                    contributor.sectionKey,
-                                    contributor.itemKey,
-                                  ])
-                            }
-                          >
-                            <TableCell className="align-top">
-                              <div className="flex flex-col">
-                                <span className="font-semibold">
-                                  {contributor.kind === "CILO"
-                                    ? contributor.ciloCode
-                                    : "Direct GO question"}
-                                </span>
-                                <span className="text-text-secondary">
-                                  {contributor.kind === "CILO"
-                                    ? contributor.ciloDescription
-                                    : contributor.questionPrompt}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              <div className="flex flex-col">
-                                <span className="font-semibold">
-                                  {contributor.course?.code ?? "—"}
-                                </span>
-                                <span className="text-text-secondary">
-                                  {contributor.kind === "CILO"
-                                    ? (contributor.course?.title ?? "Course unavailable")
-                                    : contributor.deploymentName}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="align-top">
-                              {contributor.kind === "CILO"
-                                ? contributor.manifestation
-                                  ? MANIFESTATION_LABELS[contributor.manifestation]
-                                  : "Not classified"
-                                : "Direct at publication"}
-                            </TableCell>
-                            <TableCell className="text-right align-top tabular-nums">
-                              {contributor.meanRating.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right align-top tabular-nums">
-                              {contributor.ratingCount}
-                            </TableCell>
-                          </TableRow>
+                          <ContributorRow
+                            key={contributorKey(contributor)}
+                            contributor={contributor}
+                          />
                         ))}
                       </TableBody>
                     </Table>
