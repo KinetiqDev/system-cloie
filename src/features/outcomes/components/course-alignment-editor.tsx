@@ -3,10 +3,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ListChecks, RotateCcw, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { showToast } from "@/components/ui/toast";
 import {
   Empty,
   EmptyDescription,
@@ -47,6 +49,11 @@ type Props = {
   alignment: CourseAlignment;
   eyebrow?: string;
   emptyStateAction?: { href: string; label: string };
+  /**
+   * Where a committed mapping returns to. Defaults to the Faculty Manage CILOs
+   * list, the surface every faculty alignment entry point starts from.
+   */
+  returnHref?: string;
   prepareAction: (
     input: unknown
   ) => Promise<
@@ -431,9 +438,11 @@ export function CourseAlignmentEditor({
   alignment,
   eyebrow = "Faculty Course alignment",
   emptyStateAction = { href: "/faculty/cilos", label: "Manage CILOs" },
+  returnHref = "/faculty/cilos",
   prepareAction,
   commitAction,
 }: Props) {
+  const router = useRouter();
   const isProgramSpecific = alignment.course.scope === "PROGRAM_SPECIFIC";
   const { activeTargetIds } = indexAlignmentTargets(alignment);
   const initialCells = cellsFromAlignment(alignment, activeTargetIds);
@@ -443,7 +452,6 @@ export function CourseAlignmentEditor({
   const [discardConfirmation, setDiscardConfirmation] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [freshnessToken, setFreshnessToken] = useState(alignment.freshnessToken);
 
   const isDirty = alignment.cilos.some(
@@ -488,7 +496,6 @@ export function CourseAlignmentEditor({
       else cells[targetId] = manifestation;
       return { ...current, [ciloId]: cells };
     });
-    setSuccess(null);
   };
 
   const prepareReview = async () => {
@@ -533,7 +540,12 @@ export function CourseAlignmentEditor({
         setDraft(committedState);
         setSavedCells(committedState);
         setFreshnessToken(result.freshnessToken);
-        setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
+        // The mapping is committed server-side, so this surface is done: report
+        // the outcome and hand the author back to the list they entered from.
+        const message = `${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`;
+        showToast(message, "success");
+        router.push(returnHref);
+        return;
       } else {
         setError(result.error);
       }
@@ -548,7 +560,6 @@ export function CourseAlignmentEditor({
   const discardDraft = () => {
     setDraft(savedCells);
     setDiscardConfirmation(false);
-    setSuccess(null);
     setError(null);
   };
 
@@ -591,11 +602,6 @@ export function CourseAlignmentEditor({
               {needsReload ? "Reload alignment" : "Retry review"}
             </Button>
           </AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert variant="success" role="status">
-          <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
       <AlignmentContent

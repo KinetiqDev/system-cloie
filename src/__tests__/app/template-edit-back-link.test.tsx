@@ -39,6 +39,13 @@ vi.mock("@/features/evaluations/services/list-faculty-course-contexts", () => ({
   listFacultyCourseContexts: listFacultyCourseContextsMock,
 }));
 
+vi.mock("@/features/evaluations/services/list-faculty-courses-with-cilos", () => ({
+  listFacultyCoursesWithCilos: vi.fn().mockResolvedValue({
+    success: true,
+    data: { courses: [], totalCourseCount: 0 },
+  }),
+}));
+
 vi.mock("@/lib/actions/course-bound-evaluation-actions", () => ({
   listFacultyCourseContextsAction: vi.fn(),
   loadFacultyManagedCilosAction: vi.fn(),
@@ -90,9 +97,9 @@ describe("template edit pages render exactly one back link", () => {
         templateType: "COURSE_BOUND",
         is_active: true,
         is_faculty_accessible: true,
-        boundCourseId: null,
+        boundCourseId: "8b69c52b-918f-43db-864b-d5cb09d3b4e8",
         boundMajorId: null,
-        boundProgramId: null,
+        boundProgramId: "program-1",
         programCode: null,
         programName: null,
         facultyOwnerId: "faculty-1",

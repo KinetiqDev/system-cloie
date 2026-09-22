@@ -1,5 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock, replace: vi.fn(), refresh: vi.fn() }),
+}));
+
 import { CourseAlignmentEditor } from "@/features/outcomes/components/course-alignment-editor";
 import type {
   CourseAlignmentReview,
@@ -96,6 +103,22 @@ function stageTarget() {
 }
 
 describe("CourseAlignmentEditor", () => {
+  let toastMessages: Array<{ kind: string; message: string }> = [];
+  const toastListener = ((event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    toastMessages.push({ kind: detail.kind, message: detail.message });
+  }) as EventListener;
+
+  beforeEach(() => {
+    pushMock.mockClear();
+    toastMessages = [];
+    window.addEventListener("cloie-toast", toastListener);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("cloie-toast", toastListener);
+  });
+
   it("stages an ILO manifestation, reviews the exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
     const commitAction = vi
@@ -127,8 +150,14 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/ILO-1: Set to Learning \(L\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(review, true));
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
+    expect(screen.queryByText("1 mapping change saved.")).not.toBeInTheDocument();
   });
 
   it("reviews and commits a manifestation change from the desktop matrix", async () => {
@@ -155,8 +184,13 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/GO-1: Learning \(L\) \u2192 Practice \(P\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(pspReview, true));
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
   it("shows archived GO manifestations read-only and keeps them out of draft saves", async () => {
@@ -347,7 +381,13 @@ describe("CourseAlignmentEditor", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
     resolveCommit!({ success: true, changed: 1, freshnessToken: "fresh" });
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
   it("keeps restoring a canceled history traversal until it reaches the dirty entry", () => {
@@ -680,7 +720,13 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Back to editing" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalled());
-    expect(await screen.findByText("2 mapping changes saved.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "2 mapping changes saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
   it("allows review of incomplete progress with a publication warning", async () => {
