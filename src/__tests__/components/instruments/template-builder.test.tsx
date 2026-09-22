@@ -1881,7 +1881,9 @@ describe("TemplateBuilder", () => {
     );
 
     expect(
-      await screen.findByText(/bound to a CILO and reaches Graduate Outcomes through the CILO mapping/i)
+      await screen.findByText(
+        /bound to a CILO and reaches Graduate Outcomes through the CILO mapping/i
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "GO Binding" })).toBeDisabled();
   });

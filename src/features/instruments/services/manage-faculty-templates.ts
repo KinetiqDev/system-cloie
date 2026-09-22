@@ -257,29 +257,17 @@ async function validateDraftBindings(input: {
  * A question with a CILO binding cannot carry GO bindings: CILO-bound ratings
  * already reach GOs through the CILO-to-GO mappings.
  */
-export async function validateCourseBoundGoBindings(input: {
-  bindings: SaveFacultyTemplateDraftInput["go_question_bindings"];
-  boundCourseId?: string | null;
-  structure: TemplateStructure;
-  db?: PublicationContextDb;
-  ciloBindings?: Array<{ sectionKey: string; itemKey: string }>;
-}): Promise<
-  { success: true; bindings: FacultyTemplateGoBindingItem[] } | { success: false; error: string }
-> {
-  if (input.bindings.length === 0) {
-    return { success: true, bindings: [] };
-  }
+type CourseBoundGoCatalog = {
+  course: { course_scope: CourseScope; program_id: string };
+  db: PublicationContextDb;
+};
 
-  if (!input.boundCourseId) {
-    return {
-      success: false,
-      error: "Select a course before assigning Graduate Outcomes to questions.",
-    };
-  }
-
-  const db = input.db ?? prisma;
+async function resolveCourseBoundGoCatalog(
+  boundCourseId: string,
+  db: PublicationContextDb
+): Promise<{ success: true; data: CourseBoundGoCatalog } | { success: false; error: string }> {
   const course = await db.course.findUnique({
-    where: { id: input.boundCourseId },
+    where: { id: boundCourseId },
     select: { course_scope: true, program_id: true },
   });
 
@@ -301,6 +289,100 @@ export async function validateCourseBoundGoBindings(input: {
     };
   }
 
+  return {
+    success: true,
+    data: { course: { course_scope: course.course_scope, program_id: course.program_id }, db },
+  };
+}
+
+type CourseBoundGoLookup = {
+  goMap: Map<string, { id: string; code: string; description: string }>;
+  questionMap: Map<string, { prompt: string }>;
+  ciloQuestionKeys: Set<string>;
+  usedPairs: Set<string>;
+};
+
+function normalizeCourseBoundGoBinding(
+  binding: SaveFacultyTemplateDraftInput["go_question_bindings"][number],
+  lookup: CourseBoundGoLookup
+): { success: true; data: FacultyTemplateGoBindingItem } | { success: false; error: string } {
+  const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
+  const go = lookup.goMap.get(binding.goId);
+
+  if (!go) {
+    return {
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    };
+  }
+
+  const question = lookup.questionMap.get(questionKey);
+
+  if (!question) {
+    return {
+      success: false,
+      error: "Graduate Outcomes can only be assigned to Likert questions.",
+    };
+  }
+
+  if (lookup.ciloQuestionKeys.has(questionKey)) {
+    return {
+      success: false,
+      error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
+    };
+  }
+
+  const pairKey = encodeGoBindingKey(binding.goId, binding.sectionKey, binding.itemKey);
+  if (lookup.usedPairs.has(pairKey)) {
+    return {
+      success: false,
+      error: "A Graduate Outcome can only be assigned once to the same question.",
+    };
+  }
+  lookup.usedPairs.add(pairKey);
+
+  return {
+    success: true,
+    data: {
+      goCodeSnapshot: go.code,
+      goDescriptionSnapshot: go.description,
+      goId: go.id,
+      itemKey: binding.itemKey,
+      questionPromptSnapshot: question.prompt,
+      sectionKey: binding.sectionKey,
+    },
+  };
+}
+
+export async function validateCourseBoundGoBindings(input: {
+  bindings: SaveFacultyTemplateDraftInput["go_question_bindings"];
+  boundCourseId?: string | null;
+  structure: TemplateStructure;
+  db?: PublicationContextDb;
+  ciloBindings?: Array<{ sectionKey: string; itemKey: string }>;
+}): Promise<
+  { success: true; bindings: FacultyTemplateGoBindingItem[] } | { success: false; error: string }
+> {
+  if (input.bindings.length === 0) {
+    return { success: true, bindings: [] };
+  }
+
+  if (!input.boundCourseId) {
+    return {
+      success: false,
+      error: "Select a course before assigning Graduate Outcomes to questions.",
+    };
+  }
+
+  const db = input.db ?? prisma;
+  const catalog = await resolveCourseBoundGoCatalog(input.boundCourseId, db);
+
+  if (!catalog.success) {
+    return catalog;
+  }
+
+  const course = catalog.data.course;
+
   const likertQuestions = listTemplateLikertQuestions(input.structure);
   const questionMap = new Map(
     likertQuestions.map((question) => [
@@ -317,58 +399,26 @@ export async function validateCourseBoundGoBindings(input: {
     select: { code: true, description: true, id: true },
   });
   const goMap = new Map(gos.map((go) => [go.id, go]));
-  const ciloQuestionKeys = new Set(
-    (input.ciloBindings ?? []).map((binding) =>
-      encodeQuestionKey(binding.sectionKey, binding.itemKey)
-    )
-  );
-  const usedPairs = new Set<string>();
+  const lookup: CourseBoundGoLookup = {
+    goMap,
+    questionMap,
+    ciloQuestionKeys: new Set(
+      (input.ciloBindings ?? []).map((binding) =>
+        encodeQuestionKey(binding.sectionKey, binding.itemKey)
+      )
+    ),
+    usedPairs: new Set<string>(),
+  };
   const normalized: FacultyTemplateGoBindingItem[] = [];
 
   for (const binding of input.bindings) {
-    const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
-    const go = goMap.get(binding.goId);
-    const question = questionMap.get(questionKey);
+    const normalizedBinding = normalizeCourseBoundGoBinding(binding, lookup);
 
-    if (!go) {
-      return {
-        success: false,
-        error: "One or more selected Graduate Outcomes are not available to this course.",
-      };
+    if (!normalizedBinding.success) {
+      return normalizedBinding;
     }
 
-    if (!question) {
-      return {
-        success: false,
-        error: "Graduate Outcomes can only be assigned to Likert questions.",
-      };
-    }
-
-    if (ciloQuestionKeys.has(questionKey)) {
-      return {
-        success: false,
-        error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
-      };
-    }
-
-
-    const pairKey = encodeGoBindingKey(binding.goId, binding.sectionKey, binding.itemKey);
-    if (usedPairs.has(pairKey)) {
-      return {
-        success: false,
-        error: "A Graduate Outcome can only be assigned once to the same question.",
-      };
-    }
-    usedPairs.add(pairKey);
-
-    normalized.push({
-      goCodeSnapshot: go.code,
-      goDescriptionSnapshot: go.description,
-      goId: go.id,
-      itemKey: binding.itemKey,
-      questionPromptSnapshot: question.prompt,
-      sectionKey: binding.sectionKey,
-    });
+    normalized.push(normalizedBinding.data);
   }
 
   return { success: true, bindings: normalized };

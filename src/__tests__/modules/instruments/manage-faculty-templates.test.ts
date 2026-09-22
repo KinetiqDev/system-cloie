@@ -247,9 +247,7 @@ describe("manage-faculty-templates structure persistence", () => {
 
     const result = await saveFacultyTemplateDraft({
       ...draftInput(),
-      go_question_bindings: [
-        { goId: "go-1", itemKey: "question-a", sectionKey: "section-a" },
-      ],
+      go_question_bindings: [{ goId: "go-1", itemKey: "question-a", sectionKey: "section-a" }],
     });
 
     expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
@@ -313,9 +311,7 @@ describe("manage-faculty-templates structure persistence", () => {
 
     const result = await saveFacultyTemplateDraft({
       ...draftInput(),
-      go_question_bindings: [
-        { goId: "go-1", itemKey: "question-b", sectionKey: "section-b" },
-      ],
+      go_question_bindings: [{ goId: "go-1", itemKey: "question-b", sectionKey: "section-b" }],
     });
 
     expect(result).toEqual({
