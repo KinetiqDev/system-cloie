@@ -7,7 +7,7 @@ import { BackLink } from "@/components/ui/back-link";
 
 import { cn } from "@/lib/utils";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -65,10 +65,12 @@ function MapCilosButton({
   course,
   variant = "outline",
   returnTo,
+  linkName,
 }: {
   course: FacultyCourseWithCiloCount;
   variant?: "outline" | "default";
   returnTo?: string;
+  linkName?: string;
 }) {
   const href = returnTo
     ? `/faculty/cilos/${course.id}/alignment?returnTo=${encodeURIComponent(returnTo)}`
@@ -77,9 +79,12 @@ function MapCilosButton({
   return (
     <Link
       href={href}
+      aria-label={
+        linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}`
+      }
       className={cn(buttonVariants({ variant, size: "sm", className: "max-sm:w-full" }))}
     >
-      Map CILOs to {course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}
+      {linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}`}
       <ArrowRight className="size-4" />
     </Link>
   );
@@ -295,15 +300,29 @@ export function AddCiloForm({
             </Alert>
           )}
           {successMessage && selectedCourse && (
-            <Alert variant="success">
-              <CheckCircle2 aria-hidden="true" />
-              <AlertDescription>
-                <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span>{successMessage}</span>
-                  <MapCilosButton course={selectedCourse} variant="default" returnTo={returnTo} />
-                </span>
-              </AlertDescription>
-            </Alert>
+            <div role="region" aria-label="Next step: map CILOs">
+              <Alert variant="success">
+                <CheckCircle2 aria-hidden="true" />
+                <AlertTitle>Next step: map your CILOs</AlertTitle>
+                <AlertDescription>
+                  <span className="flex flex-col gap-2">
+                    <span>{successMessage}</span>
+                    <span>
+                      Map new CILOs before publishing — evaluations stay blocked until every CILO is
+                      mapped.
+                    </span>
+                    <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <MapCilosButton
+                        course={selectedCourse}
+                        variant="default"
+                        returnTo={returnTo}
+                        linkName="Continue to map CILOs"
+                      />
+                    </span>
+                  </span>
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
 
           {/* Course */}

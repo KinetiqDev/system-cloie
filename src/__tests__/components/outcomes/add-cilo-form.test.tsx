@@ -188,6 +188,24 @@ describe("AddCiloForm", () => {
       expect(link).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
     }
   });
+  it("frames the post-save panel as a mandatory map next step", async () => {
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText("CILO Description"), {
+      target: { value: "Design instruction" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (0)");
+    fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
+
+    const nextStep = await screen.findByRole("region", { name: /next step.*map/i });
+    expect(nextStep).toHaveTextContent(/map.*before.*publish/i);
+    expect(screen.getByRole("link", { name: /continue to map CILOs/i })).toHaveAttribute(
+      "href",
+      "/faculty/cilos/course-1/alignment"
+    );
+  });
 
   it("names Institutional Learning Outcomes as the mapping target for General Education courses", async () => {
     renderForm();

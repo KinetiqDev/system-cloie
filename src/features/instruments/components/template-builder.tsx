@@ -1542,6 +1542,10 @@ export function TemplateBuilder({
             ? "Save draft"
             : "Save template"
           : "Create template";
+  // Faculty drafts bind questions to one Course's CILOs, so publishing
+  // without a bound Course always fails server-side. Gate Continue here
+  // instead of letting faculty author unbindable questions first.
+  const needsCourseGate = facultyMode && !boundCourseId;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-32 sm:pb-28">
@@ -1587,6 +1591,7 @@ export function TemplateBuilder({
                 className="w-full sm:w-auto"
                 onClick={handleContinueToPublish}
                 loading={isPending}
+                disabled={needsCourseGate}
                 aria-label="Continue to publish"
               >
                 <span className="sm:hidden">Continue</span>
@@ -1711,7 +1716,12 @@ export function TemplateBuilder({
             </p>
           )}
           {facultyMode && (
-            <div className="border-border space-y-2 rounded-lg border p-4">
+            <div
+              className="border-border space-y-2 rounded-lg border p-4"
+              {...(needsCourseGate
+                ? { role: "region", "aria-label": "Choose a course first" }
+                : {})}
+            >
               <Label htmlFor="faculty-course-context">Course</Label>
               <Combobox
                 items={facultyCourseContexts}
@@ -1777,11 +1787,13 @@ export function TemplateBuilder({
                 </ComboboxContent>
               </Combobox>
               <p className="text-muted-foreground text-xs">
-                {isLoadingCilos
-                  ? "Loading saved CILOs..."
-                  : loadedCilos.length > 0
-                    ? `${loadedCilos.length} saved CILO(s) available for binding.`
-                    : "Select a course with saved CILOs before publishing."}
+                {needsCourseGate
+                  ? "Choose a course first — its saved CILOs load here for binding, and Continue stays disabled until then."
+                  : isLoadingCilos
+                    ? "Loading saved CILOs..."
+                    : loadedCilos.length > 0
+                      ? `${loadedCilos.length} saved CILO(s) available for binding.`
+                      : "Select a course with saved CILOs before publishing."}
               </p>
               <CourseGoCatalogStatus
                 selectedCourseContext={selectedCourseContext}

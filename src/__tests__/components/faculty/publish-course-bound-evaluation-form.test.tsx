@@ -142,6 +142,50 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     // Assignment picker exists
     expect(screen.getAllByText(/class assignment/i).length).toBeGreaterThan(0);
   });
+  it("surfaces unbound CILOs with a repair link before configuration", () => {
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        publicationContext={{
+          ...publicationContext,
+          bindings: [publicationContext.bindings[0]],
+        }}
+        previewAction={vi.fn()}
+        publishAction={vi.fn()}
+      />
+    );
+
+    const banner = screen.getByRole("region", { name: /cilo readiness/i });
+    expect(banner).toHaveTextContent(/1 of 2 CILOs unbound/i);
+    expect(screen.getByRole("button", { name: /bind missing CILOs/i })).toHaveAttribute(
+      "href",
+      "/faculty/tools/template-1/edit"
+    );
+  });
+
+  it("links to the roster once a class assignment is selected", async () => {
+    const previewAction = vi.fn().mockResolvedValue({ success: true, data: [] });
+    render(
+      <PublishCourseBoundEvaluationFormV2
+        assignments={assignments}
+        publicationContext={publicationContext}
+        previewAction={previewAction}
+        publishAction={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByLabelText(/deployed evaluation name/i), {
+      target: { value: "CS101 Mid-Term Evaluation" },
+    });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "assignment-1" } });
+
+    expect(screen.getByRole("button", { name: /manage roster/i })).toHaveAttribute(
+      "href",
+      "/course-rosters/assignment-1"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /preview respondents/i }));
+    await waitFor(() => expect(previewAction).toHaveBeenCalled());
+  });
 
   it("loads preview when assignment is selected then publishes with confirmed respondents", async () => {
     const previewAction = vi.fn().mockResolvedValue({

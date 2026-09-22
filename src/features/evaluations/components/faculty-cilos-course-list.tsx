@@ -272,7 +272,20 @@ function ViewEditCilosModal({
       )}
       {successMessage && (
         <Alert variant="success" role="status">
-          <AlertDescription>{successMessage}</AlertDescription>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>{successMessage}</span>
+            <span>
+              Map new CILOs before publishing — evaluations stay blocked until every CILO is mapped.
+            </span>
+            <Button
+              variant="default"
+              size="sm"
+              render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
+              aria-label="Continue to map CILOs"
+            >
+              Continue to map CILOs
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
       {needsReconcile && !isLoading && (

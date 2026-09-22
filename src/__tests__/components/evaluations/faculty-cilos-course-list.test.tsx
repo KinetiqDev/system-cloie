@@ -158,6 +158,15 @@ describe("FacultyCilosCourseList", () => {
       expect(toastMessages).toContainEqual({ kind: "error", message: "Failed to save CILOs." });
     });
   });
+  it("offers a Continue to map CILOs link after a successful modal save", async () => {
+    renderList();
+    await openModal();
+    saveCilosAction.mockResolvedValue({ success: true });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    const mapLink = await screen.findByRole("button", { name: "Continue to map CILOs" });
+    expect(mapLink).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
+  });
 
   it("warns when the save succeeds but the list cannot be refreshed", async () => {
     renderList();

@@ -845,7 +845,48 @@ describe("TemplateBuilder", () => {
     const formData = onSave.mock.calls[0][0] as FormData;
     expect(formData.get("template_type")).toBe("COURSE_BOUND");
   });
+  test("gates a new faculty draft on course selection before questions", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } })}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { hasSavedCilos: true, items: [] },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
 
+    expect(screen.getByRole("region", { name: /choose a course first/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue to publish" })).toBeDisabled();
+
+    const courseInput = screen.getByRole("combobox", { name: "Course" });
+    fireEvent.change(courseInput, { target: { value: "IT401" } });
+    fireEvent.keyDown(courseInput, { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("option", { name: /IT401/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Continue to publish" })).not.toBeDisabled();
+    });
+  });
   test("reorders sections and normalizes every persisted order", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
     const structure = [
