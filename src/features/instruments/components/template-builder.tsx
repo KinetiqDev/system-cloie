@@ -388,7 +388,7 @@ function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: st
 /**
  * Names why the Course-bound GO axis cannot offer a catalog right now. The
  * General Education case is a rule, not an empty state: those Courses have no
- * owning Program and align to Institutional Outcomes (ADR 0005, ADR 0031). The
+ * owning Program and align to Institutional Outcomes (ADR 0005). The
  * reason union is shared with the builder's GO catalog state below.
  */
 type CourseGoCatalogReason =

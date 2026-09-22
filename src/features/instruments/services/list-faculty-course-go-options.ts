@@ -13,7 +13,7 @@ import type { ProgramGoOption } from "../types";
  * `general-education` carries the rule rather than an empty list: a General
  * Education Course has no owning Program and its CILOs align to Institutional
  * Outcomes, so the builder explains the boundary instead of showing an empty
- * picker (ADR 0005, ADR 0031). A program-specific Course whose Program simply
+ * picker (ADR 0005). A program-specific Course whose Program simply
  * has no active GOs reports an empty list with no reason, because that is a
  * catalog state the Program Head can change.
  */

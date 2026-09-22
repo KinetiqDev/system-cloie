@@ -250,7 +250,7 @@ async function validateDraftBindings(input: {
  * Validates draft question–GO bindings for a Course-bound template. The GO
  * pool is the bound Course's owning Program, never the client payload, and
  * General Education Courses are rejected outright: they have no owning Program
- * and their CILOs align to Institutional Outcomes (ADR 0005, ADR 0031).
+ * and their CILOs align to Institutional Outcomes (ADR 0005).
  *
  * Coverage is not required. A Likert question without a GO binding saves and
  * publishes as a general evaluation item, mirroring the Program-wide rule.
