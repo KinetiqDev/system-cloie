@@ -222,4 +222,48 @@ describe("faculty template course gate", () => {
 
     expect(builderProps.props?.initialData).toMatchObject({ bound_course_id: COURSE_ID });
   });
+
+  test("create-from-template route gates a source without a bound course", async () => {
+    const sourceId = "e7c65302-5a13-4f33-b968-e960386ee3b8";
+    const { default: Page } = await import("@/app/(app)/faculty/tools/new/from/[templateId]/page");
+
+    render(
+      await Page({
+        params: Promise.resolve({ templateId: sourceId }),
+        searchParams: Promise.resolve({}),
+      })
+    );
+
+    expect(screen.getByRole("heading", { name: "Choose a Course" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue with IT401/ })).toHaveAttribute(
+      "href",
+      `/faculty/tools/new/from/${sourceId}?course=${COURSE_ID}`
+    );
+    expect(builderProps.props).toBeUndefined();
+  });
+
+  test("create-from-template route keeps a bound source and skips the gate", async () => {
+    const sourceId = "e7c65302-5a13-4f33-b968-e960386ee3b8";
+    getFacultyTemplateMock.mockResolvedValue({
+      success: true,
+      data: facultyTemplate({
+        boundCourseId: COURSE_ID,
+        boundCourseCode: "IT401",
+        boundCourseTitle: "Capstone 1",
+        boundProgramId: PROGRAM.id,
+        id: sourceId,
+      }),
+    });
+    const { default: Page } = await import("@/app/(app)/faculty/tools/new/from/[templateId]/page");
+
+    render(
+      await Page({
+        params: Promise.resolve({ templateId: sourceId }),
+        searchParams: Promise.resolve({}),
+      })
+    );
+
+    expect(builderProps.props?.startingFrom).toMatchObject({ id: sourceId });
+    expect(builderProps.props?.initialData).toMatchObject({ bound_course_id: COURSE_ID });
+  });
 });
