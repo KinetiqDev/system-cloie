@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 import { AddCiloForm } from "@/app/(app)/faculty/cilos/new/add-cilo-form";
@@ -75,10 +75,22 @@ async function selectCourse(query: string) {
 }
 
 describe("AddCiloForm", () => {
+  let toastMessages: Array<{ kind: string; message: string }> = [];
+  const toastListener = ((event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    toastMessages.push({ kind: detail.kind, message: detail.message });
+  }) as EventListener;
+
   beforeEach(() => {
     vi.clearAllMocks();
     saveActionMock.mockResolvedValue({ success: true });
     loadCilosActionMock.mockResolvedValue({ success: true, cilos: [] });
+    toastMessages = [];
+    window.addEventListener("cloie-toast", toastListener);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("cloie-toast", toastListener);
   });
 
   it("adds and removes CILO entries before saving", () => {
@@ -105,6 +117,12 @@ describe("AddCiloForm", () => {
     expect(alerts.map((a) => a.textContent)).toEqual(
       expect.arrayContaining(["Please select a course.", "Please add at least one CILO."])
     );
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "error",
+        message: "Please select a course. Please add at least one CILO.",
+      });
+    });
     const ciloInput = screen.getByLabelText("CILO Description");
     expect(ciloInput).toHaveAttribute("aria-invalid", "true");
     expect(ciloInput).toHaveAttribute("aria-describedby", "cilo-cilos-error");
@@ -117,7 +135,7 @@ describe("AddCiloForm", () => {
     expect(screen.queryByText("Please select a course.")).not.toBeInTheDocument();
   });
 
-  it("rejects saving without a selected course", () => {
+  it("rejects saving without a selected course", async () => {
     renderForm();
 
     fireEvent.change(screen.getByLabelText("CILO Description"), {
@@ -127,6 +145,12 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Please select a course.");
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "error",
+        message: "Please select a course.",
+      });
+    });
     const course = screen.getByRole("combobox", { name: "Course" });
     expect(course).toHaveAttribute("aria-invalid", "true");
     expect(course).toHaveAttribute("aria-describedby", "cilo-course-error");
@@ -152,11 +176,12 @@ describe("AddCiloForm", () => {
       ])
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("1 CILO saved to CS101.");
-    // Course stays selected so faculty can keep adding to the same course.
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({ kind: "success", message: "1 CILO saved to CS101." });
+    });
     expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue(
       "CS101 — Intro to Computing"
     );
-
     const mapLink = screen.getAllByRole("link", { name: /Map CILOs to GOs/ });
     expect(mapLink.length).toBeGreaterThan(0);
     for (const link of mapLink) {
@@ -187,6 +212,9 @@ describe("AddCiloForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to save CILOs.");
     expect(screen.getByText("CILOs to Add (1)")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({ kind: "error", message: "Failed to save CILOs." });
+    });
   });
 
   it("lets faculty edit and remove existing CILOs before saving", async () => {
@@ -263,7 +291,12 @@ describe("AddCiloForm", () => {
 
     await selectCourse("CS101");
     await screen.findByText("Could not load existing CILOs.");
-
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "error",
+        message: "Could not load existing CILOs.",
+      });
+    });
     const saveButton = screen.getByRole("button", { name: "Save CILOs" });
     expect(saveButton).toBeDisabled();
     fireEvent.click(saveButton);

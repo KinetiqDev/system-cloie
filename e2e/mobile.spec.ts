@@ -124,9 +124,35 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
     buffer: Buffer.from(`name\n${fx.rosterStudents.suggested.name} Jr.\n`, "utf8"),
   });
   await drawer.getByRole("button", { name: "Prepare preview" }).click();
-  await expect(
-    drawer.getByText("This confirmation will not add or restore any Students.")
-  ).toBeVisible();
+  await expect(drawer.getByText(/No Students will be added or restored/)).toBeVisible();
+  // The row filter must open without changing the drawer's layout or clipping
+  // the listbox at the viewport edge.
+  const previewFilter = drawer.getByRole("combobox", { name: "Filter preview rows" });
+  await previewFilter.click();
+  const filterListbox = page.getByRole("listbox");
+  await expect(filterListbox).toBeVisible();
+  const filterBounds = await filterListbox.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const drawerElement = document.querySelector('[data-slot="drawer-popup"]');
+    const drawerRect = drawerElement?.getBoundingClientRect();
+    return {
+      left: rect.left,
+      right: rect.right,
+      drawerWidth: drawerRect?.width ?? 0,
+      viewportWidth: window.innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportHeight: window.innerHeight,
+      bottom: rect.bottom,
+    };
+  });
+  expect(filterBounds.left).toBeGreaterThanOrEqual(0);
+  expect(filterBounds.right).toBeLessThanOrEqual(filterBounds.viewportWidth);
+  expect(filterBounds.drawerWidth).toBeLessThanOrEqual(filterBounds.viewportWidth);
+  expect(filterBounds.documentWidth).toBeLessThanOrEqual(filterBounds.viewportWidth);
+  expect(filterBounds.bottom).toBeLessThanOrEqual(filterBounds.viewportHeight);
+  await page.keyboard.press("Escape");
+  await expect(filterListbox).toBeHidden();
+  await expect(previewFilter).toBeFocused();
 
   await drawer.getByRole("button", { name: "Cancel" }).click();
   const discard = page.getByRole("alertdialog", { name: "Discard preview?" });

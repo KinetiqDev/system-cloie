@@ -61,7 +61,7 @@ export function ProgramHeadSwitcher({
             aria-label={`Switch Program. Current: ${activeProgram.code}`}
             className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground gap-1.5"
           >
-            <span className="bg-primary/10 text-primary text-caption flex size-6 shrink-0 items-center justify-center rounded-md font-bold">
+            <span className="bg-primary/10 text-link text-caption flex size-6 shrink-0 items-center justify-center rounded-md font-bold">
               {activeProgram.code.slice(0, 2)}
             </span>
             <span className="hidden max-w-44 truncate text-xs font-semibold md:inline">
@@ -92,7 +92,7 @@ export function ProgramHeadSwitcher({
             }
             className="gap-2.5"
           >
-            <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-bold">
+            <span className="bg-primary/10 text-link flex size-8 shrink-0 items-center justify-center rounded-md text-xs font-bold">
               {program.code.slice(0, 2)}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">

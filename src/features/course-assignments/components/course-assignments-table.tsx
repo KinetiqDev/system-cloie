@@ -299,7 +299,7 @@ function CourseAssignmentsRow({
       </TableCell>
       <TableCell className="py-3">
         <div className="flex items-center gap-2.5">
-          <span className="bg-primary/10 text-primary ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
+          <span className="bg-primary/10 text-link ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
             {(assignment.facultyName ?? "Unknown")
               .split(" ")
               .slice(0, 2)

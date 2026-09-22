@@ -3,8 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import GlobalError from "@/app/global-error";
 
-const assign = vi.fn();
-
 describe("GlobalError", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -22,9 +20,7 @@ describe("GlobalError", () => {
     );
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Critical Error" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Critical Error" })).toBeInTheDocument();
     expect(
       screen.getByText(
         /unexpected problem and this page could not finish loading\. Try again, or return home if the problem persists\./
@@ -38,22 +34,13 @@ describe("GlobalError", () => {
   });
 
   it("offers a safe path home without exposing the exception message", () => {
-    const originalLocation = window.location;
-    Object.defineProperty(window, "location", {
-      value: { assign },
-      writable: true,
-    });
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     render(<GlobalError error={new Error("secret internals")} reset={() => {}} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Go Home" }));
-    expect(assign).toHaveBeenCalledWith("/");
+    // global-error replaces the root layout, so the recovery is a plain
+    // anchor: no router context, full reload home.
+    expect(screen.getByRole("link", { name: "Go Home" })).toHaveAttribute("href", "/");
     expect(screen.queryByText(/secret internals/)).not.toBeInTheDocument();
-
-    Object.defineProperty(window, "location", {
-      value: originalLocation,
-      writable: true,
-    });
   });
 });

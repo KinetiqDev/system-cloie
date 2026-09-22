@@ -221,9 +221,7 @@ test.describe("Faculty Course roster mutation", () => {
 
     // No-write preview: suggested rows are not effective until acknowledged,
     // so the stated effect is zero before the required acknowledgement.
-    await expect(
-      dialog.getByText("This confirmation will not add or restore any Students.")
-    ).toBeVisible();
+    await expect(dialog.getByText(/No Students will be added or restored/)).toBeVisible();
     // Identity evidence for the suggested-but-prepared row: canonical name
     // and email.
     await expect(dialog.getByText(fx.rosterStudents.csvAdd.name).first()).toBeVisible();
@@ -233,15 +231,13 @@ test.describe("Faculty Course roster mutation", () => {
     const notComplete = dialog.getByText("Review not complete");
     await expect(notComplete).toBeVisible();
     const acknowledge = dialog.getByRole("checkbox", {
-      name: /I acknowledge 1 suggested match/,
+      name: /I reviewed 1 suggested account/,
     });
     await expect(acknowledge).toBeVisible();
     await acknowledge.check();
     await expect(notComplete).toBeHidden();
-    await expect(
-      dialog.getByText("This confirmation will add or restore 1 Student.")
-    ).toBeVisible();
-    await dialog.getByRole("button", { name: "Review complete" }).click();
+    await expect(dialog.getByText(/1 Student is ready to add or restore/)).toBeVisible();
+    await dialog.getByRole("button", { name: /Add 1 Student/i }).click();
 
     // Result feedback groups the outcomes.
     await expect(dialog.getByText("Confirmation complete")).toBeVisible();
@@ -288,7 +284,7 @@ test.describe("Faculty Course roster mutation", () => {
     });
     await dialog.getByRole("button", { name: "Prepare preview" }).click();
     await expect(
-      dialog.getByRole("checkbox", { name: /I acknowledge 1 suggested match/ })
+      dialog.getByRole("checkbox", { name: /I reviewed 1 suggested account/ })
     ).toBeVisible();
     await expectNoAxeViolations(page);
   });

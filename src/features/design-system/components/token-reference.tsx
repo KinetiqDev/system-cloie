@@ -85,7 +85,11 @@ const TEXT_SWATCHES = [
   { className: "text-muted-foreground", name: "muted-foreground", note: "Secondary text" },
   { className: "text-link", name: "link", note: "Interactive text and links" },
   { className: "text-secondary-foreground", name: "secondary-foreground", note: "On secondary" },
-  { className: "text-text-disabled", name: "text-disabled", note: "Disabled text only" },
+  {
+    className: "text-text-disabled",
+    name: "text-disabled",
+    note: "Disabled text only — never body content",
+  },
 ];
 
 const STATUS_SWATCHES: {
@@ -171,7 +175,11 @@ export function TokenReference() {
                   swatch.className
                 )}
               >
-                <span className="font-mono text-xs">Aa</span>
+                {swatch.name === "text-disabled" ? (
+                  <span className="font-mono text-xl font-bold">Aa</span>
+                ) : (
+                  <span className="font-mono text-xs">Aa</span>
+                )}
               </div>
               <p className="text-muted-foreground text-xs">
                 <span className="font-mono">{swatch.name}</span> — {swatch.note}

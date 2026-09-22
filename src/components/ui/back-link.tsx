@@ -30,8 +30,8 @@ export type BackLinkProps = BackLinkHref | BackLinkAction;
  * (for example the template builder's unsaved-changes confirm).
  */
 export function BackLink({ children, className, ...props }: BackLinkProps) {
-  // Secondary (not muted) text: muted #64748b on the app background #f8fafc
-  // is 4.47:1, just under the 4.5:1 text minimum.
+  // Secondary (not muted) text: the muted role now clears AA on the app
+  // background, but secondary stays the safer upward-navigation ink.
   const styles = cn("-ml-2 w-fit gap-1.5 text-text-secondary hover:text-foreground", className);
 
   if (props.href !== undefined) {

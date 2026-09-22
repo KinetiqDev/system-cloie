@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { showToast } from "@/components/ui/toast";
 
 import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 
@@ -132,12 +133,16 @@ export function AddCiloForm({
         if (result.success) {
           setExistingCilos(result.cilos ?? []);
         } else {
-          setExistingCilosError(result.error ?? "Could not load existing CILOs.");
+          const message = result.error ?? "Could not load existing CILOs.";
+          setExistingCilosError(message);
+          showToast(message, "error");
         }
       })
       .catch(() => {
         if (seq !== loadSeqRef.current) return;
-        setExistingCilosError("Could not load existing CILOs.");
+        const message = "Could not load existing CILOs.";
+        setExistingCilosError(message);
+        showToast(message, "error");
       })
       .finally(() => {
         if (seq === loadSeqRef.current) setExistingCilosLoading(false);
@@ -223,6 +228,7 @@ export function AddCiloForm({
         nextErrors.cilos = "Please add at least one CILO.";
       }
       setFieldErrors(nextErrors);
+      showToast(Object.values(nextErrors).join(" "), "error");
       return;
     }
 
@@ -238,21 +244,32 @@ export function AddCiloForm({
     ];
 
     startTransition(async () => {
-      const result = await saveAction(course.id, payload);
+      let result: { success: boolean; error?: string };
+      try {
+        result = await saveAction(course.id, payload);
+      } catch {
+        const message = "Failed to save CILOs.";
+        setFormError(message);
+        showToast(message, "error");
+        return;
+      }
 
       if (!result.success) {
-        setFormError(result.error ?? "Failed to save CILOs.");
+        const message = result.error ?? "Failed to save CILOs.";
+        setFormError(message);
+        showToast(message, "error");
         return;
       }
 
       const added = ciloList.length;
+      const message =
+        added > 0
+          ? `${added} ${added === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`
+          : `CILO changes saved for ${course.code}.`;
       setAddedCounts((prev) => ({ ...prev, [course.id]: (prev[course.id] ?? 0) + added }));
+      showToast(message, "success");
       if (selectedCourseRef.current?.id === course.id) {
-        setSuccessMessage(
-          added > 0
-            ? `${added} ${added === 1 ? "CILO" : "CILOs"} saved to ${course.code}.`
-            : `CILO changes saved for ${course.code}.`
-        );
+        setSuccessMessage(message);
         setCiloList([]);
         setCiloText("");
         loadExistingCilos(course.id);

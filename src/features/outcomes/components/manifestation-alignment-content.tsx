@@ -84,7 +84,7 @@ function manifestLegend() {
         <li key={option.value} className="flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-md text-xs font-semibold"
+            className="bg-primary/10 text-link flex size-6 items-center justify-center rounded-md text-xs font-semibold"
           >
             {option.letter}
           </span>

@@ -730,7 +730,7 @@ export function AddUserForm({
           {existingUser && (
             <div className="border-border bg-muted/40 flex flex-col gap-3 rounded-lg border p-4">
               <div className="flex items-start gap-2.5">
-                <span className="bg-primary/10 text-primary mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full">
+                <span className="bg-primary/10 text-link mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full">
                   <UserCheck className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">
