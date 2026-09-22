@@ -1175,7 +1175,9 @@ describe("course roster pages", () => {
       )
     );
     // Suggested matches and unresolved rows gate review completion.
-    expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /review complete|add \d+ students?/i })
+    ).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(/Acknowledge 1 suggested match/i);
     expect(screen.getByRole("alert")).toHaveTextContent(/Resolve or skip 1 row before continuing/i);
 
@@ -1363,7 +1365,9 @@ describe("course roster pages", () => {
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() => expect(screen.getByText("Suggested match")).toBeInTheDocument());
 
-    const reviewComplete = screen.getByRole("button", { name: /add \d+ students?/i });
+    const reviewComplete = screen.getByRole("button", {
+      name: /review complete|add \d+ students?/i,
+    });
     const ack = screen.getByRole("checkbox", { name: /I reviewed 1 suggested account/ });
     expect(reviewComplete).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent(
@@ -2379,9 +2383,9 @@ describe("course roster confirmation results", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /prepare preview/i }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled()
+      expect(screen.getByRole("button", { name: /review complete/i })).toBeEnabled()
     );
-    fireEvent.click(screen.getByRole("button", { name: /add \d+ students?/i }));
+    fireEvent.click(screen.getByRole("button", { name: /review complete/i }));
     await waitFor(() => expect(screen.getByText(/Confirmation complete/)).toBeInTheDocument());
     expect(confirmSpy).not.toHaveBeenCalled();
     expect(screen.getAllByText("Already active").length).toBeGreaterThan(0);

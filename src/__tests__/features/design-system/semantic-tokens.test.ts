@@ -89,7 +89,7 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
 
       // Border roles
       expect(tokensCss).toContain("--border-default: #d3dbe5");
-      expect(tokensCss).toContain("--border-strong: #a9b6c6");
+      expect(tokensCss).toContain("--border-strong: #7d8da1");
       expect(tokensCss).toContain("--input-border: #64748b");
 
       // Status roles (Light)
@@ -176,10 +176,12 @@ describe("Design System — Semantic Foundations (Issue #252)", () => {
     });
   });
   it("keeps control boundaries above 3:1 in both appearances", () => {
+    expect(contrast("#7d8da1", "#ffffff")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#7d8da1", "#f4f7fb")).toBeGreaterThanOrEqual(3);
     expect(contrast("#64748b", "#ffffff")).toBeGreaterThanOrEqual(3);
-    expect(contrast("#64748b", "#f8fafc")).toBeGreaterThanOrEqual(3);
-    expect(contrast("#64748b", "#0f172a")).toBeGreaterThanOrEqual(3);
-    expect(contrast("#64748b", "#111827")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#64748b", "#f4f7fb")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#5f7288", "#111827")).toBeGreaterThanOrEqual(3);
+    expect(contrast("#5f7288", "#0b1120")).toBeGreaterThanOrEqual(3);
   });
 
   describe("globals.css - Tailwind Theme & Semantic Bridge", () => {

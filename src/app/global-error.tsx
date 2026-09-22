@@ -71,19 +71,22 @@ export default function GlobalError({
             >
               Try Again
             </button>
-            <button
-              onClick={() => window.location.assign("/")}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- global-error replaces the root layout so next/link router context is unavailable; a full-reload anchor is the correct recovery */}
+            <a
+              href="/"
               style={{
+                display: "inline-block",
                 padding: "0.5rem 1rem",
                 backgroundColor: "var(--surface-primary, #ffffff)",
                 color: "var(--text-primary, #0f172a)",
                 border: "1px solid var(--border-default, #d3dbe5)",
                 borderRadius: "0.375rem",
                 cursor: "pointer",
+                textDecoration: "none",
               }}
             >
               Go Home
-            </button>
+            </a>
           </div>
         </div>
       </body>

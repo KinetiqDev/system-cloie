@@ -62,7 +62,7 @@
    * 3. Borders (Light Defaults)
    * ======================================== */
   --border-default: #d3dbe5;
-  --border-strong: #a9b6c6;
+  --border-strong: #7d8da1;
   --input-border: #64748b;
 
   --color-border: var(--border-default);
@@ -92,7 +92,7 @@
 
   --secondary-bg: #f1f5f9;
   --secondary-hover: #e2e8f0;
-  --secondary-border: #a9b6c6;
+  --secondary-border: #7d8da1;
   --secondary-fg: #0f172a;
 
   /* Legacy alias for secondary action variables */

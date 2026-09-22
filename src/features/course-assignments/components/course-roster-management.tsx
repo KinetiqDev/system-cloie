@@ -535,6 +535,9 @@ function RowCandidateDisplay({
   );
 }
 
+// Desktop table row and mobile stacked card are one row contract sharing
+// status, controls, and search locals; splitting duplicates the shared derivations.
+// fallow-ignore-next-line complexity
 function ReviewRow({
   row,
   isDesktop,
@@ -651,6 +654,9 @@ function ReviewRow({
   );
 }
 
+// Filter header, acknowledgement gate, and desktop table / mobile list are one
+// preview contract sharing counts, visibility, and confirmation derivations.
+// fallow-ignore-next-line complexity
 function ReviewPreviewBlock({
   preview,
   assignment,
@@ -1241,6 +1247,13 @@ function ManagementBody({
   );
 }
 
+function reviewPrimaryLabel(phase: RosterManagementPhase, confirmCount: number): string {
+  if (phase === "add") return "Prepare preview";
+  if (phase !== "review") return "Done";
+  if (confirmCount === 0) return "Review complete";
+  return confirmCount === 1 ? "Add 1 Student" : `Add ${confirmCount} Students`;
+}
+
 export function RosterManagementDialog({
   assignment,
   assignmentId,
@@ -1435,14 +1448,7 @@ export function RosterManagementDialog({
         })
       ).length
     : 0;
-  const primaryLabel =
-    phase === "add"
-      ? "Prepare preview"
-      : phase === "review"
-        ? confirmCount === 1
-          ? "Add 1 Student"
-          : `Add ${confirmCount} Students`
-        : "Done";
+  const primaryLabel = reviewPrimaryLabel(phase, confirmCount);
   const primaryDisabled = isPending || (phase === "review" && reviewBlockers.length > 0);
 
   const body = (
