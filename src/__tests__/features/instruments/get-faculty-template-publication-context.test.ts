@@ -423,6 +423,33 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
     });
   });
 
+  it("rejects publication when a stored GO binding lost its GO to deletion", async () => {
+    mocks.template.findFirst.mockResolvedValue({
+      ...template(),
+      template_go_question_bindings: [
+        {
+          id: "g1",
+          go_id: null,
+          go_code_snapshot: "GO1",
+          go_description_snapshot: "Communicates solutions effectively.",
+          section_key: "cilo-items",
+          item_key: "cilo-attainment-1",
+          question_prompt_snapshot: "Question prompt",
+        },
+      ],
+    });
+    mocks.go.findMany.mockResolvedValue([
+      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    });
+  });
+
   it("rejects publication when a General Education course carries a GO binding", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),

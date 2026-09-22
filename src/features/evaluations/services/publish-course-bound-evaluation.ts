@@ -226,9 +226,18 @@ export async function getOnBehalfTemplatePublicationContext(
     };
   }
 
-  // Direct question–GO bindings are optional and validated through the same
-  // Course-bound rule the faculty save path uses, so an on-behalf publication
-  // can never publish a GO the bound Course's owning Program does not own.
+  // Direct question-GO bindings stay optional: an unbound Likert question
+  // publishes as a general item. A null go_id means its GO was deleted
+  // after the draft was saved (FK SET NULL). Block like an archived or
+  // foreign GO so the loss is explicit, matching the central publish
+  // plan, instead of silently dropping the intended coverage. The next
+  // draft save prunes the row.
+  if (template.template_go_question_bindings.some((binding) => !binding.go_id)) {
+    return {
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    };
+  }
   const goBindingValidation = await validateCourseBoundGoBindings({
     bindings: template.template_go_question_bindings
       .filter((binding) => binding.go_id)
