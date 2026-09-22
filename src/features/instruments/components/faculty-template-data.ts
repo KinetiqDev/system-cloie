@@ -6,6 +6,7 @@ import {
   toTemplateStructure,
   type EvaluationTemplateType,
   type TemplateCiloQuestionBinding,
+  type TemplateGoQuestionBinding,
   type TemplateStructure,
 } from "../types";
 
@@ -22,8 +23,10 @@ type FacultyTemplateBuilderData = {
     bound_program_id: string | null;
     structure: TemplateStructure;
   };
-  /** CILO bindings already carried by the stored template. */
+  /** CILO and GO bindings already carried by the stored template. */
   initialBindings: TemplateCiloQuestionBinding[];
+  /** Direct question–GO bindings already carried by the stored template. */
+  initialGoBindings: TemplateGoQuestionBinding[];
 };
 
 /**
@@ -52,6 +55,15 @@ function toFacultyTemplateBuilderData(template: FacultyTemplateItem): FacultyTem
         ciloId: binding.ciloId!,
         itemKey: binding.itemKey,
         questionPromptSnapshot: binding.questionPromptSnapshot,
+        sectionKey: binding.sectionKey,
+      })),
+    initialGoBindings: template.templateGoQuestionBindings
+      .filter((binding) => binding.goId)
+      .map((binding) => ({
+        goCodeSnapshot: binding.goCodeSnapshot,
+        goDescriptionSnapshot: binding.goDescriptionSnapshot,
+        goId: binding.goId!,
+        itemKey: binding.itemKey,
         sectionKey: binding.sectionKey,
       })),
   };

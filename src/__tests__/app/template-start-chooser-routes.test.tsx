@@ -89,6 +89,7 @@ function facultyTemplate(overrides: Partial<FacultyTemplateItem>): FacultyTempla
     sourceTemplateId: null,
     structure: STRUCTURE,
     templateCiloQuestionBindings: [],
+    templateGoQuestionBindings: [],
     templateType: "COURSE_BOUND",
     versionCount: 1,
     ...overrides,

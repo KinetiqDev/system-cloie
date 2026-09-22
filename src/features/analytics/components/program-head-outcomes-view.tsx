@@ -115,10 +115,9 @@ export function ProgramHeadOutcomesView({
             </EmptyMedia>
             <EmptyTitle>No mapped outcome evidence</EmptyTitle>
             <EmptyDescription>
-              Submitted course-bound ratings exist in this scope, but none are bound to a CILO with
-              a canonical mapping to a Graduate Outcome of this Program. Central instrument
-              questions and Institutional Outcome evidence are never assigned to a Graduate Outcome
-              by wording or item key.
+              Submitted course-bound ratings exist in this scope, but none reach a Graduate Outcome
+              through a direct publication binding or a CILO&apos;s canonical mapping. Institutional
+              Outcome evidence is never assigned to a Graduate Outcome by wording or item key.
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>

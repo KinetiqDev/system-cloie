@@ -359,11 +359,15 @@ function SummaryStat({
 }
 
 function mappingLabels(cilo: {
-  mappings: Array<{ goCode: string; manifestation: string }>;
+  mappings: Array<{ goCode: string; manifestation: string | null }>;
 }): string {
   return cilo.mappings.length === 0
     ? "—"
-    : cilo.mappings.map((mapping) => `${mapping.goCode} (${mapping.manifestation})`).join(", ");
+    : cilo.mappings
+        .map((mapping) =>
+          mapping.manifestation ? `${mapping.goCode} (${mapping.manifestation})` : mapping.goCode
+        )
+        .join(", ");
 }
 
 function DistributionCounts({

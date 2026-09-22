@@ -41,6 +41,8 @@ type CourseBoundCiloBinding = {
   item_key: string;
 };
 
+type CourseBoundGoBinding = GoSnapshotShape;
+
 type CourseBoundEvalShape = {
   id: string;
   deployment_name: string;
@@ -59,6 +61,7 @@ type CourseBoundEvalShape = {
     };
   };
   cilo_question_bindings: CourseBoundCiloBinding[];
+  go_question_bindings: CourseBoundGoBinding[];
 };
 
 type GoSnapshotShape = {
@@ -152,6 +155,7 @@ export async function getProgramHeadResponseDetail(
                 },
               },
               cilo_question_bindings: true,
+              go_question_bindings: true,
             },
           },
           central_deployment: {
@@ -259,20 +263,22 @@ function resolveCourseBoundBinding(
   entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
   ciloMappings: Map<string, CiloGoMapping[]>
 ): SubmittedAnswerBinding {
+  const directBindings = evaluation.goSnapshots
+    .filter(
+      (snapshot) =>
+        snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
+    )
+    .map((snapshot) => ({
+      key:
+        snapshot.go_id ??
+        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
+      code: snapshot.go_code_snapshot,
+      description: snapshot.go_description_snapshot,
+    }));
   if (evaluation.type === "PROGRAM_WIDE") {
-    const bindings = evaluation.goSnapshots
-      .filter(
-        (snapshot) =>
-          snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
-      )
-      .map((snapshot) => ({
-        key:
-          snapshot.go_id ??
-          `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
-        code: snapshot.go_code_snapshot,
-        description: snapshot.go_description_snapshot,
-      }));
-    return bindings.length > 0 ? { type: "GO", goBindings: bindings } : { type: "GENERAL" };
+    return directBindings.length > 0
+      ? { type: "GO", goBindings: directBindings }
+      : { type: "GENERAL" };
   }
 
   const binding = evaluation.bindings.find(
@@ -283,13 +289,16 @@ function resolveCourseBoundBinding(
         candidate.item_key === entry.item_key)
   );
   if (!binding) {
-    return { type: "GENERAL" };
+    return directBindings.length > 0
+      ? { type: "GO", goBindings: directBindings }
+      : { type: "GENERAL" };
   }
   return {
     type: "CILO",
     ciloId: binding.cilo_id,
     ciloLabel: binding.cilo_description_snapshot,
     goMappings: ciloMappings.get(binding.cilo_id ?? "") ?? [],
+    directGoBindings: directBindings,
   };
 }
 
@@ -357,7 +366,7 @@ function projectEvaluation(response: {
       bindings: courseBound.cilo_question_bindings,
       stakeholder: TargetStakeholder.STUDENT,
       termInstanceId: courseBound.course_assignment.term_instance.id,
-      goSnapshots: [],
+      goSnapshots: courseBound.go_question_bindings,
     };
   }
   const deployment = response.assignment.central_deployment!;

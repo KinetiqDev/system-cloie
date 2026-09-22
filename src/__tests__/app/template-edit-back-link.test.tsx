@@ -46,6 +46,7 @@ vi.mock("@/lib/actions/course-bound-evaluation-actions", () => ({
 
 vi.mock("@/lib/actions/faculty-template-actions", () => ({
   saveFacultyTemplateDraftAction: vi.fn(),
+  loadFacultyCourseGoOptionsAction: vi.fn(),
   validateFacultyTemplatePublishReadinessAction: vi.fn(),
 }));
 
@@ -98,6 +99,7 @@ describe("template edit pages render exactly one back link", () => {
         sourceTemplateId: null,
         structure: [],
         templateCiloQuestionBindings: [],
+        templateGoQuestionBindings: [],
         versionCount: 1,
       },
     });

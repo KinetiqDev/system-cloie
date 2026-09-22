@@ -15,6 +15,7 @@ import {
 } from "@/features/auth/services/resolve-program-head-context";
 import {
   getFacultyTemplatePublicationContext,
+  validateCourseBoundGoBindings,
   type FacultyTemplatePublicationContext,
 } from "@/features/instruments/services/manage-faculty-templates";
 import { ROLES } from "@/lib/constants/roles";
@@ -128,6 +129,7 @@ export async function getOnBehalfTemplatePublicationContext(
         },
       },
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -175,7 +177,10 @@ export async function getOnBehalfTemplatePublicationContext(
     }
   }
 
-  const questionMap = new Map(likertQuestions.map((q) => [`${q.sectionKey}:${q.itemKey}`, q]));
+  // Question identity is a structural tuple, never a separator join.
+  const questionMap = new Map(
+    likertQuestions.map((q) => [JSON.stringify([q.sectionKey, q.itemKey]), q])
+  );
   const ciloMap = new Map(cilos.map((c) => [c.id, c]));
   const validatedBindings = [];
   const usedQuestionKeys = new Set<string>();
@@ -183,7 +188,7 @@ export async function getOnBehalfTemplatePublicationContext(
   for (const binding of template.template_cilo_question_bindings) {
     if (!binding.cilo_id) continue;
     const cilo = ciloMap.get(binding.cilo_id);
-    const questionKey = `${binding.section_key}:${binding.item_key}`;
+    const questionKey = JSON.stringify([binding.section_key, binding.item_key]);
     const question = questionMap.get(questionKey);
 
     if (!cilo) {
@@ -221,11 +226,42 @@ export async function getOnBehalfTemplatePublicationContext(
     };
   }
 
+  // Direct question-GO bindings stay optional: an unbound Likert question
+  // publishes as a general item. A null go_id means its GO was deleted
+  // after the draft was saved (FK SET NULL). Block like an archived or
+  // foreign GO so the loss is explicit, matching the central publish
+  // plan, instead of silently dropping the intended coverage. The next
+  // draft save prunes the row.
+  if (template.template_go_question_bindings.some((binding) => !binding.go_id)) {
+    return {
+      success: false,
+      error: "One or more selected Graduate Outcomes are not available to this course.",
+    };
+  }
+  const goBindingValidation = await validateCourseBoundGoBindings({
+    bindings: template.template_go_question_bindings
+      .filter((binding) => binding.go_id)
+      .map((binding) => ({
+        goId: binding.go_id!,
+        itemKey: binding.item_key,
+        sectionKey: binding.section_key,
+      })),
+    boundCourseId: template.bound_course_id,
+    structure,
+    db,
+    ciloBindings: validatedBindings,
+  });
+
+  if (!goBindingValidation.success) {
+    return goBindingValidation;
+  }
+
   return {
     success: true,
     data: {
       bindings: validatedBindings,
       cilos,
+      goBindings: goBindingValidation.bindings,
       course: {
         code: template.bound_course.code,
         courseType: template.bound_course.course_scope,
@@ -585,6 +621,24 @@ export async function publishCourseBoundEvaluation({
                 section_key: binding.sectionKey,
               })),
             });
+
+            // Direct question–GO bindings are frozen here: evidence for the
+            // selected-Program GO rows must not change when the GO catalog is
+            // later edited. An unbound Likert question writes no row and
+            // contributes no GO evidence, exactly like the Program-wide path.
+            if (contextData.goBindings.length > 0) {
+              await tx.courseBoundGoQuestionBinding.createMany({
+                data: contextData.goBindings.map((binding) => ({
+                  course_bound_evaluation_id: evaluation.id,
+                  go_code_snapshot: binding.goCodeSnapshot,
+                  go_description_snapshot: binding.goDescriptionSnapshot,
+                  go_id: binding.goId,
+                  item_key: binding.itemKey,
+                  question_prompt_snapshot: binding.questionPromptSnapshot,
+                  section_key: binding.sectionKey,
+                })),
+              });
+            }
 
             await tx.courseBoundEvaluationExclusion.createMany({
               data: normalizedExclusions.map((exclusion) => ({

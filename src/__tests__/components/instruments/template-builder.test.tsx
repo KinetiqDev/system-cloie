@@ -1808,6 +1808,165 @@ describe("TemplateBuilder", () => {
     expect(option).not.toHaveAttribute("aria-disabled", "true");
   });
 
+  test("disables the GO axis on a CILO-bound question and explains the mapping path", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "First outcome question",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [{ ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" }],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              hasSavedCilos: true,
+              items: [{ description: "Apply engineering methods", id: "cilo-1" }],
+            },
+          }),
+          loadCourseGoOptionsAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              items: [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }],
+              unavailableReason: null,
+            },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByText(
+        /bound to a CILO and reaches Graduate Outcomes through the CILO mapping/i
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "GO Binding" })).toBeDisabled();
+  });
+
+  test("disables the CILO axis on a GO-bound question and explains the direct path", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "GO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Direct outcome question",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [],
+          initialGoBindings: [{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              hasSavedCilos: true,
+              items: [{ description: "Apply engineering methods", id: "cilo-1" }],
+            },
+          }),
+          loadCourseGoOptionsAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: {
+              items: [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }],
+              unavailableReason: null,
+            },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true }),
+        }}
+      />
+    );
+
+    expect(
+      await screen.findByText(/bound to Graduate Outcomes. Clear the GO binding to assign a CILO/i)
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("CILO Binding")).toBeDisabled();
+  });
+
   test("copies a starting template only when the new draft is saved", async () => {
     const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
     const onSave = vi.fn();

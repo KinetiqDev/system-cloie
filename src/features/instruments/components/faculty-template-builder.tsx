@@ -6,6 +6,7 @@ import {
   validateFacultyTemplatePublishReadinessAction,
 } from "@/lib/actions/faculty-template-actions";
 import type { FacultyCourseContext } from "@/features/evaluations/types";
+import { loadFacultyCourseGoOptionsAction } from "@/lib/actions/faculty-template-actions";
 import type { TemplateCiloQuestionBinding } from "../types";
 import { TemplateBuilder, type TemplateBuilderProps } from "./template-builder";
 
@@ -17,6 +18,8 @@ interface FacultyTemplateBuilderProps {
   initialData?: TemplateBuilderProps["initialData"];
   /** CILO bindings carried in from the template being edited or copied. */
   initialBindings?: TemplateCiloQuestionBinding[];
+  /** Direct question–GO bindings carried in from the template being edited or copied. */
+  initialGoBindings?: TemplateBuilderProps["initialGoBindings"];
   startingFrom?: TemplateBuilderProps["startingFrom"];
   saveSuccessConfig?: TemplateBuilderProps["saveSuccessConfig"];
 }
@@ -29,6 +32,7 @@ interface FacultyTemplateBuilderProps {
 export function FacultyTemplateBuilder({
   courseContexts,
   initialBindings = [],
+  initialGoBindings,
   programLabel,
   ...props
 }: FacultyTemplateBuilderProps) {
@@ -38,7 +42,9 @@ export function FacultyTemplateBuilder({
       facultyConfig={{
         courseContexts,
         initialBindings,
+        initialGoBindings: initialGoBindings ?? [],
         loadManagedCilosAction: loadFacultyManagedCilosAction,
+        loadCourseGoOptionsAction: loadFacultyCourseGoOptionsAction,
         validatePublishReadinessAction: validateFacultyTemplatePublishReadinessAction,
       }}
       onSave={saveFacultyTemplateDraftAction}

@@ -9,6 +9,7 @@ const {
   assignmentCreateManyMock,
   bindingCreateManyMock,
   courseBoundEvaluationCreateMock,
+  goBindingCreateManyMock,
   courseAssignmentFindUniqueMock,
   courseAssignmentMembershipFindManyMock,
   exclusionCreateManyMock,
@@ -25,10 +26,12 @@ const {
   studentEnrollmentFindManyMock,
   targetCreateManyMock,
   transactionMock,
+  validateCourseBoundGoBindingsMock,
 } = vi.hoisted(() => ({
   assignmentCreateManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
   courseBoundEvaluationCreateMock: vi.fn(),
+  goBindingCreateManyMock: vi.fn(),
   courseAssignmentFindUniqueMock: vi.fn(),
   courseAssignmentMembershipFindManyMock: vi.fn(),
   exclusionCreateManyMock: vi.fn(),
@@ -45,6 +48,7 @@ const {
   studentEnrollmentFindManyMock: vi.fn(),
   targetCreateManyMock: vi.fn(),
   transactionMock: vi.fn(),
+  validateCourseBoundGoBindingsMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -85,6 +89,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 
 vi.mock("@/features/instruments/services/manage-faculty-templates", () => ({
   getFacultyTemplatePublicationContext: getFacultyTemplatePublicationContextMock,
+  validateCourseBoundGoBindings: validateCourseBoundGoBindingsMock,
 }));
 
 const MOCK_ASSIGNMENT = {
@@ -141,6 +146,7 @@ const MOCK_PUBLICATION_CONTEXT = {
       { description: "Apply capstone planning fundamentals.", id: "cilo-1" },
       { description: "Produce a proposal-aligned outline defense artifact.", id: "cilo-2" },
     ],
+    goBindings: [],
     course: {
       code: "IT-401",
       courseType: "PROGRAM_SPECIFIC",
@@ -156,6 +162,23 @@ const MOCK_PUBLICATION_CONTEXT = {
     majorId: null,
     programId: "program-1",
     template: { id: "template-1", name: "Course-Bound CILO Evaluation", structure: [] },
+  },
+};
+
+const MOCK_PUBLICATION_CONTEXT_WITH_GO = {
+  ...MOCK_PUBLICATION_CONTEXT,
+  data: {
+    ...MOCK_PUBLICATION_CONTEXT.data,
+    goBindings: [
+      {
+        goId: "go-1",
+        goCodeSnapshot: "GO-1",
+        goDescriptionSnapshot: "Communicate effectively.",
+        itemKey: "q1",
+        questionPromptSnapshot: "I achieved outcome one.",
+        sectionKey: "outcomes",
+      },
+    ],
   },
 };
 
@@ -181,6 +204,7 @@ const MOCK_BOUND_TEMPLATE = {
       item_key: "q2",
     },
   ],
+  template_go_question_bindings: [],
   structure: [
     {
       key: "outcomes",
@@ -209,6 +233,7 @@ describe("publishCourseBoundEvaluation", () => {
         $queryRaw: lockCourseAssignmentMock,
         courseBoundEvaluation: { create: courseBoundEvaluationCreateMock },
         courseBoundCiloQuestionBinding: { createMany: bindingCreateManyMock },
+        courseBoundGoQuestionBinding: { createMany: goBindingCreateManyMock },
         courseBoundEvaluationTarget: { createMany: targetCreateManyMock },
         courseBoundEvaluationExclusion: { createMany: exclusionCreateManyMock },
         courseAssignment: { findUnique: courseAssignmentFindUniqueMock },
@@ -224,6 +249,7 @@ describe("publishCourseBoundEvaluation", () => {
     );
 
     // Default mocks for on-behalf template lookup
+    validateCourseBoundGoBindingsMock.mockResolvedValue({ success: true, bindings: [] });
     instrumentTemplateFindFirstMock.mockResolvedValue({
       id: "bound-template-1",
       bound_course_id: "course-1",
@@ -246,6 +272,7 @@ describe("publishCourseBoundEvaluation", () => {
           item_key: "q2",
         },
       ],
+      template_go_question_bindings: [],
       structure: [
         {
           key: "outcomes",
@@ -461,6 +488,41 @@ describe("publishCourseBoundEvaluation", () => {
     expect(JSON.stringify(assignmentCreateManyMock.mock.calls)).not.toMatch(
       /studentIdNumber|student_id_number|Student ID/i
     );
+  });
+
+  it("snapshots direct GO bindings with the live labels and question prompt", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "COMPLETE" },
+      roles: [ROLES.FACULTY],
+      userId: "faculty-1",
+    });
+    courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+    getFacultyTemplatePublicationContextMock.mockResolvedValue(MOCK_PUBLICATION_CONTEXT_WITH_GO);
+    instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+    courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+    await expect(
+      publishCourseBoundEvaluation({
+        assignmentId: "assignment-1",
+        deploymentName: "Capstone GO Evaluation",
+        templateId: "template-1",
+      })
+    ).resolves.toMatchObject({ success: true });
+
+    expect(goBindingCreateManyMock).toHaveBeenCalledWith({
+      data: [
+        {
+          course_bound_evaluation_id: "evaluation-1",
+          go_code_snapshot: "GO-1",
+          go_description_snapshot: "Communicate effectively.",
+          go_id: "go-1",
+          item_key: "q1",
+          question_prompt_snapshot: "I achieved outcome one.",
+          section_key: "outcomes",
+        },
+      ],
+    });
   });
 
   it("does not rematch names or infer Course membership from term placement", async () => {

@@ -3,6 +3,7 @@ import { ratingBelongsToScale } from "./scale-identity";
 import { buildQuantitativeMetric, type QuantitativeRating } from "./quantitative";
 import type { QuantitativeMetric } from "./types";
 import type { OutcomeItemRatingRow } from "./cilo";
+import { encodeContributionKey, encodeQuestionKey } from "./question-identity";
 
 // ---------------------------------------------------------------------------
 // GO metric aggregation (spec §5.8, §5.9, §7, §9)
@@ -161,38 +162,79 @@ function finalize(aggregates: Map<string, GoAggregate>): GoMetric[] {
  */
 export function buildCourseDerivedGoMetrics(rows: OutcomeItemRatingRow[]): GoMetric[] {
   const aggregates = new Map<string, GoAggregate>();
+  const seenContributions = new Set<string>();
 
   for (const row of rows) {
-    if (!row.cilo || row.goMappings.length === 0) {
-      continue;
-    }
-    const cilo = { id: row.cilo.id, label: row.cilo.label };
-    // One rating contributes once per GO even if a caller passes duplicate
-    // mapping rows (§54 duplicate contribution prevention).
-    const seenGos = new Set<string>();
-    for (const mapping of row.goMappings) {
-      if (seenGos.has(mapping.goId)) {
-        continue;
-      }
-      seenGos.add(mapping.goId);
-      const aggregate = getOrCreateAggregate(aggregates, {
-        goId: mapping.goId,
-        goCode: mapping.goCode,
-        goDescription: mapping.goDescription,
-      });
-      accumulate(
-        aggregate,
-        row.ratingValue,
-        row.responseId,
-        row.scale,
-        cilo,
-        `${row.sectionKey}:${row.itemKey}`,
-        row.evaluationId
-      );
-    }
+    accumulateCourseRow(aggregates, seenContributions, row);
   }
 
   return finalize(aggregates);
+}
+
+type CourseRowMappingGroup = {
+  mappings: OutcomeItemRatingRow["goMappings"];
+  cilo: { id: string; label: string } | null;
+};
+
+function courseRowMappingGroups(row: OutcomeItemRatingRow): CourseRowMappingGroup[] {
+  const cilo = row.cilo ? { id: row.cilo.id, label: row.cilo.label } : null;
+  return [
+    { mappings: row.goMappings, cilo },
+    { mappings: row.directGoMappings ?? [], cilo: null },
+  ];
+}
+
+function hasCourseEvidence(row: OutcomeItemRatingRow): boolean {
+  return row.goMappings.length > 0 || (row.directGoMappings?.length ?? 0) > 0;
+}
+
+function accumulateCourseRow(
+  aggregates: Map<string, GoAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeItemRatingRow
+): void {
+  if (!hasCourseEvidence(row)) {
+    return;
+  }
+  for (const { mappings, cilo: contributionCilo } of courseRowMappingGroups(row)) {
+    accumulateMappingGroup(aggregates, seenContributions, row, mappings, contributionCilo);
+  }
+}
+
+function accumulateMappingGroup(
+  aggregates: Map<string, GoAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeItemRatingRow,
+  mappings: OutcomeItemRatingRow["goMappings"],
+  contributionCilo: { id: string; label: string } | null
+): void {
+  for (const mapping of mappings) {
+    const contributionKey = encodeContributionKey(
+      row.responseId,
+      row.evaluationId ?? "",
+      row.sectionKey,
+      row.itemKey,
+      mapping.goId
+    );
+    if (seenContributions.has(contributionKey)) {
+      continue;
+    }
+    seenContributions.add(contributionKey);
+    const aggregate = getOrCreateAggregate(aggregates, {
+      goId: mapping.goId,
+      goCode: mapping.goCode,
+      goDescription: mapping.goDescription,
+    });
+    accumulate(
+      aggregate,
+      row.ratingValue,
+      row.responseId,
+      row.scale,
+      contributionCilo,
+      encodeQuestionKey(row.sectionKey, row.itemKey),
+      row.evaluationId
+    );
+  }
 }
 
 /** One program-wide rating with its deployment's snapshot GO bindings (§5.9). */
@@ -236,7 +278,7 @@ export function buildProgramWideGoMetrics(rows: CentralGoRatingRow[]): GoMetric[
         row.responseId,
         row.scale,
         null,
-        `${row.sectionKey}:${row.itemKey}`,
+        encodeQuestionKey(row.sectionKey, row.itemKey),
         row.evaluationId
       );
     }

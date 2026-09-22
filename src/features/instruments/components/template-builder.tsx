@@ -103,12 +103,27 @@ type ActionResult<T = void> = { success: true; data?: T } | { success: false; er
 
 const EMPTY_FACULTY_COURSE_CONTEXTS: FacultyCourseContext[] = [];
 
+type FacultyBuilderCourseGoOptionsResult =
+  | {
+      success: true;
+      data: { items: ProgramGoOption[]; unavailableReason: "general-education" | null };
+    }
+  | { success: false; error: string };
+
 type FacultyBuilderConfig = {
   courseContexts: FacultyCourseContext[];
   initialBindings: TemplateCiloQuestionBinding[];
+  /** Direct question–GO bindings stored on the template, seeded into the editor. */
+  initialGoBindings?: TemplateGoQuestionBinding[];
   loadManagedCilosAction: (
     payload: FacultyManagedCiloContext
   ) => Promise<FacultyManagedCiloLoadResult>;
+  /** Resolves the bound Course's GO catalog; absent when a flow offers none. */
+  loadCourseGoOptionsAction?: (payload: {
+    courseId: string;
+    majorId: string | null;
+    programId: string;
+  }) => Promise<FacultyBuilderCourseGoOptionsResult>;
   validatePublishReadinessAction: (templateId: string) => Promise<ActionResult<{ id: string }>>;
 };
 
@@ -157,10 +172,11 @@ export interface TemplateBuilderProps {
   onPublish?: (templateId: string) => void;
   /**
    * Server-prepared active GOs (canonical order) offered to Program-wide
-   * templates. Absent in faculty/COURSE_BOUND mode.
+   * templates. Absent in faculty/COURSE_BOUND mode: there the catalog is
+   * resolved per bound Course through the faculty builder config.
    */
   goOptions?: ProgramGoOption[];
-  /** Existing Program-wide question–GO bindings loaded for this template. */
+  /** Existing question–GO bindings loaded for this template. */
   initialGoBindings?: TemplateGoQuestionBinding[];
 }
 
@@ -369,6 +385,65 @@ function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: st
   return { sectionKey, itemKey };
 }
 
+/**
+ * Names why the Course-bound GO axis cannot offer a catalog right now. The
+ * General Education case is a rule, not an empty state: those Courses have no
+ * owning Program and align to Institutional Outcomes (ADR 0005). The
+ * reason union is shared with the builder's GO catalog state below.
+ */
+type CourseGoCatalogReason =
+  | "general-education"
+  | "unselected-course"
+  | "unresolved-course"
+  | "empty-catalog"
+  | null;
+
+function courseGoCatalogNote(
+  reason: CourseGoCatalogReason,
+  isLoading: boolean,
+  selectedCourseContext: FacultyCourseContext | null
+): string | null {
+  if (isLoading) return "Loading Graduate Outcomes…";
+  if (reason === "general-education" || selectedCourseContext?.courseType === "GENERAL_EDUCATION") {
+    return "Graduate Outcome binding applies to program-specific courses.";
+  }
+  if (reason === "unselected-course") {
+    // A stale "no course" reason with a live selection means the catalog has
+    // not resolved for this flow; there is nothing to explain yet.
+    return selectedCourseContext ? null : "Bind a course to this template to assign GOs.";
+  }
+  if (reason === "unresolved-course") {
+    return "The selected course is no longer available; re-select it to load Graduate Outcomes.";
+  }
+  if (reason === "empty-catalog") {
+    return "This program has no active Graduate Outcomes yet, so there is nothing to assign.";
+  }
+  return null;
+}
+
+function CourseGoCatalogStatus({
+  selectedCourseContext,
+  programCatalog,
+}: {
+  selectedCourseContext: FacultyCourseContext | null;
+  programCatalog: {
+    reason: CourseGoCatalogReason;
+    isLoading: boolean;
+  };
+}) {
+  const note = courseGoCatalogNote(
+    programCatalog.reason,
+    programCatalog.isLoading,
+    selectedCourseContext
+  );
+  if (!note) return null;
+  return (
+    <p role="status" className="text-muted-foreground text-xs">
+      {note}
+    </p>
+  );
+}
+
 function formatCourseContextLabel(
   context: Pick<FacultyCourseContext, "courseCode" | "courseTitle" | "scopeLabel">
 ) {
@@ -403,6 +478,8 @@ function serializeBuilderDraft(draft: {
   boundMajorId: string;
   boundProgramId: string;
   ciloQuestionBindings: Record<string, string>;
+  /** Course-bound GO bindings, tracked only in faculty mode. */
+  courseGoBindings?: Record<string, string[]>;
   description: string;
   isActive: boolean;
   isFacultyAccessible: boolean;
@@ -413,6 +490,7 @@ function serializeBuilderDraft(draft: {
 }) {
   return JSON.stringify({
     ...draft,
+    courseGoBindings: draft.courseGoBindings ?? undefined,
     sections: normalizeTemplateStructure(draft.sections),
   });
 }
@@ -484,20 +562,6 @@ export function TemplateBuilder({
     }
     return map;
   });
-  /** Archived GOs bound to questions: rendered as removable archived chips. */
-  const archivedGoLookup = useMemo(() => {
-    const lookup = new Map<string, ProgramGoOption>();
-    const activeIds = new Set((goOptions ?? []).map((go) => go.id));
-    for (const binding of initialGoBindings ?? []) {
-      if (activeIds.has(binding.goId)) continue;
-      lookup.set(binding.goId, {
-        id: binding.goId,
-        code: binding.goCodeSnapshot ?? "Archived GO",
-        description: binding.goDescriptionSnapshot ?? "",
-      });
-    }
-    return lookup;
-  }, [initialGoBindings, goOptions]);
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -518,6 +582,48 @@ export function TemplateBuilder({
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
+  /**
+   * Course-bound GO bindings ask each Likert question for the Graduate
+   * Outcomes of the bound Course's owning Program. The catalog is loaded from
+   * the server whenever the bound Course context changes, exactly like the
+   * saved CILOs. The stored rows only seed the editor; the live catalog wins
+   * on every save.
+   */
+  const [courseGoBindings, setCourseGoBindings] = useState<Record<string, string[]>>(() => {
+    if (!facultyConfig) return {};
+    const map: Record<string, string[]> = {};
+    for (const binding of facultyConfig.initialGoBindings ?? initialGoBindings ?? []) {
+      const key = encodeBindingKey(binding.sectionKey, binding.itemKey);
+      if (!map[key]) map[key] = [];
+      if (!map[key].includes(binding.goId)) map[key].push(binding.goId);
+    }
+    return map;
+  });
+  const [courseGoOptions, setCourseGoOptions] = useState<ProgramGoOption[]>([]);
+  const [courseGoOptionsReason, setCourseGoOptionsReason] =
+    useState<CourseGoCatalogReason>("unselected-course");
+  const [isLoadingGoOptions, setIsLoadingGoOptions] = useState(false);
+  /** Archived GOs bound to questions: rendered as removable archived chips. */
+  const archivedGoLookup = useMemo(() => {
+    const lookup = new Map<string, ProgramGoOption>();
+    const seededBindings = [
+      ...(initialGoBindings ?? []),
+      ...(facultyConfig?.initialGoBindings ?? []),
+    ];
+    const activeIds = new Set([
+      ...(goOptions ?? []).map((go) => go.id),
+      ...courseGoOptions.map((go) => go.id),
+    ]);
+    for (const binding of seededBindings) {
+      if (activeIds.has(binding.goId)) continue;
+      lookup.set(binding.goId, {
+        id: binding.goId,
+        code: binding.goCodeSnapshot ?? "Archived GO",
+        description: binding.goDescriptionSnapshot ?? "",
+      });
+    }
+    return lookup;
+  }, [initialGoBindings, facultyConfig?.initialGoBindings, goOptions, courseGoOptions]);
   const currentDraftSnapshot = useMemo(
     () =>
       serializeBuilderDraft({
@@ -525,6 +631,7 @@ export function TemplateBuilder({
         boundMajorId,
         boundProgramId,
         ciloQuestionBindings,
+        courseGoBindings: facultyMode ? courseGoBindings : undefined,
         description,
         isActive,
         isFacultyAccessible,
@@ -538,8 +645,10 @@ export function TemplateBuilder({
       boundMajorId,
       boundProgramId,
       ciloQuestionBindings,
+      courseGoBindings,
       description,
       effectiveTemplateType,
+      facultyMode,
       isActive,
       isFacultyAccessible,
       name,
@@ -668,8 +777,32 @@ export function TemplateBuilder({
   const programGoOptions = goOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
+  const loadCourseGoOptionsAction = facultyConfig?.loadCourseGoOptionsAction;
   const selectedCourseContext =
     facultyCourseContexts.find((context) => context.courseId === boundCourseId) ?? null;
+  const selectedCourseType = selectedCourseContext?.courseType;
+  /** The Course-bound GO axis state and derived availability for rendering. */
+  const courseGoCatalog = useMemo(
+    () => ({
+      options: courseGoOptions,
+      reason: courseGoOptionsReason,
+      isLoading: isLoadingGoOptions,
+      available:
+        facultyMode &&
+        Boolean(boundCourseId) &&
+        selectedCourseType === "PROGRAM_SPECIFIC" &&
+        courseGoOptionsReason !== "general-education" &&
+        !isLoadingGoOptions,
+    }),
+    [
+      courseGoOptions,
+      courseGoOptionsReason,
+      isLoadingGoOptions,
+      facultyMode,
+      boundCourseId,
+      selectedCourseType,
+    ]
+  );
   const selectedCiloLabels = useMemo(() => {
     const labels = new Map<string, string>();
 
@@ -775,6 +908,94 @@ export function TemplateBuilder({
     facultyMode,
     facultyCourseContexts,
     loadManagedCilosAction,
+  ]);
+
+  // Mirrors the saved-CILO load above for the bound Course's Graduate Outcome
+  // catalog. The request intentionally carries only the Course context triple:
+  // the server resolves the owning Program from the Course record.
+  useEffect(() => {
+    if (!facultyMode) {
+      return;
+    }
+
+    if (!boundCourseId) {
+      queueMicrotask(() => {
+        setCourseGoOptions((current) => (current.length === 0 ? current : []));
+        setCourseGoOptionsReason("unselected-course");
+        setIsLoadingGoOptions(false);
+      });
+      return;
+    }
+
+    const context = facultyCourseContexts.find(
+      (candidate) =>
+        candidate.courseId === boundCourseId &&
+        candidate.programId === boundProgramId &&
+        candidate.majorId === (boundMajorId || null)
+    );
+
+    if (!context) {
+      queueMicrotask(() => {
+        setCourseGoOptions((current) => (current.length === 0 ? current : []));
+        setCourseGoOptionsReason("unresolved-course");
+        setIsLoadingGoOptions(false);
+      });
+      return;
+    }
+
+    if (!loadCourseGoOptionsAction) {
+      return;
+    }
+
+    let isStale = false;
+    queueMicrotask(() => setIsLoadingGoOptions(true));
+
+    loadCourseGoOptionsAction({
+      courseId: context.courseId,
+      majorId: context.majorId,
+      programId: context.programId,
+    })
+      .then((result) => {
+        if (isStale) {
+          return;
+        }
+
+        if (!result.success) {
+          setCourseGoOptions([]);
+          setCourseGoOptionsReason("unresolved-course");
+          showToast(result.error, "error");
+          return;
+        }
+
+        const { items, unavailableReason } = result.data;
+        setCourseGoOptions(items);
+        setCourseGoOptionsReason(
+          unavailableReason ?? (items.length === 0 ? "empty-catalog" : null)
+        );
+      })
+      .catch(() => {
+        if (!isStale) {
+          setCourseGoOptions([]);
+          setCourseGoOptionsReason("unresolved-course");
+          showToast("Unable to load Graduate Outcomes for this course.", "error");
+        }
+      })
+      .finally(() => {
+        if (!isStale) {
+          setIsLoadingGoOptions(false);
+        }
+      });
+
+    return () => {
+      isStale = true;
+    };
+  }, [
+    boundCourseId,
+    boundMajorId,
+    boundProgramId,
+    facultyMode,
+    facultyCourseContexts,
+    loadCourseGoOptionsAction,
   ]);
 
   // ─── Section Operations ──────────────────────────────────────────────
@@ -1109,6 +1330,10 @@ export function TemplateBuilder({
             })
         )
       );
+      formData.set(
+        "go_question_bindings",
+        JSON.stringify(collectGoBindings(normalizeTemplateStructure(sections), courseGoBindings))
+      );
     }
 
     return formData;
@@ -1117,6 +1342,7 @@ export function TemplateBuilder({
     boundMajorId,
     boundProgramId,
     ciloQuestionBindings,
+    courseGoBindings,
     description,
     effectiveTemplateType,
     facultyMode,
@@ -1495,7 +1721,11 @@ export function TemplateBuilder({
                   setBoundCourseId(next?.courseId ?? "");
                   setBoundProgramId(next?.programId ?? "");
                   setBoundMajorId(next?.majorId ?? "");
+                  // The catalog for both outcome axes belongs to the newly
+                  // selected Course, so bindings keyed to the previous Course
+                  // never carry over.
                   setCiloQuestionBindings({});
+                  setCourseGoBindings({});
                 }}
                 filter={(ctx: FacultyCourseContext, query: string) =>
                   !query ||
@@ -1553,6 +1783,10 @@ export function TemplateBuilder({
                     ? `${loadedCilos.length} saved CILO(s) available for binding.`
                     : "Select a course with saved CILOs before publishing."}
               </p>
+              <CourseGoCatalogStatus
+                selectedCourseContext={selectedCourseContext}
+                programCatalog={courseGoCatalog}
+              />
             </div>
           )}
         </CardContent>
@@ -1685,6 +1919,25 @@ export function TemplateBuilder({
                 goOptions={programGoOptions}
                 goQuestionBindings={goQuestionBindings}
                 programWideMode={programWideMode}
+                courseBoundGoBinding={
+                  facultyMode
+                    ? {
+                        options: courseGoCatalog.options,
+                        questionBindings: courseGoBindings,
+                        note: courseGoCatalogNote(
+                          courseGoCatalog.reason,
+                          courseGoCatalog.isLoading,
+                          selectedCourseContext
+                        ),
+                        available: courseGoCatalog.available,
+                        onBindingsChange: (questionKey, goIds) =>
+                          setCourseGoBindings((current) => ({
+                            ...current,
+                            [questionKey]: goIds,
+                          })),
+                      }
+                    : undefined
+                }
                 archivedGoLookup={archivedGoLookup}
                 onGoBindingsChange={(questionKey, goIds) =>
                   setGoQuestionBindings((current) => ({
@@ -1816,6 +2069,14 @@ interface SectionCardProps {
   goOptions: ProgramGoOption[];
   goQuestionBindings: Record<string, string[]>;
   programWideMode: boolean;
+  /** Course-bound GO catalog and per-question binding state for faculty mode. */
+  courseBoundGoBinding?: {
+    options: ProgramGoOption[];
+    questionBindings: Record<string, string[]>;
+    note: string | null;
+    available: boolean;
+    onBindingsChange: (questionKey: string, goIds: string[]) => void;
+  };
   archivedGoLookup: Map<string, ProgramGoOption>;
   section: TemplateSection;
   sectionIndex: number;
@@ -1856,6 +2117,7 @@ function SectionCard({
   goOptions,
   goQuestionBindings,
   programWideMode,
+  courseBoundGoBinding,
   archivedGoLookup,
   section,
   sectionIndex,
@@ -1973,13 +2235,23 @@ function SectionCard({
                 selectedCiloId={
                   ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
                 }
-                goOptions={goOptions}
+                goOptions={programWideMode ? goOptions : (courseBoundGoBinding?.options ?? [])}
                 selectedGoIds={
-                  goQuestionBindings[encodeBindingKey(section.key, question.key)] ?? []
+                  (programWideMode
+                    ? goQuestionBindings
+                    : (courseBoundGoBinding?.questionBindings ?? {}))[
+                    encodeBindingKey(section.key, question.key)
+                  ] ?? []
                 }
                 programWideMode={programWideMode}
+                courseBoundGoBindingAvailable={courseBoundGoBinding?.available ?? false}
+                courseBoundGoBindingNote={courseBoundGoBinding?.note ?? null}
                 archivedGoLookup={archivedGoLookup}
-                onGoBindingsChange={onGoBindingsChange}
+                onGoBindingsChange={(questionKey, goIds) =>
+                  programWideMode
+                    ? onGoBindingsChange(questionKey, goIds)
+                    : courseBoundGoBinding?.onBindingsChange?.(questionKey, goIds)
+                }
                 canRemove={section.questions.length > 1}
               />
             ))}
@@ -2028,6 +2300,10 @@ interface QuestionCardProps {
   goOptions: ProgramGoOption[];
   selectedGoIds: string[];
   programWideMode: boolean;
+  /** True when the Course-bound GO axis can offer a catalog for this question. */
+  courseBoundGoBindingAvailable: boolean;
+  /** Why the Course-bound GO axis is unavailable; rendered when set. */
+  courseBoundGoBindingNote: string | null;
   archivedGoLookup: Map<string, ProgramGoOption>;
   selectedCiloLabel?: string;
   selectedCiloId: string;
@@ -2055,6 +2331,8 @@ function QuestionCard({
   goOptions,
   selectedGoIds,
   programWideMode,
+  courseBoundGoBindingAvailable,
+  courseBoundGoBindingNote,
   archivedGoLookup,
   selectedCiloLabel,
   selectedCiloId,
@@ -2143,6 +2421,7 @@ function QuestionCard({
               </Label>
               <Select
                 value={selectedCiloId || "none"}
+                disabled={selectedGoIds.length > 0 && !selectedCiloId}
                 onValueChange={(value) => {
                   const ciloId = !value || value === "none" ? "" : value;
 
@@ -2191,8 +2470,59 @@ function QuestionCard({
                   })}
                 </SelectContent>
               </Select>
+              {selectedGoIds.length > 0 && !selectedCiloId && (
+                <p role="status" className="text-muted-foreground text-xs">
+                  This question is bound to Graduate Outcomes. Clear the GO binding to assign a
+                  CILO.
+                </p>
+              )}
             </div>
           )}
+
+          {/* Course-bound GO axis: one question may cover several Graduate
+            Outcomes of the bound Course's owning Program. The control is
+            unavailable until a program-specific Course is bound; when the
+            catalog itself cannot be offered, a note names the reason. */}
+          {facultyMode && question.type === "likert" && courseBoundGoBindingAvailable && (
+            <div className="space-y-2">
+              <span id={`go-binding-label-${question.key}`} className="text-sm font-medium">
+                GO Binding
+              </span>
+              <GoMultiSelect
+                options={goOptions}
+                selectedIds={selectedGoIds}
+                questionKey={question.key}
+                labelId={`go-binding-label-${question.key}`}
+                archivedGoLookup={archivedGoLookup}
+                disabled={Boolean(selectedCiloId)}
+                onChange={(goIds) =>
+                  onGoBindingsChange(encodeBindingKey(sectionKey, question.key), goIds)
+                }
+              />
+              {selectedCiloId ? (
+                <p role="status" className="text-muted-foreground text-xs">
+                  This question is bound to a CILO and reaches Graduate Outcomes through the CILO
+                  mapping. Clear the CILO binding to assign Graduate Outcomes directly.
+                </p>
+              ) : (
+                selectedGoIds.length === 0 && (
+                  <p role="status" className="text-muted-foreground text-xs">
+                    No GO assigned yet. This Likert question publishes as a general evaluation item
+                    and gives no direct GO evidence.
+                  </p>
+                )
+              )}
+            </div>
+          )}
+          {facultyMode &&
+            question.type === "likert" &&
+            !courseBoundGoBindingAvailable &&
+            courseBoundGoBindingNote && (
+              <p role="status" className="text-muted-foreground text-xs">
+                {courseBoundGoBindingNote}
+              </p>
+            )}
+
           {programWideMode && (
             <div className="space-y-2">
               <span id={`go-binding-label-${question.key}`} className="text-sm font-medium">
@@ -2384,13 +2714,15 @@ interface GoMultiSelectProps {
   labelId: string;
   archivedGoLookup: Map<string, ProgramGoOption>;
   onChange: (goIds: string[]) => void;
+  disabled?: boolean;
 }
 
 /**
- * Likert question GO multi-select for Program-wide templates. Desktop shows a
- * searchable popover; mobile shows a bottom drawer surface. Selection is
- * keyboard-accessible (real checkboxes), chips are individually removable,
- * and a Clear action empties the selection.
+ * Likert question GO multi-select. Desktop shows a searchable popover; mobile
+ * shows a bottom drawer surface. Selection is keyboard-accessible (real
+ * checkboxes), chips are individually removable, and a Clear action empties
+ * the selection. `disabled` gates the picker trigger when the question is
+ * CILO-bound; chips stay removable so a stale GO binding can still be cleared.
  */
 function GoMultiSelect({
   options,
@@ -2399,6 +2731,7 @@ function GoMultiSelect({
   labelId,
   archivedGoLookup,
   onChange,
+  disabled = false,
 }: GoMultiSelectProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [query, setQuery] = useState("");
@@ -2448,6 +2781,7 @@ function GoMultiSelect({
       id={`go-binding-${questionKey}`}
       type="button"
       variant="outline"
+      disabled={disabled}
       className="border-input w-full justify-between text-left font-normal"
       aria-labelledby={labelId}
       aria-controls={listboxId}

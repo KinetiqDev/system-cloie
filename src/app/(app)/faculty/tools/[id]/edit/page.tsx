@@ -29,6 +29,7 @@ export default async function FacultyEditTemplatePage({ params }: FacultyEditTem
         programLabel={seed.programLabel}
         initialData={{ ...seed.initialData, id: seed.template.id }}
         initialBindings={seed.initialBindings}
+        initialGoBindings={seed.initialGoBindings}
         saveSuccessConfig={{
           toastMessage: "Instrument template saved.",
         }}

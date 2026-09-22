@@ -38,5 +38,5 @@ Associates a Likert question with a course CILO — at most one CILO per questio
 _Avoid_: CILO mapping, outcome link
 
 **GO question binding**:
-Associates a Likert question in a PROGRAM_WIDE template with an active GO from the program's catalog; one question may carry several GOs. Drafts may be partial, and publication does not require full Likert coverage: a Likert question with no binding publishes as a general evaluation item and produces no GO evidence. Publication rejects bindings that no longer match the template structure and bindings whose GO is archived or outside the program, and it snapshots the bound GO code, description, and question prompt.
-_Avoid_: GO mapping, outcome link
+Associates a Likert question with an active GO. A PROGRAM_WIDE template uses its owning Program catalog; a COURSE_BOUND faculty template uses the bound Program-specific Course's owning Program catalog and rejects General Education Courses. One question may carry several GOs. A Course-bound question with a CILO binding cannot carry GO bindings: CILO-bound ratings already reach GOs through the CILO-to-GO mappings. Drafts may be partial, and publication does not require full Likert coverage: an unbound Likert question publishes as a general evaluation item and produces no direct GO evidence. Publication rejects bindings that no longer match the template structure and bindings whose GO is archived or outside the authoritative Program, then snapshots the GO code, description, and question prompt.
+_Avoid_: GO mapping, client-selected Program catalog, outcome link

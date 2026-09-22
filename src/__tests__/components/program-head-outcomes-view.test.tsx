@@ -36,6 +36,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         ],
         contributors: [
           {
+            kind: "CILO",
             ciloId: "cilo-1",
             ciloCode: "CILO 1",
             ciloDescription: "Achieve the outcome",
@@ -45,6 +46,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
             ratingCount: 2,
           },
           {
+            kind: "CILO",
             ciloId: "cilo-2",
             ciloCode: "CILO 1",
             ciloDescription: "Analyze evidence",
@@ -100,6 +102,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         contributingCourses: [{ id: "course-3", code: "MATH 101", title: "Math 101" }],
         contributors: [
           {
+            kind: "CILO",
             ciloId: "cilo-3",
             ciloCode: "CILO 2",
             ciloDescription: "Evaluate claims",
@@ -200,11 +203,12 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO({ manyToManyDisclosure: false }));
     expect(screen.queryByText("Multiple Graduate Outcome mapping")).not.toBeInTheDocument();
   });
-  it("exposes a CILO contributor matrix with course, manifestation, mean, and valid count", () => {
+
+  it("exposes an outcome contributor matrix with provenance, mean, and valid count", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("CILO contributor matrix")).toBeInTheDocument();
-    expect(screen.getAllByText("Manifestation")[0]).toBeInTheDocument();
+    expect(screen.getByText("Outcome contributor matrix")).toBeInTheDocument();
+    expect(screen.getAllByText("Binding")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Valid Ratings")[0]).toBeInTheDocument();
     expect(screen.getByText("Achieve the outcome")).toBeInTheDocument();
     expect(screen.getByText("Analyze evidence")).toBeInTheDocument();

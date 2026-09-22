@@ -35,8 +35,7 @@ function mergeCatalogRows(
         responseCount: 0,
         evaluationCount: 0,
         contributorCount: 0,
-        contributorKind:
-          sourceKey === "COURSE_STUDENT" ? ("cilos" as const) : ("questions" as const),
+        contributorKind: "questions" as const,
         spansMultipleScales: false,
         scaleMax: null,
         hasEvidence: false,
@@ -223,7 +222,7 @@ export function ProgramHeadGoSummary({
         )}
         <p className="text-muted-foreground text-label-sm mt-2">
           {sourceKey === "COURSE_STUDENT"
-            ? "Only quantitative answers bound to a CILO flow through CILO-to-GO mappings into course-derived GO means."
+            ? "Course-bound GO means use published direct question bindings and current CILO-to-GO mappings."
             : "Directly bound questions on published deployments feed this source's GO means."}
         </p>
       </CardContent>

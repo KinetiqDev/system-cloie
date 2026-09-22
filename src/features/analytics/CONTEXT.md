@@ -106,8 +106,8 @@ _Avoid_: Raw comment text on the dashboard
 ## Outcome evidence
 
 **Program GO evidence**:
-Course-bound quantitative evidence connected through a published evaluation's CILO question binding to a CILO and that CILO's GO mapping in the selected Program. Central instrument questions and Institutional Outcome evidence are not Program GO evidence.
-_Avoid_: Universal outcome attainment, ILO-to-GO evidence
+Course-bound quantitative evidence connected either through a frozen direct question-to-GO publication binding or through a published evaluation's CILO question binding and that CILO's current GO mapping in the selected Program. Each submitted response item contributes once per `(response, evaluation, question, GO)`, even when both paths name the same GO. Institutional Outcome evidence is not Program GO evidence.
+_Avoid_: Universal outcome attainment, duplicate direct-plus-CILO contribution, ILO-to-GO evidence
 
 **Current-mapping interpretation**:
 The grouping of historical Course-bound ratings by the selected Program's current CILO-to-GO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.

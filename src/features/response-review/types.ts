@@ -41,6 +41,8 @@ export type SubmittedAnswerBinding =
       ciloLabel: string;
       /** Selected Program's current CILO→GO mappings, with manifestation. */
       goMappings: CiloGoMapping[];
+      /** Frozen direct GO bindings carried by this same course question. */
+      directGoBindings: ProgramWideGoBinding[];
     }
   | { type: "GO"; goBindings: ProgramWideGoBinding[] }
   | { type: "GENERAL" };

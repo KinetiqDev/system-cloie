@@ -50,6 +50,7 @@ model CourseBoundEvaluation {
   assignments            EvaluationAssignment[]           @relation("CourseBoundAssignments")
   targets                CourseBoundEvaluationTarget[]
   cilo_question_bindings CourseBoundCiloQuestionBinding[]
+  go_question_bindings   CourseBoundGoQuestionBinding[]
   exclusions             CourseBoundEvaluationExclusion[]
 
   @@unique([id, course_assignment_id], map: "course_bound_evaluations_id_assignment_key")
@@ -77,6 +78,27 @@ model CourseBoundCiloQuestionBinding {
   @@unique([course_bound_evaluation_id, cilo_id, section_key, item_key], map: "course_bound_cilo_question_bindings_eval_cilo_key")
   @@unique([course_bound_evaluation_id, section_key, item_key], map: "course_bound_cilo_question_bindings_eval_question_key")
   @@map("course_bound_cilo_question_bindings")
+}
+
+model CourseBoundGoQuestionBinding {
+  id                       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  course_bound_evaluation_id String  @db.Uuid
+  go_id                    String?  @map("plo_id") @db.Uuid
+  go_code_snapshot         String   @map("plo_code_snapshot")
+  go_description_snapshot  String   @map("plo_description_snapshot")
+  section_key              String
+  item_key                 String
+  question_prompt_snapshot String
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+
+  course_bound_evaluation CourseBoundEvaluation @relation(fields: [course_bound_evaluation_id], references: [id], onDelete: Cascade)
+  go                      GO?                 @relation(fields: [go_id], references: [id], onDelete: SetNull)
+
+  // One question may cover several GOs and one GO may span several questions,
+  // so uniqueness is the full (evaluation, GO, question) pair.
+  @@unique([course_bound_evaluation_id, go_id, section_key, item_key], map: "cbgqb_evaluation_plo_question_key")
+  @@map("course_bound_plo_question_bindings")
 }
 
 model CourseBoundEvaluationTarget {

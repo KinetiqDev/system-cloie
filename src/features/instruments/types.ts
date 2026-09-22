@@ -36,8 +36,10 @@ export type TemplateCiloQuestionBinding = {
 };
 
 /**
- * An active Graduate Outcome offered to a Program-wide template editor.
- * The list is server-prepared in canonical GO order.
+ * An active Graduate Outcome offered to a template editor: the Program-wide
+ * editor gets the template Program's catalog, and a Course-bound editor gets
+ * the bound Course's owning Program catalog. The list is server-prepared in
+ * canonical GO order.
  */
 export type ProgramGoOption = {
   id: string;
@@ -46,9 +48,9 @@ export type ProgramGoOption = {
 };
 
 /**
- * A draft Program-wide question–GO binding. Serialized as
- * `program_question_go_bindings` in template FormData and persisted by the
- * Program Head template services.
+ * A draft question–GO binding. A Program-wide template serializes its bindings
+ * as `program_question_go_bindings` and a Course-bound template as
+ * `go_question_bindings` in template FormData; both persist here.
  */
 export type TemplateGoQuestionBinding = {
   goId: string;

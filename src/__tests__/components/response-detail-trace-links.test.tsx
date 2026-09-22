@@ -136,6 +136,7 @@ describe("ResponseDetail reverse trace links", () => {
                     manifestation: "LEARNING",
                   },
                 ],
+                directGoBindings: [],
               },
             },
           ],

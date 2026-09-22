@@ -31,6 +31,7 @@ export type OutcomeItemRatingRow = {
   cilo: { id: string; label: string; description: string } | null;
   evaluationId?: string;
   goMappings: CiloGoMapping[];
+  directGoMappings?: CiloGoMapping[];
 };
 
 /** A rating contributes only when its value belongs to the item's frozen scale. */
@@ -50,7 +51,8 @@ type CiloAggregate = {
 
 function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow): void {
   aggregate.ratings.push({ rating: toRating(row), scale: row.scale });
-  const questionKey = `${row.sectionKey}::${row.itemKey}`;
+  // Question identity is a structural tuple, never a separator join.
+  const questionKey = JSON.stringify([row.sectionKey, row.itemKey]);
   if (!aggregate.questions.has(questionKey)) {
     aggregate.questions.set(questionKey, {
       sectionKey: row.sectionKey,
@@ -199,7 +201,8 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
   const byQuestion = new Map<string, QuestionAggregate>();
 
   for (const row of rows) {
-    const questionKey = `${row.sectionKey}::${row.itemKey}`;
+    // Question identity is a structural tuple, never a separator join.
+    const questionKey = JSON.stringify([row.sectionKey, row.itemKey]);
     let aggregate = byQuestion.get(questionKey);
     if (!aggregate) {
       aggregate = { row, entries: [] };
@@ -213,8 +216,17 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
   return [...byQuestion.values()]
     .map(({ row, entries }) => {
       const binding: QuestionBinding = row.cilo
-        ? { type: "CILO", ciloId: row.cilo.id, ciloLabel: row.cilo.label }
-        : { type: "GENERAL" };
+        ? {
+            type: "CILO",
+            ciloId: row.cilo.id,
+            ciloLabel: row.cilo.label,
+            ...(row.directGoMappings && row.directGoMappings.length > 0
+              ? { directGoMappings: row.directGoMappings }
+              : {}),
+          }
+        : row.directGoMappings && row.directGoMappings.length > 0
+          ? { type: "GO", goMappings: row.directGoMappings }
+          : { type: "GENERAL" };
       const scaleGroups = groupRatingsByScale(entries).map((group) => group.metric);
       scaleGroups.sort((left, right) =>
         (left.scale?.key ?? "").localeCompare(right.scale?.key ?? "")

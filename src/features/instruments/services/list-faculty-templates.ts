@@ -32,6 +32,14 @@ export type FacultyTemplateItem = {
     questionPromptSnapshot: string;
     sectionKey: string;
   }>;
+  templateGoQuestionBindings: Array<{
+    goId: string | null;
+    goCodeSnapshot: string;
+    goDescriptionSnapshot: string;
+    itemKey: string;
+    questionPromptSnapshot: string;
+    sectionKey: string;
+  }>;
   versionCount: number;
 };
 
@@ -96,6 +104,7 @@ export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult
       bound_course: { select: { code: true, title: true } },
       program: { select: { code: true, name: true } },
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
       _count: { select: { versions: true } },
     },
     orderBy: { updated_at: "desc" },
@@ -121,6 +130,14 @@ export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult
     templateCiloQuestionBindings: t.template_cilo_question_bindings.map((binding) => ({
       ciloDescriptionSnapshot: binding.cilo_description_snapshot,
       ciloId: binding.cilo_id,
+      itemKey: binding.item_key,
+      questionPromptSnapshot: binding.question_prompt_snapshot,
+      sectionKey: binding.section_key,
+    })),
+    templateGoQuestionBindings: t.template_go_question_bindings.map((binding) => ({
+      goCodeSnapshot: binding.go_code_snapshot,
+      goDescriptionSnapshot: binding.go_description_snapshot,
+      goId: binding.go_id,
       itemKey: binding.item_key,
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,
@@ -179,6 +196,7 @@ export async function getFacultyTemplate(
       source_template_id: true,
       program: { select: { id: true, code: true, name: true } },
       template_cilo_question_bindings: true,
+      template_go_question_bindings: true,
     },
   });
 
@@ -206,6 +224,14 @@ export async function getFacultyTemplate(
     templateCiloQuestionBindings: template.template_cilo_question_bindings.map((binding) => ({
       ciloDescriptionSnapshot: binding.cilo_description_snapshot,
       ciloId: binding.cilo_id,
+      itemKey: binding.item_key,
+      questionPromptSnapshot: binding.question_prompt_snapshot,
+      sectionKey: binding.section_key,
+    })),
+    templateGoQuestionBindings: template.template_go_question_bindings.map((binding) => ({
+      goCodeSnapshot: binding.go_code_snapshot,
+      goDescriptionSnapshot: binding.go_description_snapshot,
+      goId: binding.go_id,
       itemKey: binding.item_key,
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,

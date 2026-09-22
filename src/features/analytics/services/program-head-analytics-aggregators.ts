@@ -3,6 +3,10 @@ import {
   resolveSnapshotItemScale,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
+import {
+  encodeContributionKey,
+  encodeDirectContributorKey,
+} from "../aggregators/question-identity";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -288,7 +292,8 @@ export type OutcomeEvidenceRow = {
   itemKey: string;
   /** Frozen structure snapshot of the instrument version that produced the rating. */
   instrumentVersion: { id: string; structureSnapshot: unknown } | null;
-  /** Binding subject; null when the bound CILO was deleted (no mapping possible). */
+  course: { id: string; code: string; title: string } | null;
+  /** CILO provenance for current CILO-to-GO mappings, when present. */
   cilo: {
     id: string;
     code: string;
@@ -302,8 +307,38 @@ export type OutcomeEvidenceRow = {
     name: string;
     manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
   }>;
+  /** Frozen direct question-to-GO bindings published with the evaluation. */
+  directGoBindings: Array<{
+    goId: string;
+    code: string;
+    name: string;
+    questionPrompt: string;
+  }>;
   evaluationId: string;
   deploymentName: string;
+};
+
+type CiloContributorAggregate = {
+  kind: "CILO";
+  ciloId: string;
+  ciloCode: string;
+  ciloDescription: string;
+  course: { id: string; code: string; title: string } | null;
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
+  ratingSum: number;
+  ratingCount: number;
+};
+
+type DirectGoContributorAggregate = {
+  kind: "DIRECT_GO";
+  evaluationId: string;
+  deploymentName: string;
+  sectionKey: string;
+  itemKey: string;
+  questionPrompt: string;
+  course: { id: string; code: string; title: string } | null;
+  ratingSum: number;
+  ratingCount: number;
 };
 
 /** Accumulated evidence behind one Graduate Outcome row. */
@@ -317,18 +352,7 @@ type OutcomeEvidenceAggregate = {
   cilos: Map<string, string>;
   courses: Map<string, { code: string; title: string }>;
   evaluations: Map<string, string>;
-  /** CILO id -> valid-rating-only contribution behind this GO row. */
-  contributors: Map<
-    string,
-    {
-      ciloCode: string;
-      ciloDescription: string;
-      course: { id: string; code: string; title: string } | null;
-      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      ratingSum: number;
-      ratingCount: number;
-    }
-  >;
+  contributors: Map<string, CiloContributorAggregate | DirectGoContributorAggregate>;
   /** scaleKey (sorted descriptor JSON) -> per-category counts */
   distributions: Map<string, { descriptors: ScaleDescriptor[]; counts: Map<number, number> }>;
   excludedRatingCount: number;
@@ -341,9 +365,13 @@ type OutcomeEvidenceAggregation = {
   hasMultiMappedCilo: boolean;
 };
 
+type OutcomeGoBinding =
+  | OutcomeEvidenceRow["goMappings"][number]
+  | OutcomeEvidenceRow["directGoBindings"][number];
+
 function getOrCreateOutcomeAggregate(
   outcomes: Map<string, OutcomeEvidenceAggregate>,
-  mapping: OutcomeEvidenceRow["goMappings"][number]
+  mapping: OutcomeGoBinding
 ): OutcomeEvidenceAggregate {
   let aggregate = outcomes.get(mapping.goId);
   if (!aggregate) {
@@ -378,33 +406,48 @@ function ratingIsValid(descriptors: ScaleDescriptor[] | null, value: number): bo
   return descriptors !== null && descriptors.some((descriptor) => descriptor.value === value);
 }
 
-function accumulateOutcomeRow(
+function accumulateOutcomeValue(
   aggregate: OutcomeEvidenceAggregate,
   row: OutcomeEvidenceRow,
-  cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
-  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null,
   descriptors: ScaleDescriptor[] | null,
   isValidRating: boolean
-): void {
-  aggregate.cilos.set(cilo.id, cilo.description);
-  if (cilo.course) {
-    aggregate.courses.set(cilo.course.id, {
-      code: cilo.course.code,
-      title: cilo.course.title,
-    });
+): boolean {
+  if (row.course) {
+    aggregate.courses.set(row.course.id, { code: row.course.code, title: row.course.title });
   }
   aggregate.evaluations.set(row.evaluationId, row.deploymentName);
-
   if (!isValidRating) {
     aggregate.excludedRatingCount += 1;
-    return;
+    return false;
   }
   aggregate.ratingSum += row.ratingValue;
   aggregate.ratingCount += 1;
   aggregate.responseIds.add(row.responseId);
-  let contributor = aggregate.contributors.get(cilo.id);
+  if (descriptors) {
+    const scaleKey = JSON.stringify(descriptors);
+    let distribution = aggregate.distributions.get(scaleKey);
+    if (!distribution) {
+      distribution = { descriptors, counts: new Map() };
+      aggregate.distributions.set(scaleKey, distribution);
+    }
+    distribution.counts.set(row.ratingValue, (distribution.counts.get(row.ratingValue) ?? 0) + 1);
+  }
+  return true;
+}
+
+function accumulateCiloContributor(
+  aggregate: OutcomeEvidenceAggregate,
+  row: OutcomeEvidenceRow,
+  cilo: NonNullable<OutcomeEvidenceRow["cilo"]>,
+  manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null
+): void {
+  aggregate.cilos.set(cilo.id, cilo.description);
+  const key = `cilo:${cilo.id}`;
+  let contributor = aggregate.contributors.get(key) as CiloContributorAggregate | undefined;
   if (!contributor) {
     contributor = {
+      kind: "CILO",
+      ciloId: cilo.id,
       ciloCode: cilo.code,
       ciloDescription: cilo.description,
       course: cilo.course,
@@ -412,57 +455,115 @@ function accumulateOutcomeRow(
       ratingSum: 0,
       ratingCount: 0,
     };
-    aggregate.contributors.set(cilo.id, contributor);
+    aggregate.contributors.set(key, contributor);
   }
   contributor.ratingSum += row.ratingValue;
   contributor.ratingCount += 1;
+}
 
-  if (!descriptors) {
-    return;
+function accumulateDirectContributor(
+  aggregate: OutcomeEvidenceAggregate,
+  row: OutcomeEvidenceRow,
+  binding: OutcomeEvidenceRow["directGoBindings"][number]
+): void {
+  const key = encodeDirectContributorKey(row.evaluationId, row.sectionKey, row.itemKey);
+  let contributor = aggregate.contributors.get(key) as DirectGoContributorAggregate | undefined;
+  if (!contributor) {
+    contributor = {
+      kind: "DIRECT_GO",
+      evaluationId: row.evaluationId,
+      deploymentName: row.deploymentName,
+      sectionKey: row.sectionKey,
+      itemKey: row.itemKey,
+      questionPrompt: binding.questionPrompt,
+      course: row.course,
+      ratingSum: 0,
+      ratingCount: 0,
+    };
+    aggregate.contributors.set(key, contributor);
   }
-  const scaleKey = JSON.stringify(descriptors);
-  let distribution = aggregate.distributions.get(scaleKey);
-  if (!distribution) {
-    distribution = { descriptors, counts: new Map() };
-    aggregate.distributions.set(scaleKey, distribution);
-  }
-  distribution.counts.set(row.ratingValue, (distribution.counts.get(row.ratingValue) ?? 0) + 1);
+  contributor.ratingSum += row.ratingValue;
+  contributor.ratingCount += 1;
 }
 
 /**
- * Aggregate course-bound ratings into Program GO rows. Each rating contributes
- * once to every mapped GO (many-to-many). Ratings are valid only when their
- * value belongs to the applicable item's frozen snapshot scale; unresolvable
- * or out-of-scale ratings are excluded from the valid aggregate and counted
- * diagnostically. Central items and unmapped CILOs never create rows because
- * the caller supplies only course-bound rows with canonical mappings.
+ * Aggregate course-bound ratings into Program GO rows through current CILO
+ * mappings and frozen direct question bindings. One response item contributes
+ * once per GO even when both paths name the same GO.
  */
+/** Accumulate one rating row's CILO-derived contributions. */
+function accumulateCiloRowContributions(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow,
+  descriptors: ScaleDescriptor[] | null,
+  isValidRating: boolean
+): void {
+  if (!row.cilo) return;
+  for (const mapping of row.goMappings) {
+    const contributionKey = encodeContributionKey(
+      row.responseId,
+      row.evaluationId,
+      row.sectionKey,
+      row.itemKey,
+      mapping.goId
+    );
+    if (seenContributions.has(contributionKey)) continue;
+    seenContributions.add(contributionKey);
+    const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
+    if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+      accumulateCiloContributor(aggregate, row, row.cilo, mapping.manifestation);
+    }
+  }
+}
+
+/** Accumulate one rating row's frozen direct-question contributions. */
+function accumulateDirectRowContributions(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow,
+  descriptors: ScaleDescriptor[] | null,
+  isValidRating: boolean
+): void {
+  for (const binding of row.directGoBindings) {
+    const contributionKey = encodeContributionKey(
+      row.responseId,
+      row.evaluationId,
+      row.sectionKey,
+      row.itemKey,
+      binding.goId
+    );
+    if (seenContributions.has(contributionKey)) continue;
+    seenContributions.add(contributionKey);
+    const aggregate = getOrCreateOutcomeAggregate(outcomes, binding);
+    if (accumulateOutcomeValue(aggregate, row, descriptors, isValidRating)) {
+      accumulateDirectContributor(aggregate, row, binding);
+    }
+  }
+}
+
+/** Accumulate one outcome rating row across both CILO and direct GO paths. */
+function accumulateOutcomeEvidenceRow(
+  outcomes: Map<string, OutcomeEvidenceAggregate>,
+  seenContributions: Set<string>,
+  row: OutcomeEvidenceRow
+): void {
+  const descriptors = resolveRatingScale(row);
+  const isValidRating = ratingIsValid(descriptors, row.ratingValue);
+  accumulateCiloRowContributions(outcomes, seenContributions, row, descriptors, isValidRating);
+  accumulateDirectRowContributions(outcomes, seenContributions, row, descriptors, isValidRating);
+}
+
 export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvidenceAggregation {
   const outcomes = new Map<string, OutcomeEvidenceAggregate>();
+  const seenContributions = new Set<string>();
   let hasMultiMappedCilo = false;
 
   for (const row of rows) {
-    if (!row.cilo || row.goMappings.length === 0) {
-      continue;
-    }
-    if (row.goMappings.length > 1) {
+    if (row.cilo && row.goMappings.length > 1) {
       hasMultiMappedCilo = true;
     }
-
-    const descriptors = resolveRatingScale(row);
-    const isValidRating = ratingIsValid(descriptors, row.ratingValue);
-
-    for (const mapping of row.goMappings) {
-      const aggregate = getOrCreateOutcomeAggregate(outcomes, mapping);
-      accumulateOutcomeRow(
-        aggregate,
-        row,
-        row.cilo,
-        mapping.manifestation,
-        descriptors,
-        isValidRating
-      );
-    }
+    accumulateOutcomeEvidenceRow(outcomes, seenContributions, row);
   }
 
   return { outcomes, hasMultiMappedCilo };
@@ -474,6 +575,69 @@ export function aggregateOutcomeEvidence(rows: OutcomeEvidenceRow[]): OutcomeEvi
  * ordering. Distribution percentages are computed at full precision and
  * rounded only for display.
  */
+/** Project one accumulated contributor into its DTO shape. */
+function contributorDtoFor(
+  contributor: CiloContributorAggregate | DirectGoContributorAggregate
+): ProgramHeadOutcomeDTO["contributors"][number] {
+  const meanRating = contributor.ratingSum / contributor.ratingCount;
+  const ratingCount = contributor.ratingCount;
+  return contributor.kind === "CILO"
+    ? {
+        kind: "CILO" as const,
+        ciloId: contributor.ciloId,
+        ciloCode: contributor.ciloCode,
+        ciloDescription: contributor.ciloDescription,
+        course: contributor.course,
+        manifestation: contributor.manifestation,
+        meanRating,
+        ratingCount,
+      }
+    : {
+        kind: "DIRECT_GO" as const,
+        evaluationId: contributor.evaluationId,
+        deploymentName: contributor.deploymentName,
+        sectionKey: contributor.sectionKey,
+        itemKey: contributor.itemKey,
+        questionPrompt: contributor.questionPrompt,
+        course: contributor.course,
+        meanRating,
+        ratingCount,
+      };
+}
+
+/** Rank contributors: course, then kind, then stable identity. */
+function compareContributorDtos(
+  left: ProgramHeadOutcomeDTO["contributors"][number],
+  right: ProgramHeadOutcomeDTO["contributors"][number]
+): number {
+  const courseOrder = (left.course?.code ?? "").localeCompare(right.course?.code ?? "");
+  if (courseOrder !== 0) return courseOrder;
+  if (left.kind !== right.kind) return left.kind.localeCompare(right.kind);
+  return compareSameKindContributors(left, right);
+}
+
+function compareSameKindContributors(
+  left: ProgramHeadOutcomeDTO["contributors"][number],
+  right: ProgramHeadOutcomeDTO["contributors"][number]
+): number {
+  if (left.kind === "CILO" && right.kind === "CILO") {
+    return left.ciloCode.localeCompare(right.ciloCode) || left.ciloId.localeCompare(right.ciloId);
+  }
+  if (left.kind === "DIRECT_GO" && right.kind === "DIRECT_GO") {
+    return (
+      left.deploymentName.localeCompare(right.deploymentName) ||
+      left.itemKey.localeCompare(right.itemKey)
+    );
+  }
+  return 0;
+}
+
+function contributorDtosFor(
+  aggregate: OutcomeEvidenceAggregate
+): ProgramHeadOutcomeDTO["contributors"] {
+  return [...aggregate.contributors.values()].map(contributorDtoFor).sort(compareContributorDtos);
+}
+
 export function buildProgramHeadOutcomeDtos(
   aggregation: OutcomeEvidenceAggregation
 ): ProgramHeadOutcomeDTO[] {
@@ -511,22 +675,7 @@ export function buildProgramHeadOutcomeDtos(
       contributingCourses: [...aggregate.courses.entries()]
         .map(([id, course]) => ({ id, code: course.code, title: course.title }))
         .sort((left, right) => left.code.localeCompare(right.code)),
-      contributors: [...aggregate.contributors.entries()]
-        .map(([ciloId, contributor]) => ({
-          ciloId,
-          ciloCode: contributor.ciloCode,
-          ciloDescription: contributor.ciloDescription,
-          course: contributor.course,
-          manifestation: contributor.manifestation,
-          meanRating: contributor.ratingSum / contributor.ratingCount,
-          ratingCount: contributor.ratingCount,
-        }))
-        .sort(
-          (left, right) =>
-            (left.course?.code ?? "").localeCompare(right.course?.code ?? "") ||
-            left.ciloCode.localeCompare(right.ciloCode) ||
-            left.ciloId.localeCompare(right.ciloId)
-        ),
+      contributors: contributorDtosFor(aggregate),
       evidenceEvaluations: [...aggregate.evaluations.entries()]
         .map(([evaluationId, deploymentName]) => ({ evaluationId, deploymentName }))
         .sort((left, right) => left.deploymentName.localeCompare(right.deploymentName)),
