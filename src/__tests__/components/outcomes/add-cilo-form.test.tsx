@@ -182,11 +182,54 @@ describe("AddCiloForm", () => {
     expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue(
       "CS101 — Intro to Computing"
     );
-    const mapLink = screen.getAllByRole("link", { name: /Map CILOs to GOs/ });
-    expect(mapLink.length).toBeGreaterThan(0);
-    for (const link of mapLink) {
-      expect(link).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
-    }
+    const mapLink = screen.getByRole("link", { name: /Continue to map CILOs/ });
+    expect(mapLink).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
+  });
+
+  it("keeps exactly one mapping action on screen after a save", async () => {
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText("CILO Description"), {
+      target: { value: "Design instruction" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await selectCourse("CS101");
+    await screen.findByText("Existing CILOs (0)");
+
+    // Before saving, the course row carries the only mapping action.
+    expect(screen.getAllByRole("link", { name: /Map CILOs to GOs/ })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
+    await screen.findByRole("region", { name: /next step.*map/i });
+
+    // After saving, the post-save panel carries it and the row drops its copy.
+    const mappingActions = [
+      ...screen.queryAllByRole("link", { name: /Map CILOs to GOs/ }),
+      ...screen.queryAllByRole("link", { name: /Continue to map CILOs/ }),
+    ];
+    expect(mappingActions).toHaveLength(1);
+    expect(mappingActions[0]).toHaveAttribute("href", "/faculty/cilos/course-1/alignment");
+  });
+
+  it("offers a retry when existing CILOs fail to load", async () => {
+    loadCilosActionMock
+      .mockResolvedValueOnce({ success: false, error: "Could not load existing CILOs." })
+      .mockResolvedValueOnce({
+        success: true,
+        cilos: [{ id: "cilo-1", description: "Apply core computing concepts" }],
+      });
+    renderForm();
+
+    await selectCourse("CS101");
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Could not load existing CILOs.");
+    expect(screen.getByRole("button", { name: "Save CILOs" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry loading CILOs" }));
+
+    expect(await screen.findByDisplayValue("Apply core computing concepts")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save CILOs" })).not.toBeDisabled();
   });
   it("frames the post-save panel as a mandatory map next step", async () => {
     renderForm();
@@ -200,7 +243,7 @@ describe("AddCiloForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
 
     const nextStep = await screen.findByRole("region", { name: /next step.*map/i });
-    expect(nextStep).toHaveTextContent(/map.*before.*publish/i);
+    expect(nextStep).toHaveTextContent(/publishing stays blocked until every CILO is mapped/i);
     expect(screen.getByRole("link", { name: /continue to map CILOs/i })).toHaveAttribute(
       "href",
       "/faculty/cilos/course-1/alignment"

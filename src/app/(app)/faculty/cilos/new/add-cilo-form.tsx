@@ -305,20 +305,17 @@ export function AddCiloForm({
                 <CheckCircle2 aria-hidden="true" />
                 <AlertTitle>Next step: map your CILOs</AlertTitle>
                 <AlertDescription>
-                  <span className="flex flex-col gap-2">
-                    <span>{successMessage}</span>
-                    <span>
-                      Map new CILOs before publishing — evaluations stay blocked until every CILO is
-                      mapped.
+                  <span className="flex flex-col items-start gap-3">
+                    <span className="flex flex-col gap-1">
+                      <span>{successMessage}</span>
+                      <span>Publishing stays blocked until every CILO is mapped.</span>
                     </span>
-                    <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <MapCilosButton
-                        course={selectedCourse}
-                        variant="default"
-                        returnTo={returnTo}
-                        linkName="Continue to map CILOs"
-                      />
-                    </span>
+                    <MapCilosButton
+                      course={selectedCourse}
+                      variant="default"
+                      returnTo={returnTo}
+                      linkName="Continue to map CILOs"
+                    />
                   </span>
                 </AlertDescription>
               </Alert>
@@ -418,7 +415,9 @@ export function AddCiloForm({
                     {countOnFile(selectedCourse) === 1 ? "" : "s"} on file
                   </p>
                 </div>
-                <MapCilosButton course={selectedCourse} returnTo={returnTo} />
+                {/* The post-save panel owns the mapping action once it is on
+                  screen, so the row keeps a single CTA per moment. */}
+                {!successMessage && <MapCilosButton course={selectedCourse} returnTo={returnTo} />}
               </div>
             )}
           </FieldGroup>
@@ -434,7 +433,22 @@ export function AddCiloForm({
                   Loading existing CILOs...
                 </p>
               ) : existingCilosError ? (
-                <p className="text-muted-foreground text-sm">{existingCilosError}</p>
+                <div
+                  role="alert"
+                  className="border-danger/40 bg-danger-soft flex flex-col items-start gap-2 rounded-lg border p-3"
+                >
+                  <p className="text-sm">{existingCilosError}</p>
+                  <p className="text-caption">
+                    Editing stays locked until these CILOs load, so a save cannot drop them.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectedCourse && loadExistingCilos(selectedCourse.id)}
+                  >
+                    Retry loading CILOs
+                  </Button>
+                </div>
               ) : existingCilos.length === 0 ? (
                 <p className="text-muted-foreground border-border rounded-lg border border-dashed py-4 text-center text-sm">
                   No CILOs on file for this course yet.
