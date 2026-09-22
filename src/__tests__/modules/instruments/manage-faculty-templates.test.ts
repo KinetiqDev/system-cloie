@@ -248,29 +248,23 @@ describe("manage-faculty-templates structure persistence", () => {
     const result = await saveFacultyTemplateDraft({
       ...draftInput(),
       go_question_bindings: [
-        { goId: "go-1", itemKey: "question-b", sectionKey: "section-b" },
         { goId: "go-1", itemKey: "question-a", sectionKey: "section-a" },
       ],
     });
 
     expect(result).toEqual({ success: true, data: { id: TEMPLATE_ID } });
     // One GO may span several questions, and the snapshot comes from the live
-    // GO, not from the client payload.
+    // GO, not from the client payload. question-a carries no CILO, so the
+    // exclusivity gate passes; question-b stays CILO-bound.
     expect(goBindingCreateManyMock).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
           go_id: "go-1",
           go_code_snapshot: "GO1",
           go_description_snapshot: "Collaborates",
-          section_key: "section-b",
-          item_key: "question-b",
-          question_prompt_snapshot: "Question B",
-          template_id: TEMPLATE_ID,
-        }),
-        expect.objectContaining({
-          go_id: "go-1",
           section_key: "section-a",
           item_key: "question-a",
+          question_prompt_snapshot: "Question A",
           template_id: TEMPLATE_ID,
         }),
       ],
@@ -309,6 +303,24 @@ describe("manage-faculty-templates structure persistence", () => {
     expect(result).toEqual({
       success: false,
       error: "One or more selected Graduate Outcomes are not available to this course.",
+    });
+    expect(goBindingCreateManyMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a Course-bound GO on a question that already carries a CILO", async () => {
+    goFindManyMock.mockResolvedValue([{ id: "go-1", code: "GO1", description: "Collaborates" }]);
+
+    const result = await saveFacultyTemplateDraft({
+      ...draftInput(),
+      go_question_bindings: [
+        { goId: "go-1", itemKey: "question-b", sectionKey: "section-b" },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
     });
     expect(goBindingCreateManyMock).not.toHaveBeenCalled();
     expect(transactionMock).not.toHaveBeenCalled();

@@ -254,12 +254,15 @@ async function validateDraftBindings(input: {
  *
  * Coverage is not required. A Likert question without a GO binding saves and
  * publishes as a general evaluation item, mirroring the Program-wide rule.
+ * A question with a CILO binding cannot carry GO bindings: CILO-bound ratings
+ * already reach GOs through the CILO-to-GO mappings.
  */
 export async function validateCourseBoundGoBindings(input: {
   bindings: SaveFacultyTemplateDraftInput["go_question_bindings"];
   boundCourseId?: string | null;
   structure: TemplateStructure;
   db?: PublicationContextDb;
+  ciloBindings?: Array<{ sectionKey: string; itemKey: string }>;
 }): Promise<
   { success: true; bindings: FacultyTemplateGoBindingItem[] } | { success: false; error: string }
 > {
@@ -314,12 +317,18 @@ export async function validateCourseBoundGoBindings(input: {
     select: { code: true, description: true, id: true },
   });
   const goMap = new Map(gos.map((go) => [go.id, go]));
+  const ciloQuestionKeys = new Set(
+    (input.ciloBindings ?? []).map((binding) =>
+      encodeQuestionKey(binding.sectionKey, binding.itemKey)
+    )
+  );
   const usedPairs = new Set<string>();
   const normalized: FacultyTemplateGoBindingItem[] = [];
 
   for (const binding of input.bindings) {
+    const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
     const go = goMap.get(binding.goId);
-    const question = questionMap.get(encodeQuestionKey(binding.sectionKey, binding.itemKey));
+    const question = questionMap.get(questionKey);
 
     if (!go) {
       return {
@@ -334,6 +343,14 @@ export async function validateCourseBoundGoBindings(input: {
         error: "Graduate Outcomes can only be assigned to Likert questions.",
       };
     }
+
+    if (ciloQuestionKeys.has(questionKey)) {
+      return {
+        success: false,
+        error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
+      };
+    }
+
 
     const pairKey = encodeGoBindingKey(binding.goId, binding.sectionKey, binding.itemKey);
     if (usedPairs.has(pairKey)) {
@@ -586,6 +603,7 @@ export async function saveFacultyTemplateDraft(
     bindings: input.go_question_bindings,
     boundCourseId: input.bound_course_id,
     structure,
+    ciloBindings: bindingValidation.bindings,
   });
 
   if (!goBindingValidation.success) {
@@ -914,6 +932,7 @@ export async function getFacultyTemplatePublicationContext(
     boundCourseId: template.bound_course_id,
     structure,
     db,
+    ciloBindings: bindingValidation.bindings,
   });
 
   if (!goBindingValidation.success) {

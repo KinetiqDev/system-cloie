@@ -249,6 +249,7 @@ export async function getOnBehalfTemplatePublicationContext(
     boundCourseId: template.bound_course_id,
     structure,
     db,
+    ciloBindings: validatedBindings,
   });
 
   if (!goBindingValidation.success) {

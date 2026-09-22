@@ -358,18 +358,51 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
 
   it("returns direct GO bindings frozen from the live GO catalog", async () => {
     mocks.template.findFirst.mockResolvedValue({
-      ...template(),
-      template_go_question_bindings: [
-        {
-          id: "g1",
-          go_id: GO_ID,
-          go_code_snapshot: "STALE",
-          go_description_snapshot: "Stale description",
-          section_key: "cilo-items",
-          item_key: "cilo-attainment-1",
-          question_prompt_snapshot: "Stale prompt",
-        },
-      ],
+      ...template({
+        structure: [
+          {
+            key: "cilo-items",
+            title: "Course Intended Learning Outcomes Evaluation",
+            description: "Bind each saved CILO to one Likert item.",
+            order: 1,
+            questions: [
+              {
+                key: "cilo-attainment-1",
+                prompt: "I achieved the first course intended learning outcome.",
+                type: "likert",
+                order: 1,
+                required: true,
+                likertDescriptors: [
+                  { value: 1, label: "Not Achieved" },
+                  { value: 5, label: "Fully Achieved" },
+                ],
+              },
+              {
+                key: "go-attainment-1",
+                prompt: "I demonstrate the program graduate outcome.",
+                type: "likert",
+                order: 2,
+                required: true,
+                likertDescriptors: [
+                  { value: 1, label: "Not Achieved" },
+                  { value: 5, label: "Fully Achieved" },
+                ],
+              },
+            ],
+          },
+        ],
+        template_go_question_bindings: [
+          {
+            id: "g1",
+            go_id: GO_ID,
+            go_code_snapshot: "STALE",
+            go_description_snapshot: "Stale description",
+            section_key: "cilo-items",
+            item_key: "go-attainment-1",
+            question_prompt_snapshot: "Stale prompt",
+          },
+        ],
+      }),
     });
     mocks.go.findMany.mockResolvedValue([
       { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
@@ -380,13 +413,14 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
     expect(result.success).toBe(true);
     if (result.success) {
       // Snapshot labels come from the live GO at publication, never the stored draft row.
+      // The GO question carries no CILO, so the exclusivity gate passes.
       expect(result.data.goBindings).toEqual([
         {
           goId: GO_ID,
           goCodeSnapshot: "GO1",
           goDescriptionSnapshot: "Communicates solutions effectively.",
-          itemKey: "cilo-attainment-1",
-          questionPromptSnapshot: "I achieved the first course intended learning outcome.",
+          itemKey: "go-attainment-1",
+          questionPromptSnapshot: "I demonstrate the program graduate outcome.",
           sectionKey: "cilo-items",
         },
       ]);
@@ -420,6 +454,33 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
     expect(result).toEqual({
       success: false,
       error: "One or more selected Graduate Outcomes are not available to this course.",
+    });
+  });
+
+  it("rejects publication when a GO binding shares a question with a CILO binding", async () => {
+    mocks.template.findFirst.mockResolvedValue({
+      ...template(),
+      template_go_question_bindings: [
+        {
+          id: "g1",
+          go_id: GO_ID,
+          go_code_snapshot: "GO1",
+          go_description_snapshot: "Communicates solutions effectively.",
+          section_key: "cilo-items",
+          item_key: "cilo-attainment-1",
+          question_prompt_snapshot: "Question prompt",
+        },
+      ],
+    });
+    mocks.go.findMany.mockResolvedValue([
+      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
     });
   });
 

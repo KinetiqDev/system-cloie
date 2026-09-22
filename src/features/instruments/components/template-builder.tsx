@@ -2421,6 +2421,7 @@ function QuestionCard({
               </Label>
               <Select
                 value={selectedCiloId || "none"}
+                disabled={selectedGoIds.length > 0 && !selectedCiloId}
                 onValueChange={(value) => {
                   const ciloId = !value || value === "none" ? "" : value;
 
@@ -2469,6 +2470,12 @@ function QuestionCard({
                   })}
                 </SelectContent>
               </Select>
+              {selectedGoIds.length > 0 && !selectedCiloId && (
+                <p role="status" className="text-muted-foreground text-xs">
+                  This question is bound to Graduate Outcomes. Clear the GO binding to assign a
+                  CILO.
+                </p>
+              )}
             </div>
           )}
 
@@ -2487,15 +2494,23 @@ function QuestionCard({
                 questionKey={question.key}
                 labelId={`go-binding-label-${question.key}`}
                 archivedGoLookup={archivedGoLookup}
+                disabled={Boolean(selectedCiloId)}
                 onChange={(goIds) =>
                   onGoBindingsChange(encodeBindingKey(sectionKey, question.key), goIds)
                 }
               />
-              {selectedGoIds.length === 0 && (
+              {selectedCiloId ? (
                 <p role="status" className="text-muted-foreground text-xs">
-                  No GO assigned yet. This Likert question publishes as a general evaluation item
-                  and gives no direct GO evidence.
+                  This question is bound to a CILO and reaches Graduate Outcomes through the CILO
+                  mapping. Clear the CILO binding to assign Graduate Outcomes directly.
                 </p>
+              ) : (
+                selectedGoIds.length === 0 && (
+                  <p role="status" className="text-muted-foreground text-xs">
+                    No GO assigned yet. This Likert question publishes as a general evaluation item
+                    and gives no direct GO evidence.
+                  </p>
+                )
               )}
             </div>
           )}
@@ -2699,13 +2714,15 @@ interface GoMultiSelectProps {
   labelId: string;
   archivedGoLookup: Map<string, ProgramGoOption>;
   onChange: (goIds: string[]) => void;
+  disabled?: boolean;
 }
 
 /**
- * Likert question GO multi-select for Program-wide templates. Desktop shows a
- * searchable popover; mobile shows a bottom drawer surface. Selection is
- * keyboard-accessible (real checkboxes), chips are individually removable,
- * and a Clear action empties the selection.
+ * Likert question GO multi-select. Desktop shows a searchable popover; mobile
+ * shows a bottom drawer surface. Selection is keyboard-accessible (real
+ * checkboxes), chips are individually removable, and a Clear action empties
+ * the selection. `disabled` gates the picker trigger when the question is
+ * CILO-bound; chips stay removable so a stale GO binding can still be cleared.
  */
 function GoMultiSelect({
   options,
@@ -2714,6 +2731,7 @@ function GoMultiSelect({
   labelId,
   archivedGoLookup,
   onChange,
+  disabled = false,
 }: GoMultiSelectProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [query, setQuery] = useState("");
@@ -2763,6 +2781,7 @@ function GoMultiSelect({
       id={`go-binding-${questionKey}`}
       type="button"
       variant="outline"
+      disabled={disabled}
       className="border-input w-full justify-between text-left font-normal"
       aria-labelledby={labelId}
       aria-controls={listboxId}
