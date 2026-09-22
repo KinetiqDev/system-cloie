@@ -305,19 +305,24 @@ export function AddCiloForm({
                 <CheckCircle2 aria-hidden="true" />
                 <AlertTitle>Next step: map your CILOs</AlertTitle>
                 <AlertDescription>
-                  <span className="flex flex-col items-start gap-3">
-                    <span className="flex flex-col gap-1">
-                      <span>{successMessage}</span>
-                      <span>Publishing stays blocked until every CILO is mapped.</span>
-                    </span>
-                    <MapCilosButton
-                      course={selectedCourse}
-                      variant="default"
-                      returnTo={returnTo}
-                      linkName="Continue to map CILOs"
-                    />
+                  <span className="flex flex-col gap-1">
+                    <span>{successMessage}</span>
+                    <span>Publishing stays blocked until every CILO is mapped.</span>
                   </span>
                 </AlertDescription>
+                {/* A direct Alert child keeps the action out of the icon gutter:
+                  the description column is inset by the glyph, which left the
+                  button off-center on narrow screens. Full-bleed on mobile so
+                  it centers in the panel; column 2 above `sm` so it stays
+                  aligned with the copy it follows. */}
+                <div className="col-span-full pt-1 sm:col-span-1 sm:col-start-2 [&_a]:no-underline [&_a:hover]:no-underline">
+                  <MapCilosButton
+                    course={selectedCourse}
+                    variant="default"
+                    returnTo={returnTo}
+                    linkName="Continue to map CILOs"
+                  />
+                </div>
               </Alert>
             </div>
           )}

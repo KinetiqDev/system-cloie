@@ -272,11 +272,14 @@ function ViewEditCilosModal({
       )}
       {successMessage && (
         <Alert variant="success" role="status">
-          <AlertDescription className="flex flex-col items-start gap-2">
+          <AlertDescription className="flex flex-col gap-1">
             <span>{successMessage}</span>
-            <span>
-              Map new CILOs before publishing — evaluations stay blocked until every CILO is mapped.
-            </span>
+            <span>Publishing stays blocked until every CILO is mapped.</span>
+          </AlertDescription>
+          {/* Direct Alert child: the description column applies an anchor
+            underline meant for inline links, which a button-styled link must
+            not inherit. */}
+          <div className="pt-1 [&_a]:no-underline [&_a:hover]:no-underline">
             <Button
               variant="default"
               size="sm"
@@ -285,7 +288,7 @@ function ViewEditCilosModal({
             >
               Continue to map CILOs
             </Button>
-          </AlertDescription>
+          </div>
         </Alert>
       )}
       {needsReconcile && !isLoading && (

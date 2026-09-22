@@ -385,13 +385,15 @@ export function PublishCourseBoundEvaluationFormV2({
       {unboundCiloCount > 0 && (
         <div role="region" aria-label="CILO readiness">
           <Alert variant="warning">
-            <AlertDescription className="flex flex-col items-start gap-2">
-              <span>
-                {unboundCiloCount} of {selectedPublicationContext.cilos.length}{" "}
-                {selectedPublicationContext.cilos.length === 1 ? "CILO" : "CILOs"} unbound.
-                Publishing stays blocked until every CILO has a Likert question.
-              </span>
-              {!isOnBehalf && (
+            <AlertDescription>
+              {unboundCiloCount} of {selectedPublicationContext.cilos.length}{" "}
+              {selectedPublicationContext.cilos.length === 1 ? "CILO" : "CILOs"} unbound. Publishing
+              stays blocked until every CILO has a Likert question.
+            </AlertDescription>
+            {/* Direct Alert child: no icon here, so the action sits in the
+              panel's own column and a button-styled link keeps no underline. */}
+            {!isOnBehalf && (
+              <div className="pt-1 [&_a]:no-underline [&_a:hover]:no-underline">
                 <Button
                   variant="outline"
                   size="sm"
@@ -402,8 +404,8 @@ export function PublishCourseBoundEvaluationFormV2({
                 >
                   Bind missing CILOs
                 </Button>
-              )}
-            </AlertDescription>
+              </div>
+            )}
           </Alert>
         </div>
       )}
