@@ -259,7 +259,6 @@ async function validateDraftBindings(input: {
  */
 type CourseBoundGoCatalog = {
   course: { course_scope: CourseScope; program_id: string };
-  db: PublicationContextDb;
 };
 
 async function resolveCourseBoundGoCatalog(
@@ -291,7 +290,7 @@ async function resolveCourseBoundGoCatalog(
 
   return {
     success: true,
-    data: { course: { course_scope: course.course_scope, program_id: course.program_id }, db },
+    data: { course: { course_scope: course.course_scope, program_id: course.program_id } },
   };
 }
 
