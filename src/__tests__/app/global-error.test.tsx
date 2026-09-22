@@ -20,9 +20,7 @@ describe("GlobalError", () => {
     );
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Critical Error" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Critical Error" })).toBeInTheDocument();
     expect(
       screen.getByText(
         /unexpected problem and this page could not finish loading\. Try again, or return home if the problem persists\./
