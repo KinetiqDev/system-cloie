@@ -645,7 +645,7 @@ function ReviewRow({
         {status}
       </div>
       <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
-        <span className="text-label-sm text-muted-foreground">System account</span>
+        <span className="text-body-sm text-muted-foreground">System account</span>
         <RowCandidateDisplay candidate={selectedCandidate} candidates={row.candidates} />
       </div>
       {controls}
@@ -754,7 +754,7 @@ function ReviewPreviewBlock({
           </div>
         ) : (
           <div className="flex min-w-0 flex-col gap-1.5 md:flex-row md:items-center md:justify-between">
-            <label htmlFor="roster-preview-filter" className="text-label-sm text-muted-foreground">
+            <label htmlFor="roster-preview-filter" className="text-body-sm text-muted-foreground">
               Show rows
             </label>
             <Select
