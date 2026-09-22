@@ -2,7 +2,7 @@
 title: Deployment and Handover Evidence
 kind: living-project-document
 status: living
-last_verified: 2026-09-04
+last_verified: 2026-09-22
 ---
 
 # Deployment and Handover Evidence
@@ -11,12 +11,12 @@ Skeleton adjacent to [Appendix F](../guide/appendix-f-requirements-traceability-
 
 ## Deployment evidence (existing, linked)
 
-| Item                                                                                                                                              | Evidence source                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dedicated demo deployment contract (operator runbook: scope/safety, auth modes, environment contract, provision/reset, rollback, evidence limits) | [docs/runbooks/dedicated-demo-deployment.md](../../runbooks/dedicated-demo-deployment.md); design decision in [docs/adr/0008-dedicated-demo-deployment-authentication.md](../../adr/0008-dedicated-demo-deployment-authentication.md) |
-| Deployment inventory (host, Coolify, Supabase, Cloudflare tunnel, secrets, backups, verification, outstanding operational readiness)              | [docs/operations/deployment-inventory.md](../../operations/deployment-inventory.md) (last verified 2026-08-31 in that file)                                                                                                           |
-| Deployment architecture (runtime topology, target-neutral backend contract)                                                                       | [docs/architecture/deployment.md](../../architecture/deployment.md); [docs/adr/0020-self-hosted-supabase-target-neutral-backends.md](../../adr/0020-self-hosted-supabase-target-neutral-backends.md)                                  |
-| Production build/auth boundary discipline for any accepted evidence                                                                               | [docs/testing/production-browser-evidence.md](../../testing/production-browser-evidence.md)                                                                                                                                           |
+| Item                                                                                                                                               | Evidence source                                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dedicated demo deployment contract (operator runbook: scope/safety, auth modes, environment contract, provision/reset, rollback, evidence limits)  | [docs/runbooks/dedicated-demo-deployment.md](../../runbooks/dedicated-demo-deployment.md); design decision in [docs/adr/0008-dedicated-demo-deployment-authentication.md](../../adr/0008-dedicated-demo-deployment-authentication.md) |
+| Deployment inventory (host, Coolify, Supabase, staging apps, Cloudflare tunnel, secrets, backups, verification, outstanding operational readiness) | [docs/operations/deployment-inventory.md](../../operations/deployment-inventory.md) (last verified 2026-09-22 in that file)                                                                                                           |
+| Deployment architecture (runtime topology, target-neutral backend contract)                                                                        | [docs/architecture/deployment.md](../../architecture/deployment.md); [docs/adr/0020-self-hosted-supabase-target-neutral-backends.md](../../adr/0020-self-hosted-supabase-target-neutral-backends.md)                                  |
+| Production build/auth boundary discipline for any accepted evidence                                                                                | [docs/testing/production-browser-evidence.md](../../testing/production-browser-evidence.md)                                                                                                                                           |
 
 ## Institutional turnover policy (official source, linked)
 

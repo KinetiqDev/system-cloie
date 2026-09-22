@@ -28,7 +28,7 @@ Per the [official guide, Chapter 3](../guide/technical-document-guide-2026.md): 
 ### Working notes (from repository evidence)
 
 - Requirements were resolved into domain terminology and invariants recorded per bounded context; the process output is [CONTEXT-MAP.md](../../../CONTEXT-MAP.md) and the `src/features/<domain>/CONTEXT.md` files it indexes
-- Durable architectural decisions with rationale: [docs/adr/](../../adr/) (21 ADRs; every entry records context, decision, considered options, consequences)
+- Durable architectural decisions with rationale: [docs/adr/](../../adr/) (31 ADR documents, numbers 0001–0030 with a duplicated 0001; every entry records context, decision, considered options, consequences)
 - Stakeholder decision log: [docs/capstone/evidence/stakeholder-decisions.md](../evidence/stakeholder-decisions.md)
 - Traceability practice: [docs/capstone/evidence/requirements-traceability.md](../evidence/requirements-traceability.md)
 

@@ -2,7 +2,7 @@
 title: System CLOIE Deployment
 kind: living-project-document
 status: living
-last_verified: 2026-09-11
+last_verified: 2026-09-22
 ---
 
 # Deployment
@@ -19,6 +19,8 @@ Primary production runs as two Coolify resources on the `home-lab` Ubuntu host b
 
 - **System CLOIE App** — Next.js standalone build (`Dockerfile`, Node 22, pnpm 10.30.3), internal port 3000, domain `https://system-cloie.app`, `CLOIE_DEPLOYMENT_KIND=production`, health endpoint `/api/health`.
 - **System CLOIE Supabase** — self-hosted Supabase stack (PostgreSQL 17, Supavisor pooler, Auth with Google provider), public API domain `https://api.system-cloie.app`.
+
+Staging apps (Dev, Preview) and the Supabase staging instance track their own branches and are recorded alongside production in the inventory's Staging section — they are not production targets.
 
 The full procedure — host layout, secrets, first deployment, redeployments, schema-change deployments, rollback, Supabase updates — is the runbook [`docs/deployment-coolify.md`](../deployment-coolify.md). Current observed resource UUIDs, versions, verification results, and outstanding operational-readiness items are recorded in [`docs/operations/deployment-inventory.md`](../operations/deployment-inventory.md) (note its `last_verified` date; the runbook defers to the executable repository when they disagree).
 
