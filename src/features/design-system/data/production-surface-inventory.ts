@@ -2849,6 +2849,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/instruments/components/faculty-template-workspace.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
     path: "src/features/instruments/components/faculty-course-gate.tsx",
     disposition: "task",
     taskId: 20,
