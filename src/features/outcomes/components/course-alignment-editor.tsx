@@ -1,12 +1,14 @@
 // fallow-ignore-file code-duplication
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ListChecks, RotateCcw, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { showToast } from "@/components/ui/toast";
 import {
   Empty,
   EmptyDescription,
@@ -16,14 +18,23 @@ import {
 } from "@/components/ui/empty";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  ResponsiveAlertDialog,
+  ResponsiveAlertDialogAction,
+  ResponsiveAlertDialogCancel,
+  ResponsiveAlertDialogContent,
+  ResponsiveAlertDialogDescription,
+  ResponsiveAlertDialogFooter,
+  ResponsiveAlertDialogHeader,
+  ResponsiveAlertDialogTitle,
+} from "@/components/ui/responsive-alert-dialog";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import type {
   CourseAlignmentReview,
   CourseAlignment,
@@ -35,18 +46,15 @@ import {
 import { manifestationLabel } from "@/features/outcomes/components/manifestation-picker";
 import type { CILOMappingManifestation } from "@prisma/client";
 
-declare global {
-  interface Window {
-    navigation?: {
-      currentEntry?: { index: number } | null;
-    };
-  }
-}
-
 type Props = {
   alignment: CourseAlignment;
   eyebrow?: string;
   emptyStateAction?: { href: string; label: string };
+  /**
+   * Where a committed mapping returns to. Defaults to the Faculty Manage CILOs
+   * list, the surface every faculty alignment entry point starts from.
+   */
+  returnHref?: string;
   prepareAction: (
     input: unknown
   ) => Promise<
@@ -60,14 +68,12 @@ type Props = {
   >;
 };
 
-const HISTORY_GUARD_KEY = "cloie-course-alignment-dirty-entry";
-
-function isHistoryGuardEntry(marker: string): boolean {
-  const state: unknown = window.history.state;
-  return (
-    typeof state === "object" && state !== null && Reflect.get(state, HISTORY_GUARD_KEY) === marker
-  );
-}
+/**
+ * Why the discard confirmation is open. The two intents share one overlay but
+ * not one outcome: `draft` stays on the editor, `leave` continues to `href`
+ * (or to the previous history entry when `href` is null).
+ */
+type DiscardIntent = { kind: "draft" } | { kind: "leave"; href: string | null };
 
 function indexAlignmentTargets(alignment: CourseAlignment) {
   return {
@@ -76,77 +82,6 @@ function indexAlignmentTargets(alignment: CourseAlignment) {
       [...alignment.targets, ...alignment.unavailableTargets].map((target) => [target.id, target])
     ),
   };
-}
-
-function currentHistoryEntryIndex(): number | undefined {
-  return window.navigation?.currentEntry?.index;
-}
-
-function useDirtyAlignmentNavigationGuard(isDirty: boolean) {
-  useEffect(() => {
-    if (!isDirty) return;
-
-    const confirmDiscard = (event: MouseEvent) => {
-      const link = (event.target as Element | null)?.closest("a[href]") as HTMLAnchorElement | null;
-      if (!link || event.defaultPrevented || event.button !== 0) return;
-
-      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
-        Boolean
-      );
-      if (hasModifier || link.target || link.origin !== window.location.origin) return;
-      if (window.confirm("Discard staged alignment changes?")) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = true;
-    };
-    const editorHistoryIndex = currentHistoryEntryIndex();
-    const editorHistoryState = window.history.state;
-    const historyMarker = `${Date.now()}-${Math.random()}`;
-    window.history.replaceState(
-      { ...editorHistoryState, [HISTORY_GUARD_KEY]: historyMarker },
-      "",
-      window.location.href
-    );
-
-    let revertingHistoryNavigation = false;
-    const confirmHistoryNavigation = () => {
-      if (revertingHistoryNavigation) {
-        if (!isHistoryGuardEntry(historyMarker)) {
-          window.history.go(1);
-          return;
-        }
-        revertingHistoryNavigation = false;
-        return;
-      }
-      if (window.confirm("Discard staged alignment changes?")) return;
-
-      const currentHistoryIndex = currentHistoryEntryIndex();
-      const stepsBackToEditor =
-        editorHistoryIndex === undefined || currentHistoryIndex === undefined
-          ? 1
-          : editorHistoryIndex - currentHistoryIndex;
-      if (stepsBackToEditor === 0) return;
-
-      revertingHistoryNavigation = true;
-      window.history.go(stepsBackToEditor);
-    };
-
-    window.addEventListener("popstate", confirmHistoryNavigation);
-    document.addEventListener("click", confirmDiscard, true);
-    window.addEventListener("beforeunload", warnBeforeUnload);
-    return () => {
-      document.removeEventListener("click", confirmDiscard, true);
-      window.removeEventListener("popstate", confirmHistoryNavigation);
-      window.removeEventListener("beforeunload", warnBeforeUnload);
-      if (isHistoryGuardEntry(historyMarker)) {
-        window.history.replaceState(editorHistoryState, "", window.location.href);
-      }
-    };
-  }, [isDirty]);
 }
 
 function cellsFromAlignment(
@@ -244,25 +179,30 @@ function AlignmentContent({
 type AlignmentDialogsProps = {
   alignment: CourseAlignment;
   review: CourseAlignmentReview | null;
-  discardConfirmation: boolean;
+  discardIntent: DiscardIntent | null;
   pending: boolean;
   onCloseReview: () => void;
   onCommitReview: () => void;
-  onDiscardConfirmationChange: (open: boolean) => void;
-  onDiscardDraft: () => void;
+  onCancelDiscard: () => void;
+  onConfirmDiscard: () => void;
 };
 
 function AlignmentDialogs({
   alignment,
   review,
-  discardConfirmation,
+  discardIntent,
   pending,
   onCloseReview,
   onCommitReview,
-  onDiscardConfirmationChange,
-  onDiscardDraft,
+  onCancelDiscard,
+  onConfirmDiscard,
 }: AlignmentDialogsProps) {
   const { activeTargetIds, targetById } = indexAlignmentTargets(alignment);
+  // The "Discard changes" button and a departure attempt reach differing
+  // consequences, so the confirmation names the one the user is about to enter.
+  const isDeparture = discardIntent?.kind === "leave";
+  const discardCancelLabel = isDeparture ? "Keep editing" : "Keep mapping";
+  const discardConfirmLabel = isDeparture ? "Discard and leave" : "Discard draft";
   return (
     <>
       <AlertDialog
@@ -303,21 +243,31 @@ function AlignmentDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={discardConfirmation} onOpenChange={onDiscardConfirmationChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard staged alignment changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The staged mapping changes have not been saved. Discarding them restores the last
-              saved Course alignment.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep mapping</AlertDialogCancel>
-            <AlertDialogAction onClick={onDiscardDraft}>Discard draft</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponsiveAlertDialog
+        open={discardIntent !== null}
+        onOpenChange={(open) => {
+          if (!open) onCancelDiscard();
+        }}
+      >
+        <ResponsiveAlertDialogContent desktopClassName="sm:max-w-md">
+          <ResponsiveAlertDialogHeader>
+            <ResponsiveAlertDialogTitle>
+              Discard staged alignment changes?
+            </ResponsiveAlertDialogTitle>
+            <ResponsiveAlertDialogDescription>
+              {discardIntent?.kind === "leave"
+                ? "The staged mapping changes have not been saved. Discarding them leaves this page and restores the last saved Course alignment."
+                : "The staged mapping changes have not been saved. Discarding them restores the last saved Course alignment."}
+            </ResponsiveAlertDialogDescription>
+          </ResponsiveAlertDialogHeader>
+          <ResponsiveAlertDialogFooter>
+            <ResponsiveAlertDialogCancel>{discardCancelLabel}</ResponsiveAlertDialogCancel>
+            <ResponsiveAlertDialogAction onClick={onConfirmDiscard}>
+              {discardConfirmLabel}
+            </ResponsiveAlertDialogAction>
+          </ResponsiveAlertDialogFooter>
+        </ResponsiveAlertDialogContent>
+      </ResponsiveAlertDialog>
     </>
   );
 }
@@ -431,19 +381,20 @@ export function CourseAlignmentEditor({
   alignment,
   eyebrow = "Faculty Course alignment",
   emptyStateAction = { href: "/faculty/cilos", label: "Manage CILOs" },
+  returnHref = "/faculty/cilos",
   prepareAction,
   commitAction,
 }: Props) {
+  const router = useRouter();
   const isProgramSpecific = alignment.course.scope === "PROGRAM_SPECIFIC";
   const { activeTargetIds } = indexAlignmentTargets(alignment);
   const initialCells = cellsFromAlignment(alignment, activeTargetIds);
   const [draft, setDraft] = useState(initialCells);
   const [savedCells, setSavedCells] = useState(initialCells);
   const [review, setReview] = useState<CourseAlignmentReview | null>(null);
-  const [discardConfirmation, setDiscardConfirmation] = useState(false);
+  const [discardIntent, setDiscardIntent] = useState<DiscardIntent | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [freshnessToken, setFreshnessToken] = useState(alignment.freshnessToken);
 
   const isDirty = alignment.cilos.some(
@@ -488,7 +439,6 @@ export function CourseAlignmentEditor({
       else cells[targetId] = manifestation;
       return { ...current, [ciloId]: cells };
     });
-    setSuccess(null);
   };
 
   const prepareReview = async () => {
@@ -533,7 +483,12 @@ export function CourseAlignmentEditor({
         setDraft(committedState);
         setSavedCells(committedState);
         setFreshnessToken(result.freshnessToken);
-        setSuccess(`${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`);
+        // The mapping is committed server-side, so this surface is done: report
+        // the outcome and hand the author back to the list they entered from.
+        const message = `${result.changed} mapping change${result.changed === 1 ? "" : "s"} saved.`;
+        showToast(message, "success");
+        router.push(returnHref);
+        return;
       } else {
         setError(result.error);
       }
@@ -547,15 +502,51 @@ export function CourseAlignmentEditor({
 
   const discardDraft = () => {
     setDraft(savedCells);
-    setDiscardConfirmation(false);
-    setSuccess(null);
+    setDiscardIntent(null);
     setError(null);
   };
 
-  useDirtyAlignmentNavigationGuard(isDirty);
+  // A departure the guard intercepted: the draft is still staged and the user
+  // has not agreed to lose it, so remember where they were going and ask.
+  const requestLeave = useCallback((href: string | null) => {
+    setDiscardIntent((current) => current ?? { kind: "leave", href });
+  }, []);
+
+  const { allowDeparture, hasHeldHistoryEntry } = useUnsavedChangesGuard({
+    isDirty,
+    onRequestLeave: requestLeave,
+  });
+
+  const leaveEditor = (href: string | null) => {
+    // The confirmed departure is the one navigation the guard must not re-ask
+    // about, including the router's own history entry for it.
+    allowDeparture();
+    setDiscardIntent(null);
+    if (href === null) {
+      window.history.go(hasHeldHistoryEntry() ? -2 : -1);
+      return;
+    }
+    router.push(href);
+  };
+
+  const confirmDiscard = () => {
+    const intent = discardIntent;
+    if (intent?.kind === "leave") {
+      setDraft(savedCells);
+      leaveEditor(intent.href);
+      return;
+    }
+    discardDraft();
+  };
+
+  const cancelDiscard = () => {
+    setDiscardIntent(null);
+  };
 
   return (
-    <div className="flex flex-col gap-6">
+    // The mobile action toolbar is fixed over the page, so the editor reserves
+    // its height (plus the safe area) to keep the last CILO row reachable.
+    <div className="flex flex-col gap-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-muted-foreground text-body-sm">{eyebrow}</p>
@@ -593,11 +584,6 @@ export function CourseAlignmentEditor({
           </AlertDescription>
         </Alert>
       )}
-      {success && (
-        <Alert variant="success" role="status">
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
       <AlignmentContent
         alignment={alignment}
         draft={draft}
@@ -613,11 +599,19 @@ export function CourseAlignmentEditor({
         </p>
       )}
 
-      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+      {/* On phones the CILO cards run far past the fold, so the two document
+          actions pin to the bottom edge as a toolbar. From `md` up the page
+          fits and they return to the flow, right-aligned under the matrix. */}
+      <div
+        role="toolbar"
+        aria-label="Alignment actions"
+        className="border-border bg-background fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2 border-t px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 md:static md:mx-0 md:flex md:grid-cols-none md:flex-row md:justify-end md:gap-3 md:border-t md:px-0 md:pt-4 md:pb-0"
+      >
         <Button
           type="button"
           variant="outline"
-          onClick={() => setDiscardConfirmation(true)}
+          className="w-full md:w-auto"
+          onClick={() => setDiscardIntent({ kind: "draft" })}
           disabled={!isDirty || editingLocked}
         >
           <RotateCcw data-icon="inline-start" />
@@ -625,6 +619,7 @@ export function CourseAlignmentEditor({
         </Button>
         <Button
           type="button"
+          className="w-full md:w-auto"
           onClick={prepareReview}
           disabled={!isDirty || editingLocked || alignment.cilos.length === 0}
         >
@@ -638,12 +633,12 @@ export function CourseAlignmentEditor({
       <AlignmentDialogs
         alignment={alignment}
         review={review}
-        discardConfirmation={discardConfirmation}
+        discardIntent={discardIntent}
         pending={pending}
         onCloseReview={() => setReview(null)}
         onCommitReview={commitReview}
-        onDiscardConfirmationChange={setDiscardConfirmation}
-        onDiscardDraft={discardDraft}
+        onCancelDiscard={cancelDiscard}
+        onConfirmDiscard={confirmDiscard}
       />
     </div>
   );

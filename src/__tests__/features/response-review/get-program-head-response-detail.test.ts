@@ -223,7 +223,14 @@ describe("getProgramHeadResponseDetail", () => {
     expect(quant).toBeDefined();
     if (quant?.kind === "quantitative") {
       expect(quant.rating).toBe(4);
-      expect(quant.scaleLabel).toBe("Mostly Achieved");
+      expect(quant.scale).toEqual([1, 2, 3, 4, 5]);
+      expect(quant.descriptorLabels).toEqual([
+        "Not Achieved",
+        "Slightly Achieved",
+        "Moderately Achieved",
+        "Mostly Achieved",
+        "Fully Achieved",
+      ]);
       expect(quant.binding.type).toBe("CILO");
       if (quant.binding.type === "CILO") {
         expect(quant.binding.ciloLabel).toBe("CILO 1");

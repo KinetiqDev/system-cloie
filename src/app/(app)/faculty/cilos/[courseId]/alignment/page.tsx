@@ -36,6 +36,7 @@ export default async function CourseAlignmentPage({
       </nav>
       <CourseAlignmentEditor
         alignment={result.data}
+        returnHref={backHref}
         prepareAction={prepareCourseAlignmentAction}
         commitAction={commitCourseAlignmentAction}
       />

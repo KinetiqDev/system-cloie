@@ -35,7 +35,8 @@ function responseDTO(
             itemKey: "q1",
             prompt: "Rate the outcome",
             rating: 5,
-            scaleLabel: null,
+            scale: [1, 2, 3, 4, 5],
+            descriptorLabels: [null, null, null, null, null],
             binding: {
               type: "GO",
               goBindings: [
@@ -123,7 +124,8 @@ describe("ResponseDetail reverse trace links", () => {
               itemKey: "q1",
               prompt: "Rate",
               rating: 4,
-              scaleLabel: null,
+              scale: [1, 2, 3, 4, 5],
+              descriptorLabels: [null, null, null, null, null],
               binding: {
                 type: "CILO",
                 ciloId: "cilo-1",

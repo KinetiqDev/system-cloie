@@ -154,7 +154,9 @@ export function PublishCourseBoundEvaluationFormV2({
   const fallbackPublishErrorMessage = "Unable to publish evaluation right now. Please try again.";
 
   // A CILO may be evidenced by several Likert questions, so the preview groups
-  // bindings by CILO and lists every bound question.
+  // bindings by CILO and lists every bound question. CILOs with no bound
+  // question block publishing server-side; the readiness banner below names
+  // them with a repair link instead of failing at publish time.
   const bindingsByCiloId = new Map<string, typeof selectedPublicationContext.bindings>();
   for (const binding of selectedPublicationContext.bindings) {
     const existing = bindingsByCiloId.get(binding.ciloId);
@@ -164,7 +166,9 @@ export function PublishCourseBoundEvaluationFormV2({
       bindingsByCiloId.set(binding.ciloId, [binding]);
     }
   }
-
+  const unboundCiloCount = selectedPublicationContext.cilos.filter(
+    (cilo) => !bindingsByCiloId.has(cilo.id)
+  ).length;
   // Build a lookup from sectionKey:itemKey → { sectionIndex, sectionTitle, questionIndex }
   const questionLocationMap = new Map<
     string,
@@ -378,6 +382,33 @@ export function PublishCourseBoundEvaluationFormV2({
           </AlertDescription>
         </Alert>
       )}
+      {unboundCiloCount > 0 && (
+        <div role="region" aria-label="CILO readiness">
+          <Alert variant="warning">
+            <AlertDescription>
+              {unboundCiloCount} of {selectedPublicationContext.cilos.length}{" "}
+              {selectedPublicationContext.cilos.length === 1 ? "CILO" : "CILOs"} unbound. Publishing
+              stays blocked until every CILO has a Likert question.
+            </AlertDescription>
+            {/* Direct Alert child: no icon here, so the action sits in the
+              panel's own column and a button-styled link keeps no underline. */}
+            {!isOnBehalf && (
+              <div className="pt-1 [&_a]:no-underline [&_a:hover]:no-underline">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={
+                    <Link href={`/faculty/tools/${selectedPublicationContext.template.id}/edit`} />
+                  }
+                  aria-label="Bind missing CILOs"
+                >
+                  Bind missing CILOs
+                </Button>
+              </div>
+            )}
+          </Alert>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
         <section
@@ -516,6 +547,15 @@ export function PublishCourseBoundEvaluationFormV2({
                     {selectedAssignment.yearLevel.replace("_", " ").toLowerCase()}
                     {selectedAssignment.section ? ` — ${selectedAssignment.section}` : ""}
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-1 w-fit"
+                    render={<Link href={`/course-rosters/${selectedAssignment.id}`} />}
+                    aria-label="Manage roster"
+                  >
+                    Manage roster
+                  </Button>
                 </CardContent>
               </Card>
             )}

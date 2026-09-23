@@ -69,6 +69,7 @@ describe("getCentralDeploymentSubmittedReview", () => {
                 itemKey: "q1",
                 kind: "quantitative",
                 prompt: "Program effectiveness",
+                scale: [],
               },
               {
                 answer: "Well structured.",

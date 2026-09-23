@@ -1,18 +1,29 @@
 import { notFound, redirect } from "next/navigation";
 
-import { FacultyTemplateBuilder } from "@/features/instruments/components/faculty-template-builder";
 import { loadFacultyTemplateBuilderSeed } from "@/features/instruments/components/faculty-template-data";
+import { FacultyTemplateWorkspace } from "@/features/instruments/components/faculty-template-workspace";
+import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import { buildPageTitle } from "@/lib/page-title";
 
 interface FacultyEditTemplatePageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ course?: string }>;
 }
 
 export const metadata = { title: buildPageTitle("Edit Tool", "Faculty") };
 
-export default async function FacultyEditTemplatePage({ params }: FacultyEditTemplatePageProps) {
-  const { id } = await params;
-  const seed = await loadFacultyTemplateBuilderSeed(id);
+export default async function FacultyEditTemplatePage({
+  params,
+  searchParams,
+}: FacultyEditTemplatePageProps) {
+  const [{ id }, requested] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve<{ course?: string }>({}),
+  ]);
+  const [seed, coursesResult] = await Promise.all([
+    loadFacultyTemplateBuilderSeed(id),
+    listFacultyCoursesWithCilos(),
+  ]);
 
   if (!seed) notFound();
 
@@ -23,17 +34,11 @@ export default async function FacultyEditTemplatePage({ params }: FacultyEditTem
   }
 
   return (
-    <div className="space-y-6">
-      <FacultyTemplateBuilder
-        courseContexts={seed.courseContexts}
-        programLabel={seed.programLabel}
-        initialData={{ ...seed.initialData, id: seed.template.id }}
-        initialBindings={seed.initialBindings}
-        initialGoBindings={seed.initialGoBindings}
-        saveSuccessConfig={{
-          toastMessage: "Instrument template saved.",
-        }}
-      />
-    </div>
+    <FacultyTemplateWorkspace
+      seed={seed}
+      coursesResult={coursesResult}
+      requestedCourseId={requested.course}
+      mode="edit"
+    />
   );
 }

@@ -232,6 +232,28 @@ describe("PublishedDeploymentsCollection", () => {
     expect(screen.getByRole("button", { name: "Expand Survey" })).toBeInTheDocument();
   });
 
+  test("keeps archived deployments out of All but reachable through the Archived chip", () => {
+    render(
+      <PublishedDeploymentsCollection
+        view="list"
+        items={[
+          makeItem({ id: "active-1", name: "Live Deployment", status: "ACTIVE" }),
+          makeItem({ id: "archived-1", name: "Archived Deployment", status: "ARCHIVED" }),
+        ]}
+        empty={<p>Empty</p>}
+        renderMenuItems={NOOP_MENU}
+      />
+    );
+
+    expect(screen.getByText("Live Deployment")).toBeInTheDocument();
+    expect(screen.queryByText("Archived Deployment")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+
+    expect(screen.getByText("Archived Deployment")).toBeInTheDocument();
+    expect(screen.queryByText("Live Deployment")).not.toBeInTheDocument();
+  });
+
   test("renders the empty state when there are no deployments", () => {
     render(
       <PublishedDeploymentsCollection

@@ -29,6 +29,7 @@ import {
   distinctCourseOptions,
   distinctPeriodOptions,
   filterPublishedEvaluations,
+  hasActivePublishedFilters,
 } from "./filter-published-evaluations";
 import { FacultyPublishedFilterBar } from "./faculty-published-filter-bar";
 import {
@@ -89,6 +90,7 @@ export function FacultyPublishedEvaluations({
   const periodOptions = useMemo(() => distinctPeriodOptions(localEvaluations), [localEvaluations]);
   const courseOptions = useMemo(() => distinctCourseOptions(localEvaluations), [localEvaluations]);
   const visibleEvaluations = useMemo(
+    // The lifecycle facet is collection-owned; this narrows by the other facets only.
     () => filterPublishedEvaluations(localEvaluations, filters),
     [localEvaluations, filters]
   );
@@ -211,11 +213,24 @@ export function FacultyPublishedEvaluations({
         statusFilter={filters.status}
         onStatusFilterChange={handleStatusChange}
         empty={
-          <div className="border-muted rounded-xl border-2 border-dashed py-16 text-center">
-            <p className="text-muted-foreground text-sm">
-              No published evaluations yet. Publish an evaluation from a template to get started.
-            </p>
-          </div>
+          hasActivePublishedFilters(filters) ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
+              <p className="text-muted-foreground text-sm">No evaluations match these filters.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS)}
+              >
+                Clear filters
+              </Button>
+            </div>
+          ) : (
+            <div className="border-muted rounded-xl border-2 border-dashed py-16 text-center">
+              <p className="text-muted-foreground text-sm">
+                No published evaluations yet. Publish an evaluation from a template to get started.
+              </p>
+            </div>
+          )
         }
         filteredEmpty={
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">

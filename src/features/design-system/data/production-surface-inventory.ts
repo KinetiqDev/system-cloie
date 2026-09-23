@@ -1979,6 +1979,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/responsive-alert-dialog.tsx",
+    disposition: "task",
+    taskId: 6,
+    category: "ui_primitive",
+  },
+  {
     path: "src/components/ui/responsive-dialog.tsx",
     disposition: "task",
     taskId: 6,
@@ -2843,6 +2849,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/instruments/components/faculty-template-workspace.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/instruments/components/faculty-course-gate.tsx",
+    disposition: "task",
+    taskId: 20,
+    category: "feature_component",
+  },
+  {
     path: "src/features/instruments/components/evaluation-tools-tabs.tsx",
     disposition: "task",
     taskId: 20,
@@ -3014,6 +3032,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/portals/components/session-banner.tsx",
     disposition: "task",
     taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/responses/components/likert-scale-replay.tsx",
+    disposition: "task",
+    taskId: 24,
     category: "feature_component",
   },
   {

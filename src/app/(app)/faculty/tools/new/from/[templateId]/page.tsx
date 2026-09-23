@@ -1,20 +1,29 @@
 import { notFound, redirect } from "next/navigation";
 
-import { FacultyTemplateBuilder } from "@/features/instruments/components/faculty-template-builder";
 import { loadFacultyTemplateBuilderSeed } from "@/features/instruments/components/faculty-template-data";
+import { FacultyTemplateWorkspace } from "@/features/instruments/components/faculty-template-workspace";
+import { listFacultyCoursesWithCilos } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("New Template", "Faculty") };
 
 interface FacultyNewFromTemplatePageProps {
   params: Promise<{ templateId: string }>;
+  searchParams?: Promise<{ course?: string }>;
 }
 
 export default async function FacultyNewFromTemplatePage({
   params,
+  searchParams,
 }: FacultyNewFromTemplatePageProps) {
-  const { templateId } = await params;
-  const seed = await loadFacultyTemplateBuilderSeed(templateId);
+  const [{ templateId }, requested] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve<{ course?: string }>({}),
+  ]);
+  const [seed, coursesResult] = await Promise.all([
+    loadFacultyTemplateBuilderSeed(templateId),
+    listFacultyCoursesWithCilos(),
+  ]);
 
   if (!seed) notFound();
 
@@ -24,22 +33,11 @@ export default async function FacultyNewFromTemplatePage({
   }
 
   return (
-    <div className="space-y-6">
-      <FacultyTemplateBuilder
-        courseContexts={seed.courseContexts}
-        programLabel={seed.programLabel}
-        startingFrom={{
-          id: seed.template.id,
-          name: seed.template.name,
-          origin: "shared-template",
-        }}
-        initialData={seed.initialData}
-        initialBindings={seed.initialBindings}
-        initialGoBindings={seed.initialGoBindings}
-        saveSuccessConfig={{
-          toastMessage: "Your template copy was saved.",
-        }}
-      />
-    </div>
+    <FacultyTemplateWorkspace
+      seed={seed}
+      coursesResult={coursesResult}
+      requestedCourseId={requested.course}
+      mode="copy"
+    />
   );
 }

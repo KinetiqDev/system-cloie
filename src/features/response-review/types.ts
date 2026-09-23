@@ -52,8 +52,10 @@ export type QuantitativeSubmittedAnswer = {
   itemKey: string;
   prompt: string;
   rating: number;
-  /** Label of the selected scale value; null when the snapshot has none. */
-  scaleLabel: string | null;
+  /** Full rating scale from the frozen snapshot, so the answer can be replayed. */
+  scale: number[];
+  /** Descriptor wording per scale value, aligned by index. */
+  descriptorLabels: (string | null)[];
   binding: SubmittedAnswerBinding;
 };
 

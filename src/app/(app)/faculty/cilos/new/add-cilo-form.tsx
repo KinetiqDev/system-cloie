@@ -7,7 +7,7 @@ import { BackLink } from "@/components/ui/back-link";
 
 import { cn } from "@/lib/utils";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -65,10 +65,12 @@ function MapCilosButton({
   course,
   variant = "outline",
   returnTo,
+  linkName,
 }: {
   course: FacultyCourseWithCiloCount;
   variant?: "outline" | "default";
   returnTo?: string;
+  linkName?: string;
 }) {
   const href = returnTo
     ? `/faculty/cilos/${course.id}/alignment?returnTo=${encodeURIComponent(returnTo)}`
@@ -77,9 +79,12 @@ function MapCilosButton({
   return (
     <Link
       href={href}
+      aria-label={
+        linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}`
+      }
       className={cn(buttonVariants({ variant, size: "sm", className: "max-sm:w-full" }))}
     >
-      Map CILOs to {course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}
+      {linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "GOs" : "ILOs"}`}
       <ArrowRight className="size-4" />
     </Link>
   );
@@ -295,15 +300,31 @@ export function AddCiloForm({
             </Alert>
           )}
           {successMessage && selectedCourse && (
-            <Alert variant="success">
-              <CheckCircle2 aria-hidden="true" />
-              <AlertDescription>
-                <span className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span>{successMessage}</span>
-                  <MapCilosButton course={selectedCourse} variant="default" returnTo={returnTo} />
-                </span>
-              </AlertDescription>
-            </Alert>
+            <div role="region" aria-label="Next step: map CILOs">
+              <Alert variant="success">
+                <CheckCircle2 aria-hidden="true" />
+                <AlertTitle>Next step: map your CILOs</AlertTitle>
+                <AlertDescription>
+                  <span className="flex flex-col gap-1">
+                    <span>{successMessage}</span>
+                    <span>Publishing stays blocked until every CILO is mapped.</span>
+                  </span>
+                </AlertDescription>
+                {/* A direct Alert child keeps the action out of the icon gutter:
+                  the description column is inset by the glyph, which left the
+                  button off-center on narrow screens. Full-bleed on mobile so
+                  it centers in the panel; column 2 above `sm` so it stays
+                  aligned with the copy it follows. */}
+                <div className="col-span-full pt-1 sm:col-span-1 sm:col-start-2 [&_a]:no-underline [&_a:hover]:no-underline">
+                  <MapCilosButton
+                    course={selectedCourse}
+                    variant="default"
+                    returnTo={returnTo}
+                    linkName="Continue to map CILOs"
+                  />
+                </div>
+              </Alert>
+            </div>
           )}
 
           {/* Course */}
@@ -399,7 +420,9 @@ export function AddCiloForm({
                     {countOnFile(selectedCourse) === 1 ? "" : "s"} on file
                   </p>
                 </div>
-                <MapCilosButton course={selectedCourse} returnTo={returnTo} />
+                {/* The post-save panel owns the mapping action once it is on
+                  screen, so the row keeps a single CTA per moment. */}
+                {!successMessage && <MapCilosButton course={selectedCourse} returnTo={returnTo} />}
               </div>
             )}
           </FieldGroup>
@@ -415,7 +438,19 @@ export function AddCiloForm({
                   Loading existing CILOs...
                 </p>
               ) : existingCilosError ? (
-                <p className="text-muted-foreground text-sm">{existingCilosError}</p>
+                <Alert variant="destructive" className="flex flex-col items-start gap-2 p-3">
+                  <p className="text-sm">{existingCilosError}</p>
+                  <p className="text-caption">
+                    Editing stays locked until these CILOs load, so a save cannot drop them.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectedCourse && loadExistingCilos(selectedCourse.id)}
+                  >
+                    Retry loading CILOs
+                  </Button>
+                </Alert>
               ) : existingCilos.length === 0 ? (
                 <p className="text-muted-foreground border-border rounded-lg border border-dashed py-4 text-center text-sm">
                   No CILOs on file for this course yet.

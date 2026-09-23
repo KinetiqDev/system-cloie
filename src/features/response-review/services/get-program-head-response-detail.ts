@@ -2,10 +2,7 @@ import { StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
-import {
-  resolveItemScaleIdentity,
-  type ScaleIdentity,
-} from "@/features/analytics/aggregators/scale-identity";
+import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
 import { ROLES } from "@/lib/constants/roles";
 import {
@@ -302,11 +299,6 @@ function resolveCourseBoundBinding(
   };
 }
 
-function scaleLabelFor(scale: ScaleIdentity | null, rating: number): string | null {
-  const descriptor = scale?.descriptors.find((candidate) => candidate.value === rating);
-  return descriptor?.label ?? null;
-}
-
 function identityFragment(
   context: RespondentIdentityContext | undefined,
   stakeholder: TargetStakeholder
@@ -414,7 +406,8 @@ function buildResponseSections(
             itemKey: item.key,
             prompt: item.prompt,
             rating: entry.rating_value,
-            scaleLabel: scaleLabelFor(scale, entry.rating_value),
+            scale: scale?.descriptors.map((descriptor) => descriptor.value) ?? [],
+            descriptorLabels: scale?.descriptors.map((descriptor) => descriptor.label) ?? [],
             binding: resolveCourseBoundBinding(evaluation, entry, ciloMappings),
           };
         }

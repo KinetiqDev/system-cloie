@@ -1,4 +1,11 @@
-import type { SubmittedResponseSection } from "@/features/responses/services/get-student-submitted-response-review";
+import { CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
+import type {
+  SubmittedResponseItem,
+  SubmittedResponseSection,
+} from "@/features/responses/services/get-student-submitted-response-review";
 import { formatDateTime } from "@/lib/utils/date-format";
 
 interface SubmittedResponseReviewProps {
@@ -9,6 +16,61 @@ interface SubmittedResponseReviewProps {
   sections: SubmittedResponseSection[];
 }
 
+type QuantitativeItem = Extract<SubmittedResponseItem, { kind: "quantitative" }>;
+
+function countAnswers(sections: SubmittedResponseSection[]) {
+  return sections.reduce(
+    (totals, section) => {
+      for (const item of section.items) {
+        if (item.answer === undefined) {
+          continue;
+        }
+
+        if (item.kind === "quantitative") {
+          totals.ratings += 1;
+        } else {
+          totals.written += 1;
+        }
+      }
+
+      return totals;
+    },
+    { ratings: 0, written: 0 }
+  );
+}
+
+function QuantitativeAnswerRow({ item }: { item: QuantitativeItem }) {
+  return (
+    <li className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+      <p className="text-title-md text-foreground text-pretty">{item.prompt}</p>
+      <LikertScaleReplay
+        answer={item.answer}
+        scale={item.scale}
+        descriptorLabels={item.descriptorLabels}
+      />
+    </li>
+  );
+}
+
+function QualitativeAnswerRow({
+  item,
+}: {
+  item: Extract<SubmittedResponseItem, { kind: "qualitative" }>;
+}) {
+  return (
+    <li className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
+      <p className="text-title-md text-foreground text-pretty">{item.prompt}</p>
+      {item.answer === undefined ? (
+        <p className="text-text-muted text-body-sm">Not answered.</p>
+      ) : (
+        <p className="bg-surface-muted text-text-secondary text-body-sm max-w-prose rounded-lg p-3 [overflow-wrap:anywhere] whitespace-pre-line">
+          {item.answer}
+        </p>
+      )}
+    </li>
+  );
+}
+
 export function SubmittedResponseReview({
   evaluationTitle,
   courseTitle,
@@ -16,36 +78,62 @@ export function SubmittedResponseReview({
   submittedAt,
   sections,
 }: SubmittedResponseReviewProps) {
+  const { ratings, written } = countAnswers(sections);
+  const submittedLabel = formatDateTime(submittedAt);
+
   return (
-    <div className="motion-safe:animate-in motion-safe:fade-in space-y-8 motion-safe:duration-500">
-      <div>
-        <h1 className="font-heading text-2xl font-black">{evaluationTitle}</h1>
-        <p className="text-foreground text-sm">
-          {courseTitle ? `${courseTitle} • ${programLabel}` : programLabel}
+    <div className="motion-safe:animate-in motion-safe:fade-in flex flex-col gap-6 motion-safe:duration-200">
+      <header className="flex flex-col gap-3">
+        <Badge variant="success" className="uppercase">
+          <CheckCircle2 data-icon="inline-start" aria-hidden="true" />
+          Submitted
+        </Badge>
+        <div className="flex flex-col gap-1">
+          <h1 className="text-heading-xl text-balance">{evaluationTitle}</h1>
+          <p className="text-body-sm text-text-secondary text-pretty">
+            {courseTitle ? `${courseTitle} • ${programLabel}` : programLabel}
+          </p>
+        </div>
+        <p className="text-body-sm text-text-secondary tabular-nums">
+          Submitted on <time dateTime={submittedAt.toISOString()}>{submittedLabel}</time> •{" "}
+          {ratings} {ratings === 1 ? "rating" : "ratings"} • {written} written{" "}
+          {written === 1 ? "answer" : "answers"}
         </p>
-        <p className="text-foreground mt-1 text-xs">Submitted on {formatDateTime(submittedAt)}</p>
+      </header>
+
+      <div className="flex flex-col gap-6">
+        {sections.map((section) => (
+          <Card key={section.id} className="gap-4 py-5">
+            <CardHeader className="px-4 sm:px-5">
+              <h2 className="text-heading-md text-foreground">{section.name}</h2>
+              {section.description && <CardDescription>{section.description}</CardDescription>}
+            </CardHeader>
+            <CardContent className="px-4 sm:px-5">
+              <ul className="divide-border flex flex-col divide-y">
+                {section.items.map((item) => {
+                  const itemKey = item.kind === "quantitative" ? item.itemKey : item.promptKey;
+
+                  return item.kind === "quantitative" ? (
+                    <QuantitativeAnswerRow key={itemKey} item={item} />
+                  ) : (
+                    <QualitativeAnswerRow key={itemKey} item={item} />
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {sections.map((section) => (
-        <section key={section.id} className="space-y-4">
-          <h2 className="text-foreground border-border border-b pb-2 text-lg font-bold">
-            {section.name}
-          </h2>
-          <div className="space-y-4">
-            {section.items.map((item, idx) => {
-              const itemKey = item.kind === "quantitative" ? item.itemKey : item.promptKey;
-              return (
-                <div key={itemKey ?? idx} className="border-border rounded-xl border p-4">
-                  <p className="text-foreground mb-2 text-sm">{item.prompt}</p>
-                  <p className="text-text-primary font-bold">
-                    {item.answer !== undefined ? String(item.answer) : "—"}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      <div className="border-border bg-surface-muted flex items-start gap-3 rounded-xl border p-4">
+        <CheckCircle2 className="text-success mt-0.5 size-5 shrink-0" aria-hidden="true" />
+        <div className="flex flex-col gap-1">
+          <p className="text-title-sm text-foreground">Your response has been recorded</p>
+          <p className="text-body-sm text-text-secondary text-pretty">
+            This record is read-only. Submitted responses are final and cannot be edited.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

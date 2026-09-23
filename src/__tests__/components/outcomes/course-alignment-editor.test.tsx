@@ -1,5 +1,12 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock, replace: vi.fn(), refresh: vi.fn() }),
+}));
+
 import { CourseAlignmentEditor } from "@/features/outcomes/components/course-alignment-editor";
 import type {
   CourseAlignmentReview,
@@ -96,6 +103,22 @@ function stageTarget() {
 }
 
 describe("CourseAlignmentEditor", () => {
+  let toastMessages: Array<{ kind: string; message: string }> = [];
+  const toastListener = ((event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    toastMessages.push({ kind: detail.kind, message: detail.message });
+  }) as EventListener;
+
+  beforeEach(() => {
+    pushMock.mockClear();
+    toastMessages = [];
+    window.addEventListener("cloie-toast", toastListener);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("cloie-toast", toastListener);
+  });
+
   it("stages an ILO manifestation, reviews the exact diff, and commits", async () => {
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review });
     const commitAction = vi
@@ -127,8 +150,14 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/ILO-1: Set to Learning \(L\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(review, true));
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
+    expect(screen.queryByText("1 mapping change saved.")).not.toBeInTheDocument();
   });
 
   it("reviews and commits a manifestation change from the desktop matrix", async () => {
@@ -155,8 +184,13 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/GO-1: Learning \(L\) \u2192 Practice \(P\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(pspReview, true));
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
   it("shows archived GO manifestations read-only and keeps them out of draft saves", async () => {
@@ -347,15 +381,22 @@ describe("CourseAlignmentEditor", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saving..." })).toBeDisabled();
     resolveCommit!({ success: true, changed: 1, freshnessToken: "fresh" });
-    expect(await screen.findByText("1 mapping change saved.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "1 mapping change saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
-  it("keeps restoring a canceled history traversal until it reaches the dirty entry", () => {
+  it("offers the confirmation on a history traversal without the Navigation API", () => {
     const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
     const originalState = window.history.state;
     const originalUrl = window.location.href;
+    // A same-URL entry keeps the first Back traversal inside the editor.
     Reflect.deleteProperty(window, "navigation");
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const pushState = vi.spyOn(window.history, "pushState");
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
     const { unmount } = render(
       <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
@@ -363,19 +404,23 @@ describe("CourseAlignmentEditor", () => {
 
     try {
       stageTarget();
-      const dirtyEntryState = window.history.state;
-      window.history.replaceState({ page: "intermediate" }, "", "/intermediate");
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      window.dispatchEvent(new PopStateEvent("popstate"));
-      window.history.replaceState(dirtyEntryState, "", "/faculty/cilos/test/alignment");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      expect(pushState).toHaveBeenCalledTimes(1);
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
 
-      expect(historyGo).toHaveBeenCalledTimes(2);
-      expect(historyGo).toHaveBeenLastCalledWith(1);
+      expect(pushState).toHaveBeenCalledTimes(2);
+      expect(historyGo).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("heading", { name: "Discard staged alignment changes?" })
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Discard and leave" }));
+      expect(historyGo).toHaveBeenCalledWith(-2);
     } finally {
       unmount();
-      confirm.mockRestore();
       historyGo.mockRestore();
+      pushState.mockRestore();
       window.history.replaceState(originalState, "", originalUrl);
       if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
     }
@@ -421,42 +466,64 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
   });
 
-  it("prompts before a dirty draft leaves through application navigation", () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("confirms in-app before a dirty draft leaves through internal navigation", () => {
     renderEditor({ prepareAction: vi.fn(), commitAction: vi.fn() });
     stageTarget();
     const link = document.createElement("a");
     link.href = "/faculty/cilos";
     document.body.append(link);
 
+    // The click is cancelled and the shared confirmation stands in for the
+    // browser's native prompt, which cannot be shown on this route.
     fireEvent.click(link);
 
-    expect(confirm).toHaveBeenCalledWith("Discard staged alignment changes?");
+    expect(
+      screen.getByRole("heading", { name: "Discard staged alignment changes?" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Discard and leave" })).toBeInTheDocument();
+    // Staying keeps the staged draft.
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Discard changes" })).toBeEnabled();
     link.remove();
-    confirm.mockRestore();
   });
 
-  it("restores the dirty entry after canceling a multi-step browser-history traversal", () => {
+  it("holds the editor and offers the confirmation when history is traversed", () => {
     const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
-    let historyIndex = 3;
+    const navigateListeners: Array<(event: Event) => void> = [];
     Object.defineProperty(window, "navigation", {
       configurable: true,
-      get: () => ({ currentEntry: { index: historyIndex } }),
+      get: () => ({
+        addEventListener: (type: string, listener: (event: Event) => void) => {
+          if (type === "navigate") navigateListeners.push(listener);
+        },
+        removeEventListener: () => undefined,
+      }),
     });
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
-    renderEditor({ prepareAction: vi.fn(), commitAction: vi.fn() });
-    stageTarget();
-    historyIndex = 0;
 
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    try {
+      renderEditor({ prepareAction: vi.fn(), commitAction: vi.fn() });
+      stageTarget();
 
-    expect(confirm).toHaveBeenCalledWith("Discard staged alignment changes?");
-    expect(historyGo).toHaveBeenCalledWith(3);
-    confirm.mockRestore();
-    historyGo.mockRestore();
-    if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
-    else Reflect.deleteProperty(window, "navigation");
+      // A cancelable same-document traversal is cancelled outright, so the
+      // editor never unmounts and the draft survives the attempt.
+      const traversal = new Event("navigate", { cancelable: true });
+      Object.assign(traversal, {
+        destination: { sameDocument: true, url: window.location.href },
+        hashChange: false,
+      });
+      act(() => {
+        navigateListeners.forEach((listener) => listener(traversal));
+      });
+
+      expect(traversal.defaultPrevented).toBe(true);
+      expect(
+        screen.getByRole("heading", { name: "Discard staged alignment changes?" })
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
+    } finally {
+      if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
+      else Reflect.deleteProperty(window, "navigation");
+    }
   });
 
   it("preserves a stale draft and offers reload after a failed review", async () => {
@@ -680,7 +747,13 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Back to editing" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalled());
-    expect(await screen.findByText("2 mapping changes saved.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toastMessages).toContainEqual({
+        kind: "success",
+        message: "2 mapping changes saved.",
+      });
+    });
+    expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
   it("allows review of incomplete progress with a publication warning", async () => {

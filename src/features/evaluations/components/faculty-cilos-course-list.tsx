@@ -272,7 +272,23 @@ function ViewEditCilosModal({
       )}
       {successMessage && (
         <Alert variant="success" role="status">
-          <AlertDescription>{successMessage}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-1">
+            <span>{successMessage}</span>
+            <span>Publishing stays blocked until every CILO is mapped.</span>
+          </AlertDescription>
+          {/* Direct Alert child: the description column applies an anchor
+            underline meant for inline links, which a button-styled link must
+            not inherit. */}
+          <div className="pt-1 [&_a]:no-underline [&_a:hover]:no-underline">
+            <Button
+              variant="default"
+              size="sm"
+              render={<Link href={`/faculty/cilos/${course.id}/alignment`} />}
+              aria-label="Continue to map CILOs"
+            >
+              Continue to map CILOs
+            </Button>
+          </div>
         </Alert>
       )}
       {needsReconcile && !isLoading && (
