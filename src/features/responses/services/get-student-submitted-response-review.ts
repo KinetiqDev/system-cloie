@@ -2,31 +2,7 @@ import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
-
-type StructureSnapshotSection = {
-  key: string;
-  description?: string;
-  questions?: Array<{
-    key: string;
-    prompt: string;
-    type: "likert" | "guided_open_ended";
-  }>;
-  items?: Array<{
-    kind: "quantitative" | "qualitative";
-    key: string;
-    prompt: string;
-    scale?: number[];
-  }>;
-  qualitative_prompts?: Array<{
-    key: string;
-    prompt: string;
-  }>;
-  quantitative_items?: Array<{
-    key: string;
-    prompt: string;
-  }>;
-  title: string;
-};
+import { mapTemplateStructureToSections } from "@/features/responses/services/map-template-structure";
 
 type SubmittedResponseAnswers = Record<string, unknown>;
 
@@ -35,94 +11,67 @@ type BuildSubmittedResponseSectionsInput = {
   structureSnapshot: unknown;
 };
 
+/**
+ * One frozen snapshot item plus the respondent's recorded answer. The rating
+ * scale and its descriptor labels travel with the answer so a replayed Likert
+ * item can name the meaning the respondent chose, not just its number.
+ */
+export type SubmittedResponseItem =
+  | {
+      kind: "quantitative";
+      itemKey: string;
+      prompt: string;
+      answer: number | undefined;
+      scale: number[];
+      descriptorLabels?: string[];
+    }
+  | {
+      kind: "qualitative";
+      promptKey: string;
+      prompt: string;
+      answer: string | undefined;
+    };
+
 export type SubmittedResponseSection = {
   id: string;
   name: string;
   description: string;
-  items: Array<{
-    kind: "quantitative" | "qualitative";
-    itemKey?: string;
-    promptKey?: string;
-    prompt: string;
-    answer: string | number | undefined;
-  }>;
+  items: SubmittedResponseItem[];
 };
-
-function isSnapshotSection(value: unknown): value is StructureSnapshotSection {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const section = value as StructureSnapshotSection;
-
-  return typeof section.key === "string" && typeof section.title === "string";
-}
-
-function getReviewItems(section: StructureSnapshotSection) {
-  if (Array.isArray(section.questions)) {
-    return section.questions.map((question) => ({
-      key: question.key,
-      kind: question.type === "likert" ? ("quantitative" as const) : ("qualitative" as const),
-      prompt: question.prompt,
-    }));
-  }
-
-  if (Array.isArray(section.items)) {
-    return section.items.map((item) => ({
-      key: item.key,
-      kind: item.kind,
-      prompt: item.prompt,
-    }));
-  }
-
-  return [
-    ...(section.quantitative_items ?? []).map((item) => ({
-      key: item.key,
-      kind: "quantitative" as const,
-      prompt: item.prompt,
-    })),
-    ...(section.qualitative_prompts ?? []).map((item) => ({
-      key: item.key,
-      kind: "qualitative" as const,
-      prompt: item.prompt,
-    })),
-  ];
-}
 
 export function buildSubmittedResponseSections({
   answers,
   structureSnapshot,
 }: BuildSubmittedResponseSectionsInput): SubmittedResponseSection[] {
-  if (!Array.isArray(structureSnapshot)) {
-    return [];
-  }
-
-  return structureSnapshot.filter(isSnapshotSection).map((section) => ({
-    id: section.key,
-    name: section.title,
-    description: section.description ?? "",
-    items: getReviewItems(section).map((item) => {
-      const answerKey =
-        item.kind === "quantitative"
-          ? buildStudentEvaluationAnswerKey(section.key, "quantitative", item.key)
-          : buildStudentEvaluationAnswerKey(section.key, "qualitative", item.key);
-
-      const rawAnswer = answers[answerKey];
-
-      let answer: string | number | undefined;
+  return mapTemplateStructureToSections(structureSnapshot).map((section) => ({
+    id: section.id,
+    name: section.name,
+    description: section.description,
+    items: section.items.map((item): SubmittedResponseItem => {
       if (item.kind === "quantitative") {
-        answer = typeof rawAnswer === "number" ? rawAnswer : undefined;
-      } else {
-        const strAnswer = typeof rawAnswer === "string" ? rawAnswer : undefined;
-        answer = strAnswer && strAnswer.trim().length > 0 ? strAnswer : undefined;
+        const rawAnswer =
+          answers[buildStudentEvaluationAnswerKey(section.id, "quantitative", item.itemKey)];
+
+        return {
+          kind: "quantitative",
+          itemKey: item.itemKey,
+          prompt: item.prompt,
+          answer: typeof rawAnswer === "number" ? rawAnswer : undefined,
+          scale: item.scale,
+          ...(item.descriptorLabels ? { descriptorLabels: item.descriptorLabels } : {}),
+        };
       }
 
+      // Blank qualitative text is a skipped optional prompt, not recorded answer text.
+      const rawText =
+        answers[buildStudentEvaluationAnswerKey(section.id, "qualitative", item.promptKey)];
+      const text = typeof rawText === "string" ? rawText : "";
+
       return {
-        kind: item.kind,
+        kind: "qualitative",
+        promptKey: item.promptKey,
         prompt: item.prompt,
-        ...(item.kind === "quantitative"
-          ? { itemKey: item.key, answer: answer as number | undefined }
-          : { promptKey: item.key, answer: answer as string | undefined }),
+        answer: text.trim().length > 0 ? text : undefined,
       };
     }),
   }));
@@ -231,10 +180,7 @@ export async function getStudentSubmittedResponseReview(
       evaluationTitle:
         response.assignment.course_bound.deployment_name ??
         response.assignment.course_bound.instrument.template.name,
-      programLabel:
-        ca.course.major?.name ??
-        ca.program?.name ??
-        "Program context unavailable",
+      programLabel: ca.course.major?.name ?? ca.program?.name ?? "Program context unavailable",
       responseId: response.id,
       sections: buildSubmittedResponseSections({
         answers,
@@ -254,7 +200,9 @@ export async function getStudentSubmittedResponseReview(
         majorName: response.assignment.central_deployment.major?.name ?? null,
         programCode: response.assignment.central_deployment.program?.code ?? null,
         programName: response.assignment.central_deployment.program?.name ?? null,
-        yearLevelName: response.assignment.central_deployment.year_level ? getYearLevelDisplay(response.assignment.central_deployment.year_level) : null,
+        yearLevelName: response.assignment.central_deployment.year_level
+          ? getYearLevelDisplay(response.assignment.central_deployment.year_level)
+          : null,
       }),
       responseId: response.id,
       sections: buildSubmittedResponseSections({

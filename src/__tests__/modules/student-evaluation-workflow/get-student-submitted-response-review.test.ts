@@ -70,7 +70,13 @@ describe("buildSubmittedResponseSections", () => {
             prompt: "Remarks",
             answer: "More examples would help.",
           },
-          { kind: "quantitative", itemKey: "q1", prompt: "Clarity of instruction", answer: 4 },
+          {
+            kind: "quantitative",
+            itemKey: "q1",
+            prompt: "Clarity of instruction",
+            answer: 4,
+            scale: [1, 2, 3, 4, 5],
+          },
         ],
       },
       {
@@ -78,7 +84,13 @@ describe("buildSubmittedResponseSections", () => {
         name: "Section B",
         description: "",
         items: [
-          { kind: "quantitative", itemKey: "q2", prompt: "Usefulness of activities", answer: 5 },
+          {
+            kind: "quantitative",
+            itemKey: "q2",
+            prompt: "Usefulness of activities",
+            answer: 5,
+            scale: [1, 2, 3, 4, 5],
+          },
         ],
       },
     ]);
@@ -131,7 +143,13 @@ describe("buildSubmittedResponseSections", () => {
         description: "",
         id: "section-a",
         items: [
-          { answer: 5, itemKey: "q1", kind: "quantitative", prompt: "Question 1" },
+          {
+            answer: 5,
+            itemKey: "q1",
+            kind: "quantitative",
+            prompt: "Question 1",
+            scale: [],
+          },
           {
             answer: "Legacy remarks",
             kind: "qualitative",
@@ -172,6 +190,7 @@ describe("buildSubmittedResponseSections", () => {
             itemKey: "q1",
             kind: "quantitative",
             prompt: "How clear was the lesson?",
+            scale: [],
           },
           {
             answer: "Very reflective.",
@@ -235,6 +254,7 @@ describe("getStudentSubmittedResponseReview", () => {
                 itemKey: "q1",
                 kind: "quantitative",
                 prompt: "Question 1",
+                scale: [1, 2, 3, 4, 5],
               },
             ],
             name: "Section A",
