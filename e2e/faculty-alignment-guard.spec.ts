@@ -142,3 +142,27 @@ test("the alignment guard holds Back without the Navigation API", async ({ page 
   await expect(page).toHaveURL(/\/faculty\/cilos$/, { timeout: 30_000 });
   expect(native).toEqual([]);
 });
+
+test("discarding a staged draft leaves no extra Back entries without the Navigation API", async ({
+  page,
+}) => {
+  const fx = fixture();
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "navigation", { value: undefined, configurable: true });
+  });
+  await loginAs(page, fx.demoFaculty.email);
+  await enterDirtyAlignmentWorkspace(page, "ITRES1");
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByRole("button", { name: "Discard changes" }).click();
+    await page.getByRole("button", { name: "Discard draft" }).click();
+    await expect(page.getByRole("button", { name: /Review 0 changes/ })).toBeDisabled();
+    if (attempt === 0) {
+      await page.getByRole("button", { name: /CILO 1, GO 1, manifestation: Learning/ }).click();
+      await expect(page.getByRole("button", { name: /Review 1 change/ })).toBeEnabled();
+    }
+  }
+
+  await pressBrowserBack(page);
+  await expect(page).toHaveURL(/\/faculty\/cilos$/, { timeout: 30_000 });
+});

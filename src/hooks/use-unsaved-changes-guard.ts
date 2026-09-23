@@ -44,7 +44,7 @@ type UnsavedChangesGuard = {
    */
   allowDeparture: () => void;
   /** Whether Back must cross a held same-URL entry on this browser. */
-  heldHistoryEntry: boolean;
+  hasHeldHistoryEntry: () => boolean;
 };
 
 /**
@@ -85,14 +85,20 @@ export function useUnsavedChangesGuard({
   }, [onRequestLeave]);
 
   const departureApproved = useRef(false);
+  const heldEntry = useRef(false);
 
   const allowDeparture = useCallback(() => {
     departureApproved.current = true;
   }, []);
+  const hasHeldHistoryEntry = useCallback(
+    () => getNavigationTarget() === null && heldEntry.current,
+    []
+  );
 
   useEffect(() => {
-    if (!isDirty) return;
-    departureApproved.current = false;
+    const navigation = getNavigationTarget();
+    if (!isDirty && !heldEntry.current) return;
+    if (isDirty) departureApproved.current = false;
 
     /** Modifier-clicks, downloads, and off-site links stay with the browser. */
     const leavesDocument = (event: MouseEvent, anchor: HTMLAnchorElement) => {
@@ -121,7 +127,7 @@ export function useUnsavedChangesGuard({
       requestLeave.current(`${anchor.pathname}${anchor.search}${anchor.hash}`);
     };
 
-    const navigation = getNavigationTarget();
+    // Navigation API support is checked once for this effect's listener set.
     const cancelTraversal = (event: NavigateEvent) => {
       if (departureApproved.current) return;
       // Cross-document destinations have already left this document; only the
@@ -137,30 +143,32 @@ export function useUnsavedChangesGuard({
       event.preventDefault();
       event.returnValue = true;
     };
-
     // popstate cannot be cancelled. A same-URL entry keeps the first Back
     // traversal on this route, so Next sees the editor rather than its parent.
-    const heldEntry = !navigation?.addEventListener;
-    if (heldEntry) {
+    if (!navigation?.addEventListener && isDirty && !heldEntry.current) {
       window.history.pushState(window.history.state, "", window.location.href);
+      heldEntry.current = true;
     }
-    let restoring = false;
     const handlePopstate = () => {
       if (departureApproved.current) return;
-      if (restoring) {
-        restoring = false;
+      if (!isDirty) {
+        if (!heldEntry.current) return;
+        heldEntry.current = false;
+        window.history.go(-1);
         return;
       }
-      restoring = true;
       window.history.pushState(window.history.state, "", window.location.href);
+      heldEntry.current = true;
       requestLeave.current(null);
     };
 
-    document.addEventListener("click", interceptLinkClick, true);
-    window.addEventListener("beforeunload", warnBeforeUnload);
+    if (isDirty) {
+      document.addEventListener("click", interceptLinkClick, true);
+      window.addEventListener("beforeunload", warnBeforeUnload);
+    }
     if (navigation?.addEventListener) {
-      navigation.addEventListener("navigate", cancelTraversal);
-    } else {
+      if (isDirty) navigation.addEventListener("navigate", cancelTraversal);
+    } else if (heldEntry.current) {
       window.addEventListener("popstate", handlePopstate);
     }
 
@@ -175,5 +183,5 @@ export function useUnsavedChangesGuard({
     };
   }, [isDirty]);
 
-  return { allowDeparture, heldHistoryEntry: getNavigationTarget() === null };
+  return { allowDeparture, hasHeldHistoryEntry };
 }
