@@ -2,7 +2,7 @@
 
 **Comprehensive Learning Outcomes and Instructional Evaluation**
 
-A college-level digital evaluation, monitoring, and reporting platform for Assumption College of Davao. CLOIE supports multiple academic programs, their courses, faculty members, and stakeholder-based outcome evaluation processes.
+A college-level digital evaluation, monitoring, and reporting platform for Assumption College of Davao. System CLOIE supports multiple academic programs, their courses, faculty members, and stakeholder-based outcome evaluation processes.
 
 ## Quick Start
 
@@ -79,13 +79,14 @@ See `AGENTS.md` for the full skill inventory, `CONTEXT-MAP.md` and `src/features
 
 ## Authentication
 
-CLOIE operates with three intentionally separated authentication modes, never co-deployed under one instance:
+System CLOIE operates with four intentionally separated authentication modes, never co-deployed under one instance:
 
-| Mode                   | Mechanism                                                                                                      | Where                       |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com`                    | Primary public deployment   |
-| **Local Development**  | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails                     | `NODE_ENV=development` only |
-| **Dedicated Demo**     | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment    |
+| Mode | Mechanism | Where |
+| ---- | --------- | ----- |
+| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com` | Primary public deployment |
+| **Local Development** | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails | `NODE_ENV=development` only |
+| **Dedicated Demo** | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment |
+| **Isolated CI Test** | Short-lived signed session against the disposable seeded database; `CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test` | Disposable CI only |
 
 The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md` and `docs/adr/0008-dedicated-demo-deployment-authentication.md` for the full contract.
 
@@ -157,6 +158,7 @@ src/
 │   │   ├── industry-partner/
 │   │   ├── program-head/
 │   │   ├── secretary/
+│   │   ├── select-role/
 │   │   └── student/
 │   ├── (public)/          # Unauthenticated route group
 │   │   ├── login/
@@ -180,8 +182,9 @@ src/
 │   ├── evaluations/          # Evaluation workflows and deployments
 │   ├── instruments/          # Templates, instruments, versioning
 │   ├── legal/                # Legal content, versions, acknowledgements
-│   ├── outcomes/             # Outcome catalogs, CILOs, mappings
+│   ├── outcomes/             # ILO catalog, Graduate Outcomes (GOs), CILOs, typed mappings
 │   ├── response-review/      # Identified vs anonymized review of submitted responses
+│   ├── responses/            # Responses, one-response invariant, drafts, submission
 │   └── users/                # User profiles and admin management
 ├── hooks/                # Shared React hooks
 ├── lib/                  # Shared utilities and configurations
@@ -205,7 +208,7 @@ The domain model is documented through a multi-context layout:
 
 - **`CONTEXT-MAP.md`** — index of domain contexts and their relationships
 - **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants
-- **`docs/adr/`** — architectural decision records (25 ADR files, see list below)
+- **`docs/adr/`**: 31 architectural decision records (see list below)
 
 Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
@@ -230,7 +233,7 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0014 | Google authoritative account names                               |
 | 0015 | Name-based course roster resolution and student ID removal       |
 | 0016 | Server-side bounded AI interpretation boundary                   |
-| 0017 | Program learning outcome canonical terminology                   |
+| 0017 | Program learning outcome canonical terminology _(Superseded by ADR 0030)_  |
 | 0018 | Transfer ILO catalog ownership to General Education Coordinator  |
 | 0019 | Removing Secretary Course Assignment Mutation                    |
 | 0020 | Self-Hosted Supabase Only — Target-Neutral Backends              |
@@ -238,10 +241,16 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0022 | Multi-role accounts with active role context                     |
 | 0023 | Deterministic qualitative evidence and sentiment shape           |
 | 0024 | Remove Dean enrollment oversight _(Amends ADR 0006)_             |
+| 0025 | Relax the Central Deployment GO Binding Gate                     |
+| 0026 | Institution Time Zone for Rendered Timestamps                    |
+| 0027 | One CILO May Be Evidenced by Several Likert Questions            |
+| 0028 | Secretary Term Placement for an Unplaced Student                 |
+| 0029 | Multi-Program Program Head Provisioning at Creation              |
+| 0030 | Graduate Outcome canonical terminology                           |
 
 #### Request Flow
 
-Authentication middleware is at `src/proxy.ts` (not the traditional `middleware.ts`):
+Authentication middleware lives at `src/proxy.ts` (not the traditional `middleware.ts`):
 
 ```typescript
 // src/proxy.ts
@@ -253,11 +262,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!api/health(?:/|$)|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
 ```
 
-`src/proxy.ts` rewrites Server Action POSTs to set `x-forwarded-host` from `Origin` before calling `updateSession`. Supabase session refresh lives in `src/lib/supabase/middleware.ts`.
+`src/proxy.ts` rewrites Server Action POSTs to set `x-forwarded-host` from `Origin` before calling `updateSession`. It also remembers the selected program from `/program-head/programs/[id]` in a cookie. Supabase session refresh lives in `src/lib/supabase/middleware.ts`.
 
 #### Server Actions Pattern
 
@@ -429,7 +438,7 @@ pnpm test:watch                               # Watch mode
 pnpm vitest run src/__tests__/path/file.test.ts  # Single file
 ```
 
-Fourteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a shared backend:
+Sixteen suites validate database-level constraints. They are gated behind `RUN_DATABASE_INTEGRATION_TESTS=1` so `pnpm test` never writes to a shared backend:
 
 ```bash
 RUN_DATABASE_INTEGRATION_TESTS=1 pnpm test:db
@@ -444,7 +453,9 @@ Point `DATABASE_URL` at a disposable test database, never a shared backend. `pnp
 - `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
 - `src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
+- `src/__tests__/features/evaluations/course-bound-go-question-binding-db-invariants.test.ts`
 - `src/__tests__/features/evaluations/publication-roster-lock-db-invariants.test.ts`
+- `src/__tests__/features/instruments/cilo-question-binding-cardinality-db-invariants.test.ts`
 - `src/__tests__/features/responses/response-lifecycle-invariants.test.ts`
 - `src/__tests__/features/users/services/program-head-assignment-set-db-invariants.test.ts`
 - `src/__tests__/features/users/services/secretary-account-creation-atomicity.test.ts`
