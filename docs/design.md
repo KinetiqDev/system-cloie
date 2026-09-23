@@ -372,7 +372,8 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Preserve current URL-toast consumption and cleanup; toasts are dismissible with a keyboard- and touch-operable control.
 - Use Dialog on desktop and Drawer on mobile where established.
 - Overlays stay inside the viewport: the body scrolls its own overflow and the header and action row stay pinned, so a long body (for example an expanded column guide) never pushes the actions off screen.
-- Use `AlertDialog` for destructive confirmation.
+- Use `AlertDialog` for destructive confirmation; use `ResponsiveAlertDialog` (`src/components/ui/responsive-alert-dialog.tsx`) when the same confirmation must also be a Drawer on mobile. Both shells keep the AlertDialog contract: an explicit choice is the only way out, with no close button.
+- Never use the browser's native `window.confirm` for a confirmation the product owns. It cannot be styled, cannot be themed, cannot be reached by the app's focus or contrast rules, and on mobile it stacks over the app with platform chrome. Reserve `beforeunload` for refresh and browser close, where the platform gives a page no styled alternative.
 - Overlays use semantic surface, border, and scrim tokens; strong shadows are overlay-only.
 
 ### 8.9 Data Visualization
@@ -419,6 +420,20 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Management builders that do not publish use `Save template`. Institutional baseline copies use `Create program copy`.
 - Back and internal navigation warn before they discard unsaved instrument template changes. Refresh and browser close use the native unsaved-change warning.
 - Save remains in the builder and preserves the user's editing position. Success uses the shared toast and the toolbar status, not a modal.
+
+### 9.2 Unsaved-changes guard
+
+- Surfaces with unsaved work use `useUnsavedChangesGuard` (`src/hooks/use-unsaved-changes-guard.ts`) and render their own confirmation. Do not call `window.confirm`.
+- The guard cancels same-origin link clicks and cancels same-document history traversals through the Navigation API's cancelable `navigate` event. `popstate` cannot hold a route: the App Router binds its own `popstate` handler ahead of any effect, so on a Back traversal the route re-renders and React detaches a `popstate`-based guard before it can prompt — the edit is then discarded with no confirmation at all.
+- Traversals that leave the document (a cross-document previous entry, refresh, or browser close) keep the platform's native `beforeunload` warning; a page cannot restyle that prompt.
+- A confirmed departure calls the guard's `allowDeparture` before navigating, so the departure the user approved is never re-questioned.
+
+### 9.3 Course alignment workspace
+
+- The desktop defines the mapping through the CILO-by-target matrix; mobile renders the same cells as one card per CILO. Both drive one draft, so a change made at either viewport is the change that saves.
+- Phones pin `Discard changes` and `Review N changes` to the bottom edge as a two-column toolbar with safe-area padding and 44 px targets, because the CILO cards run far past the fold. From `md` up the actions return to the flow, right-aligned under the matrix.
+- The workspace reserves the toolbar's height so the last CILO card is never covered and the page never scrolls horizontally.
+- Discarding through the button and discarding by leaving name their different consequences: `Keep mapping` / `Discard draft` stays in the editor, while `Keep editing` / `Discard and leave` continues to the intercepted destination.
 
 ---
 
