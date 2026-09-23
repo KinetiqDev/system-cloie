@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
+import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
 import {
   STAKEHOLDER_EVIDENCE_SOURCE,
   buildAnalyticsUrl,
@@ -131,11 +132,12 @@ function QuantitativeAnswerCard({
   return (
     <div className="border-border/70 flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">
       <p className="text-body-md font-semibold text-pretty">{item.prompt}</p>
+      <LikertScaleReplay
+        answer={item.rating}
+        scale={item.scale}
+        descriptorLabels={item.descriptorLabels}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex items-baseline gap-2">
-          <span className="text-lg font-bold tabular-nums">{item.rating}</span>
-          {item.scaleLabel && <span className="text-text-muted text-sm">({item.scaleLabel})</span>}
-        </div>
         {binding.type === "CILO" && (
           <Badge
             variant="outline"

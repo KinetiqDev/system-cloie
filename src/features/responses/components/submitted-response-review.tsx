@@ -1,11 +1,11 @@
 import { CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
 import type {
   SubmittedResponseItem,
   SubmittedResponseSection,
 } from "@/features/responses/services/get-student-submitted-response-review";
-import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/utils/date-format";
 
 interface SubmittedResponseReviewProps {
@@ -39,108 +39,15 @@ function countAnswers(sections: SubmittedResponseSection[]) {
   );
 }
 
-/**
- * Spoken form of one replayed rating: the number alone is meaningless without
- * the scale it belongs to, so the name of the chosen option travels with it.
- */
-function describeRating(item: QuantitativeItem): string {
-  if (item.answer === undefined) {
-    return "Not answered";
-  }
-
-  const selectedIndex = item.scale.indexOf(item.answer);
-  const selectedLabel = selectedIndex === -1 ? undefined : item.descriptorLabels?.[selectedIndex];
-
-  return selectedLabel ? `${item.answer} — ${selectedLabel}` : String(item.answer);
-}
-
-function ratingAnnouncement(item: QuantitativeItem): string {
-  if (item.answer === undefined) {
-    return "Not answered";
-  }
-
-  const descriptors = item.descriptorLabels ?? [];
-  const first = descriptors[0];
-  const last = descriptors[descriptors.length - 1];
-  const scaleSummary =
-    first && last
-      ? `. Scale ${item.scale[0]} (${first}) to ${item.scale[item.scale.length - 1]} (${last})`
-      : "";
-
-  return `${describeRating(item)}${scaleSummary}`;
-}
-
-/**
- * Read-only replay of the rating scale the respondent answered on: every option
- * is shown with its own wording, and the recorded choice carries the fill.
- */
-function LikertScaleReplay({ item }: { item: QuantitativeItem }) {
-  const selectedIndex = item.answer === undefined ? -1 : item.scale.indexOf(item.answer);
-
-  if (item.scale.length === 0) {
-    return <p className="text-body-md text-text-primary font-semibold">{describeRating(item)}</p>;
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {/* Read-only replay of the scale: every option keeps its own wording, and
-          the recorded choice carries the fill. The list stays a real list for
-          assistive tech; the answer is announced once in words. */}
-      <span className="sr-only">Your answer: {ratingAnnouncement(item)}.</span>
-      <ol
-        aria-hidden="true"
-        className="grid max-w-2xl gap-1.5"
-        style={{ gridTemplateColumns: `repeat(${item.scale.length}, minmax(0, 1fr))` }}
-      >
-        {item.scale.map((value, index) => {
-          const isSelected = index === selectedIndex;
-          const label = item.descriptorLabels?.[index];
-
-          return (
-            <li key={value} className="flex min-w-0 flex-col items-center gap-1.5">
-              <span
-                className={cn(
-                  "text-label-lg flex w-full items-center justify-center rounded-md border py-1.5 tabular-nums",
-                  isSelected
-                    ? "border-primary bg-primary text-on-primary"
-                    : "border-border bg-surface text-text-secondary"
-                )}
-              >
-                {value}
-              </span>
-              {label && (
-                <span
-                  className={cn(
-                    "hidden max-w-full text-center leading-tight [overflow-wrap:anywhere] sm:block",
-                    isSelected ? "text-label-sm text-foreground" : "text-caption text-text-muted"
-                  )}
-                >
-                  {label}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-      {/* Below sm the five columns are too narrow for descriptor text, so the
-          chosen option is named once instead of truncated five times. The
-          scale above already announces this answer to assistive tech. */}
-      {item.answer === undefined ? (
-        <p className="text-text-muted text-body-sm">Not answered.</p>
-      ) : (
-        <p aria-hidden="true" className="text-label-md text-foreground sm:hidden">
-          {describeRating(item)}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function QuantitativeAnswerRow({ item }: { item: QuantitativeItem }) {
   return (
     <li className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
       <p className="text-title-md text-foreground text-pretty">{item.prompt}</p>
-      <LikertScaleReplay item={item} />
+      <LikertScaleReplay
+        answer={item.answer}
+        scale={item.scale}
+        descriptorLabels={item.descriptorLabels}
+      />
     </li>
   );
 }

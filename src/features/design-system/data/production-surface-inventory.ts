@@ -3023,6 +3023,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/responses/components/likert-scale-replay.tsx",
+    disposition: "task",
+    taskId: 24,
+    category: "feature_component",
+  },
+  {
     path: "src/features/responses/components/review-modal.tsx",
     disposition: "task",
     taskId: 24,
