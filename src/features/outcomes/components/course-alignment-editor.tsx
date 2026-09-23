@@ -602,7 +602,7 @@ export function CourseAlignmentEditor({
       <div
         role="toolbar"
         aria-label="Alignment actions"
-        className="border-border bg-background fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2 border-t px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-md sm:px-6 md:static md:mx-0 md:flex md:grid-cols-none md:flex-row md:justify-end md:gap-3 md:border-t md:px-0 md:pt-4 md:pb-0 md:shadow-none"
+        className="border-border bg-background fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 items-center gap-2 border-t px-4 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-6 md:static md:mx-0 md:flex md:grid-cols-none md:flex-row md:justify-end md:gap-3 md:border-t md:px-0 md:pt-4 md:pb-0"
       >
         <Button
           type="button"

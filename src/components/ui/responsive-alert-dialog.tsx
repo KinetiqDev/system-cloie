@@ -64,7 +64,16 @@ function ResponsiveAlertDialog({ children, open, onOpenChange }: ResponsiveAlert
           {children}
         </AlertDialog>
       ) : (
-        <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
+        <Drawer
+          open={open}
+          onOpenChange={(nextOpen, details) => {
+            if (!nextOpen && details.reason !== "close-press") {
+              details.cancel();
+              return;
+            }
+            onOpenChange(nextOpen);
+          }}
+        >
           {children}
         </Drawer>
       )}
@@ -76,14 +85,12 @@ type ResponsiveAlertDialogContentProps = {
   children?: React.ReactNode;
   className?: string;
   desktopClassName?: string;
-  mobileClassName?: string;
 };
 
 function ResponsiveAlertDialogContent({
   children,
   className,
   desktopClassName,
-  mobileClassName,
 }: ResponsiveAlertDialogContentProps) {
   const { isDesktop } = useResponsiveAlertDialog();
 
@@ -103,11 +110,7 @@ function ResponsiveAlertDialogContent({
 
   return (
     <DrawerContent
-      className={cn(
-        "flex max-h-[calc(100dvh-1rem)] min-w-0 flex-col overflow-hidden",
-        className,
-        mobileClassName
-      )}
+      className={cn("flex max-h-[calc(100dvh-1rem)] min-w-0 flex-col overflow-hidden", className)}
     >
       {children}
     </DrawerContent>

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * the respondent actually answered on — so the scale and its wording travel
  * with the answer.
  */
-export type LikertScaleReplayProps = {
+type LikertScaleReplayProps = {
   answer: number | undefined;
   scale: number[];
   /** Descriptor wording per scale value, aligned by index. */

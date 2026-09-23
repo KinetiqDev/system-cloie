@@ -81,12 +81,12 @@ See `AGENTS.md` for the full skill inventory, `CONTEXT-MAP.md` and `src/features
 
 System CLOIE operates with four intentionally separated authentication modes, never co-deployed under one instance:
 
-| Mode | Mechanism | Where |
-| ---- | --------- | ----- |
-| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com` | Primary public deployment |
-| **Local Development** | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails | `NODE_ENV=development` only |
-| **Dedicated Demo** | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration | Separate demo deployment |
-| **Isolated CI Test** | Short-lived signed session against the disposable seeded database; `CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test` | Disposable CI only |
+| Mode                   | Mechanism                                                                                                                        | Where                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com`                                      | Primary public deployment   |
+| **Local Development**  | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails                                       | `NODE_ENV=development` only |
+| **Dedicated Demo**     | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration                   | Separate demo deployment    |
+| **Isolated CI Test**   | Short-lived signed session against the disposable seeded database; `CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test` | Disposable CI only          |
 
 The demo deployment is used for production-build route/rendering evidence, cross-role demonstrations, and performance traces. It never replaces OAuth evidence. See `docs/runbooks/dedicated-demo-deployment.md` and `docs/adr/0008-dedicated-demo-deployment-authentication.md` for the full contract.
 
@@ -214,39 +214,39 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
 ### Architectural Decision Records
 
-| ADR  | Title                                                            |
-| ---- | ---------------------------------------------------------------- |
-| 0001 | Complete secretary-created accounts                              |
-| 0001 | Single-role accounts _(Superseded by ADR 0022)_                  |
-| 0002 | Separate domain users from auth identities                       |
-| 0003 | Course catalog and assignment refactor                           |
-| 0004 | Strict program deletion                                          |
-| 0005 | Outcome ownership and dean oversight                             |
-| 0006 | Dean PWA offline cache contract _(Amended by ADR 0024)_          |
-| 0007 | Course assignment roster membership                              |
-| 0008 | Dedicated demo deployment authentication                         |
-| 0009 | Program head selected program context                            |
-| 0010 | Unified appearance and protected showcase                        |
-| 0011 | Fallow code intelligence policy                                  |
-| 0012 | Secretary-controlled academic calendar state                     |
-| 0013 | Versioned curriculum course placement _(Superseded by ADR 0021)_ |
-| 0014 | Google authoritative account names                               |
-| 0015 | Name-based course roster resolution and student ID removal       |
-| 0016 | Server-side bounded AI interpretation boundary                   |
-| 0017 | Program learning outcome canonical terminology _(Superseded by ADR 0030)_  |
-| 0018 | Transfer ILO catalog ownership to General Education Coordinator  |
-| 0019 | Removing Secretary Course Assignment Mutation                    |
-| 0020 | Self-Hosted Supabase Only — Target-Neutral Backends              |
-| 0021 | Remove Curriculum Versioning                                     |
-| 0022 | Multi-role accounts with active role context                     |
-| 0023 | Deterministic qualitative evidence and sentiment shape           |
-| 0024 | Remove Dean enrollment oversight _(Amends ADR 0006)_             |
-| 0025 | Relax the Central Deployment GO Binding Gate                     |
-| 0026 | Institution Time Zone for Rendered Timestamps                    |
-| 0027 | One CILO May Be Evidenced by Several Likert Questions            |
-| 0028 | Secretary Term Placement for an Unplaced Student                 |
-| 0029 | Multi-Program Program Head Provisioning at Creation              |
-| 0030 | Graduate Outcome canonical terminology                           |
+| ADR  | Title                                                                     |
+| ---- | ------------------------------------------------------------------------- |
+| 0001 | Complete secretary-created accounts                                       |
+| 0001 | Single-role accounts _(Superseded by ADR 0022)_                           |
+| 0002 | Separate domain users from auth identities                                |
+| 0003 | Course catalog and assignment refactor                                    |
+| 0004 | Strict program deletion                                                   |
+| 0005 | Outcome ownership and dean oversight                                      |
+| 0006 | Dean PWA offline cache contract _(Amended by ADR 0024)_                   |
+| 0007 | Course assignment roster membership                                       |
+| 0008 | Dedicated demo deployment authentication                                  |
+| 0009 | Program head selected program context                                     |
+| 0010 | Unified appearance and protected showcase                                 |
+| 0011 | Fallow code intelligence policy                                           |
+| 0012 | Secretary-controlled academic calendar state                              |
+| 0013 | Versioned curriculum course placement _(Superseded by ADR 0021)_          |
+| 0014 | Google authoritative account names                                        |
+| 0015 | Name-based course roster resolution and student ID removal                |
+| 0016 | Server-side bounded AI interpretation boundary                            |
+| 0017 | Program learning outcome canonical terminology _(Superseded by ADR 0030)_ |
+| 0018 | Transfer ILO catalog ownership to General Education Coordinator           |
+| 0019 | Removing Secretary Course Assignment Mutation                             |
+| 0020 | Self-Hosted Supabase Only — Target-Neutral Backends                       |
+| 0021 | Remove Curriculum Versioning                                              |
+| 0022 | Multi-role accounts with active role context                              |
+| 0023 | Deterministic qualitative evidence and sentiment shape                    |
+| 0024 | Remove Dean enrollment oversight _(Amends ADR 0006)_                      |
+| 0025 | Relax the Central Deployment GO Binding Gate                              |
+| 0026 | Institution Time Zone for Rendered Timestamps                             |
+| 0027 | One CILO May Be Evidenced by Several Likert Questions                     |
+| 0028 | Secretary Term Placement for an Unplaced Student                          |
+| 0029 | Multi-Program Program Head Provisioning at Creation                       |
+| 0030 | Graduate Outcome canonical terminology                                    |
 
 #### Request Flow
 
@@ -262,7 +262,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/health(?:/|$)|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!api/health(?:/|$)|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
 ```
 

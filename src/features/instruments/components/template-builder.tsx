@@ -461,7 +461,12 @@ function formatTemplateTypeLabel(type: EvaluationTemplateType): string {
 const HISTORY_GUARD_KEY = "cloie-instrument-template-dirty-entry";
 
 function currentHistoryEntryIndex(): number | undefined {
-  return window.navigation?.currentEntry?.index;
+  const navigation: unknown = Reflect.get(window, "navigation");
+  if (typeof navigation !== "object" || navigation === null) return undefined;
+  const currentEntry: unknown = Reflect.get(navigation, "currentEntry");
+  if (typeof currentEntry !== "object" || currentEntry === null) return undefined;
+  const index: unknown = Reflect.get(currentEntry, "index");
+  return typeof index === "number" ? index : undefined;
 }
 
 function isHistoryGuardEntry(marker: string): boolean {

@@ -82,7 +82,7 @@ export function SubmittedResponseReview({
   const submittedLabel = formatDateTime(submittedAt);
 
   return (
-    <div className="motion-safe:animate-in motion-safe:fade-in flex flex-col gap-6 motion-safe:duration-500">
+    <div className="motion-safe:animate-in motion-safe:fade-in flex flex-col gap-6 motion-safe:duration-200">
       <header className="flex flex-col gap-3">
         <Badge variant="success" className="uppercase">
           <CheckCircle2 data-icon="inline-start" aria-hidden="true" />

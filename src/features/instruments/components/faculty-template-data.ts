@@ -69,7 +69,7 @@ function toFacultyTemplateBuilderData(template: FacultyTemplateItem): FacultyTem
   };
 }
 
-type FacultyTemplateBuilderSeed = FacultyTemplateBuilderData & {
+export type FacultyTemplateBuilderSeed = FacultyTemplateBuilderData & {
   template: FacultyTemplateItem;
   /** Course contexts the faculty member may bind CILOs to. */
   courseContexts: FacultyCourseContext[];

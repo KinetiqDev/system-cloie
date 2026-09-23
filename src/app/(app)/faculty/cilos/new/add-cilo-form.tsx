@@ -438,10 +438,7 @@ export function AddCiloForm({
                   Loading existing CILOs...
                 </p>
               ) : existingCilosError ? (
-                <div
-                  role="alert"
-                  className="border-danger/40 bg-danger-soft flex flex-col items-start gap-2 rounded-lg border p-3"
-                >
+                <Alert variant="destructive" className="flex flex-col items-start gap-2 p-3">
                   <p className="text-sm">{existingCilosError}</p>
                   <p className="text-caption">
                     Editing stays locked until these CILOs load, so a save cannot drop them.
@@ -453,7 +450,7 @@ export function AddCiloForm({
                   >
                     Retry loading CILOs
                   </Button>
-                </div>
+                </Alert>
               ) : existingCilos.length === 0 ? (
                 <p className="text-muted-foreground border-border rounded-lg border border-dashed py-4 text-center text-sm">
                   No CILOs on file for this course yet.

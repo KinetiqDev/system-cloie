@@ -85,8 +85,8 @@ describe("ResponsiveAlertDialog", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Discard staged changes?" });
     expect(dialog).toHaveAttribute("data-swipe-direction", "down");
-    // The drawer is dismissible by gesture, so the choice stays explicit and
-    // stacked in reverse order above the safe-area padding.
+    // Actions remain stacked above the safe-area padding; gestures do not
+    // dismiss a destructive confirmation.
     const footer = screen.getByRole("button", { name: "Discard and leave" }).parentElement;
     expect(footer).toHaveClass("flex-col-reverse", "border-t");
 
