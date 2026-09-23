@@ -394,9 +394,9 @@ describe("CourseAlignmentEditor", () => {
     const originalNavigation = Object.getOwnPropertyDescriptor(window, "navigation");
     const originalState = window.history.state;
     const originalUrl = window.location.href;
-    // Browsers without the Navigation API fall back to popstate, which cannot
-    // cancel a traversal — so the guard must return to the held entry itself.
+    // A same-URL entry keeps the first Back traversal inside the editor.
     Reflect.deleteProperty(window, "navigation");
+    const pushState = vi.spyOn(window.history, "pushState");
     const historyGo = vi.spyOn(window.history, "go").mockImplementation(() => undefined);
     const { unmount } = render(
       <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
@@ -404,19 +404,23 @@ describe("CourseAlignmentEditor", () => {
 
     try {
       stageTarget();
+      expect(pushState).toHaveBeenCalledTimes(1);
       act(() => {
         window.dispatchEvent(new PopStateEvent("popstate"));
       });
 
-      // The draft is still staged and the user is asked before it is lost.
+      expect(pushState).toHaveBeenCalledTimes(2);
+      expect(historyGo).not.toHaveBeenCalled();
       expect(
         screen.getByRole("heading", { name: "Discard staged alignment changes?" })
       ).toBeInTheDocument();
       expect(screen.getByTestId("manifestation-matrix")).toBeInTheDocument();
-      expect(historyGo).toHaveBeenCalledWith(1);
+      fireEvent.click(screen.getByRole("button", { name: "Discard and leave" }));
+      expect(historyGo).toHaveBeenCalledWith(-2);
     } finally {
       unmount();
       historyGo.mockRestore();
+      pushState.mockRestore();
       window.history.replaceState(originalState, "", originalUrl);
       if (originalNavigation) Object.defineProperty(window, "navigation", originalNavigation);
     }

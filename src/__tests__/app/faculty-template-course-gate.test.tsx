@@ -266,4 +266,54 @@ describe("faculty template course gate", () => {
     expect(builderProps.props?.startingFrom).toMatchObject({ id: sourceId });
     expect(builderProps.props?.initialData).toMatchObject({ bound_course_id: COURSE_ID });
   });
+
+  test("copying a template bound to an unavailable course requires an authorized course", async () => {
+    const sourceId = "e7c65302-5a13-4f33-b968-e960386ee3b8";
+    getFacultyTemplateMock.mockResolvedValue({
+      success: true,
+      data: facultyTemplate({
+        boundCourseId: "c699629d-8cb1-4329-8c5d-b55792bbd354",
+        boundProgramId: PROGRAM.id,
+        facultyOwnerId: null,
+      }),
+    });
+    const { default: Page } = await import("@/app/(app)/faculty/tools/new/from/[templateId]/page");
+
+    render(
+      await Page({
+        params: Promise.resolve({ templateId: sourceId }),
+        searchParams: Promise.resolve({}),
+      })
+    );
+
+    expect(screen.getByRole("heading", { name: "Choose a Course" })).toBeInTheDocument();
+    expect(builderProps.props).toBeUndefined();
+  });
+
+  test("copying onto another authorized course drops stale source bindings", async () => {
+    const sourceId = "e7c65302-5a13-4f33-b968-e960386ee3b8";
+    getFacultyTemplateMock.mockResolvedValue({
+      success: true,
+      data: facultyTemplate({
+        boundCourseId: "c699629d-8cb1-4329-8c5d-b55792bbd354",
+        boundProgramId: PROGRAM.id,
+        facultyOwnerId: null,
+        templateCiloQuestionBindings: [{ ciloId: "old-cilo", sectionKey: "s", itemKey: "q" }],
+      }),
+    });
+    const { default: Page } = await import("@/app/(app)/faculty/tools/new/from/[templateId]/page");
+
+    render(
+      await Page({
+        params: Promise.resolve({ templateId: sourceId }),
+        searchParams: Promise.resolve({ course: COURSE_ID }),
+      })
+    );
+
+    expect(builderProps.props?.initialData).toMatchObject({
+      bound_course_id: COURSE_ID,
+      bound_program_id: PROGRAM.id,
+    });
+    expect(builderProps.props?.initialBindings).toEqual([]);
+  });
 });

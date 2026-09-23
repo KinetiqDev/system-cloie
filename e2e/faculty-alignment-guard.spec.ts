@@ -120,3 +120,25 @@ test("the in-page back control asks before discarding staged alignment changes",
 
   await expectNoHorizontalOverflow(page);
 });
+
+test("the alignment guard holds Back without the Navigation API", async ({ page }) => {
+  const fx = fixture();
+  const native = collectNativeDialogs(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "navigation", { value: undefined, configurable: true });
+  });
+  await loginAs(page, fx.demoFaculty.email);
+  await enterDirtyAlignmentWorkspace(page, "ITRES1");
+
+  await pressBrowserBack(page);
+  await expect(discardConfirmation(page)).toBeVisible();
+  await expect(page.getByTestId("manifestation-matrix")).toBeVisible();
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await expect(page.getByRole("button", { name: /Review 1 change/ })).toBeEnabled();
+
+  await pressBrowserBack(page);
+  await expect(discardConfirmation(page)).toBeVisible();
+  await page.getByRole("button", { name: "Discard and leave" }).click();
+  await expect(page).toHaveURL(/\/faculty\/cilos$/, { timeout: 30_000 });
+  expect(native).toEqual([]);
+});

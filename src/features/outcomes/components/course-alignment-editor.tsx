@@ -512,7 +512,10 @@ export function CourseAlignmentEditor({
     setDiscardIntent((current) => current ?? { kind: "leave", href });
   }, []);
 
-  const { allowDeparture } = useUnsavedChangesGuard({ isDirty, onRequestLeave: requestLeave });
+  const { allowDeparture, heldHistoryEntry } = useUnsavedChangesGuard({
+    isDirty,
+    onRequestLeave: requestLeave,
+  });
 
   const leaveEditor = (href: string | null) => {
     // The confirmed departure is the one navigation the guard must not re-ask
@@ -520,7 +523,7 @@ export function CourseAlignmentEditor({
     allowDeparture();
     setDiscardIntent(null);
     if (href === null) {
-      window.history.back();
+      window.history.go(heldHistoryEntry ? -2 : -1);
       return;
     }
     router.push(href);

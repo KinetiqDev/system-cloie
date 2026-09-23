@@ -43,6 +43,8 @@ type UnsavedChangesGuard = {
    * immediately before navigating away after the user has confirmed.
    */
   allowDeparture: () => void;
+  /** Whether Back must cross a held same-URL entry on this browser. */
+  heldHistoryEntry: boolean;
 };
 
 /**
@@ -67,8 +69,9 @@ type UnsavedChangesGuard = {
  * `beforeunload` is the only signal a page receives there and its prompt cannot
  * be restyled.
  *
- * Without the Navigation API, `popstate` remains as a best-effort fallback that
- * cancels a single-step traversal by returning to the held entry.
+ * Without the Navigation API, a same-URL history entry absorbs a one-step
+ * Back traversal before the router can leave this page. The confirmation then
+ * either keeps the editor or crosses both entries after approval.
  */
 export function useUnsavedChangesGuard({
   isDirty,
@@ -135,8 +138,12 @@ export function useUnsavedChangesGuard({
       event.returnValue = true;
     };
 
-    // Fallback: popstate cannot cancel a traversal, so return to the held entry
-    // once the user declines. `restoring` keeps that return from re-prompting.
+    // popstate cannot be cancelled. A same-URL entry keeps the first Back
+    // traversal on this route, so Next sees the editor rather than its parent.
+    const heldEntry = !navigation?.addEventListener;
+    if (heldEntry) {
+      window.history.pushState(window.history.state, "", window.location.href);
+    }
     let restoring = false;
     const handlePopstate = () => {
       if (departureApproved.current) return;
@@ -145,8 +152,8 @@ export function useUnsavedChangesGuard({
         return;
       }
       restoring = true;
+      window.history.pushState(window.history.state, "", window.location.href);
       requestLeave.current(null);
-      window.history.go(1);
     };
 
     document.addEventListener("click", interceptLinkClick, true);
@@ -168,5 +175,5 @@ export function useUnsavedChangesGuard({
     };
   }, [isDirty]);
 
-  return { allowDeparture };
+  return { allowDeparture, heldHistoryEntry: getNavigationTarget() === null };
 }

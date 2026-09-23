@@ -2,6 +2,7 @@ import { FacultyCourseGate } from "./faculty-course-gate";
 import { FacultyTemplateBuilder } from "./faculty-template-builder";
 import type { FacultyTemplateBuilderSeed } from "./faculty-template-data";
 import type { FacultyCourseWithCilosResult } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
+import type { FacultyCourseContext } from "@/features/evaluations/types";
 
 type FacultyTemplateWorkspaceProps = {
   seed: FacultyTemplateBuilderSeed;
@@ -10,18 +11,51 @@ type FacultyTemplateWorkspaceProps = {
   mode: "edit" | "copy";
 };
 
+type CourseSelection = {
+  context: FacultyCourseContext | null;
+  courseId: string | null;
+  changed: boolean;
+};
+
+function resolveEditCourse(
+  seed: FacultyTemplateBuilderSeed,
+  requestedCourseId?: string
+): CourseSelection {
+  const storedCourseId = seed.initialData.bound_course_id;
+  const context =
+    seed.courseContexts.find((course) => course.courseId === storedCourseId) ??
+    seed.courseContexts.find((course) => course.courseId === requestedCourseId) ??
+    null;
+  return { context, courseId: storedCourseId ?? context?.courseId ?? null, changed: false };
+}
+
+function resolveCopyCourse(
+  seed: FacultyTemplateBuilderSeed,
+  requestedCourseId?: string
+): CourseSelection {
+  const context =
+    seed.courseContexts.find((course) => course.courseId === requestedCourseId) ??
+    seed.courseContexts.find((course) => course.courseId === seed.initialData.bound_course_id) ??
+    null;
+  return {
+    context,
+    courseId: context?.courseId ?? null,
+    changed: context?.courseId !== seed.initialData.bound_course_id,
+  };
+}
+
 export function FacultyTemplateWorkspace({
   seed,
   coursesResult,
   requestedCourseId,
   mode,
 }: FacultyTemplateWorkspaceProps) {
-  const chosenContext = requestedCourseId
-    ? (seed.courseContexts.find((context) => context.courseId === requestedCourseId) ?? null)
-    : null;
-  const boundCourseId = seed.initialData.bound_course_id ?? chosenContext?.courseId ?? null;
+  const { context, courseId, changed } =
+    mode === "copy"
+      ? resolveCopyCourse(seed, requestedCourseId)
+      : resolveEditCourse(seed, requestedCourseId);
 
-  if (!boundCourseId) {
+  if (!courseId) {
     return (
       <FacultyCourseGate
         courses={coursesResult.success ? coursesResult.data.courses : []}
@@ -50,12 +84,14 @@ export function FacultyTemplateWorkspace({
         initialData={{
           ...seed.initialData,
           ...(mode === "edit" ? { id: seed.template.id } : {}),
-          bound_course_id: boundCourseId,
-          bound_program_id: seed.initialData.bound_program_id ?? chosenContext?.programId ?? null,
-          bound_major_id: seed.initialData.bound_major_id ?? chosenContext?.majorId ?? null,
+          bound_course_id: courseId,
+          bound_program_id:
+            context?.programId ?? (mode === "edit" ? seed.initialData.bound_program_id : null),
+          bound_major_id:
+            context?.majorId ?? (mode === "edit" ? seed.initialData.bound_major_id : null),
         }}
-        initialBindings={seed.initialBindings}
-        initialGoBindings={seed.initialGoBindings}
+        initialBindings={changed ? [] : seed.initialBindings}
+        initialGoBindings={changed ? [] : seed.initialGoBindings}
         {...(mode === "copy"
           ? {
               startingFrom: {
