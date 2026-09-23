@@ -1,3 +1,6 @@
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+
 // Regression: a faculty template cannot bind CILOs until it is bound to a
 // Course, so the blank and edit routes ask for the Course first instead of
 // dropping the author into a builder with an empty Course control.
@@ -64,9 +67,6 @@ vi.mock("@/features/instruments/components/faculty-template-builder", () => ({
     return <div data-testid="faculty-template-builder" />;
   },
 }));
-
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const PROGRAM = { code: "BSIT", id: "program-1", name: "Information Technology" };
 const COURSE_ID = "8b69c52b-918f-43db-864b-d5cb09d3b4e8";
