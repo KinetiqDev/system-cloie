@@ -26,6 +26,18 @@ function getNavigationTarget(): NavigationTarget | null {
   return navigation as NavigationTarget;
 }
 
+function isExternalLinkActivation(event: MouseEvent, anchor: HTMLAnchorElement): boolean {
+  return (
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    Boolean(anchor.target) ||
+    anchor.hasAttribute("download") ||
+    anchor.origin !== window.location.origin
+  );
+}
+
 type UnsavedChangesGuardOptions = {
   /** Whether unsaved work exists. The guard binds only while this is true. */
   isDirty: boolean;
@@ -96,56 +108,61 @@ export function useUnsavedChangesGuard({
   );
 
   useEffect(() => {
-    const navigation = getNavigationTarget();
-    if (!isDirty && !heldEntry.current) return;
-    if (isDirty) departureApproved.current = false;
-
-    /** Modifier-clicks, downloads, and off-site links stay with the browser. */
-    const leavesDocument = (event: MouseEvent, anchor: HTMLAnchorElement) => {
-      const hasModifier = [event.metaKey, event.ctrlKey, event.shiftKey, event.altKey].some(
-        Boolean
-      );
-      return (
-        hasModifier ||
-        Boolean(anchor.target) ||
-        anchor.hasAttribute("download") ||
-        anchor.origin !== window.location.origin
-      );
-    };
-
+    if (!isDirty) return;
     const interceptLinkClick = (event: MouseEvent) => {
       if (departureApproved.current || event.defaultPrevented || event.button !== 0) return;
       const anchor = (event.target as Element | null)?.closest?.(
         "a[href]"
       ) as HTMLAnchorElement | null;
-      if (!anchor || leavesDocument(event, anchor)) return;
-      // Already there: nothing to discard, so let it through untouched.
-      if (anchor.href === window.location.href) return;
+      if (
+        !anchor ||
+        isExternalLinkActivation(event, anchor) ||
+        anchor.href === window.location.href
+      )
+        return;
 
       event.preventDefault();
       event.stopPropagation();
       requestLeave.current(`${anchor.pathname}${anchor.search}${anchor.hash}`);
     };
-
-    // Navigation API support is checked once for this effect's listener set.
-    const cancelTraversal = (event: NavigateEvent) => {
-      if (departureApproved.current) return;
-      // Cross-document destinations have already left this document; only the
-      // browser's own beforeunload warning can speak for them.
-      if (!event.cancelable || event.hashChange || event.destination.sameDocument === false) return;
-
-      event.preventDefault();
-      requestLeave.current(null);
-    };
-
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       if (departureApproved.current) return;
       event.preventDefault();
       event.returnValue = true;
     };
-    // popstate cannot be cancelled. A same-URL entry keeps the first Back
-    // traversal on this route, so Next sees the editor rather than its parent.
-    if (!navigation?.addEventListener && isDirty && !heldEntry.current) {
+
+    document.addEventListener("click", interceptLinkClick, true);
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => {
+      document.removeEventListener("click", interceptLinkClick, true);
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+    };
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (isDirty) departureApproved.current = false;
+  }, [isDirty]);
+
+  useEffect(() => {
+    const navigation = getNavigationTarget();
+    if (!isDirty || !navigation?.addEventListener) return;
+
+    const cancelTraversal = (event: NavigateEvent) => {
+      if (departureApproved.current) return;
+      if (!event.cancelable || event.hashChange || event.destination.sameDocument === false) return;
+      event.preventDefault();
+      requestLeave.current(null);
+    };
+    navigation.addEventListener("navigate", cancelTraversal);
+    return () => navigation.removeEventListener("navigate", cancelTraversal);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (getNavigationTarget()?.addEventListener || (!isDirty && !heldEntry.current)) return;
+
+    // Without the Navigation API, a same-URL entry holds the editor ahead of
+    // Next's popstate listener. Retain it across clean-to-dirty cycles.
+    if (isDirty && !heldEntry.current) {
       window.history.pushState(window.history.state, "", window.location.href);
       heldEntry.current = true;
     }
@@ -162,25 +179,8 @@ export function useUnsavedChangesGuard({
       requestLeave.current(null);
     };
 
-    if (isDirty) {
-      document.addEventListener("click", interceptLinkClick, true);
-      window.addEventListener("beforeunload", warnBeforeUnload);
-    }
-    if (navigation?.addEventListener) {
-      if (isDirty) navigation.addEventListener("navigate", cancelTraversal);
-    } else if (heldEntry.current) {
-      window.addEventListener("popstate", handlePopstate);
-    }
-
-    return () => {
-      document.removeEventListener("click", interceptLinkClick, true);
-      window.removeEventListener("beforeunload", warnBeforeUnload);
-      if (navigation?.addEventListener) {
-        navigation.removeEventListener("navigate", cancelTraversal);
-      } else {
-        window.removeEventListener("popstate", handlePopstate);
-      }
-    };
+    window.addEventListener("popstate", handlePopstate);
+    return () => window.removeEventListener("popstate", handlePopstate);
   }, [isDirty]);
 
   return { allowDeparture, hasHeldHistoryEntry };
