@@ -81,14 +81,6 @@ export function distinctTargetOptions(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-function matchesStatus(
-  item: FilterablePublishedEvaluation,
-  status: PublishedEvaluationFilters["status"]
-): boolean {
-  if (status === "ALL") return item.status !== ("ARCHIVED" as DeploymentStatus);
-  return item.status === status;
-}
-
 function matchesQuery(item: FilterablePublishedEvaluation, query: string): boolean {
   const needle = normalizePublishedQuery(query).toLowerCase();
   if (!needle) return true;
@@ -104,13 +96,18 @@ function matchesQuery(item: FilterablePublishedEvaluation, query: string): boole
   return haystack.includes(needle);
 }
 
+/**
+ * Apply the caller-owned facets (period, course, target, search). The lifecycle
+ * status facet is owned by `PublishedDeploymentsCollection`, which renders the
+ * status chips and derives their counts; narrowing by status here would hide
+ * deployments from that row and strand the user on an empty filter.
+ */
 export function filterPublishedEvaluations<T extends FilterablePublishedEvaluation>(
   items: T[],
-  filters: PublishedEvaluationFilters
+  filters: Omit<PublishedEvaluationFilters, "status">
 ): T[] {
   return items.filter(
     (item) =>
-      matchesStatus(item, filters.status) &&
       (filters.periodId === null || item.termInstanceId === filters.periodId) &&
       (filters.courseId === null || item.courseId === filters.courseId) &&
       (filters.target === null || item.targetStakeholder === filters.target) &&

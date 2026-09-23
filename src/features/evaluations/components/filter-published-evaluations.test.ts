@@ -39,20 +39,6 @@ const BASE_FILTERS: PublishedEvaluationFilters = {
 };
 
 describe("filterPublishedEvaluations", () => {
-  it("excludes archived evaluations when the status filter is All", () => {
-    const items = [makeItem(), makeItem({ evaluationId: "archived", status: "ARCHIVED" })];
-
-    expect(filterPublishedEvaluations(items, BASE_FILTERS)).toHaveLength(1);
-  });
-
-  it("selects one lifecycle status at a time", () => {
-    const items = [makeItem(), makeItem({ evaluationId: "closed", status: "CLOSED" })];
-
-    const closed = filterPublishedEvaluations(items, { ...BASE_FILTERS, status: "CLOSED" });
-
-    expect(closed.map((item) => item.evaluationId)).toEqual(["closed"]);
-  });
-
   it("narrows by academic period", () => {
     const items = [
       makeItem(),
@@ -112,7 +98,7 @@ describe("filterPublishedEvaluations", () => {
     ).toEqual(["evaluation-1"]);
   });
 
-  it("combines every active filter with AND semantics", () => {
+  it("combines every caller-owned facet with AND semantics", () => {
     const items = [
       makeItem(),
       makeItem({
@@ -130,7 +116,6 @@ describe("filterPublishedEvaluations", () => {
       courseId: COURSE_IT,
       target: null,
       query: "review",
-      status: "CLOSED",
     });
 
     expect(filtered.map((item) => item.evaluationId)).toEqual(["match"]);

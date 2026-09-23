@@ -96,6 +96,28 @@ describe("FacultyPublishedEvaluations", () => {
     expect(screen.queryByText("Active Eval")).not.toBeInTheDocument();
   });
 
+  it("keeps the status filter row reachable when a status matches nothing", () => {
+    render(
+      <FacultyPublishedEvaluations
+        view="list"
+        evaluations={[
+          makeItem({ evaluationId: "e1", deploymentName: "Active Eval", status: "ACTIVE" }),
+          makeItem({ evaluationId: "e2", deploymentName: "Closed Eval", status: "CLOSED" }),
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Scheduled" }));
+
+    // The chip row is the only control for the lifecycle facet, so an empty
+    // status must leave it mounted and never claim nothing is published.
+    expect(screen.getByRole("toolbar", { name: /filter by deployment status/i })).toBeVisible();
+    expect(screen.queryByText(/no published evaluations yet/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Closed" }));
+    expect(screen.getByText("Closed Eval")).toBeInTheDocument();
+  });
+
   it("narrows the list by academic period", async () => {
     render(
       <FacultyPublishedEvaluations

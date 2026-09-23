@@ -217,6 +217,28 @@ describe("ProgramHeadToolsPage", () => {
     expect(within(dialog).queryByText("Duplicate failed.")).not.toBeInTheDocument();
   });
 
+  test("keeps the status filter row reachable when a status matches nothing", () => {
+    render(
+      <ProgramHeadToolsPage
+        templates={[template]}
+        deployments={[deployment]}
+        baselines={[baseline]}
+        program={{ id: "program-1", code: "BSIT", name: "Information Technology" }}
+        initialTab="published"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+
+    // The chip row is the only control for the lifecycle facet, so an empty
+    // status must leave it mounted and never claim nothing is published.
+    expect(screen.getByRole("toolbar", { name: /filter by deployment status/i })).toBeVisible();
+    expect(screen.queryByText(/no published tools yet/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Active" }));
+    expect(within(screen.getByRole("tabpanel")).getByText("BSIT Tool")).toBeVisible();
+  });
+
   test("narrows published deployments by the initial target filter", () => {
     const alumniDeployment: ProgramHeadDeploymentItem = {
       ...deployment,
