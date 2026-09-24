@@ -1,5 +1,12 @@
-import { getDeanLearningOutcomes } from "@/features/dean/services/read-dean-oversight";
-import { assertAllowedQueryParameters, deanJson, handleDeanReadError, parseRequiredUuid, requireDean, DeanRouteBadRequestError } from "../route-helpers";
+import { getDeanLearningOutcomes } from "@/features/dean/services/read-dean-learning-outcomes";
+import {
+  assertAllowedQueryParameters,
+  deanJson,
+  handleDeanReadError,
+  parseRequiredUuid,
+  requireDean,
+  DeanRouteBadRequestError,
+} from "../route-helpers";
 
 const RISKS = new Set(["missing-cilos", "incomplete-mappings", "not-ready"]);
 
@@ -15,7 +22,12 @@ export async function GET(request: Request): Promise<Response> {
     if (riskValue !== null && !RISKS.has(riskValue)) {
       throw new DeanRouteBadRequestError("Invalid risk.");
     }
-    return deanJson(await getDeanLearningOutcomes(period, riskValue as "missing-cilos" | "incomplete-mappings" | "not-ready" | null));
+    return deanJson(
+      await getDeanLearningOutcomes(
+        period,
+        riskValue as "missing-cilos" | "incomplete-mappings" | "not-ready" | null
+      )
+    );
   } catch (error) {
     return handleDeanReadError(error, "learning outcomes");
   }
