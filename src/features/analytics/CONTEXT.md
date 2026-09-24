@@ -133,6 +133,10 @@ _Avoid_: Single blended mean across scale identities
 Ratings dropped from a valid aggregate because scale resolution failed or the rating value fell outside the scale.
 _Avoid_: Treating excluded ratings as valid aggregate input
 
+**Program Head Outcomes GO row**:
+The Outcomes view's course-bound GO row is a Program Head evidence surface, not a bare metric. It carries per-contributor provenance (each CILO and each direct question with its own rating count and mean), the frozen publication manifestation label, contributing Courses and CILOs, the contributing evaluations with their review links, the many-to-many and current-mapping disclosures, and scale-separated distributions. Its `meanRating` pools every valid in-scale rating across the row and sets `spansMultipleScales`, and the view prints the cross-scale comparability notice beside that number. The shared `buildCourseDerivedGoMetrics` metric is the wrong shape for this surface: it has no provenance fields and reports `mean: null` for mixed scales, so adopting it would delete evidence and change a rendered mean. Counting rules are shared in practice and pinned by test, so the two agree on contributions, overlap collapse, invalid ratings, and unmapped rows.
+_Avoid_: Bare metric as the Outcomes row, mixed-scale mean as null on the Outcomes row, provenance-free Outcome row
+
 ## AI-assisted interpretation
 
 **AI-assisted interpretation**:
