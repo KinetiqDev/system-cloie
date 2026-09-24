@@ -129,6 +129,137 @@ interface CourseAssignmentsRowProps {
   onActivate: (assignmentId: string) => void;
 }
 
+const VIEW_ONLY_LABEL = "View only";
+const READ_ONLY_LABEL = "Read only";
+const PROGRAM_SPECIFIC_LABEL = "Program-specific";
+const COORDINATOR_SCOPE_LABEL = "Managed by General Education Coordinator";
+
+/**
+ * One row's display capability for the list UI. Every write re-authorizes
+ * against `course_scope` inside the server service; this is a display
+ * contract, never an authorization source.
+ */
+type AssignmentRowCapability = {
+  selectable: boolean;
+  readOnlyLabel: string | null;
+  menuReadOnlyLabel: string | null;
+  delegatedToCoordinator: boolean;
+};
+
+/**
+ * Resolves the row capability from the list mode and the Course scope: the
+ * Program Head sees only Program-specific rows and the Coordinator only
+ * General Education rows, while a view-only host keeps the whole list
+ * read-only.
+ */
+function assignmentRowCapability(
+  mode: CourseAssignmentsTableMode,
+  canManageAssignments: boolean,
+  courseScope: CourseScope | null | undefined
+): AssignmentRowCapability {
+  const isGeneralEducation = courseScope === CourseScope.GENERAL_EDUCATION;
+  const dispatchedToCoordinator = mode === "program-head" && isGeneralEducation;
+  const inRoleScope =
+    mode === "program-head"
+      ? !isGeneralEducation
+      : mode === "general-education"
+        ? isGeneralEducation
+        : true;
+  const selectable = canManageAssignments && inRoleScope;
+
+  if (selectable) {
+    return {
+      selectable,
+      readOnlyLabel: null,
+      menuReadOnlyLabel: null,
+      delegatedToCoordinator: dispatchedToCoordinator,
+    };
+  }
+  if (!canManageAssignments) {
+    return {
+      selectable,
+      readOnlyLabel: VIEW_ONLY_LABEL,
+      menuReadOnlyLabel: VIEW_ONLY_LABEL,
+      delegatedToCoordinator: dispatchedToCoordinator,
+    };
+  }
+  return {
+    selectable,
+    readOnlyLabel: dispatchedToCoordinator ? COORDINATOR_SCOPE_LABEL : PROGRAM_SPECIFIC_LABEL,
+    menuReadOnlyLabel: READ_ONLY_LABEL,
+    delegatedToCoordinator: dispatchedToCoordinator,
+  };
+}
+
+/**
+ * The roster entry point for one row. Roster navigation is deliberately a
+ * separate decision from the row capability: a view-only Secretary keeps the
+ * roster-discovery link, while the Coordinator gets a notice instead.
+ */
+type RosterNavigation = { kind: "link"; href: string } | { kind: "notice"; label: string };
+
+function rosterNavigation(
+  mode: CourseAssignmentsTableMode,
+  assignmentId: string,
+  selectedProgramId?: string
+): RosterNavigation {
+  if (mode === "general-education") {
+    return { kind: "notice", label: "Roster managed by Program" };
+  }
+  if (mode === "all-program") {
+    return { kind: "link", href: `/course-rosters/${assignmentId}` };
+  }
+  if (selectedProgramId) {
+    return {
+      kind: "link",
+      href: buildProgramHeadCourseRosterPath(selectedProgramId, assignmentId),
+    };
+  }
+  return { kind: "notice", label: "Roster available in program view" };
+}
+
+/** Two-letter avatar initials derived from the canonical account name. */
+function facultyInitials(name: string | null | undefined): string {
+  return (name ?? "Unknown")
+    .split(" ")
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+/** Display facts shared by the desktop row and the mobile card. */
+type AssignmentRowPresentation = {
+  scopeLabel: string;
+  scopeBadgeVariant: "secondary" | "outline";
+  statusLabel: string;
+  statusBadgeVariant: "success" | "outline";
+  statusDotClass: string;
+  rosterCountLabel: string;
+  facultyName: string;
+  facultyEmail: string;
+  facultyInitials: string;
+  classLabel: string;
+};
+
+function assignmentRowPresentation(assignment: CourseAssignmentItem): AssignmentRowPresentation {
+  const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
+  const rosterCount = assignment.rosterMembershipCount ?? 0;
+  return {
+    scopeLabel: isGeneralEducation ? "GE" : "Program-specific",
+    scopeBadgeVariant: isGeneralEducation ? "secondary" : "outline",
+    statusLabel: assignment.isActive ? "Active" : "Inactive",
+    statusBadgeVariant: assignment.isActive ? "success" : "outline",
+    statusDotClass: assignment.isActive ? "bg-success" : "bg-muted-foreground",
+    rosterCountLabel: `${rosterCount} roster ${rosterCount === 1 ? "member" : "members"}`,
+    facultyName: assignment.facultyName ?? "Unknown faculty",
+    facultyEmail: assignment.facultyEmail ?? "—",
+    facultyInitials: facultyInitials(assignment.facultyName),
+    classLabel: `${getYearLevelDisplay(assignment.yearLevel)} · ${getSectionLabel(assignment.section)}`,
+  };
+}
+
 function RosterCell({
   assignment,
   mode,
@@ -138,45 +269,32 @@ function RosterCell({
   mode: CourseAssignmentsTableMode;
   selectedProgramId?: string;
 }) {
-  const isCoordinator = mode === "general-education";
-  if (isCoordinator) {
-    return (
-      <span className="bg-muted text-muted-foreground ring-border inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium ring-1">
-        Roster managed by Program
-      </span>
-    );
-  }
-  if (mode === "all-program" || (mode === "program-head" && selectedProgramId)) {
-    const href =
-      mode === "all-program"
-        ? `/course-rosters/${assignment.id}`
-        : buildProgramHeadCourseRosterPath(selectedProgramId!, assignment.id);
-    return (
-      <Link
-        href={href}
-        aria-label={`Open roster for ${assignment.courseCode}`}
-        className={buttonVariants({
-          variant: "outline",
-          size: "sm",
-          className:
-            "border-primary-border bg-primary-soft text-selected-fg hover:bg-selected-bg hover:text-selected-fg h-8 gap-1.5 rounded-full px-3 text-xs font-semibold shadow-xs",
-        })}
-      >
-        <Users aria-hidden="true" />
-        Open roster
-        <ExternalLink className="opacity-70" aria-hidden="true" />
-      </Link>
-    );
+  const roster = rosterNavigation(mode, assignment.id, selectedProgramId);
+  if (roster.kind === "notice") {
+    const noticeClass =
+      mode === "general-education"
+        ? "bg-muted text-muted-foreground ring-border inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium ring-1"
+        : "bg-muted text-muted-foreground inline-flex items-center rounded-md px-2.5 py-1 text-xs";
+    return <span className={noticeClass}>{roster.label}</span>;
   }
   return (
-    <span className="bg-muted text-muted-foreground inline-flex items-center rounded-md px-2.5 py-1 text-xs">
-      Roster available in program view
-    </span>
+    <Link
+      href={roster.href}
+      aria-label={`Open roster for ${assignment.courseCode}`}
+      className={buttonVariants({
+        variant: "outline",
+        size: "sm",
+        className:
+          "border-primary-border bg-primary-soft text-selected-fg hover:bg-selected-bg hover:text-selected-fg h-8 gap-1.5 rounded-full px-3 text-xs font-semibold shadow-xs",
+      })}
+    >
+      <Users aria-hidden="true" />
+      Open roster
+      <ExternalLink className="opacity-70" aria-hidden="true" />
+    </Link>
   );
 }
 
-// Menu branches express the role/scope action matrix pinned by assignment workflow tests.
-// fallow-ignore-next-line complexity
 function AssignmentActions({
   assignment,
   mode,
@@ -186,17 +304,15 @@ function AssignmentActions({
   onOpenConfirm,
   onActivate,
 }: Omit<CourseAssignmentsRowProps, "selectedProgramId" | "selected" | "onSelectedChange">) {
-  const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
-  const readOnlyReason = !canManageAssignments
-    ? "View only"
-    : (isGeneralEducation && mode === "program-head") ||
-        (mode === "general-education" && !isGeneralEducation)
-      ? "Read only"
-      : null;
+  const capability = assignmentRowCapability(mode, canManageAssignments, assignment.courseScope);
   const busy = processingId === assignment.id;
 
-  if (readOnlyReason) {
-    return <span className="text-muted-foreground text-xs font-medium">{readOnlyReason}</span>;
+  if (capability.menuReadOnlyLabel) {
+    return (
+      <span className="text-muted-foreground text-xs font-medium">
+        {capability.menuReadOnlyLabel}
+      </span>
+    );
   }
 
   return (
@@ -215,12 +331,11 @@ function AssignmentActions({
       />
       <DropdownMenuContent align="end" className="min-w-40">
         <DropdownMenuGroup>
-          {(mode === "all-program" || mode === "general-education" || !isGeneralEducation) && (
-            <DropdownMenuItem onClick={() => onEdit(assignment)} disabled={busy}>
-              <Pencil className="size-4" />
-              Edit
-            </DropdownMenuItem>
-          )}
+          {/* Out-of-scope rows returned the read-only marker above. */}
+          <DropdownMenuItem onClick={() => onEdit(assignment)} disabled={busy}>
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
           {assignment.isActive ? (
             <DropdownMenuItem
               onClick={() => onOpenConfirm("deactivate", assignment)}
@@ -249,8 +364,6 @@ function AssignmentActions({
   );
 }
 
-// Row branches keep the desktop role/scope matrix visible and covered as one table contract.
-// fallow-ignore-next-line complexity
 function CourseAssignmentsRow({
   assignment,
   mode,
@@ -263,31 +376,22 @@ function CourseAssignmentsRow({
   onOpenConfirm,
   onActivate,
 }: CourseAssignmentsRowProps) {
-  const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
-  const isCoordinator = mode === "general-education";
-  const isReadOnly = isGeneralEducation && mode === "program-head";
-  const readOnlyReason = !canManageAssignments
-    ? "View only"
-    : isReadOnly
-      ? "Managed by General Education Coordinator"
-      : isCoordinator && !isGeneralEducation
-        ? "Program-specific"
-        : null;
-  const scopeLabel = isGeneralEducation ? "GE" : "Program-specific";
+  const capability = assignmentRowCapability(mode, canManageAssignments, assignment.courseScope);
+  const presentation = assignmentRowPresentation(assignment);
   return (
     <TableRow
-      data-readonly={readOnlyReason !== null || undefined}
+      data-readonly={capability.readOnlyLabel !== null || undefined}
       data-state={selected ? "selected" : undefined}
       className="group hover:bg-muted/40"
     >
       <TableCell>
-        {readOnlyReason ? null : (
+        {capability.selectable ? (
           <Checkbox
             aria-label={`Select ${assignment.courseCode}`}
             checked={selected}
             onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
           />
-        )}
+        ) : null}
       </TableCell>
       <TableCell className="py-3">
         <div className="flex flex-col gap-1">
@@ -300,20 +404,14 @@ function CourseAssignmentsRow({
       <TableCell className="py-3">
         <div className="flex items-center gap-2.5">
           <span className="bg-primary/10 text-link ring-primary/15 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
-            {(assignment.facultyName ?? "Unknown")
-              .split(" ")
-              .slice(0, 2)
-              .map((part) => part[0] ?? "")
-              .join("")
-              .toUpperCase()
-              .slice(0, 2)}
+            {presentation.facultyInitials}
           </span>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm leading-none font-medium">
-              {assignment.facultyName ?? "Unknown faculty"}
+              {presentation.facultyName}
             </span>
             <span className="text-muted-foreground truncate text-xs">
-              {assignment.facultyEmail ?? "—"}
+              {presentation.facultyEmail}
             </span>
           </div>
         </div>
@@ -328,7 +426,7 @@ function CourseAssignmentsRow({
       <TableCell className="py-3">
         <span className="bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap">
           <GraduationCap className="text-muted-foreground size-3 shrink-0" aria-hidden="true" />
-          {getYearLevelDisplay(assignment.yearLevel)} · {getSectionLabel(assignment.section)}
+          {presentation.classLabel}
         </span>
       </TableCell>
       <TableCell className="py-3">
@@ -340,28 +438,28 @@ function CourseAssignmentsRow({
       <TableCell className="py-3">
         <div className="flex flex-col items-start gap-1">
           <Badge
-            variant={isGeneralEducation ? "secondary" : "outline"}
+            variant={presentation.scopeBadgeVariant}
             className="rounded-full px-2.5 py-1 text-xs"
           >
-            {scopeLabel}
+            {presentation.scopeLabel}
           </Badge>
-          {isGeneralEducation && mode === "program-head" && (
+          {capability.delegatedToCoordinator && (
             <span className="text-muted-foreground block text-xs leading-snug">
-              Managed by General Education Coordinator
+              {COORDINATOR_SCOPE_LABEL}
             </span>
           )}
         </div>
       </TableCell>
       <TableCell className="py-3">
         <Badge
-          variant={assignment.isActive ? "success" : "outline"}
+          variant={presentation.statusBadgeVariant}
           className="rounded-full px-2.5 py-1 text-xs"
         >
           <span
-            className={`mr-1.5 size-1.5 rounded-full ${assignment.isActive ? "bg-success" : "bg-muted-foreground"}`}
+            className={`mr-1.5 size-1.5 rounded-full ${presentation.statusDotClass}`}
             aria-hidden="true"
           />
-          {assignment.isActive ? "Active" : "Inactive"}
+          {presentation.statusLabel}
         </Badge>
       </TableCell>
       <TableCell className="py-3">
@@ -480,13 +578,10 @@ export function CourseAssignmentsTable({
   const totalPages = Math.ceil(total / pageSize);
   const manageableAssignments = useMemo(
     () =>
-      assignments.filter((assignment) => {
-        if (!canManageAssignments) return false;
-        const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
-        if (mode === "program-head") return !isGeneralEducation;
-        if (mode === "general-education") return isGeneralEducation;
-        return true;
-      }),
+      assignments.filter(
+        (assignment) =>
+          assignmentRowCapability(mode, canManageAssignments, assignment.courseScope).selectable
+      ),
     [assignments, canManageAssignments, mode]
   );
   const selection = useTableSelection(
@@ -724,8 +819,12 @@ export function CourseAssignmentsTable({
       {!isDesktop ? (
         <div className="grid min-w-0 gap-3">
           {assignments.map((assignment) => {
-            const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
-            const classLabel = `${getYearLevelDisplay(assignment.yearLevel)} · ${getSectionLabel(assignment.section)}`;
+            const capability = assignmentRowCapability(
+              mode,
+              canManageAssignments,
+              assignment.courseScope
+            );
+            const presentation = assignmentRowPresentation(assignment);
             return (
               <Card
                 key={assignment.id}
@@ -735,7 +834,7 @@ export function CourseAssignmentsTable({
                 className="data-[state=selected]:bg-selected-bg min-w-0 overflow-hidden border shadow-xs transition-shadow hover:shadow-sm"
               >
                 <CardHeader className="min-w-0 gap-3 pb-3">
-                  {manageableAssignments.some((item) => item.id === assignment.id) && (
+                  {capability.selectable && (
                     <Checkbox
                       aria-label={`Select ${assignment.courseCode}`}
                       checked={selection.selectedIds.has(assignment.id)}
@@ -750,20 +849,20 @@ export function CourseAssignmentsTable({
                         {assignment.courseCode}
                       </span>
                       <Badge
-                        variant={isGeneralEducation ? "secondary" : "outline"}
+                        variant={presentation.scopeBadgeVariant}
                         className="rounded-full px-2 py-0.5 text-xs font-semibold"
                       >
-                        {isGeneralEducation ? "GE" : "Program-specific"}
+                        {presentation.scopeLabel}
                       </Badge>
                       <Badge
-                        variant={assignment.isActive ? "success" : "outline"}
+                        variant={presentation.statusBadgeVariant}
                         className="rounded-full px-2 py-0.5 text-xs"
                       >
                         <span
-                          className={`mr-1 size-1 rounded-full ${assignment.isActive ? "bg-success" : "bg-muted-foreground"}`}
+                          className={`mr-1 size-1 rounded-full ${presentation.statusDotClass}`}
                           aria-hidden="true"
                         />
-                        {assignment.isActive ? "Active" : "Inactive"}
+                        {presentation.statusLabel}
                       </Badge>
                     </CardTitle>
                     <CardDescription className="line-clamp-2 text-sm leading-snug">
@@ -794,20 +893,14 @@ export function CourseAssignmentsTable({
                   <div className="bg-muted/30 grid min-w-0 grid-cols-1 gap-3 rounded-lg border p-3 min-[380px]:grid-cols-2">
                     <div className="flex min-w-0 items-center gap-2.5 min-[380px]:col-span-2">
                       <span className="bg-primary text-primary-foreground ring-primary/20 flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ring-1">
-                        {(assignment.facultyName ?? "Unknown")
-                          .split(" ")
-                          .slice(0, 2)
-                          .map((part) => part[0] ?? "")
-                          .join("")
-                          .toUpperCase()
-                          .slice(0, 2)}
+                        {presentation.facultyInitials}
                       </span>
                       <div className="flex min-w-0 flex-col gap-1">
                         <p className="truncate text-sm leading-none font-medium">
-                          {assignment.facultyName ?? "Unknown faculty"}
+                          {presentation.facultyName}
                         </p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {assignment.facultyEmail ?? "—"}
+                          {presentation.facultyEmail}
                         </p>
                       </div>
                     </div>
@@ -820,7 +913,7 @@ export function CourseAssignmentsTable({
                           className="text-muted-foreground mt-0.5 shrink-0"
                           aria-hidden="true"
                         />
-                        <span className="break-words">{classLabel}</span>
+                        <span className="break-words">{presentation.classLabel}</span>
                       </span>
                     </div>
                     <div className="flex min-w-0 flex-col gap-1">
@@ -832,16 +925,13 @@ export function CourseAssignmentsTable({
                           className="text-muted-foreground mt-0.5 shrink-0"
                           aria-hidden="true"
                         />
-                        <span className="break-words">
-                          {assignment.rosterMembershipCount ?? 0} roster{" "}
-                          {(assignment.rosterMembershipCount ?? 0) === 1 ? "member" : "members"}
-                        </span>
+                        <span className="break-words">{presentation.rosterCountLabel}</span>
                       </span>
                     </div>
                   </div>
-                  {isGeneralEducation && mode === "program-head" && (
+                  {capability.delegatedToCoordinator && (
                     <p className="bg-warning-soft text-warning-foreground ring-warning/20 rounded-md px-2.5 py-2 text-xs font-medium ring-1">
-                      Managed by General Education Coordinator
+                      {COORDINATOR_SCOPE_LABEL}
                     </p>
                   )}
                   <RosterCell
