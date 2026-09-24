@@ -1215,6 +1215,67 @@ describe("publishCourseBoundEvaluation", () => {
       });
     });
 
+    it("publishes on-behalf when the stored structure uses the canonical lowercase Likert type", async () => {
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.DEAN,
+        profileGate: { status: "COMPLETE" },
+        roles: [ROLES.FACULTY, ROLES.DEAN],
+        userId: "dean-user-1",
+      });
+      courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+      // The spelling production actually stores: `type: "likert"`, matching
+      // QuestionType and listTemplateLikertQuestions. The uppercase fixtures
+      // above must not be the only spelling this path is proven against.
+      instrumentTemplateFindFirstMock.mockResolvedValue({
+        ...MOCK_BOUND_TEMPLATE,
+        structure: [
+          {
+            key: "outcomes",
+            questions: [
+              { key: "q1", prompt: "I achieved outcome one.", type: "likert" },
+              { key: "q2", prompt: "I achieved outcome two.", type: "likert" },
+            ],
+          },
+        ],
+        template_cilo_question_bindings: [
+          { cilo_id: "cilo-1", section_key: "outcomes", item_key: "q1" },
+        ],
+      });
+      ciloFindManyMock.mockResolvedValue([
+        {
+          description: "Apply capstone planning fundamentals.",
+          id: "cilo-1",
+          cilo_mappings: [
+            {
+              manifestation: "LEARNING",
+              go: { id: "plo-1", program_id: "program-1", is_active: true },
+            },
+          ],
+          cilo_institutional_outcome_mappings: [],
+        },
+      ]);
+      instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+      courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+      const result = await publishCourseBoundEvaluation({
+        assignmentId: "assignment-1",
+        deploymentName: "Dean On-Behalf Evaluation",
+        templateId: "bound-template-1",
+      });
+
+      if (!result.success) throw new Error(result.error);
+      expect(bindingCreateManyMock).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            cilo_id: "cilo-1",
+            cilo_description_snapshot: "Apply capstone planning fundamentals.",
+            item_key: "q1",
+            question_prompt_snapshot: "I achieved outcome one.",
+          }),
+        ],
+      });
+    });
+
     it("allows Dean to publish a General Education assignment with its faculty template", async () => {
       const deanUserId = "dean-user-1";
       resolveAuthSessionMock.mockResolvedValue({
