@@ -12,6 +12,10 @@ _Avoid_: Deployer-owned evidence, affiliation-wide evidence, another Faculty mem
 The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
 _Avoid_: Evaluation checkbox dashboard, mean of means, CILO attainment claim, cross-course trend
 
+**Faculty CILO and question grouping**:
+One metric per `(evaluation, CILO)` and per `(evaluation, question)`. A Faculty scope spans several owned evaluations, so the same CILO never pools its ratings across terms; each evaluation keeps its own mean and its own publication-time label. The question view enumerates the frozen structure snapshot, so an unrated question still appears for the unrated disclosure, and a Likert question here describes one `(section, item)` identity. A binding whose CILO row is gone keeps its own group rather than pooling under another CILO. Shared arithmetic, not grouping, is what the Faculty builders reuse from the canonical Analytics aggregators.
+_Avoid_: Cross-term CILO pool, one metric per CILO across evaluation evidence, unrated question omission, archived binding fold-in
+
 **Faculty aggregate-only review**:
 Faculty receive no individual-response route or DTO. Retired Faculty Course-bound review deep links redirect to the matching aggregate Analytics scope. Browser payloads contain no respondent label, response identifier, roster record, raw rating row, or raw written comment.
 _Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
