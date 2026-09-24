@@ -176,6 +176,72 @@ describe("FacultyAnalyticsDashboard", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders every bound question when section and item keys collide under a separator join", () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const scaleGroup = {
+      scaleKey: "scale-1",
+      scaleLabel: "1–5 (5-point)",
+      scaleMin: 1,
+      scaleMax: 5,
+      mean: 4,
+      ratingCount: 2,
+      responseCount: 2,
+      excludedRatingCount: 0,
+      categories: [],
+    };
+    const collidingData: FacultyAnalyticsData = {
+      ...data,
+      filters: { view: "cilos" },
+      evaluations: [
+        {
+          id: "evaluation-1",
+          deploymentName: "End-of-term evaluation",
+          assignmentId: "assignment-1",
+          courseId: "course-1",
+          courseCode: "IT201",
+          courseTitle: "Data Structures",
+          classLabel: "BSIT · 2nd year · Morning",
+          programName: "BSIT",
+          termInstanceId: "term-1",
+          termInstanceLabel: "2026–2027 · 1st Semester",
+          status: "CLOSED",
+          responseCount: 2,
+          opportunityCount: 2,
+        },
+      ],
+      ciloMetrics: [
+        {
+          key: '["evaluation-1","cilo-1"]',
+          ciloId: "cilo-1",
+          courseId: "course-1",
+          courseCode: "IT201",
+          courseTitle: "Data Structures",
+          evaluationId: "evaluation-1",
+          evaluationName: "End-of-term evaluation",
+          label: "CILO 1",
+          description: "Apply structural identities",
+          // Distinct questions whose `sectionKey:itemKey` joins are identical.
+          questions: [
+            { sectionKey: "outcomes", itemKey: "application:lab", prompt: "I apply methods." },
+            { sectionKey: "outcomes:application", itemKey: "lab", prompt: "I defend methods." },
+          ],
+          scaleGroups: [scaleGroup],
+        },
+      ],
+    };
+
+    render(<FacultyAnalyticsDashboard data={collidingData} options={options} />);
+
+    // A separator-joined React key collapses this pair into one list item and
+    // logs a duplicate-key warning; both prompts must survive.
+    expect(screen.getAllByText("I apply methods.")).toHaveLength(2);
+    expect(screen.getAllByText("I defend methods.")).toHaveLength(2);
+    const consoleMessages = consoleError.mock.calls.flat().map(String);
+    expect(consoleMessages).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("same key")])
+    );
+  });
+
   it("shows an accessible, reduced-motion-safe skeleton while AI interpretation is pending", async () => {
     const { promise, resolve } = Promise.withResolvers<unknown>();
     generateInsightMock.mockReturnValue(promise);

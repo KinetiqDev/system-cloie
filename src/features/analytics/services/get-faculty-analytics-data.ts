@@ -18,6 +18,7 @@ import {
 } from "@/features/evaluations/services/course-info-snapshot";
 import { groupRatingsByScale } from "../aggregators/quantitative";
 import { resolveCiloLabels } from "../aggregators/cilo";
+import { encodeBindingKey, encodeQuestionKey } from "../aggregators/question-identity";
 import {
   buildScaleIdentities,
   describeScale,
@@ -531,6 +532,20 @@ function qualitativePromptLabel(
  * or deleted with SetNull) keeps its own group: there is no CILO left to pool
  * it under. Labels come from the evaluation's publication-time CILO snapshot,
  * so a CILO keeps one label however many questions evidence it.
+ *
+ * The quantitative arithmetic is not duplicated: `metricGroups` filters to
+ * valid raw ratings and delegates to the canonical `groupRatingsByScale`, so
+ * the means, counts, and scale separation match `aggregators/cilo.ts` exactly.
+ * What stays Faculty-specific is the grouping unit and the projection. This
+ * builder groups one CILO per evaluation, because a Faculty scope spans several
+ * of the member's own evaluations and pooling a CILO across terms would blend
+ * unrelated cohorts; the canonical aggregator keys on the CILO alone and its
+ * Program Head callers partition per evaluation first. This builder also retains
+ * the bindings whose CILO is gone, which the canonical `CiloMetric` can only
+ * express through a caller-synthesized id. Both callers receive already-filtered
+ * valid ratings, so the group's `excludedRatingCount` is zero here and the
+ * scope-wide excluded count lives on the top-level distributions. Parity is
+ * pinned by `src/__tests__/features/analytics/faculty-cilo-parity.test.ts`.
  */
 function buildCiloMetrics(
   evaluations: EvaluationRow[],
@@ -563,7 +578,7 @@ function buildCiloMetrics(
         };
         groups.set(key, group);
       }
-      const questionKey = `${binding.section_key}:${binding.item_key}`;
+      const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
       if (group.questionKeys.has(questionKey)) {
         continue;
       }
@@ -590,7 +605,7 @@ function buildCiloMetrics(
         ratings.filter(
           (rating) =>
             rating.evaluation.id === evaluation.id &&
-            group.questionKeys.has(`${rating.sectionKey}:${rating.itemKey}`)
+            group.questionKeys.has(encodeQuestionKey(rating.sectionKey, rating.itemKey))
         )
       ),
     }));
@@ -608,9 +623,15 @@ function buildQuestionMetrics(
     const ciloLabels = resolveCiloLabels(evaluation.cilos_snapshot, orderedCiloIds);
     // One CILO may span several questions, so a question's label comes from its
     // CILO's publication-time label, never from binding position.
+    //
+    // Questions are enumerated from the frozen structure snapshot rather than
+    // from rating rows, so a question the cohort left unrated still reaches the
+    // "unrated" disclosure. The canonical `buildQuestionMetrics` is row-driven
+    // and cannot enumerate one. Arithmetic still comes from the same
+    // `metricGroups` seam as the CILO builder.
     const bindingByQuestion = new Map(
       evaluation.cilo_question_bindings.map((binding) => [
-        `${binding.section_key}:${binding.item_key}`,
+        encodeQuestionKey(binding.section_key, binding.item_key),
         binding.cilo_id ? (ciloLabels.get(binding.cilo_id) ?? "CILO") : null,
       ])
     );
@@ -619,10 +640,10 @@ function buildQuestionMetrics(
       getSnapshotSectionItems(section)
         .filter((item) => item.kind === "quantitative")
         .map((item) => ({
-          key: `${evaluation.id}:${section.key}:${item.key}`,
+          key: encodeBindingKey(evaluation.id, section.key, item.key),
           sectionTitle: section.title,
           prompt: item.prompt,
-          ciloLabel: bindingByQuestion.get(`${section.key}:${item.key}`) ?? null,
+          ciloLabel: bindingByQuestion.get(encodeQuestionKey(section.key, item.key)) ?? null,
           scaleGroups: metricGroups(
             ratings.filter(
               (rating) =>

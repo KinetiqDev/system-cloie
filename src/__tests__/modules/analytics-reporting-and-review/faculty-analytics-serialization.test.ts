@@ -23,7 +23,28 @@ const scale = [
   { value: 5, label: "Strongly agree" },
 ];
 
-function response(id: string, ratings: number[], comment: string, promptKey = "remarks") {
+/** One seeded assignment row as the Faculty analytics read projects it. */
+type FacultyResponseFixture = {
+  respondent_id: string;
+  response: {
+    id: string;
+    status: string;
+    quant_items: Array<{
+      rating_value: number;
+      section_key: string;
+      item_key: string;
+      cilo_question_binding_id: string;
+    }>;
+    qual_items: Array<{ section_key: string; prompt_key: string; text_content: string }>;
+  };
+};
+
+function response(
+  id: string,
+  ratings: number[],
+  comment: string,
+  promptKey = "remarks"
+): FacultyResponseFixture {
   return {
     respondent_id: `student-${id}`,
     response: {
@@ -40,7 +61,20 @@ function response(id: string, ratings: number[], comment: string, promptKey = "r
   };
 }
 
-function evaluation(assignments: ReturnType<typeof response>[]) {
+/** One seeded CILO question binding row as the Faculty analytics read projects it. */
+type FacultyBindingFixture = {
+  id: string;
+  cilo_id: string | null;
+  cilo_description_snapshot: string;
+  question_prompt_snapshot: string;
+  section_key: string;
+  item_key: string;
+  created_at: Date;
+  updated_at: Date;
+  course_bound_evaluation_id: string;
+};
+
+function evaluation(assignments: FacultyResponseFixture[]) {
   return {
     id: "evaluation-1",
     deployment_name: "End-of-term evaluation",
@@ -83,7 +117,7 @@ function evaluation(assignments: ReturnType<typeof response>[]) {
         updated_at: new Date(),
         course_bound_evaluation_id: "evaluation-1",
       },
-    ],
+    ] as FacultyBindingFixture[],
     instrument: {
       id: "66666666-6666-4666-8666-666666666666",
       version_number: 2,
@@ -366,6 +400,209 @@ describe("faculty analytics serialization", () => {
     expect(labelsByItemKey).toEqual({
       "I can apply the methods": "CILO 1",
       "I can defend the applied methods": "CILO 2",
+    });
+  });
+
+  it("keeps questions whose section and item keys collide under a separator join separate", async () => {
+    const ciloOne = "55555555-5555-4555-8555-555555555555";
+    const ciloTwo = "77777777-7777-4777-8777-777777777777";
+    const ciloThree = "88888888-8888-4888-8888-888888888888";
+    // Incompatible with `scale`: a different numeric range and different labels.
+    const fourPointScale = [
+      { value: 1, label: "Poor" },
+      { value: 2, label: "Fair" },
+      { value: 3, label: "Satisfactory" },
+      { value: 4, label: "Excellent" },
+    ];
+    const quantitative = (key: string, prompt: string, descriptors = scale) => ({
+      key,
+      kind: "quantitative" as const,
+      prompt,
+      likertDescriptors: descriptors,
+    });
+    const binding = (
+      id: string,
+      ciloId: string | null,
+      sectionKey: string,
+      itemKey: string,
+      prompt: string,
+      description: string
+    ) => ({
+      id,
+      cilo_id: ciloId,
+      cilo_description_snapshot: description,
+      question_prompt_snapshot: prompt,
+      section_key: sectionKey,
+      item_key: itemKey,
+      created_at: new Date(),
+      updated_at: new Date(),
+      course_bound_evaluation_id: "evaluation-1",
+    });
+
+    // Replacing either separator with a colon in one key while removing it from
+    // the other produces the same joined string: (a, b:c) with (a:b, c).
+    const collisionFixture = evaluation([]);
+    collisionFixture.cilos_snapshot = [
+      { description: "Apply engineering methods", id: ciloOne, label: "CILO 1" },
+      { description: "Present the applied methods", id: ciloTwo, label: "CILO 2" },
+      { description: "Review the applied methods", id: ciloThree, label: "CILO 3" },
+    ];
+    collisionFixture.cilo_question_bindings = [
+      binding(
+        "binding-apply",
+        ciloOne,
+        "outcomes",
+        "application:lab",
+        "I can apply the methods",
+        "Apply engineering methods"
+      ),
+      binding(
+        "binding-defend",
+        ciloOne,
+        "outcomes:application",
+        "lab",
+        "I can defend the applied methods",
+        "Apply engineering methods"
+      ),
+      binding(
+        "binding-present",
+        ciloTwo,
+        "review",
+        "panel:defense",
+        "I can present my work",
+        "Present the applied methods"
+      ),
+      binding(
+        "binding-review",
+        ciloThree,
+        "review:panel",
+        "defense",
+        "I can review my work",
+        "Review the applied methods"
+      ),
+      binding(
+        "binding-archived",
+        null,
+        "outcomes",
+        "portfolio",
+        "I kept a portfolio",
+        "Kept a portfolio"
+      ),
+    ];
+    collisionFixture.instrument.structure_snapshot = [
+      {
+        key: "outcomes",
+        title: "Learning outcomes",
+        items: [
+          quantitative("application:lab", "I can apply the methods"),
+          quantitative("portfolio", "I kept a portfolio"),
+        ],
+      },
+      {
+        key: "outcomes:application",
+        title: "Applied outcomes",
+        items: [quantitative("lab", "I can defend the applied methods", fourPointScale)],
+      },
+      {
+        key: "review",
+        title: "Peer review",
+        items: [quantitative("panel:defense", "I can present my work")],
+      },
+      {
+        key: "review:panel",
+        title: "Panel review",
+        items: [quantitative("defense", "I can review my work")],
+      },
+    ];
+    const rated = (
+      id: string,
+      status: "SUBMITTED" | "IN_PROGRESS",
+      sectionKey: string,
+      itemKey: string,
+      ratingValue: number
+    ): FacultyResponseFixture => ({
+      respondent_id: `student-${id}`,
+      response: {
+        id,
+        status,
+        quant_items: [
+          {
+            rating_value: ratingValue,
+            section_key: sectionKey,
+            item_key: itemKey,
+            cilo_question_binding_id: "binding-apply",
+          },
+        ],
+        qual_items: [],
+      },
+    });
+    collisionFixture.assignments = [
+      rated("r1", "SUBMITTED", "outcomes", "application:lab", 5),
+      rated("r2", "SUBMITTED", "outcomes:application", "lab", 2),
+      rated("r3", "SUBMITTED", "review", "panel:defense", 4),
+      rated("r4", "SUBMITTED", "review:panel", "defense", 1),
+      rated("r5", "IN_PROGRESS", "outcomes", "application:lab", 1),
+    ];
+    courseBoundEvaluationFindManyMock.mockResolvedValue([collisionFixture]);
+
+    const result = await getFacultyAnalyticsDataAction({ view: "cilos" });
+    if (!result.success) throw new Error(result.error);
+
+    // Submitted-only aggregation survives the identity change: the in-progress
+    // rating never reaches a metric.
+    expect(result.data.kpi).toMatchObject({ submittedResponseCount: 4, validRatingCount: 4 });
+
+    const ciloByLabel = new Map(result.data.ciloMetrics.map((metric) => [metric.label, metric]));
+    expect(ciloByLabel.size).toBe(4);
+    // Two colliding questions bound to one CILO stay two questions, and each
+    // CILO pools only its own questions' ratings.
+    expect(ciloByLabel.get("CILO 1")?.questions.map((question) => question.prompt)).toEqual([
+      "I can apply the methods",
+      "I can defend the applied methods",
+    ]);
+    // The two colliding questions carry different scales, so their ratings stay
+    // in separate scale groups rather than merging into one blended mean.
+    expect(ciloByLabel.get("CILO 1")?.scaleGroups).toMatchObject([
+      { scaleLabel: "1–5 (5-point)", mean: 5, ratingCount: 1 },
+      { scaleLabel: "1–4 (4-point)", mean: 2, ratingCount: 1 },
+    ]);
+    expect(ciloByLabel.get("CILO 2")?.questions.map((question) => question.prompt)).toEqual([
+      "I can present my work",
+    ]);
+    expect(ciloByLabel.get("CILO 2")?.scaleGroups).toMatchObject([{ mean: 4, ratingCount: 1 }]);
+    expect(ciloByLabel.get("CILO 3")?.scaleGroups).toMatchObject([{ mean: 1, ratingCount: 1 }]);
+    // An archived CILO keeps its own group under the lone binding's identity.
+    expect(ciloByLabel.get("Unassigned CILO")).toMatchObject({
+      description: "Kept a portfolio",
+      ciloId: null,
+      questions: [{ sectionKey: "outcomes", itemKey: "portfolio", prompt: "I kept a portfolio" }],
+      scaleGroups: [],
+    });
+
+    const questionByPrompt = new Map(
+      result.data.questionMetrics.map((metric) => [metric.prompt, metric])
+    );
+    const questionKeys = result.data.questionMetrics.map((metric) => metric.key);
+    expect(new Set(questionKeys).size).toBe(questionKeys.length);
+    expect(questionByPrompt.get("I can apply the methods")).toMatchObject({
+      ciloLabel: "CILO 1",
+      scaleGroups: [{ mean: 5, ratingCount: 1 }],
+    });
+    expect(questionByPrompt.get("I can defend the applied methods")).toMatchObject({
+      ciloLabel: "CILO 1",
+      scaleGroups: [{ mean: 2, ratingCount: 1 }],
+    });
+    expect(questionByPrompt.get("I can present my work")).toMatchObject({
+      ciloLabel: "CILO 2",
+      scaleGroups: [{ mean: 4, ratingCount: 1 }],
+    });
+    expect(questionByPrompt.get("I can review my work")).toMatchObject({
+      ciloLabel: "CILO 3",
+      scaleGroups: [{ mean: 1, ratingCount: 1 }],
+    });
+    expect(questionByPrompt.get("I kept a portfolio")).toMatchObject({
+      ciloLabel: null,
+      scaleGroups: [],
     });
   });
 
