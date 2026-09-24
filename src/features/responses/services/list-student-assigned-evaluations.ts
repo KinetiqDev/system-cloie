@@ -16,6 +16,10 @@ import {
   isCentralDeploymentAvailable,
   isCourseBoundEvaluationAvailable,
 } from "./course-bound-availability";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotProgramLabel,
+} from "@/features/evaluations/services/course-info-snapshot";
 import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
 
 const THREE_DAYS_IN_MS = 3 * 24 * 60 * 60 * 1000;
@@ -251,6 +255,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
           }
 
           const ca = courseBound.course_assignment;
+          const courseInfo = parseCourseInfoSnapshot(courseBound.course_info_snapshot);
 
           const sections = mapStructureSnapshotToSections(
             courseBound.instrument.structure_snapshot
@@ -278,15 +283,19 @@ export async function listStudentAssignedEvaluations(): Promise<{
 
           return buildStudentEvaluationListItem({
             assignmentId: assignment.id,
-            courseTitle: ca.course.title,
+            courseTitle: courseInfo?.courseTitle ?? ca.course.title,
             deadlineAt: courseBound.deadline_at,
             deploymentType: "COURSE_BOUND",
             evaluationId: assignment.id,
             evaluationTitle: courseBound.deployment_name ?? courseBound.instrument.template.name,
-            facultyName: ca.faculty ? ca.faculty.name : null,
+            facultyName: courseInfo?.facultyName ?? (ca.faculty ? ca.faculty.name : null),
             href,
             now,
-            programLabel: ca.course.major?.name ?? ca.program.name,
+            programLabel: resolveSnapshotProgramLabel(
+              courseInfo,
+              ca.course.major?.name ?? null,
+              ca.program.name
+            ),
             section,
             session,
           });
