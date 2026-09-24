@@ -39,7 +39,6 @@ import {
   deleteIndustryPartnerProfile,
   deleteStudentAcademicContext,
   removeRoleFromUser,
-  revokeUserRole,
   toggleUserActive,
   updateExternalInviteStatus,
   upsertIndustryPartnerProfile,
@@ -362,31 +361,6 @@ export async function addRoleToExistingUserAction(formData: FormData): Promise<A
   }
 
   const result = await addRoleToExistingUser(parsed.data);
-
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  revalidateAdminFoundation();
-  return { success: true };
-}
-
-export async function revokeUserRoleAction(
-  userId: string,
-  role: SystemRole
-): Promise<ActionResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { error: "Authentication required.", success: false };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { error: "Insufficient permissions.", success: false };
-  }
-  if (userId === session.userId) {
-    return { error: "Cannot modify own account.", success: false };
-  }
-  const result = await revokeUserRole(userId, role);
 
   if (!result.success) {
     return { success: false, error: result.error };

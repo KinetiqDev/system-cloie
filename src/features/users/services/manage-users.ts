@@ -352,14 +352,6 @@ export async function addRoleToExistingUser(
   }
 }
 
-/** Expected denial thrown by the revocation transaction for the assignment gate. */
-class ActiveProgramHeadAssignmentsError extends Error {
-  constructor() {
-    super("Deactivate all program-head assignments before revoking the Program Head role.");
-    this.name = "ActiveProgramHeadAssignmentsError";
-  }
-}
-
 /** Expected denial thrown by the activation transaction when the role is missing. */
 class MissingProgramHeadRoleError extends Error {
   constructor() {
@@ -374,113 +366,6 @@ class MissingRoleAssignmentError extends Error {
     super("Role assignment not found.");
     this.name = "MissingRoleAssignmentError";
   }
-}
-
-// fallow-ignore-next-line complexity
-export async function revokeUserRole(userId: string, role: SystemRole): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-  if (userId === session.userId) return { success: false, error: "Cannot modify own account." };
-
-  const assignedRole = await prisma.userRole.findUnique({
-    where: { user_id_role: { user_id: userId, role } },
-  });
-
-  if (!assignedRole || assignedRole.role !== role) {
-    return { success: false, error: "Role assignment not found." };
-  }
-
-  if (role === SystemRole.STUDENT) {
-    const profile = await prisma.studentAcademicProfile.findUnique({
-      where: { user_id: userId },
-      select: { id: true },
-    });
-
-    if (profile) {
-      return {
-        success: false,
-        error: "Remove the student academic context before revoking the Student role.",
-      };
-    }
-  }
-
-  if (role === SystemRole.FACULTY) {
-    const activeAffiliations = await prisma.facultyProgramAffiliation.count({
-      where: {
-        faculty_id: userId,
-        is_active: true,
-      },
-    });
-
-    if (activeAffiliations > 0) {
-      return {
-        success: false,
-        error: "Deactivate all faculty-program affiliations before revoking the Faculty role.",
-      };
-    }
-  }
-
-  if (role === SystemRole.PROGRAM_HEAD) {
-    // The role can only be revoked while no assignment is active. The count
-    // and the delete run in one transaction under the same advisory lock as
-    // assignment-set administration so a concurrent activation cannot slip
-    // between the check and the role deletion.
-    const programHeadUserId = userId;
-    try {
-      await prisma.$transaction(async (tx) => {
-        await lockProgramHeadAssignmentSet(tx, programHeadUserId);
-        const activeAssignments = await tx.programHeadAssignment.count({
-          where: {
-            program_head_id: programHeadUserId,
-            is_active: true,
-          },
-        });
-
-        if (activeAssignments > 0) {
-          throw new ActiveProgramHeadAssignmentsError();
-        }
-
-        await tx.userRole.delete({
-          where: { user_id_role: { user_id: programHeadUserId, role: SystemRole.PROGRAM_HEAD } },
-        });
-      });
-    } catch (error) {
-      // Convert only the expected assignment-gate denial; database failures
-      // propagate to the caller's error boundary.
-      if (error instanceof ActiveProgramHeadAssignmentsError) {
-        return { success: false, error: error.message };
-      }
-      throw error;
-    }
-
-    return { success: true, data: undefined };
-  }
-
-  if (role === SystemRole.INDUSTRY_PARTNER) {
-    const profile = await prisma.industryPartnerProfile.findUnique({
-      where: { user_id: userId },
-      select: { id: true },
-    });
-
-    if (profile) {
-      return {
-        success: false,
-        error: "Remove the industry partner profile before revoking the Industry Partner role.",
-      };
-    }
-  }
-
-  await prisma.userRole.delete({
-    where: { user_id_role: { user_id: userId, role } },
-  });
-
-  return { success: true, data: undefined };
 }
 
 /**
@@ -842,8 +727,8 @@ export async function deactivateProgramHeadAssignment(
 
   await prisma.$transaction(async (tx) => {
     // Acquire the per-Program-Head advisory lock before reading any
-    // assignment row, matching createProgramHeadAssignment and
-    // revokeUserRole. The lock key is the owning user id, which the caller
+    // assignment row, matching createProgramHeadAssignment and the
+    // role-removal transaction. The lock key is the owning user id, which the caller
     // supplies, so the row read and write below run under the same lock as
     // assignment-set administration. The ownership check keeps a mismatched
     // caller from deactivating a row while holding another user's lock.
