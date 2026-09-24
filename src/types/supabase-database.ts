@@ -883,6 +883,60 @@ export type Database = {
           },
         ]
       }
+      course_bound_plo_question_bindings: {
+        Row: {
+          course_bound_evaluation_id: string
+          created_at: string
+          id: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          course_bound_evaluation_id: string
+          created_at?: string
+          id?: string
+          item_key: string
+          plo_code_snapshot: string
+          plo_description_snapshot: string
+          plo_id?: string | null
+          question_prompt_snapshot: string
+          section_key: string
+          updated_at: string
+        }
+        Update: {
+          course_bound_evaluation_id?: string
+          created_at?: string
+          id?: string
+          item_key?: string
+          plo_code_snapshot?: string
+          plo_description_snapshot?: string
+          plo_id?: string | null
+          question_prompt_snapshot?: string
+          section_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_bound_plo_question_bindings_course_bound_evaluation_id_f"
+            columns: ["course_bound_evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "course_bound_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_bound_plo_question_bindings_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "gos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           code: string
