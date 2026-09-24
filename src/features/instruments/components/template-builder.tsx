@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useMemo, useReducer, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -96,6 +96,12 @@ import type {
   TemplateSettingsInput,
 } from "../types";
 import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
+import {
+  collectCiloBindings,
+  collectGoBindings,
+  encodeQuestionBindingKey,
+  pruneDraftBindings,
+} from "../services/draft-bindings";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -231,6 +237,77 @@ function normalizeTemplateStructure(structure: TemplateStructure): TemplateStruc
 }
 
 /**
+ * The draft document and the bindings that describe it.
+ *
+ * A structure edit and the pruning it triggers are one transition, so they live
+ * in one reducer rather than in four independent `useState` setters. A React
+ * event handler that commits two edits in the same batch would otherwise update
+ * `sections` twice while pruning the binding maps against whichever structure
+ * value the click handler had captured, leaving bindings that the committed
+ * document no longer contains.
+ */
+type DraftState = {
+  ciloQuestionBindings: Record<string, string>;
+  courseGoBindings: Record<string, string[]>;
+  goQuestionBindings: Record<string, string[]>;
+  sections: TemplateStructure;
+};
+
+type DraftAction =
+  | { type: "updateSections"; update: (sections: TemplateStructure) => TemplateStructure }
+  | { type: "commitStructure"; update: (sections: TemplateStructure) => TemplateStructure }
+  | {
+      type: "updateCiloBindings";
+      update: (bindings: Record<string, string>) => Record<string, string>;
+    }
+  | {
+      type: "updateGoBindings";
+      update: (bindings: Record<string, string[]>) => Record<string, string[]>;
+    }
+  | {
+      type: "updateCourseGoBindings";
+      update: (bindings: Record<string, string[]>) => Record<string, string[]>;
+    };
+
+function draftReducer(state: DraftState, action: DraftAction): DraftState {
+  switch (action.type) {
+    case "updateSections": {
+      // The updater runs against the reducer's own structure, so two edits
+      // dispatched in one batch compose instead of overwriting each other.
+      const sections = action.update(state.sections);
+      // A rejected edit returns the same reference; keep the old state so
+      // nothing downstream re-renders or re-marks the draft dirty.
+      return sections === state.sections ? state : { ...state, sections };
+    }
+    case "commitStructure": {
+      const sections = normalizeTemplateStructure(action.update(state.sections));
+      return {
+        sections,
+        ciloQuestionBindings: pruneDraftBindings(state.ciloQuestionBindings, sections),
+        goQuestionBindings: pruneDraftBindings(state.goQuestionBindings, sections),
+        courseGoBindings: pruneDraftBindings(state.courseGoBindings, sections),
+      };
+    }
+    case "updateCiloBindings": {
+      const ciloQuestionBindings = action.update(state.ciloQuestionBindings);
+      return ciloQuestionBindings === state.ciloQuestionBindings
+        ? state
+        : { ...state, ciloQuestionBindings };
+    }
+    case "updateGoBindings": {
+      const goQuestionBindings = action.update(state.goQuestionBindings);
+      return goQuestionBindings === state.goQuestionBindings
+        ? state
+        : { ...state, goQuestionBindings };
+    }
+    case "updateCourseGoBindings": {
+      const courseGoBindings = action.update(state.courseGoBindings);
+      return courseGoBindings === state.courseGoBindings ? state : { ...state, courseGoBindings };
+    }
+  }
+}
+
+/**
  * Opaque sortable identifier. Never parsed: persisted section/question keys are
  * arbitrary nonempty strings that may contain separators, so the identifier is
  * derived structurally with JSON.stringify and keys are only ever resolved
@@ -350,41 +427,6 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
 
   return { x: rect.left, y: rect.top - offset };
 };
-/**
- * Faculty CILO binding map keys. The legacy `${sectionKey}:${itemKey}` encoding
- * broke keys that contain separators, so bindings are keyed by the JSON-encoded
- * pair and decoded structurally (never split).
- */
-function encodeBindingKey(sectionKey: string, itemKey: string): string {
-  return JSON.stringify([sectionKey, itemKey]);
-}
-
-/**
- * Collects Program-wide question–GO bindings from the live structure:
- * deleting a question or switching it to open-ended automatically drops its
- * bindings. Shared by the save-draft and save-as-copy payloads.
- */
-function collectGoBindings(
-  structure: TemplateStructure,
-  goQuestionBindings: Record<string, string[]>
-): TemplateGoQuestionBinding[] {
-  return structure.flatMap((section) =>
-    section.questions.flatMap((question) => {
-      if (question.type !== "likert") return [];
-      const goIds = goQuestionBindings[encodeBindingKey(section.key, question.key)] ?? [];
-      return goIds
-        .filter(Boolean)
-        .map((goId) => ({ itemKey: question.key, goId, sectionKey: section.key }));
-    })
-  );
-}
-
-function decodeBindingKey(encodedKey: string): { sectionKey: string; itemKey: string } {
-  const [sectionKey, itemKey] = JSON.parse(encodedKey) as [string, string];
-
-  return { sectionKey, itemKey };
-}
-
 /**
  * Names why the Course-bound GO axis cannot offer a catalog right now. The
  * General Education case is a rule, not an empty state: those Courses have no
@@ -539,34 +581,75 @@ export function TemplateBuilder({
     initialData?.is_faculty_accessible ?? false
   );
 
-  // Structure state
-  const [sections, setSections] = useState<TemplateStructure>(() =>
-    normalizeTemplateStructure(
-      initialData?.structure?.length
-        ? initialData.structure
-        : [createSection(0, initialSectionKey, initialQuestionKey)]
-    )
+  const [draft, dispatchDraft] = useReducer(
+    draftReducer,
+    undefined,
+    (): DraftState => ({
+      // Structure state
+      sections: normalizeTemplateStructure(
+        initialData?.structure?.length
+          ? initialData.structure
+          : [createSection(0, initialSectionKey, initialQuestionKey)]
+      ),
+      ciloQuestionBindings: Object.fromEntries(
+        (facultyConfig?.initialBindings ?? []).map((binding) => [
+          encodeQuestionBindingKey(binding.sectionKey, binding.itemKey),
+          binding.ciloId,
+        ])
+      ),
+      goQuestionBindings: (() => {
+        const map: Record<string, string[]> = {};
+        for (const binding of initialGoBindings ?? []) {
+          const key = encodeQuestionBindingKey(binding.sectionKey, binding.itemKey);
+          if (!map[key]) map[key] = [];
+          map[key].push(binding.goId);
+        }
+        return map;
+      })(),
+      /**
+       * Course-bound GO bindings ask each Likert question for the Graduate
+       * Outcomes of the bound Course's owning Program. The catalog is loaded from
+       * the server whenever the bound Course context changes, exactly like the
+       * saved CILOs. The stored rows only seed the editor; the live catalog wins
+       * on every save.
+       */
+      courseGoBindings: (() => {
+        if (!facultyConfig) return {};
+        const map: Record<string, string[]> = {};
+        for (const binding of facultyConfig.initialGoBindings ?? initialGoBindings ?? []) {
+          const key = encodeQuestionBindingKey(binding.sectionKey, binding.itemKey);
+          if (!map[key]) map[key] = [];
+          if (!map[key].includes(binding.goId)) map[key].push(binding.goId);
+        }
+        return map;
+      })(),
+    })
   );
+  const { ciloQuestionBindings, courseGoBindings, goQuestionBindings, sections } = draft;
+  const setSections = useCallback(
+    (update: (sections: TemplateStructure) => TemplateStructure) =>
+      dispatchDraft({ type: "updateSections", update }),
+    []
+  );
+  const setCiloQuestionBindings = useCallback(
+    (update: (bindings: Record<string, string>) => Record<string, string>) =>
+      dispatchDraft({ type: "updateCiloBindings", update }),
+    []
+  );
+  const setGoQuestionBindings = useCallback(
+    (update: (bindings: Record<string, string[]>) => Record<string, string[]>) =>
+      dispatchDraft({ type: "updateGoBindings", update }),
+    []
+  );
+  const setCourseGoBindings = useCallback(
+    (update: (bindings: Record<string, string[]>) => Record<string, string[]>) =>
+      dispatchDraft({ type: "updateCourseGoBindings", update }),
+    []
+  );
+
   const [boundProgramId, setBoundProgramId] = useState(initialData?.bound_program_id ?? "");
   const [boundMajorId, setBoundMajorId] = useState(initialData?.bound_major_id ?? "");
   const [boundCourseId, setBoundCourseId] = useState(initialData?.bound_course_id ?? "");
-  const [ciloQuestionBindings, setCiloQuestionBindings] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      (facultyConfig?.initialBindings ?? []).map((binding) => [
-        encodeBindingKey(binding.sectionKey, binding.itemKey),
-        binding.ciloId,
-      ])
-    )
-  );
-  const [goQuestionBindings, setGoQuestionBindings] = useState<Record<string, string[]>>(() => {
-    const map: Record<string, string[]> = {};
-    for (const binding of initialGoBindings ?? []) {
-      const key = encodeBindingKey(binding.sectionKey, binding.itemKey);
-      if (!map[key]) map[key] = [];
-      map[key].push(binding.goId);
-    }
-    return map;
-  });
   const [loadedCilos, setLoadedCilos] = useState<Array<{ description: string; id: string }>>([]);
   const [isLoadingCilos, setIsLoadingCilos] = useState(false);
 
@@ -587,23 +670,6 @@ export function TemplateBuilder({
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
-  /**
-   * Course-bound GO bindings ask each Likert question for the Graduate
-   * Outcomes of the bound Course's owning Program. The catalog is loaded from
-   * the server whenever the bound Course context changes, exactly like the
-   * saved CILOs. The stored rows only seed the editor; the live catalog wins
-   * on every save.
-   */
-  const [courseGoBindings, setCourseGoBindings] = useState<Record<string, string[]>>(() => {
-    if (!facultyConfig) return {};
-    const map: Record<string, string[]> = {};
-    for (const binding of facultyConfig.initialGoBindings ?? initialGoBindings ?? []) {
-      const key = encodeBindingKey(binding.sectionKey, binding.itemKey);
-      if (!map[key]) map[key] = [];
-      if (!map[key].includes(binding.goId)) map[key].push(binding.goId);
-    }
-    return map;
-  });
   const [courseGoOptions, setCourseGoOptions] = useState<ProgramGoOption[]>([]);
   const [courseGoOptionsReason, setCourseGoOptionsReason] =
     useState<CourseGoCatalogReason>("unselected-course");
@@ -1005,67 +1071,80 @@ export function TemplateBuilder({
 
   // ─── Section Operations ──────────────────────────────────────────────
 
-  const addSection = useCallback((insertIndex?: number) => {
-    setSections((prev) => {
-      const idx = insertIndex ?? prev.length;
-      const newSection = createSection(idx);
-      const updated = [...prev.slice(0, idx), newSection, ...prev.slice(idx)];
-      return normalizeTemplateStructure(updated);
-    });
-  }, []);
+  const addSection = useCallback(
+    (insertIndex?: number) => {
+      // Mint identity before the transition. An updater must be pure, and React
+      // may invoke it twice (Strict Mode, or an eager bail-out check), which
+      // would allocate a second key and discard it.
+      const newSection = createSection(0);
+      setSections((current) => {
+        const idx = insertIndex ?? current.length;
+        return normalizeTemplateStructure([
+          ...current.slice(0, idx),
+          newSection,
+          ...current.slice(idx),
+        ]);
+      });
+    },
+    [setSections]
+  );
 
-  const removeSection = useCallback((key: string) => {
-    setSections((prev) => {
-      const removed = prev.find((s) => s.key === key);
-      if (removed) {
-        setGoQuestionBindings((current) => {
-          const next = { ...current };
-          for (const question of removed.questions) {
-            delete next[encodeBindingKey(key, question.key)];
-          }
-          return next;
-        });
-      }
-      return normalizeTemplateStructure(prev.filter((s) => s.key !== key));
-    });
-  }, []);
+  /**
+   * Commit a structure change and drop the bindings it invalidated. Every edit
+   * that removes or retypes a question goes through here, so the CILO, GO, and
+   * Course-bound GO maps stay coherent with the document they describe instead
+   * of each edit path pruning whichever map it happened to remember.
+   */
+  const commitStructure = useCallback(
+    (update: (sections: TemplateStructure) => TemplateStructure) =>
+      dispatchDraft({ type: "commitStructure", update }),
+    []
+  );
+
+  const removeSection = useCallback(
+    (key: string) => {
+      commitStructure((current) => current.filter((s) => s.key !== key));
+    },
+    [commitStructure]
+  );
 
   const updateSection = useCallback(
     (key: string, updates: Partial<Pick<TemplateSection, "title" | "description">>) => {
       setSections((prev) => prev.map((s) => (s.key === key ? { ...s, ...updates } : s)));
     },
-    []
+    [setSections]
   );
 
   // ─── Question Operations ─────────────────────────────────────────────
 
-  const addQuestion = useCallback((sectionKey: string) => {
-    setSections((prev) =>
-      normalizeTemplateStructure(
-        prev.map((s) => {
-          if (s.key !== sectionKey) return s;
-          const newQuestion = createQuestion(s.questions.length);
-          return { ...s, questions: [...s.questions, newQuestion] };
-        })
-      )
-    );
-  }, []);
+  const addQuestion = useCallback(
+    (sectionKey: string) => {
+      // Same reason as `addSection`: mint the key outside the transition, and
+      // let normalization assign the order from the resulting document.
+      const newQuestion = createQuestion(0);
+      setSections((current) =>
+        normalizeTemplateStructure(
+          current.map((s) =>
+            s.key === sectionKey ? { ...s, questions: [...s.questions, newQuestion] } : s
+          )
+        )
+      );
+    },
+    [setSections]
+  );
 
-  const removeQuestion = useCallback((sectionKey: string, questionKey: string) => {
-    setGoQuestionBindings((current) => {
-      const next = { ...current };
-      delete next[encodeBindingKey(sectionKey, questionKey)];
-      return next;
-    });
-    setSections((prev) =>
-      normalizeTemplateStructure(
-        prev.map((s) => {
-          if (s.key !== sectionKey) return s;
-          return { ...s, questions: s.questions.filter((q) => q.key !== questionKey) };
-        })
-      )
-    );
-  }, []);
+  const removeQuestion = useCallback(
+    (sectionKey: string, questionKey: string) => {
+      commitStructure((current) =>
+        current.map((s) =>
+          s.key === sectionKey
+            ? { ...s, questions: s.questions.filter((q) => q.key !== questionKey) }
+            : s
+        )
+      );
+    },
+    [commitStructure]
+  );
 
   const updateQuestion = useCallback(
     (sectionKey: string, questionKey: string, updates: Partial<TemplateQuestion>) => {
@@ -1079,18 +1158,13 @@ export function TemplateBuilder({
         })
       );
     },
-    []
+    [setSections]
   );
 
   const changeQuestionType = useCallback(
     (sectionKey: string, questionKey: string, newType: QuestionType) => {
-      setGoQuestionBindings((current) => {
-        const next = { ...current };
-        delete next[encodeBindingKey(sectionKey, questionKey)];
-        return next;
-      });
-      setSections((prev) =>
-        prev.map((s) => {
+      commitStructure((current) =>
+        current.map((s) => {
           if (s.key !== sectionKey) return s;
           return {
             ...s,
@@ -1115,7 +1189,7 @@ export function TemplateBuilder({
         })
       );
     },
-    []
+    [commitStructure]
   );
 
   // ─── Likert Descriptor Operations ────────────────────────────────────
@@ -1137,7 +1211,7 @@ export function TemplateBuilder({
         })
       );
     },
-    []
+    [setSections]
   );
   // ─── Suggested Response Operations ───────────────────────────────────
 
@@ -1147,40 +1221,42 @@ export function TemplateBuilder({
 
       if (!normalizedResponse) return;
 
-      let hasDuplicate = false;
+      const targetQuestion = sections
+        .find((section) => section.key === sectionKey)
+        ?.questions.find((question) => question.key === questionKey);
 
-      setSections((prev) =>
-        normalizeTemplateStructure(
-          prev.map((s) => {
-            if (s.key !== sectionKey) return s;
-            return {
-              ...s,
-              questions: s.questions.map((q) => {
-                if (q.key !== questionKey) return q;
-
-                if (hasDuplicateSuggestedResponse(q.suggestedResponses, normalizedResponse)) {
-                  hasDuplicate = true;
-                  return q;
-                }
-
-                return {
-                  ...q,
-                  suggestedResponses: [...(q.suggestedResponses ?? []), normalizedResponse],
-                };
-              }),
-            };
-          })
-        )
-      );
-
-      if (hasDuplicate) {
+      if (hasDuplicateSuggestedResponse(targetQuestion?.suggestedResponses, normalizedResponse)) {
         setError("Predefined responses must be unique within a question.");
         return;
       }
 
       setError(null);
+      // The transition dedupes as well, so uniqueness does not depend on this
+      // render snapshot being the latest document: two adds dispatched in one
+      // batch still cannot store the same response twice.
+      setSections((current) =>
+        normalizeTemplateStructure(
+          current.map((s) =>
+            s.key !== sectionKey
+              ? s
+              : {
+                  ...s,
+                  questions: s.questions.map((q) => {
+                    if (q.key !== questionKey) return q;
+                    const existing = q.suggestedResponses ?? [];
+                    // Uniqueness is enforced against the document being written,
+                    // not the one this handler rendered from, and the check stays
+                    // inside a pure updater.
+                    return hasDuplicateSuggestedResponse(existing, normalizedResponse)
+                      ? q
+                      : { ...q, suggestedResponses: [...existing, normalizedResponse] };
+                  }),
+                }
+          )
+        )
+      );
     },
-    []
+    [sections, setSections]
   );
 
   const removeSuggestedResponse = useCallback(
@@ -1202,7 +1278,7 @@ export function TemplateBuilder({
         )
       );
     },
-    []
+    [setSections]
   );
 
   // ─── Drag Reordering ─────────────────────────────────────────────────
@@ -1238,7 +1314,7 @@ export function TemplateBuilder({
         return normalizeTemplateStructure(arrayMove(prev, fromIndex, toIndex));
       });
     },
-    [sortableMap]
+    [setSections, sortableMap]
   );
 
   const handleQuestionDragEnd = useCallback(
@@ -1271,7 +1347,7 @@ export function TemplateBuilder({
         );
       });
     },
-    [sortableMap]
+    [setSections, sortableMap]
   );
 
   const handleDragEnd = useCallback(
@@ -1316,7 +1392,7 @@ export function TemplateBuilder({
     if (programWideMode) {
       formData.set(
         "program_question_go_bindings",
-        JSON.stringify(collectGoBindings(normalizeTemplateStructure(sections), goQuestionBindings))
+        JSON.stringify(collectGoBindings(sections, goQuestionBindings))
       );
     }
 
@@ -1326,18 +1402,11 @@ export function TemplateBuilder({
       formData.set("bound_program_id", boundProgramId);
       formData.set(
         "cilo_question_bindings",
-        JSON.stringify(
-          Object.entries(ciloQuestionBindings)
-            .filter(([, ciloId]) => ciloId)
-            .map(([encodedKey, ciloId]) => {
-              const { sectionKey, itemKey } = decodeBindingKey(encodedKey);
-              return { ciloId, itemKey, sectionKey };
-            })
-        )
+        JSON.stringify(collectCiloBindings(ciloQuestionBindings, sections))
       );
       formData.set(
         "go_question_bindings",
-        JSON.stringify(collectGoBindings(normalizeTemplateStructure(sections), courseGoBindings))
+        JSON.stringify(collectGoBindings(sections, courseGoBindings))
       );
     }
 
@@ -1681,7 +1750,7 @@ export function TemplateBuilder({
                   setIsFacultyAccessible(false);
                 }
                 if (nextType !== "PROGRAM_WIDE") {
-                  setGoQuestionBindings({});
+                  setGoQuestionBindings(() => ({}));
                 }
               }}
             >
@@ -1739,8 +1808,8 @@ export function TemplateBuilder({
                   // The catalog for both outcome axes belongs to the newly
                   // selected Course, so bindings keyed to the previous Course
                   // never carry over.
-                  setCiloQuestionBindings({});
-                  setCourseGoBindings({});
+                  setCiloQuestionBindings(() => ({}));
+                  setCourseGoBindings(() => ({}));
                 }}
                 filter={(ctx: FacultyCourseContext, query: string) =>
                   !query ||
@@ -2246,18 +2315,18 @@ function SectionCard({
                 facultyMode={facultyMode}
                 onCiloBindingChange={onCiloBindingChange}
                 selectedCiloLabel={selectedCiloLabels.get(
-                  ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
+                  ciloQuestionBindings[encodeQuestionBindingKey(section.key, question.key)] ?? ""
                 )}
                 ciloQuestionCounts={ciloQuestionCounts}
                 selectedCiloId={
-                  ciloQuestionBindings[encodeBindingKey(section.key, question.key)] ?? ""
+                  ciloQuestionBindings[encodeQuestionBindingKey(section.key, question.key)] ?? ""
                 }
                 goOptions={programWideMode ? goOptions : (courseBoundGoBinding?.options ?? [])}
                 selectedGoIds={
                   (programWideMode
                     ? goQuestionBindings
                     : (courseBoundGoBinding?.questionBindings ?? {}))[
-                    encodeBindingKey(section.key, question.key)
+                    encodeQuestionBindingKey(section.key, question.key)
                   ] ?? []
                 }
                 programWideMode={programWideMode}
@@ -2443,7 +2512,7 @@ function QuestionCard({
                   const ciloId = !value || value === "none" ? "" : value;
 
                   // Update CILO binding
-                  onCiloBindingChange(encodeBindingKey(sectionKey, question.key), ciloId);
+                  onCiloBindingChange(encodeQuestionBindingKey(sectionKey, question.key), ciloId);
 
                   // Auto-populate an untitled question with the CILO description.
                   // A CILO may be reused across questions, so an already-written
@@ -2513,7 +2582,7 @@ function QuestionCard({
                 archivedGoLookup={archivedGoLookup}
                 disabled={Boolean(selectedCiloId)}
                 onChange={(goIds) =>
-                  onGoBindingsChange(encodeBindingKey(sectionKey, question.key), goIds)
+                  onGoBindingsChange(encodeQuestionBindingKey(sectionKey, question.key), goIds)
                 }
               />
               {selectedCiloId ? (
@@ -2552,7 +2621,7 @@ function QuestionCard({
                 labelId={`go-binding-label-${question.key}`}
                 archivedGoLookup={archivedGoLookup}
                 onChange={(goIds) =>
-                  onGoBindingsChange(encodeBindingKey(sectionKey, question.key), goIds)
+                  onGoBindingsChange(encodeQuestionBindingKey(sectionKey, question.key), goIds)
                 }
               />
               {selectedGoIds.length === 0 && (
