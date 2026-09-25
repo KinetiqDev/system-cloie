@@ -253,6 +253,7 @@ function bindingsAreTypeOnly(
  */
 function importedNames(clause: ts.ImportClause | undefined): string[] | null {
   if (clause === undefined) return null;
+  if (clause.name !== undefined) return null;
 
   const named = clause.namedBindings;
   if (named !== undefined && ts.isNamedImports(named)) {
@@ -950,9 +951,10 @@ describe("boundary checker behavior", () => {
         'import Prisma from "@prisma/client";',
         'import "@prisma/client";',
         'void import("@prisma/client");',
+        'import Prisma, { CourseScope } from "@prisma/client";',
       ].join("\n")
     );
-    expect(unbounded.map(isServerOnlySpecifier)).toEqual([true, true, true, true]);
+    expect(unbounded.map(isServerOnlySpecifier)).toEqual([true, true, true, true, true]);
 
     const legal = edgesOf(
       "src/features/probe/client",
