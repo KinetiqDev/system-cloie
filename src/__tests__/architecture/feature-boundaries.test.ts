@@ -452,8 +452,9 @@ function clientOffenders(): string[] {
  *
  * `@prisma/client` is a package, not a marker: it also publishes enums and types
  * that Client Components legitimately use (`CourseScope`, `YearLevel`, and the
- * `Prisma` namespace for query types). Only a value binding of `PrismaClient`,
- * the constructor that opens a connection, leaks the client.
+ * `Prisma` namespace for query types). Named value imports are checked for the
+ * `PrismaClient` constructor. Namespace, default, side-effect, and dynamic
+ * imports expose an unbounded value set and cannot prove the constructor absent.
  *
  * An erased edge is never server evidence: `import type { PrismaClient }` and
  * `import { type Shape }` leave no runtime code behind.
@@ -463,7 +464,7 @@ function isServerOnlySpecifier(edge: ModuleEdge): boolean {
   if ((SERVER_ONLY_MARKERS as readonly string[]).includes(edge.specifier)) return true;
   if (edge.resolved === PRISMA_MODULE) return true;
   if (edge.specifier === PRISMA_CLIENT_PACKAGE) {
-    return (edge.bindings ?? []).includes(PRISMA_CLIENT_VALUE_BINDING);
+    return edge.bindings === null || edge.bindings.includes(PRISMA_CLIENT_VALUE_BINDING);
   }
   return (SERVER_ONLY_BUILTINS as readonly string[]).includes(edge.specifier);
 }
@@ -942,6 +943,16 @@ describe("boundary checker behavior", () => {
       ].join("\n")
     );
     expect(leak.map(isServerOnlySpecifier)).toEqual([true, true]);
+    const unbounded = edgesOf(
+      "src/features/probe/client",
+      [
+        'import * as Prisma from "@prisma/client";',
+        'import Prisma from "@prisma/client";',
+        'import "@prisma/client";',
+        'void import("@prisma/client");',
+      ].join("\n")
+    );
+    expect(unbounded.map(isServerOnlySpecifier)).toEqual([true, true, true, true]);
 
     const legal = edgesOf(
       "src/features/probe/client",
