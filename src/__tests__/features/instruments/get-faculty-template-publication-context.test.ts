@@ -432,6 +432,80 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
     }
   });
 
+  it("resolves bindings on questions stored with the legacy uppercase spellings", async () => {
+    // The Faculty-owned and on-behalf publication context paths resolve a
+    // binding through one shared question-kind rule, so a legacy stored shape
+    // that publishes on-behalf resolves here too. Only the spellings differ
+    // from the case above.
+    mocks.template.findFirst.mockResolvedValue({
+      ...template({
+        structure: [
+          {
+            key: "cilo-items",
+            title: "Course Intended Learning Outcomes Evaluation",
+            description: "Bind each saved CILO to one Likert item.",
+            order: 1,
+            questions: [
+              {
+                key: "cilo-attainment-1",
+                prompt: "I achieved the first course intended learning outcome.",
+                type: "LIKERT",
+                order: 1,
+                required: true,
+              },
+              {
+                key: "go-attainment-1",
+                prompt: "I demonstrate the program graduate outcome.",
+                question_type: "LIKERT",
+                order: 2,
+                required: true,
+              },
+            ],
+          },
+        ],
+        template_go_question_bindings: [
+          {
+            id: "g1",
+            go_id: GO_ID,
+            go_code_snapshot: "STALE",
+            go_description_snapshot: "Stale description",
+            section_key: "cilo-items",
+            item_key: "go-attainment-1",
+            question_prompt_snapshot: "Stale prompt",
+          },
+        ],
+      }),
+    });
+    mocks.go.findMany.mockResolvedValue([
+      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    ]);
+
+    const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.bindings).toEqual([
+        {
+          ciloDescriptionSnapshot: "Apply capstone planning fundamentals.",
+          ciloId: CILO_ID,
+          itemKey: "cilo-attainment-1",
+          questionPromptSnapshot: "I achieved the first course intended learning outcome.",
+          sectionKey: "cilo-items",
+        },
+      ]);
+      expect(result.data.goBindings).toEqual([
+        {
+          goCodeSnapshot: "GO1",
+          goDescriptionSnapshot: "Communicates solutions effectively.",
+          goId: GO_ID,
+          itemKey: "go-attainment-1",
+          questionPromptSnapshot: "I demonstrate the program graduate outcome.",
+          sectionKey: "cilo-items",
+        },
+      ]);
+    }
+  });
+
   it("rejects publication when a bound GO is outside the course's owning program", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),

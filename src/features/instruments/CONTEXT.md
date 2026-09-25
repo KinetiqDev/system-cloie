@@ -30,7 +30,7 @@ A COURSE_BOUND template marked usable by faculty, who copy or draft it into thei
 ## Questions and outcome bindings
 
 **Question type**:
-`likert` (numeric scale with optional LikertDescriptor labels) or `guided_open_ended` (free text with optional suggested responses). Only Likert questions can carry outcome bindings.
+`likert` (numeric scale with optional LikertDescriptor labels) or `guided_open_ended` (free text with optional suggested responses). Only Likert questions can carry outcome bindings. Every binding-resolution path reads a stored question through `isLikertQuestion` rather than comparing the field itself, so one rule decides the kind for both draft authoring and publication: the `QuestionType` union's lowercase `type` is canonical, uppercase `type`/`question_type` spellings from legacy JSON still resolve their bindings, and `type` wins whenever a stored row carries both.
 _Avoid_: Item type, response type
 
 **CILO question binding**:

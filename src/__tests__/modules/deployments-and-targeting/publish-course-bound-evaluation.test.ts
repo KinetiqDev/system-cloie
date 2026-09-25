@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 import { publishCourseBoundEvaluation } from "@/features/evaluations/services/publish-course-bound-evaluation";
+import type * as FacultyTemplateServices from "@/features/instruments/services/manage-faculty-templates";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
@@ -12,6 +13,7 @@ const {
   goBindingCreateManyMock,
   courseAssignmentFindUniqueMock,
   courseAssignmentMembershipFindManyMock,
+  courseFindUniqueMock,
   exclusionCreateManyMock,
   getFacultyTemplatePublicationContextMock,
   instrumentVersionFindFirstMock,
@@ -26,7 +28,6 @@ const {
   studentEnrollmentFindManyMock,
   targetCreateManyMock,
   transactionMock,
-  validateCourseBoundGoBindingsMock,
 } = vi.hoisted(() => ({
   assignmentCreateManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
@@ -34,6 +35,7 @@ const {
   goBindingCreateManyMock: vi.fn(),
   courseAssignmentFindUniqueMock: vi.fn(),
   courseAssignmentMembershipFindManyMock: vi.fn(),
+  courseFindUniqueMock: vi.fn(),
   exclusionCreateManyMock: vi.fn(),
   getFacultyTemplatePublicationContextMock: vi.fn(),
   instrumentVersionFindFirstMock: vi.fn(),
@@ -48,7 +50,6 @@ const {
   studentEnrollmentFindManyMock: vi.fn(),
   targetCreateManyMock: vi.fn(),
   transactionMock: vi.fn(),
-  validateCourseBoundGoBindingsMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -72,6 +73,9 @@ vi.mock("@/lib/db/prisma", () => ({
     cILO: {
       findMany: ciloFindManyMock,
     },
+    course: {
+      findUnique: courseFindUniqueMock,
+    },
     gO: {
       findMany: goFindManyMock,
     },
@@ -87,10 +91,20 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
 }));
 
-vi.mock("@/features/instruments/services/manage-faculty-templates", () => ({
-  getFacultyTemplatePublicationContext: getFacultyTemplatePublicationContextMock,
-  validateCourseBoundGoBindings: validateCourseBoundGoBindingsMock,
-}));
+vi.mock("@/features/instruments/services/manage-faculty-templates", async () => {
+  // The Faculty-owned context entry point is stubbed (it has its own suite),
+  // but the shared GO-binding validator runs for real: it is what the on-behalf
+  // path resolves its stored GO bindings through, and stubbing it would hide
+  // exactly the question-kind rule this suite guards.
+  const actual = await vi.importActual<typeof FacultyTemplateServices>(
+    "@/features/instruments/services/manage-faculty-templates"
+  );
+
+  return {
+    getFacultyTemplatePublicationContext: getFacultyTemplatePublicationContextMock,
+    validateCourseBoundGoBindings: actual.validateCourseBoundGoBindings,
+  };
+});
 
 const MOCK_ASSIGNMENT = {
   id: "assignment-1",
@@ -243,13 +257,17 @@ describe("publishCourseBoundEvaluation", () => {
         instrumentVersion: { findFirst: instrumentVersionFindFirstMock },
         programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
         cILO: { findMany: ciloFindManyMock },
+        course: { findUnique: courseFindUniqueMock },
         gO: { findMany: goFindManyMock },
         evaluationAssignment: { createMany: assignmentCreateManyMock },
       })
     );
 
     // Default mocks for on-behalf template lookup
-    validateCourseBoundGoBindingsMock.mockResolvedValue({ success: true, bindings: [] });
+    courseFindUniqueMock.mockResolvedValue({
+      course_scope: "PROGRAM_SPECIFIC",
+      program_id: "program-1",
+    });
     instrumentTemplateFindFirstMock.mockResolvedValue({
       id: "bound-template-1",
       bound_course_id: "course-1",
@@ -1275,6 +1293,92 @@ describe("publishCourseBoundEvaluation", () => {
         ],
       });
     });
+
+    /**
+     * The stored shapes a Course-bound template's questions can carry. `type` is
+     * the canonical field; the uppercase spellings are the legacy shape earlier
+     * rows and fixtures use. All three must resolve, on this path and on the
+     * shared GO-binding validator it delegates to.
+     */
+    const STORED_LIKERT_KINDS: Array<[string, Record<string, unknown>]> = [
+      ["the canonical lowercase `type`", { type: "likert" }],
+      ["a legacy uppercase `type`", { type: "LIKERT" }],
+      ["a legacy `question_type`", { question_type: "LIKERT" }],
+    ];
+
+    it.each(STORED_LIKERT_KINDS)(
+      "publishes on-behalf a GO-bound question stored with %s",
+      async (_storedAs, kind) => {
+        resolveAuthSessionMock.mockResolvedValue({
+          activeRole: ROLES.DEAN,
+          profileGate: { status: "COMPLETE" },
+          roles: [ROLES.FACULTY, ROLES.DEAN],
+          userId: "dean-user-1",
+        });
+        courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
+        // q1 carries a CILO and always uses the canonical spelling, so the
+        // only thing this case varies is the kind of the GO-bound q2. A
+        // spelling the GO validator cannot read fails the publication instead
+        // of quietly dropping the intended coverage.
+        instrumentTemplateFindFirstMock.mockResolvedValue({
+          ...MOCK_BOUND_TEMPLATE,
+          structure: [
+            {
+              key: "outcomes",
+              questions: [
+                { key: "q1", prompt: "I achieved outcome one.", type: "likert" },
+                { key: "q2", prompt: "I demonstrate the program outcome.", ...kind },
+              ],
+            },
+          ],
+          template_cilo_question_bindings: [
+            { cilo_id: "cilo-1", section_key: "outcomes", item_key: "q1" },
+          ],
+          template_go_question_bindings: [
+            { go_id: "go-1", section_key: "outcomes", item_key: "q2" },
+          ],
+        });
+        ciloFindManyMock.mockResolvedValue([
+          {
+            description: "Apply capstone planning fundamentals.",
+            id: "cilo-1",
+            cilo_mappings: [
+              {
+                manifestation: "LEARNING",
+                go: { id: "go-1", program_id: "program-1", is_active: true },
+              },
+            ],
+            cilo_institutional_outcome_mappings: [],
+          },
+        ]);
+        goFindManyMock.mockResolvedValue([
+          { id: "go-1", code: "BSIT-GO1", description: "Communicate effectively." },
+        ]);
+        instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
+        courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
+
+        const result = await publishCourseBoundEvaluation({
+          assignmentId: "assignment-1",
+          deploymentName: "Dean GO-Bound On-Behalf Evaluation",
+          templateId: "bound-template-1",
+        });
+
+        if (!result.success) throw new Error(result.error);
+        expect(goBindingCreateManyMock).toHaveBeenCalledWith({
+          data: [
+            {
+              course_bound_evaluation_id: "evaluation-1",
+              go_code_snapshot: "BSIT-GO1",
+              go_description_snapshot: "Communicate effectively.",
+              go_id: "go-1",
+              item_key: "q2",
+              question_prompt_snapshot: "I demonstrate the program outcome.",
+              section_key: "outcomes",
+            },
+          ],
+        });
+      }
+    );
 
     it("allows Dean to publish a General Education assignment with its faculty template", async () => {
       const deanUserId = "dean-user-1";

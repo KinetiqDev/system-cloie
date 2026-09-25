@@ -8,10 +8,13 @@
  * ADR 0011 shared-zone rule that already holds in the repository.
  *
  * Rules:
- * 1. A Client Component must not import the Prisma client singleton, directly or
- *    through a value-import chain.
+ * 1. A Client Component must not import the Prisma client, directly or through a
+ *    value-import chain: neither the `PrismaClient` value from `@prisma/client`
+ *    nor the `@/lib/db/prisma` singleton.
  * 2. A Client Component must not import a feature module whose value-import
- *    chain reaches Prisma or a server-only builtin.
+ *    chain reaches Prisma or a server-only builtin, and must not import
+ *    `next/headers` at all, because that module exists only in the server
+ *    runtime.
  * 3. Shared infrastructure under `src/lib` must not import a feature, except the
  *    paths ADR 0011 leaves unrestricted.
  *
@@ -59,6 +62,9 @@ const SERVER_ONLY_BUILTINS = [
  * Specifiers that mark a module as server-only, so a Client Component reaching
  * one is a bundle leak regardless of what the module does internally.
  *
+ * `next/headers` is here because it publishes the request-scoped `cookies()` and
+ * `headers()` APIs, which exist only in the server runtime.
+ *
  * The `server-only` marker itself is recognized even though this repository does
  * not currently use it: the checker should reject a client import the moment
  * anyone adopts the convention. Applying the marker across existing feature
@@ -68,7 +74,18 @@ const SERVER_ONLY_BUILTINS = [
  * marker to a service under test fails those tests). Server ownership today holds
  * by import graph, which this suite enforces directly.
  */
-const SERVER_ONLY_MARKERS = ["server-only", "@/lib/db/prisma", PRISMA_MODULE] as const;
+const SERVER_ONLY_MARKERS = [
+  "server-only",
+  "next/headers",
+  "@/lib/db/prisma",
+  PRISMA_MODULE,
+] as const;
+
+/** The package that publishes the Prisma client constructor. */
+const PRISMA_CLIENT_PACKAGE = "@prisma/client";
+
+/** The one `@prisma/client` value a Client Component must never bind. */
+const PRISMA_CLIENT_VALUE_BINDING = "PrismaClient";
 
 /** Resolved from `tsconfig.json` `compilerOptions.paths`. */
 const PATH_ALIASES: ReadonlyArray<{ prefix: string; target: string }> = [
@@ -202,16 +219,33 @@ type ModuleEdge = {
   bindings: string[] | null;
 };
 
-/** Named import bindings that could be used as a value. */
+/**
+ * True when a named binding list carries no value across the edge: every element
+ * is an inline `type` specifier (or the list is empty).
+ *
+ * This is the same erasure rule as a whole-statement `import type` / `export type`,
+ * applied per element, so `export { type Shape } from "..."` and
+ * `import { run, type Shape }` are judged by the specifiers that survive.
+ *
+ * A namespace clause (`import * as ns`, `export * as ns from`) is always a value,
+ * and `undefined` is a side-effect import, which carries runtime code by design.
+ */
 function bindingsAreTypeOnly(
   bindings: ts.NamedImportBindings | ts.NamedExportBindings | undefined
 ): boolean {
-  if (!bindings || !ts.isNamedImports(bindings)) return false;
+  if (bindings === undefined) return false;
+  if (!ts.isNamedImports(bindings) && !ts.isNamedExports(bindings)) return false;
   return bindings.elements.every((element) => element.isTypeOnly);
 }
 
 /**
  * The value names an import declaration binds, or null when it binds none.
+ *
+ * The name is the *imported* one (the `propertyName`), not the local alias: a
+ * seam pins what a consumer may take from the target module, so
+ * `import { internalName as publicName }` still reaches `internalName` in the
+ * target and must be checked as such. Without this, any consumer could defeat
+ * the seam rule by renaming the binding it imports.
  *
  * Inline `type` specifiers (`import { run, type Shape }`) are skipped: they are
  * erased at compile time, exactly like a whole-statement `import type`, so they
@@ -224,7 +258,7 @@ function importedNames(clause: ts.ImportClause | undefined): string[] | null {
   if (named !== undefined && ts.isNamedImports(named)) {
     return named.elements
       .filter((element) => !element.isTypeOnly)
-      .map((element) => element.name.text);
+      .map((element) => (element.propertyName ?? element.name).text);
   }
   // A default or namespace binding is not a named interface, so treat the edge
   // as unbounded rather than guessing which export it will reach.
@@ -243,6 +277,22 @@ function reExportSpecifier(node: ts.Node): string | null {
   const specifier = node.moduleSpecifier;
   if (specifier === undefined || !ts.isStringLiteral(specifier)) return null;
   return specifier.text;
+}
+
+/**
+ * The value names an `export ... from` declaration republishes, or null when it
+ * republishes none.
+ *
+ * Mirrors `importedNames`: the name is the *exported* one (`propertyName`), so a
+ * renamed re-export is judged by what it takes from the target, not by the local
+ * name it publishes. `export * from` names nothing specific, so it stays
+ * unbounded like a namespace import.
+ */
+function reExportedNames(exportClause: ts.NamedExportBindings | undefined): string[] | null {
+  if (exportClause === undefined || !ts.isNamedExports(exportClause)) return null;
+  return exportClause.elements
+    .filter((element) => !element.isTypeOnly)
+    .map((element) => (element.propertyName ?? element.name).text);
 }
 
 /** The literal specifier on a dynamic `import("@/lib/db/prisma")` call, or null. */
@@ -265,7 +315,9 @@ function importClauseOf(node: ts.Node): ts.ImportClause | undefined {
 
 /** True when the whole edge is erased, so it cannot carry runtime code. */
 function edgeIsTypeOnly(node: ts.Node, clause: ts.ImportClause | undefined): boolean {
-  if (ts.isExportDeclaration(node)) return Boolean(node.isTypeOnly);
+  if (ts.isExportDeclaration(node)) {
+    return Boolean(node.isTypeOnly) || bindingsAreTypeOnly(node.exportClause);
+  }
   if (clause === undefined) return false;
   return Boolean(clause.isTypeOnly) || bindingsAreTypeOnly(clause.namedBindings);
 }
@@ -293,7 +345,10 @@ function readEdges(modulePath: string): ModuleEdge[] {
     const specifier = specifierOf(node);
     if (specifier !== null) {
       const clause = importClauseOf(node);
-      record(specifier, edgeIsTypeOnly(node, clause), importedNames(clause));
+      const bindings = ts.isExportDeclaration(node)
+        ? reExportedNames(node.exportClause)
+        : importedNames(clause);
+      record(specifier, edgeIsTypeOnly(node, clause), bindings);
     }
     ts.forEachChild(node, visit);
   };
@@ -303,14 +358,20 @@ function readEdges(modulePath: string): ModuleEdge[] {
 }
 
 /**
- * Every edge a Client Component could actually pull runtime code across. A
- * `"use server"` module is the terminal boundary described in the file header.
+ * Every edge a Client Component could actually pull runtime code across.
+ *
+ * A `"use server"` module is the terminal boundary described in the file header:
+ * Next.js compiles its exports into RPC references, so its own imports never
+ * reach the browser. That holds however the module is reached — as the entry
+ * (`return []`) and as a target (filtered), so a client that reaches an action
+ * through one middle module still stops there.
  */
 function valueTargets(modulePath: string): string[] {
   if (isServerActionModule(modulePath)) return [];
   return readEdges(modulePath)
     .filter((edge) => !edge.typeOnly && edge.resolved !== null && modulePaths.has(edge.resolved))
-    .map((edge) => edge.resolved as string);
+    .map((edge) => edge.resolved as string)
+    .filter((target) => !isServerActionModule(target));
 }
 
 type Reachability = { via: string; specifier: string | null };
@@ -385,12 +446,25 @@ function clientOffenders(): string[] {
 }
 
 /**
- * True when the edge names the Prisma singleton, a server-only marker package, or
- * a Node builtin that cannot run in a browser.
+ * True when the edge names the Prisma singleton, the Prisma client constructor,
+ * `next/headers`, a server-only marker package, or a Node builtin that cannot run
+ * in a browser.
+ *
+ * `@prisma/client` is a package, not a marker: it also publishes enums and types
+ * that Client Components legitimately use (`CourseScope`, `YearLevel`, and the
+ * `Prisma` namespace for query types). Only a value binding of `PrismaClient`,
+ * the constructor that opens a connection, leaks the client.
+ *
+ * An erased edge is never server evidence: `import type { PrismaClient }` and
+ * `import { type Shape }` leave no runtime code behind.
  */
 function isServerOnlySpecifier(edge: ModuleEdge): boolean {
+  if (edge.typeOnly) return false;
   if ((SERVER_ONLY_MARKERS as readonly string[]).includes(edge.specifier)) return true;
   if (edge.resolved === PRISMA_MODULE) return true;
+  if (edge.specifier === PRISMA_CLIENT_PACKAGE) {
+    return (edge.bindings ?? []).includes(PRISMA_CLIENT_VALUE_BINDING);
+  }
   return (SERVER_ONLY_BUILTINS as readonly string[]).includes(edge.specifier);
 }
 
@@ -787,14 +861,177 @@ describe("boundary checker behavior", () => {
         [
           '"use client";',
           'import type { Shape } from "@/lib/db/prisma";',
+          'export type { Prisma } from "@prisma/client";',
+          'export { type Provider } from "@/lib/db/prisma";',
           "export const view = (input: Shape) => input;",
         ].join("\n")
       )
     );
     try {
+      // `import type`, `export type`, and an inline `type` specifier are all
+      // erased, so none of them is a value edge a browser could follow.
       expect(valueTargets("src/features/probe/type-only-client")).toEqual([]);
+      expect(serverEvidenceReachedFrom("src/features/probe/type-only-client")).toBe(null);
+      expect(readEdges("src/features/probe/type-only-client").map((edge) => edge.typeOnly)).toEqual(
+        [true, true, true]
+      );
     } finally {
       sourceCache.delete("src/features/probe/type-only-client");
+    }
+  });
+
+  it("judges a seam import by the name it takes, so an alias cannot smuggle a private export", () => {
+    // The seam pins what a consumer may reach in the owning module, so aliasing
+    // is judged by the exported name, never by the local one. Otherwise
+    // `private as documented` would read as an allowed binding while pulling the
+    // private export, and a legitimate rename of a documented binding would read
+    // as a violation.
+    const seamSpecifier = "@/features/course-assignments/services/course-assignment-roster";
+    const consumer = "src/features/responses/services/probe-seam-consumer";
+    const violationsFor = (code: string) => {
+      sourceCache.set(consumer, parseFixture(consumer, code));
+      try {
+        return moduleSeamViolations(consumer, "responses");
+      } finally {
+        sourceCache.delete(consumer);
+      }
+    };
+
+    expect(
+      violationsFor(
+        [
+          `import { resolveAuthorizedCourseAssignmentRoster as toCourseBoundEvaluationEligibilityAssignment } from "${seamSpecifier}";`,
+          "void toCourseBoundEvaluationEligibilityAssignment;",
+          "",
+        ].join("\n")
+      )
+    ).toEqual([
+      `${consumer} -> ${seamSpecifier} (undeclared: resolveAuthorizedCourseAssignmentRoster)`,
+    ]);
+
+    // A renamed re-export takes the same route out of the seam.
+    expect(
+      violationsFor(
+        `export { resolveAuthorizedCourseAssignmentRoster as resolveCourseBoundEvaluationEligibility } from "${seamSpecifier}";\n`
+      )
+    ).toEqual([
+      `${consumer} -> ${seamSpecifier} (undeclared: resolveAuthorizedCourseAssignmentRoster)`,
+    ]);
+
+    // Renaming a documented binding stays legal, and an erased specifier is not a
+    // seam question at all.
+    expect(
+      violationsFor(
+        [
+          `import { toCourseBoundEvaluationEligibilityAssignment as projectEligibility } from "${seamSpecifier}";`,
+          `import { type CourseBoundEvaluationEligibilityInput as EligibilityInput } from "${seamSpecifier}";`,
+          "export type Probe = EligibilityInput;",
+          "void projectEligibility;",
+          "",
+        ].join("\n")
+      )
+    ).toEqual([]);
+  });
+
+  it("catches the Prisma client constructor without rejecting the enums and types Clients use", () => {
+    const leak = edgesOf(
+      "src/features/probe/client",
+      [
+        'import { PrismaClient } from "@prisma/client";',
+        'import { PrismaClient as Database } from "@prisma/client";',
+      ].join("\n")
+    );
+    expect(leak.map(isServerOnlySpecifier)).toEqual([true, true]);
+
+    const legal = edgesOf(
+      "src/features/probe/client",
+      [
+        'import { CourseScope } from "@prisma/client";',
+        'import type { PrismaClient, Prisma } from "@prisma/client";',
+        'import { CourseScope, type Prisma } from "@prisma/client";',
+        'import { z } from "zod";',
+      ].join("\n")
+    );
+    expect(legal.map(isServerOnlySpecifier)).toEqual([false, false, false, false]);
+  });
+
+  it("catches a direct or transitive next/headers import but leaves next/navigation alone", () => {
+    const direct = edgesOf(
+      "src/features/probe/client",
+      [
+        'import { cookies } from "next/headers";',
+        'import { useRouter } from "next/navigation";',
+      ].join("\n")
+    );
+    expect(direct.map(isServerOnlySpecifier)).toEqual([true, false]);
+
+    // The client reaches `next/headers` only through a middle module: the walk
+    // must follow the value edge and report the transitive leak.
+    const files: Array<[string, string]> = [
+      [
+        "src/features/probe/headers-client",
+        ['"use client";', 'import { label } from "@/features/probe/headers-middle";'].join("\n"),
+      ],
+      [
+        "src/features/probe/headers-middle",
+        ['import { cookies } from "next/headers";', "export const label = cookies;"].join("\n"),
+      ],
+    ];
+    for (const [modulePath, code] of files) {
+      // `valueTargets` only crosses edges into known project modules, so the
+      // synthetic pair has to be registered the way a real file would be.
+      modulePaths.add(modulePath);
+      sourceCache.set(modulePath, parseFixture(modulePath, code));
+    }
+    try {
+      const reached = serverEvidenceReachedFrom("src/features/probe/headers-client");
+      expect(reached?.specifier).toBe("next/headers");
+      expect(reached?.via).toBe("src/features/probe/headers-middle");
+    } finally {
+      for (const [modulePath] of files) {
+        modulePaths.delete(modulePath);
+        sourceCache.delete(modulePath);
+      }
+    }
+  });
+
+  it("treats a use server module as terminal even when reached through a middle module", () => {
+    const files: Array<[string, string]> = [
+      [
+        "src/features/probe/action-client",
+        ['"use client";', 'import { run } from "@/features/probe/action-middle";'].join("\n"),
+      ],
+      [
+        "src/features/probe/action-middle",
+        [
+          'import { runSomething } from "@/features/probe/action-module";',
+          "export const run = runSomething;",
+        ].join("\n"),
+      ],
+      [
+        "src/features/probe/action-module",
+        [
+          '"use server";',
+          'import { prisma } from "@/lib/db/prisma";',
+          "export async function runSomething() {",
+          "  return prisma;",
+          "}",
+        ].join("\n"),
+      ],
+    ];
+    for (const [modulePath, code] of files) {
+      modulePaths.add(modulePath);
+      sourceCache.set(modulePath, parseFixture(modulePath, code));
+    }
+    try {
+      // The middle module is still inspected, but the action terminates the walk
+      // before Prisma is reached, exactly as the file header describes.
+      expect(serverEvidenceReachedFrom("src/features/probe/action-client")).toBe(null);
+    } finally {
+      for (const [modulePath] of files) {
+        modulePaths.delete(modulePath);
+        sourceCache.delete(modulePath);
+      }
     }
   });
 });

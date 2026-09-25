@@ -1,5 +1,5 @@
 import { CourseBoundEvaluationExclusionCategory, DeploymentStatus } from "@prisma/client";
-import type { TemplateStructure } from "@/features/instruments/types";
+import { isLikertQuestion, type TemplateStructure } from "@/features/instruments/types";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { isNeutralOtherExplanation } from "../exclusion-text";
 import { encodeQuestionKey } from "./central-deployment-go-plan";
@@ -153,13 +153,11 @@ type ValidatedCiloBinding = {
  * Lists a template's Likert questions by structural identity.
  *
  * This scanner only reads the stored `structure` column; it never writes a
- * structure, so the accepted spellings are an explicit tolerance list rather
- * than a statement about stored rows. `type: "likert"` is canonical: it is the
- * `QuestionType` union and the only spelling production writes, and it is the
- * rule `listTemplateLikertQuestions` applies for the Faculty publication
- * context. The uppercase spellings are retained for compatibility with this
- * module's previous scanner predicate and for any legacy JSON that may still
- * carry them. Both publication paths therefore agree on the canonical spelling.
+ * structure. The question kind comes from `isLikertQuestion` in the Instruments
+ * feature, the same rule the Faculty-owned publication context applies through
+ * `listTemplateLikertQuestions`, so both paths resolve a binding against the
+ * same questions and the canonical lowercase spelling leads while legacy
+ * uppercase JSON still resolves.
  */
 function listLikertQuestionsByIdentity(
   structure: TemplateStructure
@@ -173,10 +171,7 @@ function listLikertQuestionsByIdentity(
 
     for (const question of sectionRecord.questions) {
       const record = question as unknown as Record<string, unknown> | null;
-      if (!record) continue;
-      const isLikert =
-        record.type === "likert" || record.type === "LIKERT" || record.question_type === "LIKERT";
-      if (!isLikert) continue;
+      if (!record || !isLikertQuestion(record)) continue;
 
       const entry = { itemKey: String(record.key), prompt: String(record.prompt), sectionKey };
       found.set(encodeQuestionKey(sectionKey, entry.itemKey), entry);
