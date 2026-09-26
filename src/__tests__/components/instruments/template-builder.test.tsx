@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { StrictMode } from "react";
 import {
   TemplateBuilder,
   filteredContainerCollisionDetection,
@@ -1390,6 +1391,273 @@ describe("TemplateBuilder", () => {
     expect((onSave.mock.calls[0][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
+  test("drops a CILO binding when the bound question is deleted", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        toolsHref="/faculty/tools"
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate CILO 1",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+                {
+                  key: "question-2",
+                  prompt: "Evaluate CILO 2",
+                  type: "likert",
+                  order: 1,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [],
+          initialBindings: [
+            { ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" },
+            { ciloId: "cilo-2", itemKey: "question-2", sectionKey: "section-1" },
+          ],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { hasSavedCilos: true, items: [{ description: "Apply planning", id: "cilo-1" }] },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true, data: {} }),
+        }}
+      />
+    );
+
+    await waitFor(() => expect(screen.getAllByText("CILO Binding")).toHaveLength(2));
+
+    // Delete the question carrying the first binding.
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]!);
+
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    // Only the surviving question's binding is saved. A stale entry would make
+    // the server reject the whole save, because its question no longer exists.
+    expect((onSave.mock.calls[0]![0] as FormData).get("cilo_question_bindings")).toBe(
+      JSON.stringify([{ ciloId: "cilo-2", itemKey: "question-2", sectionKey: "section-1" }])
+    );
+  });
+
+  test("drops a CILO binding when its question becomes guided open-ended", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        toolsHref="/faculty/tools"
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Evaluate CILO 1",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [],
+          initialBindings: [{ ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" }],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { hasSavedCilos: true, items: [{ description: "Apply planning", id: "cilo-1" }] },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true, data: {} }),
+        }}
+      />
+    );
+
+    await waitFor(() => expect(screen.getAllByText("CILO Binding")).toHaveLength(1));
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Question type" }));
+    const guidedOption = await screen.findByRole("option", { name: "Guided Open-Ended" });
+    fireEvent.mouseMove(guidedOption);
+    fireEvent.click(guidedOption);
+
+    // The binding control disappears with the Likert question it belonged to.
+    expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0]![0] as FormData).get("cilo_question_bindings")).toBe("[]");
+  });
+
+  test("drops Course-bound GO bindings when their question is deleted", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        toolsHref="/faculty/tools"
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Rate the direct outcome",
+                  type: "likert",
+                  order: 0,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+                {
+                  key: "question-2",
+                  prompt: "Keep this question",
+                  type: "likert",
+                  order: 1,
+                  required: true,
+                  likertDescriptors: [
+                    { label: "Poor", value: 1 },
+                    { label: "Fair", value: 2 },
+                    { label: "Good", value: 3 },
+                    { label: "Very Good", value: 4 },
+                    { label: "Excellent", value: 5 },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [],
+          initialGoBindings: [
+            {
+              goId: "go-1",
+              itemKey: "question-1",
+              sectionKey: "section-1",
+              goCodeSnapshot: "GO-1",
+              goDescriptionSnapshot: "Apply discipline knowledge",
+            },
+            {
+              goId: "go-2",
+              itemKey: "question-2",
+              sectionKey: "section-1",
+              goCodeSnapshot: "GO-2",
+              goDescriptionSnapshot: "Communicate effectively",
+            },
+          ],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { hasSavedCilos: false, items: [] },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true, data: {} }),
+        }}
+      />
+    );
+
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
+
+    // Delete the first question, leaving the second question's GO binding.
+    fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]!);
+
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect((onSave.mock.calls[0]![0] as FormData).get("go_question_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-2", goId: "go-2", sectionKey: "section-1" }])
+    );
+  });
+
   test("renders archived GO bindings as removable archived chips", () => {
     render(
       <TemplateBuilder
@@ -2074,6 +2342,337 @@ describe("TemplateBuilder", () => {
     );
     expect(onSave).not.toHaveBeenCalled();
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/program-head/tools/copy-1/edit"));
+  });
+
+  test("composes two structural edits committed in one batch and prunes every binding map", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const likert = (key: string, order: number) => ({
+      key,
+      prompt: `Rate ${key}`,
+      type: "likert" as const,
+      order,
+      required: true,
+      likertDescriptors: [
+        { label: "Poor", value: 1 },
+        { label: "Fair", value: 2 },
+        { label: "Good", value: 3 },
+        { label: "Very Good", value: 4 },
+        { label: "Excellent", value: 5 },
+      ],
+    });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        toolsHref="/faculty/tools"
+        initialData={{
+          id: "template-1",
+          name: "CILO Tool",
+          description: "",
+          template_type: "COURSE_BOUND",
+          is_active: true,
+          is_faculty_accessible: true,
+          bound_course_id: "course-1",
+          bound_major_id: null,
+          bound_program_id: "program-1",
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                likert("question-1", 0),
+                likert("question-2", 1),
+                likert("question-3", 2),
+              ],
+            },
+          ],
+        }}
+        facultyConfig={{
+          courseContexts: [
+            {
+              courseCode: "IT401",
+              courseId: "course-1",
+              courseTitle: "Capstone 1",
+              courseType: "PROGRAM_SPECIFIC",
+              majorId: null,
+              majorName: null,
+              programCode: "BSIT",
+              programId: "program-1",
+              programName: "Information Technology",
+              scopeLabel: "BSIT - Shared Program Course",
+            },
+          ],
+          initialBindings: [
+            { ciloId: "cilo-1", itemKey: "question-1", sectionKey: "section-1" },
+            { ciloId: "cilo-2", itemKey: "question-2", sectionKey: "section-1" },
+            { ciloId: "cilo-3", itemKey: "question-3", sectionKey: "section-1" },
+          ],
+          initialGoBindings: [
+            {
+              goId: "go-1",
+              itemKey: "question-1",
+              sectionKey: "section-1",
+              goCodeSnapshot: "GO-1",
+              goDescriptionSnapshot: "Apply discipline knowledge",
+            },
+            {
+              goId: "go-2",
+              itemKey: "question-2",
+              sectionKey: "section-1",
+              goCodeSnapshot: "GO-2",
+              goDescriptionSnapshot: "Communicate effectively",
+            },
+            {
+              goId: "go-3",
+              itemKey: "question-3",
+              sectionKey: "section-1",
+              goCodeSnapshot: "GO-3",
+              goDescriptionSnapshot: "Work in teams",
+            },
+          ],
+          loadManagedCilosAction: vi.fn().mockResolvedValue({
+            success: true,
+            data: { hasSavedCilos: true, items: [{ description: "Apply planning", id: "cilo-3" }] },
+          }),
+          validatePublishReadinessAction: vi.fn().mockResolvedValue({ success: true, data: {} }),
+        }}
+      />
+    );
+
+    await waitFor(() => expect(screen.getAllByText("CILO Binding")).toHaveLength(3));
+    expect(screen.getByText("GO-3")).toBeInTheDocument();
+
+    // Two structural edits committed inside one batch: both must survive, and
+    // every binding map must be pruned against the document they compose.
+    const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+    await act(async () => {
+      fireEvent.click(deleteButtons[0]!);
+      fireEvent.click(deleteButtons[1]!);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    const formData = onSave.mock.calls[0]![0] as FormData;
+
+    // The committed structure keeps only the question neither edit removed.
+    expect(JSON.parse(formData.get("structure") as string)).toMatchObject([
+      { key: "section-1", questions: [{ key: "question-3" }] },
+    ]);
+    expect(formData.get("cilo_question_bindings")).toBe(
+      JSON.stringify([{ ciloId: "cilo-3", itemKey: "question-3", sectionKey: "section-1" }])
+    );
+    expect(formData.get("go_question_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-3", goId: "go-3", sectionKey: "section-1" }])
+    );
+
+    // The Course-bound GO map is pruned too, not just the payload projection.
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO-2")).not.toBeInTheDocument();
+    expect(screen.getByText("GO-3")).toBeInTheDocument();
+  });
+
+  test("composes two structural edits in one batch and prunes the program-wide GO map", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const likert = (key: string, order: number) => ({
+      key,
+      prompt: `Rate ${key}`,
+      type: "likert" as const,
+      order,
+      required: true,
+      likertDescriptors: [
+        { label: "Poor", value: 1 },
+        { label: "Fair", value: 2 },
+        { label: "Good", value: 3 },
+        { label: "Very Good", value: 4 },
+        { label: "Excellent", value: 5 },
+      ],
+    });
+
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={onSave}
+        goOptions={[
+          { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+          { id: "go-2", code: "GO-2", description: "Communicate effectively" },
+          { id: "go-3", code: "GO-3", description: "Work in teams" },
+        ]}
+        initialData={{
+          id: "template-1",
+          name: "Program Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Outcomes",
+              description: undefined,
+              order: 0,
+              questions: [
+                likert("question-1", 0),
+                likert("question-2", 1),
+                likert("question-3", 2),
+              ],
+            },
+          ],
+        }}
+        initialGoBindings={[
+          { goId: "go-1", itemKey: "question-1", sectionKey: "section-1" },
+          { goId: "go-2", itemKey: "question-2", sectionKey: "section-1" },
+          { goId: "go-3", itemKey: "question-3", sectionKey: "section-1" },
+        ]}
+      />
+    );
+
+    expect(screen.getByText("GO-1")).toBeInTheDocument();
+
+    const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+    await act(async () => {
+      fireEvent.click(deleteButtons[0]!);
+      fireEvent.click(deleteButtons[1]!);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    // Both removals hold: the committed structure keeps only the question
+    // neither edit removed.
+    expect(
+      JSON.parse((onSave.mock.calls[0]![0] as FormData).get("structure") as string)
+    ).toMatchObject([{ key: "section-1", questions: [{ key: "question-3" }] }]);
+
+    // Only the surviving question's GO is published. Both removed questions'
+    // bindings are gone from the map, not just from the payload projection.
+    expect(
+      JSON.parse(
+        (onSave.mock.calls[0]![0] as FormData).get("program_question_go_bindings") as string
+      )
+    ).toEqual([{ itemKey: "question-3", goId: "go-3", sectionKey: "section-1" }]);
+    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("GO-2")).not.toBeInTheDocument();
+  });
+
+  test("mints each new section and question identity once under StrictMode double invocation", async () => {
+    const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
+    const uuidSpy = vi.spyOn(crypto, "randomUUID");
+
+    render(
+      <StrictMode>
+        <TemplateBuilder
+          programLabel="BSIT"
+          onSave={onSave}
+          goOptions={[]}
+          initialData={{
+            id: "template-1",
+            name: "Program Tool",
+            description: "",
+            template_type: "PROGRAM_WIDE",
+            is_active: true,
+            is_faculty_accessible: false,
+            structure: [
+              {
+                key: "section-1",
+                title: "Outcomes",
+                description: undefined,
+                order: 0,
+                questions: [
+                  {
+                    key: "question-1",
+                    prompt: "Rate your learning",
+                    type: "likert",
+                    order: 0,
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          }}
+        />
+      </StrictMode>
+    );
+
+    const afterRender = uuidSpy.mock.calls.length;
+
+    // "Add Section" renders at the top and the bottom of the document.
+    // Adding a section introduces its own question, and adding a question adds
+    // one more, so these two actions mint exactly three identities.
+    fireEvent.click(screen.getAllByRole("button", { name: /add section/i })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: /add question/i })[0]!);
+
+    expect(uuidSpy.mock.calls.length - afterRender).toBe(3);
+
+    fireEvent.click(screen.getByRole("button", { name: /save template/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    const structure = JSON.parse(
+      (onSave.mock.calls[0]![0] as FormData).get("structure") as string
+    ) as Array<{ key: string; questions: Array<{ key: string }> }>;
+
+    // StrictMode double-invokes a state transition to surface impurity, so an
+    // identity minted inside one is allocated twice and half of that work is
+    // discarded. Minting before the dispatch keeps each identity single-use.
+    const sectionKeys = structure.map((section) => section.key);
+    expect(new Set(sectionKeys).size).toBe(sectionKeys.length);
+    const questionKeys = structure.flatMap((section) =>
+      section.questions.map((question) => question.key)
+    );
+    expect(new Set(questionKeys).size).toBe(questionKeys.length);
+
+    uuidSpy.mockRestore();
+  });
+
+  test("stores a predefined response once when two identical adds are dispatched in one batch", async () => {
+    render(
+      <TemplateBuilder
+        programLabel="BSIT"
+        onSave={vi.fn().mockResolvedValue({ success: true })}
+        initialData={{
+          id: "template-1",
+          name: "Guided Tool",
+          description: "",
+          template_type: "PROGRAM_WIDE",
+          is_active: true,
+          is_faculty_accessible: false,
+          structure: [
+            {
+              key: "section-1",
+              title: "Feedback",
+              description: undefined,
+              order: 0,
+              questions: [
+                {
+                  key: "question-1",
+                  prompt: "Remarks",
+                  type: "guided_open_ended",
+                  order: 0,
+                  required: true,
+                  suggestedResponses: [],
+                },
+              ],
+            },
+          ],
+        }}
+      />
+    );
+
+    const input = screen.getByPlaceholderText(/Add a predefined response/i);
+    const addButton = screen.getByRole("button", { name: "Add" });
+
+    // Two identical adds inside one batch: uniqueness must hold against the
+    // document being written, not against the render snapshot both handlers saw.
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "Clear examples" } });
+      fireEvent.click(addButton);
+      fireEvent.change(input, { target: { value: "Clear examples" } });
+      fireEvent.click(addButton);
+    });
+
+    expect(screen.getAllByText("Clear examples")).toHaveLength(1);
   });
 
   test("refuses to create a baseline copy without a usable name", async () => {

@@ -29,10 +29,14 @@ const redirectMock = vi.hoisted(() =>
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock, redirect: redirectMock }));
 
-vi.mock("@/features/dean/services/read-dean-oversight", () => ({
+vi.mock("@/features/dean/services/dean-read-model", () => ({
   DeanReadModelNotFoundError: class DeanReadModelNotFoundError extends Error {},
   listDeanEligiblePeriods: listDeanEligiblePeriodsMock,
+}));
+vi.mock("@/features/dean/services/read-dean-learning-outcomes", () => ({
   getDeanLearningOutcomes: getDeanLearningOutcomesMock,
+}));
+vi.mock("@/features/dean/services/read-dean-dashboard", () => ({
   getDeanDashboard: getDeanDashboardMock,
 }));
 

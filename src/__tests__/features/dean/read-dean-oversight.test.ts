@@ -18,10 +18,8 @@ vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
 }));
 
 import type { PeriodReadiness } from "@/features/academic-calendar/services/read-period-readiness";
-import {
-  getDeanDashboard,
-  getDeanLearningOutcomes,
-} from "@/features/dean/services/read-dean-oversight";
+import { getDeanDashboard } from "@/features/dean/services/read-dean-dashboard";
+import { getDeanLearningOutcomes } from "@/features/dean/services/read-dean-learning-outcomes";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
 const ASSIGNMENT_ID = "22222222-2222-4222-8222-222222222222";

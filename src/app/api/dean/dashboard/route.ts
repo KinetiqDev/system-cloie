@@ -1,5 +1,10 @@
-import { getDeanDashboard } from "@/features/dean/services/read-dean-oversight";
-import { deanJson, handleDeanReadError, requireDean, DeanRouteBadRequestError } from "../route-helpers";
+import { getDeanDashboard } from "@/features/dean/services/read-dean-dashboard";
+import {
+  deanJson,
+  handleDeanReadError,
+  requireDean,
+  DeanRouteBadRequestError,
+} from "../route-helpers";
 
 export async function GET(request: Request): Promise<Response> {
   const authError = await requireDean();

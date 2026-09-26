@@ -1,13 +1,6 @@
 // fallow-ignore-file code-duplication
 import { randomUUID } from "node:crypto";
-import {
-  CourseBoundEvaluationExclusionCategory,
-  CourseScope,
-  DeploymentStatus,
-  EvaluationTemplateType,
-  Prisma,
-} from "@prisma/client";
-import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
+import { CourseScope, EvaluationTemplateType, Prisma } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
   revalidateProgramHeadAssignment,
@@ -23,7 +16,13 @@ import { prisma } from "@/lib/db/prisma";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { type TemplateStructure } from "@/features/instruments/types";
 import { canDeployCourseBoundEvaluation } from "../policies";
-import { isNeutralOtherExplanation } from "../exclusion-text";
+import {
+  buildPublicationStatus,
+  planCourseBoundPublication,
+  PublicationValidationError,
+  toPublicationFailure,
+  validateCiloQuestionBindings,
+} from "./course-bound-publication-plan";
 import {
   classifyCourseAlignment,
   type CourseAlignmentState,
@@ -34,27 +33,10 @@ import type {
   PublishCourseBoundEvaluationResult,
 } from "../types";
 
-class PublicationValidationError extends Error {
-  constructor(
-    message: string,
-    readonly alignmentCourseId?: string
-  ) {
-    super(message);
-  }
-}
-
 type PublicationContextDb = Prisma.TransactionClient | typeof prisma;
 
 function isTransactionWriteConflict(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2034";
-}
-
-function buildPublicationStatus(activationAt: Date | null | undefined): "ACTIVE" | "SCHEDULED" {
-  if (activationAt && activationAt.getTime() > Date.now()) {
-    return DeploymentStatus.SCHEDULED;
-  }
-
-  return DeploymentStatus.ACTIVE;
 }
 
 /**
@@ -154,77 +136,16 @@ export async function getOnBehalfTemplatePublicationContext(
   const structure = Array.isArray(template.structure)
     ? (template.structure as unknown as TemplateStructure)
     : [];
-  const likertQuestions: { sectionKey: string; itemKey: string; prompt: string }[] = [];
-  for (const section of structure) {
-    if (
-      section &&
-      typeof section === "object" &&
-      "questions" in section &&
-      Array.isArray(section.questions)
-    ) {
-      for (const question of section.questions) {
-        if (question && typeof question === "object") {
-          const q = question as unknown as Record<string, unknown>;
-          if (q.question_type === "LIKERT" || q.type === "LIKERT") {
-            likertQuestions.push({
-              sectionKey: String((section as unknown as Record<string, unknown>).key),
-              itemKey: String(q.key),
-              prompt: String(q.prompt),
-            });
-          }
-        }
-      }
-    }
+
+  const ciloBindingValidation = validateCiloQuestionBindings({
+    bindings: template.template_cilo_question_bindings,
+    cilos,
+    structure,
+  });
+  if (!ciloBindingValidation.success) {
+    return ciloBindingValidation;
   }
-
-  // Question identity is a structural tuple, never a separator join.
-  const questionMap = new Map(
-    likertQuestions.map((q) => [JSON.stringify([q.sectionKey, q.itemKey]), q])
-  );
-  const ciloMap = new Map(cilos.map((c) => [c.id, c]));
-  const validatedBindings = [];
-  const usedQuestionKeys = new Set<string>();
-
-  for (const binding of template.template_cilo_question_bindings) {
-    if (!binding.cilo_id) continue;
-    const cilo = ciloMap.get(binding.cilo_id);
-    const questionKey = JSON.stringify([binding.section_key, binding.item_key]);
-    const question = questionMap.get(questionKey);
-
-    if (!cilo) {
-      return { success: false, error: "One or more selected CILOs are invalid." };
-    }
-
-    if (!question) {
-      return { success: false, error: "CILOs can only be assigned to Likert questions." };
-    }
-
-    if (usedQuestionKeys.has(questionKey)) {
-      return { success: false, error: "A Likert question can only be assigned one CILO." };
-    }
-
-    usedQuestionKeys.add(questionKey);
-
-    validatedBindings.push({
-      ciloDescriptionSnapshot: cilo.description,
-      ciloId: cilo.id,
-      itemKey: binding.item_key,
-      questionPromptSnapshot: question.prompt,
-      sectionKey: binding.section_key,
-    });
-  }
-
-  // Coverage gate: every active CILO of the bound course must be evidenced by
-  // at least one Likert question. A CILO may span several questions, so the
-  // number of bindings is unrelated to the number of CILOs.
-  const boundCiloIds = new Set(validatedBindings.map((binding) => binding.ciloId));
-
-  if (cilos.some((cilo) => !boundCiloIds.has(cilo.id))) {
-    return {
-      success: false,
-      error: "Every saved CILO must be assigned to at least one Likert question before publishing.",
-    };
-  }
+  const validatedBindings = ciloBindingValidation.bindings;
 
   // Direct question-GO bindings stay optional: an unbound Likert question
   // publishes as a general item. A null go_id means its GO was deleted
@@ -516,60 +437,12 @@ export async function publishCourseBoundEvaluation({
               where: { course_assignment_id: assignmentId, is_active: true },
               select: { id: true, student_user_id: true },
             });
-            const membershipById = new Map(
-              memberships.map((membership) => [membership.id, membership])
-            );
-            const normalizedExclusions = exclusions.map((exclusion) => ({
-              ...exclusion,
-              otherExplanation: exclusion.otherExplanation?.trim() || undefined,
-            }));
-            const excludedMembershipIds = new Set<string>();
-            for (const exclusion of normalizedExclusions) {
-              const membership = membershipById.get(exclusion.membershipId);
-              if (!membership) {
-                throw new PublicationValidationError(
-                  "Every exclusion must target an active Course-assignment roster member."
-                );
-              }
-              if (excludedMembershipIds.has(exclusion.membershipId)) {
-                throw new PublicationValidationError("A roster member can only be excluded once.");
-              }
-              if (
-                exclusion.category === CourseBoundEvaluationExclusionCategory.OTHER &&
-                (!exclusion.otherExplanation ||
-                  exclusion.otherExplanation.length < 5 ||
-                  exclusion.otherExplanation.length > 200 ||
-                  !isNeutralOtherExplanation(exclusion.otherExplanation))
-              ) {
-                throw new PublicationValidationError(
-                  "Other exclusion explanations must be 5-200 neutral characters without sensitive details."
-                );
-              }
-              if (
-                exclusion.category !== CourseBoundEvaluationExclusionCategory.OTHER &&
-                exclusion.otherExplanation
-              ) {
-                throw new PublicationValidationError(
-                  "Only an Other exclusion may include an explanation."
-                );
-              }
-              excludedMembershipIds.add(exclusion.membershipId);
-            }
-
-            const respondentIds = memberships
-              .filter((membership) => !excludedMembershipIds.has(membership.id))
-              .map((membership) => membership.student_user_id);
-            if (respondentIds.length === 0) {
-              throw new PublicationValidationError(
-                "At least one roster member must receive this evaluation."
-              );
-            }
-
-            const ciloSnapshots = contextData.cilos.map((cilo, index: number) => ({
-              description: cilo.description,
-              id: cilo.id,
-              label: `CILO ${index + 1}`,
-            }));
+            const plan = planCourseBoundPublication({
+              cilos: contextData.cilos,
+              exclusions,
+              memberships,
+            });
+            const { ciloSnapshots, normalizedExclusions, respondentIds } = plan;
 
             const publishedAt = new Date();
             const evaluation = await tx.courseBoundEvaluation.create({
@@ -697,42 +570,6 @@ export async function publishCourseBoundEvaluation({
 
     throw new Error("Publication transaction retry limit exceeded.");
   } catch (error) {
-    if (error instanceof PublicationValidationError) {
-      return {
-        error: error.message,
-        success: false,
-        ...(error.alignmentCourseId ? { alignmentCourseId: error.alignmentCourseId } : {}),
-      };
-    }
-
-    if (isUniqueConstraintError(error)) {
-      return {
-        error: "This course assignment already has a deployed evaluation.",
-        success: false,
-      };
-    }
-
-    const referenceId = randomUUID();
-    console.error("Failed to publish course-bound evaluation", {
-      operation: "publish_course_bound_evaluation",
-      actorId,
-      assignmentId,
-      referenceId,
-      error:
-        error instanceof Error
-          ? {
-              name: error.name,
-              code:
-                typeof error === "object" && error !== null && "code" in error
-                  ? String(error.code)
-                  : undefined,
-            }
-          : { type: typeof error },
-    });
-    return {
-      error: `Failed to publish evaluation. Please try again. Support reference: ${referenceId}.`,
-      referenceId,
-      success: false,
-    };
+    return toPublicationFailure(error, { actorId, assignmentId, referenceId: randomUUID() });
   }
 }

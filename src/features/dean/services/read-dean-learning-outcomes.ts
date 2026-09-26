@@ -1,18 +1,7 @@
-import type {
-  AcademicPeriodStatus,
-  CourseScope,
-  Prisma,
-  StudentSection,
-  YearLevel,
-} from "@prisma/client";
+import type { AcademicPeriodStatus, CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { ROLES } from "@/lib/constants/roles";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { listAcademicPeriodSummaries } from "@/features/academic-calendar/services/read-academic-period-summaries";
-import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import {
   readPeriodReadiness,
-  readPeriodReadinessTotals,
   type PeriodReadiness,
   type ReadinessContext,
 } from "@/features/academic-calendar/services/read-period-readiness";
@@ -20,35 +9,13 @@ import {
   hasExhaustiveGoCoverage,
   type CourseAlignmentTargetLayer,
 } from "@/features/outcomes/services/classify-course-alignment";
-
-export class DeanReadModelNotFoundError extends Error {}
-export class DeanReadModelBadRequestError extends Error {}
-export class DeanReadModelUnauthorizedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DeanReadModelUnauthorizedError";
-  }
-}
-
-export type DeanReadState<T> = { state: "ready"; data: T } | { state: "no-eligible-period" };
-
-export type DeanPeriodSummary = {
-  id: string;
-  label: string;
-  status: AcademicPeriodStatus;
-};
-
-type PeriodRecord = Prisma.AcademicTermInstanceGetPayload<{
-  include: { school_year: { select: { code: true } } };
-}>;
-
-function periodSummary(period: PeriodRecord): DeanPeriodSummary {
-  return {
-    id: period.id,
-    label: formatTermInstanceLabel(period.school_year.code, period.semester, period.term),
-    status: period.status,
-  };
-}
+import {
+  DeanReadModelBadRequestError,
+  periodSummary,
+  requirePeriod,
+  type DeanPeriodSummary,
+  type DeanReadState,
+} from "./dean-read-model";
 
 type AssignmentRow = {
   id: string;
@@ -64,25 +31,6 @@ type AssignmentRow = {
     program_id: string | null;
   };
   program: { id: string; name: string; is_active: boolean };
-};
-
-export type DeanDashboardData = {
-  activePeriod: { id: string; label: string };
-  kpis: {
-    activeContexts: number;
-    readyContexts: number;
-    missingCiloContexts: number;
-    incompleteMappingContexts: number;
-  };
-  risks: { missingCilos: number; incompleteMappings: number; notReady: number };
-  programs: Array<{
-    id: string;
-    name: string;
-    activeContexts: number;
-    readyContexts: number;
-    missingCiloContexts: number;
-    incompleteMappingContexts: number;
-  }>;
 };
 
 type DeanOutcomeCatalogEntry = {
@@ -127,58 +75,12 @@ export type DeanLearningOutcomesData = {
   }>;
 };
 
-export async function listDeanEligiblePeriods(): Promise<DeanPeriodSummary[]> {
-  const session = await resolveAuthSession();
-  if (!session) throw new DeanReadModelUnauthorizedError("Authentication required.");
-  if (session.activeRole !== ROLES.DEAN) {
-    throw new DeanReadModelUnauthorizedError("College Dean access required.");
-  }
-
-  return listAcademicPeriodSummaries();
-}
-
 function archivedLabel(
   name: string,
   isArchived: boolean,
   periodStatus: AcademicPeriodStatus
 ): string {
   return periodStatus === "COMPLETED" && isArchived ? `${name} (Archived)` : name;
-}
-
-async function findEligiblePeriod(
-  periodId: string | undefined,
-  defaultMode: "active" | "active-or-completed"
-): Promise<PeriodRecord | null> {
-  if (periodId) {
-    const period = await prisma.academicTermInstance.findUnique({
-      where: { id: periodId },
-      include: { school_year: { select: { code: true } } },
-    });
-    if (!period || (period.status !== "ACTIVE" && period.status !== "COMPLETED")) {
-      throw new DeanReadModelNotFoundError("Academic period is not eligible");
-    }
-    return period;
-  }
-
-  const active = await prisma.academicTermInstance.findFirst({
-    where: { status: "ACTIVE" },
-    include: { school_year: { select: { code: true } } },
-  });
-  if (active || defaultMode === "active") return active;
-  return prisma.academicTermInstance.findFirst({
-    where: { status: "COMPLETED" },
-    include: { school_year: { select: { code: true } } },
-    orderBy: [{ end_date: "desc" }, { created_at: "desc" }],
-  });
-}
-
-async function requirePeriod(
-  periodId: string | undefined,
-  defaultMode: "active" | "active-or-completed"
-): Promise<PeriodRecord | null> {
-  const period = await findEligiblePeriod(periodId, defaultMode);
-  if (!period && periodId) throw new DeanReadModelNotFoundError("Academic period is not eligible");
-  return period;
 }
 
 function readinessForProgram(readiness: PeriodReadiness, programId: string) {
@@ -203,6 +105,7 @@ function contextMatchesRisk(
   if (risk === "not-ready") return context.state !== "ready";
   return true;
 }
+
 function visibleCatalog(
   targets: Array<{
     id: string;
@@ -365,49 +268,68 @@ async function assignmentRows(periodId: string, includeArchived: boolean) {
   );
 }
 
-export async function getDeanDashboard(): Promise<DeanReadState<DeanDashboardData>> {
-  const period = await prisma.academicTermInstance.findFirst({
-    where: { status: "ACTIVE" },
-    include: { school_year: { select: { code: true } } },
-  });
-  if (!period) return { state: "no-eligible-period" };
+/**
+ * The mapping gaps one readiness context contributes to its program.
+ *
+ * `missing-cilos` yields a single gap naming the context; `incomplete-mapping`
+ * yields one gap per active CILO that fails the aligned rule, carrying that
+ * CILO's statement, archive state, and the exact targets it is missing. A
+ * `ready` context contributes none. Archived CILOs never appear as current gaps.
+ */
+function mappingGapsForContext(
+  assignment: AssignmentRow,
+  context: ReadinessContext,
+  periodStatus: AcademicPeriodStatus,
+  schemaVersion: number
+): DeanMappingGap[] {
+  const base = mappingGapBase(assignment, context, periodStatus, schemaVersion);
 
-  const programTotals = await readPeriodReadinessTotals(period.id);
-  const missingCilos = programTotals.reduce((sum, total) => sum + total.missingCiloContexts, 0);
-  const incompleteMappings = programTotals.reduce(
-    (sum, total) => sum + total.incompleteMappingContexts,
-    0
-  );
-  return {
-    state: "ready",
-    data: {
-      activePeriod: { id: period.id, label: periodSummary(period).label },
-      kpis: {
-        activeContexts: programTotals.reduce((sum, total) => sum + total.activeContexts, 0),
-        readyContexts: programTotals.reduce((sum, total) => sum + total.readyContexts, 0),
-        missingCiloContexts: missingCilos,
-        incompleteMappingContexts: incompleteMappings,
+  if (context.state === "missing-cilos") {
+    return [
+      {
+        ...base,
+        ciloId: null,
+        ciloStatement: null,
+        ciloIsArchived: null,
+        reason: "missing-cilos",
+        missingGoIds: [],
+        missingInstitutionalOutcomeIds: [],
       },
-      risks: { missingCilos, incompleteMappings, notReady: missingCilos + incompleteMappings },
-      programs: programTotals.map(
-        ({
-          programId,
-          programName,
-          activeContexts,
-          readyContexts,
-          missingCiloContexts,
-          incompleteMappingContexts,
-        }) => ({
-          id: programId,
-          name: programName,
-          activeContexts,
-          readyContexts,
-          missingCiloContexts,
-          incompleteMappingContexts,
-        })
-      ),
-    },
-  };
+    ];
+  }
+
+  if (context.state !== "incomplete-mapping") return [];
+
+  return incompleteCilos(context, schemaVersion).map((cilo) => ({
+    ...base,
+    ciloId: cilo.id,
+    ciloStatement: cilo.description,
+    ciloIsArchived: cilo.isArchived,
+    reason: "incomplete-mapping",
+    missingGoIds: cilo.missingGoIds ?? [],
+    missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
+  }));
+}
+
+/** Programs rank by unresolved-context count descending, then name. */
+function byUnresolvedContextsThenName(
+  left: DeanLearningOutcomesData["programs"][number],
+  right: DeanLearningOutcomesData["programs"][number]
+): number {
+  const unresolved =
+    right.missingCiloContexts +
+    right.incompleteMappingContexts -
+    (left.missingCiloContexts + left.incompleteMappingContexts);
+  return unresolved || left.name.localeCompare(right.name);
+}
+
+/** Gaps rank by course code, then year level, then section: stable display order. */
+function byCourseThenClass(left: DeanMappingGap, right: DeanMappingGap): number {
+  return (
+    left.courseCode.localeCompare(right.courseCode) ||
+    left.yearLevel.localeCompare(right.yearLevel) ||
+    left.section.localeCompare(right.section)
+  );
 }
 
 export async function getDeanLearningOutcomes(
@@ -451,29 +373,9 @@ export async function getDeanLearningOutcomes(
       program.gos = visibleCatalog(context.gos, period.status);
       program.goCount = program.gos.length;
     }
-    if (context.state === "missing-cilos") {
-      program.mappingGaps.push({
-        ...mappingGapBase(assignment, context, period.status, schemaVersion),
-        ciloId: null,
-        ciloStatement: null,
-        ciloIsArchived: null,
-        reason: "missing-cilos",
-        missingGoIds: [],
-        missingInstitutionalOutcomeIds: [],
-      });
-    } else if (context.state === "incomplete-mapping") {
-      for (const cilo of incompleteCilos(context, schemaVersion)) {
-        program.mappingGaps.push({
-          ...mappingGapBase(assignment, context, period.status, schemaVersion),
-          ciloId: cilo.id,
-          ciloStatement: cilo.description,
-          ciloIsArchived: cilo.isArchived,
-          reason: "incomplete-mapping",
-          missingGoIds: cilo.missingGoIds ?? [],
-          missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
-        });
-      }
-    }
+    program.mappingGaps.push(
+      ...mappingGapsForContext(assignment, context, period.status, schemaVersion)
+    );
     programs.set(assignment.program_id, program);
   }
 
@@ -484,22 +386,10 @@ export async function getDeanLearningOutcomes(
       schemaVersion,
       risk,
       institutionalOutcomes,
-      programs: [...programs.values()]
-        .sort(
-          (a, b) =>
-            b.missingCiloContexts +
-              b.incompleteMappingContexts -
-              (a.missingCiloContexts + a.incompleteMappingContexts) || a.name.localeCompare(b.name)
-        )
-        .map((program) => ({
-          ...program,
-          mappingGaps: program.mappingGaps.sort(
-            (a, b) =>
-              a.courseCode.localeCompare(b.courseCode) ||
-              a.yearLevel.localeCompare(b.yearLevel) ||
-              a.section.localeCompare(b.section)
-          ),
-        })),
+      programs: [...programs.values()].sort(byUnresolvedContextsThenName).map((program) => ({
+        ...program,
+        mappingGaps: program.mappingGaps.sort(byCourseThenClass),
+      })),
     },
   };
 }

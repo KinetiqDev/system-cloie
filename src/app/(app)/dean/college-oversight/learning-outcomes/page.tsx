@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   DeanReadModelNotFoundError,
-  getDeanLearningOutcomes,
   listDeanEligiblePeriods,
   type DeanPeriodSummary,
   type DeanReadState,
+} from "@/features/dean/services/dean-read-model";
+import {
+  getDeanLearningOutcomes,
   type DeanLearningOutcomesData,
-} from "@/features/dean/services/read-dean-oversight";
+} from "@/features/dean/services/read-dean-learning-outcomes";
 import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { buildPageTitle } from "@/lib/page-title";

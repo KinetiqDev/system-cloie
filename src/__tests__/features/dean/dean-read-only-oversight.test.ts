@@ -33,7 +33,12 @@ vi.mock("@/lib/db/prisma", () => ({ prisma: prismaMock }));
 import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import { createUserBySecretaryAction } from "@/lib/actions/secretary-user-crud-actions";
 import { requireDean, DEAN_CACHE_CONTROL } from "@/app/api/dean/route-helpers";
-import * as deanServices from "@/features/dean/services/read-dean-oversight";
+import * as deanDashboard from "@/features/dean/services/read-dean-dashboard";
+import * as deanLearningOutcomes from "@/features/dean/services/read-dean-learning-outcomes";
+import * as deanReadModel from "@/features/dean/services/dean-read-model";
+
+/** Every export across the Dean read models, so the guard sees the whole surface. */
+const deanServices = { ...deanReadModel, ...deanDashboard, ...deanLearningOutcomes };
 
 function deanSession() {
   return createAuthSessionSnapshot({

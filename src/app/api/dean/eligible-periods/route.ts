@@ -1,5 +1,10 @@
-import { listDeanEligiblePeriods } from "@/features/dean/services/read-dean-oversight";
-import { deanJson, handleDeanReadError, requireDean, DeanRouteBadRequestError } from "../route-helpers";
+import { listDeanEligiblePeriods } from "@/features/dean/services/dean-read-model";
+import {
+  deanJson,
+  handleDeanReadError,
+  requireDean,
+  DeanRouteBadRequestError,
+} from "../route-helpers";
 
 export async function GET(request: Request): Promise<Response> {
   const authError = await requireDean();

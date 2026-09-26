@@ -4,6 +4,7 @@ import { ensureRoleAccess } from "@/features/auth/policies/ensure-role-access";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { PublishCourseBoundEvaluationFormV2 } from "@/features/evaluations/components/publish-course-bound-evaluation-form-v2";
 import { getFacultyTemplatePublicationContext } from "@/features/instruments/services/manage-faculty-templates";
+import { toPublicationContext } from "@/features/evaluations/services/publication-options";
 import {
   previewCourseBoundRespondentsAction,
   publishCourseBoundEvaluationAction,
@@ -154,21 +155,8 @@ export default async function NewFacultyCiloEvaluationPage({
     }
   }
 
-  // Simplified publication context for V2 form
-  const formPublicationContext = {
-    bindings: publicationContext.data.bindings,
-    cilos: publicationContext.data.cilos,
-    course: {
-      code: publicationContext.data.course.code,
-      id: publicationContext.data.course.id,
-      title: publicationContext.data.course.title,
-    },
-    template: {
-      id: publicationContext.data.template.id,
-      name: publicationContext.data.template.name,
-      structure: publicationContext.data.template.structure,
-    },
-  };
+  // Simplify to the serializable shape the publication form consumes.
+  const formPublicationContext = toPublicationContext(publicationContext.data);
 
   return (
     <PublishCourseBoundEvaluationFormV2

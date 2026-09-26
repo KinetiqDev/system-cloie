@@ -225,9 +225,43 @@ describe("program head selected Program new CILO evaluation page", () => {
       await import("../../app/(app)/program-head/programs/[programId]/cilo-evaluations/new/page")
     ).default;
 
-    await expect(
-      Page({ params: Promise.resolve({ programId: "program-beed" }) })
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(Page({ params: Promise.resolve({ programId: "program-beed" }) })).rejects.toThrow(
+      "NEXT_NOT_FOUND"
+    );
     expect(courseAssignmentFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("returns not-found when the selected Program has no publishable assignment", async () => {
+    // An authorized Program with nothing publishable is not-found, exactly as
+    // when the assignment list resolves but no template qualifies: the form
+    // cannot render without a first publication context.
+    courseAssignmentFindManyMock.mockResolvedValue([]);
+    instrumentTemplateFindFirstMock.mockResolvedValue(null);
+
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/cilo-evaluations/new/page")
+    ).default;
+
+    await expect(Page({ params: Promise.resolve({ programId: "program-bsed" }) })).rejects.toThrow(
+      "NEXT_NOT_FOUND"
+    );
+    expect(getOnBehalfTemplatePublicationContextMock).not.toHaveBeenCalled();
+  });
+
+  it("returns not-found when every assignment's template context fails to resolve", async () => {
+    courseAssignmentFindManyMock.mockResolvedValue([makeAssignment({})]);
+    instrumentTemplateFindFirstMock.mockResolvedValue({ id: "template-1" });
+    getOnBehalfTemplatePublicationContextMock.mockResolvedValue({
+      error: "This course has no saved CILOs.",
+      success: false,
+    });
+
+    const Page = (
+      await import("../../app/(app)/program-head/programs/[programId]/cilo-evaluations/new/page")
+    ).default;
+
+    await expect(Page({ params: Promise.resolve({ programId: "program-bsed" }) })).rejects.toThrow(
+      "NEXT_NOT_FOUND"
+    );
   });
 });

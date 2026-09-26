@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import { mapTemplateStructureToSections } from "@/features/responses/services/map-template-structure";
+import {
+  parseCourseInfoSnapshot,
+  resolveSnapshotProgramLabel,
+} from "@/features/evaluations/services/course-info-snapshot";
 
 type SubmittedResponseAnswers = Record<string, unknown>;
 
@@ -174,13 +178,20 @@ export async function getStudentSubmittedResponseReview(
 
   if (response.assignment.course_bound) {
     const ca = response.assignment.course_bound.course_assignment;
+    const courseInfo = parseCourseInfoSnapshot(
+      response.assignment.course_bound.course_info_snapshot
+    );
 
     return {
-      courseTitle: ca.course.title,
+      courseTitle: courseInfo?.courseTitle ?? ca.course.title,
       evaluationTitle:
         response.assignment.course_bound.deployment_name ??
         response.assignment.course_bound.instrument.template.name,
-      programLabel: ca.course.major?.name ?? ca.program?.name ?? "Program context unavailable",
+      programLabel: resolveSnapshotProgramLabel(
+        courseInfo,
+        ca.course.major?.name ?? null,
+        ca.program?.name ?? "Program context unavailable"
+      ),
       responseId: response.id,
       sections: buildSubmittedResponseSections({
         answers,

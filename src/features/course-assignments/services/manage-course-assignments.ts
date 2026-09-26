@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -11,6 +10,12 @@ import {
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { getSectionLabel } from "@/lib/constants/academic";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
+import {
+  LIFECYCLE_REFUSALS,
+  lifecycleRefusalMessage,
+  PERMISSION_REFUSAL_PREFIX,
+  unexpectedLifecycleFailure,
+} from "./lifecycle-outcomes";
 import type {
   CreateCourseAssignmentInput,
   UpdateCourseAssignmentInput,
@@ -95,25 +100,32 @@ async function resolveLifecycleAssignment(assignmentId: string) {
   });
 }
 
-function unexpectedLifecycleFailure(
-  operation: string,
-  actorId: string | undefined,
+/**
+ * Lock one Course assignment row (`FOR UPDATE`) and load it with the given
+ * projection, inside the caller's transaction.
+ *
+ * Update and delete both begin this way: the lock serializes the read-then-write
+ * sequence that follows, and the loaded row is what the invariant checks run
+ * against. Update then verifies publication and roster-membership state before
+ * writing; delete rechecks the preflight revision and both membership counts
+ * before removing the row. Without the lock those checks could pass against a
+ * state that a concurrent roster change or a second delete had already replaced.
+ *
+ * The two commands differ only in projection, so the pairing lives here: a caller
+ * that took the load without the lock would silently lose that serialization.
+ */
+async function lockAndLoadAssignment<TInclude extends Prisma.CourseAssignmentInclude>(
+  tx: Prisma.TransactionClient,
   assignmentId: string,
-  error: unknown
+  include: TInclude
 ) {
-  const referenceId = randomUUID();
-  console.error("Course assignment lifecycle request failed", {
-    operation,
-    actorId: actorId ?? null,
-    assignmentId,
-    referenceId,
-    error: error instanceof Error ? { name: error.name } : { type: typeof error },
-  });
-  return {
-    success: false as const,
-    error: "The course assignment request could not be completed.",
-    referenceId,
-  };
+  await tx.$queryRaw`
+    SELECT id
+    FROM "course_assignments"
+    WHERE id = ${assignmentId}
+    FOR UPDATE
+  `;
+  return tx.courseAssignment.findUnique({ where: { id: assignmentId }, include });
 }
 
 async function resolveAssignmentCourse(
@@ -124,31 +136,28 @@ async function resolveAssignmentCourse(
     where: { id: input.courseId },
     select: { program_id: true, is_active: true, course_scope: true },
   });
-  if (!course) throw new Error("COURSE_NOT_FOUND");
-  if (course.is_active === false) throw new Error("COURSE_INACTIVE");
+  if (!course) throw new Error(LIFECYCLE_REFUSALS.COURSE_NOT_FOUND);
+  if (course.is_active === false) throw new Error(LIFECYCLE_REFUSALS.COURSE_INACTIVE);
   if (course.program_id !== null && course.program_id !== input.programId) {
-    throw new Error("COURSE_PROGRAM_MISMATCH");
+    throw new Error(LIFECYCLE_REFUSALS.COURSE_PROGRAM_MISMATCH);
   }
   return course;
 }
 
+/**
+ * Translate a creation failure into a safe message, or null when the failure is
+ * unrecognized and should be reported generically.
+ *
+ * The refusal vocabulary and its messages live in `lifecycle-outcomes`; the only
+ * creation-specific outcome is the duplicate-assignment constraint, which has no
+ * refusal code because it is detected from the driver error rather than asserted
+ * by this service.
+ */
 function assignmentCreationError(error: unknown): string | null {
   if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
     return "An identical assignment already exists. If inactive, please activate it instead of creating a new one.";
   }
-  if (error instanceof Error) {
-    const errors: Record<string, string> = {
-      COURSE_NOT_FOUND: "Course not found.",
-      COURSE_PROGRAM_MISMATCH: "Assignment program must match the Course's owning program.",
-      COURSE_INACTIVE: "Inactive courses cannot receive new assignments.",
-      YEAR_LEVEL_REQUIRED: "Year level is required.",
-      SELECTED_PROGRAM_INACTIVE: "Selected Program is no longer assigned.",
-    };
-    if (error.message.startsWith("PERMISSION:")) return error.message.slice("PERMISSION:".length);
-    return errors[error.message] ?? null;
-  }
-
-  return null;
+  return lifecycleRefusalMessage(error);
 }
 
 /**
@@ -172,7 +181,7 @@ export async function createCourseAssignment(
           userId: authSession.userId,
           programId: input.programId,
         });
-        if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
+        if (!selected) throw new Error(LIFECYCLE_REFUSALS.SELECTED_PROGRAM_INACTIVE);
       }
 
       const course = await resolveAssignmentCourse(tx, input);
@@ -182,7 +191,7 @@ export async function createCourseAssignment(
         course.program_id,
         authSession && isProgramHead(authSession) ? [input.programId] : []
       );
-      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+      if (!permission.allowed) throw new Error(`${PERMISSION_REFUSAL_PREFIX}${permission.reason}`);
 
       return tx.courseAssignment.create({
         data: {
@@ -222,19 +231,8 @@ export async function updateCourseAssignment(
   const contextFailure = await validateSelectedProgram(authSession, input.selectedProgramId);
   if (contextFailure) return contextFailure;
   try {
-    // fallow-ignore-next-line code-duplication
     return await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id
-        FROM "course_assignments"
-        WHERE id = ${input.assignmentId}
-        FOR UPDATE
-      `;
-
-      const existing = await tx.courseAssignment.findUnique({
-        where: { id: input.assignmentId },
-        include: { course: true },
-      });
+      const existing = await lockAndLoadAssignment(tx, input.assignmentId, { course: true });
 
       if (!existing) return { success: false, error: "Assignment not found." };
 
@@ -345,6 +343,63 @@ export async function updateCourseAssignment(
 }
 
 /**
+ * The guarded activation-state change that deactivate and activate both perform:
+ * load the assignment, revalidate the Program Head's scope inside the
+ * transaction, check the role policy, then flip `is_active`.
+ *
+ * The two commands differ only in the target state, so this is one lifecycle
+ * command with two entry points rather than two commands. It throws coded
+ * refusals, which the callers translate, and it runs inside the caller's
+ * transaction so that caller remains the single transaction owner.
+ */
+async function runAssignmentActivationChange(
+  tx: Prisma.TransactionClient,
+  input: {
+    assignmentId: string;
+    authSession: Awaited<ReturnType<typeof resolveAuthSession>>;
+    selectedProgramId: string | undefined;
+    isActive: boolean;
+  }
+): Promise<{ programIds: string[] }> {
+  const existing = await tx.courseAssignment.findUnique({
+    where: { id: input.assignmentId },
+    include: { course: true },
+  });
+  if (!existing) throw new Error(LIFECYCLE_REFUSALS.ASSIGNMENT_NOT_FOUND);
+
+  if (input.authSession && isProgramHead(input.authSession)) {
+    if (!input.selectedProgramId) {
+      throw new Error(LIFECYCLE_REFUSALS.SELECTED_PROGRAM_REQUIRED);
+    }
+    const selected = await revalidateProgramHeadAssignment(tx, {
+      userId: input.authSession.userId,
+      programId: input.selectedProgramId,
+    });
+    if (!selected || existing.program_id !== input.selectedProgramId) {
+      throw new Error(LIFECYCLE_REFUSALS.OUT_OF_SCOPE);
+    }
+  }
+
+  const permission = canManageCourseAssignment(
+    input.authSession,
+    existing.course.course_scope,
+    existing.course.program_id,
+    input.authSession && isProgramHead(input.authSession) && input.selectedProgramId
+      ? [input.selectedProgramId]
+      : []
+  );
+  if (!permission.allowed) {
+    throw new Error(`${PERMISSION_REFUSAL_PREFIX}${permission.reason}`);
+  }
+
+  await tx.courseAssignment.update({
+    where: { id: input.assignmentId },
+    data: { is_active: input.isActive },
+  });
+  return { programIds: [existing.program_id] };
+}
+
+/**
  * Deactivate a course assignment (soft delete).
  */
 export async function deactivateCourseAssignment(
@@ -357,43 +412,19 @@ export async function deactivateCourseAssignment(
   if (contextFailure) return contextFailure;
 
   try {
-    // fallow-ignore-next-line code-duplication
-    const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.courseAssignment.findUnique({
-        where: { id: assignmentId },
-        include: { course: true },
-      });
-      if (!existing) throw new Error("ASSIGNMENT_NOT_FOUND");
-      if (authSession && isProgramHead(authSession)) {
-        if (!selectedProgramId) throw new Error("SELECTED_PROGRAM_REQUIRED");
-        const selected = await revalidateProgramHeadAssignment(tx, {
-          userId: authSession.userId,
-          programId: selectedProgramId,
-        });
-        if (!selected || existing.program_id !== selectedProgramId) throw new Error("OUT_OF_SCOPE");
-      }
-      const permission = canManageCourseAssignment(
+    const result = await prisma.$transaction((tx) =>
+      runAssignmentActivationChange(tx, {
+        assignmentId,
         authSession,
-        existing.course.course_scope,
-        existing.course.program_id,
-        authSession && isProgramHead(authSession) && selectedProgramId ? [selectedProgramId] : []
-      );
-      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
-      await tx.courseAssignment.update({ where: { id: assignmentId }, data: { is_active: false } });
-      return { programIds: [existing.program_id] };
-    });
+        isActive: false,
+        selectedProgramId,
+      })
+    );
 
     return { success: true, data: result };
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND")
-        return { success: false, error: "Assignment not found." };
-      if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE")
-        return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:"))
-        return { success: false, error: error.message.slice(11) };
-    }
+    const refusal = lifecycleRefusalMessage(error);
+    if (refusal) return { success: false, error: refusal };
     return unexpectedLifecycleFailure(
       "deactivate_assignment",
       authSession?.userId,
@@ -413,45 +444,19 @@ export async function activateCourseAssignment(
   const contextFailure = await validateSelectedProgram(authSession, input.programId);
   if (contextFailure) return contextFailure;
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      const existing = await tx.courseAssignment.findUnique({
-        where: { id: input.assignmentId },
-        include: { course: true },
-      });
-      if (!existing) throw new Error("ASSIGNMENT_NOT_FOUND");
-      if (authSession && isProgramHead(authSession)) {
-        if (!input.programId) throw new Error("SELECTED_PROGRAM_REQUIRED");
-        const selected = await revalidateProgramHeadAssignment(tx, {
-          userId: authSession.userId,
-          programId: input.programId,
-        });
-        if (!selected || existing.program_id !== input.programId) throw new Error("OUT_OF_SCOPE");
-      }
-      const permission = canManageCourseAssignment(
+    const result = await prisma.$transaction((tx) =>
+      runAssignmentActivationChange(tx, {
+        assignmentId: input.assignmentId,
         authSession,
-        existing.course.course_scope,
-        existing.course.program_id,
-        authSession && isProgramHead(authSession) && input.programId ? [input.programId] : []
-      );
-      if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
-      await tx.courseAssignment.update({
-        where: { id: input.assignmentId },
-        data: { is_active: true },
-      });
-      return { programIds: [existing.program_id] };
-    });
+        isActive: true,
+        selectedProgramId: input.programId,
+      })
+    );
 
     return { success: true, data: result };
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "ASSIGNMENT_NOT_FOUND")
-        return { success: false, error: "Assignment not found." };
-      if (error.message === "SELECTED_PROGRAM_REQUIRED") return missingSelectedProgram();
-      if (error.message === "OUT_OF_SCOPE")
-        return { success: false, error: "Course assignment is outside the selected Program." };
-      if (error.message.startsWith("PERMISSION:"))
-        return { success: false, error: error.message.slice(11) };
-    }
+    const refusal = lifecycleRefusalMessage(error);
+    if (refusal) return { success: false, error: refusal };
     return unexpectedLifecycleFailure(
       "activate_assignment",
       authSession?.userId,
@@ -534,17 +539,11 @@ export async function deleteCourseAssignment(
 
   try {
     return await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`
-        SELECT id
-        FROM "course_assignments"
-        WHERE id = ${input.assignmentId}
-        FOR UPDATE
-      `;
-
-      const existing = await tx.courseAssignment.findUnique({
-        where: { id: input.assignmentId },
-        include: lifecycleAssignmentInclude,
-      });
+      const existing = await lockAndLoadAssignment(
+        tx,
+        input.assignmentId,
+        lifecycleAssignmentInclude
+      );
       if (!existing) return { success: false, error: "Assignment not found." };
 
       if (isProgramHead(authSession)) {
@@ -674,14 +673,13 @@ export async function bulkCreateCourseAssignments(
         continue;
       }
 
-      // fallow-ignore-next-line code-duplication
       await prisma.$transaction(async (tx) => {
         if (isProgramHead(authSession)) {
           const selected = await revalidateProgramHeadAssignment(tx, {
             userId: authSession.userId,
             programId: requestedProgramId ?? input.programId,
           });
-          if (!selected) throw new Error("SELECTED_PROGRAM_INACTIVE");
+          if (!selected) throw new Error(LIFECYCLE_REFUSALS.SELECTED_PROGRAM_INACTIVE);
         }
         const course = await resolveAssignmentCourse(tx, input);
         const permission = canManageCourseAssignment(
@@ -690,7 +688,8 @@ export async function bulkCreateCourseAssignments(
           course.program_id,
           isProgramHead(authSession) ? [input.programId] : []
         );
-        if (!permission.allowed) throw new Error(`PERMISSION:${permission.reason}`);
+        if (!permission.allowed)
+          throw new Error(`${PERMISSION_REFUSAL_PREFIX}${permission.reason}`);
         await tx.courseAssignment.create({
           data: {
             term_instance_id: input.termInstanceId,

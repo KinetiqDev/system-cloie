@@ -9,7 +9,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/features/users/services/manage-users", () => ({
   toggleUserActive: vi.fn(() => Promise.resolve({ success: true })),
   assignUserRole: vi.fn(() => Promise.resolve({ success: true, data: { id: "role-1" } })),
-  revokeUserRole: vi.fn(() => Promise.resolve({ success: true })),
+  removeRoleFromUser: vi.fn(() => Promise.resolve({ success: true })),
   createProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
   deactivateProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
   deleteStudentAcademicContext: vi.fn(() => Promise.resolve({ success: true })),
@@ -28,7 +28,7 @@ import {
   bulkToggleCoursesActiveAction,
   toggleUserActiveAction,
   assignUserRoleAction,
-  revokeUserRoleAction,
+  removeRoleFromUserAction,
   createProgramHeadAssignmentAction,
   deactivateProgramHeadAssignmentAction,
   deleteStudentAcademicContextAction,
@@ -38,7 +38,7 @@ import {
 import {
   toggleUserActive,
   assignUserRole,
-  revokeUserRole,
+  removeRoleFromUser,
   createProgramHeadAssignment,
   deactivateProgramHeadAssignment,
   deleteStudentAcademicContext,
@@ -53,11 +53,6 @@ describe("management-foundation-actions security", () => {
   const secretarySession = createAuthSessionSnapshot({
     userId: "11111111-1111-4111-a111-111111111111",
     roles: [ROLES.SECRETARY],
-  });
-
-  const deanSession = createAuthSessionSnapshot({
-    userId: "22222222-2222-4222-b222-222222222222",
-    roles: [ROLES.DEAN],
   });
 
   const studentSession = createAuthSessionSnapshot({
@@ -154,22 +149,22 @@ describe("management-foundation-actions security", () => {
     });
   });
 
-  describe("revokeUserRoleAction", () => {
+  describe("removeRoleFromUserAction", () => {
     it("rejects unauthenticated", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await revokeUserRoleAction("other-user", ROLES.FACULTY);
+      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
       expect(result).toEqual({ success: false, error: "Authentication required." });
     });
 
     it("rejects wrong role", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await revokeUserRoleAction("other-user", ROLES.FACULTY);
+      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
       expect(result).toEqual({ success: false, error: "Insufficient permissions." });
     });
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await revokeUserRoleAction(
+      const result = await removeRoleFromUserAction(
         "11111111-1111-4111-a111-111111111111",
         ROLES.FACULTY
       );
@@ -178,8 +173,8 @@ describe("management-foundation-actions security", () => {
 
     it("accepts right role + other-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await revokeUserRoleAction("other-user", ROLES.FACULTY);
-      expect(revokeUserRole).toHaveBeenCalledWith("other-user", ROLES.FACULTY);
+      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
+      expect(removeRoleFromUser).toHaveBeenCalledWith("other-user", ROLES.FACULTY);
       expect(result).toEqual({ success: true });
     });
   });

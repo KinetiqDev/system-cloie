@@ -3,7 +3,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import {
   DeanReadModelBadRequestError,
   DeanReadModelNotFoundError,
-} from "@/features/dean/services/read-dean-oversight";
+} from "@/features/dean/services/dean-read-model";
 
 export const DEAN_CACHE_CONTROL = "private, no-store";
 

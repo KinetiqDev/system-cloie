@@ -4,11 +4,11 @@ import { ArrowUpRight, CheckCircle2, CircleAlert, Gauge, Layers3 } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { type DeanReadState } from "@/features/dean/services/dean-read-model";
 import {
   getDeanDashboard,
   type DeanDashboardData,
-  type DeanReadState,
-} from "@/features/dean/services/read-dean-oversight";
+} from "@/features/dean/services/read-dean-dashboard";
 import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
 import { buildPageTitle } from "@/lib/page-title";
 

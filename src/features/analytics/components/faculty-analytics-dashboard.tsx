@@ -58,6 +58,7 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ViewTabs } from "@/components/layout/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
+import { encodeQuestionKey } from "../aggregators/question-identity";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
 import { cn } from "@/lib/utils";
 import type {
@@ -1339,7 +1340,9 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
               <dd className="mt-0.5 break-words">
                 <ul className="flex flex-col gap-0.5">
                   {metric.questions.map((question) => (
-                    <li key={`${question.sectionKey}:${question.itemKey}`}>{question.prompt}</li>
+                    <li key={encodeQuestionKey(question.sectionKey, question.itemKey)}>
+                      {question.prompt}
+                    </li>
                   ))}
                 </ul>
               </dd>
@@ -1375,7 +1378,9 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
                 <TableCell className="align-top whitespace-normal">
                   <ul className="flex flex-col gap-0.5">
                     {metric.questions.map((question) => (
-                      <li key={`${question.sectionKey}:${question.itemKey}`}>{question.prompt}</li>
+                      <li key={encodeQuestionKey(question.sectionKey, question.itemKey)}>
+                        {question.prompt}
+                      </li>
                     ))}
                   </ul>
                 </TableCell>

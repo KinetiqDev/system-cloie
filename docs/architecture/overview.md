@@ -21,6 +21,23 @@ Shared code lives in `src/lib/` (including `src/lib/db/` for Prisma access and t
 
 The rules for how to work inside this layout — smallest complete change, preserve domain boundaries, server-first rendering, narrow `"use client"` boundaries, Server Actions under `src/lib/actions/` following existing patterns — are owned by [AGENTS.md → Architecture](../../AGENTS.md).
 
+## Cross-feature interfaces
+
+Most cross-feature coupling is direct composition of two primitives, and that is deliberate. The rest is a small set of named interfaces, enforced by [`src/__tests__/architecture/feature-boundaries.test.ts`](../../src/__tests__/architecture/feature-boundaries.test.ts), which pins the exact imported names so a consumer cannot widen its reach and an owner cannot silently rename a published export.
+
+| Interface                                              | Consumer          | Contract                                                                                                                                                                             |
+| ------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `course-assignments/services/course-assignment-roster` | `responses`       | Read-only roster eligibility: may this respondent answer this Course-bound assignment, and for which evaluation. Roster membership is the authoritative recipient source (ADR 0007). |
+| `course-assignments/services/course-assignment-roster` | `analytics`       | `countEligibleCourseBoundEvaluationAssignments`: counts the dynamically eligible slice of a caller-scoped opportunity set.                                                           |
+| `analytics/aggregators/*`                              | `response-review` | The canonical CILO, question, participation, and scale arithmetic plus its metric vocabulary. Pure functions over rating rows, so review never forks analytics arithmetic.           |
+
+Two couplings are approved direct composition rather than interfaces, and are recorded here so the distinction is not re-litigated:
+
+- **Auth primitives** (`auth/services/resolve-auth-session`, `resolve-program-head-context`). These are the session and role-scoping primitives nearly every server read needs, consumed across routes, Server Actions, and most features. A per-consumer interface here would be a second convention beside the established one.
+- **Server Actions** (`src/lib/actions/**`). ADR 0011 classifies that path as its own `server-actions` zone, and feature composition there is sanctioned: an action is the RPC boundary a Client Component calls, so it must reach the feature service owning the operation.
+
+The table lists three consumer edges across two owning modules. A seam qualifies by owning a shared contract, not by its consumer count. The roster interface serves two consumers, because roster membership is the single authoritative eligibility source for both. The aggregator interface serves one, because it owns the canonical CILO, question, participation, and scale calculation: a review surface that re-derived that arithmetic could disagree with the analytics it reviews. What is never promoted is a single caller's private query, which would make an internal detail public before anything needs it.
+
 ## Server-first rendering
 
 - Server Components are the default; `"use client"` boundaries are narrow and limited to state, hooks, browser APIs, event handlers, charts, drag-and-drop, and react-hook-form (rule owned by [AGENTS.md → Architecture](../../AGENTS.md)).

@@ -37,9 +37,11 @@ Rejected. Remote rules and runtime coverage (paid) introduce external or license
 
 ### 1. Baseline-backed changed-file gate
 
-- CI runs the Fallow audit gate (`scripts/run-fallow-audit.ts`) against the change base with per-category identity baselines (`fallow-baselines/{dead-code,health,dupes}.json`).
+- CI runs the Fallow audit gate (`scripts/run-fallow-audit.ts`) against the change base with per-category baselines (`fallow-baselines/{dead-code,health,dupes}.json`). The gate itself always runs on changed files; the baselines only decide which findings it reports as unmatched.
 - Only new findings unmatched by the baselines in files touched by the change can fail the build; the gate's verdict is recorded in `artifacts/fallow/audit.json` and `audit.sarif`.
-- Baselines are identity-based (fallow-specific issue IDs), not count-based, so they cannot mask new occurrences of a known issue.
+- Baseline matching is category-specific, not one uniform rule, and the difference is observable in the files:
+  - `dead-code.json` and `dupes.json` record identities: `path:symbol` for an unused export or type, and `file:start-end|file:start-end` for a clone group. A second finding of the same kind at a different location is a different identity, so these categories cannot mask a new occurrence.
+  - `health.json` records `finding_counts` as per-path, per-severity-category **counts** (`{"<path>": {"crap_high": {"count": 1}}}`), plus `target_keys` (`<path>:<category>`). Because the key is the path and the value is a count, a health finding at a path already recorded for that category at the same count matches the baseline. A new finding of an already-recorded category at an already-recorded count therefore does not surface as unmatched, so the health baseline can absorb a finding of that shape. Complexity regressions are still visible through the report-only full scans and the per-file scores, and the gate's own complexity section reports what it considered unmatched.
 
 ### 2. Narrow seams only
 

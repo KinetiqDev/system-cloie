@@ -67,12 +67,37 @@ export type TemplateLikertQuestionOption = {
   sectionTitle: string;
 };
 
+/**
+ * The one question-kind rule every binding-resolution path applies, whether it
+ * reads a typed `TemplateQuestion` or the untyped JSON of a stored structure.
+ *
+ * `type: "likert"` is canonical: it is the `QuestionType` union, what the
+ * template schema accepts, and the only spelling production writes. The
+ * uppercase `type`/`question_type` spellings are tolerated so legacy stored
+ * JSON still resolves its CILO and GO bindings at publication; nothing writes
+ * them. `type` decides whenever it carries a string, so a leftover legacy key
+ * can never override the current shape. Resolving a kind through this predicate
+ * rather than a string comparison is what keeps the two publication context
+ * paths agreeing.
+ */
+export function isLikertQuestion(question: unknown): boolean {
+  if (!question || typeof question !== "object") return false;
+  const record = question as Record<string, unknown>;
+  const type = record.type;
+
+  if (typeof type === "string") {
+    return type === "likert" || type === "LIKERT";
+  }
+
+  return record.question_type === "LIKERT";
+}
+
 export function listTemplateLikertQuestions(
   structure: TemplateStructure
 ): TemplateLikertQuestionOption[] {
   return structure.flatMap((section) =>
     section.questions
-      .filter((question) => question.type === "likert")
+      .filter((question) => isLikertQuestion(question))
       .map((question) => ({
         itemKey: question.key,
         prompt: question.prompt,

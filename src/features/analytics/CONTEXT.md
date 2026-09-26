@@ -12,6 +12,10 @@ _Avoid_: Deployer-owned evidence, affiliation-wide evidence, another Faculty mem
 The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
 _Avoid_: Evaluation checkbox dashboard, mean of means, CILO attainment claim, cross-course trend
 
+**Faculty CILO and question grouping**:
+One metric per `(evaluation, CILO)` and per `(evaluation, question)`. A Faculty scope spans several owned evaluations, so the same CILO never pools its ratings across terms; each evaluation keeps its own mean and its own publication-time label. The question view enumerates the frozen structure snapshot, so an unrated question still appears for the unrated disclosure, and a Likert question here describes one `(section, item)` identity. A binding whose CILO row is gone keeps its own group rather than pooling under another CILO. Shared arithmetic, not grouping, is what the Faculty builders reuse from the canonical Analytics aggregators.
+_Avoid_: Cross-term CILO pool, one metric per CILO across evaluation evidence, unrated question omission, archived binding fold-in
+
 **Faculty aggregate-only review**:
 Faculty receive no individual-response route or DTO. Retired Faculty Course-bound review deep links redirect to the matching aggregate Analytics scope. Browser payloads contain no respondent label, response identifier, roster record, raw rating row, or raw written comment.
 _Avoid_: Anonymized response card, individual Faculty response review, raw comment drill-through
@@ -128,6 +132,10 @@ _Avoid_: Single blended mean across scale identities
 **Excluded rating count**:
 Ratings dropped from a valid aggregate because scale resolution failed or the rating value fell outside the scale.
 _Avoid_: Treating excluded ratings as valid aggregate input
+
+**Program Head Outcomes GO row**:
+The Outcomes view's course-bound GO row is a Program Head evidence surface, not a bare metric. It carries per-contributor provenance (each CILO and each direct question with its own rating count and mean), the frozen publication manifestation label, contributing Courses and CILOs, the contributing evaluations with their review links, the many-to-many and current-mapping disclosures, and scale-separated distributions. Its `meanRating` pools every valid in-scale rating across the row and sets `spansMultipleScales`, and the view prints the cross-scale comparability notice beside that number. The shared `buildCourseDerivedGoMetrics` metric is the wrong shape for this surface: it has no provenance fields and reports `mean: null` for mixed scales, so adopting it would delete evidence and change a rendered mean. Counting rules are shared in practice and pinned by test, so the two agree on contributions, overlap collapse, invalid ratings, and unmapped rows.
+_Avoid_: Bare metric as the Outcomes row, mixed-scale mean as null on the Outcomes row, provenance-free Outcome row
 
 ## AI-assisted interpretation
 

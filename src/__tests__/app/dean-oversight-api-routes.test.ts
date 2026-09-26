@@ -22,13 +22,17 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
 
-vi.mock("@/features/dean/services/read-dean-oversight", () => ({
+vi.mock("@/features/dean/services/dean-read-model", () => ({
   DeanReadModelNotFoundError: class DeanReadModelNotFoundError extends Error {},
   DeanReadModelBadRequestError: class DeanReadModelBadRequestError extends Error {},
   DeanReadModelUnauthorizedError: class DeanReadModelUnauthorizedError extends Error {},
-  getDeanDashboard: getDashboardMock,
-  getDeanLearningOutcomes: getLearningOutcomesMock,
   listDeanEligiblePeriods: listEligiblePeriodsMock,
+}));
+vi.mock("@/features/dean/services/read-dean-dashboard", () => ({
+  getDeanDashboard: getDashboardMock,
+}));
+vi.mock("@/features/dean/services/read-dean-learning-outcomes", () => ({
+  getDeanLearningOutcomes: getLearningOutcomesMock,
 }));
 
 import { GET as getDashboard } from "@/app/api/dean/dashboard/route";
@@ -37,7 +41,7 @@ import { GET as getEligiblePeriods } from "@/app/api/dean/eligible-periods/route
 import {
   DeanReadModelBadRequestError,
   DeanReadModelNotFoundError,
-} from "@/features/dean/services/read-dean-oversight";
+} from "@/features/dean/services/dean-read-model";
 
 const PERIOD_ID = "11111111-1111-4111-8111-111111111111";
 

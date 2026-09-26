@@ -263,4 +263,78 @@ describe("getStudentSubmittedResponseReview", () => {
       })
     );
   });
+
+  it("keeps the frozen Course and program labels after the live catalog drifts", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    findFirstMock.mockResolvedValue({
+      assignment: {
+        course_bound: {
+          course_assignment: {
+            course: { title: "Renamed Live Course", major: { name: "Renamed Live Major" } },
+            program: { name: "Renamed Live Program", id: "program-1" },
+          },
+          course_info_snapshot: {
+            courseTitle: "Capstone 1",
+            majorName: "Information Technology",
+            programCode: "BSIT",
+            programName: "BS Information Technology",
+            snapshotSchemaVersion: 2,
+          },
+          instrument: {
+            structure_snapshot: [
+              {
+                items: [
+                  { key: "q1", kind: "quantitative", prompt: "Question 1", scale: [1, 2, 3, 4, 5] },
+                ],
+                key: "section-a",
+                title: "Section A",
+              },
+            ],
+            template: { name: "Post-Term CILO Evaluation Tool" },
+          },
+        },
+      },
+      id: "response-1",
+      qual_items: [],
+      quant_items: [{ item_key: "q1", rating_value: 5, section_key: "section-a" }],
+      submitted_at: new Date("2026-05-20T10:00:00.000Z"),
+    });
+
+    await expect(getStudentSubmittedResponseReview("response-1")).resolves.toEqual(
+      expect.objectContaining({
+        courseTitle: "Capstone 1",
+        programLabel: "Information Technology",
+      })
+    );
+  });
+
+  it("falls back to live catalog labels for legacy responses with no course info snapshot", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
+    findFirstMock.mockResolvedValue({
+      assignment: {
+        course_bound: {
+          course_assignment: {
+            course: { title: "Capstone 1", major: { name: "Information Technology" } },
+            program: { name: "BSIT", id: "program-1" },
+          },
+          course_info_snapshot: null,
+          instrument: {
+            structure_snapshot: [],
+            template: { name: "Post-Term CILO Evaluation Tool" },
+          },
+        },
+      },
+      id: "response-1",
+      qual_items: [],
+      quant_items: [],
+      submitted_at: new Date("2026-05-20T10:00:00.000Z"),
+    });
+
+    await expect(getStudentSubmittedResponseReview("response-1")).resolves.toEqual(
+      expect.objectContaining({
+        courseTitle: "Capstone 1",
+        programLabel: "Information Technology",
+      })
+    );
+  });
 });

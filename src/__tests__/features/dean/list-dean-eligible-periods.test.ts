@@ -23,7 +23,7 @@ vi.mock("@/features/academic-calendar/services/read-period-readiness", () => ({
   readPeriodReadiness: vi.fn(),
 }));
 
-import { listDeanEligiblePeriods } from "@/features/dean/services/read-dean-oversight";
+import { listDeanEligiblePeriods } from "@/features/dean/services/dean-read-model";
 
 describe("listDeanEligiblePeriods authorization seam", () => {
   beforeEach(() => {
