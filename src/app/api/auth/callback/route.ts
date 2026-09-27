@@ -9,7 +9,7 @@ import { resolveSelfServiceEligibility } from "@/features/auth/services/self-ser
 import { resolveGoogleAccountName } from "@/features/auth/services/resolve-google-account-name";
 import { SystemRole, type User, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
+import { isEntryIntent, isTicketIntent, intentToRole } from "@/features/auth/services/role-intent";
 import {
   readActiveRoleCookie,
   setActiveRoleCookie,
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
   const ticket = readCookieValue(request.headers.get("cookie"), LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME);
   const ticketVerification = verifyLegalAcknowledgementTicket(ticket, intentParam ?? "");
 
-  if (!intentParam || !isRoleIntent(intentParam) || !ticketVerification.valid) {
+  if (!intentParam || !isTicketIntent(intentParam) || !ticketVerification.valid) {
     return redirectWithClearedTicket(`${siteUrl}/`);
   }
 
@@ -411,7 +411,16 @@ export async function GET(request: Request) {
     }
   } else {
     if (!targetRole) {
+      // Role-less entry intent with no matching domain account: nothing to
+      // link and nothing to claim. Staff entrances require a provisioned
+      // account; external Google holders without one register first.
       await supabase.auth.signOut();
+      if (isEntryIntent(intentParam) && intentParam === "staff") {
+        return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
+      }
+      if (isEntryIntent(intentParam) && intentParam === "external") {
+        return redirectWithClearedTicket(`${siteUrl}/register/external`);
+      }
       return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
     }
 
