@@ -41,6 +41,7 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: {
       getUser: getUserMock,
+      getClaims: async () => ({ data: { claims: { amr: [{ method: "google" }] } }, error: null }),
     },
   })),
 }));
@@ -134,6 +135,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
@@ -160,6 +163,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: {
         status: "STUDENT_ONBOARDING_REQUIRED",
         intent: "student",
@@ -189,6 +194,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });
@@ -210,11 +217,13 @@ describe("resolveAuthSession", () => {
       alumniProfileId: "alumni-profile",
       alumniVerificationStatus: "PENDING",
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });
 
-  it("requires onboarding for mixed faculty and student users when the faculty affiliation is missing", async () => {
+  it("requires deliberate selection for a multi-role account instead of adopting the first role", async () => {
     const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
     getUserMock.mockResolvedValue({
       data: { user: { id: "user-4", email: "faculty@acd.edu.ph" } },
@@ -231,16 +240,15 @@ describe("resolveAuthSession", () => {
       email: "faculty@acd.edu.ph",
       name: null,
       roles: [ROLES.FACULTY, ROLES.STUDENT],
-      activeRole: ROLES.FACULTY,
+      activeRole: null,
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
-      profileGate: {
-        status: "FACULTY_ONBOARDING_REQUIRED",
-        intent: "faculty",
-      },
+      facultyApprovalStatus: null,
+      authMethod: "google",
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
 
@@ -266,6 +274,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
@@ -293,6 +303,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: {
         status: "FACULTY_ONBOARDING_REQUIRED",
         intent: "faculty",
@@ -325,6 +337,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });

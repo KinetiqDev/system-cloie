@@ -16,9 +16,9 @@ describe("ROLE_CARDS configuration", () => {
     expect(roles).toHaveLength(8);
   });
 
-  it("marks STUDENT as self_service_internal (requires ACD email)", () => {
+  it("marks STUDENT as secretary-provisioned, not self-service", () => {
     const studentCard = ROLE_CARDS.find((c) => c.role === ROLES.STUDENT);
-    expect(studentCard?.category).toBe("self_service_internal");
+    expect(studentCard?.category).toBe("secretary_provisioned_student");
   });
 
   it("marks ALUMNI as self_service_external (any Google account accepted)", () => {

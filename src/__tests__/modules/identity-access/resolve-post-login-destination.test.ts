@@ -3,7 +3,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 
 describe("resolvePostLoginDestination", () => {
-  it("sends a roleless student signup to student onboarding", () => {
+  it("sends a roleless student sign-in to the unprovisioned status, never a self-service form", () => {
     expect(
       resolvePostLoginDestination({
         requestedPath: "/dashboard",
@@ -11,7 +11,45 @@ describe("resolvePostLoginDestination", () => {
         activeRole: null,
         profileGate: { status: "ROLE_SELECTION_REQUIRED" },
       })
-    ).toBe("/onboarding?intent=student");
+    ).toBe("/status/unprovisioned-student");
+  });
+
+  it("sends a role-less account with no recognized intent back to the entrances", () => {
+    expect(
+      resolvePostLoginDestination({
+        requestedPath: "/dashboard",
+        intent: null,
+        activeRole: null,
+        profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+      })
+    ).toBe("/");
+  });
+
+  it("routes pending, rejected, and method-mismatch gates to their status pages", () => {
+    expect(
+      resolvePostLoginDestination({
+        requestedPath: "/dashboard",
+        intent: null,
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      })
+    ).toBe("/status/faculty-pending");
+    expect(
+      resolvePostLoginDestination({
+        requestedPath: "/dashboard",
+        intent: null,
+        activeRole: ROLES.FACULTY,
+        profileGate: { status: "FACULTY_REQUEST_REJECTED" },
+      })
+    ).toBe("/status/faculty-rejected");
+    expect(
+      resolvePostLoginDestination({
+        requestedPath: "/dashboard",
+        intent: null,
+        activeRole: ROLES.SECRETARY,
+        profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.SECRETARY },
+      })
+    ).toBe("/status/method-mismatch");
   });
 
   it("sends a roleless alumni signup to alumni onboarding", () => {

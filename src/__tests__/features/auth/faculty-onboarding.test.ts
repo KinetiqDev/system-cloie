@@ -8,12 +8,18 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 
-const { resolveAuthenticatedDomainUserMock } = vi.hoisted(() => ({
-  resolveAuthenticatedDomainUserMock: vi.fn(),
-}));
+const { resolveAuthenticatedDomainUserMock, facultyAccessRequestFindUniqueMock } = vi.hoisted(
+  () => ({
+    resolveAuthenticatedDomainUserMock: vi.fn(),
+    facultyAccessRequestFindUniqueMock: vi.fn(),
+  })
+);
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
+    facultyAccessRequest: {
+      findUnique: facultyAccessRequestFindUniqueMock,
+    },
     $transaction: vi.fn(),
     user: {
       update: vi.fn(),
@@ -139,6 +145,9 @@ describe("createFacultyProfile Server Action", () => {
     });
 
     (prisma.userRole.findUnique as any).mockResolvedValue(null);
+    // No self-request row: a Secretary-provisioned Faculty account is active
+    // at creation, so createFacultyProfile may still write its affiliation.
+    facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
   });
 
   it("should fail if user is not authenticated", async () => {
@@ -296,6 +305,9 @@ describe("createFacultyProfile Server Action", () => {
     });
     // No FACULTY role claimed yet; other roles no longer block registration.
     (prisma.userRole.findUnique as any).mockResolvedValue(null);
+    // No self-request row: a Secretary-provisioned Faculty account is active
+    // at creation, so createFacultyProfile may still write its affiliation.
+    facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
 
     const result = await createFacultyProfile(validPayload);
 

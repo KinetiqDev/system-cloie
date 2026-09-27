@@ -55,8 +55,8 @@ describe("LegalAcknowledgementDialog", () => {
           method: "POST",
           body: JSON.stringify({
             intent: "industry-partner",
-            privacyVersion: "1.0",
-            termsVersion: "1.0",
+            privacyVersion: "1.1",
+            termsVersion: "1.1",
           }),
         })
       );
