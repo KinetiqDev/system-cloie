@@ -75,11 +75,25 @@ export async function approveFacultyAccessRequest(input: {
   return prisma.$transaction(async (tx) => {
     const request = await tx.facultyAccessRequest.findUnique({
       where: { user_id: input.requestUserId },
-      select: { id: true, program_id: true, status: true },
+      select: {
+        id: true,
+        program_id: true,
+        status: true,
+        user: { select: { is_active: true } },
+      },
     });
     if (!request) return { success: false as const, error: "Faculty request not found." };
     if (request.status === FacultyApprovalStatus.APPROVED) {
       return { success: true as const, status: FacultyApprovalStatus.APPROVED };
+    }
+    // A deactivated account must not be granted an affiliation: approval would
+    // create scope the account cannot use, and reactivating is a separate
+    // deliberate act.
+    if (!request.user.is_active) {
+      return {
+        success: false as const,
+        error: "This applicant's account is deactivated. Reactivate it before approving.",
+      };
     }
 
     await tx.facultyAccessRequest.update({

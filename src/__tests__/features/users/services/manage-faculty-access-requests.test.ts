@@ -63,6 +63,7 @@ describe("rejectFacultyAccessRequest", () => {
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "APPROVED",
+      user: { is_active: true },
     });
 
     const result = await rejectFacultyAccessRequest({
@@ -89,6 +90,7 @@ describe("rejectFacultyAccessRequest", () => {
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "PENDING",
+      user: { is_active: true },
     });
 
     const result = await rejectFacultyAccessRequest({
@@ -106,6 +108,7 @@ describe("rejectFacultyAccessRequest", () => {
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "PENDING",
+      user: { is_active: true },
     });
 
     await rejectFacultyAccessRequest({
@@ -154,6 +157,7 @@ describe("approveFacultyAccessRequest", () => {
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "PENDING",
+      user: { is_active: true },
     });
 
     const result = await approveFacultyAccessRequest({
@@ -176,11 +180,30 @@ describe("approveFacultyAccessRequest", () => {
     expect(updateManyAffiliationMock).not.toHaveBeenCalled();
   });
 
+  it("refuses to approve a deactivated applicant", async () => {
+    findUniqueRequestMock.mockResolvedValue({
+      id: "request-1",
+      program_id: PROGRAM_ID,
+      status: "PENDING",
+      user: { is_active: false },
+    });
+
+    const result = await approveFacultyAccessRequest({
+      requestUserId: FACULTY_ID,
+      decidedByUserId: "secretary-1",
+    });
+
+    expect(result.success).toBe(false);
+    expect(upsertAffiliationMock).not.toHaveBeenCalled();
+    expect(updateRequestMock).not.toHaveBeenCalled();
+  });
+
   it("is idempotent for an already approved request and leaves other programs alone", async () => {
     findUniqueRequestMock.mockResolvedValue({
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "APPROVED",
+      user: { is_active: true },
     });
 
     const result = await approveFacultyAccessRequest({
@@ -202,6 +225,7 @@ describe("approveFacultyAccessRequest", () => {
       id: "request-1",
       program_id: PROGRAM_ID,
       status: "APPROVED",
+      user: { is_active: true },
     });
 
     await rejectFacultyAccessRequest({
