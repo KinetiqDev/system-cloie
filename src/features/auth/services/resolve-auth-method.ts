@@ -12,38 +12,83 @@ export type AuthMethod = "google" | "password" | "otp" | "recovery";
 
 type SessionKind = "oauth" | "dev" | "dedicated-demo" | "ci-test";
 
-const GOOGLE_PROVIDER = "google";
+/**
+ * GoTrue reports every OAuth provider sign-in as the single method `oauth`
+ * (see the AMR method list in @supabase/auth-js and the Supabase JWT claims
+ * reference). The `amr` claim therefore proves *that* the current session came
+ * from an OAuth provider, never *which* one. The provider is only available in
+ * `app_metadata.provider`, which is not session-scoped: a password identity that
+ * once signed in through Google keeps that provider value forever.
+ */
+const AMR_OAUTH = "oauth";
+const AMR_PASSWORD = "password";
+const AMR_OTP = "otp";
+const AMR_RECOVERY = "recovery";
 const EMAIL_PROVIDER = "email";
 
 /**
- * Supabase reports the method of the *current* session in the signed access
- * token's `amr` claim. It is the only source of truth that distinguishes a
- * Google sign-in from a password, one-time-code, or recovery session on the
- * same Auth identity, so the verified JWT is the only input this trusts.
+ * System CLOIE enables exactly one OAuth provider (Google) on every target —
+ * see `[auth.external.google]` in supabase/config.toml, where every other
+ * external provider is disabled. Under that invariant, an `oauth` session whose
+ * verified `app_metadata.provider` is `google` is a Google session.
  */
-export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null {
-  if (!claims || typeof claims !== "object" || !("amr" in claims)) return null;
-  const amr = claims.amr;
-  if (!Array.isArray(amr) || amr.length === 0) return null;
+const GOOGLE_PROVIDER = "google";
 
-  const methods = amr
+function readAmrMethods(claims: unknown): string[] {
+  if (!claims || typeof claims !== "object" || !("amr" in claims)) return [];
+  const amr = claims.amr;
+  if (!Array.isArray(amr)) return [];
+
+  return amr
     .map((entry) => {
       if (!entry || typeof entry !== "object" || !("method" in entry)) return "";
       const method = entry.method;
       return typeof method === "string" ? method.trim().toLowerCase() : "";
     })
     .filter((method) => method.length > 0);
-
-  if (methods.length === 0) return null;
-  // Google wins when the session was established with it; otherwise the
-  // strongest non-Google method present decides.
-  if (methods.includes(GOOGLE_PROVIDER)) return "google";
-  if (methods.includes("otp")) return "otp";
-  if (methods.includes("recovery")) return "recovery";
-  if (methods.includes("password") || methods.includes(EMAIL_PROVIDER)) return "password";
-  return null;
 }
 
+/**
+ * The provider GoTrue recorded for the Auth identity. It is only trustworthy
+ * as corroboration for an `oauth` session: it is server-managed, and it is not
+ * session-scoped, so it can never on its own prove how the current session was
+ * established.
+ */
+function readRecordedProvider(claims: unknown): string | null {
+  if (!claims || typeof claims !== "object" || !("app_metadata" in claims)) return null;
+  const appMetadata = claims.app_metadata;
+  if (!appMetadata || typeof appMetadata !== "object" || !("provider" in appMetadata)) {
+    return null;
+  }
+  const provider = appMetadata.provider;
+  return typeof provider === "string" ? provider.trim().toLowerCase() : null;
+}
+
+/**
+ * Resolves the current session's authentication method from verified access
+ * token claims only.
+ *
+ * An OAuth session is accepted as `google` only when the recorded provider is
+ * Google; any other provider, an unrecorded provider, or a missing claim
+ * resolves to null, which the profile gate treats as unproved and refuses for
+ * every internal role. `user_metadata` is never consulted: it is user-editable.
+ */
+export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null {
+  const methods = readAmrMethods(claims);
+  if (methods.length === 0) return null;
+
+  // A proved credential method outranks OAuth: when a claim carries both, the
+  // password, one-time-code, or recovery step is what actually established
+  // this session, so the session must not be trusted as a Google sign-in.
+  if (methods.includes(AMR_PASSWORD) || methods.includes(EMAIL_PROVIDER)) return "password";
+  if (methods.includes(AMR_OTP)) return "otp";
+  if (methods.includes(AMR_RECOVERY)) return "recovery";
+
+  if (methods.includes(AMR_OAUTH)) {
+    return readRecordedProvider(claims) === GOOGLE_PROVIDER ? "google" : null;
+  }
+  return null;
+}
 /**
  * The non-Google development, dedicated-demo, and CI-test sessions are not
  * Supabase sessions and carry no `amr` claim. They authenticate fixture
@@ -59,7 +104,7 @@ export function resolveAuthMethodForSession(mode: SessionKind, claims: unknown):
 /**
  * Reads the verified access-token claims for the current session. `getClaims`
  * validates the JWT against the Auth server rather than trusting the cookie, so
- * a forged `amr` claim cannot open an internal role.
+ * a forged `amr` claim can never open an internal role.
  */
 export async function resolveSessionAuthMethod(
   getClaims: () => Promise<{ data: { claims?: unknown } | null; error: unknown }>

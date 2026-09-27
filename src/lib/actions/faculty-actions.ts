@@ -7,6 +7,37 @@ import { facultyProfileSchema, type FacultyProfileInput } from "@/lib/schemas/fa
 import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
 import { requestFacultyAccess as submitFacultyAccessRequest } from "@/features/users/services/manage-faculty-access-requests";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
+import { resolveSessionAuthMethod } from "@/features/auth/services/resolve-auth-method";
+
+const ACADEMIC_DOMAIN_FAILURE =
+  "An institutional ACD email is required for Faculty access.";
+
+const NOT_GOOGLE_SESSION_FAILURE =
+  "Faculty access requires your current ACD Google sign-in. Sign out and sign in with Google again.";
+
+/**
+ * Faculty is an internal role, so both the direct profile action and the
+ * registration request require a current Google session and an ACD
+ * institutional email. The method is proved from verified access-token claims,
+ * never from client state, so a password, one-time-code, or recovery session
+ * cannot mutate Faculty scope even when the account is already linked.
+ */
+async function requireGoogleFacultySession(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; email?: string | null }
+): Promise<{ ok: true; email: string } | { ok: false; error: string }> {
+  const method = await resolveSessionAuthMethod(() => supabase.auth.getClaims());
+  if (method !== "google") {
+    return { ok: false, error: NOT_GOOGLE_SESSION_FAILURE };
+  }
+
+  const email = (user.email ?? "").trim().toLowerCase();
+  if (!email.endsWith("@acd.edu.ph") && !email.endsWith("@acdeducation.com")) {
+    return { ok: false, error: ACADEMIC_DOMAIN_FAILURE };
+  }
+
+  return { ok: true, email };
+}
 
 /**
  * Explicit Faculty registration. The request is self-submitted but not
@@ -48,8 +79,21 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
       };
     }
 
-    if (!domainUser.is_active) {
-      return { success: false, error: "Your CLOIE account is currently inactive." };
+    // The callback's verified first-link transaction is the only writer of
+    // `auth_user_id`; an email-matched but unlinked account must never file a
+    // request or gain the FACULTY role through this action.
+    if (domainUser.auth_user_id !== user.id) {
+      return {
+        success: false,
+        error: "Your account identity could not be resolved. Please sign out and sign in again.",
+      };
+    }
+
+    // Faculty is an internal role: refused unless this is a current Google
+    // session on an ACD institutional address.
+    const session = await requireGoogleFacultySession(supabase, user);
+    if (!session.ok) {
+      return { success: false, error: session.error };
     }
 
     const result = await submitFacultyAccessRequest({
@@ -121,6 +165,13 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
         error:
           "Your account identity could not be resolved. Please sign out and sign in with Google again.",
       };
+    }
+    // A password, one-time-code, or recovery session must not mutate Faculty
+    // scope even when the account is already linked, so the direct action
+    // requires the same current Google session and ACD email as the request.
+    const session = await requireGoogleFacultySession(supabase, user);
+    if (!session.ok) {
+      return { success: false, error: session.error };
     }
 
     if (!domainUser.name.trim()) {

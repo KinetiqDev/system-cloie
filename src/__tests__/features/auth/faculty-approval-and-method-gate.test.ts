@@ -77,11 +77,68 @@ describe("Faculty approval state (issue #649)", () => {
 });
 
 describe("auth method enforcement", () => {
-  it("resolves the session method from the verified amr claim", () => {
-    expect(resolveAuthMethodFromClaims({ amr: [{ method: "google" }] })).toBe("google");
+  it("resolves a Google OAuth session from amr oauth plus the recorded provider", () => {
+    // GoTrue reports every OAuth provider as the single method "oauth"; the
+    // provider is only in app_metadata.
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "google", providers: ["google"] },
+      })
+    ).toBe("google");
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "password" }] })).toBe("password");
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "otp" }] })).toBe("otp");
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "recovery" }] })).toBe("recovery");
+  });
+
+  it("refuses an oauth session from any provider other than Google", () => {
+    // Adversarial: a code replayed from another enabled OAuth provider must
+    // never be accepted as a Google sign-in.
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "github" },
+      })
+    ).toBeNull();
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "apple" },
+      })
+    ).toBeNull();
+  });
+
+  it("refuses an oauth session with no recorded provider, and never trusts user_metadata", () => {
+    expect(resolveAuthMethodFromClaims({ amr: [{ method: "oauth" }] })).toBeNull();
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: {},
+      })
+    ).toBeNull();
+    // user_metadata is user-editable and must never prove a provider.
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "password" }],
+        user_metadata: { provider: "google", sub: "forged" },
+        app_metadata: { provider: "google" },
+      })
+    ).toBe("password");
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        user_metadata: { provider: "google" },
+      })
+    ).toBeNull();
+  });
+
+  it("prefers a proved non-oauth method when both are present in the claim", () => {
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }, { method: "password" }],
+        app_metadata: { provider: "google" },
+      })
+    ).toBe("password");
   });
 
   it("treats a missing or unusable amr claim as unproved", () => {

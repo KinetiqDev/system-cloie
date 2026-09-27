@@ -9,6 +9,7 @@ import {
 } from "@/features/legal/services/legal-acknowledgement-ticket";
 
 const {
+  getClaimsMock,
   exchangeCodeForSessionMock,
   signOutMock,
   resolveAuthSessionMock,
@@ -23,6 +24,7 @@ const {
   upsertUserRoleMock,
   transactionMock,
 } = vi.hoisted(() => ({
+  getClaimsMock: vi.fn(),
   exchangeCodeForSessionMock: vi.fn(),
   signOutMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
@@ -58,6 +60,7 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       exchangeCodeForSession: exchangeCodeForSessionMock,
       signOut: signOutMock,
+      getClaims: getClaimsMock,
     },
   })),
 }));
@@ -106,6 +109,11 @@ describe("auth callback route", () => {
     vi.unstubAllEnvs();
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloie.test");
     vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
+    // The callback proves the exchanged session is Google before any link.
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
+      error: null,
+    });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: "STUDENT",
@@ -795,6 +803,45 @@ describe("auth callback route", () => {
       create: { user_id: "domain-user-1", role: SystemRole.ALUMNI },
     });
     expect(response.headers.get("location")).toContain("/select-role");
+  });
+
+  it("refuses an exchanged session that is not a proven Google sign-in", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "user@acd.edu.ph",
+          user_metadata: { name: "Attacker" },
+        },
+      },
+    });
+    // A code replayed from another OAuth provider: `amr: oauth` alone is not
+    // Google proof, and this must be refused before any account is linked,
+    // claimed, or created.
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "github" } } },
+      error: null,
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: null,
+      email: "user@acd.edu.ph",
+      name: "Provisional",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+    });
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
+    );
+
+    expect(signOutMock).toHaveBeenCalled();
+    expect(response.headers.get("location")).toContain("/status/method-mismatch");
+    expect(updateManyUserMock).not.toHaveBeenCalled();
+    expect(createUserMock).not.toHaveBeenCalled();
+    expect(createUserRoleMock).not.toHaveBeenCalled();
+    expect(upsertUserRoleMock).not.toHaveBeenCalled();
   });
 
   it("resolves a fresh Faculty claim to the pending gate, never COMPLETE", async () => {

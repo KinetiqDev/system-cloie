@@ -123,6 +123,7 @@ describe("facultyProfileSchema", () => {
 
 describe("createFacultyProfile Server Action", () => {
   const mockGetUser = vi.fn();
+  const mockGetClaims = vi.fn();
   const validPayload = {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
   };
@@ -132,6 +133,7 @@ describe("createFacultyProfile Server Action", () => {
     (createClient as any).mockResolvedValue({
       auth: {
         getUser: mockGetUser,
+        getClaims: mockGetClaims,
       },
     });
 
@@ -154,6 +156,11 @@ describe("createFacultyProfile Server Action", () => {
     // at creation, so createFacultyProfile may still write its affiliation.
     facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
     facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
+    // A current Google session is required for Faculty scope mutation.
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
+      error: null,
+    });
   });
 
   it("should fail if user is not authenticated", async () => {
@@ -402,5 +409,72 @@ describe("createFacultyProfile Server Action", () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain("institutional review");
     expect(prisma.facultyProgramAffiliation.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each(["password", "otp", "recovery"] as const)(
+    "refuses a %s session from mutating Faculty scope",
+    async (method) => {
+      mockGetUser.mockResolvedValue({
+        data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
+        error: null,
+      });
+      (prisma.program.findUnique as any).mockResolvedValue({
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        is_active: true,
+      });
+      // A linked, fully eligible account — the only thing that may stop this
+      // write is the session method itself.
+      facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
+      facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
+      mockGetClaims.mockResolvedValue({
+        data: { claims: { amr: [{ method }], app_metadata: { provider: "email" } } },
+        error: null,
+      });
+
+      const result = await createFacultyProfile(validPayload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("current ACD Google sign-in");
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    }
+  );
+
+  it("refuses an oauth session from a non-Google provider", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+    facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
+    facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "github" } } },
+      error: null,
+    });
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a non-institutional email even from a Google session", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-faculty-123", email: "person@gmail.com" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("institutional");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

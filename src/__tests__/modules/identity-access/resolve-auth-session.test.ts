@@ -41,7 +41,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: {
       getUser: getUserMock,
-      getClaims: async () => ({ data: { claims: { amr: [{ method: "google" }] } }, error: null }),
+      // A real Google session carries amr oauth plus the recorded provider.
+      getClaims: async () => ({
+        data: {
+          claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } },
+        },
+        error: null,
+      }),
     },
   })),
 }));
