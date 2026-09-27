@@ -6,7 +6,6 @@ import {
   approveFacultyAccessRequest,
   rejectFacultyAccessRequest,
 } from "@/features/users/services/manage-faculty-access-requests";
-import { prisma } from "@/lib/db/prisma";
 
 const {
   findUniqueRequestMock,

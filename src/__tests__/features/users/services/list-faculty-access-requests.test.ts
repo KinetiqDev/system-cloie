@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FacultyApprovalStatus } from "@prisma/client";
 import { listFacultyAccessRequests } from "@/features/users/services/list-faculty-access-requests";
 import { ROLES } from "@/lib/constants/roles";
-import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
 const { findManyRequestMock } = vi.hoisted(() => ({
@@ -41,7 +40,11 @@ function requestRow(overrides: Record<string, unknown> = {}) {
     created_at: new Date("2026-09-20T10:00:00.000Z"),
     decided_at: null,
     decision_note: null,
-    program: { id: "program-1", code: "BSIT", name: "Bachelor of Science in Information Technology" },
+    program: {
+      id: "program-1",
+      code: "BSIT",
+      name: "Bachelor of Science in Information Technology",
+    },
     user: { id: "faculty-1", name: "Jane Smith", email: "jane@acd.edu.ph", is_active: true },
     ...overrides,
   };
@@ -53,7 +56,9 @@ describe("listFacultyAccessRequests", () => {
   });
 
   it("returns requests with the requested program and pending count", async () => {
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(secretarySession());
+    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      secretarySession()
+    );
     findManyRequestMock.mockResolvedValue([
       requestRow(),
       requestRow({
@@ -81,7 +86,9 @@ describe("listFacultyAccessRequests", () => {
   });
 
   it("surfaces a deactivated applicant so the Secretary can see why", async () => {
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(secretarySession());
+    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      secretarySession()
+    );
     findManyRequestMock.mockResolvedValue([
       requestRow({
         user: { id: "faculty-3", name: "Deactivated", email: "d@acd.edu.ph", is_active: false },

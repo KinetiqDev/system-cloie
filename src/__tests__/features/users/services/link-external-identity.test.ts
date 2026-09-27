@@ -3,7 +3,6 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { linkExternalVerifiedIdentity } from "@/features/users/services/link-external-identity";
-import { prisma } from "@/lib/db/prisma";
 
 const { findUniqueUserMock, updateManyUserMock, createUserMock, transactionMock } = vi.hoisted(
   () => ({

@@ -29,7 +29,11 @@ vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
-  prisma: { $transaction: vi.fn(async (cb: any) => cb(prismaMockTx)) },
+  prisma: {
+    $transaction: vi.fn(async (callback: (tx: typeof prismaMockTx) => unknown) =>
+      callback(prismaMockTx)
+    ),
+  },
 }));
 
 const prismaMockTx = {
