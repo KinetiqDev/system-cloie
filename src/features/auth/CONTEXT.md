@@ -79,13 +79,25 @@ _Avoid_: Any ACD subdomain, any school-looking email
 A System CLOIE role for people participating from outside the current institution: Alumni or Industry Partner.
 _Avoid_: Guest role, public role
 
-**Role selection portal**:
-The single public entry point where a person chooses the System CLOIE role they want to enter with before continuing through authentication and any required onboarding.
-_Avoid_: Separate sign-up pages per role
+**Scoped entrance**:
+One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), Faculty registration, or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
+_Avoid_: Role selection portal, one shared role card grid
 
 **Public entry**:
-The role selection portal is the primary way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
-_Avoid_: Role-less login as the main entry point
+The scoped entrances plus the System CLOIE landing page are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
+_Avoid_: Role-less login as the main entry point, retired portal selection
+
+**Entry intent**:
+The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a role; the callback resolves the existing account, requires provisioning for an unknown staff address, and sends an unknown external address to external registration.
+_Avoid_: Role claim, authorization decision
+
+**Google-only internal role**:
+An internal role — Student, Faculty, Secretary, Dean, Program Head, or General Education Coordinator — that may only be used from a current Google sign-in. A password, one-time-code, or recovery session for the same Auth identity is refused at the centralized session boundary and at internal Server Actions, and Alumni and Industry Partner are the only roles that may use email-password alongside Google.
+_Avoid_: Any authenticated session, user_metadata provider claim
+
+**Proved Google session**:
+A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the recorded `app_metadata.provider` is `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. `user_metadata` is never consulted because the person can edit it.
+_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider
 
 **External stakeholder invite**:
 A Secretary-managed invitation (ExternalStakeholderInvite) that offers an Alumni or Industry Partner person entry into System CLOIE, with statuses DRAFT, SENT, ACCEPTED, and REVOKED and an optional program scope; it is the parallel invite-based entry path alongside self-service external sign-up.
