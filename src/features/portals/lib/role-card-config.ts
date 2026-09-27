@@ -1,6 +1,11 @@
 import { ROLES } from "@/lib/constants/roles";
 
-export type RoleCategory = "self_service_internal" | "self_service_external" | "pre_provisioned_admin" | "provisioned_faculty";
+export type RoleCategory =
+  | "self_service_internal"
+  | "self_service_external"
+  | "pre_provisioned_admin"
+  | "secretary_provisioned_student"
+  | "provisioned_faculty";
 
 export type RoleCardConfig = {
   role: string;
@@ -44,7 +49,7 @@ export const ROLE_CARDS: RoleCardConfig[] = [
     title: "Student",
     description: "Participate in surveys, evaluations, and view history.",
     iconName: "GraduationCap",
-    category: "self_service_internal",
+    category: "secretary_provisioned_student",
   },
   {
     role: ROLES.ALUMNI,

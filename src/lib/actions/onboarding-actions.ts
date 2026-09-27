@@ -101,20 +101,23 @@ export async function registerStudentProfile(
 
     const domainUserId = domainUser.id;
 
+    // Student provisioning is Secretary-only (issue #649). This action may
+    // complete the academic profile of an already-provisioned Student, but it
+    // must never be the writer that assigns the STUDENT role: an unprovisioned
+    // account is refused before any role, profile, or enrollment write.
+    const provisionedStudentRole = await prisma.userRole.findUnique({
+      where: { user_id_role: { user_id: domainUserId, role: ROLES.STUDENT } },
+      select: { user_id: true },
+    });
+    if (!provisionedStudentRole) {
+      return {
+        error:
+          "Student accounts are created by the Secretary's office. Please contact the Secretary to have your Student account provisioned.",
+      };
+    }
+
     // Role + academic profile only. Never create a User and never write client identity.
     await prisma.$transaction(async (tx) => {
-      const existingRole = await tx.userRole.findUnique({
-        where: { user_id_role: { user_id: domainUserId, role: ROLES.STUDENT } },
-      });
-      if (!existingRole) {
-        await tx.userRole.create({
-          data: {
-            user_id: domainUserId,
-            role: ROLES.STUDENT,
-          },
-        });
-      }
-
       // Phase 9: Profile only holds static cohort fields - enrollment data is in StudentEnrollment
       await tx.studentAcademicProfile.upsert({
         where: { user_id: domainUserId },
@@ -236,11 +239,11 @@ export async function resetIncompleteRoleClaim(abandoned?: string | FormData) {
     }
   }
 
-  // Route back to the portal matching the role being onboarded:
-  // staff roles (faculty) → /portal/staff; respondent roles → /portal/respondents.
+  // Route back to the entrance matching the role being onboarded:
+  // staff roles (faculty) → /login/staff; respondent roles → /.
   const isStaffClaim =
     target === ROLES.FACULTY ||
     (session && "intent" in session.profileGate && session.profileGate.intent === "faculty");
 
-  redirect(isStaffClaim ? "/portal/staff" : "/portal/respondents");
+  redirect(isStaffClaim ? "/login/staff" : "/");
 }

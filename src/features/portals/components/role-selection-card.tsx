@@ -38,8 +38,9 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
   const Icon = ICON_MAP[config.iconName] || ShieldCheck;
   const intent = roleToIntentOrThrow(config.role);
 
-  const isSelfService = config.category === "self_service_internal" || config.category === "self_service_external";
-  const needsAcdEmail = config.category === "self_service_internal" || config.category === "provisioned_faculty" || config.category === "pre_provisioned_admin";
+  const isPreProvisioned =
+    config.category === "pre_provisioned_admin" || config.category === "secretary_provisioned_student";
+  const needsAcdEmail = config.category === "self_service_internal" || config.category === "provisioned_faculty" || isPreProvisioned;
 
   return (
     <div className="flex flex-col h-full bg-surface border border-border rounded-2xl p-6 shadow-sm transition-all hover:shadow-md">
@@ -49,7 +50,7 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
         </div>
         <div>
           <h3 className="text-title-md font-semibold text-foreground">{config.title}</h3>
-          {!isSelfService && config.category === "pre_provisioned_admin" && (
+          {isPreProvisioned && (
             <Badge variant="warning" className="mt-1 uppercase tracking-wide">
               <Lock className="size-3" />
               Pre-Provisioned
