@@ -139,7 +139,10 @@ export function getLegalAcknowledgementCookieOptions() {
   return {
     httpOnly: true,
     maxAge: LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
-    path: "/api/auth",
+    // App scope: the ticket must reach page-URL Server Actions (e.g.
+    // /register/external) as well as /api/auth. It stays httpOnly, short
+    // lived, and signed, and the callback clears it with these same options.
+    path: "/",
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV !== "development",
   };
