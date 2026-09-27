@@ -353,10 +353,13 @@ export async function listAuthorizedCourseRosterAssignments(
       return { success: false, error: "Course assignment not found." };
     }
     const rosterRoles = [ROLES.FACULTY, ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD];
-    if (
-      !rosterRoles.some((role) => role === session.activeRole) ||
-      session.profileGate.status === "INACTIVE"
-    ) {
+    // Re-read the resolved gate here rather than trusting the entry page: a
+    // pending or rejected Faculty request, a stale role selection, or a
+    // non-Google session must not reach roster rows.
+    if (!rosterRoles.some((role) => role === session.activeRole)) {
+      return { success: false, error: "Course assignment not found." };
+    }
+    if (session.profileGate.status !== "COMPLETE") {
       return { success: false, error: "Course assignment not found." };
     }
 

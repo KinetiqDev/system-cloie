@@ -38,14 +38,21 @@ async function resolveSelectedRoleReadiness(userId: string, role: Role) {
   }
 
   if (role === "FACULTY") {
-    const affiliation = await prisma.facultyProgramAffiliation.findFirst({
-      where: { faculty_id: userId, is_active: true },
-      select: { id: true },
-    });
-    return { hasFacultyAffiliation: affiliation !== null };
+    const [affiliation, request] = await Promise.all([
+      prisma.facultyProgramAffiliation.findFirst({
+        where: { faculty_id: userId, is_active: true },
+        select: { id: true },
+      }),
+      prisma.facultyAccessRequest.findUnique({
+        where: { user_id: userId },
+        select: { status: true },
+      }),
+    ]);
+    return {
+      hasFacultyAffiliation: affiliation !== null,
+      facultyApprovalStatus: request?.status ?? null,
+    };
   }
-
-  return {};
 }
 export async function switchActiveRole(role: string): Promise<void> {
   const session = await resolveAuthSession();

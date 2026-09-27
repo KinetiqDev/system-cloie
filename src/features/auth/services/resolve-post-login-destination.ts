@@ -40,21 +40,41 @@ export function resolvePostLoginDestination({
     return "/status/rejected";
   }
 
+  if (profileGate.status === "FACULTY_APPROVAL_PENDING") {
+    return "/status/faculty-pending";
+  }
+
+  if (profileGate.status === "FACULTY_REQUEST_REJECTED") {
+    return "/status/faculty-rejected";
+  }
+
+  if (profileGate.status === "AUTH_METHOD_MISMATCH") {
+    return "/status/method-mismatch";
+  }
+
   if (profileGate.status === "DEFERRED_ENROLLMENT") {
     return "/student/dashboard";
   }
 
   if (profileGate.status === "ROLE_SELECTION_REQUIRED") {
+    // A role-less account must make a deliberate choice. Student is
+    // Secretary-provisioned only (issue #649), so a role-less Student sign-in
+    // resolves to the unprovisioned status instead of a self-service form, and
+    // every unrecognised entry intent returns to the entrances rather than
+    // defaulting into any role's onboarding.
+    if (intent === "student") {
+      return "/status/unprovisioned-student";
+    }
+    if (intent === "faculty") {
+      return "/onboarding?intent=faculty";
+    }
     if (intent === "alumni") {
       return "/onboarding?intent=alumni";
     }
     if (intent === "industry-partner" || intent === "industry_partner") {
       return "/onboarding?intent=industry-partner";
     }
-    if (intent === "faculty") {
-      return "/onboarding?intent=faculty";
-    }
-    return "/onboarding?intent=student";
+    return "/";
   }
 
   if (profileGate.status === "STUDENT_ONBOARDING_REQUIRED") {

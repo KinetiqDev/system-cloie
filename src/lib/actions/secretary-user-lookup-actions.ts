@@ -27,7 +27,7 @@ export type LookupUserByEmailResult =
  */
 export async function lookupUserByEmailAction(email: string): Promise<LookupUserByEmailResult> {
   const session = await resolveAuthSession();
-  if (!session?.roles?.includes(ROLES.SECRETARY)) {
+  if (!session?.activeRole || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required." };
   }
 

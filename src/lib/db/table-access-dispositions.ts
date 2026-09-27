@@ -116,6 +116,7 @@ export const TABLE_ACCESS_DISPOSITIONS = {
     kind: "authenticated-read",
     evidence: AUTHENTICATED_READ_EVIDENCE,
   },
+  faculty_access_requests: { kind: "server-only" },
   student_academic_profiles: { kind: "server-only" },
   industry_partner_profiles: { kind: "server-only" },
   industry_partner_program_affiliations: { kind: "server-only" },

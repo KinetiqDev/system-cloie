@@ -23,7 +23,7 @@ export async function loadCilosForCourseAction(courseId: string): Promise<{
 }> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication required." };
   }
 
@@ -52,7 +52,7 @@ export async function saveCilosForCourseAction(
 ): Promise<{ success: boolean; error?: string }> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication required." };
   }
 
@@ -124,7 +124,7 @@ async function setCiloActiveAction(
 ): Promise<{ success: boolean; error?: string }> {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.FACULTY)) {
+  if (!session || session.activeRole !== ROLES.FACULTY) {
     return { success: false, error: "Faculty authentication required." };
   }
 
