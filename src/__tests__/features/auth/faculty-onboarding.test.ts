@@ -8,6 +8,12 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 
+const { resolveAuthSessionMock } = vi.hoisted(() => ({ resolveAuthSessionMock: vi.fn() }));
+
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: resolveAuthSessionMock,
+}));
+
 const {
   resolveAuthenticatedDomainUserMock,
   facultyAccessRequestFindUniqueMock,
@@ -27,6 +33,7 @@ vi.mock("@/lib/db/prisma", () => ({
     $transaction: vi.fn(),
     user: {
       update: vi.fn(),
+      findUnique: vi.fn(),
     },
     userRole: {
       upsert: vi.fn(),
@@ -145,7 +152,7 @@ describe("createFacultyProfile Server Action", () => {
       id: "faculty-123",
       email: "teacher@acd.edu.ph",
       name: "Jane Smith",
-      auth_user_id: "auth-faculty-123",
+      auth_user_id: "faculty-123",
       is_active: true,
       alumni_profile: null,
       industry_partner_profile: null,
@@ -156,15 +163,23 @@ describe("createFacultyProfile Server Action", () => {
     // at creation, so createFacultyProfile may still write its affiliation.
     facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
     facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
-    // A current Google session is required for Faculty scope mutation.
-    mockGetClaims.mockResolvedValue({
-      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
-      error: null,
+    // A proved Google session on an ACD address, bound to this account.
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
   });
 
   it("should fail if user is not authenticated", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
+    resolveAuthSessionMock.mockResolvedValue(null);
 
     const result = await createFacultyProfile(validPayload);
 
@@ -173,9 +188,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("should fail if the program does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue(null);
 
@@ -186,9 +209,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("should fail if the program is archived or inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -202,9 +233,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("should create profile, role, and program affiliation successfully", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -246,9 +285,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("preserves stored name when client identity is injected", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -267,9 +314,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("should check if userRole exists before creating and skip creating if it exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -291,9 +346,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("should return client-safe unexpected error message if database transaction fails", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -308,9 +371,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("allows onboarding when the user holds a different role (multi-role)", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -338,22 +409,27 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("rejects registration when the resolved domain user is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
       is_active: true,
     });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+    (prisma.user.findUnique as any).mockResolvedValue({
       id: "faculty-123",
-      email: "teacher@acd.edu.ph",
       name: "Jane Smith",
-      auth_user_id: "auth-faculty-123",
+      auth_user_id: "faculty-123",
       is_active: false,
-      alumni_profile: null,
-      industry_partner_profile: null,
     });
 
     const result = await createFacultyProfile(validPayload);
@@ -363,26 +439,31 @@ describe("createFacultyProfile Server Action", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it("denies an email-matched but unlinked account before any write", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-other-999", email: "teacher@acd.edu.ph" } },
-      error: null,
+  it("refuses when the session resolves no account at all", async () => {
+    // An unlinked account cannot produce a session: the boundary resolves the
+    // User from the verified link, so a missing row means no account owns this
+    // session and nothing may be written.
+    resolveAuthSessionMock.mockResolvedValue(null);
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("Authentication session invalid or missing.");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a session whose account record is gone", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
       is_active: true,
     });
-    // Email match without the verified link: the callback's first-link
-    // transaction is the only writer of auth_user_id.
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "faculty-123",
-      email: "teacher@acd.edu.ph",
-      name: "Jane Smith",
-      auth_user_id: null,
-      is_active: true,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
+    (prisma.user.findUnique as any).mockResolvedValue(null);
 
     const result = await createFacultyProfile(validPayload);
 
@@ -392,9 +473,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("files a review request instead of granting access to a self-service claimant", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -426,9 +515,17 @@ describe("createFacultyProfile Server Action", () => {
       // write is the session method itself.
       facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
       facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
-      mockGetClaims.mockResolvedValue({
-        data: { claims: { amr: [{ method }], app_metadata: { provider: "email" } } },
-        error: null,
+      resolveAuthSessionMock.mockResolvedValue({
+        userId: "faculty-123",
+        email: "teacher@acd.edu.ph",
+        authMethod: method,
+        activeRole: "FACULTY",
+      });
+      (prisma.user.findUnique as any).mockResolvedValue({
+        id: "faculty-123",
+        name: "Jane Smith",
+        auth_user_id: "faculty-123",
+        is_active: true,
       });
 
       const result = await createFacultyProfile(validPayload);
@@ -440,9 +537,17 @@ describe("createFacultyProfile Server Action", () => {
   );
 
   it("refuses an oauth session from a non-Google provider", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",
@@ -450,9 +555,17 @@ describe("createFacultyProfile Server Action", () => {
     });
     facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
     facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
-    mockGetClaims.mockResolvedValue({
-      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "github" } } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      authMethod: null,
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
 
     const result = await createFacultyProfile(validPayload);
@@ -462,9 +575,17 @@ describe("createFacultyProfile Server Action", () => {
   });
 
   it("refuses a non-institutional email even from a Google session", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "person@gmail.com" } },
-      error: null,
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "person@gmail.com",
+      authMethod: "google",
+      activeRole: "FACULTY",
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({
+      id: "faculty-123",
+      name: "Jane Smith",
+      auth_user_id: "faculty-123",
+      is_active: true,
     });
     (prisma.program.findUnique as any).mockResolvedValue({
       id: "550e8400-e29b-41d4-a716-446655440000",

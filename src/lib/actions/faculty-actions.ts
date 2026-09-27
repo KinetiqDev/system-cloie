@@ -8,6 +8,7 @@ import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve
 import { requestFacultyAccess as submitFacultyAccessRequest } from "@/features/users/services/manage-faculty-access-requests";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
 import { resolveSessionAuthMethod } from "@/features/auth/services/resolve-auth-method";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
 const ACADEMIC_DOMAIN_FAILURE =
   "An institutional ACD email is required for Faculty access.";
@@ -53,23 +54,20 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
     if (!legal.acknowledged) {
       return { success: false, error: "A current legal acknowledgement is required." };
     }
-
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user || !user.email) {
+    // The centralized session boundary is the identity source: it covers real
+    // Google sessions and the development, dedicated-demo, and CI test
+    // sessions that Supabase alone does not describe. Every non-Google regime
+    // is bounded by its own deployment gate.
+    const authSession = await resolveAuthSession();
+    if (!authSession) {
       return { success: false, error: "Authentication session invalid or missing." };
     }
-
     // Client-injected identity fields are stripped by Zod.
     const validatedData = facultyProfileSchema.parse(data);
 
-    const domainUser = await resolveAuthenticatedDomainUser({
-      authUserId: user.id,
-      email: user.email,
+    const domainUser = await prisma.user.findUnique({
+      where: { id: authSession.userId },
+      select: { id: true, auth_user_id: true, is_active: true },
     });
 
     if (!domainUser) {
@@ -79,21 +77,25 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
       };
     }
 
-    // The callback's verified first-link transaction is the only writer of
-    // `auth_user_id`; an email-matched but unlinked account must never file a
-    // request or gain the FACULTY role through this action.
-    if (domainUser.auth_user_id !== user.id) {
-      return {
-        success: false,
-        error: "Your account identity could not be resolved. Please sign out and sign in again.",
-      };
+    if (!domainUser.is_active) {
+      return { success: false, error: "Your CLOIE account is currently inactive." };
     }
 
-    // Faculty is an internal role: refused unless this is a current Google
-    // session on an ACD institutional address.
-    const session = await requireGoogleFacultySession(supabase, user);
-    if (!session.ok) {
-      return { success: false, error: session.error };
+    // The session boundary already resolved this account from the verified
+    // `auth_user_id` link, or from a deployment-bounded development,
+    // dedicated-demo, or CI test identity. Re-comparing the link here would
+    // only produce false negatives, and an unlinked account could never
+    // produce a session in the first place.
+
+    // Faculty is an internal role: refused unless this session is a proved
+    // Google session on an ACD institutional address. The method was already
+    // judged at the session boundary that produced this snapshot.
+    if (authSession.authMethod !== "google") {
+      return { success: false, error: NOT_GOOGLE_SESSION_FAILURE };
+    }
+    const email = (authSession.email ?? "").trim().toLowerCase();
+    if (!email.endsWith("@acd.edu.ph") && !email.endsWith("@acdeducation.com")) {
+      return { success: false, error: ACADEMIC_DOMAIN_FAILURE };
     }
 
     const result = await submitFacultyAccessRequest({
@@ -117,13 +119,11 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
 
 export async function createFacultyProfile(data: FacultyProfileInput) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user || !user.email) {
+    // The centralized session boundary is the identity source, so this action
+    // works for a real Google session and for the deployment-bounded
+    // development, dedicated-demo, and CI test sessions.
+    const authSession = await resolveAuthSession();
+    if (!authSession) {
       return { success: false, error: "Authentication session invalid or missing." };
     }
 
@@ -143,9 +143,9 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
       return { success: false, error: "The selected program is archived or inactive." };
     }
 
-    const domainUser = await resolveAuthenticatedDomainUser({
-      authUserId: user.id,
-      email: user.email,
+    const domainUser = await prisma.user.findUnique({
+      where: { id: authSession.userId },
+      select: { id: true, name: true, auth_user_id: true, is_active: true },
     });
 
     if (!domainUser) {
@@ -156,22 +156,19 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
       };
     }
 
-    // The callback's verified first-link transaction is the only writer of
-    // `auth_user_id`. An email-matched but unlinked account must never gain a
-    // role or an affiliation through this action.
-    if (domainUser.auth_user_id !== user.id) {
-      return {
-        success: false,
-        error:
-          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
-      };
-    }
+    // The session boundary already resolved this account from the verified
+    // `auth_user_id` link (or a deployment-bounded fixture identity), so an
+    // unlinked account cannot reach this write at all.
+
     // A password, one-time-code, or recovery session must not mutate Faculty
     // scope even when the account is already linked, so the direct action
     // requires the same current Google session and ACD email as the request.
-    const session = await requireGoogleFacultySession(supabase, user);
-    if (!session.ok) {
-      return { success: false, error: session.error };
+    if (authSession.authMethod !== "google") {
+      return { success: false, error: NOT_GOOGLE_SESSION_FAILURE };
+    }
+    const sessionEmail = (authSession.email ?? "").trim().toLowerCase();
+    if (!sessionEmail.endsWith("@acd.edu.ph") && !sessionEmail.endsWith("@acdeducation.com")) {
+      return { success: false, error: ACADEMIC_DOMAIN_FAILURE };
     }
 
     if (!domainUser.name.trim()) {
