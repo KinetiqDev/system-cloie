@@ -140,7 +140,10 @@ test.describe("public entry (signed-out)", () => {
     await gotoStable(page, "/reset-password");
     await expect(page.getByRole("heading", { level: 1, name: "Set a new password" })).toBeVisible();
     await expect(page.getByLabel("6-digit recovery code")).toBeVisible();
-    await expect(page.getByLabel("New password")).toBeVisible();
+    // Exact: "New password" is a prefix of "Confirm new password", so a
+    // substring locator resolves to both fields in strict mode.
+    await expect(page.getByLabel("New password", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Confirm new password", { exact: true })).toBeVisible();
     await expectNoAxeViolations(page);
   });
 
