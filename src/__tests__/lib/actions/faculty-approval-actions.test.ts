@@ -46,7 +46,9 @@ describe("faculty decision actions", () => {
     (requireLegalAcknowledgement as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       acknowledged: true,
     });
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(secretarySession());
+    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      secretarySession()
+    );
     (approveFacultyAccessRequest as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       success: true,
       status: "APPROVED",

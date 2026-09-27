@@ -4,7 +4,6 @@ System CLOIE runs against self-hosted Supabase backends only: the **local Supaba
 
 There is one migration history and one environment contract across local Docker, remote self-hosted Docker, dedicated demo, and disposable CI. Switching targets is an operator action: stop System CLOIE, activate another environment profile, clear stale Auth cookies, and restart. See [ADR 0020](../docs/adr/0020-self-hosted-supabase-target-neutral-backends.md).
 
-
 ## Email-Password Auth for External Participants (issue #649)
 
 Alumni and Industry Partner may sign in with an email address and password
@@ -41,6 +40,7 @@ there and **never** in this repository. Required on each production instance:
 Code lifetime, attempt limits, and resend cooldown are therefore properties of
 the instance configuration, not of the application. Do not infer production
 readiness from this file or from local settings.
+
 ## Environment
 
 Copy `.env.example` to `.env.local` (local development) and fill in:

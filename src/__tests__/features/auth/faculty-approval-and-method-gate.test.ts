@@ -151,7 +151,9 @@ describe("auth method enforcement", () => {
   it("resolves fixture sessions as google and real sessions from their claims", () => {
     expect(resolveAuthMethodForSession("dedicated-demo", null)).toBe("google");
     expect(resolveAuthMethodForSession("ci-test", null)).toBe("google");
-    expect(resolveAuthMethodForSession("oauth", { amr: [{ method: "password" }] })).toBe("password");
+    expect(resolveAuthMethodForSession("oauth", { amr: [{ method: "password" }] })).toBe(
+      "password"
+    );
   });
 
   it.each([

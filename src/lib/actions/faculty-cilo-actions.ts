@@ -4,9 +4,14 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import { commitOutcomeWrite, prepareOutcomeWrite } from "@/features/outcomes/services/manage-outcome-writes";
+import {
+  commitOutcomeWrite,
+  prepareOutcomeWrite,
+} from "@/features/outcomes/services/manage-outcome-writes";
 
-async function writeCilo(input: Parameters<typeof prepareOutcomeWrite>[0]): Promise<{ success: boolean; error?: string }> {
+async function writeCilo(
+  input: Parameters<typeof prepareOutcomeWrite>[0]
+): Promise<{ success: boolean; error?: string }> {
   const review = await prepareOutcomeWrite(input);
   if (!review.success) return review;
   return commitOutcomeWrite(review.data, true);
@@ -28,10 +33,16 @@ export async function loadCilosForCourseAction(courseId: string): Promise<{
   }
 
   const assignment = await prisma.courseAssignment.findFirst({
-    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    where: {
+      faculty_id: session.userId,
+      course_id: courseId,
+      is_active: true,
+      term_instance: { status: "ACTIVE" },
+    },
     select: { id: true },
   });
-  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
+  if (!assignment)
+    return { success: false, error: "You do not have permission to manage CILOs for this course." };
 
   const cilos = await prisma.cILO.findMany({
     where: { course_id: courseId, is_active: true },
@@ -57,10 +68,16 @@ export async function saveCilosForCourseAction(
   }
 
   const assignment = await prisma.courseAssignment.findFirst({
-    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    where: {
+      faculty_id: session.userId,
+      course_id: courseId,
+      is_active: true,
+      term_instance: { status: "ACTIVE" },
+    },
     select: { id: true },
   });
-  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
+  if (!assignment)
+    return { success: false, error: "You do not have permission to manage CILOs for this course." };
 
   // Validate course exists
   const course = await prisma.course.findUnique({
@@ -91,13 +108,20 @@ export async function saveCilosForCourseAction(
       return { success: false, error: "CILO not found for this course." };
     }
 
-    const toArchiveIds = existingCilos.filter((cilo) => !keepIds.has(cilo.id)).map((cilo) => cilo.id);
+    const toArchiveIds = existingCilos
+      .filter((cilo) => !keepIds.has(cilo.id))
+      .map((cilo) => cilo.id);
     for (const id of toArchiveIds) {
       const result = await writeCilo({ kind: "CILO", action: "archive", id });
       if (!result.success) return result;
     }
     for (const item of toUpdate) {
-      const result = await writeCilo({ kind: "CILO", action: "update", id: item.id!, description: item.description });
+      const result = await writeCilo({
+        kind: "CILO",
+        action: "update",
+        id: item.id!,
+        description: item.description,
+      });
       if (!result.success) return result;
       await prisma.instrumentTemplateCiloQuestionBinding.updateMany({
         where: { cilo_id: item.id! },
@@ -105,7 +129,12 @@ export async function saveCilosForCourseAction(
       });
     }
     for (const item of toCreate) {
-      const result = await writeCilo({ kind: "CILO", action: "create", courseId, description: item.description });
+      const result = await writeCilo({
+        kind: "CILO",
+        action: "create",
+        courseId,
+        description: item.description,
+      });
       if (!result.success) return result;
     }
   } catch (err) {
@@ -129,12 +158,22 @@ async function setCiloActiveAction(
   }
 
   const assignment = await prisma.courseAssignment.findFirst({
-    where: { faculty_id: session.userId, course_id: courseId, is_active: true, term_instance: { status: "ACTIVE" } },
+    where: {
+      faculty_id: session.userId,
+      course_id: courseId,
+      is_active: true,
+      term_instance: { status: "ACTIVE" },
+    },
     select: { id: true },
   });
-  if (!assignment) return { success: false, error: "You do not have permission to manage CILOs for this course." };
+  if (!assignment)
+    return { success: false, error: "You do not have permission to manage CILOs for this course." };
 
-  const result = await writeCilo({ kind: "CILO", action: is_active ? "restore" : "archive", id: ciloId });
+  const result = await writeCilo({
+    kind: "CILO",
+    action: is_active ? "restore" : "archive",
+    id: ciloId,
+  });
   if (!result.success) return result;
 
   revalidatePath("/faculty/cilos");

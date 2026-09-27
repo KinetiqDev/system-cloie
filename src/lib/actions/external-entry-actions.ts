@@ -53,8 +53,7 @@ const NEUTRAL_RECOVERY_MESSAGE =
 const NEUTRAL_RECOVERY_CONFIRM_MESSAGE =
   "If the recovery code matches, your password has been updated. Sign in with your new password.";
 
-const LEGAL_REQUIRED_ERROR =
-  "Accept the current Privacy Notice and Terms of Use to continue.";
+const LEGAL_REQUIRED_ERROR = "Accept the current Privacy Notice and Terms of Use to continue.";
 
 /**
  * Resend cooldown and attempt limits. GoTrue applies its own instance rate
@@ -103,9 +102,7 @@ function neutralSuccess(message: string): ExternalEntryResult {
  * Email-first Continue: validates transport shape and returns a neutral
  * next-step message. Never reveals account existence or provider.
  */
-export async function requestExternalEmailContinue(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function requestExternalEmailContinue(input: unknown): Promise<ExternalEntryResult> {
   const parsed = externalEmailContinueSchema.safeParse(input);
   if (!parsed.success) {
     return neutralFailure("Enter a valid email address to continue.");
@@ -117,9 +114,7 @@ export async function requestExternalEmailContinue(
  * Password sign-in for an external participant. Provider mismatches and
  * unknown addresses collapse into one neutral response.
  */
-export async function signInExternalParticipant(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function signInExternalParticipant(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
   if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
 
@@ -152,9 +147,7 @@ export async function signInExternalParticipant(
  * from the email address) plus the Alumni / Industry Partner choice, then
  * starts Supabase email verification. Domain linkage waits for verification.
  */
-export async function registerExternalAccount(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function registerExternalAccount(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
   if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
 
@@ -212,9 +205,7 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
   const now = Date.now();
   const emailKey = normalizedEmailKey(parsed.data.email);
   if (!consumeVerifyAttempt(`verify:${emailKey}`, now)) {
-    return neutralFailure(
-      "Too many attempts. Wait for the cooldown, then request a new code."
-    );
+    return neutralFailure("Too many attempts. Wait for the cooldown, then request a new code.");
   }
 
   try {
@@ -252,9 +243,7 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
 }
 
 /** Re-sends the verification code with a neutral response and cooldown note. */
-export async function resendVerificationCode(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function resendVerificationCode(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
   if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
 
@@ -280,9 +269,7 @@ export async function resendVerificationCode(
 }
 
 /** Starts password recovery with a neutral response. */
-export async function requestPasswordRecovery(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function requestPasswordRecovery(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
   if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
 
@@ -313,9 +300,7 @@ export async function requestPasswordRecovery(
  * Completes recovery: verifies the 6-digit code, sets the new password, and
  * ends the recovery-confined session so it can never reach a workspace.
  */
-export async function confirmPasswordRecovery(
-  input: unknown
-): Promise<ExternalEntryResult> {
+export async function confirmPasswordRecovery(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
   if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
 

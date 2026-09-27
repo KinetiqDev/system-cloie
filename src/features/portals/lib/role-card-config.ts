@@ -82,6 +82,5 @@ export const ROLE_CARDS_STAFF = ROLE_CARDS.filter(
 );
 
 export const ROLE_CARDS_RESPONDENT = ROLE_CARDS.filter(
-  (r) =>
-    r.role === ROLES.STUDENT || r.role === ROLES.ALUMNI || r.role === ROLES.INDUSTRY_PARTNER
+  (r) => r.role === ROLES.STUDENT || r.role === ROLES.ALUMNI || r.role === ROLES.INDUSTRY_PARTNER
 );

@@ -1,6 +1,9 @@
 import type { Role } from "@/lib/constants/roles";
 import type { FacultyApprovalStatus, VerificationStatus } from "@prisma/client";
-import { resolveProfileGate, type ProfileGate } from "@/features/users/services/resolve-profile-gate";
+import {
+  resolveProfileGate,
+  type ProfileGate,
+} from "@/features/users/services/resolve-profile-gate";
 import type { AuthMethod } from "./resolve-auth-method";
 
 export type AuthSessionSnapshot = {
@@ -43,8 +46,7 @@ export function buildAuthSessionSnapshot(input: {
   // fallback applies only when exactly one role is assigned, and every other
   // case stays explicitly null so /select-role performs a deliberate choice
   // (issue #649, ADR 0022).
-  const activeRole =
-    input.activeRole ?? (input.roles.length === 1 ? input.roles[0] : null);
+  const activeRole = input.activeRole ?? (input.roles.length === 1 ? input.roles[0] : null);
   const name = typeof input.name === "string" && input.name.trim().length > 0 ? input.name : null;
   const facultyApprovalStatus = input.facultyApprovalStatus ?? null;
   const authMethod = input.authMethod ?? null;
