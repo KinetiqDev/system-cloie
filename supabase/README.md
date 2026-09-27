@@ -4,6 +4,43 @@ System CLOIE runs against self-hosted Supabase backends only: the **local Supaba
 
 There is one migration history and one environment contract across local Docker, remote self-hosted Docker, dedicated demo, and disposable CI. Switching targets is an operator action: stop System CLOIE, activate another environment profile, clear stale Auth cookies, and restart. See [ADR 0020](../docs/adr/0020-self-hosted-supabase-target-neutral-backends.md).
 
+
+## Email-Password Auth for External Participants (issue #649)
+
+Alumni and Industry Partner may sign in with an email address and password
+alongside Google. Credentials, six-digit codes, and recovery live in Supabase
+Auth only — the application schema has no password column, and GoTrue stores
+passwords hashed.
+
+Local CLI Docker stack: `supabase/config.toml` already sets `enable_signup =
+true`, `enable_confirmations = true`, `secure_password_change = true`,
+otp_length = 6, otp_expiry = 3600, and a 60s resend cooldown. Restart the
+local stack after editing the file. Local mail is captured by the built-in
+mail catcher; it is never delivered to a real inbox.
+
+Every other target (staging, dedicated demo, disposable CI, production) is an
+independently deployed Supabase Docker instance. The operator configures mail
+there and **never** in this repository. Required on each production instance:
+
+- `GOTRUE_MAILER_URLPATHS_CONFIRMATION`, `..._RECOVERY`, and
+  `..._MAGICLINK` must be reachable by the Auth service, or the corresponding
+  template customized. A template the Auth container cannot fetch means codes
+  never arrive.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_USER_NAME`, and
+  `SMTP_ADMIN_EMAIL`, plus SPF/DKIM/DMARC records for the sending domain.
+- `ENABLE_EMAIL_SIGNUP=true` and `ENABLE_EMAIL_AUTOCONFIRM=false`. Autoconfirm
+  would let an unverified address reach domain linkage.
+- `GOTRUE_MAILER_OTP_EXP` (seconds; keep it at or below `GOTRUE_SECURITY_MAX_AGE`
+  so a code cannot outlive its session) and `GOTRUE_MAILER_AUTOCONFIRM`.
+- Rate limits on the instance: mail send rate, `GOTRUE_RATE_LIMIT_EMAIL_SENT`,
+  `GOTRUE_RATE_LIMIT_VERIFY_AND_GENERATE`, and the password minimum
+  (`GOTRUE_PASSWORD_MIN_LENGTH`, keep at 8 or more to match the app schema).
+- `ADDITIONAL_REDIRECT_URLS` must include every per-target System CLOIE
+  callback, including the `/verify-email` and `/reset-password` origins.
+
+Code lifetime, attempt limits, and resend cooldown are therefore properties of
+the instance configuration, not of the application. Do not infer production
+readiness from this file or from local settings.
 ## Environment
 
 Copy `.env.example` to `.env.local` (local development) and fill in:
