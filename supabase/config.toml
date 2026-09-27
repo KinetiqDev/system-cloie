@@ -245,7 +245,17 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
+# Six-digit codes, not links (issue #649): external registration and password
+# recovery are verified with `verifyOtp`, which requires the template to
+# render {{ .Token }}. The stock confirmation template only sends a link.
+[auth.email.template.confirmation]
+subject = "Your System CLOIE verification code"
+content_path = "./supabase/templates/confirm_signup.html"
+
+[auth.email.template.recovery]
+subject = "Your System CLOIE password recovery code"
+content_path = "./supabase/templates/recovery.html"
+
 # [auth.email.template.invite]
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
