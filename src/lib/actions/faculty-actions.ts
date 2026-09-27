@@ -10,8 +10,7 @@ import { requireLegalAcknowledgement } from "@/features/legal/services/require-l
 import { resolveSessionAuthMethod } from "@/features/auth/services/resolve-auth-method";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
-const ACADEMIC_DOMAIN_FAILURE =
-  "An institutional ACD email is required for Faculty access.";
+const ACADEMIC_DOMAIN_FAILURE = "An institutional ACD email is required for Faculty access.";
 
 const NOT_GOOGLE_SESSION_FAILURE =
   "Faculty access requires your current ACD Google sign-in. Sign out and sign in with Google again.";

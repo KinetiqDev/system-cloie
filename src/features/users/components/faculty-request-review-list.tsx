@@ -47,10 +47,7 @@ export function FacultyRequestReviewList({
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
 
-  const decide = (
-    request: FacultyAccessRequestListItem,
-    decision: "approve" | "reject"
-  ) => {
+  const decide = (request: FacultyAccessRequestListItem, decision: "approve" | "reject") => {
     setError(null);
     startTransition(async () => {
       const result =
@@ -76,12 +73,10 @@ export function FacultyRequestReviewList({
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 py-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-title-lg text-foreground font-bold tracking-tight">
-          Faculty requests
-        </h1>
+        <h1 className="text-title-lg text-foreground font-bold tracking-tight">Faculty requests</h1>
         <p className="text-body-md text-muted-foreground">
-          Review Faculty registration requests. A request grants no Faculty access until you
-          approve it.
+          Review Faculty registration requests. A request grants no Faculty access until you approve
+          it.
         </p>
         <p className="text-body-sm text-muted-foreground" data-testid="pending-count">
           {pendingCount} awaiting review
@@ -98,9 +93,7 @@ export function FacultyRequestReviewList({
       {requests.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-body-md text-muted-foreground">
-              No Faculty requests yet.
-            </p>
+            <p className="text-body-md text-muted-foreground">No Faculty requests yet.</p>
           </CardContent>
         </Card>
       ) : (
@@ -125,7 +118,7 @@ export function FacultyRequestReviewList({
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-4">
-                    <dl className="grid grid-cols-1 gap-2 text-body-sm sm:grid-cols-2">
+                    <dl className="text-body-sm grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <div className="flex gap-2">
                         <dt className="text-muted-foreground">Requested program</dt>
                         <dd className="text-foreground">
@@ -163,9 +156,7 @@ export function FacultyRequestReviewList({
                     {request.status === "PENDING" && (
                       <div className="flex flex-col gap-3">
                         <div className="flex flex-col gap-2">
-                          <Label htmlFor={`note-${request.userId}`}>
-                            Decision note (optional)
-                          </Label>
+                          <Label htmlFor={`note-${request.userId}`}>Decision note (optional)</Label>
                           <Input
                             id={`note-${request.userId}`}
                             value={note[request.userId] ?? ""}
