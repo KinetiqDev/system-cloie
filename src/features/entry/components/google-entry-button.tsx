@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LegalAcknowledgementDialog } from "@/features/legal/components/legal-acknowledgement-dialog";
 import type { TicketIntent } from "@/features/auth/services/role-intent";
@@ -21,32 +20,16 @@ export function GoogleEntryButton({
   roleTitle,
   label,
   domainNote,
-  googleAllowed = true,
 }: {
-  intent: TicketIntent;
   roleTitle: string;
   label: string;
   domainNote: string;
-  googleAllowed?: boolean;
+  intent: TicketIntent;
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
-    <div className="space-y-4">
-      <div className="border-border/50 bg-background text-caption text-muted-foreground flex items-start gap-2 rounded-lg border p-3">
-        {googleAllowed ? (
-          <>
-            <CheckCircle2 className="text-success size-4 shrink-0" aria-hidden="true" />
-            <span>{domainNote}</span>
-          </>
-        ) : (
-          <>
-            <ShieldAlert className="text-primary mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <span>{domainNote}</span>
-          </>
-        )}
-      </div>
-
+    <div className="space-y-3">
       <Button
         type="button"
         variant="outline"
@@ -61,6 +44,7 @@ export function GoogleEntryButton({
         />
         <span className="min-w-0 leading-tight">{label}</span>
       </Button>
+      <p className="text-body-sm text-muted-foreground min-w-0 leading-relaxed">{domainNote}</p>
 
       <LegalAcknowledgementDialog
         open={isDialogOpen}

@@ -121,6 +121,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
               aria-describedby={
                 emailForm.formState.errors.email ? "external-email-error" : undefined
               }
+              className="min-h-12"
               {...emailForm.register("email")}
             />
             {emailForm.formState.errors.email && (
@@ -130,7 +131,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
             )}
           </div>
           <EntryLegalCheckbox
-            id="external-legal"
+            id="external-legal-initial"
             checked={legalAccepted}
             onCheckedChange={setLegalAccepted}
           />
@@ -155,14 +156,14 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
           intent="external"
           roleTitle="Alumni or Industry Partner"
           label="Continue with Google"
-          domainNote="Any Google account accepted. Your sign-in method stays private — this page never says which method an email uses."
+          domainNote="Or use any Google account instead."
         />
 
         <p className="text-body-sm text-muted-foreground text-center">
           New to System CLOIE?{" "}
           <Link
             href="/register/external"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Create an external account
           </Link>
@@ -173,9 +174,15 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
 
   return (
     <div className="space-y-5">
-      <div className="border-border bg-surface-muted flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5">
+      <div className="border-border bg-surface-muted flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2">
         <span className="text-body-md text-muted-foreground min-w-0 truncate">{email}</span>
-        <Button type="button" variant="ghost" size="sm" onClick={changeEmail} className="shrink-0">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={changeEmail}
+          className="min-h-11 shrink-0"
+        >
           <ArrowLeft className="size-4" aria-hidden="true" />
           Change
         </Button>
@@ -193,6 +200,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
             aria-describedby={
               passwordForm.formState.errors.password ? "external-password-error" : undefined
             }
+            className="min-h-12"
             {...passwordForm.register("password")}
           />
           {passwordForm.formState.errors.password && (
@@ -202,7 +210,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
           )}
         </div>
         <EntryLegalCheckbox
-          id="external-legal"
+          id="external-legal-password"
           checked={legalAccepted}
           onCheckedChange={setLegalAccepted}
         />
@@ -219,14 +227,14 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
 
       <div className="text-body-sm flex flex-col items-center gap-2 text-center">
         <Link
-          href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ""}`}
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          href={`/forgot-password?email=${encodeURIComponent(email)}`}
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Forgot your password?
         </Link>
         <Link
           href="/register/external"
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Create an external account instead
         </Link>

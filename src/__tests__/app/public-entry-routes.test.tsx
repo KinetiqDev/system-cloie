@@ -45,7 +45,7 @@ describe("Public entry routes", () => {
     render(await StudentLoginPage());
     expect(screen.getByRole("heading", { level: 1, name: "Student sign in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
-    expect(screen.getByText(/no self-service placement form/i)).toBeInTheDocument();
+    expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /faculty/i })).toBeNull();
   });
 
@@ -53,7 +53,7 @@ describe("Public entry routes", () => {
     render(await StaffLoginPage());
     expect(screen.getByRole("heading", { level: 1, name: "Staff sign in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
-    expect(screen.getByText(/sign-in never invents authority/i)).toBeInTheDocument();
+    expect(screen.getByText(/choose a workspace after sign-in/i)).toBeInTheDocument();
   });
 
   it("faculty registration starts signed-out users with Google before any form", async () => {

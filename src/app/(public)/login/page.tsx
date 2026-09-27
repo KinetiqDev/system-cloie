@@ -74,19 +74,19 @@ export default async function LoginPage({
           <div className="flex flex-col gap-2 text-center">
             <Link
               href="/login/student"
-              className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
             >
               Student sign in
             </Link>
             <Link
               href="/login/staff"
-              className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
             >
               Staff sign in
             </Link>
             <Link
               href="/login/external"
-              className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
             >
               Alumni &amp; partner sign in
             </Link>

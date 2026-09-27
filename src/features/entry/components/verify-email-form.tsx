@@ -166,7 +166,7 @@ export function VerifyEmailForm({ prefilledEmail }: { prefilledEmail?: string })
         </Button>
         <Link
           href="/login/external"
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Back to sign in
         </Link>

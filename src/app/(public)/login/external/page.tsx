@@ -35,13 +35,13 @@ export default async function ExternalLoginPage({
   return (
     <EntryShell
       title="Alumni & partner sign in"
-      description="Start with your email address, then sign in with a password or continue with Google."
+      description="Sign in with your email and password, or choose Google."
       footer={
         <p className="text-body-sm text-muted-foreground">
           Internal ACD member?{" "}
           <Link
             href="/login/staff"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Use staff sign-in
           </Link>

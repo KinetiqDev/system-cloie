@@ -27,13 +27,13 @@ export default async function StaffLoginPage() {
   return (
     <EntryShell
       title="Staff sign in"
-      description="One sign-in for Secretary, Dean, Program Head, General Education Coordinator, and Faculty."
+      description="Use your ACD Google account to open your assigned workspace."
       footer={
         <p className="text-body-sm text-muted-foreground">
           New Faculty member?{" "}
           <Link
             href="/register/faculty"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Submit a Faculty request
           </Link>
@@ -44,12 +44,12 @@ export default async function StaffLoginPage() {
         intent="staff"
         roleTitle="Staff or Faculty"
         label="Continue with ACD Google"
-        domainNote="ACD email required (@acd.edu.ph or @acdeducation.com). Your assigned roles decide which workspaces open — sign-in never invents authority."
+        domainNote="Use your @acd.edu.ph or @acdeducation.com account."
       />
-      <div className="bg-muted/50 border-border text-body-sm text-muted-foreground rounded-lg border p-4 leading-relaxed">
-        One account can hold several roles — for example Program Head and Faculty. After sign-in you
-        choose which workspace to continue with, and you can switch again at any time.
-      </div>
+      <p className="text-body-sm text-muted-foreground leading-relaxed">
+        Secretary, Dean, Program Head, Faculty, and General Education Coordinator sign in here. If
+        you have more than one role, choose a workspace after sign-in.
+      </p>
     </EntryShell>
   );
 }

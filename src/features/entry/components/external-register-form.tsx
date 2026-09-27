@@ -86,8 +86,7 @@ export function ExternalRegisterForm() {
                   <span>
                     <span className="text-body-md text-foreground block font-semibold">Alumni</span>
                     <span className="text-body-sm text-muted-foreground block">
-                      You graduated from Assumption College of Davao and join tracer studies and
-                      feedback.
+                      You graduated from Assumption College of Davao.
                     </span>
                   </span>
                 </label>
@@ -101,8 +100,7 @@ export function ExternalRegisterForm() {
                       Industry Partner
                     </span>
                     <span className="text-body-sm text-muted-foreground block">
-                      You represent an organization giving feedback on program outcomes and graduate
-                      readiness.
+                      You represent an organization giving feedback on graduates.
                     </span>
                   </span>
                 </label>
@@ -186,7 +184,7 @@ export function ExternalRegisterForm() {
         <p className="text-body-sm text-muted-foreground text-center">
           <Link
             href="/verify-email"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Enter your verification code
           </Link>
@@ -203,14 +201,14 @@ export function ExternalRegisterForm() {
         intent="external"
         roleTitle="Alumni or Industry Partner"
         label="Continue with Google"
-        domainNote="Prefer Google? Use any Google account instead — no password needed."
+        domainNote="Or use any Google account instead — no password needed."
       />
 
       <p className="text-body-sm text-muted-foreground text-center">
         Already registered?{" "}
         <Link
           href="/login/external"
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Sign in
         </Link>

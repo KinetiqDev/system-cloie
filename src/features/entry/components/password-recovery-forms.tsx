@@ -96,7 +96,7 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
         <p className="text-body-sm text-muted-foreground text-center">
           <Link
             href="/reset-password"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Enter your recovery code
           </Link>
@@ -107,7 +107,7 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
         Remembered it?{" "}
         <Link
           href="/login/external"
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Back to sign in
         </Link>
@@ -247,7 +247,7 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
         <p className="text-body-sm text-muted-foreground text-center">
           <Link
             href="/login/external"
-            className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
           >
             Sign in with your new password
           </Link>

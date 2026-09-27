@@ -11,17 +11,13 @@ import {
 } from "@/features/auth/components/dev-role-switcher";
 
 const IS_POINTS = [
-  "College-wide Outcome-Based Education evaluation, monitoring, analytics, and reporting",
-  "Stakeholder evaluations from students, alumni, and industry partners",
-  "Traceable attainment evidence: every figure connects back to the responses that produced it",
-  "Defensible evidence for quality assurance, accreditation, and continuous improvement",
+  "Collects evaluations from students, alumni, and industry partners",
+  "Connects learning outcomes and responses to attainment reports for quality assurance",
 ];
 
 const IS_NOT_POINTS = [
-  "Not a learning management system — it does not deliver instruction",
-  "Not a student information system — no grades, transcripts, or enrollment replacement",
-  "No individual grade management of any kind",
-  "No open comment boards — responses stay confidential within the evaluation process",
+  "Not a learning management system: it does not deliver instruction",
+  "Not a student records system: it does not manage grades, transcripts, or enrollment",
 ];
 
 export default function Home() {
@@ -89,34 +85,30 @@ export default function Home() {
             Welcome to System CLOIE
           </h1>
           <p className="text-body-lg text-muted-foreground mx-auto mt-4 max-w-2xl">
-            System CLOIE turns stakeholder evaluations into trustworthy learning-outcome evidence
-            for Assumption College of Davao — from evaluation, to response, to attainment analytics
-            the college can defend.
+            Answer evaluations. Turn responses into learning-outcome evidence for Assumption College
+            of Davao.
           </p>
 
           {/* Audience entry cards */}
-          <div className="mt-12 grid w-full grid-cols-1 gap-5 text-left md:grid-cols-3">
+          <div className="mt-9 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3">
             <PortalChoiceCard
               icon={<GraduationCap className="size-7" />}
               title="Students"
-              description="Answer your course evaluations with your ACD Google account. Provisioned by the Secretary's office."
-              roles={["Student"]}
+              description="Answer course evaluations with your ACD Google account."
               href="/login/student"
               badge="ACD email required"
             />
             <PortalChoiceCard
               icon={<Building2 className="size-7" />}
               title="Staff & Faculty"
-              description="Run evaluations, curriculum, and academic operations. One sign-in for every internal role."
-              roles={["Secretary", "Dean", "Program Head", "Faculty", "Gen Ed Coordinator"]}
+              description="Manage evaluations and academic work with your ACD Google account."
               href="/login/staff"
               badge="ACD email required"
             />
             <PortalChoiceCard
               icon={<Users className="size-7" />}
               title="Alumni & Partners"
-              description="Share graduate and industry feedback with email sign-in or any Google account."
-              roles={["Alumni", "Industry Partner"]}
+              description="Share graduate or industry feedback with email or Google."
               href="/login/external"
               badge="Email or Google"
             />
@@ -126,7 +118,7 @@ export default function Home() {
             New Faculty member?{" "}
             <Link
               href="/register/faculty"
-              className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
             >
               Submit a Faculty request
             </Link>
@@ -144,13 +136,8 @@ export default function Home() {
           >
             Evaluation evidence, end to end
           </h2>
-          <p className="text-body-md text-muted-foreground mx-auto mt-3 max-w-2xl text-center">
-            System CLOIE manages academic structures and learning outcomes, gathers evaluations from
-            the people who experience them, and produces attainment analytics for quality assurance
-            and accreditation.
-          </p>
 
-          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="bg-surface border-border rounded-2xl border p-6 shadow-sm">
               <h3 className="text-title-md text-foreground font-semibold">What System CLOIE is</h3>
               <ul className="mt-4 space-y-3">
@@ -214,13 +201,13 @@ export default function Home() {
           </span>
           <nav aria-label="Legal links" className="text-body-sm flex gap-4">
             <Link
-              className="text-muted-foreground hover:text-primary focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground hover:text-link focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               href="/privacy"
             >
               Privacy Notice
             </Link>
             <Link
-              className="text-muted-foreground hover:text-primary focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground hover:text-link focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               href="/terms"
             >
               Terms of Use

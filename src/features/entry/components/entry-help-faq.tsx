@@ -7,14 +7,14 @@ type FaqItem = {
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    question: "I am a Student but I have never signed in. Where do I start?",
+    question: "I am a Student. Where do I start?",
     answer:
-      "Start at Student sign-in with your ACD Google account (@acd.edu.ph or @acdeducation.com). Student accounts are created by the Secretary's office: if your account is not set up yet, you will see a not-yet-set-up explanation with Secretary support guidance. Do not use Faculty registration — it cannot provision a Student account.",
+      "Sign in with your ACD Google account. The Secretary's office sets up Student accounts; if yours is not ready, contact them for help.",
   },
   {
     question: "I submitted a Faculty request. What happens next?",
     answer:
-      "Your request waits for institutional review and grants no Faculty workspace access until your eligibility is confirmed. If it is approved, your Faculty workspace opens on your next sign-in. If it is declined, you will see the outcome with reapplication steps.",
+      "The Secretary's office reviews your request. You cannot use the Faculty workspace until it is approved. Sign in again to see the decision; if it was not approved, you can reapply.",
   },
   {
     question: "My Alumni or Industry Partner application was not approved. What now?",
@@ -22,24 +22,24 @@ const FAQ_ITEMS: FaqItem[] = [
       "Following institutional review, declined external applications cannot open role dashboards. The decision message includes the next step, which may be reapplying with corrected details or contacting the Secretary's office.",
   },
   {
-    question: "I used the wrong sign-in method for my account.",
+    question: "Why can't I use my password for a staff or Student workspace?",
     answer:
-      "Internal workspaces (Student, Faculty, Secretary, Dean, Program Head, General Education Coordinator) always require current ACD Google sign-in. If you try a password or recovery session on an internal workspace, you will see a method-mismatch explanation directing you back to Google sign-in. External participants (Alumni, Industry Partner) may use either email-password or Google.",
+      "Students, Faculty, and staff must use an ACD Google account. Alumni and Industry Partners can use a password or Google. Return to the right sign-in page and choose Google for an internal workspace.",
   },
   {
     question: "My verification or recovery code expired. What do I do?",
     answer:
-      "Codes have a limited lifetime. Request a new code from the verification page and enter the latest one — older codes stop working. If no email arrives, check spam, confirm the address spelling, then wait for the resend cooldown before requesting again.",
+      "Request a new code and enter the latest one. Check your spam folder and email spelling if it does not arrive; wait for the resend timer before trying again.",
   },
   {
-    question: "I forgot my external account password. How do I recover it?",
+    question: "I forgot my password. How do I recover it?",
     answer:
-      "Use Forgot password with your account email. If the email is eligible, a 6-digit recovery code is sent; enter it with a new password. The recovery session only sets the new password — it never opens a workspace or skips role, approval, or legal checks.",
+      "Use Forgot password on the Alumni and partner sign-in page. Enter the six-digit code sent to your email and set a new password. Sign in again afterward.",
   },
   {
-    question: "Why do sign-in pages never say whether my email exists?",
+    question: "Why doesn't the page say whether my email is registered?",
     answer:
-      "Public login, signup, resend, and recovery responses intentionally reveal no account existence or provider, so accounts cannot be enumerated. You always see the same message for an address regardless of what the system holds for it.",
+      "Sign-in and recovery messages do not confirm whether an account exists. This protects other people's account information. If you have an account, follow the next step shown on the page.",
   },
 ];
 

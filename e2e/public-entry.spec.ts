@@ -44,7 +44,7 @@ test.describe("public entry (signed-out)", () => {
     await gotoStable(page, "/login/student");
     await expect(page.getByRole("heading", { level: 1, name: "Student sign in" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Continue with ACD Google/ })).toBeVisible();
-    await expect(page.getByText(/no self-service placement form/i)).toBeVisible();
+    await expect(page.getByText(/office sets up your account/i)).toBeVisible();
     await expect(page.locator("h1")).toHaveCount(1);
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);

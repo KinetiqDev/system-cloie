@@ -29,7 +29,7 @@ describe("Landing page", () => {
     renderHome();
 
     expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
-    expect(screen.getByText(/turns stakeholder evaluations into trustworthy/i)).toBeInTheDocument();
+    expect(screen.getByText(/Turn responses into learning-outcome evidence/i)).toBeInTheDocument();
 
     const studentCard = screen.getByRole("link", { name: /Students/i });
     const staffCard = screen.getByRole("link", { name: /Staff & Faculty/i });

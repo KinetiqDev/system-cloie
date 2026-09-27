@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
@@ -20,8 +21,11 @@ export function EntryShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col px-4 py-8 sm:py-12">
-      <div className="mb-8 flex flex-col items-center text-center">
+    <div className="mx-auto flex w-full max-w-md min-w-0 flex-col px-4 py-6 sm:py-12">
+      <BackLink href="/" className="mb-5 min-h-11 self-start">
+        All sign-in options
+      </BackLink>
+      <div className="mb-7 flex flex-col items-center text-center">
         <div className="mb-5 flex items-center gap-4">
           <Image
             src="/logos/acd-logo.png"
@@ -43,8 +47,10 @@ export function EntryShell({
         <p className="text-body-md text-muted-foreground mt-2">{description}</p>
       </div>
 
-      <Card className="border-border bg-surface shadow-sm">
-        <CardContent className="space-y-5 px-6 py-7 sm:px-8">{children}</CardContent>
+      <Card className="border-border bg-surface min-w-0 overflow-visible shadow-sm">
+        <CardContent className="min-w-0 space-y-5 overflow-visible px-5 py-6 sm:px-8 [&_input[data-slot=input]]:min-h-12">
+          {children}
+        </CardContent>
       </Card>
 
       {footer ? <div className="mt-6 text-center">{footer}</div> : null}
@@ -53,7 +59,7 @@ export function EntryShell({
         Need help?{" "}
         <Link
           href="/#help"
-          className="text-primary hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
         >
           Visit help and FAQs
         </Link>

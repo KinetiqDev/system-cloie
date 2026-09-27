@@ -54,25 +54,25 @@ export function EntryLegalCheckbox({
         onCheckedChange={(value) => onCheckedChange(value === true)}
         aria-required="true"
       />
-      <Label htmlFor={id} className="cursor-pointer text-sm leading-6">
-        {LEGAL_ACKNOWLEDGEMENT_CONTENT.acknowledgementLabel}{" "}
-        <span className="whitespace-nowrap">
+      <div className="min-w-0 space-y-1.5">
+        <Label htmlFor={id} className="block min-w-0 cursor-pointer text-sm leading-relaxed">
+          {LEGAL_ACKNOWLEDGEMENT_CONTENT.acknowledgementLabel}
+        </Label>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <Link
             href="/privacy"
-            className="text-link font-medium underline underline-offset-4"
-            onClick={(event) => event.stopPropagation()}
+            className="text-link inline-flex min-h-11 items-center font-medium underline underline-offset-4"
           >
             Privacy Notice
-          </Link>{" "}
+          </Link>
           <Link
             href="/terms"
-            className="text-link font-medium underline underline-offset-4"
-            onClick={(event) => event.stopPropagation()}
+            className="text-link inline-flex min-h-11 items-center font-medium underline underline-offset-4"
           >
-            Terms
+            Terms of Use
           </Link>
-        </span>
-      </Label>
+        </div>
+      </div>
     </div>
   );
 }
