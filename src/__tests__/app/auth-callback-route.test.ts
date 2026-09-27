@@ -797,6 +797,57 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toContain("/select-role");
   });
 
+  it("resolves a fresh Faculty claim to the pending gate, never COMPLETE", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "user@acd.edu.ph",
+          user_metadata: { name: "Faculty Person" },
+        },
+      },
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: VALID_UUID_1,
+      email: "user@acd.edu.ph",
+      name: "Faculty Person",
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+    });
+    upsertUserRoleMock.mockResolvedValue({
+      id: "role-2",
+      user_id: "domain-user-1",
+      role: SystemRole.FACULTY,
+    });
+    // The stored review state travels with the account: a pending request
+    // must survive the claimed-role snapshot rebuild.
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: null,
+      roles: ["STUDENT", "FACULTY"],
+      studentProfileId: "student-profile-1",
+      alumniProfileId: null,
+      industryPartnerProfileId: null,
+      facultyApprovalStatus: "PENDING",
+      authMethod: "google",
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
+    );
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      })
+    );
+    expect(response.headers.get("location")).toContain("/status/faculty-pending");
+  });
+
   it("refuses a Student self-claim on an already-linked multi-role account", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,

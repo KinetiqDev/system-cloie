@@ -8,17 +8,21 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { createClient } from "@/lib/supabase/server";
 
-const { resolveAuthenticatedDomainUserMock, facultyAccessRequestFindUniqueMock } = vi.hoisted(
-  () => ({
-    resolveAuthenticatedDomainUserMock: vi.fn(),
-    facultyAccessRequestFindUniqueMock: vi.fn(),
-  })
-);
+const {
+  resolveAuthenticatedDomainUserMock,
+  facultyAccessRequestFindUniqueMock,
+  facultyAffiliationFindFirstMock,
+} = vi.hoisted(() => ({
+  resolveAuthenticatedDomainUserMock: vi.fn(),
+  facultyAccessRequestFindUniqueMock: vi.fn(),
+  facultyAffiliationFindFirstMock: vi.fn(),
+}));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     facultyAccessRequest: {
       findUnique: facultyAccessRequestFindUniqueMock,
+      upsert: vi.fn(async () => ({ status: "PENDING" })),
     },
     $transaction: vi.fn(),
     user: {
@@ -31,6 +35,7 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     facultyProgramAffiliation: {
       upsert: vi.fn(),
+      findFirst: facultyAffiliationFindFirstMock,
     },
     program: {
       findUnique: vi.fn(),
@@ -148,6 +153,7 @@ describe("createFacultyProfile Server Action", () => {
     // No self-request row: a Secretary-provisioned Faculty account is active
     // at creation, so createFacultyProfile may still write its affiliation.
     facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
+    facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
   });
 
   it("should fail if user is not authenticated", async () => {
@@ -308,6 +314,7 @@ describe("createFacultyProfile Server Action", () => {
     // No self-request row: a Secretary-provisioned Faculty account is active
     // at creation, so createFacultyProfile may still write its affiliation.
     facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
+    facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
 
     const result = await createFacultyProfile(validPayload);
 
@@ -347,5 +354,53 @@ describe("createFacultyProfile Server Action", () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe("Your CLOIE account is currently inactive.");
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("denies an email-matched but unlinked account before any write", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-other-999", email: "teacher@acd.edu.ph" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+    // Email match without the verified link: the callback's first-link
+    // transaction is the only writer of auth_user_id.
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      name: "Jane Smith",
+      auth_user_id: null,
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("could not be resolved");
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("files a review request instead of granting access to a self-service claimant", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
+      error: null,
+    });
+    (prisma.program.findUnique as any).mockResolvedValue({
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      is_active: true,
+    });
+    facultyAccessRequestFindUniqueMock.mockResolvedValue(null);
+    facultyAffiliationFindFirstMock.mockResolvedValue(null);
+    (prisma.userRole.findUnique as any).mockResolvedValue(null);
+
+    const result = await createFacultyProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("institutional review");
+    expect(prisma.facultyProgramAffiliation.upsert).not.toHaveBeenCalled();
   });
 });

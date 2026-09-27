@@ -345,10 +345,11 @@ describe("registerStudentProfile Server Action", () => {
 
   it("refuses an unprovisioned account before any role, profile, or enrollment write", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-new", email: "newstudent@acd.edu.ph" } },
+      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
       error: null,
     });
-    // No STUDENT role: the account was never provisioned by the Secretary.
+    // Linked identity, but no STUDENT role: the account was never provisioned
+    // by the Secretary.
     findUniqueUserRoleMock.mockResolvedValue(null);
     transactionMock.mockClear();
     upsertEnrollmentForActiveTermMock.mockClear();
@@ -359,13 +360,46 @@ describe("registerStudentProfile Server Action", () => {
     expect(transactionMock).not.toHaveBeenCalled();
     expect(upsertEnrollmentForActiveTermMock).not.toHaveBeenCalled();
   });
+  it("refuses an email-matched but unlinked account before any write", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-other-999", email: "student@acd.edu.ph" } },
+      error: null,
+    });
+    // The email matches a domain account, but the verified link belongs to a
+    // different Auth identity: only the callback's first-link transaction may
+    // bind it.
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "student-123",
+      email: "student@acd.edu.ph",
+      name: "Jane Doe",
+      auth_user_id: null,
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await registerStudentProfile(validAcademicPayload);
+
+    expect(result.error).toContain("could not be resolved");
+    expect(transactionMock).not.toHaveBeenCalled();
+    expect(upsertEnrollmentForActiveTermMock).not.toHaveBeenCalled();
+  });
 
   it("should fail if the domain user cannot be resolved", async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
       error: null,
     });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue(null);
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "student-123",
+      email: "student@acd.edu.ph",
+      name: "Jane Doe",
+      auth_user_id: "auth-student-123",
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+    resolveAuthenticatedDomainUserMock.mockResolvedValueOnce(null);
 
     const result = await registerStudentProfile(validAcademicPayload);
 

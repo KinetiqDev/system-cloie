@@ -19,7 +19,7 @@ An HMAC-SHA256-signed base64url token whose payload binds the chosen role intent
 _Avoid_: Consent token, OAuth state parameter
 
 **Acknowledgement cookie**:
-The `cloie_legal_ack` cookie that carries the acknowledgement ticket from the acknowledgement route to the OAuth callback. It is httpOnly with `sameSite: lax`, scoped to `/api/auth`, and cleared (maxAge zero) once the callback finishes with it.
+The `cloie_legal_ack` cookie that carries the acknowledgement ticket from the acknowledgement route to the OAuth callback and to page-URL Server Actions. It is httpOnly with `sameSite: lax`, scoped to `/`, and cleared (maxAge zero) once the callback finishes with it.
 _Avoid_: Persistent login cookie, session cookie
 
 ## Privacy disclosure

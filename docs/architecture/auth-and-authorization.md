@@ -16,7 +16,7 @@ How people enter System CLOIE and how the server decides what they may do. Domai
 
 ## Google OAuth flow with the signed-acknowledgement gate
 
-The public entry is the role selection portal, where the person chooses the role they want to enter with (`intent`). Before any Google contact, the browser posts the acknowledged privacy notice and terms versions to `/api/auth/legal-acknowledgement`, which issues an **HMAC-SHA256-signed base64url ticket** (payload: role intent + pinned privacy/terms versions, 15-minute expiry plus 60 s clock skew) carried in the httpOnly `cloie_legal_ack` cookie scoped to `/api/auth` (legal domain; see `src/features/legal/CONTEXT.md`).
+The public entry is the role selection portal, where the person chooses the role they want to enter with (`intent`). Before any Google contact, the browser posts the acknowledged privacy notice and terms versions to `/api/auth/legal-acknowledgement`, which issues an **HMAC-SHA256-signed base64url ticket** (payload: role intent + pinned privacy/terms versions, 15-minute expiry plus 60 s clock skew) carried in the httpOnly `cloie_legal_ack` cookie scoped to `/` (legal domain; see `src/features/legal/CONTEXT.md`), so page-URL Server Actions can enforce the same acknowledgement before identity and role mutations.
 
 The callback route (`src/app/api/auth/callback/route.ts`) then:
 

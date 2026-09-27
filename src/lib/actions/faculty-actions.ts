@@ -112,6 +112,17 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
       };
     }
 
+    // The callback's verified first-link transaction is the only writer of
+    // `auth_user_id`. An email-matched but unlinked account must never gain a
+    // role or an affiliation through this action.
+    if (domainUser.auth_user_id !== user.id) {
+      return {
+        success: false,
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+      };
+    }
+
     if (!domainUser.name.trim()) {
       return {
         success: false,
@@ -138,6 +149,29 @@ export async function createFacultyProfile(data: FacultyProfileInput) {
           request.status === "REJECTED"
             ? "Your Faculty request was not approved. You may submit a new request."
             : "Your Faculty request is still awaiting institutional review.",
+      };
+    }
+
+    // No request row and no active affiliation means a self-service claimant
+    // who never filed through Faculty registration: file the request with the
+    // submitted program instead of granting access, so Faculty access still
+    // begins only after Secretary approval.
+    const existingAffiliation = await prisma.facultyProgramAffiliation.findFirst({
+      where: { faculty_id: domainUser.id, is_active: true },
+      select: { id: true },
+    });
+    if (!request && !existingAffiliation) {
+      const filed = await submitFacultyAccessRequest({
+        userId: domainUser.id,
+        programId: validatedData.program_id,
+      });
+      if (!filed.success) {
+        return { success: false, error: filed.error };
+      }
+      return {
+        success: false,
+        error:
+          "Your Faculty request has been submitted for institutional review. You will gain access after approval.",
       };
     }
 

@@ -473,6 +473,11 @@ export async function GET(request: Request) {
           industryPartnerProfileId: session.industryPartnerProfileId,
           alumniVerificationStatus: session.alumniVerificationStatus,
           industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+          // The code exchange just proved a Google session, and the stored
+          // Faculty review state travels with the account: a pending or
+          // rejected claim must resolve to its status, never COMPLETE.
+          authMethod: "google",
+          facultyApprovalStatus: session.facultyApprovalStatus,
         }).profileGate
       : (session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" });
 

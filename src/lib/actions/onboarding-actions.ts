@@ -88,6 +88,16 @@ export async function registerStudentProfile(
       };
     }
 
+    // The callback's verified first-link transaction is the only writer of
+    // `auth_user_id`. An email-matched but unlinked account must never gain a
+    // profile or an enrollment through this action.
+    if (domainUser.auth_user_id !== user.id) {
+      return {
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+      };
+    }
+
     if (!domainUser.name.trim()) {
       return {
         error: "Your account name is not available. Please sign out and sign in with Google again.",

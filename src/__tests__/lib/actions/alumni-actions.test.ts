@@ -83,6 +83,27 @@ describe("Alumni Actions", () => {
     });
   });
 
+  it("denies an email-matched but unlinked account before any write", async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "auth-user-999", email: "test@example.com" } },
+      error: null,
+    });
+    resolveAuthenticatedDomainUserMock.mockResolvedValue({
+      id: "user-123",
+      email: "test@example.com",
+      name: "Test Person",
+      auth_user_id: null,
+      is_active: true,
+      alumni_profile: null,
+      industry_partner_profile: null,
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("could not be resolved");
+  });
+
   it("should fail if user is not authenticated", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
 

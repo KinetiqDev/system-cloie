@@ -94,6 +94,12 @@ export async function switchActiveRole(role: string): Promise<void> {
           industryPartnerProfileId: session.industryPartnerProfileId,
           alumniVerificationStatus: session.alumniVerificationStatus,
           industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+          // The boundary already judged the method; carry its verdict and the
+          // stored Faculty review state so a pending, rejected, or mismatched
+          // session cannot recompute COMPLETE on switch. Fresh FACULTY
+          // readiness still wins through the spread below.
+          authMethod: session.authMethod,
+          facultyApprovalStatus: session.facultyApprovalStatus,
           ...readiness,
         }).profileGate;
 

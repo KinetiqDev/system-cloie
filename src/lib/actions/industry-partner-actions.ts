@@ -85,6 +85,17 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
       };
     }
 
+    // The callback's verified first-link transaction is the only writer of
+    // `auth_user_id`. An email-matched but unlinked account must never gain a
+    // role or a profile through this action.
+    if (domainUser.auth_user_id !== user.id) {
+      return {
+        success: false,
+        error:
+          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
+      };
+    }
+
     if (!domainUser.name.trim()) {
       return {
         success: false,
