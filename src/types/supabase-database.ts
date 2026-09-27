@@ -1115,6 +1115,64 @@ export type Database = {
           },
         ]
       }
+      faculty_access_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          program_id: string
+          status: Database["public"]["Enums"]["faculty_approval_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          program_id: string
+          status?: Database["public"]["Enums"]["faculty_approval_status"]
+          updated_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          program_id?: string
+          status?: Database["public"]["Enums"]["faculty_approval_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_access_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_access_requests_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_access_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faculty_program_affiliations: {
         Row: {
           created_at: string
@@ -2084,6 +2142,7 @@ export type Database = {
       DeploymentType: "COURSE_BOUND" | "CENTRAL"
       enrollment_source: "ONBOARDING" | "ROLLOVER" | "SECRETARY"
       EvaluationTemplateType: "PROGRAM_WIDE" | "COURSE_BOUND"
+      faculty_approval_status: "PENDING" | "APPROVED" | "REJECTED"
       InviteStatus: "DRAFT" | "SENT" | "ACCEPTED" | "REVOKED"
       ResponseStatus: "IN_PROGRESS" | "SUBMITTED"
       student_section: "MORNING" | "AFTERNOON" | "EVENING"
@@ -2247,6 +2306,7 @@ export const Constants = {
       DeploymentType: ["COURSE_BOUND", "CENTRAL"],
       enrollment_source: ["ONBOARDING", "ROLLOVER", "SECRETARY"],
       EvaluationTemplateType: ["PROGRAM_WIDE", "COURSE_BOUND"],
+      faculty_approval_status: ["PENDING", "APPROVED", "REJECTED"],
       InviteStatus: ["DRAFT", "SENT", "ACCEPTED", "REVOKED"],
       ResponseStatus: ["IN_PROGRESS", "SUBMITTED"],
       student_section: ["MORNING", "AFTERNOON", "EVENING"],
