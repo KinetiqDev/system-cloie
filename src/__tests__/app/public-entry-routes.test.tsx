@@ -72,6 +72,12 @@ describe("Public entry routes", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email address")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /I acknowledge that I have read and understood the System CLOIE Privacy Notice/i
+      )
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
   });
 
@@ -82,6 +88,7 @@ describe("Public entry routes", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Alumni/ })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Industry Partner/ })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 
   it("verify-email explains the 6-digit code with resend", async () => {
@@ -90,7 +97,7 @@ describe("Public entry routes", () => {
       screen.getByRole("heading", { level: 1, name: "Verify your email" })
     ).toBeInTheDocument();
     expect(screen.getByLabelText("6-digit verification code")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Verify email" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Resend code" })).toBeInTheDocument();
   });
 

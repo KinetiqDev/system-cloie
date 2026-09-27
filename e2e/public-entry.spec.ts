@@ -88,9 +88,20 @@ test.describe("public entry (signed-out)", () => {
     await expectNoAxeViolations(page);
   });
 
+  test("external email-first Continue requires the legal acknowledgement", async ({ page }) => {
+    await gotoStable(page, "/login/external");
+    await page.getByLabel("Email address").fill("someone@example.com");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(
+      page.getByText("Accept the Privacy Notice and Terms of Use to continue.")
+    ).toBeVisible();
+    await expect(page.getByLabel("Password")).toBeHidden();
+  });
+
   test("external email Continue advances to the password step", async ({ page }) => {
     await gotoStable(page, "/login/external");
     await page.getByLabel("Email address").fill("someone@example.com");
+    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByLabel("Password")).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
