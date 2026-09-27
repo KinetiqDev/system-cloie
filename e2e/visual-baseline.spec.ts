@@ -23,9 +23,9 @@ import { gotoStable, screenshotStable, useReducedMotion } from "./support/visual
  * neither submits nor saves a draft.
  */
 test.describe("@visual curated baseline (desktop)", () => {
-  test("public entry: login", async ({ page }) => {
+  test("public entry: student login", async ({ page }) => {
     await useReducedMotion(page);
-    await gotoStable(page, "/login");
+    await gotoStable(page, "/login/student");
     await screenshotStable(page, "public-login.png");
   });
 

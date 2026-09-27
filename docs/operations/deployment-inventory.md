@@ -113,7 +113,7 @@ The current backups are on the same server and are not disaster recovery.
 - Application image: healthy
 - Public application: HTTP 200
 - Public health endpoint: returns `{"status":"ok","service":"System CLOIE"}`
-- Anonymous protected route: redirects to the respondent portal
+- Anonymous protected route: redirects to the System CLOIE landing (scoped entrances; the shared portal was retired in issue #649)
 - Public database ports 5432, 55432, and 6543: closed
 - External Supabase Auth: verified with the browser-safe publishable key; Google is enabled
 - Google OAuth: user confirmed the live flow works through Google authentication and return to System CLOIE

@@ -18,7 +18,7 @@ describe("production browser evidence auth boundary", () => {
     );
   });
 
-  it("accepts only a redirect to the public portal for protected content", async () => {
+  it("accepts only a redirect to the System CLOIE landing for protected content", async () => {
     const baseUrl = new URL("http://127.0.0.1:3000");
 
     for (const status of [301, 302, 303, 307, 308]) {
@@ -26,7 +26,7 @@ describe("production browser evidence auth boundary", () => {
         assertUnauthenticatedRedirect(
           new Response(null, {
             status,
-            headers: { location: "/portal/respondents" },
+            headers: { location: "/" },
           }),
           "/faculty/dashboard",
           baseUrl
@@ -36,10 +36,9 @@ describe("production browser evidence auth boundary", () => {
 
     await expect(
       assertUnauthenticatedRedirect(
-        new Response(
-          `NEXT_REDIRECT /portal/respondents\n<meta http-equiv="refresh" content="0;url=/portal/respondents">`,
-          { status: 200 }
-        ),
+        new Response(`NEXT_REDIRECT /\n<meta http-equiv="refresh" content="0;url=/;">`, {
+          status: 200,
+        }),
         "/faculty/dashboard",
         baseUrl
       )
@@ -50,12 +49,12 @@ describe("production browser evidence auth boundary", () => {
         assertUnauthenticatedRedirect(
           new Response(null, {
             status,
-            headers: { location: "/portal/respondents" },
+            headers: { location: "/" },
           }),
           "/faculty/dashboard",
           baseUrl
         )
-      ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
+      ).rejects.toThrow("does not contain an RSC redirect to /.");
     }
 
     await expect(
@@ -66,7 +65,7 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
+    ).rejects.toThrow("does not contain an RSC redirect to /.");
 
     await expect(
       assertUnauthenticatedRedirect(
@@ -77,7 +76,7 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).rejects.toThrow("does not contain an RSC redirect to /portal/respondents");
+    ).rejects.toThrow("missing the meta-refresh fallback");
 
     await expect(
       assertUnauthenticatedRedirect(
@@ -88,22 +87,22 @@ describe("production browser evidence auth boundary", () => {
         "/faculty/dashboard",
         baseUrl
       )
-    ).rejects.toThrow("expected /portal/respondents");
+    ).rejects.toThrow("expected /.");
 
     await expect(
       assertUnauthenticatedRedirect(
         new Response(null, {
           status: 307,
-          headers: { location: "/portal/respondents/unexpected" },
+          headers: { location: "/login" },
         }),
         "/faculty/dashboard",
         baseUrl
       )
-    ).rejects.toThrow("expected /portal/respondents");
+    ).rejects.toThrow("expected /.");
 
     await expect(
       assertUnauthenticatedRedirect(
-        new Response("NEXT_REDIRECT /portal/respondents", { status: 200 }),
+        new Response("NEXT_REDIRECT /login", { status: 200 }),
         "/faculty/dashboard",
         baseUrl
       )
