@@ -9,7 +9,7 @@ export default async function DashboardPage() {
 
   if (!session) {
     // Should be unreachable — SessionGuard redirects unauthenticated users.
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   redirect(

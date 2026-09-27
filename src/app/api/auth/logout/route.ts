@@ -16,8 +16,8 @@ export async function POST(request: Request) {
   cookieStore.delete(CI_TEST_AUTH_COOKIE_NAME);
   cookieStore.delete(DEMO_AUTH_COOKIE_NAME);
 
-  // Return to portal page after logout
-  return NextResponse.redirect(`${siteUrl}/portal/respondents`);
+  // Return to the System CLOIE landing (scoped entrances) after logout
+  return NextResponse.redirect(`${siteUrl}/`);
 }
 
 export async function GET(request: Request) {

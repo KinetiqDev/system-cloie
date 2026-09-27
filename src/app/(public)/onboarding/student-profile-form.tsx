@@ -422,7 +422,7 @@ export function StudentProfileForm({
             onClick={async () => {
               const supabase = createClient();
               await supabase.auth.signOut();
-              router.push("/portal/respondents");
+              router.push("/login/student");
             }}
           >
             <ArrowLeft className="size-4" data-icon="inline-start" />

@@ -12,7 +12,7 @@ export default async function AlumniProfilePage() {
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const user = await prisma.user.findUnique({

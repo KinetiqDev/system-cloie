@@ -12,7 +12,7 @@ export default async function AlumniSubmittedPage({ params }: { params: Promise<
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const { id: deploymentId } = await params;

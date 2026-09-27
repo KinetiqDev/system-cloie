@@ -22,7 +22,7 @@ export default async function FacultyAnalyticsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await resolveAuthSession();
-  if (!session) redirect("/portal/respondents");
+  if (!session) redirect("/");
 
   const redirectPath = ensureRoleAccess({
     activeRole: session.activeRole,

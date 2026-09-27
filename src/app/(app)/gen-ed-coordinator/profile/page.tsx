@@ -11,7 +11,7 @@ export const metadata = { title: buildPageTitle("Profile", "Gen Ed Coordinator")
 // fallow-ignore-next-line complexity
 export default async function GenEdCoordinatorProfilePage() {
   const session = await resolveAuthSession();
-  if (!session) redirect("/portal/respondents");
+  if (!session) redirect("/");
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },

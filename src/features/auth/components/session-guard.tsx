@@ -16,7 +16,7 @@ export async function SessionGuard({ children, allowedRoles = [] }: SessionGuard
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   if (

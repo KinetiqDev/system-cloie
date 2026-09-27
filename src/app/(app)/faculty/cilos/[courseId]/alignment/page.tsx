@@ -21,7 +21,7 @@ export default async function CourseAlignmentPage({
   searchParams?: Promise<{ returnTo?: string }>;
 }) {
   const session = await resolveAuthSession();
-  if (!session) redirect("/portal/respondents");
+  if (!session) redirect("/");
 
   const { courseId } = await params;
   const { returnTo } = (await searchParams) ?? {};

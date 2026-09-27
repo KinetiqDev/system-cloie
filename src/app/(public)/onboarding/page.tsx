@@ -31,7 +31,7 @@ export default async function OnboardingPage({
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const session = await resolveAuthSessionFromUser({
@@ -90,7 +90,7 @@ export default async function OnboardingPage({
   if (intent === "student" && step === "form") {
     const nStudForm = (user.email ?? "").trim().toLowerCase();
     if (!nStudForm.endsWith("@acd.edu.ph") && !nStudForm.endsWith("@acdeducation.com")) {
-      redirect("/portal/respondents");
+      redirect("/login/student");
     }
     const yearLevels = Object.values(YearLevel);
     const activeTermId = await getActiveTermId();
@@ -112,7 +112,7 @@ export default async function OnboardingPage({
   if (intent === "student") {
     const nStud = (user.email ?? "").trim().toLowerCase();
     if (!nStud.endsWith("@acd.edu.ph") && !nStud.endsWith("@acdeducation.com")) {
-      redirect("/portal/respondents");
+      redirect("/login/student");
     }
     return (
       <div className="mx-auto w-full max-w-lg">
@@ -161,5 +161,5 @@ export default async function OnboardingPage({
     );
   }
 
-  redirect("/portal/respondents");
+  redirect("/");
 }

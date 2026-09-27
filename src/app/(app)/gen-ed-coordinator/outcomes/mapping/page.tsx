@@ -99,7 +99,7 @@ export default async function GenEdOutcomesMappingPage() {
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   if (session.activeRole !== ROLES.GEN_ED_COORDINATOR) {

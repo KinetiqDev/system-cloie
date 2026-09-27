@@ -15,6 +15,8 @@ import {
   ArrowLeft,
   UserRoundX,
   IdCard,
+  GraduationCap,
+  Hourglass,
 } from "lucide-react";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -96,8 +98,43 @@ const STATUS_CONFIGS = {
     color: "danger",
     showRetry: true,
   },
+  "unprovisioned-student": {
+    title: "Student Account Not Set Up Yet",
+    description: "Your ACD Google account is not linked to a Student record yet.",
+    details:
+      "Student accounts are created by the Secretary's office before first sign-in. Please contact the Secretary's office or IT support to have your Student account provisioned. Do not use Faculty registration — it cannot create a Student account.",
+    icon: GraduationCap,
+    color: "warning",
+    showRetry: true,
+  },
+  "faculty-pending": {
+    title: "Faculty Request Pending Review",
+    description: "Your Faculty request is waiting for institutional review.",
+    details:
+      "Your request grants no Faculty workspace access until your eligibility is confirmed. If it is approved, your Faculty workspace opens on your next sign-in. If it is declined, you will see the outcome with reapplication steps.",
+    icon: Hourglass,
+    color: "warning",
+    showRetry: false,
+  },
+  "faculty-rejected": {
+    title: "Faculty Request Not Approved",
+    description: "Your Faculty request was not approved following institutional review.",
+    details:
+      "You do not have Faculty workspace access. You may submit a new Faculty request with corrected details from Faculty registration, or contact the Secretary's office for guidance.",
+    icon: XCircle,
+    color: "danger",
+    showRetry: false,
+  },
+  "method-mismatch": {
+    title: "Different Sign-In Method Required",
+    description: "This workspace requires your current ACD Google sign-in.",
+    details:
+      "Password and recovery sessions cannot open internal workspaces (Student, Faculty, Secretary, Dean, Program Head, or General Education Coordinator). Sign out, then sign in again with your ACD Google account. External participants may use either method on the Alumni and partner entrance.",
+    icon: ShieldAlert,
+    color: "info",
+    showRetry: true,
+  },
 } as const;
-
 type StatusType = keyof typeof STATUS_CONFIGS;
 
 function isStatusType(type: string): type is StatusType {
@@ -223,13 +260,9 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
 
           <div className="flex flex-col gap-3 pt-2">
             {config.showRetry && (
-              <Button
-                render={<Link href="/portal/respondents" />}
-                className="w-full"
-                variant="default"
-              >
+              <Button render={<Link href="/" />} className="w-full" variant="default">
                 <ArrowLeft className="mr-2 size-4" />
-                Back to Role Selection
+                Back to System CLOIE Entrances
               </Button>
             )}
 
