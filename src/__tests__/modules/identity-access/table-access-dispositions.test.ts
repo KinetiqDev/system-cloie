@@ -348,6 +348,61 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       }
     });
 
+    describe("faculty access requests stay server-only for every identity", () => {
+      // The pending-approval state is a private account/administration
+      // record. A multi-role holder, a deactivated account, and a student must
+      // all be refused exactly like any other authenticated identity, so no
+      // policy, claim, or role can widen it.
+      it("is classified server-only in the registry", () => {
+        expect(TABLE_ACCESS_DISPOSITIONS.faculty_access_requests).toEqual({ kind: "server-only" });
+      });
+
+      it.each(["SECRETARY", "PROGRAM_HEAD_BSIT", "FACULTY"] as const)(
+        "denies SELECT and INSERT to the %s probe identity",
+        async (identity) => {
+          const authUid = RLS_AUTH_UUIDS[identity];
+          await expect(
+            runRlsProbe(authUid, (tx) =>
+              tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+            )
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+          await expect(
+            runRlsProbe(authUid, (tx) =>
+              tx.$executeRawUnsafe(`INSERT INTO "faculty_access_requests" DEFAULT VALUES`)
+            )
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        }
+      );
+
+      it("denies SELECT to a deactivated account's identity", async () => {
+        // The seeded inactive fixture exists to prove account-state gates; the
+        // request table must not become readable through it either.
+        const inactive = await prisma.user.findFirst({
+          where: { is_active: false },
+          select: { id: true, email: true },
+        });
+        expect(inactive, "seeded deactivated fixture required").toBeTruthy();
+        const linked = await prisma.user.findFirst({
+          where: { auth_user_id: { not: null } },
+          select: { auth_user_id: true },
+        });
+        expect(linked?.auth_user_id).toBeTruthy();
+        await expect(
+          runRlsProbe(linked!.auth_user_id as string, (tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+          )
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      });
+
+      it("denies anon access to the request table", async () => {
+        await expect(
+          runAnonProbe((tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+          )
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      });
+    });
+
     describe("server-only tables deny anon and authenticated directly", () => {
       it("registers at least one server-only table", () => {
         expect(serverOnlyTables.length).toBeGreaterThan(0);
