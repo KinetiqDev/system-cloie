@@ -11,6 +11,11 @@ import {
   type VerifyEmailCodeInput,
 } from "@/lib/schemas/external-entry";
 import { resendVerificationCode, verifyExternalCode } from "@/lib/actions/external-entry-actions";
+import {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./entry-legal-acknowledgement";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +31,7 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export function VerifyEmailForm({ prefilledEmail }: { prefilledEmail?: string }) {
   const [message, setMessage] = useState<EntryFormMessage>(null);
   const [cooldownLeft, setCooldownLeft] = useState(0);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const {
     register,
@@ -43,8 +49,24 @@ export function VerifyEmailForm({ prefilledEmail }: { prefilledEmail?: string })
     return () => clearTimeout(timer);
   }, [cooldownLeft]);
 
+  const ensureEntryLegal = async (): Promise<boolean> => {
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return false;
+    }
+    if (!(await acknowledgeEntryLegal("external"))) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const onSubmit: SubmitHandler<VerifyEmailCodeInput> = async (data) => {
     setMessage(null);
+    if (!(await ensureEntryLegal())) return;
     const result = await verifyExternalCode(data);
     setMessage(
       result.success
@@ -54,6 +76,7 @@ export function VerifyEmailForm({ prefilledEmail }: { prefilledEmail?: string })
   };
 
   const onResend = async () => {
+    if (!(await ensureEntryLegal())) return;
     const email = getValues("email");
     const parsed = resendCodeSchema.safeParse({ email });
     if (!parsed.success) {
@@ -118,7 +141,11 @@ export function VerifyEmailForm({ prefilledEmail }: { prefilledEmail?: string })
             </p>
           )}
         </div>
-
+        <EntryLegalCheckbox
+          id="verify-email-legal"
+          checked={legalAccepted}
+          onCheckedChange={setLegalAccepted}
+        />
         <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
           {isSubmitting ? "Verifying…" : "Verify email"}
         </Button>

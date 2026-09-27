@@ -9,6 +9,11 @@ import {
   type ExternalRegisterFormValues,
 } from "@/lib/schemas/external-entry";
 import { registerExternalAccount } from "@/lib/actions/external-entry-actions";
+import {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./entry-legal-acknowledgement";
 import { GoogleEntryButton } from "./google-entry-button";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
@@ -24,7 +29,7 @@ import { Separator } from "@/components/ui/separator";
  */
 export function ExternalRegisterForm() {
   const [message, setMessage] = useState<EntryFormMessage>(null);
-
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const {
     control,
     register,
@@ -37,6 +42,17 @@ export function ExternalRegisterForm() {
 
   const onSubmit: SubmitHandler<ExternalRegisterFormValues> = async (data) => {
     setMessage(null);
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return;
+    }
+    if (!(await acknowledgeEntryLegal("external"))) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return;
+    }
     const result = await registerExternalAccount(data);
     setMessage(
       result.success
@@ -154,7 +170,11 @@ export function ExternalRegisterForm() {
             </p>
           )}
         </div>
-
+        <EntryLegalCheckbox
+          id="register-external-legal"
+          checked={legalAccepted}
+          onCheckedChange={setLegalAccepted}
+        />
         <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
           {isSubmitting ? "Creating account…" : "Create account"}
         </Button>

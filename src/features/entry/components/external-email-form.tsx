@@ -16,6 +16,11 @@ import {
   signInExternalParticipant,
 } from "@/lib/actions/external-entry-actions";
 import { GoogleEntryButton } from "./google-entry-button";
+import {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./entry-legal-acknowledgement";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +41,24 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
   const router = useRouter();
   const [email, setEmail] = useState(prefilledEmail ?? "");
   const [message, setMessage] = useState<EntryFormMessage>(null);
+  const [legalAccepted, setLegalAccepted] = useState(false);
+
+  const requireEntryLegal = async (): Promise<boolean> => {
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return false;
+    }
+    const issued = await acknowledgeEntryLegal("external");
+    if (!issued) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const emailForm = useForm<EmailStepValues>({
     resolver: customZodResolver(externalEmailContinueSchema) as Resolver<EmailStepValues>,
     defaultValues: { email: prefilledEmail ?? "" },
@@ -48,6 +71,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
 
   const onContinue: SubmitHandler<EmailStepValues> = async (data) => {
     setMessage(null);
+    if (!(await requireEntryLegal())) return;
     const result = await requestExternalEmailContinue(data);
     if (!result.success) {
       setMessage({ kind: "error", text: result.error });
@@ -60,6 +84,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
 
   const onSignIn: SubmitHandler<PasswordStepValues> = async (data) => {
     setMessage(null);
+    if (!(await requireEntryLegal())) return;
     const result = await signInExternalParticipant(data);
     if (!result.success) {
       setMessage({ kind: "error", text: result.error });
@@ -104,6 +129,11 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
               </p>
             )}
           </div>
+          <EntryLegalCheckbox
+            id="external-legal"
+            checked={legalAccepted}
+            onCheckedChange={setLegalAccepted}
+          />
           <Button
             type="submit"
             className="min-h-12 w-full"
@@ -171,6 +201,11 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
             </p>
           )}
         </div>
+        <EntryLegalCheckbox
+          id="external-legal"
+          checked={legalAccepted}
+          onCheckedChange={setLegalAccepted}
+        />
         <Button
           type="submit"
           className="min-h-12 w-full"

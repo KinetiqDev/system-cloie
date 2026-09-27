@@ -8,3 +8,8 @@ export { VerifyEmailForm } from "./components/verify-email-form";
 export { ForgotPasswordForm, ResetPasswordForm } from "./components/password-recovery-forms";
 export { FacultyRegisterForm } from "./components/faculty-register-form";
 export { EntryHelpFaq } from "./components/entry-help-faq";
+export {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./components/entry-legal-acknowledgement";

@@ -14,6 +14,11 @@ import {
   confirmPasswordRecovery,
   requestPasswordRecovery,
 } from "@/lib/actions/external-entry-actions";
+import {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./entry-legal-acknowledgement";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +27,7 @@ import { Label } from "@/components/ui/label";
 /** Recovery request: neutral response, never reveals account existence. */
 export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string }) {
   const [message, setMessage] = useState<EntryFormMessage>(null);
+  const [legalAccepted, setLegalAccepted] = useState(false);
 
   const {
     register,
@@ -34,6 +40,17 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
 
   const onSubmit: SubmitHandler<RecoveryRequestInput> = async (data) => {
     setMessage(null);
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return;
+    }
+    if (!(await acknowledgeEntryLegal("external"))) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return;
+    }
     const result = await requestPasswordRecovery(data);
     setMessage(
       result.success
@@ -63,6 +80,11 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
             </p>
           )}
         </div>
+        <EntryLegalCheckbox
+          id="forgot-password-legal"
+          checked={legalAccepted}
+          onCheckedChange={setLegalAccepted}
+        />
         <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
           {isSubmitting ? "Sending…" : "Send recovery code"}
         </Button>
@@ -100,7 +122,7 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
  */
 export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string }) {
   const [message, setMessage] = useState<EntryFormMessage>(null);
-
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const {
     register,
     handleSubmit,
@@ -112,6 +134,17 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
 
   const onSubmit: SubmitHandler<RecoveryConfirmInput> = async (data) => {
     setMessage(null);
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return;
+    }
+    if (!(await acknowledgeEntryLegal("external"))) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return;
+    }
     const result = await confirmPasswordRecovery(data);
     setMessage(
       result.success
@@ -198,7 +231,11 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
             </p>
           )}
         </div>
-
+        <EntryLegalCheckbox
+          id="reset-password-legal"
+          checked={legalAccepted}
+          onCheckedChange={setLegalAccepted}
+        />
         <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
           {isSubmitting ? "Updating…" : "Set new password"}
         </Button>
