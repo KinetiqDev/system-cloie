@@ -2,8 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
-import { prisma } from "@/lib/db/prisma";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
+import { linkExternalVerifiedIdentity } from "@/features/users/services/link-external-identity";
 import { linkedProviderNames } from "@/features/auth/services/resolve-auth-method";
 import {
   externalEmailContinueSchema,
@@ -97,52 +97,6 @@ function neutralFailure(message: string): ExternalEntryResult {
 
 function neutralSuccess(message: string): ExternalEntryResult {
   return { success: true, message };
-}
-
-/**
- * Establishes the domain account for a just-verified identity. Returns false
- * when the address already belongs to a domain account, which must not fork
- * domain identity: the caller then leaves the existing account untouched.
- */
-async function ensureDomainUserForVerifiedIdentity(input: {
-  authUserId: string;
-  email: string;
-  name: string | null;
-}): Promise<{ linked: boolean; existingUserId: string | null }> {
-  const email = normalizedEmailKey(input.email);
-  if (!email) return { linked: false, existingUserId: null };
-
-  return prisma.$transaction(async (tx) => {
-    const byAuth = await tx.user.findUnique({ where: { auth_user_id: input.authUserId } });
-    if (byAuth) return { linked: true, existingUserId: byAuth.id };
-
-    const byEmail = await tx.user.findUnique({ where: { email } });
-    if (byEmail) {
-      // Unlinked domain account (for example Google-first or Secretary-created):
-      // link the verified identity and replace a provisional name, then stop.
-      if (!byEmail.auth_user_id) {
-        const updated = await tx.user.updateMany({
-          where: { id: byEmail.id, auth_user_id: null },
-          data: {
-            auth_user_id: input.authUserId,
-            ...(input.name ? { name: input.name } : {}),
-          },
-        });
-        if (updated.count === 1) return { linked: true, existingUserId: byEmail.id };
-      }
-      // Already linked to another identity, or the race was lost: never
-      // overwrite the existing link.
-      return { linked: false, existingUserId: byEmail.id };
-    }
-
-    if (!input.name) return { linked: false, existingUserId: null };
-
-    const created = await tx.user.create({
-      data: { auth_user_id: input.authUserId, email, name: input.name },
-      select: { id: true },
-    });
-    return { linked: true, existingUserId: created.id };
-  });
 }
 
 /**
@@ -284,7 +238,7 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
       const collected =
         typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
       const email = data.user.email ?? parsed.data.email;
-      await ensureDomainUserForVerifiedIdentity({
+      await linkExternalVerifiedIdentity({
         authUserId: data.user.id,
         email,
         name: collected.length > 0 ? collected : null,
