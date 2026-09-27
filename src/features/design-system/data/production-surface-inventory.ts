@@ -1842,6 +1842,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/entry/components/entry-legal-acknowledgement.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
     path: "src/app/(public)/status/[type]/loading.tsx",
     disposition: "task",
     taskId: 23,
