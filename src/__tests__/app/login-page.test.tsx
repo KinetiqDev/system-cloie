@@ -13,11 +13,11 @@ vi.mock("next/image", () => ({
 }));
 
 describe("LoginPage", () => {
-  it("redirects to the respondent portal when no error is present", async () => {
+  it("redirects to the System CLOIE landing when no error is present", async () => {
     await LoginPage({
       searchParams: Promise.resolve({}),
     });
-    expect(redirectMock).toHaveBeenCalledWith("/portal/respondents");
+    expect(redirectMock).toHaveBeenCalledWith("/");
     expect(redirectMock).toHaveBeenCalledTimes(1);
   });
 

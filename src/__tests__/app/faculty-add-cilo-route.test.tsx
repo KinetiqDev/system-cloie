@@ -39,9 +39,7 @@ describe("Faculty add CILO route", () => {
     resolveAuthSessionMock.mockResolvedValue(null);
     const { default: Page } = await import("@/app/(app)/faculty/cilos/new/page");
 
-    await expect(Page({ searchParams: Promise.resolve({}) })).rejects.toThrow(
-      "REDIRECT:/portal/respondents"
-    );
+    await expect(Page({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/");
     expect(listCoursesMock).not.toHaveBeenCalled();
   });
 

@@ -3,10 +3,8 @@ import { ROLES } from "@/lib/constants/roles";
 import { ensureRoleAccess } from "@/features/auth/policies/ensure-role-access";
 
 describe("ensureRoleAccess", () => {
-  it("redirects anonymous access to portal", () => {
-    expect(ensureRoleAccess({ activeRole: null, allowedRoles: [ROLES.SECRETARY] })).toBe(
-      "/portal/respondents"
-    );
+  it("redirects anonymous access to the landing", () => {
+    expect(ensureRoleAccess({ activeRole: null, allowedRoles: [ROLES.SECRETARY] })).toBe("/");
   });
 
   it("allows a matching role", () => {

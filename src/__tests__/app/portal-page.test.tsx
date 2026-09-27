@@ -8,9 +8,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("PortalRedirectPage", () => {
-  it("redirects to /portal/respondents", async () => {
+  it("redirects to the System CLOIE landing (portal retired)", async () => {
     await PortalRedirectPage();
-    expect(redirectMock).toHaveBeenCalledWith("/portal/respondents");
+    expect(redirectMock).toHaveBeenCalledWith("/");
     expect(redirectMock).toHaveBeenCalledTimes(1);
   });
 });

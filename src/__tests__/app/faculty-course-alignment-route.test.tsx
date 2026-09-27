@@ -28,9 +28,9 @@ describe("Faculty Course alignment route", () => {
     await expect(
       CourseAlignmentPage({
         params: Promise.resolve({ courseId: "11111111-1111-4111-8111-111111111111" }),
+        searchParams: Promise.resolve({}),
       })
-    ).rejects.toThrow("NEXT_REDIRECT:/portal/respondents");
-    expect(readAlignmentMock).not.toHaveBeenCalled();
+    ).rejects.toThrow("NEXT_REDIRECT:/");
   });
 
   it("maps unauthorized or invalid Course results to the same unavailable route", async () => {

@@ -49,7 +49,7 @@ describe("auth logout route", () => {
     );
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://cloie.example.com/portal/respondents");
+    expect(response.headers.get("location")).toBe("https://cloie.example.com/");
     expect(signOutMock).toHaveBeenCalled();
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_dev_auth");
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_demo_auth");
@@ -61,6 +61,6 @@ describe("auth logout route", () => {
     );
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://request.example.com/portal/respondents");
+    expect(response.headers.get("location")).toBe("https://request.example.com/");
   });
 });

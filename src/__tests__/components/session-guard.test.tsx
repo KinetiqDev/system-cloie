@@ -43,11 +43,11 @@ describe("SessionGuard", () => {
     resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
   });
 
-  it("redirects unauthenticated users to portal", async () => {
+  it("redirects unauthenticated users to the landing", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
+      `${REDIRECT_ERROR}:/`
     );
   });
 
