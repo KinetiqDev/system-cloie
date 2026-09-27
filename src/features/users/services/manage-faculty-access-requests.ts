@@ -123,7 +123,7 @@ export async function rejectFacultyAccessRequest(input: {
   return prisma.$transaction(async (tx) => {
     const request = await tx.facultyAccessRequest.findUnique({
       where: { user_id: input.requestUserId },
-      select: { id: true, status: true },
+      select: { id: true, program_id: true, status: true },
     });
     if (!request) return { success: false as const, error: "Faculty request not found." };
 
@@ -137,11 +137,18 @@ export async function rejectFacultyAccessRequest(input: {
       },
     });
 
-    // Rejection never grants access, and never removes a Secretariat-managed
-    // affiliation that predates the self-request.
-    await tx.facultyProgramAffiliation.deleteMany({
-      where: { faculty_id: input.requestUserId, is_active: true },
-    });
+    // Revoke only what this self-request granted, and only if approval had
+    // actually run. A PENDING request created no affiliation, and any other
+    // affiliation on the account — Secretary-provisioned primary or
+    // additional programs — predates the request and must survive untouched.
+    // Revocation follows the domain convention: deactivate, never delete, so
+    // the affiliation history stays on the account.
+    if (request.status === FacultyApprovalStatus.APPROVED) {
+      await tx.facultyProgramAffiliation.updateMany({
+        where: { faculty_id: input.requestUserId, program_id: request.program_id, is_active: true },
+        data: { is_active: false, is_primary: false },
+      });
+    }
 
     return { success: true as const, status: FacultyApprovalStatus.REJECTED };
   });
