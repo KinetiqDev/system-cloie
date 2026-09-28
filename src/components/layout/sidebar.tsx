@@ -49,10 +49,10 @@ export function Sidebar({ user, roles = [], activeProgramId = null }: SidebarPro
           className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <Image
-            src="/logos/cloie-logo.png"
-            alt="System CLOIE Logo"
-            width={486}
-            height={513}
+            src="/logos/cloie-logo.svg"
+            alt="System CLOIE"
+            width={442}
+            height={500}
             className={LOGO_CLASS_NAME}
           />
           <span className="text-title-lg text-link font-bold tracking-tight">System CLOIE</span>
@@ -169,10 +169,10 @@ function DeanSidebar({ user }: Pick<SidebarProps, "user">) {
           className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <Image
-            src="/logos/cloie-logo.png"
-            alt="System CLOIE Logo"
-            width={486}
-            height={513}
+            src="/logos/cloie-logo.svg"
+            alt="System CLOIE"
+            width={442}
+            height={500}
             className={LOGO_CLASS_NAME}
           />
           <span className="text-title-lg text-link ml-3 hidden font-bold tracking-tight lg:inline">

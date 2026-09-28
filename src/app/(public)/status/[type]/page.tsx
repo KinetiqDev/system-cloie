@@ -177,11 +177,11 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
             className="shrink-0 object-contain"
           />
           <Image
-            src="/logos/cloie-logo.png"
-            alt="CLOIE Logo"
-            width={486}
-            height={513}
-            className="h-12 w-auto shrink-0 object-contain"
+            src="/logos/cloie-logo.svg"
+            alt="System CLOIE"
+            width={442}
+            height={500}
+            className="border-border h-12 w-auto shrink-0 rounded border bg-white object-contain p-1"
             priority
           />
         </div>

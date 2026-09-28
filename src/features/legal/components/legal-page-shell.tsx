@@ -25,11 +25,11 @@ export function LegalPageShell({ document }: { document: LegalDocument }) {
             className="focus-visible:ring-ring flex items-center gap-3 rounded-md focus-visible:ring-2 focus-visible:outline-none"
           >
             <Image
-              src="/logos/cloie-logo.png"
-              alt="CLOIE"
-              width={486}
-              height={513}
-              className="h-9 w-auto"
+              src="/logos/cloie-logo.svg"
+              alt="System CLOIE"
+              width={442}
+              height={500}
+              className="border-border h-9 w-auto shrink-0 rounded border bg-white object-contain p-0.5"
             />
             <span className="text-title-md text-link font-bold">System CLOIE</span>
           </Link>
