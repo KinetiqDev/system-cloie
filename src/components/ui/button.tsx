@@ -68,6 +68,9 @@ function Button({
 }: ButtonProps) {
   // Base UI uses the 'render' prop for delegation, not 'asChild'.
   // We destructure asChild here to prevent it from being passed to the DOM.
+  // The binding is intentionally discarded; the leading underscore is the
+  // marker, but this project does not set ignoreRestSiblings for the rule.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- deliberate strip; see above
   const { asChild: _asChild, disabled, ...rest } = props;
 
   // Spinner size tracks button size: xs/sm → sm, default/lg → default, icon* → default.
