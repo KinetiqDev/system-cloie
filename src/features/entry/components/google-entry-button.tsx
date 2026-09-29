@@ -36,6 +36,9 @@ export function GoogleEntryButton({
         onClick={() => setIsDialogOpen(true)}
         className="min-h-12 w-full py-3 text-center whitespace-normal shadow-sm"
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- third-party
+            brand lockup; a static decorative SVG gains nothing from the
+            image optimizer and would need width/height plumbing. */}
         <img
           src="/logos/google-logo.svg"
           alt=""

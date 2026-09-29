@@ -87,6 +87,9 @@ export function RoleSelectionCard({ config }: RoleSelectionCardProps) {
           variant="outline"
           className="h-auto min-h-8 w-full min-w-0 py-1.5 text-center text-wrap break-words whitespace-normal shadow-sm [&_img]:shrink-0"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element -- third-party
+              brand lockup; a static decorative SVG gains nothing from the
+              image optimizer and would need width/height plumbing. */}
           <img
             src="/logos/google-logo.svg"
             alt=""
