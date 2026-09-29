@@ -15,6 +15,7 @@ import {
   EntryLegalCheckbox,
 } from "./entry-legal-acknowledgement";
 import { GoogleEntryButton } from "./google-entry-button";
+import { PasswordInput } from "./password-input";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,9 +154,8 @@ export function ExternalRegisterForm() {
 
         <div className="space-y-2">
           <Label htmlFor="register-password">Password</Label>
-          <Input
+          <PasswordInput
             id="register-password"
-            type="password"
             autoComplete="new-password"
             placeholder="At least 8 characters"
             aria-invalid={errors.password ? true : undefined}

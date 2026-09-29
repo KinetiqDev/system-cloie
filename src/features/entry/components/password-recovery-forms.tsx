@@ -19,6 +19,7 @@ import {
   ENTRY_LEGAL_REQUIRED_MESSAGE,
   EntryLegalCheckbox,
 } from "./entry-legal-acknowledgement";
+import { PasswordInput } from "./password-input";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,9 +199,8 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
 
         <div className="space-y-2">
           <Label htmlFor="reset-new-password">New password</Label>
-          <Input
+          <PasswordInput
             id="reset-new-password"
-            type="password"
             autoComplete="new-password"
             placeholder="At least 8 characters"
             aria-invalid={errors.newPassword ? true : undefined}
@@ -216,9 +216,8 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
 
         <div className="space-y-2">
           <Label htmlFor="reset-confirm-password">Confirm new password</Label>
-          <Input
+          <PasswordInput
             id="reset-confirm-password"
-            type="password"
             autoComplete="new-password"
             placeholder="Repeat your new password"
             aria-invalid={errors.confirmPassword ? true : undefined}

@@ -2,6 +2,7 @@ export { EntryShell } from "./components/entry-shell";
 export { GoogleEntryButton } from "./components/google-entry-button";
 export { EntryFormMessageView } from "./components/entry-form-message";
 export type { EntryFormMessage } from "./components/entry-form-message";
+export { PasswordInput } from "./components/password-input";
 export { ExternalEmailForm } from "./components/external-email-form";
 export { ExternalRegisterForm } from "./components/external-register-form";
 export { VerifyEmailForm } from "./components/verify-email-form";

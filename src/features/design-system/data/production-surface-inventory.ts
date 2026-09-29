@@ -1836,6 +1836,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/entry/components/password-input.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
     path: "src/features/entry/components/password-recovery-forms.tsx",
     disposition: "task",
     taskId: 23,

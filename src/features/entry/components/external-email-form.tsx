@@ -21,6 +21,7 @@ import {
   ENTRY_LEGAL_REQUIRED_MESSAGE,
   EntryLegalCheckbox,
 } from "./entry-legal-acknowledgement";
+import { PasswordInput } from "./password-input";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,9 +192,8 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
       <form onSubmit={passwordForm.handleSubmit(onSignIn)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="external-password">Password</Label>
-          <Input
+          <PasswordInput
             id="external-password"
-            type="password"
             autoComplete="current-password"
             placeholder="Enter your password"
             aria-invalid={passwordForm.formState.errors.password ? true : undefined}
