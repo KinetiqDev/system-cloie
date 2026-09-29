@@ -4,6 +4,10 @@ import { Building2, Users } from "lucide-react";
 import { PortalChoiceCard, InstallAppButton } from "@/features/portals";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
+import {
+  DevRoleSwitcher,
+  DevRoleSwitcherDesktop,
+} from "@/features/auth/components/dev-role-switcher";
 
 export default function Home() {
   const appearanceEnabled = resolveAppearanceAvailability();
@@ -28,6 +32,8 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <AppearanceMenuTrigger enabled={appearanceEnabled} />
             <InstallAppButton />
+            <DevRoleSwitcherDesktop />
+            <DevRoleSwitcher />
           </div>
         </div>
       </header>

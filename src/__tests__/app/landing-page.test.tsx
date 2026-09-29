@@ -12,6 +12,10 @@ vi.mock("next/link", () => ({
   default: ({ children, ...props }: React.ComponentProps<"a">) => <a {...props}>{children}</a>,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
 function renderHome() {
   return render(
     <AppearanceProvider enabled={true}>
@@ -58,5 +62,29 @@ describe("Landing page", () => {
     expect(classStrings).not.toMatch(
       /shadow-primary|shadow-danger|shadow-warning|shadow-success|shadow-info/
     );
+  });
+
+  it("offers the development role switcher so local roles need no Google account", () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    renderHome();
+
+    expect(screen.getByRole("button", { name: "Open Dev Roles switcher" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /dev/i })).toHaveLength(2);
+
+    vi.unstubAllEnvs();
+  });
+
+  it("never exposes the development role switcher outside development", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    renderHome();
+
+    expect(screen.queryByText("Dev Roles")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open Dev Roles switcher" })
+    ).not.toBeInTheDocument();
+
+    vi.unstubAllEnvs();
   });
 });
