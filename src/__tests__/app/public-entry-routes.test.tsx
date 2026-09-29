@@ -9,8 +9,18 @@ import VerifyEmailPage from "@/app/(public)/verify-email/page";
 import ForgotPasswordPage from "@/app/(public)/forgot-password/page";
 import ResetPasswordPage from "@/app/(public)/reset-password/page";
 
-const { resolveAuthSessionMock } = vi.hoisted(() => ({
+const { resolveAuthSessionMock, cookieGetMock, requireLegalMock } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
+  cookieGetMock: vi.fn(),
+  requireLegalMock: vi.fn(),
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({ get: cookieGetMock })),
+}));
+
+vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
+  requireLegalAcknowledgement: requireLegalMock,
 }));
 
 vi.mock("next/image", () => ({
@@ -39,6 +49,11 @@ describe("Public entry routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveAuthSessionMock.mockResolvedValue(null);
+    cookieGetMock.mockReturnValue(undefined);
+    requireLegalMock.mockResolvedValue({
+      acknowledged: false,
+      reason: "missing-or-invalid-intent",
+    });
   });
 
   it("student entrance offers a single ACD Google action with Secretary guidance", async () => {
@@ -97,8 +112,36 @@ describe("Public entry routes", () => {
       screen.getByRole("heading", { level: 1, name: "Verify your email" })
     ).toBeInTheDocument();
     expect(screen.getByLabelText("6-digit verification code")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email address")).not.toHaveAttribute("readonly");
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Resend code" })).toBeInTheDocument();
+  });
+
+  it("verify-email pins the registered address and drops the repeated acknowledgement", async () => {
+    cookieGetMock.mockReturnValue({ value: "amara@example.com" });
+    requireLegalMock.mockResolvedValue({ acknowledged: true });
+
+    render(await VerifyEmailPage({ searchParams: emptyParams }));
+
+    const email = screen.getByLabelText("Email address");
+    expect(email).toHaveValue("amara@example.com");
+    expect(email).toHaveAttribute("readonly");
+    expect(screen.getByText(/The code goes to this address/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByRole("button", { name: "Verify email" })).toBeEnabled();
+  });
+
+  it("a pinned address outranks the email query parameter", async () => {
+    cookieGetMock.mockReturnValue({ value: "amara@example.com" });
+    requireLegalMock.mockResolvedValue({ acknowledged: true });
+
+    render(
+      await VerifyEmailPage({
+        searchParams: Promise.resolve({ email: "someone-else@example.com" }),
+      })
+    );
+
+    expect(screen.getByLabelText("Email address")).toHaveValue("amara@example.com");
   });
 
   it("forgot-password stays neutral about account existence", async () => {

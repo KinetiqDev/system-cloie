@@ -86,7 +86,7 @@ export function ForgotPasswordForm({ prefilledEmail }: { prefilledEmail?: string
           checked={legalAccepted}
           onCheckedChange={setLegalAccepted}
         />
-        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
+        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting || !legalAccepted}>
           {isSubmitting ? "Sending…" : "Send recovery code"}
         </Button>
       </form>
@@ -235,7 +235,7 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
           checked={legalAccepted}
           onCheckedChange={setLegalAccepted}
         />
-        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
+        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting || !legalAccepted}>
           {isSubmitting ? "Updating…" : "Set new password"}
         </Button>
       </form>

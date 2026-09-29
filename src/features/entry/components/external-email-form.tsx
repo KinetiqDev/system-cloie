@@ -139,7 +139,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
           <Button
             type="submit"
             className="min-h-12 w-full"
-            disabled={emailForm.formState.isSubmitting}
+            disabled={emailForm.formState.isSubmitting || !legalAccepted}
           >
             {emailForm.formState.isSubmitting ? "Checking…" : "Continue"}
           </Button>
@@ -217,7 +217,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
         <Button
           type="submit"
           className="min-h-12 w-full"
-          disabled={passwordForm.formState.isSubmitting}
+          disabled={passwordForm.formState.isSubmitting || !legalAccepted}
         >
           {passwordForm.formState.isSubmitting ? "Signing in…" : "Sign in"}
         </Button>

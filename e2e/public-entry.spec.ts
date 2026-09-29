@@ -88,14 +88,14 @@ test.describe("public entry (signed-out)", () => {
     await expectNoAxeViolations(page);
   });
 
-  test("external email-first Continue requires the legal acknowledgement", async ({ page }) => {
+  test("external email-first Continue waits for the legal acknowledgement", async ({ page }) => {
     await gotoStable(page, "/login/external");
     await page.getByLabel("Email address").fill("someone@example.com");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(
-      page.getByText("Accept the Privacy Notice and Terms of Use to continue.")
-    ).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
+    await expect(page.locator("#external-password")).toBeHidden();
+
+    await page.getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled();
   });
 
   test("external email Continue advances to the password step", async ({ page }) => {
@@ -103,7 +103,7 @@ test.describe("public entry (signed-out)", () => {
     await page.getByLabel("Email address").fill("someone@example.com");
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.locator("#external-password")).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: /Forgot your password/ })).toBeVisible();
   });
@@ -122,28 +122,66 @@ test.describe("public entry (signed-out)", () => {
     await expectNoAxeViolations(page);
   });
 
+  test("every entry password field can be revealed before submitting", async ({ page }) => {
+    // The reveal control is named "Show password", so a label lookup for the
+    // field would match both. aria-controls names the field it governs, which
+    // locates the pair unambiguously and asserts the wiring at the same time.
+    const reveal = (fieldId: string) => page.locator(`button[aria-controls="${fieldId}"]`);
+
+    await gotoStable(page, "/register/external");
+    const registerPassword = page.locator("#register-password");
+    await expect(registerPassword).toHaveAttribute("type", "password");
+    await reveal("register-password").click();
+    await expect(registerPassword).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Hide password" }).click();
+    await expect(registerPassword).toHaveAttribute("type", "password");
+    await expectNoAxeViolations(page);
+
+    await gotoStable(page, "/reset-password");
+    const newPassword = page.locator("#reset-new-password");
+    await expect(newPassword).toHaveAttribute("type", "password");
+    await reveal("reset-new-password").click();
+    await expect(newPassword).toHaveAttribute("type", "text");
+    // The confirm field is independent: revealing one must not reveal the other.
+    await expect(page.locator("#reset-confirm-password")).toHaveAttribute("type", "password");
+    await expectNoAxeViolations(page);
+  });
+
+  test("registration waits for the acknowledgement before creating the account", async ({
+    page,
+  }) => {
+    await gotoStable(page, "/register/external");
+    await expect(page.getByRole("button", { name: "Create account" })).toBeDisabled();
+    await page.getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Create account" })).toBeEnabled();
+  });
+
   test("verify, forgot, and reset pages render their code and password flows", async ({ page }) => {
     await gotoStable(page, "/verify-email");
     await expect(page.getByRole("heading", { level: 1, name: "Verify your email" })).toBeVisible();
     await expect(page.getByLabel("6-digit verification code")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Verify email" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Resend code" })).toBeVisible();
+    await expect(page.getByLabel("Email address")).toBeEditable();
+    // A cold visit holds no registration ticket, so the server gate is visible.
+    await expect(page.getByRole("button", { name: "Verify email" })).toBeDisabled();
+    await page.getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Verify email" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Resend code" })).toBeEnabled();
     await expectNoAxeViolations(page);
 
     await gotoStable(page, "/forgot-password");
     await expect(
       page.getByRole("heading", { level: 1, name: "Forgot your password?" })
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send recovery code" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send recovery code" })).toBeDisabled();
+    await page.getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Send recovery code" })).toBeEnabled();
     await expectNoAxeViolations(page);
 
     await gotoStable(page, "/reset-password");
     await expect(page.getByRole("heading", { level: 1, name: "Set a new password" })).toBeVisible();
     await expect(page.getByLabel("6-digit recovery code")).toBeVisible();
-    // Exact: "New password" is a prefix of "Confirm new password", so a
-    // substring locator resolves to both fields in strict mode.
-    await expect(page.getByLabel("New password", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Confirm new password", { exact: true })).toBeVisible();
+    await expect(page.locator("#reset-new-password")).toBeVisible();
+    await expect(page.locator("#reset-confirm-password")).toBeVisible();
     await expectNoAxeViolations(page);
   });
 

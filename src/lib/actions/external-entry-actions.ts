@@ -1,8 +1,14 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
+import {
+  clearPendingVerificationEmail,
+  rememberPendingVerificationEmail,
+  VERIFY_EMAIL_PATH,
+} from "@/features/entry/services/pending-verification-email";
 import { linkExternalVerifiedIdentity } from "@/features/users/services/link-external-identity";
 import { linkedProviderNames } from "@/features/auth/services/resolve-auth-method";
 import {
@@ -15,9 +21,15 @@ import {
   verifyEmailCodeSchema,
 } from "@/lib/schemas/external-entry";
 
+/**
+ * `LEGAL_ACKNOWLEDGEMENT_REQUIRED` marks the one failure a client cannot
+ * recover from on its own: the acknowledgement ticket is missing or expired,
+ * so the only way forward is to tick the box. Every other failure leaves the
+ * form actionable as-is.
+ */
 export type ExternalEntryResult =
   | { success: true; message: string }
-  | { success: false; error: string };
+  | { success: false; error: string; code?: "LEGAL_ACKNOWLEDGEMENT_REQUIRED" };
 
 /**
  * Public external (Alumni / Industry Partner) email-first entry actions.
@@ -37,9 +49,6 @@ export type ExternalEntryResult =
 
 const NEUTRAL_CONTINUE_MESSAGE =
   "If this email can sign in with a password, continue below. Otherwise choose another option — this message is the same for every address.";
-
-const NEUTRAL_REGISTER_MESSAGE =
-  "If this email is eligible, a 6-digit verification code is on its way. Enter it on the verification page to continue.";
 
 const NEUTRAL_VERIFY_MESSAGE =
   "If the code matches, your email is now verified. Continue to complete your registration.";
@@ -98,6 +107,11 @@ function neutralSuccess(message: string): ExternalEntryResult {
   return { success: true, message };
 }
 
+/** Carries the marker the code step needs to re-open the acknowledgement. */
+function legalRequiredFailure(): ExternalEntryResult {
+  return { success: false, error: LEGAL_REQUIRED_ERROR, code: "LEGAL_ACKNOWLEDGEMENT_REQUIRED" };
+}
+
 /**
  * Email-first Continue: validates transport shape and returns a neutral
  * next-step message. Never reveals account existence or provider.
@@ -116,7 +130,7 @@ export async function requestExternalEmailContinue(input: unknown): Promise<Exte
  */
 export async function signInExternalParticipant(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = externalSignInSchema.safeParse(input);
   if (!parsed.success) {
@@ -146,10 +160,16 @@ export async function signInExternalParticipant(input: unknown): Promise<Externa
  * External registration: collects the canonical account name (never derived
  * from the email address) plus the Alumni / Industry Partner choice, then
  * starts Supabase email verification. Domain linkage waits for verification.
+ *
+ * On acceptance it pins the address and redirects to the code step, so the
+ * person types the code in one continuous flow instead of hunting for a link
+ * on the page they just left. The redirect carries the enumeration-neutral
+ * promise with it: the notice is identical whether mail went out, a duplicate
+ * was absorbed, or the transport threw.
  */
 export async function registerExternalAccount(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = externalRegisterSchema.safeParse(input);
   if (!parsed.success) {
@@ -159,34 +179,37 @@ export async function registerExternalAccount(input: unknown): Promise<ExternalE
 
   const now = Date.now();
   const emailKey = normalizedEmailKey(parsed.data.email);
-  if (isCoolingDown(`register:${emailKey}`, now)) {
-    return neutralSuccess(NEUTRAL_REGISTER_MESSAGE);
+  const withinCooldown = isCoolingDown(`register:${emailKey}`, now);
+
+  if (!withinCooldown) {
+    try {
+      const supabase = await createClient();
+      const { error } = await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: {
+          // app_metadata is Auth-owned; the requested role is carried as user
+          // metadata only and is never trusted for authorization.
+          data: {
+            display_name: parsed.data.name,
+            requested_role: parsed.data.role,
+          },
+          emailRedirectTo: `${getSiteUrl()}${VERIFY_EMAIL_PATH}`,
+        },
+      });
+      // A duplicate signup can return an obfuscated result without sending
+      // mail; the outcome to the person is the same either way.
+      if (!error) {
+        resendCooldownUntil.set(`register:${emailKey}`, now + RESEND_COOLDOWN_MS);
+      }
+    } catch {
+      // Deliberately silent: a transport failure must not read differently
+      // from a code that was sent.
+    }
   }
 
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
-        // app_metadata is Auth-owned; the requested role is carried as user
-        // metadata only and is never trusted for authorization.
-        data: {
-          display_name: parsed.data.name,
-          requested_role: parsed.data.role,
-        },
-        emailRedirectTo: `${getSiteUrl()}/verify-email`,
-      },
-    });
-    // A duplicate signup can return an obfuscated result without sending mail;
-    // the caller sees the same message either way.
-    if (!error) {
-      resendCooldownUntil.set(`register:${emailKey}`, now + RESEND_COOLDOWN_MS);
-    }
-    return neutralSuccess(NEUTRAL_REGISTER_MESSAGE);
-  } catch {
-    return neutralSuccess(NEUTRAL_REGISTER_MESSAGE);
-  }
+  await rememberPendingVerificationEmail(parsed.data.email);
+  redirect(VERIFY_EMAIL_PATH);
 }
 
 /**
@@ -195,7 +218,7 @@ export async function registerExternalAccount(input: unknown): Promise<ExternalE
  */
 export async function verifyExternalCode(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = verifyEmailCodeSchema.safeParse(input);
   if (!parsed.success) {
@@ -236,6 +259,9 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
       });
     }
 
+    // Inbox control is proven, so the pinned address has served its purpose.
+    await clearPendingVerificationEmail();
+
     return neutralSuccess(NEUTRAL_VERIFY_MESSAGE);
   } catch {
     return neutralFailure("Verification is temporarily unavailable. Try again shortly.");
@@ -245,7 +271,7 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
 /** Re-sends the verification code with a neutral response and cooldown note. */
 export async function resendVerificationCode(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = resendCodeSchema.safeParse(input);
   if (!parsed.success) {
@@ -271,7 +297,7 @@ export async function resendVerificationCode(input: unknown): Promise<ExternalEn
 /** Starts password recovery with a neutral response. */
 export async function requestPasswordRecovery(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = recoveryRequestSchema.safeParse(input);
   if (!parsed.success) {
@@ -302,7 +328,7 @@ export async function requestPasswordRecovery(input: unknown): Promise<ExternalE
  */
 export async function confirmPasswordRecovery(input: unknown): Promise<ExternalEntryResult> {
   const legal = await requireLegalAcknowledgement("external");
-  if (!legal.acknowledged) return neutralFailure(LEGAL_REQUIRED_ERROR);
+  if (!legal.acknowledged) return legalRequiredFailure();
 
   const parsed = recoveryConfirmSchema.safeParse(input);
   if (!parsed.success) {

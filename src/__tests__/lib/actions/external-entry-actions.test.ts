@@ -12,7 +12,7 @@ import {
   verifyExternalCode,
 } from "@/lib/actions/external-entry-actions";
 
-const { supabaseMocks } = vi.hoisted(() => ({
+const { supabaseMocks, redirectMock, cookieSetMock, cookieGetMock } = vi.hoisted(() => ({
   supabaseMocks: {
     signInWithPassword: vi.fn(),
     signUp: vi.fn(),
@@ -22,6 +22,19 @@ const { supabaseMocks } = vi.hoisted(() => ({
     updateUser: vi.fn(),
     signOut: vi.fn(),
   },
+  redirectMock: vi.fn(),
+  cookieSetMock: vi.fn(),
+  cookieGetMock: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: cookieGetMock,
+    set: cookieSetMock,
+    delete: vi.fn(),
+  })),
 }));
 
 vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
@@ -87,15 +100,14 @@ describe("external entry actions", () => {
     });
   });
 
-  it("registration answers neutrally even when signup reports an error", async () => {
+  it("registration pins the address and hands off to the code step on an absorbed signup", async () => {
     supabaseMocks.signUp.mockResolvedValue({ error: new Error("User already registered") });
-    const result = await registerExternalAccount({
+    await registerExternalAccount({
       name: "Amara Reyes",
       email: "amara@example.com",
       password: "correct-horse-9",
       role: "ALUMNI",
     });
-    expect(result.success).toBe(true);
     expect(supabaseMocks.signUp).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "amara@example.com",
@@ -104,6 +116,23 @@ describe("external entry actions", () => {
         }),
       })
     );
+    expect(cookieSetMock).toHaveBeenCalledWith(
+      "cloie_pending_verify_email",
+      "amara@example.com",
+      expect.objectContaining({ httpOnly: true, path: "/verify-email" })
+    );
+    expect(redirectMock).toHaveBeenCalledWith("/verify-email");
+  });
+
+  it("registration answers neutrally when the transport throws", async () => {
+    supabaseMocks.signUp.mockRejectedValue(new Error("smtp down"));
+    await registerExternalAccount({
+      name: "Bela Santos",
+      email: "bela@example.com",
+      password: "correct-horse-9",
+      role: "INDUSTRY_PARTNER",
+    });
+    expect(redirectMock).toHaveBeenCalledWith("/verify-email");
   });
 
   it("registration rejects an email-derived-name shortcut (name required)", async () => {
@@ -114,12 +143,24 @@ describe("external entry actions", () => {
       role: "ALUMNI",
     });
     expect(result.success).toBe(false);
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("code verification rejects a non-6-digit token before any provider call", async () => {
     const result = await verifyExternalCode({ email: "amara@example.com", token: "123" });
     expect(result.success).toBe(false);
     expect(supabaseMocks.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it("a verified code releases the pinned address", async () => {
+    supabaseMocks.verifyOtp.mockResolvedValue({ error: null, data: { user: { id: "auth-1" } } });
+    const result = await verifyExternalCode({ email: "dara@example.com", token: "123456" });
+    expect(result.success).toBe(true);
+    expect(cookieSetMock).toHaveBeenCalledWith(
+      "cloie_pending_verify_email",
+      "",
+      expect.objectContaining({ maxAge: 0, path: "/verify-email" })
+    );
   });
 
   it("resend answers neutrally even when the provider throws", async () => {

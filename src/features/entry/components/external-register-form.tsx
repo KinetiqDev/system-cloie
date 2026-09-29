@@ -27,6 +27,9 @@ import { Separator } from "@/components/ui/separator";
  * External registration: the person chooses Alumni or Industry Partner, and
  * supplies the canonical account name at signup — it is never invented from
  * the email address. The response stays neutral about account existence.
+ *
+ * Acceptance hands off to the code step server-side, so there is no success
+ * state to render here: only the failures that keep the person on this page.
  */
 export function ExternalRegisterForm() {
   const [message, setMessage] = useState<EntryFormMessage>(null);
@@ -55,11 +58,9 @@ export function ExternalRegisterForm() {
       return;
     }
     const result = await registerExternalAccount(data);
-    setMessage(
-      result.success
-        ? { kind: "success", text: result.message }
-        : { kind: "error", text: result.error }
-    );
+    if (!result.success) {
+      setMessage({ kind: "error", text: result.error });
+    }
   };
 
   return (
@@ -173,23 +174,12 @@ export function ExternalRegisterForm() {
           checked={legalAccepted}
           onCheckedChange={setLegalAccepted}
         />
-        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting}>
+        <Button type="submit" className="min-h-12 w-full" disabled={isSubmitting || !legalAccepted}>
           {isSubmitting ? "Creating account…" : "Create account"}
         </Button>
       </form>
 
       <EntryFormMessageView message={message} />
-
-      {message?.kind === "success" && (
-        <p className="text-body-sm text-muted-foreground text-center">
-          <Link
-            href="/verify-email"
-            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
-          >
-            Enter your verification code
-          </Link>
-        </p>
-      )}
 
       <div className="flex items-center gap-3" aria-hidden="true">
         <Separator className="flex-1" />
