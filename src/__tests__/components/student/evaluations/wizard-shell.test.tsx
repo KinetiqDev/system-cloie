@@ -52,6 +52,33 @@ describe("WizardShell", () => {
     render(<WizardShell assignmentId="test" title="Test Eval" sections={mockSections} />);
 
     expect(screen.getByText(/Section 1 of 2/i)).toBeDefined();
+    expect(screen.getByRole("list", { name: "Section completion" })).toHaveClass("gap-2");
+    expect(screen.getByRole("listitem", { current: "step" })).toHaveClass("size-8");
+  });
+
+  test("keeps Likert choices evenly spaced when endpoint descriptors are longer", () => {
+    const sections = [
+      {
+        ...mockSections[0],
+        items: [
+          {
+            ...mockSections[0].items[0],
+            descriptorLabels: [
+              "Strongly Disagree",
+              "Disagree",
+              "Neutral",
+              "Agree",
+              "Strongly Agree",
+            ],
+          },
+        ],
+      },
+    ];
+    render(<WizardShell assignmentId="test" title="Test Eval" sections={sections} />);
+
+    const scale = screen.getByRole("radiogroup", { name: /Question 1/ });
+    expect(scale).toHaveStyle({ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" });
+    expect(within(scale).getAllByRole("radio")).toHaveLength(5);
   });
 
   test("does not render a save draft button in the evaluation footer", () => {
@@ -310,7 +337,7 @@ describe("WizardShell", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /back to dashboard/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /back to dashboard/i })).toHaveAttribute(
       "href",
       "/student/dashboard"
     );
