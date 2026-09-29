@@ -217,7 +217,8 @@ export function VerifyEmailForm({
         )}
         <Button
           type="submit"
-          className="min-h-12 w-full"
+          size="lg"
+          className="w-full"
           disabled={isSubmitting || (mustAcknowledge && !legalAccepted)}
         >
           {isSubmitting ? "Verifying…" : "Verify email"}

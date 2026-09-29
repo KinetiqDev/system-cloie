@@ -21,7 +21,7 @@ export function EntryShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-md min-w-0 flex-col px-4 py-6 sm:py-12">
+    <div className="entry-links mx-auto flex w-full max-w-lg min-w-0 flex-col px-4 py-6 sm:py-12">
       <BackLink href="/" className="mb-5 min-h-11 self-start">
         All sign-in options
       </BackLink>
@@ -48,7 +48,7 @@ export function EntryShell({
       </div>
 
       <Card className="border-border bg-surface min-w-0 overflow-visible shadow-sm">
-        <CardContent className="min-w-0 space-y-5 overflow-visible px-5 py-6 sm:px-8 [&_input[data-slot=input]]:min-h-12">
+        <CardContent className="entry-controls min-w-0 space-y-5 overflow-visible px-5 py-6 sm:px-8">
           {children}
         </CardContent>
       </Card>

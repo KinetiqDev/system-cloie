@@ -33,8 +33,9 @@ export function GoogleEntryButton({
       <Button
         type="button"
         variant="outline"
+        size="lg"
         onClick={() => setIsDialogOpen(true)}
-        className="min-h-12 w-full py-3 text-center whitespace-normal shadow-sm"
+        className="w-full text-center shadow-sm"
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- third-party
             brand lockup; a static decorative SVG gains nothing from the

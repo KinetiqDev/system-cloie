@@ -149,12 +149,7 @@ export function FacultyRegisterForm({
 
       <EntryFormMessageView message={message} />
 
-      <Button
-        type="submit"
-        size="lg"
-        className="min-h-12 w-full font-semibold"
-        disabled={isSubmitting}
-      >
+      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? "Submitting…" : "Submit Faculty request"}
         {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
       </Button>

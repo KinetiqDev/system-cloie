@@ -122,7 +122,6 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
               aria-describedby={
                 emailForm.formState.errors.email ? "external-email-error" : undefined
               }
-              className="min-h-12"
               {...emailForm.register("email")}
             />
             {emailForm.formState.errors.email && (
@@ -138,7 +137,8 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
           />
           <Button
             type="submit"
-            className="min-h-12 w-full"
+            size="lg"
+            className="w-full"
             disabled={emailForm.formState.isSubmitting || !legalAccepted}
           >
             {emailForm.formState.isSubmitting ? "Checking…" : "Continue"}
@@ -200,7 +200,6 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
             aria-describedby={
               passwordForm.formState.errors.password ? "external-password-error" : undefined
             }
-            className="min-h-12"
             {...passwordForm.register("password")}
           />
           {passwordForm.formState.errors.password && (
@@ -216,7 +215,8 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
         />
         <Button
           type="submit"
-          className="min-h-12 w-full"
+          size="lg"
+          className="w-full"
           disabled={passwordForm.formState.isSubmitting || !legalAccepted}
         >
           {passwordForm.formState.isSubmitting ? "Signing in…" : "Sign in"}

@@ -53,7 +53,7 @@ export default function Home() {
         {/* Hero */}
         <section
           aria-labelledby="landing-hero-heading"
-          className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-backwards mx-auto flex max-w-3xl flex-col items-center py-16 text-center motion-safe:duration-700 sm:py-24"
+          className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-backwards mx-auto flex max-w-5xl flex-col items-center py-16 text-center motion-safe:duration-700 sm:py-24"
         >
           <div className="mx-auto mb-6 flex items-center justify-center gap-4 sm:gap-5">
             <div className="ring-primary/10 relative flex size-24 items-center justify-center rounded-full bg-white shadow-sm ring-4 sm:size-28">
@@ -90,7 +90,7 @@ export default function Home() {
           </p>
 
           {/* Audience entry cards */}
-          <div className="mt-9 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3">
+          <div className="mt-9 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3 lg:gap-6">
             <PortalChoiceCard
               icon={<GraduationCap className="size-7" />}
               title="Students"
@@ -118,7 +118,7 @@ export default function Home() {
             New Faculty member?{" "}
             <Link
               href="/register/faculty"
-              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+              className="text-link hover:text-primary-hover focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
             >
               Submit a Faculty request
             </Link>
@@ -201,13 +201,13 @@ export default function Home() {
           </span>
           <nav aria-label="Legal links" className="text-body-sm flex gap-4">
             <Link
-              className="text-muted-foreground hover:text-link focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground hover:text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               href="/privacy"
             >
               Privacy Notice
             </Link>
             <Link
-              className="text-muted-foreground hover:text-link focus-visible:ring-ring underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              className="text-muted-foreground hover:text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
               href="/terms"
             >
               Terms of Use

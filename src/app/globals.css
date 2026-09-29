@@ -4,6 +4,35 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant pointer-coarse (@media (any-pointer: coarse));
+
+.entry-controls
+  :is(
+    [data-slot="input"],
+    [data-slot="select-trigger"],
+    [data-slot="input-group"],
+    [data-slot="combobox-chips"]
+  ) {
+  min-height: 3rem;
+  font-size: 1rem;
+}
+
+.entry-controls [data-slot="input-group"] [data-slot="input-group-control"] {
+  height: 100%;
+  font-size: 1rem;
+}
+
+.entry-links a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: var(--radius-md);
+}
+
+.entry-links a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
 
 @layer components {
   .legal-prose {

@@ -212,7 +212,9 @@ Exact sizes live in `globals.css`.
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
-- Touch targets: interactive controls carry `pointer-coarse:` overrides expanding them to ≥44 × 44 px on touch devices; fine-pointer sizes stay dense.
+- Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
+- Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Public entry forms use the same 48 px floor for inputs, selects, and grouped controls through `entry-controls`.
+- `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.
 
 | Context         | Layout                                              |
 | --------------- | --------------------------------------------------- |
@@ -307,7 +309,9 @@ Rules:
 - `brand-accent` is intentional, not a second primary.
 - Routine destructive controls use soft danger; filled danger is confirmation-only.
 - Async actions disable duplicate submission and show loading.
-- Keep existing size names in `button.tsx`.
+- Keep existing size names in `button.tsx`: `xs` = 24 px, `sm` = 32 px, `default` = 40 px, `lg` = at least 48 px; icon sizes follow the same ladder. Use `sm` for compact row actions, `default` for operational actions, and `lg` for entry/onboarding continuation and submission.
+- Choose the shared size variant instead of overriding button height at each call site. Preserve intentional 44 px respondent and navigation targets.
+- Whole-card navigation remains a single link. Its visual action may reuse `buttonVariants`; never nest a button or another link inside the card link.
 - Upward navigation uses `BackLink` (`src/components/ui/back-link.tsx`): ghost `sm`, `-ml-2`, muted-to-foreground, `ArrowLeft` leading. `href` for plain leaves, `onClick` only for a leave guard. Label `Back to {ParentList}` in Title Case. Step controls (`Previous`, `Back to editing`) and error-recovery CTAs are not upward navigation and keep their own variants.
 
 ### 8.3 Form Controls
