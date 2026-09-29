@@ -105,7 +105,7 @@ Theme-adaptive:
 - Dark: use a light brand-safe plate (`#FFFFFF` or `#F8FAFC`) with a subtle border.
 - Warm colors inside logos are not general UI tokens.
 - The System CLOIE source mark is `assets/cloie-logo.svg`, served as `public/logos/cloie-logo.svg` with its native 442 × 500 aspect ratio.
-- Run `pnpm brand:icons` after replacing the source mark. This requires ImageMagick and generates the public SVG copy, square SVG tab icon, multi-size ICO fallback, 180 × 180 Apple touch icon, and 192/512 px PNG install icons. Icon artwork retains its colors on a white plate; the maskable variant keeps the full mark inside the central 80% safe circle.
+- Run `pnpm brand:icons` after replacing the source mark. This requires ImageMagick and generates the public SVG copy, square SVG tab icon, multi-size ICO fallback, 180 × 180 Apple touch icon, and 192/512 px PNG install icons. Icon artwork retains its colors on a white plate; the maskable variant keeps the full mark inside the central 80% safe circle. The generator accepts root-attribute reordering, validates the expected viewBox, and completes every conversion before publishing files. A differently sized source mark requires updating the UI dimensions and generator contract together.
 
 ---
 
