@@ -56,7 +56,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 
 - Name is always **System CLOIE** in user-facing copy and documentation; never shortened to "CLOIE".
 - **The ACD seal must be preserved** (confirmed binding). Never recolor, invert, filter, distort, or redraw official logos.
-- Official assets: `public/logos/acd-logo.png` (ACD seal), `public/logos/cloie-logo.png` (product mark), `public/logos/google-logo.svg` (sign-in).
+- Official assets: `public/logos/acd-logo.png` (ACD seal), `public/logos/cloie-logo.svg` (product mark), `public/logos/google-logo.svg` (sign-in).
 - Approved visual specification lives in `docs/design.md` (light/dark/system themes, semantic token contract). The stakeholder has granted explicit latitude to improve the design system beyond the incumbent spec — accessibility, user experience, contrast, clarity — provided product truth and the seal are preserved. Improvements should update the governing docs rather than diverge from them silently.
 
 ## Evidence on Hand

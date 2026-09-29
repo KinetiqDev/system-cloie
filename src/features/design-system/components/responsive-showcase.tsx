@@ -25,7 +25,7 @@ function Frame({
       <figcaption className="text-label-sm text-muted-foreground">{title}</figcaption>
       <div
         className={cn(
-          "flex flex-col overflow-hidden rounded-lg border border-sidebar-border bg-sidebar",
+          "border-sidebar-border bg-sidebar flex flex-col overflow-hidden rounded-lg border",
           widthClassName
         )}
       >
@@ -39,16 +39,16 @@ function BrandRow({ compact = false }: { compact?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-14 shrink-0 items-center gap-3 border-b border-sidebar-border px-3",
+        "border-sidebar-border flex h-14 shrink-0 items-center gap-3 border-b px-3",
         !compact && "px-4"
       )}
     >
       <Image
-        src="/logos/cloie-logo.png"
-        alt="System CLOIE Logo"
-        width={486}
-        height={513}
-        className="h-6 w-auto rounded border border-border bg-white p-0.5"
+        src="/logos/cloie-logo.svg"
+        alt="System CLOIE"
+        width={442}
+        height={500}
+        className="border-border h-6 w-auto rounded border bg-white p-0.5"
       />
       {!compact && (
         <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
@@ -68,10 +68,7 @@ export function ResponsiveShowcase() {
       <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-3">
         <Frame title="Desktop · lg (≥1024px) — expanded sidebar" widthClassName="w-full max-w-64">
           <BrandRow />
-          <nav
-            aria-label="Desktop sidebar reference"
-            className="flex flex-col gap-1 px-2 py-4"
-          >
+          <nav aria-label="Desktop sidebar reference" className="flex flex-col gap-1 px-2 py-4">
             {secretary.map((item, index) => (
               <NavigationRow
                 key={item.href}
@@ -84,7 +81,7 @@ export function ResponsiveShowcase() {
               </NavigationRow>
             ))}
           </nav>
-          <div className="mt-auto border-t border-sidebar-border p-3">
+          <div className="border-sidebar-border mt-auto border-t p-3">
             <div className="flex items-center gap-3">
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
                 <span className="text-body-sm font-semibold">R</span>
@@ -101,7 +98,10 @@ export function ResponsiveShowcase() {
           </div>
         </Frame>
 
-        <Frame title="Tablet · md–lg (768–1024px) — Dean icon rail" widthClassName="w-full max-w-16">
+        <Frame
+          title="Tablet · md–lg (768–1024px) — Dean icon rail"
+          widthClassName="w-full max-w-16"
+        >
           <BrandRow compact />
           <nav aria-label="Dean rail reference" className="flex flex-col gap-1 px-2 py-4">
             <NavigationRow
@@ -124,19 +124,20 @@ export function ResponsiveShowcase() {
           </nav>
         </Frame>
 
-        <Frame title="Mobile · <md (<768px) — drawer trigger and bottom navigation" widthClassName="w-full max-w-72">
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
+        <Frame
+          title="Mobile · <md (<768px) — drawer trigger and bottom navigation"
+          widthClassName="w-full max-w-72"
+        >
+          <div className="border-sidebar-border flex h-14 shrink-0 items-center justify-between border-b px-3">
             <div className="flex items-center gap-3">
               <Image
-                src="/logos/cloie-logo.png"
-                alt="System CLOIE Logo"
-                width={486}
-                height={513}
-                className="h-6 w-auto rounded border border-border bg-white p-0.5"
+                src="/logos/cloie-logo.svg"
+                alt="System CLOIE"
+                width={442}
+                height={500}
+                className="border-border h-6 w-auto rounded border bg-white p-0.5"
               />
-              <span className="text-title-md text-link font-bold tracking-tight">
-                System CLOIE
-              </span>
+              <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </div>
             <MobileSidebarDrawer roles={[ROLES.SECRETARY]} />
           </div>
@@ -147,7 +148,7 @@ export function ResponsiveShowcase() {
           </div>
           <nav
             aria-label="Respondent bottom navigation reference"
-            className="flex h-16 shrink-0 items-stretch border-t border-sidebar-border px-1 pb-safe"
+            className="border-sidebar-border pb-safe flex h-16 shrink-0 items-stretch border-t px-1"
           >
             {studentMobile.map((item, index) => (
               <BottomNavRow
@@ -166,12 +167,11 @@ export function ResponsiveShowcase() {
         </Frame>
       </div>
 
-      <p className="text-body-sm max-w-2xl text-muted-foreground">
-        These frames render the real layout presentation rows — the sidebar,
-        Dean rail, admin drawer, and bottom navigation around this page are the
-        same components. Breakpoints, density, hierarchy, navigation mode, and
-        responsive substitution are identical in Light and Dark; only token
-        values adapt.
+      <p className="text-body-sm text-muted-foreground max-w-2xl">
+        These frames render the real layout presentation rows — the sidebar, Dean rail, admin
+        drawer, and bottom navigation around this page are the same components. Breakpoints,
+        density, hierarchy, navigation mode, and responsive substitution are identical in Light and
+        Dark; only token values adapt.
       </p>
     </div>
   );

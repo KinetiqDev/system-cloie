@@ -83,10 +83,10 @@ export function Topbar({
         ) : (
           <>
             <Image
-              src="/logos/cloie-logo.png"
-              alt="System CLOIE Logo"
-              width={486}
-              height={513}
+              src="/logos/cloie-logo.svg"
+              alt="System CLOIE"
+              width={442}
+              height={500}
               className="border-border h-7 w-auto rounded border bg-white p-0.5"
             />
             <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>

@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "System CLOIE",
-    short_name: "CLOIE",
+    short_name: "System CLOIE",
     description: "Comprehensive Learning Outcomes and Instructional Evaluation",
     start_url: "/",
     display: "standalone",

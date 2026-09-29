@@ -8,6 +8,7 @@
     "build": "NEXT_TELEMETRY_DISABLED=1 next build",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start",
     "postinstall": "prisma generate --schema prisma",
+    "brand:icons": "node scripts/generate-brand-icons.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:check:changed": "node scripts/ci/check-prettier-changed.mjs",
