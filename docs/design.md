@@ -335,6 +335,14 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
 - Theme does not change route grouping or navigation priority.
 - Dark navigation uses light logo plates.
 - Do not add per-page navigation or expose dev/demo switching in production.
+- The large-screen sidebar collapses to an icon rail on the operator's request, the same rail the
+  Dean gets on tablet. The choice is remembered in a first-party cookie, so the server renders the
+  remembered state on the first paint. In the rail every destination keeps its accessible name and
+  names itself in a tooltip; the brand mark is the expand affordance, because a 64px rail has no
+  room for a second control beside it. The Dean rail between md and lg is width-driven, so it
+  shows neither the wordmark nor the control below lg.
+- Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
+  its state with `aria-expanded` on the navigation it controls.
 
 ### 8.5 Cards
 
@@ -447,8 +455,9 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 
 Tailwind defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280.
 
-- **Desktop:** expanded navigation, full chart/table density, multi-column cards, dialogs.
-- **Tablet:** Dean icon rail, two-column cards, reduced chart density.
+- **Desktop:** expanded navigation (collapsible to an icon rail per operator), full chart/table
+  density, multi-column cards, dialogs.
+- **Tablet:** Dean icon rail (width-driven, no toggle), two-column cards, reduced chart density.
 - **Mobile:** respondent bottom nav; admin hamburger/drawer; single-column forms; contained horizontal tables; `pb-safe`; touch targets per §5.2.
 
 Appearance must not alter breakpoints, density, information hierarchy, navigation mode, or responsive substitution.

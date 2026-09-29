@@ -2014,6 +2014,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "layout",
   },
   {
+    path: "src/components/layout/sidebar-shell.tsx",
+    disposition: "task",
+    taskId: 11,
+    category: "layout",
+  },
+  {
     path: "src/components/layout/topbar.tsx",
     disposition: "task",
     taskId: 11,

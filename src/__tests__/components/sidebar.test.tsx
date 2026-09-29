@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type React from "react";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -115,6 +115,52 @@ describe("Program Head desktop navigation", () => {
     ]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
-    expect(screen.queryByRole("button", { name: /expand|collapse/i })).not.toBeInTheDocument();
+    // Groups stay open: no disclosure control lives inside the navigation. The
+    // header's sidebar collapse control is a separate, always-present control.
+    const nav = screen.getByRole("navigation", { name: "Dean navigation" });
+    expect(within(nav).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Collapse navigation sidebar" })).toBeInTheDocument();
+  });
+
+  it("names the collapse control and the navigation it controls", () => {
+    render(<Sidebar roles={[ROLES.SECRETARY]} />);
+
+    const toggle = screen.getByRole("button", { name: "Collapse navigation sidebar" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("navigation", { name: "Primary navigation" })).toHaveAttribute(
+      "id",
+      toggle.getAttribute("aria-controls")
+    );
+  });
+
+  it("resolves to icons only when collapsed, for every role", () => {
+    for (const role of [ROLES.SECRETARY, ROLES.PROGRAM_HEAD, ROLES.FACULTY, ROLES.DEAN]) {
+      const { unmount } = render(<Sidebar roles={[role]} collapsed />);
+
+      const rail = document.querySelector("aside");
+      expect(rail).toHaveAttribute("data-collapsed", "true");
+      expect(rail).toHaveClass("w-16");
+      // Destinations keep their names for assistive technology, and the mark
+      // carries the expand affordance because a rail has no room for a
+      // second control beside it.
+      expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Expand navigation sidebar" })).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Collapse navigation sidebar" })
+      ).not.toBeInTheDocument();
+
+      unmount();
+    }
+  });
+
+  it("keeps the expanded lockup and hides it in the rail", () => {
+    const { unmount } = render(<Sidebar roles={[ROLES.SECRETARY]} />);
+    expect(screen.getByRole("link", { name: "System CLOIE — Dashboard" })).toBeInTheDocument();
+    unmount();
+
+    render(<Sidebar roles={[ROLES.SECRETARY]} collapsed />);
+    expect(
+      screen.queryByRole("link", { name: "System CLOIE — Dashboard" })
+    ).not.toBeInTheDocument();
   });
 });

@@ -9,6 +9,8 @@ interface NavigationRowProps extends ComponentProps<typeof NavigationLink> {
   active?: boolean;
   /** Tablet icon-rail geometry: centered until the large-screen sidebar expands. */
   rail?: boolean;
+  /** Rail geometry at every width, for the operator-collapsed sidebar. */
+  iconOnly?: boolean;
   /** Compact support-row geometry with smaller type. */
   secondary?: boolean;
 }
@@ -23,6 +25,7 @@ interface NavigationRowProps extends ComponentProps<typeof NavigationLink> {
 export function NavigationRow({
   active = false,
   rail = false,
+  iconOnly = false,
   secondary = false,
   className,
   ...props
@@ -38,6 +41,9 @@ export function NavigationRow({
           : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
         secondary && "text-body-sm py-2",
         rail && "justify-center md:min-w-11 lg:justify-start",
+        // The gap closes as the label folds away, so the icon settles centred.
+        iconOnly &&
+          "justify-center gap-0 px-2 transition-[gap] duration-200 ease-out motion-reduce:transition-none",
         className
       )}
     />

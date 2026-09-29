@@ -6,6 +6,12 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn(), replace: vi.fn() })),
 }));
 
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (name === "cloie-sidebar-collapsed" ? { value: "1" } : undefined),
+  }),
+}));
+
 vi.mock("@/components/layout/sidebar", () => ({
   Sidebar: () => null,
 }));
@@ -29,20 +35,25 @@ vi.mock("@/features/auth/components/demo-role-switcher", () => ({
 import { AppShell } from "@/components/layout/app-shell";
 
 describe("AppShell dedicated demo experience", () => {
-  it("shows the indicator and switcher only for the server capability", () => {
+  it("shows the indicator and switcher only for the server capability", async () => {
     const { rerender } = render(
-      <AppShell demoEnabled user={{ email: "demo-faculty@cloie.test" }} activeRole={ROLES.FACULTY}>
-        <div>Protected content</div>
-      </AppShell>
+      await AppShell({
+        demoEnabled: true,
+        user: { email: "demo-faculty@cloie.test" },
+        activeRole: ROLES.FACULTY,
+        children: <div>Protected content</div>,
+      })
     );
 
     expect(screen.getByRole("status", { name: "Dedicated demo environment" })).toBeInTheDocument();
     expect(screen.getByText("Demo role switcher")).toBeInTheDocument();
 
     rerender(
-      <AppShell user={{ email: "faculty@example.com" }} activeRole={ROLES.FACULTY}>
-        <div>Protected content</div>
-      </AppShell>
+      await AppShell({
+        user: { email: "faculty@example.com" },
+        activeRole: ROLES.FACULTY,
+        children: <div>Protected content</div>,
+      })
     );
 
     expect(

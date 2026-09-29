@@ -159,7 +159,7 @@ export function MobileSidebarDrawer({
                 alt="System CLOIE"
                 width={442}
                 height={500}
-                className="border-border h-7 w-auto rounded border bg-white p-0.5"
+                className="h-10 w-auto dark:bg-white"
               />
               <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </Link>

@@ -35,12 +35,12 @@ function Frame({
   );
 }
 
-function BrandRow({ compact = false }: { compact?: boolean }) {
+function BrandRow({ rail = false }: { rail?: boolean }) {
   return (
     <div
       className={cn(
-        "border-sidebar-border flex h-14 shrink-0 items-center gap-3 border-b px-3",
-        !compact && "px-4"
+        "border-sidebar-border flex h-16 shrink-0 items-center border-b",
+        rail ? "justify-center px-2" : "gap-3 px-4"
       )}
     >
       <Image
@@ -48,9 +48,9 @@ function BrandRow({ compact = false }: { compact?: boolean }) {
         alt="System CLOIE"
         width={442}
         height={500}
-        className="border-border h-6 w-auto rounded border bg-white p-0.5"
+        className="h-10 w-auto dark:bg-white"
       />
-      {!compact && (
+      {!rail && (
         <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
       )}
     </div>
@@ -65,7 +65,7 @@ export function ResponsiveShowcase() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-3">
+      <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-2 xl:grid-cols-4">
         <Frame title="Desktop · lg (≥1024px) — expanded sidebar" widthClassName="w-full max-w-64">
           <BrandRow />
           <nav aria-label="Desktop sidebar reference" className="flex flex-col gap-1 px-2 py-4">
@@ -102,7 +102,7 @@ export function ResponsiveShowcase() {
           title="Tablet · md–lg (768–1024px) — Dean icon rail"
           widthClassName="w-full max-w-16"
         >
-          <BrandRow compact />
+          <BrandRow rail />
           <nav aria-label="Dean rail reference" className="flex flex-col gap-1 px-2 py-4">
             <NavigationRow
               href={deanDashboard.href}
@@ -125,17 +125,39 @@ export function ResponsiveShowcase() {
         </Frame>
 
         <Frame
+          title="Desktop · collapsed rail (operator preference, every role)"
+          widthClassName="w-full max-w-16"
+        >
+          <BrandRow rail />
+          <nav aria-label="Collapsed rail reference" className="flex flex-col gap-1 px-2 py-4">
+            {secretary.map((item, index) => (
+              <NavigationRow
+                key={item.href}
+                href={item.href}
+                active={index === 0}
+                aria-current={index === 0 ? "page" : undefined}
+                iconOnly
+                title={item.name}
+              >
+                <item.icon className="size-5 shrink-0" aria-hidden="true" />
+                <span className="sr-only">{item.name}</span>
+              </NavigationRow>
+            ))}
+          </nav>
+        </Frame>
+
+        <Frame
           title="Mobile · <md (<768px) — drawer trigger and bottom navigation"
           widthClassName="w-full max-w-72"
         >
-          <div className="border-sidebar-border flex h-14 shrink-0 items-center justify-between border-b px-3">
+          <div className="border-sidebar-border flex h-16 shrink-0 items-center justify-between border-b px-3">
             <div className="flex items-center gap-3">
               <Image
                 src="/logos/cloie-logo.svg"
                 alt="System CLOIE"
                 width={442}
                 height={500}
-                className="border-border h-6 w-auto rounded border bg-white p-0.5"
+                className="h-9 w-auto dark:bg-white"
               />
               <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </div>
@@ -172,6 +194,12 @@ export function ResponsiveShowcase() {
         drawer, and bottom navigation around this page are the same components. Breakpoints,
         density, hierarchy, navigation mode, and responsive substitution are identical in Light and
         Dark; only token values adapt.
+      </p>
+      <p className="text-body-sm text-muted-foreground max-w-2xl">
+        The expanded sidebar closes from the header’s trailing-edge control; the preference is
+        remembered in a first-party cookie, so the rail returns on the next visit. In the rail the
+        brand mark is the expand affordance, every destination keeps its accessible name, and each
+        icon names its destination in a tooltip. Ctrl/⌘ + B toggles either state.
       </p>
     </div>
   );
