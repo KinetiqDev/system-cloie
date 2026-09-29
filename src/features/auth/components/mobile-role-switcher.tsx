@@ -63,7 +63,7 @@ export function MobileRoleSwitcher({
             <DrawerDescription>{description}</DrawerDescription>
           </DrawerHeader>
           <div className="flex flex-col gap-2 px-4 pb-6">
-            <div className="grid max-h-[40vh] gap-1.5 overflow-y-auto pr-1">
+            <div className="grid max-h-[40vh] grid-cols-[minmax(0,1fr)] gap-1.5 overflow-y-auto pr-1">
               <RoleSwitcherList
                 activeEmail={activeEmail}
                 error={error}
