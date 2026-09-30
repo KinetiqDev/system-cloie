@@ -11,7 +11,7 @@ import {
   isCourseBoundEvaluationAvailable,
   STUDENT_EVALUATION_UNAVAILABLE_ERROR,
 } from "./course-bound-availability";
-import { assertSubmissionIsAllowed } from "./submit-student-course-bound-response";
+import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
 import { lockResponseSubmission } from "./lock-response-submission";
 
 type SubmissionAnswers = Record<string, unknown>;

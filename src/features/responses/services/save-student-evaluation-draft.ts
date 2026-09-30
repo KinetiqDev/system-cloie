@@ -11,11 +11,8 @@ import {
   isCourseBoundEvaluationAvailable,
   STUDENT_EVALUATION_UNAVAILABLE_ERROR,
 } from "./course-bound-availability";
-import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
-import {
-  buildQualitativeUpserts,
-  buildQuantitativeUpserts,
-} from "./save-student-course-bound-draft";
+import { buildQualitativeUpserts, buildQuantitativeUpserts } from "./build-draft-upserts";
+import { mapTemplateStructureToSections } from "./map-template-structure";
 
 export type SaveStudentEvaluationDraftInput = {
   answers: Record<string, unknown>;
@@ -39,7 +36,7 @@ function resolveSection(
   sectionKey: string
 ): StudentEvaluationSection | null {
   return (
-    mapStructureSnapshotToSections(structureSnapshot).find((entry) => entry.id === sectionKey) ??
+    mapTemplateStructureToSections(structureSnapshot).find((entry) => entry.id === sectionKey) ??
     null
   );
 }

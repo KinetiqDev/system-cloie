@@ -4,11 +4,8 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import type { StudentEvaluationSection } from "@/features/responses/types";
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
 import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
+import { buildQualitativeUpserts, buildQuantitativeUpserts } from "./build-draft-upserts";
 import { mapTemplateStructureToSections } from "./map-template-structure";
-import {
-  buildQualitativeUpserts,
-  buildQuantitativeUpserts,
-} from "./save-student-course-bound-draft";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 

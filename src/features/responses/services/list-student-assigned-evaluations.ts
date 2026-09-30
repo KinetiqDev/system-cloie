@@ -20,7 +20,7 @@ import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
 } from "@/features/evaluations/services/course-info-snapshot";
-import { mapStructureSnapshotToSections } from "./get-student-course-bound-evaluation-session";
+import { mapTemplateStructureToSections } from "./map-template-structure";
 
 const THREE_DAYS_IN_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -257,7 +257,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
           const ca = courseBound.course_assignment;
           const courseInfo = parseCourseInfoSnapshot(courseBound.course_info_snapshot);
 
-          const sections = mapStructureSnapshotToSections(
+          const sections = mapTemplateStructureToSections(
             courseBound.instrument.structure_snapshot
           );
           const section = sections[0] ?? buildFallbackSection();
@@ -311,7 +311,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
             return null;
           }
 
-          const sections = mapStructureSnapshotToSections(deployment.instrument.structure_snapshot);
+          const sections = mapTemplateStructureToSections(deployment.instrument.structure_snapshot);
           const section = sections[0] ?? buildFallbackSection();
           const session: StudentEvaluationSession = {
             answeredItems: response ? response.qual_items.length + response.quant_items.length : 0,

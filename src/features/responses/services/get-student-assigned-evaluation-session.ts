@@ -18,10 +18,8 @@ import {
   resolveSnapshotProgramLabel,
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
-import {
-  mapSavedAnswerItems,
-  mapStructureSnapshotToSections,
-} from "./get-student-course-bound-evaluation-session";
+import { mapSavedAnswerItems } from "./map-saved-answer-items";
+import { mapTemplateStructureToSections } from "./map-template-structure";
 
 function countSectionItems(sections: StudentEvaluationSection[]) {
   return sections.reduce((total, section) => total + section.items.length, 0);
@@ -82,7 +80,7 @@ function prepareStudentEvaluationSession(
   savedAnswers: Record<string, number | string>;
   session: StudentEvaluationSession;
 } {
-  const sections = mapStructureSnapshotToSections(structureSnapshot);
+  const sections = mapTemplateStructureToSections(structureSnapshot);
   const savedAnswers = response
     ? mapSavedAnswerItems({
         qualitativeItems: response.qual_items,

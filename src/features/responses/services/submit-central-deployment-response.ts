@@ -4,7 +4,7 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { parseStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
 import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
-import { assertSubmissionIsAllowed } from "./submit-student-course-bound-response";
+import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
 import { lockResponseSubmission } from "./lock-response-submission";
 
 // ─── Public types ───────────────────────────────────────────────────────────
