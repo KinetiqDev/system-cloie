@@ -45,7 +45,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 - [operations/deployment-inventory.md](operations/deployment-inventory.md)
 - [operations/institutional-handover.md](operations/institutional-handover.md) — ISDRT policy interpreted for System CLOIE.
-- [runbooks/](runbooks/) — dedicated demo deployment, appearance production activation.
+- [runbooks/](runbooks/) — dedicated demo deployment, appearance production activation, external entry mail.
 - [deployment-coolify.md](deployment-coolify.md)
 - [testing/production-browser-evidence.md](testing/production-browser-evidence.md)
 

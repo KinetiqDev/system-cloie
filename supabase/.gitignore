@@ -7,3 +7,6 @@
 .env
 .env.local
 .env.*.local
+
+# Filled copy of mail.env.example. The template is tracked; its secrets are not.
+mail.env

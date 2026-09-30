@@ -15,27 +15,42 @@ Local CLI Docker stack: `supabase/config.toml` already sets `enable_signup =
 true`, `enable_confirmations = true`, `secure_password_change = true`,
 otp_length = 6, otp_expiry = 3600, and a 60s resend cooldown. Restart the
 local stack after editing the file. Local mail is captured by the built-in
-mail catcher; it is never delivered to a real inbox.
+mail catcher; it is never delivered to a real inbox. Keep it that way for
+the dedicated demo deployment and disposable CI as well.
 
 Every other target (staging, dedicated demo, disposable CI, production) is an
 independently deployed Supabase Docker instance. The operator configures mail
-there and **never** in this repository. Required on each production instance:
+there and **never** in this repository. Start from
+[`supabase/mail.env.example`](mail.env.example), which carries every required
+value as a `<<FILL: ...>>` token, and follow
+[docs/runbooks/external-entry-mail.md](../docs/runbooks/external-entry-mail.md)
+for the full procedure, the zero-cost relay rules, and verification. Copy it to
+`mail.env` in the deployment repository, not here; `supabase/mail.env` is
+git-ignored. The required settings on each real-delivery instance are:
 
-- `GOTRUE_MAILER_URLPATHS_CONFIRMATION`, `..._RECOVERY`, and
-  `..._MAGICLINK` must be reachable by the Auth service, or the corresponding
-  template customized. A template the Auth container cannot fetch means codes
-  never arrive.
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_USER_NAME`, and
-  `SMTP_ADMIN_EMAIL`, plus SPF/DKIM/DMARC records for the sending domain.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL`, and
+  `SMTP_SENDER_NAME`, plus SPF and DKIM records for the sending domain.
+  `SMTP_USER_NAME` is not a variable upstream Compose reads; the sender name
+  arrives through `SMTP_SENDER_NAME`.
+- `GOTRUE_MAILER_TEMPLATES_CONFIRMATION` and
+  `GOTRUE_MAILER_TEMPLATES_RECOVERY` must point at HTTP(S) URLs the Auth
+  container can fetch, serving `supabase/templates/confirm_signup.html` and
+  `supabase/templates/recovery.html`. GoTrue fetches the body at send time and
+  treats an unreachable URL as a send failure. Its built-in defaults render a
+  link, not the `{{ .Token }}` the entry form needs, so mail can arrive and
+  still be unusable. `GOTRUE_MAILER_URLPATHS_*` is a different setting: it
+  builds link targets for link-based templates and stays unset here.
 - `ENABLE_EMAIL_SIGNUP=true` and `ENABLE_EMAIL_AUTOCONFIRM=false`. Autoconfirm
-  would let an unverified address reach domain linkage.
+  would let an unverified address reach domain linkage, and it also suppresses
+  the verification mail entirely.
 - `GOTRUE_MAILER_OTP_EXP` (seconds; keep it at or below `GOTRUE_SECURITY_MAX_AGE`
-  so a code cannot outlive its session) and `GOTRUE_MAILER_AUTOCONFIRM`.
+  so a code cannot outlive its session), `GOTRUE_MAILER_OTP_LENGTH=6`, and
+  `GOTRUE_MAILER_AUTOCONFIRM=false`.
 - Rate limits on the instance: mail send rate, `GOTRUE_RATE_LIMIT_EMAIL_SENT`,
-  `GOTRUE_RATE_LIMIT_VERIFY_AND_GENERATE`, and the password minimum
+  `GOTRUE_RATE_LIMIT_OTP`, and the password minimum
   (`GOTRUE_PASSWORD_MIN_LENGTH`, keep at 8 or more to match the app schema).
 - `ADDITIONAL_REDIRECT_URLS` must include every per-target System CLOIE
-  callback, including the `/verify-email` and `/reset-password` origins.
+  origin, including the `/verify-email` and `/reset-password` origins.
 
 Code lifetime, attempt limits, and resend cooldown are therefore properties of
 the instance configuration, not of the application. Do not infer production
