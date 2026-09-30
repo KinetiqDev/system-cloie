@@ -56,10 +56,6 @@ vi.mock("@/features/analytics/services/resolve-legacy-cilo-review-redirect", () 
   resolveLegacyCourseResponse: resolveLegacyCourseResponseMock,
 }));
 
-vi.mock("@/features/analytics/components/published-course-bound-list", () => ({
-  PublishedCourseBoundList: ({ title }: { title: string }) => <div>Published list: {title}</div>,
-}));
-
 vi.mock("@/features/analytics/components/course-bound-review-tabs", () => ({
   CourseBoundReviewTabs: ({ responseBasePath }: { responseBasePath: string }) => (
     <div>Tabs base path: {responseBasePath}</div>

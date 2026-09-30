@@ -2495,12 +2495,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/published-course-bound-list.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
     path: "src/features/analytics/components/qualitative-word-cloud.tsx",
     disposition: "task",
     taskId: 10,
@@ -2917,19 +2911,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/dean/components/dean-oversight-loading.tsx",
     disposition: "task",
     taskId: 19,
-    category: "feature_component",
-  },
-
-  {
-    path: "src/features/enrollments/components/enrollment-editor-dialog.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/enrollments/components/student-enrollment-history.tsx",
-    disposition: "task",
-    taskId: 16,
     category: "feature_component",
   },
   {
