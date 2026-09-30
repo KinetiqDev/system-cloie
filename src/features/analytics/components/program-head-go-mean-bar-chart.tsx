@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, CartesianGrid, Cell, ComposedChart, Scatter, XAxis, YAxis, ZAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -21,26 +21,27 @@ import {
 } from "@/components/ui/table";
 import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
 
-type LollipopDatum = {
+type MeanBarDatum = {
   code: string;
   label: string;
   value: number;
 };
 
-type ProgramHeadGoLollipopChartProps = {
+type ProgramHeadGoMeanBarChartProps = {
   title: string;
   outcomes: ProgramHeadOutcomeDTO[];
 };
 
 /**
- * GO means as a lollipop/dot plot on the fixed 1–5 rating scale. Stems mark
- * the distance from the scale floor and dots mark the exact mean, so
- * outcomes stay comparable at a glance. Rows without a mean carry no
- * defensible position and are never drawn (they remain in the exact table).
+ * GO means as ranked horizontal bars on the fixed 1–5 rating scale. Bars run
+ * from a true zero baseline so their length stays proportional to the mean,
+ * and the two-decimal value rides the end of each bar so close means stay
+ * readable without a hover. Rows without a mean carry no defensible position
+ * and are never drawn (they remain in the exact table).
  */
-export function ProgramHeadGoLollipopChart({ title, outcomes }: ProgramHeadGoLollipopChartProps) {
+export function ProgramHeadGoMeanBarChart({ title, outcomes }: ProgramHeadGoMeanBarChartProps) {
   const instanceId = useId().replace(/[:]/g, "");
-  const chartId = `go-lollipop-${instanceId}`;
+  const chartId = `go-mean-bar-${instanceId}`;
   const titleId = `${chartId}-title`;
   const insightId = `${chartId}-insight`;
 
@@ -50,7 +51,7 @@ export function ProgramHeadGoLollipopChart({ title, outcomes }: ProgramHeadGoLol
         outcome.meanRating !== null
     )
     .map(
-      (outcome): LollipopDatum => ({
+      (outcome): MeanBarDatum => ({
         code: outcome.code,
         label: `${outcome.code} — ${outcome.name}`,
         value: outcome.meanRating,
@@ -94,17 +95,17 @@ export function ProgramHeadGoLollipopChart({ title, outcomes }: ProgramHeadGoLol
           className="aspect-auto w-full"
           style={{ height: Math.max(240, ranked.length * 56 + 96) }}
         >
-          <ComposedChart
+          <BarChart
             data={ranked}
             layout="vertical"
-            margin={{ bottom: 8, left: 8, right: 24, top: 8 }}
+            margin={{ bottom: 8, left: 8, right: 48, top: 8 }}
           >
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
-              domain={[1, 5]}
-              ticks={[1, 2, 3, 4, 5]}
+              domain={[0, 5]}
+              ticks={[0, 1, 2, 3, 4, 5]}
               tickLine={false}
               axisLine={false}
             />
@@ -116,31 +117,28 @@ export function ProgramHeadGoLollipopChart({ title, outcomes }: ProgramHeadGoLol
               axisLine={false}
               tickFormatter={(code: string) => (code.length > 12 ? `${code.slice(0, 11)}…` : code)}
             />
-            <ZAxis type="number" range={[140, 140]} />
             <ChartTooltip
               payloadUniqBy={(entry) => entry.dataKey}
               formatter={(_value, _name, item) => {
-                const original = (item?.payload as LollipopDatum | undefined)?.value;
+                const original = (item?.payload as MeanBarDatum | undefined)?.value;
                 return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];
               }}
             />
-            <Bar
-              dataKey="value"
-              barSize={4}
-              radius={[2, 2, 2, 2]}
-              isAnimationActive={false}
-              tooltipType="none"
-            >
-              {ranked.map((entry, index) => (
-                <Cell key={entry.code} fill={chartFill(chartId, index)} fillOpacity={0.45} />
-              ))}
-            </Bar>
-            <Scatter dataKey="value" name="Mean Rating" isAnimationActive={false}>
+            <Bar dataKey="value" maxBarSize={32} radius={[0, 6, 6, 0]} isAnimationActive={false}>
               {ranked.map((entry, index) => (
                 <Cell key={entry.code} fill={chartFill(chartId, index)} />
               ))}
-            </Scatter>
-          </ComposedChart>
+              <LabelList
+                dataKey="value"
+                position="right"
+                offset={8}
+                fill="var(--foreground)"
+                fontSize={12}
+                fontVariant="tabular-nums"
+                formatter={(value) => Number(value).toFixed(2)}
+              />
+            </Bar>
+          </BarChart>
         </ChartContainer>
       </div>
       <div

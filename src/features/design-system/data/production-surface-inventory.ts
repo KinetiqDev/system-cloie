@@ -2687,11 +2687,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
-    path: "src/features/analytics/components/program-head-go-lollipop-chart.tsx",
+    path: "src/features/analytics/components/program-head-go-mean-bar-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client lollipop chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
+      "Client horizontal bar chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
   },
   {
     path: "src/features/analytics/components/program-head-contributor-matrix.tsx",
@@ -2705,7 +2705,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
+      "New server component exposing the higher-precision mean, scale-separated distributions, and excluded-rating diagnostics",
   },
   {
     path: "src/features/analytics/components/program-head-likert-distribution.tsx",
