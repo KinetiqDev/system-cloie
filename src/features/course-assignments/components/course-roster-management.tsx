@@ -765,7 +765,8 @@ function ReviewPreviewBlock({
             >
               <SelectTrigger
                 id="roster-preview-filter"
-                className="h-11 w-full min-w-0 md:h-8 md:w-44"
+                size="sm"
+                className="w-full min-w-0 md:w-44"
                 aria-label="Filter preview rows"
               >
                 <SelectValue>{`${filterLabel} (${counts[filter]})`}</SelectValue>

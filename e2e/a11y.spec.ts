@@ -135,7 +135,26 @@ test.describe("accessibility sweep", () => {
     const roleCombobox = page.getByRole("combobox", { name: "Role" });
     await expect(roleCombobox).toBeFocused();
     await page.keyboard.press("ArrowDown");
-    await expect(page.getByRole("listbox")).toBeVisible();
+    const roleListbox = page.getByRole("listbox");
+    await expect(roleListbox).toBeVisible();
+    const optionSizing = await roleListbox
+      .getByRole("option")
+      .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height));
+    expect(optionSizing.length).toBeGreaterThan(0);
+    expect(optionSizing.every((height) => height >= 40)).toBe(true);
+    const popupBounds = await page.locator('[data-slot="select-content"]').evaluate((popup) => {
+      const rect = popup.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: innerWidth,
+        height: innerHeight,
+      };
+    });
+    expect(popupBounds.left).toBeGreaterThanOrEqual(0);
+    expect(popupBounds.right).toBeLessThanOrEqual(popupBounds.width);
+    expect(popupBounds.bottom).toBeLessThanOrEqual(popupBounds.height);
     // Base UI Select typeahead: typing highlights the matching option.
     await page.keyboard.type("Faculty");
     await page.keyboard.press("Enter");

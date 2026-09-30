@@ -137,7 +137,6 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
           />
           <Button
             type="submit"
-            size="lg"
             className="w-full"
             disabled={emailForm.formState.isSubmitting || !legalAccepted}
           >
@@ -177,13 +176,7 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
     <div className="space-y-5">
       <div className="border-border bg-surface-muted flex min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2">
         <span className="text-body-md text-muted-foreground min-w-0 truncate">{email}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={changeEmail}
-          className="min-h-11 shrink-0"
-        >
+        <Button type="button" variant="ghost" onClick={changeEmail} className="shrink-0">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Change
         </Button>
@@ -215,7 +208,6 @@ export function ExternalEmailForm({ prefilledEmail }: { prefilledEmail?: string 
         />
         <Button
           type="submit"
-          size="lg"
           className="w-full"
           disabled={passwordForm.formState.isSubmitting || !legalAccepted}
         >

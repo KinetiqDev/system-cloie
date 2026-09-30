@@ -34,7 +34,7 @@ export function PortalChoiceCard({ icon, title, description, href, badge }: Port
       <span
         aria-hidden="true"
         className={cn(
-          buttonVariants({ size: "lg" }),
+          buttonVariants({ size: "default" }),
           "group-hover:bg-primary-hover group-active:bg-primary-active w-full"
         )}
       >

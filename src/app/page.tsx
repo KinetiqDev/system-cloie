@@ -56,23 +56,23 @@ export default function Home() {
           className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:fill-mode-backwards mx-auto flex max-w-5xl flex-col items-center py-16 text-center motion-safe:duration-700 sm:py-24"
         >
           <div className="mx-auto mb-6 flex items-center justify-center gap-4 sm:gap-5">
-            <div className="ring-primary/10 relative flex size-24 items-center justify-center rounded-full bg-white shadow-sm ring-4 sm:size-28">
+            <div className="border-border flex size-20 items-center justify-center rounded-full border bg-white sm:size-24">
               <Image
                 src="/logos/acd-logo.png"
                 alt="Assumption College of Davao"
-                width={80}
-                height={80}
-                className="object-contain"
+                width={72}
+                height={72}
+                className="size-14 object-contain sm:size-18"
                 priority
               />
             </div>
-            <div className="ring-primary/10 relative flex size-24 items-center justify-center rounded-full bg-white shadow-sm ring-4 sm:size-28">
+            <div className="border-border flex size-20 items-center justify-center rounded-full border bg-white sm:size-24">
               <Image
                 src="/logos/cloie-logo.svg"
                 alt="System CLOIE"
                 width={442}
                 height={500}
-                className="h-20 w-auto object-contain"
+                className="h-14 w-auto object-contain sm:h-18"
                 priority
               />
             </div>

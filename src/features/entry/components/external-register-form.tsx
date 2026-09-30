@@ -174,12 +174,7 @@ export function ExternalRegisterForm() {
           checked={legalAccepted}
           onCheckedChange={setLegalAccepted}
         />
-        <Button
-          type="submit"
-          size="lg"
-          className="w-full"
-          disabled={isSubmitting || !legalAccepted}
-        >
+        <Button type="submit" className="w-full" disabled={isSubmitting || !legalAccepted}>
           {isSubmitting ? "Creating account…" : "Create account"}
         </Button>
       </form>

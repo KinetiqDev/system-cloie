@@ -59,7 +59,15 @@ describe("Public entry routes", () => {
   it("student entrance offers a single ACD Google action with Secretary guidance", async () => {
     render(await StudentLoginPage());
     expect(screen.getByRole("heading", { level: 1, name: "Student sign in" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toHaveClass(
+      "h-10",
+      "text-sm",
+      "pointer-coarse:h-11"
+    );
+    expect(screen.getByRole("link", { name: "All sign-in options" })).toHaveClass(
+      "h-10",
+      "pointer-coarse:h-11"
+    );
     expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /faculty/i })).toBeNull();
   });
@@ -69,6 +77,13 @@ describe("Public entry routes", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Staff sign in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
     expect(screen.getByText(/choose a workspace after sign-in/i)).toBeInTheDocument();
+    const seal = screen.getByRole("img", { name: "Assumption College of Davao seal" });
+    const mark = screen.getByRole("img", { name: "System CLOIE" });
+    for (const logo of [seal, mark]) {
+      expect(logo.parentElement).toHaveClass("size-16", "sm:size-18", "bg-white");
+      expect(logo).toHaveClass("object-contain");
+    }
+    expect(mark).toHaveClass("h-12", "sm:h-14", "w-auto");
   });
 
   it("faculty registration starts signed-out users with Google before any form", async () => {
@@ -86,7 +101,11 @@ describe("Public entry routes", () => {
       screen.getByRole("heading", { level: 1, name: "Alumni & partner sign in" })
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Email address")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toHaveClass(
+      "h-10",
+      "text-sm",
+      "pointer-coarse:h-11"
+    );
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
     expect(
       screen.getByText(

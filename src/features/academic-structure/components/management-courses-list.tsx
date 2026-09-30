@@ -303,7 +303,7 @@ export function ManagementCoursesList({
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         {/* Scope filter */}
         <Select value={scopeFilter} onValueChange={handleScopeChange}>
-          <SelectTrigger className="w-full md:w-[180px]">
+          <SelectTrigger aria-label="Filter by course scope" className="w-full md:w-[180px]">
             <SelectValue>
               {scopeFilter === SCHEDULE_FILTER_ALL
                 ? "All Scopes"
@@ -321,7 +321,7 @@ export function ManagementCoursesList({
 
         {/* Program filter */}
         <Select value={programFilter} onValueChange={handleProgramChange}>
-          <SelectTrigger className="w-full md:w-[200px]">
+          <SelectTrigger aria-label="Filter by program" className="w-full md:w-[200px]">
             <SelectValue>
               {programFilter === SCHEDULE_FILTER_ALL
                 ? "All Programs"
@@ -341,7 +341,7 @@ export function ManagementCoursesList({
         {/* Major filter (conditional — only when selected program has majors) */}
         {availableMajors.length > 0 && (
           <Select value={majorFilter} onValueChange={handleMajorChange}>
-            <SelectTrigger className="w-full md:w-[180px]">
+            <SelectTrigger aria-label="Filter by major" className="w-full md:w-[180px]">
               <SelectValue>
                 {majorFilter === SCHEDULE_FILTER_ALL
                   ? "All Majors"

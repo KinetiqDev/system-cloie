@@ -104,6 +104,7 @@ Theme-adaptive:
 - Light: use neutral surfaces and clear space.
 - Dark: use a light brand-safe plate (`#FFFFFF` or `#F8FAFC`) with a subtle border.
 - Warm colors inside logos are not general UI tokens.
+- Public entry logo pairs use equal 64 px plates on phones and 72 px plates from `sm`, with 48/56 px-high artwork. Landing hero pairs use 80/96 px plates with 56/72 px-high artwork. Preserve each asset's native aspect ratio and center it without cropping. Both marks sit on white plates in either theme; this is the existing brand-safe color exception. The landing header keeps its compact 36 px product mark.
 - The System CLOIE source mark is `assets/cloie-logo.svg`, served as `public/logos/cloie-logo.svg` with its native 442 × 500 aspect ratio.
 - Run `pnpm brand:icons` after replacing the source mark. This requires ImageMagick and generates the public SVG copy, square SVG tab icon, multi-size ICO fallback, 180 × 180 Apple touch icon, and 192/512 px PNG install icons. Icon artwork retains its colors on a white plate; the maskable variant keeps the full mark inside the central 80% safe circle. The generator accepts root-attribute reordering, validates the expected viewBox, and completes every conversion before publishing files. A differently sized source mark requires updating the UI dimensions and generator contract together.
 
@@ -213,7 +214,7 @@ Exact sizes live in `globals.css`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
 - Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
-- Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Public entry forms use the same 48 px floor for inputs, selects, and grouped controls through `entry-controls`.
+- Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Landing and public entry actions use the standard `default` button size: 40 px on desktop, 44 px on touch-capable devices, and 14 px labels. Public entry inputs, selects, and grouped controls match those heights through `entry-controls`; input text stays 16 px to avoid mobile browser zoom.
 - `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.
 
 | Context         | Layout                                              |
@@ -309,10 +310,10 @@ Rules:
 - `brand-accent` is intentional, not a second primary.
 - Routine destructive controls use soft danger; filled danger is confirmation-only.
 - Async actions disable duplicate submission and show loading.
-- Keep existing size names in `button.tsx`: `xs` = 24 px, `sm` = 32 px, `default` = 40 px, `lg` = at least 48 px; icon sizes follow the same ladder. Use `sm` for compact row actions, `default` for operational actions, and `lg` for entry/onboarding continuation and submission.
+- Keep existing size names in `button.tsx`: `xs` = 24 px, `sm` = 32 px, `default` = 40 px, `lg` = at least 48 px; icon sizes follow the same ladder. Use `sm` for compact row actions, `default` for operational and public entry actions, and `lg` for onboarding continuation and submission.
 - Choose the shared size variant instead of overriding button height at each call site. Preserve intentional 44 px respondent and navigation targets.
 - Whole-card navigation remains a single link. Its visual action may reuse `buttonVariants`; never nest a button or another link inside the card link.
-- Upward navigation uses `BackLink` (`src/components/ui/back-link.tsx`): ghost `sm`, `-ml-2`, muted-to-foreground, `ArrowLeft` leading. `href` for plain leaves, `onClick` only for a leave guard. Label `Back to {ParentList}` in Title Case. Step controls (`Previous`, `Back to editing`) and error-recovery CTAs are not upward navigation and keep their own variants.
+- Upward navigation uses `BackLink` (`src/components/ui/back-link.tsx`): ghost `sm`, `-ml-2`, muted-to-foreground, `ArrowLeft` leading. `href` for plain leaves, `onClick` only for a leave guard. Label `Back to {ParentList}` in Title Case. Public entry uses `BackLink size="default"` to match its other controls, including a 16 px arrow. Other callers keep the compact default. Step controls (`Previous`, `Back to editing`) and error-recovery CTAs are not upward navigation and keep their own variants.
 
 ### 8.3 Form Controls
 
@@ -323,6 +324,9 @@ Rules:
 - Dark fields use the semantic input surface and dedicated ring.
 - Continue using `customZodResolver`.
 - No placeholder-only labels.
+- Select and combobox option rows use a 40 px minimum height on desktop and 44 px on touch-capable devices, with wrapping labels and room for the selection indicator. Long options grow rather than clipping.
+- Selection popups match their trigger width within the available viewport and scroll when space is limited. Selects open outside the trigger by default, rather than aligning the selected row over it; Base UI may flip the popup to keep it visible.
+- Compact select triggers use `size="sm"`, not page-level height overrides. Popup search inputs retain the standard 40 px control height and 44 px touch floor.
 
 ### 8.4 Navigation
 
@@ -331,10 +335,6 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
 - Administrative roles use mobile hamburger/drawer.
 - Student, alumni, and industry partner use bottom navigation.
 - Dean uses tablet icon rail and large-screen sidebar.
-- Active states use selected/primary tokens.
-- Theme does not change route grouping or navigation priority.
-- Dark navigation uses light logo plates.
-- Do not add per-page navigation or expose dev/demo switching in production.
 - The large-screen sidebar collapses to an icon rail on the operator's request, the same rail the
   Dean gets on tablet. The choice is remembered in a first-party cookie, so the server renders the
   remembered state on the first paint. In the rail every destination keeps its accessible name and
@@ -343,6 +343,10 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   shows neither the wordmark nor the control below lg.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
+- Active states use selected/primary tokens.
+- Theme does not change route grouping or navigation priority.
+- Dark navigation uses light logo plates.
+- Do not add per-page navigation or expose dev/demo switching in production.
 
 ### 8.5 Cards
 

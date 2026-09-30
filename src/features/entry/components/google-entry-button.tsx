@@ -33,7 +33,6 @@ export function GoogleEntryButton({
       <Button
         type="button"
         variant="outline"
-        size="lg"
         onClick={() => setIsDialogOpen(true)}
         className="w-full text-center shadow-sm"
       >

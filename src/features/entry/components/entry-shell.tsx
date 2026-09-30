@@ -22,26 +22,30 @@ export function EntryShell({
 }) {
   return (
     <div className="entry-links mx-auto flex w-full max-w-lg min-w-0 flex-col px-4 py-6 sm:py-12">
-      <BackLink href="/" className="mb-5 min-h-11 self-start">
+      <BackLink href="/" size="default" className="mb-5 self-start">
         All sign-in options
       </BackLink>
       <div className="mb-7 flex flex-col items-center text-center">
-        <div className="mb-5 flex items-center gap-4">
-          <Image
-            src="/logos/acd-logo.png"
-            alt="Assumption College of Davao seal"
-            width={48}
-            height={48}
-            className="shrink-0 object-contain"
-          />
-          <Image
-            src="/logos/cloie-logo.svg"
-            alt="System CLOIE"
-            width={442}
-            height={500}
-            className="h-12 w-auto shrink-0 object-contain"
-            priority
-          />
+        <div className="mb-5 flex items-center gap-3">
+          <div className="border-border flex size-16 shrink-0 items-center justify-center rounded-full border bg-white sm:size-18">
+            <Image
+              src="/logos/acd-logo.png"
+              alt="Assumption College of Davao seal"
+              width={56}
+              height={56}
+              className="size-12 object-contain sm:size-14"
+            />
+          </div>
+          <div className="border-border flex size-16 shrink-0 items-center justify-center rounded-full border bg-white sm:size-18">
+            <Image
+              src="/logos/cloie-logo.svg"
+              alt="System CLOIE"
+              width={442}
+              height={500}
+              className="h-12 w-auto object-contain sm:h-14"
+              priority
+            />
+          </div>
         </div>
         <h1 className="text-heading-lg text-foreground font-bold tracking-tight">{title}</h1>
         <p className="text-body-md text-muted-foreground mt-2">{description}</p>
