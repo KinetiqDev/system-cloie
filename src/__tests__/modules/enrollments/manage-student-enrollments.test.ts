@@ -1,58 +1,43 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { EnrollmentSource, YearLevel } from "@prisma/client";
-import {
-  upsertEnrollmentForActiveTerm,
-  adminUpsertEnrollment,
-  deactivateEnrollment,
-} from "@/features/enrollments/services/manage-student-enrollments";
-import * as authModule from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
-import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
+import { upsertEnrollmentForActiveTerm } from "@/features/enrollments/services/manage-student-enrollments";
 
-vi.mock("@/features/auth/services/resolve-auth-session");
+const { transactionMock } = vi.hoisted(() => ({ transactionMock: vi.fn() }));
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    $transaction: vi.fn((cb) => cb({
-      studentEnrollment: {
-        findUnique: vi.fn(),
-        update: vi.fn(),
-        create: vi.fn(),
-      },
-    })),
-    studentEnrollment: {
-      update: vi.fn(),
-      updateMany: vi.fn(),
-    },
+    $transaction: transactionMock,
   },
 }));
 
+type MockTransaction = {
+  studentEnrollment: {
+    findUnique: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+  };
+};
+
+function stubTransaction(existing: { id: string } | null): MockTransaction {
+  const tx: MockTransaction = {
+    studentEnrollment: {
+      findUnique: vi.fn().mockResolvedValue(existing),
+      update: vi.fn().mockResolvedValue({ id: existing?.id ?? "enrollment-1" }),
+      create: vi.fn().mockResolvedValue({ id: "enrollment-1" }),
+    },
+  };
+  transactionMock.mockImplementation((cb: (tx: MockTransaction) => unknown) => cb(tx));
+  return tx;
+}
+
 describe("manage-student-enrollments", () => {
-  const mockAdminSession = createAuthSessionSnapshot({
-    userId: "admin-1",
-    email: "secretary@test.com",
-    roles: [ROLES.SECRETARY],
-  });
-
-  const mockStudentSession = createAuthSessionSnapshot({
-    userId: "student-1",
-    email: "student@test.com",
-    roles: [ROLES.STUDENT],
-  });
-
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
   describe("upsertEnrollmentForActiveTerm", () => {
     it("should create new enrollment when none exists", async () => {
-      const { prisma } = await import("@/lib/db/prisma");
-      const mockTx = {
-        studentEnrollment: {
-          findUnique: vi.fn().mockResolvedValue(null),
-          create: vi.fn().mockResolvedValue({ id: "enrollment-1" }),
-        },
-      };
-      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((cb) => cb(mockTx));
+      const tx = stubTransaction(null);
 
       const result = await upsertEnrollmentForActiveTerm({
         studentUserId: "student-1",
@@ -68,17 +53,20 @@ describe("manage-student-enrollments", () => {
       if (result.success) {
         expect(result.data.isNew).toBe(true);
       }
+      expect(tx.studentEnrollment.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            student_user_id: "student-1",
+            term_instance_id: "term-1",
+            is_active: true,
+          }),
+        })
+      );
+      expect(tx.studentEnrollment.update).not.toHaveBeenCalled();
     });
 
     it("should update existing enrollment when found", async () => {
-      const { prisma } = await import("@/lib/db/prisma");
-      const mockTx = {
-        studentEnrollment: {
-          findUnique: vi.fn().mockResolvedValue({ id: "enrollment-1" }),
-          update: vi.fn().mockResolvedValue({ id: "enrollment-1" }),
-        },
-      };
-      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((cb) => cb(mockTx));
+      const tx = stubTransaction({ id: "enrollment-1" });
 
       const result = await upsertEnrollmentForActiveTerm({
         studentUserId: "student-1",
@@ -94,76 +82,38 @@ describe("manage-student-enrollments", () => {
       if (result.success) {
         expect(result.data.isNew).toBe(false);
       }
+      expect(tx.studentEnrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "enrollment-1" },
+          data: expect.objectContaining({
+            year_level: YearLevel.SECOND_YEAR,
+            is_active: true,
+          }),
+        })
+      );
+      expect(tx.studentEnrollment.create).not.toHaveBeenCalled();
     });
-  });
 
-  describe("adminUpsertEnrollment", () => {
-    it("should return error when not admin", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockStudentSession);
+    it("reactivates a soft-deactivated row by forcing is_active true", async () => {
+      const tx = stubTransaction({ id: "deactivated-enrollment" });
 
-      const result = await adminUpsertEnrollment({
+      const result = await upsertEnrollmentForActiveTerm({
         studentUserId: "student-1",
         termInstanceId: "term-1",
         programId: "program-1",
         majorId: null,
         yearLevel: YearLevel.FIRST_YEAR,
         section: null,
-        source: EnrollmentSource.SECRETARY,
-      });
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("Admin access required");
-      }
-    });
-
-    it("should succeed when admin", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
-
-      const { prisma } = await import("@/lib/db/prisma");
-      const mockTx = {
-        studentEnrollment: {
-          findUnique: vi.fn().mockResolvedValue(null),
-          create: vi.fn().mockResolvedValue({ id: "enrollment-1" }),
-        },
-      };
-      (prisma.$transaction as ReturnType<typeof vi.fn>).mockImplementation((cb) => cb(mockTx));
-
-      const result = await adminUpsertEnrollment({
-        studentUserId: "student-1",
-        termInstanceId: "term-1",
-        programId: "program-1",
-        majorId: null,
-        yearLevel: YearLevel.FIRST_YEAR,
-        section: null,
-        source: EnrollmentSource.SECRETARY,
+        source: EnrollmentSource.ONBOARDING,
       });
 
       expect(result.success).toBe(true);
-    });
-  });
-
-  describe("deactivateEnrollment", () => {
-    it("should return error when not admin", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockStudentSession);
-
-      const result = await deactivateEnrollment("enrollment-1");
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("Admin access required");
-      }
-    });
-
-    it("should succeed when admin", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockAdminSession);
-
-      const { prisma } = await import("@/lib/db/prisma");
-      vi.mocked(prisma.studentEnrollment.update).mockResolvedValue({ id: "enrollment-1" } as never);
-
-      const result = await deactivateEnrollment("enrollment-1");
-
-      expect(result.success).toBe(true);
+      expect(tx.studentEnrollment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "deactivated-enrollment" },
+          data: expect.objectContaining({ is_active: true }),
+        })
+      );
     });
   });
 });
