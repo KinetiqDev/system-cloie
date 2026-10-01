@@ -1,5 +1,4 @@
-import { buildReviewWordCloudTokens, tokenizeReviewText } from "./get-course-bound-review-detail";
-import { qualitativeNlp } from "./qualitative-nlp";
+import { buildReviewWordCloudTokens, qualitativeNlp, tokenizeReviewText } from "./qualitative-nlp";
 import { DASHBOARD_SOURCE_ORDER } from "../program-head-dashboard-labels";
 import type { QualitativeToneShape, WordCloudToken } from "../types";
 import type { ProgramHeadStakeholderSourceKey } from "../program-head-analytics-types";

@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
-import { getCourseBoundResponseReview } from "@/features/analytics/services/get-course-bound-response-review";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
 import { getProgramHeadFeedback } from "@/features/analytics/services/get-program-head-analytics";
 
@@ -15,7 +14,6 @@ const {
   studentEnrollmentFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
-  resolveReviewerProgramScopeMock,
   courseBoundEvaluationFindManyMock,
   academicTermInstanceFindManyMock,
 } = vi.hoisted(() => ({
@@ -27,7 +25,6 @@ const {
   studentEnrollmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
-  resolveReviewerProgramScopeMock: vi.fn(),
   courseBoundEvaluationFindManyMock: vi.fn(),
   academicTermInstanceFindManyMock: vi.fn(),
 }));
@@ -65,10 +62,6 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
-}));
-
-vi.mock("@/features/academic-structure/services/resolve-reviewer-program-scope", () => ({
-  resolveReviewerProgramScope: resolveReviewerProgramScopeMock,
 }));
 
 const MOCK_STRUCTURE_SNAPSHOT = [
@@ -128,21 +121,6 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  describe("Faculty aggregate-only review boundary", () => {
-    it("denies individual response reads before querying response content", async () => {
-      resolveAuthSessionMock.mockResolvedValue({
-        activeRole: ROLES.FACULTY,
-        roles: [ROLES.FACULTY],
-        userId: "fac-bsit",
-      });
-
-      await expect(getCourseBoundResponseReview("response-548")).resolves.toBeNull();
-      expect(resolveReviewerProgramScopeMock).not.toHaveBeenCalled();
-      expect(responseFindFirstMock).not.toHaveBeenCalled();
-    });
-  });
-
   describe("Program Head identified review scoping", () => {
     it("returns identified response detail inside authorized Program context", async () => {
       resolveAuthSessionMock.mockResolvedValue({

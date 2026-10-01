@@ -1,6 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import type { CourseBoundResponseReview } from "@/features/analytics/types";
 import type { FacultyAnalyticsData, WordCloudToken } from "@/features/analytics/types";
 import type {
   GeneralEducationAnalyticsDTO,
@@ -16,42 +15,13 @@ import type {
 } from "@/features/analytics/program-head-analytics-types";
 import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-review/types";
 
-// §36/§40 cross-role response privacy: anonymized Faculty boundary sits in
-// a distinct type from the identified Program Head shape, and aggregate
+// §36/§40 cross-role response privacy: identified Program Head shapes are
+// pinned separately from aggregate analytics payloads, and aggregate
 // analytics payloads remain de-identified. These checks pin compile-time
 // shape separation and runtime serialization leakage in one place so a
 // refactor cannot silently move raw answer content or respondent identity
 // into a browser payload consumed by the wrong role.
 describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
-  it("Faculty anonymized DTO contains only an anonymized label, no identity fields", () => {
-    expectTypeOf<CourseBoundResponseReview>().toHaveProperty("respondentLabel");
-    expectTypeOf<CourseBoundResponseReview>().toHaveProperty("responseId");
-    expectTypeOf<CourseBoundResponseReview>().toHaveProperty("sections");
-
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("respondent");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("name");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("email");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("respondentId");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("userId");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("studentContext");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("alumniContext");
-    expectTypeOf<CourseBoundResponseReview>().not.toHaveProperty("industryContext");
-  });
-
-  it("Faculty anonymized sections carry raw qualitative text only inside the approved review boundary", () => {
-    // The anonymized review boundary intentionally includes raw qualitative text
-    // keyed by promptKey/text, but the token stays out of analytics aggregates.
-    expectTypeOf<CourseBoundResponseReview["sections"][number]>().toHaveProperty(
-      "qualitativeResponses"
-    );
-    expectTypeOf<
-      CourseBoundResponseReview["sections"][number]["qualitativeResponses"][number]
-    >().toHaveProperty("text");
-    expectTypeOf<
-      CourseBoundResponseReview["sections"][number]["qualitativeResponses"][number]
-    >().toHaveProperty("promptKey");
-  });
-
   it("Program Head identified DTO carries respondent identity and program context", () => {
     expectTypeOf<ProgramHeadSubmittedResponseDetail["respondent"]>().toHaveProperty("name");
     expectTypeOf<ProgramHeadSubmittedResponseDetail["respondent"]>().toHaveProperty("id");

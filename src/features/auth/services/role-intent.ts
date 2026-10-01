@@ -11,7 +11,7 @@ export const ROLE_INTENTS = {
   "gen-ed-coordinator": "GEN_ED_COORDINATOR",
 } as const;
 
-export type RoleIntent = keyof typeof ROLE_INTENTS;
+type RoleIntent = keyof typeof ROLE_INTENTS;
 
 /**
  * Role-less entry intents for the scoped public entrances (issue #649).
@@ -21,12 +21,12 @@ export type RoleIntent = keyof typeof ROLE_INTENTS;
  * callback resolves them role-less: no target-role claim, no role creation,
  * session resolve to /select-role or account status.
  */
-export const ENTRY_INTENTS = {
+const ENTRY_INTENTS = {
   staff: "staff",
   external: "external",
 } as const;
 
-export type EntryIntent = keyof typeof ENTRY_INTENTS;
+type EntryIntent = keyof typeof ENTRY_INTENTS;
 
 /** Any intent the legal ticket may bind: a role intent or a role-less entry intent. */
 export type TicketIntent = RoleIntent | EntryIntent;
@@ -44,12 +44,6 @@ const ROLE_TO_INTENT: Record<SystemRole, RoleIntent> = {
 export function roleToIntent(role: string): RoleIntent | null {
   const normalized = role.trim().toLowerCase().replaceAll("_", "-");
   return Object.hasOwn(ROLE_INTENTS, normalized) ? (normalized as RoleIntent) : null;
-}
-
-export function roleToIntentOrThrow(role: string): RoleIntent {
-  const intent = roleToIntent(role);
-  if (!intent) throw new Error(`Unsupported role intent: ${role}`);
-  return intent;
 }
 
 export function intentToRole(intent: string): SystemRole | null {
