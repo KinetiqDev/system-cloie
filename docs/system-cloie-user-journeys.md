@@ -14,14 +14,14 @@ The accepted decisions in `AGENTS.md`, `CONTEXT-MAP.md`, `src/features/*/CONTEXT
 
 ### 1.1 Public entry and authentication
 
-1. A person opens the role selection portal rather than a role-less login page.
-2. The person chooses one intended role from the staff or respondent portal.
-3. System CLOIE records the intended role and starts Google OAuth.
-4. Google authenticates the identity. System CLOIE normalizes the account email by trimming whitespace and lowercasing it.
-5. System CLOIE resolves the domain user record and links Google identity to an existing domain account when applicable. An eligible self-service role may be added to an already-linked account.
+1. A person chooses the Student, staff, Faculty-registration, or email-first external entrance on the System CLOIE landing page.
+2. Before authentication, the person acknowledges the current privacy notice and terms; the signed ticket binds the chosen entrance or role intent.
+3. Staff and returning external sign-in resolve an existing account without claiming a role. External registration carries the selected Alumni or Industry Partner role through authentication and onboarding.
+4. Google authenticates internal identities; external Alumni and Industry Partner identities may also verify their email and use a password. System CLOIE normalizes the account email by trimming whitespace and lowercasing it.
+5. System CLOIE resolves the domain user record and links the verified identity to an eligible domain account when applicable. An eligible self-service role may be added to an already-linked account through Google entry.
 6. The server validates the requested active role against the assigned-role set, resolves that role's profile gate, and sends the person to role selection, onboarding, an account-status page, or the role-owned dashboard.
 
-Google OAuth is the primary Production authentication mechanism. System CLOIE does not use System CLOIE-managed passwords, magic links, or ordinary email invitations. A domain user can be provisioned before first sign-in; the first Google sign-in must match the registered normalized email.
+Google OAuth remains available for account entry; external Alumni and Industry Partner accounts may also use the email-password flow. A domain user can be provisioned before first sign-in; a pre-provisioned internal account must match its registered normalized email.
 
 ### 1.2 Role eligibility
 
@@ -35,7 +35,7 @@ Google OAuth is the primary Production authentication mechanism. System CLOIE do
 | Alumni           | Self-service role claim or Secretary-created account          | Any valid email domain                     | Alumni profile; external verification applies to self-service accounts           |
 | Industry Partner | Self-service role claim or Secretary-created account          | Any valid email domain                     | Industry Partner profile; external verification applies to self-service accounts |
 
-The role selection portal rejects a self-service claim for Secretary, Dean, Program Head, or General Education Coordinator with `pre-provisioning-required`. Internal role claims with a non-ACD email reach the invalid-domain status page. Eligible already-linked accounts may add Faculty, Student, Alumni, or Industry Partner roles. Active-role selection changes authorization context but does not assign or revoke a role.
+Public role claims for Secretary, Dean, Program Head, or General Education Coordinator are rejected with `pre-provisioning-required`. Internal role claims with a non-ACD email reach the invalid-domain status page. Eligible already-linked accounts may add Faculty, Student, Alumni, or Industry Partner roles. Active-role selection changes authorization context but does not assign or revoke a role.
 
 ### 1.3 Account states and destinations
 
@@ -54,7 +54,7 @@ The status pages explain invalid domains, pre-provisioning, role mismatch, inact
 
 ### 1.4 Demo and development entry
 
-The isolated dedicated demo deployment may offer a role switcher backed by a short-lived signed demo session. The server re-resolves the seeded user and applies the normal role, account-state, program-scope, roster, respondent-eligibility, and mutation rules. The primary Production deployment remains OAuth-only. The development-only `cloie_dev_auth` path is not a Production authentication path.
+The isolated dedicated demo deployment may offer a role switcher backed by a short-lived signed demo session. The server re-resolves the seeded user and applies the normal role, account-state, program-scope, roster, respondent-eligibility, and mutation rules. Primary Production accepts proved Google sessions for internal roles and Google or email-password sessions for Alumni and Industry Partner roles; signed demo sessions are refused. The development-only `cloie_dev_auth` path is not a Production authentication path.
 
 ## 2. Foundation Workflow: Secretary
 
@@ -177,7 +177,7 @@ The Dean has college-wide oversight and selected operational capabilities. The D
 ### 3.1 Account entry
 
 1. The Secretary pre-provisions a complete Dean account with an ACD institutional email.
-2. The Dean chooses the staff portal and authenticates with Google OAuth.
+2. The Dean chooses the staff entrance and authenticates with Google OAuth.
 3. System CLOIE matches the normalized Google email to the pre-provisioned domain account.
 4. The Dean enters `/dean/dashboard`.
 
@@ -231,7 +231,7 @@ The Program Head is the accountable owner for one or more explicitly assigned ac
 ### 4.1 Account entry and program scope
 
 1. The Secretary creates a complete Program Head account with an ACD email and exactly one managed program.
-2. The Program Head chooses the staff portal and authenticates with Google OAuth.
+2. The Program Head chooses the staff entrance and authenticates with Google OAuth.
 3. System CLOIE resolves the active `ProgramHeadAssignment`.
 4. If no active assignment exists, the Program Head sees a guidance/blocked state rather than an unscoped program dashboard.
 5. All subsequent Program Head reads and writes derive program scope from the server-side assignment, not from a client-provided program ID.
@@ -316,7 +316,7 @@ The Faculty Member owns the authoring and operational work for the Course contex
 
 ### 5.1 Account entry
 
-1. The Faculty Member selects Faculty from the staff portal.
+1. The Faculty Member uses Faculty registration for a new request or the staff entrance for an existing account.
 2. The Faculty Member authenticates with Google using an ACD institutional email.
 3. A self-service Faculty claim collects a primary Faculty Program affiliation; a Secretary-created Faculty account already has one.
 4. System CLOIE enters the Faculty dashboard once the affiliation exists.
@@ -377,7 +377,7 @@ The Student role includes regular and graduating Students. Graduating status cha
 
 ### 6.1 Registration and onboarding
 
-1. The Student selects Student from the staff portal.
+1. The Student chooses the Student entrance.
 2. The Student authenticates with Google using an exact ACD institutional email.
 3. A self-service Student claim collects Student academic profile information and self-declared active-term placement when a term exists.
 4. A Secretary-created Student already has the static profile and, when possible, a Secretary-recorded active-term enrollment.
@@ -422,8 +422,8 @@ Draft and final response concurrency hardening is tracked under issue #168. The 
 
 ### 7.1 Registration and verification
 
-1. The Alumni selects Alumni from the respondent portal.
-2. The Alumni authenticates with Google using any valid email domain.
+1. The Alumni chooses Alumni on the external registration form.
+2. The Alumni authenticates with Google or verifies an email-password signup using any valid email domain.
 3. Self-service onboarding collects program, applicable major, graduation year, and the Alumni identity.
 4. A self-service profile starts pending external verification and displays a verification banner in the Alumni shell. The current profile gate blocks rejected accounts but does not yet block pending accounts.
 5. A Secretary-created Alumni account is complete and approved immediately because Secretary creation is the institutional verification step.
@@ -447,8 +447,8 @@ The Alumni does not see student-course rosters, Course-level CILOs, or program a
 
 ### 8.1 Registration and profile
 
-1. The Industry Partner selects Industry Partner from the respondent portal.
-2. The Industry Partner authenticates with Google using any valid email domain.
+1. The Industry Partner chooses Industry Partner on the external registration form.
+2. The Industry Partner authenticates with Google or verifies an email-password signup using any valid email domain.
 3. Self-service onboarding records the represented company or organization, optional position, and applicable program affiliation.
 4. The profile begins pending external verification and shows a verification banner. Rejected external accounts are blocked; pending-account gating remains partial.
 5. A Secretary-created Industry Partner account records company information and starts approved immediately.
@@ -572,36 +572,36 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 
 ## 13. Journey Status Matrix
 
-| Workflow                                                                                           | Current status                                           | Main evidence / follow-up                                                         |
-| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Google OAuth, portal entry, role gates, status pages                                               | Implemented                                              | `src/features/auth/`, `src/features/users/services/resolve-profile-gate.ts`       |
-| Bootstrap and Secretary-created complete accounts                                                  | Partial                                                  | ADR `0001-complete-secretary-created-accounts.md`; issues #70-#77 remain tracked  |
-| School years, academic terms, active-period lifecycle                                              | Implemented                                              | `src/features/academic-calendar/`; Secretary-only lifecycle                       |
-| Term rollover and graduating exceptions                                                            | Implemented                                              | `run-term-rollover.ts` and Secretary rollover routes                              |
-| Programs and majors lifecycle                                                                      | Implemented                                              | `manage-programs.ts`; strict deletion ADR                                         |
-| General Education and Program-specific Course catalog                                              | Implemented                                              | `manage-courses.ts`; catalog defaults are advisory                                |
-| Institutional baseline instruments and versioning                                                  | Implemented                                              | `manage-instruments.ts`; complete deployment/report coverage remains partial      |
-| Secretary and Dean all-program Course assignments                                                  | Implemented                                              | ADR `0003`; role-owned routes                                                     |
-| Program Head Program-specific assignment management                                                | Implemented                                              | General Education management remains Secretary/Dean-only                          |
-| Faculty roster manual management                                                                   | Implemented                                              | Roster membership services; browser verification remains open                     |
-| Faculty name-list roster reconciliation                                                            | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes |
-| Graduate Outcome authoring                                                                         | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                  |
-| Faculty Course-level CILO authoring                                                                | Implemented                                              | `/faculty/cilos` and evaluation services                                          |
-| Typed outcome mapping (CILO→ILO for General Education, CILO→GO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate         |
-| Program-owned template creation and faculty access                                                 | Implemented                                              | `manage-program-head-templates.ts`                                                |
-| Faculty-derived Course-bound templates                                                             | Implemented                                              | `manage-faculty-templates.ts`                                                     |
-| Course-bound publication, exclusions, late inclusion                                               | Implemented                                              | `publish-course-bound-evaluation.ts`; roster-lock rules                           |
-| Program-wide stakeholder deployment                                                                | Implemented for current Program Head path                | Central deployment policy and external targeting remain partial                   |
-| Student evaluation response workflow                                                               | Implemented; concurrency hardening open                  | Wizard, draft, confirmation, submit, history; issue #168                          |
-| Alumni evaluation response workflow                                                                | Implemented; verification gate partial                   | Alumni routes and stakeholder response services                                   |
-| Industry Partner evaluation response workflow                                                      | Implemented; access-code policy open                     | Industry Partner routes; issue #132                                               |
-| Faculty and Program Head scoped analytics/review                                                   | Implemented, formulas/privacy incomplete                 | Analytics services; issues #133/#176                                              |
-| Dean readiness oversight                                                                           | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                               |
-| Program Head report exports                                                                        | Stubbed                                                  | `/program-head/programs/<programId>/reports`; issue #173                          |
-| Dean report exports                                                                                | Deferred/unavailable                                     | `/dean/reports`; issue #173                                                       |
-| Formal PDF/spreadsheet reporting                                                                   | Deferred/planned                                         | Issue #173                                                                        |
-| Self-service external approval/rejection transition                                                | Partial                                                  | Rejected gate exists; complete approval workflow is not present                   |
-| Whole-app offline/PWA data workflow                                                                | Deferred                                                 | ADR `0006`                                                                        |
+| Workflow                                                                                           | Current status                                           | Main evidence / follow-up                                                                          |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Scoped public entry, Google and external password authentication, role gates, status pages         | Implemented                                              | `src/features/auth/`, `src/features/entry/`, `src/features/users/services/resolve-profile-gate.ts` |
+| Bootstrap and Secretary-created complete accounts                                                  | Partial                                                  | ADR `0001-complete-secretary-created-accounts.md`; issues #70-#77 remain tracked                   |
+| School years, academic terms, active-period lifecycle                                              | Implemented                                              | `src/features/academic-calendar/`; Secretary-only lifecycle                                        |
+| Term rollover and graduating exceptions                                                            | Implemented                                              | `run-term-rollover.ts` and Secretary rollover routes                                               |
+| Programs and majors lifecycle                                                                      | Implemented                                              | `manage-programs.ts`; strict deletion ADR                                                          |
+| General Education and Program-specific Course catalog                                              | Implemented                                              | `manage-courses.ts`; catalog defaults are advisory                                                 |
+| Institutional baseline instruments and versioning                                                  | Implemented                                              | `manage-instruments.ts`; complete deployment/report coverage remains partial                       |
+| Secretary and Dean all-program Course assignments                                                  | Implemented                                              | ADR `0003`; role-owned routes                                                                      |
+| Program Head Program-specific assignment management                                                | Implemented                                              | General Education management remains Secretary/Dean-only                                           |
+| Faculty roster manual management                                                                   | Implemented                                              | Roster membership services; browser verification remains open                                      |
+| Faculty name-list roster reconciliation                                                            | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes                  |
+| Graduate Outcome authoring                                                                         | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                                   |
+| Faculty Course-level CILO authoring                                                                | Implemented                                              | `/faculty/cilos` and evaluation services                                                           |
+| Typed outcome mapping (CILO→ILO for General Education, CILO→GO for Program-specific) and readiness | Implemented                                              | ADR `0005`; Course alignment workspace, typed readiness, publication gate                          |
+| Program-owned template creation and faculty access                                                 | Implemented                                              | `manage-program-head-templates.ts`                                                                 |
+| Faculty-derived Course-bound templates                                                             | Implemented                                              | `manage-faculty-templates.ts`                                                                      |
+| Course-bound publication, exclusions, late inclusion                                               | Implemented                                              | `publish-course-bound-evaluation.ts`; roster-lock rules                                            |
+| Program-wide stakeholder deployment                                                                | Implemented for current Program Head path                | Central deployment policy and external targeting remain partial                                    |
+| Student evaluation response workflow                                                               | Implemented; concurrency hardening open                  | Wizard, draft, confirmation, submit, history; issue #168                                           |
+| Alumni evaluation response workflow                                                                | Implemented; verification gate partial                   | Alumni routes and stakeholder response services                                                    |
+| Industry Partner evaluation response workflow                                                      | Implemented; access-code policy open                     | Industry Partner routes; issue #132                                                                |
+| Faculty and Program Head scoped analytics/review                                                   | Implemented, formulas/privacy incomplete                 | Analytics services; issues #133/#176                                                               |
+| Dean readiness oversight                                                                           | Implemented                                              | Issues #111, #119, #120; read-only and privacy-safe                                                |
+| Program Head report exports                                                                        | Stubbed                                                  | `/program-head/programs/<programId>/reports`; issue #173                                           |
+| Dean report exports                                                                                | Deferred/unavailable                                     | `/dean/reports`; issue #173                                                                        |
+| Formal PDF/spreadsheet reporting                                                                   | Deferred/planned                                         | Issue #173                                                                                         |
+| Self-service external approval/rejection transition                                                | Partial                                                  | Rejected gate exists; complete approval workflow is not present                                    |
+| Whole-app offline/PWA data workflow                                                                | Deferred                                                 | ADR `0006`                                                                                         |
 
 ## 14. Primary Sources
 

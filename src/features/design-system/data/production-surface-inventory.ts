@@ -1930,6 +1930,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/components/brand/cloie-logo-mark.tsx",
+    disposition: "task",
+    taskId: 11,
+    category: "layout",
+  },
+  {
     path: "src/components/dashboard-quick-actions.tsx",
     disposition: "task",
     taskId: 18,
@@ -2024,6 +2030,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 11,
     category: "layout",
+  },
+  {
+    path: "src/components/stakeholder-portal-pages.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
   },
   {
     path: "src/components/ui/alert-dialog.tsx",
@@ -2415,18 +2426,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/anonymized-response-cards.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/anonymized-response-detail.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
     path: "src/features/response-review/components/central-evaluation-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2444,18 +2443,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
     path: "src/features/response-review/components/response-detail.tsx",
     disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/course-bound-review-tabs.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/course-mean-pie-chart.tsx",
-    disposition: "task",
-    taskId: 9,
     category: "feature_component",
   },
   {
@@ -3178,24 +3165,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/portals/components/portal-shell.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/portals/components/role-selection-card.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/portals/components/session-banner.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
     path: "src/features/responses/components/likert-scale-replay.tsx",
     disposition: "task",
     taskId: 24,
@@ -3247,6 +3216,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/users/components/industry-partner-onboarding-form.tsx",
     disposition: "task",
     taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/users/components/profile-cards.tsx",
+    disposition: "already_compliant",
     category: "feature_component",
   },
   {

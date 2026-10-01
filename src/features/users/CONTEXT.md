@@ -32,10 +32,6 @@ _Avoid_: Bulk placement update, term rollover, profile-only correction
 The Secretary Users list's year level and section filters read the Student's enrollment row in the active Academic Period — the same row the Secretary term placement set writes and the Year & Section column displays. They are honored only alongside the Student role context, and only while that period is active and the Student is not already filtered to awaiting placement; elsewhere the list canonicalizes them away rather than keep a filter it cannot show. Program and major filters read the static student academic context.
 _Avoid_: Year level over enrollment history, section from the academic profile, placement filters without an active Academic Period
 
-**Role provisioning category**:
-The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, secretary_provisioned_student, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles and Student are provisioned by a Secretary; Faculty additionally appears as a self-service internal option whose access waits for approval.
-_Avoid_: permission level, access tier
-
 **Faculty approval state**:
 The role-scoped PENDING / APPROVED / REJECTED review state on a self-submitted Faculty request. A self-request writes the FACULTY role together with a PENDING request and no program affiliation, so the profile gate resolves it to FACULTY_APPROVAL_PENDING and the Faculty workspace stays closed; approval creates the primary active affiliation in the same transaction. It never deactivates the account globally and never reuses external VerificationStatus. A rejected request revokes only the affiliation that approval granted — a Secretary-provisioned primary or additional program is never touched, and revocation deactivates rather than deletes so the affiliation history stays on the account. Secretary-provisioned Faculty has no request row and is complete at creation.
 _Avoid_: Account deactivation, external verification status, deleting affiliations

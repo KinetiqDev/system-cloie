@@ -32,7 +32,7 @@ A request to abandon one assigned self-service role before its required profile 
 _Avoid_: Account deletion, active role selection, completed-role revocation
 
 **Pre-provisioned role**:
-A System CLOIE account role that must be created by an administrator before the person can enter through the role selection portal.
+A System CLOIE account role that an administrator must create before the person can sign in through the staff entrance.
 _Avoid_: Invite-only when the account is already created directly by an administrator
 
 **Managed role transition**:
@@ -88,7 +88,7 @@ The scoped entrances plus the System CLOIE landing page are the way people enter
 _Avoid_: Role-less login as the main entry point, retired portal selection
 
 **Entry intent**:
-The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a role; the callback resolves the existing account, requires provisioning for an unknown staff address, and sends an unknown external address to external registration.
+The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a role; the callback resolves the existing account, requires provisioning for an unknown staff address, and sends an unknown external address to external registration. External registration binds the chosen role's intent (`alumni` or `industry-partner`) to its Google action, so a new Google holder claims that role and enters its onboarding instead of returning to registration; the external sign-in entrance keeps the role-less intent because returning holders resolve through their existing session.
 _Avoid_: Role claim, authorization decision
 
 **Google-only internal role**:
@@ -204,7 +204,7 @@ A Program Head assigning themselves teaching capability only for a course within
 _Avoid_: Unrestricted self-assignment, second Faculty role
 
 **Faculty self-service account**:
-A Faculty account claimed through the role selection portal using an institutional email and completed by choosing a faculty program affiliation.
+A Faculty account requested through the staff entrance using an institutional email and completed by choosing a faculty program affiliation.
 _Avoid_: Faculty pending account, faculty pre-provisioned account
 
 **Self-declared enrollment**:

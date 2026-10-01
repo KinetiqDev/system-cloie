@@ -16,14 +16,14 @@ How people enter System CLOIE and how the server decides what they may do. Domai
 
 ## Google OAuth flow with the signed-acknowledgement gate
 
-The public entry is the role selection portal, where the person chooses the role they want to enter with (`intent`). Before any Google contact, the browser posts the acknowledged privacy notice and terms versions to `/api/auth/legal-acknowledgement`, which issues an **HMAC-SHA256-signed base64url ticket** (payload: role intent + pinned privacy/terms versions, 15-minute expiry plus 60 s clock skew) carried in the httpOnly `cloie_legal_ack` cookie scoped to `/` (legal domain; see `src/features/legal/CONTEXT.md`), so page-URL Server Actions can enforce the same acknowledgement before identity and role mutations.
+Public entry uses audience-separated Student, staff, Faculty-registration, and email-first external entrances rather than a role-card portal. Each entrance obtains a signed legal-acknowledgement ticket before authentication. The browser posts acknowledged privacy notice and terms versions to `/api/auth/legal-acknowledgement`, which issues an **HMAC-SHA256-signed base64url ticket** (payload: entrance intent + pinned privacy/terms versions, 15-minute expiry plus 60 s clock skew) in the httpOnly `cloie_legal_ack` cookie scoped to `/` (legal domain; see `src/features/legal/CONTEXT.md`). Staff and external sign-in use role-less intents; a role claim names the chosen role. Page-URL Server Actions enforce the same acknowledgement before identity and role mutations.
 
 The callback route (`src/app/api/auth/callback/route.ts`) then:
 
-1. **Verifies the ticket before the Google code exchange proceeds.** A missing, expired, tampered, or intent/version-mismatched ticket redirects to the site root — the privacy/terms acknowledgement therefore always precedes role selection and sign-in. The cookie is cleared once the callback finishes with it.
+1. **Verifies the ticket before the Google code exchange proceeds.** A missing, expired, tampered, or intent/version-mismatched ticket redirects to the site root. The privacy/terms acknowledgement therefore precedes sign-in and any role claim. The cookie is cleared once the callback finishes with it.
 2. Exchanges the code through Supabase Auth, matches or creates the domain `User` by normalized email (first link replaces a provisional Secretary-entered name with the Google-derived name), and resolves the session.
 
-There are no CLOIE-managed passwords, magic links, or invitation workflows for real accounts; Google OAuth is the only primary Production authentication mechanism ([ADR 0001: Complete Secretary-Created Accounts](../adr/0001-complete-secretary-created-accounts.md)).
+Internal roles require a proved Google session. Alumni and Industry Partner accounts may also use the external email-password flow; neither method changes the server-side role and profile gates ([ADR 0031](../adr/0031-prove-the-current-sign-in-method-before-internal-authorization.md)).
 
 ## Roles, role entry, and active-role authorization
 

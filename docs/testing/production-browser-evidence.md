@@ -34,7 +34,7 @@ pnpm start
 PRODUCTION_EVIDENCE_BASE_URL=http://127.0.0.1:3000 pnpm verify:production-auth-boundary
 ```
 
-The check must pass before any authenticated trace is accepted. It verifies that representative protected routes redirect to `/portal/respondents` without a session and that `POST /api/auth/dev-login` remains unavailable outside development. A dedicated demo deployment also runs the demo-boundary check defined by ADR 0008.
+The check must pass before any authenticated trace is accepted. It verifies that representative protected routes redirect to `/` without a session and that `POST /api/auth/dev-login` remains unavailable outside development. A dedicated demo deployment also runs the demo-boundary check defined by ADR 0008.
 
 ## Browser Trace Procedure
 
@@ -55,7 +55,7 @@ Use a fresh browser context for each role. Clear site data or sign out before ch
 6. Inspect the trace's LCP insight and record the selected LCP element and all four breakdown values: TTFB, resource load delay, resource load duration, and element render delay.
 7. Inspect the Network panel and record only relevant request metadata for `document`, `fetch`, and `script` requests: method, same-origin path or redacted origin category, status, transfer size, and duration. Do not include request headers, cookies, authorization values, query values containing identifiers, or response bodies with private data.
 8. For Course Assignments, confirm the first authorized records are present in the initial document/RSC response and that no mount-time read is required. For Faculty Dashboard, identify chart/word-cloud script chunks and whether they are deferred. For Dean Dashboard, record the initial document and relevant data requests without copying response payloads.
-9. Sign out, start a fresh context, and repeat the protected-route no-session check. The response must redirect to `/portal/respondents` and must not contain protected headings, records, or role navigation.
+9. Sign out, start a fresh context, and repeat the protected-route no-session check. The response must redirect to `/` and must not contain protected headings, records, or role navigation.
 
 ## Evidence Record
 
