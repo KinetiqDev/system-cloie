@@ -1,8 +1,8 @@
-import { Building2, Library, Mail, User } from "lucide-react";
+import { Building2, Library } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { ProfilePersonalInfoCard } from "@/features/users/components/profile-cards";
 import { prisma } from "@/lib/db/prisma";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -28,40 +28,13 @@ export default async function GenEdCoordinatorProfilePage() {
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
-              <User aria-hidden="true" className="size-5" />
-            </div>
-            <div>
-              <CardTitle className="text-title-md">Personal Information</CardTitle>
-              <CardDescription>Basic account details</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-1">
-              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
-                Full Name
-              </p>
-              <p className="text-sm font-semibold">{fullName}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-label-sm text-muted-foreground tracking-wider uppercase">
-                Email Address
-              </p>
-              {/* fallow-ignore-next-line code-duplication */}
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Mail aria-hidden="true" className="text-text-muted size-4" />
-                {user?.email ?? "No email available"}
-              </div>
-            </div>
-            <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
-                Role: Gen Ed Coordinator
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfilePersonalInfoCard
+          fullName={fullName}
+          email={user?.email}
+          role="Gen Ed Coordinator"
+          titleClassName="text-title-md"
+          labelTag="p"
+        />
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
             <div className="bg-secondary-soft text-text-secondary rounded-lg p-2">

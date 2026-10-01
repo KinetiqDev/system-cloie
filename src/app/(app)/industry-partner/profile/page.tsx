@@ -1,8 +1,12 @@
-import { Book, Building2, Briefcase, Mail, ShieldCheck, User } from "lucide-react";
+import { Book, Building2, Briefcase } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  ProfileDataPrivacyNotice,
+  ProfilePersonalInfoCard,
+} from "@/features/users/components/profile-cards";
 import { prisma } from "@/lib/db/prisma";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -25,12 +29,30 @@ export default async function IndustryPartnerProfilePage() {
           program: true,
         },
       },
+      industry_partner_program_affiliations: {
+        include: { program: true },
+        orderBy: { program: { code: "asc" } },
+      },
     },
   });
 
   const fullName = user ? user.name : "Industry Partner";
 
   const profile = user?.industry_partner_profile;
+
+  // The join table is the canonical multi-program record; the legacy single
+  // program_id stays the fallback for Secretary-written profiles that predate
+  // it. Union both so no affiliation any surface already shows can go missing
+  // here — the same set the Secretary users list labels from.
+  const affiliatedPrograms = (() => {
+    const byId = new Map<string, { id: string; name: string; code: string }>();
+    for (const affiliation of user?.industry_partner_program_affiliations ?? []) {
+      if (affiliation.program) byId.set(affiliation.program_id, affiliation.program);
+    }
+    const legacy = profile?.program;
+    if (legacy && !byId.has(legacy.id)) byId.set(legacy.id, legacy);
+    return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code));
+  })();
 
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in max-w-4xl space-y-8 motion-safe:duration-500">
@@ -42,40 +64,12 @@ export default async function IndustryPartnerProfilePage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Personal Information */}
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
-              <User className="size-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-bold">Personal Information</CardTitle>
-              <CardDescription>Basic account details</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Full Name
-              </label>
-              <p className="text-sm font-semibold">{fullName}</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Email Address
-              </label>
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Mail className="text-text-muted size-4" />
-                {user?.email ?? "No email available"}
-              </div>
-            </div>
-            <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
-                Role: Industry Partner
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfilePersonalInfoCard
+          fullName={fullName}
+          email={user?.email}
+          role="Industry Partner"
+          labelClassName="text-text-muted text-label-sm font-black tracking-widest uppercase"
+        />
 
         {/* Company Context */}
         <Card className="border-border shadow-sm">
@@ -109,45 +103,35 @@ export default async function IndustryPartnerProfilePage() {
                 </p>
               </div>
             )}
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Affiliated Program
+                Affiliated Program{affiliatedPrograms.length === 1 ? "" : "s"}
               </label>
-              <p className="flex items-center gap-2">
-                <Book className="text-text-muted size-4" />
-                {profile?.program?.name ?? "Not specified"}
-              </p>
+              {affiliatedPrograms.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {affiliatedPrograms.map((program) => (
+                    <li key={program.id}>
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary-soft text-selected-fg gap-1.5 font-bold"
+                      >
+                        <Book className="size-3.5" aria-hidden="true" />
+                        {program.code} — {program.name}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="flex items-center gap-2">
+                  <Book className="text-text-muted size-4" />
+                  Not specified
+                </p>
+              )}
             </div>
-            {profile?.program && (
-              <div className="space-y-1">
-                <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                  Program Code
-                </label>
-                <p>{profile.program.code}</p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
-        {/* Data Privacy Notice */}
-        <Card className="border-border border-l-primary border-l-4 shadow-sm md:col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="bg-primary-soft text-selected-fg shrink-0 rounded-lg p-2">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  Your evaluation responses are handled confidentially. Authorized Program Heads may
-                  review submitted responses for quality assurance and accreditation purposes. Once
-                  an evaluation is finalized and submitted, it cannot be modified to protect the
-                  integrity of results.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfileDataPrivacyNotice />
       </div>
     </div>
   );
