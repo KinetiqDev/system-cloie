@@ -19,10 +19,12 @@ import {
 import type {
   CreateCourseAssignmentInput,
   UpdateCourseAssignmentInput,
-  CourseAssignmentResult,
-  BulkCreateResult,
   DeleteCourseAssignmentInput,
   ActivateCourseAssignmentInput,
+} from "../schemas/course-assignment";
+import type {
+  CourseAssignmentResult,
+  BulkCreateResult,
   CourseAssignmentDeletionPreflight,
   CourseAssignmentMutationData,
 } from "../types";

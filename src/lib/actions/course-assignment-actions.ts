@@ -29,6 +29,8 @@ import type {
   ActivateCourseAssignmentInput,
   DeleteCourseAssignmentInput,
   BulkCreateCourseAssignmentsInput,
+} from "@/features/course-assignments/schemas/course-assignment";
+import type {
   ListCourseAssignmentsFilter,
   ListOptions,
   CourseAssignmentDeletionPreflight,
