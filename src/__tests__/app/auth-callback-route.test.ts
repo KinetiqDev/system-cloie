@@ -959,6 +959,55 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toContain("/status/role-mismatch");
   });
 
+  it("registers a new Industry Partner Google holder into its onboarding, not back to registration", async () => {
+    // Regression: /register/external used to bind the role-less `external`
+    // intent, so a new Google holder was signed out and sent back to the page
+    // they came from. The page now binds the chosen role intent, so a new
+    // Google holder claims that role and enters its onboarding.
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "partner@example.com",
+          user_metadata: { name: "Partner Person" },
+        },
+      },
+    });
+    findUniqueUserMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({
+      id: "new-user-id",
+      auth_user_id: VALID_UUID_1,
+      email: "partner@example.com",
+      name: "Partner Person",
+      roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: "INDUSTRY_PARTNER",
+      roles: ["INDUSTRY_PARTNER"],
+      profileGate: { status: "INDUSTRY_PARTNER_ONBOARDING_REQUIRED", intent: "industry-partner" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=industry-partner");
+
+    const response = await GET(
+      callbackRequest(
+        "https://cloie.test/api/auth/callback?code=abc&intent=industry-partner",
+        "industry-partner"
+      )
+    );
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(createUserMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        roles: { create: { role: SystemRole.INDUSTRY_PARTNER } },
+      }),
+      include: { roles: true },
+    });
+    expect(response.headers.get("location")).toBe(
+      "https://cloie.test/onboarding?intent=industry-partner"
+    );
+  });
+
   it("uses resolvePostLoginDestination for successful redirects", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,

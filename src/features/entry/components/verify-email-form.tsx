@@ -102,10 +102,15 @@ export function VerifyEmailForm({
     if (!(await ensureEntryLegal())) return;
     const result = await verifyExternalCode(data);
     if (result.success) {
+      // A verified identity is already linked to its domain account and the
+      // action redirects to the role's onboarding. The message stays as the
+      // fallback for the one case with no destination to enter: an address
+      // this identity may not claim, where saying nothing more is the honest
+      // and enumeration-neutral outcome.
       setMessage({ kind: "success", text: result.message });
-    } else {
-      reportFailure(result);
+      return;
     }
+    reportFailure(result);
   };
 
   const onResend = async () => {

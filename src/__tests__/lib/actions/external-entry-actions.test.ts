@@ -12,7 +12,18 @@ import {
   verifyExternalCode,
 } from "@/lib/actions/external-entry-actions";
 
-const { supabaseMocks, redirectMock, cookieSetMock, cookieGetMock } = vi.hoisted(() => ({
+const {
+  supabaseMocks,
+  redirectMock,
+  cookieSetMock,
+  cookieGetMock,
+  resolveDestinationMock,
+  writeActiveRoleCookieMock,
+  findUniqueMock,
+  updateManyMock,
+  createUserMock,
+  createUserRoleMock,
+} = vi.hoisted(() => ({
   supabaseMocks: {
     signInWithPassword: vi.fn(),
     signUp: vi.fn(),
@@ -25,9 +36,25 @@ const { supabaseMocks, redirectMock, cookieSetMock, cookieGetMock } = vi.hoisted
   redirectMock: vi.fn(),
   cookieSetMock: vi.fn(),
   cookieGetMock: vi.fn(),
+  resolveDestinationMock: vi.fn(),
+  writeActiveRoleCookieMock: vi.fn(),
+  findUniqueMock: vi.fn(),
+  updateManyMock: vi.fn(),
+  createUserMock: vi.fn(),
+  createUserRoleMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ redirect: redirectMock }));
+
+vi.mock("@/features/entry/services/resolve-external-post-verification-destination", () => ({
+  resolveExternalPostVerificationDestination: resolveDestinationMock,
+}));
+
+vi.mock("@/features/auth/services/active-role-cookie", () => ({
+  writeActiveRoleCookie: writeActiveRoleCookieMock,
+  readActiveRoleCookie: vi.fn(async () => null),
+  ACTIVE_ROLE_COOKIE_NAME: "cloie_active_role",
+}));
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -51,9 +78,12 @@ vi.mock("@/lib/db/prisma", () => ({
 
 const prismaMockTx = {
   user: {
-    findUnique: vi.fn(),
-    updateMany: vi.fn(),
-    create: vi.fn(),
+    findUnique: findUniqueMock,
+    updateMany: updateManyMock,
+    create: createUserMock,
+  },
+  userRole: {
+    create: createUserRoleMock,
   },
 };
 
@@ -121,6 +151,13 @@ describe("external entry actions", () => {
       "amara@example.com",
       expect.objectContaining({ httpOnly: true, path: "/verify-email" })
     );
+    // The chosen role has to survive the code step, or verification cannot
+    // route the account into the onboarding that collects its real fields.
+    expect(cookieSetMock).toHaveBeenCalledWith(
+      "cloie_pending_external_role",
+      "ALUMNI",
+      expect.objectContaining({ httpOnly: true, path: "/verify-email" })
+    );
     expect(redirectMock).toHaveBeenCalledWith("/verify-email");
   });
 
@@ -152,15 +189,74 @@ describe("external entry actions", () => {
     expect(supabaseMocks.verifyOtp).not.toHaveBeenCalled();
   });
 
-  it("a verified code releases the pinned address", async () => {
-    supabaseMocks.verifyOtp.mockResolvedValue({ error: null, data: { user: { id: "auth-1" } } });
+  it("a verified code releases the pins and continues into the chosen onboarding", async () => {
+    supabaseMocks.verifyOtp.mockResolvedValue({
+      error: null,
+      data: { user: { id: "auth-1", identities: [{ provider: "email" }] } },
+    });
+    cookieGetMock.mockImplementation((name: string) =>
+      name === "cloie_pending_external_role" ? { value: "INDUSTRY_PARTNER" } : undefined
+    );
+    // The verified address belongs to an unlinked, roleless external account
+    // that this password identity is allowed to claim.
+    findUniqueMock.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+      "auth_user_id" in where
+        ? null
+        : {
+            id: "external-user-1",
+            email: "dara@example.com",
+            name: "Dara Santos",
+            auth_user_id: null,
+            roles: [],
+          }
+    );
+    updateManyMock.mockResolvedValue({ count: 1 });
+    resolveDestinationMock.mockResolvedValue({
+      activeRole: "INDUSTRY_PARTNER",
+      path: "/onboarding?intent=industry-partner",
+    });
+
     const result = await verifyExternalCode({ email: "dara@example.com", token: "123456" });
+
     expect(result.success).toBe(true);
+    // The role the person registered for is what the verified identity is
+    // granted — not a default and not a role-less account.
+    expect(updateManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ auth_user_id: "auth-1" }),
+      })
+    );
+    expect(createUserRoleMock).toHaveBeenCalledWith({
+      data: { user_id: "external-user-1", role: "INDUSTRY_PARTNER" },
+    });
     expect(cookieSetMock).toHaveBeenCalledWith(
       "cloie_pending_verify_email",
       "",
       expect.objectContaining({ maxAge: 0, path: "/verify-email" })
     );
+    expect(cookieSetMock).toHaveBeenCalledWith(
+      "cloie_pending_external_role",
+      "",
+      expect.objectContaining({ maxAge: 0, path: "/verify-email" })
+    );
+    // The verified person must land in their role's real onboarding, not stay
+    // on the code step holding an account they cannot use.
+    expect(writeActiveRoleCookieMock).toHaveBeenCalledWith("INDUSTRY_PARTNER");
+    expect(redirectMock).toHaveBeenCalledWith("/onboarding?intent=industry-partner");
+  });
+
+  it("keeps the neutral completion message when no session resolves for the verified identity", async () => {
+    supabaseMocks.verifyOtp.mockResolvedValue({
+      error: null,
+      data: { user: { id: "auth-2", identities: [{ provider: "email" }] } },
+    });
+    resolveDestinationMock.mockResolvedValue(null);
+
+    const result = await verifyExternalCode({ email: "dara@example.com", token: "123456" });
+
+    expect(result.success).toBe(true);
+    expect(writeActiveRoleCookieMock).not.toHaveBeenCalled();
+    expect(redirectMock).not.toHaveBeenCalled();
   });
 
   it("resend answers neutrally even when the provider throws", async () => {

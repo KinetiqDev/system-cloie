@@ -16,16 +16,7 @@ import {
 import { formatRole } from "@/features/users/lib/role-visuals";
 import { switchActiveRole } from "@/lib/actions/switch-role-action";
 import type { Role } from "@/lib/constants/roles";
-
-/**
- * `redirect()` surfaces as a NEXT_REDIRECT digest when a server action is
- * awaited from the client. That means navigation is already in flight — it
- * is not a switch failure and must not be shown as an error.
- */
-function isNextRedirectError(error: unknown): boolean {
-  const digest = (error as { digest?: unknown } | null)?.digest;
-  return typeof digest === "string" && digest.startsWith("NEXT_REDIRECT");
-}
+import { isNextRedirectError } from "@/lib/utils/next-redirect";
 
 /**
  * Topbar dropdown for multi-role accounts. Renders nothing for single-role

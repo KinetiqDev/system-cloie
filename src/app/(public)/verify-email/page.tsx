@@ -3,7 +3,7 @@ import { requireLegalAcknowledgement } from "@/features/legal/services/require-l
 import {
   PENDING_VERIFICATION_NOTICE,
   readPendingVerificationEmail,
-} from "@/features/entry/services/pending-verification-email";
+} from "@/features/entry/services/pending-external-registration";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {

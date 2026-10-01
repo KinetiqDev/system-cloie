@@ -20,6 +20,20 @@ export async function readActiveRoleCookie(): Promise<string | null> {
   return cookieStore.get(ACTIVE_ROLE_COOKIE_NAME)?.value ?? null;
 }
 
+/**
+ * Records the requested role context from a Server Action. The cookie grants no
+ * role: session resolution accepts it only while the role is assigned to the
+ * account, so a stale value degrades to an unresolved active role.
+ */
+export async function writeActiveRoleCookie(role: string): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(
+    ACTIVE_ROLE_COOKIE_NAME,
+    role,
+    getActiveRoleCookieOptions(ACTIVE_ROLE_COOKIE_MAX_AGE_SECONDS)
+  );
+}
+
 export function setActiveRoleCookie(response: NextResponse, role: string): void {
   response.cookies.set(
     ACTIVE_ROLE_COOKIE_NAME,

@@ -91,4 +91,20 @@ describe("ExternalRegisterForm", () => {
       ).toBeInTheDocument();
     });
   });
+  it("binds the Google action to the chosen role, not the role-less external entrance", () => {
+    // Regression: the Google action used to bind the role-less `external`
+    // intent regardless of the choice, so the callback signed a new Google
+    // holder out and returned them to registration. It now binds the chosen
+    // role — visible as the dialog title the button opens. The dialog's own
+    // ticket and OAuth wiring is covered by its own test.
+    render(<ExternalRegisterForm />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Continue with Google/ }));
+    expect(screen.getByText("Before you continue as Alumni")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: /Industry Partner/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Continue with Google/ }));
+    expect(screen.getByText("Before you continue as Industry Partner")).toBeInTheDocument();
+  });
 });

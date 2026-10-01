@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Controller, useForm, type Resolver, type SubmitHandler } from "react-hook-form";
+import { Controller, useForm, useWatch, type Resolver, type SubmitHandler } from "react-hook-form";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
   externalRegisterFormSchema,
   type ExternalRegisterFormValues,
 } from "@/lib/schemas/external-entry";
 import { registerExternalAccount } from "@/lib/actions/external-entry-actions";
+import { roleToIntent, type TicketIntent } from "@/features/auth/services/role-intent";
 import {
   acknowledgeEntryLegal,
   ENTRY_LEGAL_REQUIRED_MESSAGE,
@@ -43,6 +44,13 @@ export function ExternalRegisterForm() {
     resolver: customZodResolver(externalRegisterFormSchema) as Resolver<ExternalRegisterFormValues>,
     defaultValues: { name: "", email: "", password: "", role: "ALUMNI" },
   });
+
+  // The Google action has to carry the role this person chose, exactly as the
+  // email action does: the OAuth callback resolves the account from the ticket
+  // intent, so a role-less intent would sign them out and return them here with
+  // their choice discarded.
+  const selectedRole = useWatch({ control, name: "role" });
+  const selectedIntent = roleToIntent(selectedRole) as TicketIntent;
 
   const onSubmit: SubmitHandler<ExternalRegisterFormValues> = async (data) => {
     setMessage(null);
@@ -188,8 +196,8 @@ export function ExternalRegisterForm() {
       </div>
 
       <GoogleEntryButton
-        intent="external"
-        roleTitle="Alumni or Industry Partner"
+        intent={selectedIntent}
+        roleTitle={selectedRole === "ALUMNI" ? "Alumni" : "Industry Partner"}
         label="Continue with Google"
         domainNote="Or use any Google account instead — no password needed."
       />

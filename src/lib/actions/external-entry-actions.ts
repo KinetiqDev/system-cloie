@@ -5,15 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
 import {
-  clearPendingVerificationEmail,
-  rememberPendingVerificationEmail,
+  clearPendingExternalRegistration,
+  readPendingExternalRole,
+  rememberPendingExternalRegistration,
   VERIFY_EMAIL_PATH,
-} from "@/features/entry/services/pending-verification-email";
+} from "@/features/entry/services/pending-external-registration";
 import { linkExternalVerifiedIdentity } from "@/features/users/services/link-external-identity";
 import { linkedProviderNames } from "@/features/auth/services/resolve-auth-method";
+import { writeActiveRoleCookie } from "@/features/auth/services/active-role-cookie";
+import { resolveExternalPostVerificationDestination } from "@/features/entry/services/resolve-external-post-verification-destination";
+import { isNextRedirectError } from "@/lib/utils/next-redirect";
 import {
   externalEmailContinueSchema,
   externalRegisterSchema,
+  externalRoleSchema,
   externalSignInSchema,
   recoveryConfirmSchema,
   recoveryRequestSchema,
@@ -27,7 +32,7 @@ import {
  * so the only way forward is to tick the box. Every other failure leaves the
  * form actionable as-is.
  */
-export type ExternalEntryResult =
+type ExternalEntryResult =
   | { success: true; message: string }
   | { success: false; error: string; code?: "LEGAL_ACKNOWLEDGEMENT_REQUIRED" };
 
@@ -208,7 +213,10 @@ export async function registerExternalAccount(input: unknown): Promise<ExternalE
     }
   }
 
-  await rememberPendingVerificationEmail(parsed.data.email);
+  await rememberPendingExternalRegistration({
+    email: parsed.data.email,
+    role: parsed.data.role,
+  });
   redirect(VERIFY_EMAIL_PATH);
 }
 
@@ -244,26 +252,44 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
       );
     }
 
+    const metadata = data.user.user_metadata ?? {};
+    const requested = externalRoleSchema.safeParse(metadata.requested_role);
+    const role = (await readPendingExternalRole()) ?? (requested.success ? requested.data : null);
+
     // Linkage runs only for a genuinely verified password identity. An account
     // that also carries a federated identity keeps its existing domain record.
     const providers = linkedProviderNames(data.user);
     if (!providers.includes("google")) {
-      const metadata = data.user.user_metadata ?? {};
       const collected =
         typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
       const email = data.user.email ?? parsed.data.email;
+
       await linkExternalVerifiedIdentity({
         authUserId: data.user.id,
         email,
         name: collected.length > 0 ? collected : null,
+        role,
       });
     }
 
-    // Inbox control is proven, so the pinned address has served its purpose.
-    await clearPendingVerificationEmail();
+    // Inbox control is proven, so the pins have served their purpose.
+    await clearPendingExternalRegistration();
+
+    // The verified identity now owns the role it registered for, so re-enter
+    // the ordinary post-login resolver with that role selected. Without this
+    // redirect the person stands on the code step holding an account whose
+    // onboarding they were never routed into.
+    const destination = await resolveExternalPostVerificationDestination(data.user.id, role);
+    if (destination) {
+      await writeActiveRoleCookie(destination.activeRole);
+      redirect(destination.path);
+    }
 
     return neutralSuccess(NEUTRAL_VERIFY_MESSAGE);
-  } catch {
+  } catch (error) {
+    // Next.js redirects travel as thrown control flow; let them through so a
+    // successful verification is never reported as a transport failure.
+    if (isNextRedirectError(error)) throw error;
     return neutralFailure("Verification is temporarily unavailable. Try again shortly.");
   }
 }

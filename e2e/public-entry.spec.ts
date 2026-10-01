@@ -121,6 +121,19 @@ test.describe("public entry (signed-out)", () => {
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);
   });
+  test("external registration binds Google sign-in to the chosen role", async ({ page }) => {
+    await gotoStable(page, "/register/external");
+    await page.getByRole("button", { name: /Continue with Google/ }).click();
+    await expect(page.getByText("Before you continue as Alumni")).toBeVisible();
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    await page.getByRole("radio", { name: /Industry Partner/ }).check();
+    await page.getByRole("button", { name: /Continue with Google/ }).click();
+    await expect(page.getByText("Before you continue as Industry Partner")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectNoAxeViolations(page);
+  });
 
   test("every entry password field can be revealed before submitting", async ({ page }) => {
     // The reveal control is named "Show password", so a label lookup for the
