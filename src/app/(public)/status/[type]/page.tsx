@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -213,14 +214,7 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
             height={48}
             className="shrink-0 object-contain"
           />
-          <Image
-            src="/logos/cloie-logo.svg"
-            alt="System CLOIE"
-            width={442}
-            height={500}
-            className="border-border h-12 w-auto shrink-0 rounded border bg-white object-contain p-1"
-            priority
-          />
+          <CloieLogoMark className="h-12" priority />
         </div>
         <h1 className="text-heading-xl text-primary font-bold tracking-tight">System CLOIE</h1>
         <p className="text-label-sm text-muted-foreground mt-1 tracking-wider uppercase">

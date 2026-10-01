@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Building2, CheckCircle2, GraduationCap, Users, XCircle } from "lucide-react";
 import { PortalChoiceCard, InstallAppButton } from "@/features/portals";
 import { EntryHelpFaq } from "@/features/entry";
@@ -28,13 +29,7 @@ export default function Home() {
       <header className="border-border/80 bg-background/80 relative z-10 border-b backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logos/cloie-logo.svg"
-              alt="System CLOIE"
-              width={442}
-              height={500}
-              className="border-border h-9 w-auto shrink-0 rounded border bg-white object-contain p-0.5"
-            />
+            <CloieLogoMark className="h-9" />
             <div className="space-y-0">
               <p className="text-title-md text-link font-bold">System CLOIE</p>
               <p className="text-caption text-muted-foreground">Assumption College of Davao</p>
@@ -66,16 +61,7 @@ export default function Home() {
                 priority
               />
             </div>
-            <div className="border-border flex size-20 items-center justify-center rounded-full border bg-white sm:size-24">
-              <Image
-                src="/logos/cloie-logo.svg"
-                alt="System CLOIE"
-                width={442}
-                height={500}
-                className="h-14 w-auto object-contain sm:h-18"
-                priority
-              />
-            </div>
+            <CloieLogoMark className="size-20 sm:size-24" priority />
           </div>
 
           <h1

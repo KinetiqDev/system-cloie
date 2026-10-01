@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { ROLES } from "@/lib/constants/roles";
@@ -10,6 +9,7 @@ import {
 } from "@/lib/constants/navigation";
 import { NavigationRow, BottomNavRow } from "@/components/layout/navigation-row";
 import { MobileSidebarDrawer } from "@/components/layout/mobile-sidebar-drawer";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 
 function Frame({
   title,
@@ -43,13 +43,7 @@ function BrandRow({ rail = false }: { rail?: boolean }) {
         rail ? "justify-center px-2" : "gap-3 px-4"
       )}
     >
-      <Image
-        src="/logos/cloie-logo.svg"
-        alt="System CLOIE"
-        width={442}
-        height={500}
-        className="h-10 w-auto dark:bg-white"
-      />
+      <CloieLogoMark className="h-10" />
       {!rail && (
         <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
       )}
@@ -152,13 +146,7 @@ export function ResponsiveShowcase() {
         >
           <div className="border-sidebar-border flex h-16 shrink-0 items-center justify-between border-b px-3">
             <div className="flex items-center gap-3">
-              <Image
-                src="/logos/cloie-logo.svg"
-                alt="System CLOIE"
-                width={442}
-                height={500}
-                className="h-9 w-auto dark:bg-white"
-              />
+              <CloieLogoMark className="h-9" />
               <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </div>
             <MobileSidebarDrawer roles={[ROLES.SECRETARY]} />

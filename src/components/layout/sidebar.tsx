@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
 import {
@@ -22,9 +22,8 @@ import {
 import { ROLES } from "@/lib/constants/roles";
 import { NavigationRow } from "./navigation-row";
 
-// The mark carries no white fills of its own; the dark-mode plate only keeps its
-// navy shapes legible against the dark sidebar.
-const LOGO_CLASS_NAME = "h-10 w-auto dark:bg-white";
+// The plate keeps the navy artwork legible against the dark sidebar.
+const LOGO_CLASS_NAME = "h-10";
 const NAV_ID = "app-sidebar-nav";
 /** A rail delay keeps labels from flickering as the pointer crosses the rail. */
 const TOOLTIP_DELAY = 300;
@@ -354,13 +353,7 @@ function SidebarHeader({ collapsed, onToggle, href, railBelowLg = false }: Sideb
                     "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150"
                   )}
                 >
-                  <Image
-                    src="/logos/cloie-logo.svg"
-                    alt="System CLOIE"
-                    width={442}
-                    height={500}
-                    className="h-8 w-auto dark:bg-white"
-                  />
+                  <CloieLogoMark className="h-8" />
                 </Button>
               }
             />
@@ -385,13 +378,7 @@ function SidebarHeader({ collapsed, onToggle, href, railBelowLg = false }: Sideb
         aria-label="System CLOIE — Dashboard"
         className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <Image
-          src="/logos/cloie-logo.svg"
-          alt="System CLOIE"
-          width={442}
-          height={500}
-          className={LOGO_CLASS_NAME}
-        />
+        <CloieLogoMark className={LOGO_CLASS_NAME} />
         <span
           className={cn(
             "text-link text-title-lg font-bold tracking-tight",

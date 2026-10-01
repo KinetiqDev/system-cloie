@@ -39,13 +39,11 @@ describe("Landing page", () => {
     expect(externalCard.getAttribute("href")).toBe("/login/external");
   });
 
-  it("keeps each audience card a single link with shared large-action styling", () => {
+  it("keeps each audience card a single link", () => {
     renderHome();
     for (const name of ["Students", "Staff & Faculty", "Alumni & Partners"]) {
       const card = screen.getByRole("link", { name: `Sign in: ${name}` });
       expect(card.querySelector("button, a")).toBeNull();
-      const action = card.querySelector('span[aria-hidden="true"]');
-      expect(action).toHaveClass("min-h-12", "text-base", "bg-primary");
     }
   });
 

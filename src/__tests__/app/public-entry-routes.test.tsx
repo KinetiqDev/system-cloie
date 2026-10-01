@@ -80,10 +80,10 @@ describe("Public entry routes", () => {
     const seal = screen.getByRole("img", { name: "Assumption College of Davao seal" });
     const mark = screen.getByRole("img", { name: "System CLOIE" });
     for (const logo of [seal, mark]) {
-      expect(logo.parentElement).toHaveClass("size-16", "sm:size-18", "bg-white");
-      expect(logo).toHaveClass("object-contain");
+      expect(logo.parentElement).toHaveClass("size-16", "sm:size-18", "bg-white", "rounded-full");
     }
-    expect(mark).toHaveClass("h-12", "sm:h-14", "w-auto");
+    expect(seal).toHaveClass("object-contain");
+    expect(mark).toHaveClass("h-[78%]", "w-auto");
   });
 
   it("faculty registration starts signed-out users with Google before any form", async () => {

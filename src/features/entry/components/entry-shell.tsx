@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import type { ReactNode } from "react";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,16 +37,7 @@ export function EntryShell({
               className="size-12 object-contain sm:size-14"
             />
           </div>
-          <div className="border-border flex size-16 shrink-0 items-center justify-center rounded-full border bg-white sm:size-18">
-            <Image
-              src="/logos/cloie-logo.svg"
-              alt="System CLOIE"
-              width={442}
-              height={500}
-              className="h-12 w-auto object-contain sm:h-14"
-              priority
-            />
-          </div>
+          <CloieLogoMark className="size-16 sm:size-18" priority />
         </div>
         <h1 className="text-heading-lg text-foreground font-bold tracking-tight">{title}</h1>
         <p className="text-body-md text-muted-foreground mt-2">{description}</p>

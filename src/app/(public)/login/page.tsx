@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -33,14 +34,7 @@ export default async function LoginPage({
             height={56}
             className="shrink-0 object-contain"
           />
-          <Image
-            src="/logos/cloie-logo.svg"
-            alt="System CLOIE"
-            width={442}
-            height={500}
-            className="border-border h-14 w-auto shrink-0 rounded border bg-white object-contain p-1"
-            priority
-          />
+          <CloieLogoMark className="h-14" priority />
         </div>
         <h1 className="text-display-md text-primary font-bold tracking-tight">System CLOIE</h1>
         <p className="text-muted-foreground mt-2 text-center">

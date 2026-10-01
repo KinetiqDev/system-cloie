@@ -28,19 +28,21 @@ const outputs = [
 ];
 const staged = (path) => join(temporary, path.replaceAll("/", "-"));
 
+// The mark rides a white coin — a circular plate, matching the in-app logo
+// treatment — never a rectangular frame.
 function iconSvg(markHeight) {
   const markWidth = (markHeight * 442) / 500;
   const artwork = source.replace(
     openingTag,
     `<svg x="${(512 - markWidth) / 2}" y="${(512 - markHeight) / 2}" width="${markWidth}" height="${markHeight}"${rootAttributes}>`
   );
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#FFFFFF"/>${artwork}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><circle cx="256" cy="256" r="256" fill="#FFFFFF"/>${artwork}</svg>\n`;
 }
 
-function rasterize(input, size, output) {
+function rasterize(input, size, output, background = "none") {
   execFileSync("magick", [
     "-background",
-    "white",
+    background,
     "-density",
     "384",
     input,
@@ -54,16 +56,18 @@ function rasterize(input, size, output) {
 try {
   writeFileSync(staged("public/logos/cloie-logo.svg"), source);
   const regular = staged("src/app/icon.svg");
-  writeFileSync(regular, iconSvg(416));
+  writeFileSync(regular, iconSvg(400));
+  // Transparent corners let the coin read as a circle in dark tab strips and
+  // OS chrome; Apple touch icons and the maskable tile must stay opaque.
   for (const size of [192, 512]) {
     rasterize(regular, size, staged(`public/icons/icon-${size}.png`));
   }
-  rasterize(regular, 180, staged("src/app/apple-icon.png"));
+  rasterize(regular, 180, staged("src/app/apple-icon.png"), "white");
 
   // The full rectangular artwork fits inside the maskable icon's 80% safe circle.
   const maskable = join(temporary, "maskable.svg");
   writeFileSync(maskable, iconSvg(300));
-  rasterize(maskable, 512, staged("public/icons/icon-512-maskable.png"));
+  rasterize(maskable, 512, staged("public/icons/icon-512-maskable.png"), "white");
 
   const favicon = join(temporary, "favicon.png");
   rasterize(regular, 256, favicon);

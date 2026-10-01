@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Separator } from "@/components/ui/separator";
 import type { LegalDocument } from "../types";
 import { LegalDocumentContent } from "./legal-document-content";
@@ -24,13 +24,7 @@ export function LegalPageShell({ document }: { document: LegalDocument }) {
             href="/"
             className="focus-visible:ring-ring flex items-center gap-3 rounded-md focus-visible:ring-2 focus-visible:outline-none"
           >
-            <Image
-              src="/logos/cloie-logo.svg"
-              alt="System CLOIE"
-              width={442}
-              height={500}
-              className="border-border h-9 w-auto shrink-0 rounded border bg-white object-contain p-0.5"
-            />
+            <CloieLogoMark className="h-9" />
             <span className="text-title-md text-link font-bold">System CLOIE</span>
           </Link>
           <nav aria-label="Public navigation" className="flex items-center gap-4 text-sm">
