@@ -12,8 +12,7 @@ import {
   protectedChangeDetected,
 } from "./secretary-protected-review";
 import { backfillCentralAssignmentsForUsers } from "@/features/evaluations/services/central-stakeholder-eligibility";
-import CryptoJS from "crypto-js";
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 import { SystemRole, EnrollmentSource } from "@prisma/client";
 
@@ -23,11 +22,9 @@ const NO_ACTIVE_PERIOD_PLACEMENT_ERROR =
 
 export function generateConfirmationToken(payload: string): string {
   const secret = getConfirmationSecret();
-  // We embed an expiration timestamp (e.g. 5 minutes from now)
   const expiresAt = Date.now() + 5 * 60 * 1000;
   const raw = `${payload}|${expiresAt}`;
-  const hmac = CryptoJS.HmacSHA256(raw, secret).toString();
-  // Return base64 encoded token containing the raw data and signature
+  const hmac = createHmac("sha256", secret).update(raw).digest("hex");
   return btoa(`${raw}|${hmac}`);
 }
 
@@ -44,7 +41,9 @@ function verifyConfirmationToken(token: string, expectedPayload: string): boolea
     if (payload !== expectedPayload) return false;
 
     const secret = getConfirmationSecret();
-    const expectedSignature = CryptoJS.HmacSHA256(`${payload}|${expiresAtStr}`, secret).toString();
+    const expectedSignature = createHmac("sha256", secret)
+      .update(`${payload}|${expiresAtStr}`)
+      .digest("hex");
 
     const actual = Buffer.from(signature, "hex");
     const expected = Buffer.from(expectedSignature, "hex");

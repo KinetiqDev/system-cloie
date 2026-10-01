@@ -6,7 +6,7 @@ import { editUserBySecretary } from "@/features/users/services/edit-user-by-secr
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
-import CryptoJS from "crypto-js";
+import { createHmac } from "node:crypto";
 
 // Valid Zod-4 compliant UUIDs (version bits [1-8], variant bits [89ab])
 const USER_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
@@ -40,7 +40,7 @@ function makeToken(payload: string, ttlMs = 60_000): string {
   const secret = getConfirmationSecret();
   const expiresAt = Date.now() + ttlMs;
   const raw = `${payload}|${expiresAt}`;
-  const hmac = CryptoJS.HmacSHA256(raw, secret).toString();
+  const hmac = createHmac("sha256", secret).update(raw).digest("hex");
   return btoa(`${raw}|${hmac}`);
 }
 
