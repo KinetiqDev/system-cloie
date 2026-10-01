@@ -36,35 +36,6 @@ const templateFields = {
   is_active: checkboxBoolean.default(true),
 };
 
-// Schema without structure (for legacy/simple metadata updates)
-export const createBaselineTemplateSchema = z.object(templateFields).superRefine((value, ctx) => {
-  if (value.template_type !== EvaluationTemplateType.COURSE_BOUND && value.is_faculty_accessible) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Only course-bound templates can be faculty-accessible.",
-      path: ["is_faculty_accessible"],
-    });
-  }
-});
-
-export const updateBaselineTemplateSchema = z
-  .object({
-    id: z.string().uuid(),
-    ...templateFields,
-  })
-  .superRefine((value, ctx) => {
-    if (
-      value.template_type !== EvaluationTemplateType.COURSE_BOUND &&
-      value.is_faculty_accessible
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Only course-bound templates can be faculty-accessible.",
-        path: ["is_faculty_accessible"],
-      });
-    }
-  });
-
 // Schema with structure (for template builder create/update)
 export const createBaselineTemplateWithStructureSchema = z
   .object({
@@ -103,8 +74,6 @@ export const updateBaselineTemplateWithStructureSchema = z
     }
   });
 
-export type CreateBaselineTemplateInput = z.infer<typeof createBaselineTemplateSchema>;
-export type UpdateBaselineTemplateInput = z.infer<typeof updateBaselineTemplateSchema>;
 export type CreateBaselineTemplateWithStructureInput = z.infer<
   typeof createBaselineTemplateWithStructureSchema
 >;
