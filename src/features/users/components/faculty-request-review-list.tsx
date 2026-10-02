@@ -37,6 +37,112 @@ function formatSubmittedAt(value: string) {
  * shows the requested program and the decision history, and the decision is
  * written through the SECRETARY-scoped server actions.
  */
+
+/** One reviewable request: its detail summary plus the pending decision controls. */
+function FacultyRequestRow({
+  request,
+  note,
+  isPending,
+  onNoteChange,
+  onDecide,
+}: {
+  request: FacultyAccessRequestListItem;
+  note: string;
+  isPending: boolean;
+  onNoteChange: (value: string) => void;
+  onDecide: (decision: "approve" | "reject") => void;
+}) {
+  const isDecided = request.status !== "PENDING";
+
+  return (
+    <Card data-testid={`faculty-request-${request.userId}`}>
+      <CardHeader>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <CardTitle className="text-title-md truncate">{request.name}</CardTitle>
+            <CardDescription className="truncate">{request.email}</CardDescription>
+          </div>
+          <Badge variant={isDecided ? "secondary" : "warning"} className="w-fit shrink-0">
+            {STATUS_LABEL[request.status]}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <dl className="text-body-sm grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">Requested program</dt>
+            <dd className="text-foreground">
+              {request.programCode} — {request.programName}
+            </dd>
+          </div>
+          <div className="flex gap-2">
+            <dt className="text-muted-foreground">Submitted</dt>
+            <dd className="text-foreground">{formatSubmittedAt(request.submittedAt)}</dd>
+          </div>
+          {!request.isActive && (
+            <div className="flex gap-2 sm:col-span-2">
+              <dt className="text-muted-foreground">Account</dt>
+              <dd className="text-destructive">Deactivated</dd>
+            </div>
+          )}
+          {request.decidedAt && (
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">Decided</dt>
+              <dd className="text-foreground">{formatSubmittedAt(request.decidedAt)}</dd>
+            </div>
+          )}
+          {request.decisionNote && (
+            <div className="flex gap-2 sm:col-span-2">
+              <dt className="text-muted-foreground">Note</dt>
+              <dd className="text-foreground">{request.decisionNote}</dd>
+            </div>
+          )}
+        </dl>
+
+        {request.status === "PENDING" && (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={`note-${request.userId}`}>Decision note (optional)</Label>
+              <Input
+                id={`note-${request.userId}`}
+                value={note}
+                maxLength={500}
+                placeholder="Reason shared with the applicant"
+                onChange={(event) => onNoteChange(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                onClick={() => onDecide("approve")}
+                disabled={isPending}
+                className="min-h-11 w-full sm:w-auto"
+              >
+                <CheckCircle2 className="size-4" aria-hidden="true" />
+                Approve Faculty access
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => onDecide("reject")}
+                disabled={isPending}
+                className="min-h-11 w-full sm:w-auto"
+              >
+                <XCircle className="size-4" aria-hidden="true" />
+                Do not approve
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isDecided && (
+          <p className="text-body-sm text-muted-foreground">
+            This request is closed. The applicant can submit a new request from Faculty
+            registration.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 export function FacultyRequestReviewList({
   requests,
   pendingCount,
@@ -98,111 +204,19 @@ export function FacultyRequestReviewList({
         </Card>
       ) : (
         <ul className="flex flex-col gap-4">
-          {requests.map((request) => {
-            const isDecided = request.status !== "PENDING";
-            return (
-              <li key={request.userId}>
-                <Card data-testid={`faculty-request-${request.userId}`}>
-                  <CardHeader>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex min-w-0 flex-col gap-1">
-                        <CardTitle className="text-title-md truncate">{request.name}</CardTitle>
-                        <CardDescription className="truncate">{request.email}</CardDescription>
-                      </div>
-                      <Badge
-                        variant={isDecided ? "secondary" : "warning"}
-                        className="w-fit shrink-0"
-                      >
-                        {STATUS_LABEL[request.status]}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-4">
-                    <dl className="text-body-sm grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <div className="flex gap-2">
-                        <dt className="text-muted-foreground">Requested program</dt>
-                        <dd className="text-foreground">
-                          {request.programCode} — {request.programName}
-                        </dd>
-                      </div>
-                      <div className="flex gap-2">
-                        <dt className="text-muted-foreground">Submitted</dt>
-                        <dd className="text-foreground">
-                          {formatSubmittedAt(request.submittedAt)}
-                        </dd>
-                      </div>
-                      {!request.isActive && (
-                        <div className="flex gap-2 sm:col-span-2">
-                          <dt className="text-muted-foreground">Account</dt>
-                          <dd className="text-destructive">Deactivated</dd>
-                        </div>
-                      )}
-                      {request.decidedAt && (
-                        <div className="flex gap-2">
-                          <dt className="text-muted-foreground">Decided</dt>
-                          <dd className="text-foreground">
-                            {formatSubmittedAt(request.decidedAt)}
-                          </dd>
-                        </div>
-                      )}
-                      {request.decisionNote && (
-                        <div className="flex gap-2 sm:col-span-2">
-                          <dt className="text-muted-foreground">Note</dt>
-                          <dd className="text-foreground">{request.decisionNote}</dd>
-                        </div>
-                      )}
-                    </dl>
-
-                    {request.status === "PENDING" && (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex flex-col gap-2">
-                          <Label htmlFor={`note-${request.userId}`}>Decision note (optional)</Label>
-                          <Input
-                            id={`note-${request.userId}`}
-                            value={note[request.userId] ?? ""}
-                            maxLength={500}
-                            placeholder="Reason shared with the applicant"
-                            onChange={(event) =>
-                              setNote((current) => ({
-                                ...current,
-                                [request.userId]: event.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <Button
-                            onClick={() => decide(request, "approve")}
-                            disabled={isPending}
-                            className="min-h-11 w-full sm:w-auto"
-                          >
-                            <CheckCircle2 className="size-4" aria-hidden="true" />
-                            Approve Faculty access
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => decide(request, "reject")}
-                            disabled={isPending}
-                            className="min-h-11 w-full sm:w-auto"
-                          >
-                            <XCircle className="size-4" aria-hidden="true" />
-                            Do not approve
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {isDecided && (
-                      <p className="text-body-sm text-muted-foreground">
-                        This request is closed. The applicant can submit a new request from Faculty
-                        registration.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </li>
-            );
-          })}
+          {requests.map((request) => (
+            <li key={request.userId}>
+              <FacultyRequestRow
+                request={request}
+                note={note[request.userId] ?? ""}
+                isPending={isPending}
+                onNoteChange={(value) =>
+                  setNote((current) => ({ ...current, [request.userId]: value }))
+                }
+                onDecide={(decision) => decide(request, decision)}
+              />
+            </li>
+          ))}
         </ul>
       )}
 

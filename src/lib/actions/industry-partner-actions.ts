@@ -2,12 +2,11 @@
 
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { createClient } from "@/lib/supabase/server";
 import {
   industryPartnerProfileSchema,
   type IndustryPartnerProfileInput,
 } from "@/lib/schemas/industry-partner-profile";
-import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
 function resolveProgramIds(data: IndustryPartnerProfileInput): string[] {
   if (Array.isArray(data.program_ids) && data.program_ids.length > 0) {
@@ -52,14 +51,38 @@ async function verifyProgramsExistAndActive(
 
 export async function createIndustryPartnerProfile(data: IndustryPartnerProfileInput) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user || !user.email) {
+    // The centralized session boundary is the identity and readiness source: it
+    // verifies the access-token claims, so a raw one-time-code or recovery
+    // session — which carries no workspace authority — can never reach this
+    // write (issue #649).
+    const authSession = await resolveAuthSession();
+    if (!authSession) {
       return { success: false, error: "Authentication session invalid or missing." };
+    }
+
+    // The account-state and institutional-review verdicts speak first, so an
+    // inactive or rejected account learns exactly why.
+    if (authSession.profileGate.status === "INACTIVE") {
+      return { success: false, error: "Your System CLOIE account is currently inactive." };
+    }
+    if (authSession.profileGate.status === "REJECTED_EXTERNAL_ACCOUNT") {
+      return { success: false, error: "Your registration application was not approved." };
+    }
+
+    // Industry Partner is chosen during registration, so this action only
+    // completes the profile of the workspace the session is actually in:
+    // Industry Partner must be the selected active role and must be waiting for
+    // exactly this onboarding step. A withheld role, another role's pending
+    // gate, or a raw code session grants nothing here.
+    if (
+      authSession.activeRole !== ROLES.INDUSTRY_PARTNER ||
+      authSession.profileGate.status !== "INDUSTRY_PARTNER_ONBOARDING_REQUIRED"
+    ) {
+      return {
+        success: false,
+        error:
+          "This session cannot complete Industry Partner onboarding. Sign in again and continue.",
+      };
     }
 
     // Client-injected identity fields are stripped by Zod.
@@ -72,69 +95,19 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
       return { success: false, error: verification.error };
     }
 
-    const domainUser = await resolveAuthenticatedDomainUser({
-      authUserId: user.id,
-      email: user.email,
-    });
-
-    if (!domainUser) {
-      return {
-        success: false,
-        error:
-          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
-      };
-    }
-
-    // The callback's verified first-link transaction is the only writer of
-    // `auth_user_id`. An email-matched but unlinked account must never gain a
-    // role or a profile through this action.
-    if (domainUser.auth_user_id !== user.id) {
-      return {
-        success: false,
-        error:
-          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
-      };
-    }
-
-    if (!domainUser.name.trim()) {
-      return {
-        success: false,
-        error: "Your account name is not available. Please sign out and sign in with Google again.",
-      };
-    }
-
-    // Preserve account-state and external verification gates on direct Server Action calls.
-    if (!domainUser.is_active) {
-      return { success: false, error: "Your CLOIE account is currently inactive." };
-    }
-    if (domainUser.industry_partner_profile?.verification_status === "REJECTED") {
-      return { success: false, error: "Your registration application was not approved." };
-    }
-
-    // Role + industry partner profile only. Never create a User and never write client identity.
+    // Profile only: the role was assigned during verified registration, so no
+    // user, role, or identity field is written here.
     await prisma.$transaction(async (tx) => {
-      const existingRole = await tx.userRole.findUnique({
-        where: { user_id_role: { user_id: domainUser.id, role: ROLES.INDUSTRY_PARTNER } },
-      });
-      if (!existingRole) {
-        await tx.userRole.create({
-          data: {
-            user_id: domainUser.id,
-            role: ROLES.INDUSTRY_PARTNER,
-          },
-        });
-      }
-
       const legacyProgramId = programIds[0] ?? null;
       await tx.industryPartnerProfile.upsert({
-        where: { user_id: domainUser.id },
+        where: { user_id: authSession.userId },
         update: {
           company_name: validatedData.company_name,
           position: validatedData.position || null,
           program_id: legacyProgramId,
         },
         create: {
-          user_id: domainUser.id,
+          user_id: authSession.userId,
           company_name: validatedData.company_name,
           position: validatedData.position || null,
           program_id: legacyProgramId,
@@ -142,12 +115,12 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
       });
       // Sync multi-affiliation join table
       await tx.industryPartnerProgramAffiliation.deleteMany({
-        where: { industry_partner_id: domainUser.id },
+        where: { industry_partner_id: authSession.userId },
       });
       if (programIds.length > 0) {
         await tx.industryPartnerProgramAffiliation.createMany({
           data: programIds.map((program_id) => ({
-            industry_partner_id: domainUser.id,
+            industry_partner_id: authSession.userId,
             program_id,
           })),
           skipDuplicates: true,
@@ -158,9 +131,6 @@ export async function createIndustryPartnerProfile(data: IndustryPartnerProfileI
     return { success: true };
   } catch (error: unknown) {
     console.error("Failed to create industry partner profile:", error);
-    if (error instanceof Error && error.message.startsWith("ROLE_MISMATCH")) {
-      return { success: false, error: "Your account is already registered with a different role." };
-    }
     return {
       success: false,
       error: "An unexpected error occurred while processing your request.",

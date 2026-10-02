@@ -50,7 +50,13 @@ function readPlaywrightConfig(): string {
 
 const CI = "ci.yml";
 const SCHEDULED = "scheduled.yml";
-const SELECT_OUTPUT_KEYS = ["run_build", "run_database", "run_browser", "run_visual"] as const;
+const SELECT_OUTPUT_KEYS = [
+  "run_build",
+  "run_database",
+  "run_browser",
+  "run_visual",
+  "run_auth_integration",
+] as const;
 
 describe("risk-based PR CI selection (551)", () => {
   const ci = () => readWorkflow(CI);
@@ -79,12 +85,20 @@ describe("risk-based PR CI selection (551)", () => {
     expect(jobs["unit-tests"]?.needs).toBeUndefined();
   });
 
-  it("gates the build, database, and browser jobs on the risk outputs", () => {
+  it("gates the build, database, browser, and auth jobs on the risk outputs", () => {
     const jobs = ci().jobs;
     expect(jobs["production-build"]?.if).toBe("needs.select.outputs.run_build == 'true'");
     expect(jobs["database-integration"]?.if).toBe("needs.select.outputs.run_database == 'true'");
     expect(jobs["browser-e2e"]?.if).toBe("needs.select.outputs.run_browser == 'true'");
-    for (const key of ["production-build", "database-integration", "browser-e2e"]) {
+    expect(jobs["auth-integration"]?.if).toBe(
+      "needs.select.outputs.run_auth_integration == 'true'"
+    );
+    for (const key of [
+      "production-build",
+      "database-integration",
+      "browser-e2e",
+      "auth-integration",
+    ]) {
       expect(jobs[key]?.needs).toContain("select");
     }
   });
@@ -125,6 +139,7 @@ describe("scheduled deep verification matrix (551)", () => {
     const jobs = scheduled().jobs;
     expect(Object.keys(jobs).sort()).toEqual(
       [
+        "auth-integration",
         "browser-chromium",
         "browser-firefox",
         "browser-webkit",

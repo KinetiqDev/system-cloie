@@ -21,6 +21,7 @@ describe("risk-domain check selection (551)", () => {
       run_database: false,
       run_browser: false,
       run_visual: false,
+      run_auth_integration: false,
       domains: [],
     });
   });
@@ -143,8 +144,38 @@ describe("risk-domain check selection (551)", () => {
       expect(selection.run_database, file).toBe(true);
       expect(selection.run_browser, file).toBe(true);
       expect(selection.run_visual, file).toBe(true);
+      expect(selection.run_auth_integration, file).toBe(true);
       expect(selection.domains, file).toContain("ci-infrastructure");
     }
+  });
+
+  it("selects the real Auth gate for credential, template, and Auth config changes", () => {
+    // A signed CI cookie bypasses GoTrue, so password, six-digit code, and
+    // recovery are only proved by the real-Auth gate. Any change that can
+    // alter those paths must select it.
+    for (const file of [
+      "src/features/auth/services/resolve-auth-method.ts",
+      "src/app/api/auth/callback/route.ts",
+      "src/features/legal/services/require-legal-acknowledgement.ts",
+      "src/features/users/services/resolve-profile-gate.ts",
+      "src/__tests__/auth/external-auth-real-gotrue.test.ts",
+      "package.json",
+      "pnpm-lock.yaml",
+      "src/lib/actions/external-entry-actions.ts",
+      "src/lib/schemas/external-entry.ts",
+      "src/features/entry/components/verify-email-form.tsx",
+      "supabase/config.toml",
+      "supabase/templates/confirm_signup.html",
+      "supabase/templates/recovery.html",
+      "supabase/migrations/20260927090000_add_faculty_access_requests.sql",
+    ]) {
+      expect(selectChecks([file]).run_auth_integration, file).toBe(true);
+    }
+    // Unrelated application code must not pay for the Docker gate.
+    expect(
+      selectChecks(["src/features/portals/components/dashboard-card.tsx"]).run_auth_integration
+    ).toBe(false);
+    expect(selectChecks(["README.md"]).run_auth_integration).toBe(false);
   });
 
   it("selects everything when the caller forces the full matrix", () => {
@@ -153,6 +184,7 @@ describe("risk-domain check selection (551)", () => {
     expect(selection.run_database).toBe(true);
     expect(selection.run_browser).toBe(true);
     expect(selection.run_visual).toBe(true);
+    expect(selection.run_auth_integration).toBe(true);
     expect(selection.domains).toContain("full-matrix");
   });
 
@@ -162,5 +194,6 @@ describe("risk-domain check selection (551)", () => {
     expect(selection.run_database).toBe(false);
     expect(selection.run_browser).toBe(false);
     expect(selection.run_visual).toBe(false);
+    expect(selection.run_auth_integration).toBe(false);
   });
 });

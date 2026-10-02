@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:related": "vitest related --run",
     "test:tooling-integration": "RUN_TOOLING_INTEGRATION_TESTS=1 vitest run --project=node",
+    "test:auth-integration": "tsx scripts/ci/run-auth-integration.ts",
     "lint": "eslint .",
     "lint:changed": "node scripts/ci/check-eslint-changed.mjs",
     "fallow:audit": "pnpm exec fallow audit",

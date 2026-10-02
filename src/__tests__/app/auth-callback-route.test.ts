@@ -1047,10 +1047,6 @@ describe("auth callback route", () => {
       activeRole: "FACULTY",
       profileGate: { status: "COMPLETE" },
     });
-    expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
-      id: VALID_UUID_1,
-      email: "user@acd.edu.ph",
-    });
     expect(resolveAuthSessionMock).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toContain("/faculty/dashboard");
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");

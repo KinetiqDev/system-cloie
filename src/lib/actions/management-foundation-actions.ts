@@ -20,13 +20,11 @@ import {
 import type { CourseEditData } from "@/features/academic-structure/services/manage-courses";
 import {
   addRoleToExistingUserSchema,
-  assignRoleSchema,
   createProgramHeadAssignmentSchema,
   deactivateProgramHeadAssignmentSchema,
 } from "@/features/users/schemas/secretary-user";
 import {
   addRoleToExistingUser,
-  assignUserRole,
   createProgramHeadAssignment,
   deactivateProgramHeadAssignment,
   deleteIndustryPartnerProfile,
@@ -272,37 +270,6 @@ export async function bulkToggleUsersActiveAction(
   }
   if (result.succeeded.length > 0) revalidateAdminFoundation();
   return result;
-}
-
-export async function assignUserRoleAction(formData: FormData): Promise<ActionResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { error: "Authentication required.", success: false };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { error: "Insufficient permissions.", success: false };
-  }
-  const parsed = parseWithSchema(assignRoleSchema, {
-    user_id: formData.get("user_id"),
-    role: formData.get("role"),
-  });
-
-  if (!parsed.success) {
-    return parsed;
-  }
-
-  if (parsed.data.user_id === session.userId) {
-    return { error: "Cannot modify own account.", success: false };
-  }
-  const result = await assignUserRole(parsed.data);
-
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  revalidateAdminFoundation();
-  return { success: true };
 }
 
 /**

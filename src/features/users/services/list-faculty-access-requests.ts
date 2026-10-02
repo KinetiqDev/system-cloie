@@ -17,7 +17,7 @@ export type FacultyAccessRequestListItem = {
   isActive: boolean;
 };
 
-export type FacultyAccessRequestListResult =
+type FacultyAccessRequestListResult =
   | { success: true; data: { requests: FacultyAccessRequestListItem[]; pendingCount: number } }
   | { success: false; error: string };
 

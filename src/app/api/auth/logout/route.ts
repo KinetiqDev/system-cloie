@@ -5,6 +5,7 @@ import { getSiteUrlFromRequest } from "@/lib/utils/site-url";
 import { CI_TEST_AUTH_COOKIE_NAME } from "@/features/auth/services/ci-test-auth";
 import { DEV_AUTH_COOKIE_NAME } from "@/features/auth/services/dev-auth";
 import { DEMO_AUTH_COOKIE_NAME } from "@/features/auth/services/demo-auth";
+import { SIGNUP_SESSION_COOKIE_NAME } from "@/features/auth/services/signup-session-proof";
 export async function POST(request: Request) {
   const supabase = await createClient();
 
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
   cookieStore.delete(DEV_AUTH_COOKIE_NAME);
   cookieStore.delete(CI_TEST_AUTH_COOKIE_NAME);
   cookieStore.delete(DEMO_AUTH_COOKIE_NAME);
+  cookieStore.delete(SIGNUP_SESSION_COOKIE_NAME);
 
   // Return to the System CLOIE landing (scoped entrances) after logout
   return NextResponse.redirect(`${siteUrl}/`);

@@ -126,7 +126,7 @@ describe("StatusPage", () => {
 
     expect(screen.getByText("Google Account Name Required")).toBeInTheDocument();
     expect(
-      screen.getByText(/does not provide a usable display name for CLOIE/i)
+      screen.getByText(/does not provide a usable display name for System CLOIE/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/set a full name/i)).toBeInTheDocument();
     expect(screen.getByText(/no account was created or linked/i)).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("StatusPage", () => {
 
     expect(screen.getByText("Sign-In Could Not Be Completed")).toBeInTheDocument();
     expect(
-      screen.getByText(/cannot be connected to the matching CLOIE account/i)
+      screen.getByText(/cannot be connected to the matching System CLOIE account/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/left unchanged/i)).toBeInTheDocument();
     expect(screen.queryByText(/auth_user_id/i)).not.toBeInTheDocument();

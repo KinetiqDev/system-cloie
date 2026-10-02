@@ -5,7 +5,7 @@ Legal defines the privacy notice and terms of use content versioning for System 
 ## Documents and versions
 
 **Legal document kind**:
-Either `privacy` (System CLOIE Privacy Notice) or `terms` (System CLOIE Terms of Use). Each kind pins its current version from `LEGAL_VERSIONS` (currently `1.0` for both) and carries approval status, effective date, and last-updated metadata on the document.
+Either `privacy` (System CLOIE Privacy Notice) or `terms` (System CLOIE Terms of Use). Each kind pins its current version from `LEGAL_VERSIONS` (currently `1.1` for both) and carries approval status, effective date, and last-updated metadata on the document.
 _Avoid_: Policy page, terms doc
 
 **Pending institutional approval**:

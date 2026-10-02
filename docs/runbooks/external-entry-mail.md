@@ -14,7 +14,7 @@ Adding a mail provider credential to `.env`, `.env.local`, `.env.example`, or th
 
 - Configure each target instance separately. Staging, dedicated demo, disposable CI, and primary Production are separate security boundaries and never share SMTP credentials.
 - Keep the dedicated demo deployment on the bundled catch-all mailer. Demo audience members are seeded accounts, and a real relay would send mail to addresses that were never verified.
-- Disposable CI keeps the catch-all mailer as well. Playwright never asserts real delivery.
+- Disposable CI keeps the catch-all mailer. The real Auth integration gate asserts local captured codes and provider behavior; Playwright UI journeys do not assert live inbox delivery.
 - Never add a payment method to the mail provider. See the cost guardrails below.
 
 ## The Three Failure Modes
@@ -150,6 +150,8 @@ pnpm supabase:start
 ```
 
 Restart the local stack after editing `supabase/config.toml`. To inspect captured mail, open the catcher interface on port `54324`.
+
+`pnpm test:auth-integration` starts the local stack only when needed, runs real signup, strict signup-purpose verification, code reuse rejection, duplicate signup, and password recovery against the catcher, then stops only a stack it started. The opt-in suite refuses non-loopback endpoints. CI selects this gate for credential, legal, Auth configuration, template, and verification-infrastructure changes. These checks do not certify SMTP, sending-domain authentication, Google linking, or institutional approval on a deployment target.
 
 ## Verification
 

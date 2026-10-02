@@ -1,17 +1,4 @@
-import type { EnrollmentSource, YearLevel, StudentSection } from "@prisma/client";
-
-/**
- * Input for creating/updating an enrollment.
- */
-export type UpsertEnrollmentInput = {
-  studentUserId: string;
-  termInstanceId: string;
-  programId: string;
-  majorId?: string | null;
-  yearLevel: YearLevel;
-  section?: StudentSection | null;
-  source: EnrollmentSource;
-};
+import type { YearLevel, StudentSection } from "@prisma/client";
 
 /**
  * Result of an enrollment operation.

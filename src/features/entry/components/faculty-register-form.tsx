@@ -7,6 +7,11 @@ import { z } from "zod";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import { requestFacultyAccess } from "@/lib/actions/faculty-actions";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
+import {
+  acknowledgeEntryLegal,
+  ENTRY_LEGAL_REQUIRED_MESSAGE,
+  EntryLegalCheckbox,
+} from "./entry-legal-acknowledgement";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -35,6 +40,12 @@ type ProgramOption = {
  * PENDING request only — no affiliation, no workspace — through the
  * backend-owned `requestFacultyAccess` action, which enforces the
  * server-side legal acknowledgement gate before any write.
+ *
+ * The signed acknowledgement ticket is cleared once the OAuth callback
+ * finishes, so a person already signed in cannot hold one when they reach
+ * this form. The request writes the FACULTY role, so the acknowledgement is
+ * taken deliberately here — exactly as the email-first entry forms do before
+ * a gated submit — and the action still verifies the ticket it produced.
  */
 export function FacultyRegisterForm({
   email,
@@ -45,6 +56,7 @@ export function FacultyRegisterForm({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<EntryFormMessage>(null);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const {
@@ -63,6 +75,17 @@ export function FacultyRegisterForm({
 
   const onSubmit: SubmitHandler<FacultyRequestValues> = async (data) => {
     setMessage(null);
+    if (!legalAccepted) {
+      setMessage({ kind: "error", text: ENTRY_LEGAL_REQUIRED_MESSAGE });
+      return;
+    }
+    if (!(await acknowledgeEntryLegal("faculty"))) {
+      setMessage({
+        kind: "error",
+        text: "The legal documents could not be confirmed. Try again.",
+      });
+      return;
+    }
     const result = await requestFacultyAccess({
       program_id: data.program_id,
     });
@@ -147,9 +170,15 @@ export function FacultyRegisterForm({
         )}
       </div>
 
+      <EntryLegalCheckbox
+        id="faculty-legal"
+        checked={legalAccepted}
+        onCheckedChange={setLegalAccepted}
+      />
+
       <EntryFormMessageView message={message} />
 
-      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || !legalAccepted}>
         {isSubmitting ? "Submitting…" : "Submit Faculty request"}
         {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
       </Button>

@@ -15,6 +15,7 @@ import {
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { HeroCard } from "@/features/portals/components/hero-card";
 import { listStakeholderEvaluations } from "@/features/responses/services/list-stakeholder-evaluations";
+import type { StudentEvaluationListItem } from "@/features/responses/types";
 import { EvaluationListBrowser } from "@/features/users/components/evaluation-list-browser";
 import { EvaluationListCard } from "@/features/users/components/evaluation-list-card";
 import { StatCards } from "@/features/users/components/stat-cards";
@@ -54,6 +55,92 @@ export const INDUSTRY_PARTNER_PORTAL: StakeholderPortal = {
     "View and complete evaluations assigned to you as an industry partner. Complete all forms before their deadlines.",
 };
 
+function ResumeSection({ resumeItem }: { resumeItem: StudentEvaluationListItem | null }) {
+  if (!resumeItem) return null;
+
+  const inProgress = resumeItem.status === "IN_PROGRESS";
+
+  return (
+    <section className="mt-8 space-y-4">
+      <div>
+        <h3 className="font-heading text-title-lg font-extrabold">Continue</h3>
+        <p className="text-text-muted text-body-sm font-medium">Pick up where you left off.</p>
+      </div>
+
+      <Card className="border-border overflow-hidden shadow-sm">
+        <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <p className="text-link text-label-sm font-semibold tracking-wider uppercase">
+              {inProgress ? "In Progress" : "Pending"}
+            </p>
+            <div>
+              <h4 className="text-title-lg font-bold">{resumeItem.evaluationTitle}</h4>
+              <p className="text-text-secondary text-body-sm">{resumeItem.programLabel}</p>
+            </div>
+            {inProgress && (
+              <p className="text-text-secondary text-body-sm font-medium">
+                {resumeItem.progress}% complete
+              </p>
+            )}
+          </div>
+
+          {resumeItem.href && (
+            <Button render={<Link href={resumeItem.href} />} className="min-h-11 font-semibold">
+              {inProgress ? "Resume" : "Start Evaluation"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function PendingSection({
+  portal,
+  pendingItems,
+}: {
+  portal: StakeholderPortal;
+  pendingItems: StudentEvaluationListItem[];
+}) {
+  return (
+    <section className="mt-8">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h3 className="font-heading text-title-lg font-extrabold">Pending Evaluations</h3>
+          <p className="text-text-muted text-body-sm font-medium">
+            Prioritize forms that are active and closing soon.
+          </p>
+        </div>
+        <Link
+          href={`${portal.basePath}/evaluations`}
+          className="text-link text-label-sm font-bold hover:underline"
+        >
+          View All
+        </Link>
+      </div>
+
+      <div className="grid gap-4">
+        {pendingItems.slice(0, 3).map((evalItem) => (
+          <EvaluationListCard key={evalItem.assignmentId} {...evalItem} />
+        ))}
+        {pendingItems.length === 0 && (
+          <div className="border-border bg-surface rounded-xl border-2 border-dashed p-12 text-center">
+            <div className="bg-primary-soft mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
+              <ClipboardList className="text-selected-fg size-6" />
+            </div>
+            <h4 className="text-title-sm text-text-primary mb-2 font-semibold">
+              No pending evaluations
+            </h4>
+            <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
+              You don&apos;t have any active evaluations at the moment. Check back later or view
+              your history.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 export async function StakeholderDashboardPage({ portal }: { portal: StakeholderPortal }) {
   const session = await resolveAuthSession();
   const { active, submitted } = await listStakeholderEvaluations(
@@ -79,76 +166,8 @@ export async function StakeholderDashboardPage({ portal }: { portal: Stakeholder
         completed={submitted.length}
       />
 
-      {resumeItem && (
-        <section className="mt-8 space-y-4">
-          <div>
-            <h3 className="font-heading text-title-lg font-extrabold">Continue</h3>
-            <p className="text-text-muted text-body-sm font-medium">Pick up where you left off.</p>
-          </div>
-
-          <Card className="border-border overflow-hidden shadow-sm">
-            <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-2">
-                <p className="text-link text-label-sm font-semibold tracking-wider uppercase">
-                  {resumeItem.status === "IN_PROGRESS" ? "In Progress" : "Pending"}
-                </p>
-                <div>
-                  <h4 className="text-title-lg font-bold">{resumeItem.evaluationTitle}</h4>
-                  <p className="text-text-secondary text-body-sm">{resumeItem.programLabel}</p>
-                </div>
-                {resumeItem.status === "IN_PROGRESS" && (
-                  <p className="text-text-secondary text-body-sm font-medium">
-                    {resumeItem.progress}% complete
-                  </p>
-                )}
-              </div>
-
-              {resumeItem.href && (
-                <Button render={<Link href={resumeItem.href} />} className="min-h-11 font-semibold">
-                  {resumeItem.status === "IN_PROGRESS" ? "Resume" : "Start Evaluation"}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      <section className="mt-8">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h3 className="font-heading text-title-lg font-extrabold">Pending Evaluations</h3>
-            <p className="text-text-muted text-body-sm font-medium">
-              Prioritize forms that are active and closing soon.
-            </p>
-          </div>
-          <Link
-            href={`${portal.basePath}/evaluations`}
-            className="text-link text-label-sm font-bold hover:underline"
-          >
-            View All
-          </Link>
-        </div>
-
-        <div className="grid gap-4">
-          {pendingItems.slice(0, 3).map((evalItem) => (
-            <EvaluationListCard key={evalItem.assignmentId} {...evalItem} />
-          ))}
-          {pendingItems.length === 0 && (
-            <div className="border-border bg-surface rounded-xl border-2 border-dashed p-12 text-center">
-              <div className="bg-primary-soft mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full">
-                <ClipboardList className="text-selected-fg size-6" />
-              </div>
-              <h4 className="text-title-sm text-text-primary mb-2 font-semibold">
-                No pending evaluations
-              </h4>
-              <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
-                You don&apos;t have any active evaluations at the moment. Check back later or view
-                your history.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
+      <ResumeSection resumeItem={resumeItem} />
+      <PendingSection portal={portal} pendingItems={pendingItems} />
     </div>
   );
 }

@@ -28,7 +28,7 @@ A self-service role claim that has assigned the System CLOIE account role but ha
 _Avoid_: Completed account, role change
 
 **Incomplete role cancellation**:
-A request to abandon one assigned self-service role before its required profile artifact exists. The requested role is checked against the account's assigned-role set and removed only while its own completion artifact remains absent; another active role and a completed deferred Student profile are preserved.
+A request to abandon one assigned self-service role before its required profile artifact exists. The requested role is checked against the account's assigned-role set and removed only while its own completion artifact remains absent; another active role is preserved. Student is never cancellable this way: it has no self-service artifact, and cancelling would strip a legitimately provisioned account.
 _Avoid_: Account deletion, active role selection, completed-role revocation
 
 **Pre-provisioned role**:
@@ -99,6 +99,10 @@ _Avoid_: Any authenticated session, user_metadata provider claim
 A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the recorded `app_metadata.provider` is `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. `user_metadata` is never consulted because the person can edit it.
 _Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider
 
+**Recovery-confined session**:
+A verified recovery-code session that may change the password but cannot enter any internal or external workspace. Raw code sessions are not workspace-authorized. A verified signup may continue external onboarding only when the server has proved its signup purpose for that exact session. Both successful and failed password updates end the recovery session before normal sign-in resumes.
+_Avoid_: External workspace session, recovery as institutional approval
+
 **External stakeholder invite**:
 A Secretary-managed invitation (ExternalStakeholderInvite) that offers an Alumni or Industry Partner person entry into System CLOIE, with statuses DRAFT, SENT, ACCEPTED, and REVOKED and an optional program scope; it is the parallel invite-based entry path alongside self-service external sign-up.
 _Avoid_: Self-service external sign-up, generic invitation email
@@ -130,6 +134,10 @@ _Avoid_: Role stack, simultaneous authority, primary role
 **Active account role**:
 The one assigned role currently used for dashboard access, authorization, onboarding gates, and account-state decisions.
 _Avoid_: Any assigned role, client-granted role, primary role
+
+**Withheld active role**:
+The state of an active role whose profile gate denies access: a Google-only role opened by a password, one-time-code, or recovery session, an inactive account, a rejected external account, a Faculty request not yet approved, or a Student awaiting institution-recorded placement. The session still reports the assigned role and the gate still names it, but `activeRole` resolves to no role, so every internal role guard fails closed while the workspace switcher can still move to a role the session may actually use. Gates that redirect to a self-service route a person may still complete — role selection, Faculty registration, external onboarding, deferred enrollment — do not withhold.
+_Avoid_: Revoked role, unassigned role, inactive session
 
 **Active role selection**:
 A person's choice among their assigned account roles. Selection changes authorization context but does not create, revoke, or complete a role.
@@ -203,16 +211,8 @@ _Avoid_: Active course assignment, preparation access
 A Program Head assigning themselves teaching capability only for a course within a program they manage.
 _Avoid_: Unrestricted self-assignment, second Faculty role
 
-**Faculty self-service account**:
-A Faculty account requested through the staff entrance using an institutional email and completed by choosing a faculty program affiliation.
-_Avoid_: Faculty pending account, faculty pre-provisioned account
-
-**Self-declared enrollment**:
-A Student-provided academic enrollment claim used by System CLOIE to place the student in an active term, program, year level, and section.
-_Avoid_: Registrar-verified enrollment, official enrollment record
-
 **Secretary-recorded enrollment**:
-A Secretary-provided academic enrollment record for a Student account in the active academic term, including program, year level, and section; a Secretary-created Student account should receive this record at creation time when an active term exists.
+A Secretary-provided academic enrollment record for a Student account in the active academic term, including program, year level, and section; a Secretary-created Student account should receive this record at creation time when an active term exists. It is the only writer of a Student's placement — no self-service form exists.
 _Avoid_: Self-declared enrollment, optional profile note
 
 **Student academic profile**:

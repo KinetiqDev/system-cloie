@@ -56,7 +56,7 @@ export async function createUserBySecretaryAction(
     };
   }
 
-  const result = await createUserBySecretary(parsed.data);
+  const result = await createUserBySecretary({ ...parsed.data, grantedByRole: ROLES.SECRETARY });
 
   if (!result.success) {
     // An existing account is a pivot, not a creation failure: hand the caller

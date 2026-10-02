@@ -147,7 +147,7 @@ describe("resolveAuthSession", () => {
     });
   });
 
-  it("returns onboarding-required state for an authenticated student without a profile", async () => {
+  it("returns placement-required state for an authenticated student without a profile", async () => {
     const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
     getUserMock.mockResolvedValue({
       data: { user: { id: "user-2", email: "student@acd.edu.ph" } },
@@ -163,7 +163,8 @@ describe("resolveAuthSession", () => {
       email: "student@acd.edu.ph",
       name: null,
       roles: [ROLES.STUDENT],
-      activeRole: ROLES.STUDENT,
+      // Placement is institution-recorded, so the gate denies the role itself.
+      activeRole: null,
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
@@ -172,8 +173,7 @@ describe("resolveAuthSession", () => {
       facultyApprovalStatus: null,
       authMethod: "google",
       profileGate: {
-        status: "STUDENT_ONBOARDING_REQUIRED",
-        intent: "student",
+        status: "STUDENT_PLACEMENT_REQUIRED",
       },
     });
   });

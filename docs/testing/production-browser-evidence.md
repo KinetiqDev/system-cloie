@@ -7,9 +7,10 @@ This is the repeatable evidence path for issue #193 and the authenticated perfor
 - Run `pnpm build` and `pnpm start`; do not use `pnpm dev` for accepted evidence.
 - Use either disposable real Supabase-authenticated test accounts or the separately reviewed signed demo session in an isolated dedicated demo deployment.
 - The dedicated demo deployment MUST use a production-mode build and a resettable non-Production database or dataset.
-- The primary public Production deployment remains OAuth-only. Demo variables MUST NOT be configured there, and its database MUST NOT be used for demo resets.
+- Primary Production permits Google and external email-password authentication. Demo variables MUST NOT be configured there, and its database MUST NOT be used for demo resets.
 - `cloie_dev_auth` and `POST /api/auth/dev-login` remain development-only and MUST NOT be used after `pnpm build` and `pnpm start`.
 - Signed demo-session evidence measures route rendering, server reads, hydration, navigation, UI, and LCP. It does not measure Google OAuth exchange, callback, or Supabase Auth session-refresh latency.
+- Signed CI and demo sessions do not prove password, verification, recovery, or provider-linking behavior. `pnpm test:auth-integration` separately exercises real local GoTrue and the bundled mail catcher; it does not prove live SMTP delivery or Google provider linking.
 - Keep demo secrets, allowlists, OAuth credentials, database connection secrets, cookies, access tokens, refresh tokens, and private response data outside the repository and outside trace exports.
 - Disable the dedicated demo configuration or destroy the disposable environment after the evidence window.
 

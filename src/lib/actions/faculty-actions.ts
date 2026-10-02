@@ -1,9 +1,8 @@
 "use server";
 
-import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { facultyProfileSchema, type FacultyProfileInput } from "@/lib/schemas/faculty-profile";
-import { requestFacultyAccess as submitFacultyAccessRequest } from "@/features/users/services/manage-faculty-access-requests";
+import { createFacultyAccessRequest } from "@/features/users/services/manage-faculty-access-requests";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
@@ -50,7 +49,7 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
     }
 
     if (!domainUser.is_active) {
-      return { success: false, error: "Your CLOIE account is currently inactive." };
+      return { success: false, error: "Your System CLOIE account is currently inactive." };
     }
 
     // The session boundary already resolved this account from the verified
@@ -70,7 +69,7 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
       return { success: false, error: ACADEMIC_DOMAIN_FAILURE };
     }
 
-    const result = await submitFacultyAccessRequest({
+    const result = await createFacultyAccessRequest({
       userId: domainUser.id,
       programId: validatedData.program_id,
     });
@@ -82,159 +81,6 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
     return { success: true };
   } catch (error: unknown) {
     console.error("Failed to request faculty access:", error);
-    return {
-      success: false,
-      error: "An unexpected error occurred while processing your request.",
-    };
-  }
-}
-
-export async function createFacultyProfile(data: FacultyProfileInput) {
-  try {
-    // The centralized session boundary is the identity source, so this action
-    // works for a real Google session and for the deployment-bounded
-    // development, dedicated-demo, and CI test sessions.
-    const authSession = await resolveAuthSession();
-    if (!authSession) {
-      return { success: false, error: "Authentication session invalid or missing." };
-    }
-
-    // Client-injected identity fields are stripped by Zod.
-    const validatedData = facultyProfileSchema.parse(data);
-
-    // Verify program exists and is active
-    const program = await prisma.program.findUnique({
-      where: { id: validatedData.program_id },
-    });
-
-    if (!program) {
-      return { success: false, error: "The selected program does not exist." };
-    }
-
-    if (!program.is_active) {
-      return { success: false, error: "The selected program is archived or inactive." };
-    }
-
-    const domainUser = await prisma.user.findUnique({
-      where: { id: authSession.userId },
-      select: { id: true, name: true, auth_user_id: true, is_active: true },
-    });
-
-    if (!domainUser) {
-      return {
-        success: false,
-        error:
-          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
-      };
-    }
-
-    // The session boundary already resolved this account from the verified
-    // `auth_user_id` link (or a deployment-bounded fixture identity), so an
-    // unlinked account cannot reach this write at all.
-
-    // A password, one-time-code, or recovery session must not mutate Faculty
-    // scope even when the account is already linked, so the direct action
-    // requires the same current Google session and ACD email as the request.
-    if (authSession.authMethod !== "google") {
-      return { success: false, error: NOT_GOOGLE_SESSION_FAILURE };
-    }
-    const sessionEmail = (authSession.email ?? "").trim().toLowerCase();
-    if (!sessionEmail.endsWith("@acd.edu.ph") && !sessionEmail.endsWith("@acdeducation.com")) {
-      return { success: false, error: ACADEMIC_DOMAIN_FAILURE };
-    }
-
-    if (!domainUser.name.trim()) {
-      return {
-        success: false,
-        error: "Your account name is not available. Please sign out and sign in with Google again.",
-      };
-    }
-
-    // Preserve account-state gates (profileGate INACTIVE) on direct Server Action calls.
-    if (!domainUser.is_active) {
-      return { success: false, error: "Your CLOIE account is currently inactive." };
-    }
-
-    // A pending or rejected self-request never grants an affiliation here: the
-    // Secretary approval service is the only writer of the active affiliation
-    // for a self-requested Faculty account.
-    const request = await prisma.facultyAccessRequest.findUnique({
-      where: { user_id: domainUser.id },
-      select: { status: true },
-    });
-    if (request && request.status !== "APPROVED") {
-      return {
-        success: false,
-        error:
-          request.status === "REJECTED"
-            ? "Your Faculty request was not approved. You may submit a new request."
-            : "Your Faculty request is still awaiting institutional review.",
-      };
-    }
-
-    // No request row and no active affiliation means a self-service claimant
-    // who never filed through Faculty registration: file the request with the
-    // submitted program instead of granting access, so Faculty access still
-    // begins only after Secretary approval.
-    const existingAffiliation = await prisma.facultyProgramAffiliation.findFirst({
-      where: { faculty_id: domainUser.id, is_active: true },
-      select: { id: true },
-    });
-    if (!request && !existingAffiliation) {
-      const filed = await submitFacultyAccessRequest({
-        userId: domainUser.id,
-        programId: validatedData.program_id,
-      });
-      if (!filed.success) {
-        return { success: false, error: filed.error };
-      }
-      return {
-        success: false,
-        error:
-          "Your Faculty request has been submitted for institutional review. You will gain access after approval.",
-      };
-    }
-
-    // Role + affiliation only. Never create a User and never write client identity.
-    await prisma.$transaction(async (tx) => {
-      const existingRole = await tx.userRole.findUnique({
-        where: { user_id_role: { user_id: domainUser.id, role: ROLES.FACULTY } },
-      });
-      if (!existingRole) {
-        await tx.userRole.create({
-          data: {
-            user_id: domainUser.id,
-            role: ROLES.FACULTY,
-          },
-        });
-      }
-
-      await tx.facultyProgramAffiliation.upsert({
-        where: {
-          faculty_id_program_id: {
-            faculty_id: domainUser.id,
-            program_id: validatedData.program_id,
-          },
-        },
-        update: {
-          is_primary: true,
-          is_active: true,
-        },
-        create: {
-          faculty_id: domainUser.id,
-          program_id: validatedData.program_id,
-          is_primary: true,
-          is_active: true,
-        },
-      });
-    });
-
-    return { success: true };
-  } catch (error: unknown) {
-    console.error("Failed to create faculty profile:", error);
-    if (error instanceof Error && error.message.startsWith("ROLE_MISMATCH")) {
-      return { success: false, error: "Your account is already registered with a different role." };
-    }
     return {
       success: false,
       error: "An unexpected error occurred while processing your request.",

@@ -1,13 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAlumniProfile } from "@/lib/actions/alumni-actions";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { createClient } from "@/lib/supabase/server";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 
-const { resolveAuthenticatedDomainUserMock } = vi.hoisted(() => ({
-  resolveAuthenticatedDomainUserMock: vi.fn(),
+const { resolveAuthSessionMock } = vi.hoisted(() => ({
+  resolveAuthSessionMock: vi.fn(),
+}));
+
+const { findUniqueProgramMock, findUniqueMajorMock, upsertAlumniProfileMock } = vi.hoisted(() => ({
+  findUniqueProgramMock: vi.fn(),
+  findUniqueMajorMock: vi.fn(),
+  upsertAlumniProfileMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -17,7 +21,7 @@ vi.mock("@/lib/db/prisma", () => ({
       update: vi.fn(),
     },
     alumniProfile: {
-      upsert: vi.fn(),
+      upsert: upsertAlumniProfileMock,
     },
     userRole: {
       findUnique: vi.fn(),
@@ -25,20 +29,16 @@ vi.mock("@/lib/db/prisma", () => ({
       upsert: vi.fn(),
     },
     program: {
-      findUnique: vi.fn(),
+      findUnique: findUniqueProgramMock,
     },
     major: {
-      findUnique: vi.fn(),
+      findUnique: findUniqueMajorMock,
     },
   },
 }));
 
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(),
-}));
-
-vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
-  resolveAuthenticatedDomainUser: resolveAuthenticatedDomainUserMock,
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: resolveAuthSessionMock,
 }));
 
 const validPayload = {
@@ -46,378 +46,243 @@ const validPayload = {
   program_id: "550e8400-e29b-41d4-a716-446655440000",
 };
 
-describe("Alumni Actions", () => {
-  const mockGetUser = vi.fn();
+/** A session that is genuinely inside Alumni onboarding. */
+function alumniOnboardingSession(overrides: Record<string, unknown> = {}) {
+  resolveAuthSessionMock.mockResolvedValue({
+    userId: "user-123",
+    email: "test@example.com",
+    name: "John Doe",
+    roles: [ROLES.ALUMNI],
+    activeRole: ROLES.ALUMNI,
+    authMethod: "password",
+    profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
+    ...overrides,
+  });
+}
 
+describe("createAlumniProfile Server Action", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (createClient as any).mockResolvedValue({
-      auth: {
-        getUser: mockGetUser,
-      },
-    });
-
-    (prisma.$transaction as any).mockImplementation(async (callback: any) => {
-      return callback(prisma);
-    });
-
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "user-123",
-      email: "test@example.com",
-      name: "John Doe",
-      auth_user_id: "auth-user-123",
-      is_active: true,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
+    alumniOnboardingSession();
+    findUniqueProgramMock.mockResolvedValue({
+      id: validPayload.program_id,
       is_active: true,
     });
-
-    (prisma.major.findUnique as any).mockResolvedValue({
+    findUniqueMajorMock.mockResolvedValue({
       id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
+      program_id: validPayload.program_id,
       is_active: true,
     });
+    upsertAlumniProfileMock.mockResolvedValue({ id: "alumni-profile-1" });
   });
 
-  it("denies an email-matched but unlinked account before any write", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-999", email: "test@example.com" } },
-      error: null,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "user-123",
-      email: "test@example.com",
-      name: "Test Person",
-      auth_user_id: null,
-      is_active: true,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain("could not be resolved");
-  });
-
-  it("should fail if user is not authenticated", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Authentication session invalid or missing.");
-  });
-
-  it("should fail validation for invalid data", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-
-    const result = await createAlumniProfile({
-      graduation_year: 1900,
-      program_id: "not-a-uuid",
-    } as any);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBeDefined();
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("should create profile and role successfully without major", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "auth-user-123",
-          email: "test@example.com",
-        },
-      },
-      error: null,
-    });
-
+  it("writes the alumni profile for the session's own account and grants no role", async () => {
     const result = await createAlumniProfile(validPayload);
 
     expect(result.success).toBe(true);
-    expect(prisma.$transaction).toHaveBeenCalled();
-    expect(prisma.user.update).not.toHaveBeenCalled();
-    expect(prisma.alumniProfile.upsert).toHaveBeenCalledWith({
-      where: { user_id: "user-123" },
-      update: {
-        graduation_year: 2020,
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: null,
-      },
-      create: {
-        user_id: "user-123",
-        graduation_year: 2020,
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: null,
-      },
-    });
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.ALUMNI } },
-    });
-    expect(prisma.userRole.create).toHaveBeenCalledWith({
-      data: {
-        user_id: "user-123",
-        role: ROLES.ALUMNI,
-      },
-    });
+    expect(upsertAlumniProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { user_id: "user-123" },
+        create: expect.objectContaining({ user_id: "user-123" }),
+      })
+    );
+    // The role was assigned during verified registration; this action never
+    // creates or grants it.
+    expect(prisma.userRole.create).not.toHaveBeenCalled();
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });
 
-  it("preserves stored name when client identity is injected", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "auth-user-123",
-          email: "test@example.com",
-        },
-      },
-      error: null,
+  it("refuses an unauthenticated session before any write", async () => {
+    resolveAuthSessionMock.mockResolvedValue(null);
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result).toEqual({ success: false, error: "Authentication session invalid or missing." });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a raw one-time-code session before any write", async () => {
+    // GoTrue emits `otp` for a raw signup or recovery code session. Only the
+    // signed signup proof upgrades it, so this session carries no workspace
+    // authority (issue #649).
+    alumniOnboardingSession({
+      authMethod: "otp",
+      profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.ALUMNI },
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a recovery-confined session before any write", async () => {
+    alumniOnboardingSession({
+      authMethod: "recovery",
+      profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.ALUMNI },
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unproved session before any write", async () => {
+    alumniOnboardingSession({
+      authMethod: null,
+      profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.ALUMNI },
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses when Alumni is assigned but is not the selected active role", async () => {
+    alumniOnboardingSession({
+      roles: [ROLES.ALUMNI, ROLES.STUDENT],
+      activeRole: ROLES.STUDENT,
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses when another role's onboarding gate is open", async () => {
+    alumniOnboardingSession({
+      roles: [ROLES.ALUMNI],
+      activeRole: ROLES.ALUMNI,
+      profileGate: { status: "INDUSTRY_PARTNER_ONBOARDING_REQUIRED", intent: "industry-partner" },
+    });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("reports an inactive account before any write", async () => {
+    alumniOnboardingSession({ profileGate: { status: "INACTIVE" } });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Your System CLOIE account is currently inactive.",
+    });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a rejected account before any write", async () => {
+    alumniOnboardingSession({ profileGate: { status: "REJECTED_EXTERNAL_ACCOUNT" } });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Your registration application was not approved.",
+    });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a program that does not exist", async () => {
+    findUniqueProgramMock.mockResolvedValue(null);
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result).toEqual({ success: false, error: "The selected program does not exist." });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an archived program", async () => {
+    findUniqueProgramMock.mockResolvedValue({ id: validPayload.program_id, is_active: false });
+
+    const result = await createAlumniProfile(validPayload);
+
+    expect(result).toEqual({
+      success: false,
+      error: "The selected program is archived or inactive.",
+    });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a major that is archived", async () => {
+    findUniqueMajorMock.mockResolvedValue({
+      id: "660e8400-e29b-41d4-a716-446655441111",
+      program_id: validPayload.program_id,
+      is_active: false,
     });
 
     const result = await createAlumniProfile({
+      ...validPayload,
+      major_id: "660e8400-e29b-41d4-a716-446655441111",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "The selected major is archived or inactive.",
+    });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a major belonging to another program", async () => {
+    findUniqueMajorMock.mockResolvedValue({
+      id: "660e8400-e29b-41d4-a716-446655441111",
+      program_id: "99999999-9999-4199-8999-999999999999",
+      is_active: true,
+    });
+
+    const result = await createAlumniProfile({
+      ...validPayload,
+      major_id: "660e8400-e29b-41d4-a716-446655441111",
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "The selected major does not belong to the selected program.",
+    });
+    expect(upsertAlumniProfileMock).not.toHaveBeenCalled();
+  });
+
+  it("strips client-injected identity fields", async () => {
+    await createAlumniProfile({
       ...validPayload,
       first_name: "Hacker",
       last_name: "Name",
-      name: "Hacker Name",
-    } as any);
+      name: "Injected",
+    } as never);
 
-    expect(result.success).toBe(true);
-    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(upsertAlumniProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.not.objectContaining({
+          first_name: expect.anything(),
+          last_name: expect.anything(),
+          name: expect.anything(),
+        }),
+      })
+    );
   });
 
-  it("should create profile and role successfully with major", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "auth-user-123",
-          email: "test@example.com",
-        },
-      },
-      error: null,
-    });
-
-    const result = await createAlumniProfile({
-      ...validPayload,
-      major_id: "660e8400-e29b-41d4-a716-446655441111",
-    });
-
-    expect(result.success).toBe(true);
-    expect(prisma.$transaction).toHaveBeenCalled();
-    expect(prisma.alumniProfile.upsert).toHaveBeenCalledWith({
-      where: { user_id: "user-123" },
-      update: {
-        graduation_year: 2020,
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: "660e8400-e29b-41d4-a716-446655441111",
-      },
-      create: {
-        user_id: "user-123",
-        graduation_year: 2020,
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: "660e8400-e29b-41d4-a716-446655441111",
-      },
-    });
-  });
-
-  it("should return correct error when duplicate role exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-
-    (prisma.$transaction as any).mockRejectedValue(createPrismaUniqueConstraintError());
+  it("reports an existing profile when the unique constraint fires", async () => {
+    upsertAlumniProfileMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createAlumniProfile(validPayload);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("You already have an alumni profile.");
+    expect(result).toEqual({ success: false, error: "You already have an alumni profile." });
   });
 
-  it("should fail if the program does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue(null);
+  it("returns a client-safe message when the write throws", async () => {
+    upsertAlumniProfileMock.mockRejectedValue(new Error("Db connection lost"));
 
     const result = await createAlumniProfile(validPayload);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected program does not exist.");
-  });
-
-  it("should fail if the program is archived or inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
+    expect(result).toEqual({
+      success: false,
+      error: "An unexpected error occurred while processing your request.",
     });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected program is archived or inactive.");
-  });
-
-  it("should fail if the major does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    (prisma.major.findUnique as any).mockResolvedValue(null);
-
-    const result = await createAlumniProfile({
-      ...validPayload,
-      major_id: "660e8400-e29b-41d4-a716-446655441111",
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected major does not exist.");
-  });
-
-  it("should fail if the major is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    (prisma.major.findUnique as any).mockResolvedValue({
-      id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
-
-    const result = await createAlumniProfile({
-      ...validPayload,
-      major_id: "660e8400-e29b-41d4-a716-446655441111",
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected major is archived or inactive.");
-  });
-
-  it("should fail if the major belongs to a different program", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    (prisma.major.findUnique as any).mockResolvedValue({
-      id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "different-program-id",
-      is_active: true,
-    });
-
-    const result = await createAlumniProfile({
-      ...validPayload,
-      major_id: "660e8400-e29b-41d4-a716-446655441111",
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected major does not belong to the selected program.");
-  });
-
-  it("should check if userRole exists before creating and skip creating if it exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "auth-user-123",
-          email: "test@example.com",
-        },
-      },
-      error: null,
-    });
-    (prisma.userRole.findUnique as any).mockResolvedValue({
-      id: "role-123",
-      user_id: "user-123",
-      role: ROLES.ALUMNI,
-    });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(true);
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.ALUMNI } },
-    });
-    expect(prisma.userRole.create).not.toHaveBeenCalled();
-  });
-
-  it("allows onboarding when the user holds a different role (multi-role)", async () => {
-    mockGetUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "auth-user-123",
-          email: "test@example.com",
-        },
-      },
-      error: null,
-    });
-    // No ALUMNI role claimed yet; other roles no longer block registration.
-    (prisma.userRole.findUnique as any).mockResolvedValue(null);
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(true);
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.ALUMNI } },
-    });
-    expect(prisma.userRole.create).toHaveBeenCalledWith({
-      data: {
-        user_id: "user-123",
-        role: ROLES.ALUMNI,
-      },
-    });
-  });
-
-  it("rejects registration when the resolved domain user is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "user-123",
-      email: "test@example.com",
-      name: "John Doe",
-      auth_user_id: "auth-user-123",
-      is_active: false,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Your CLOIE account is currently inactive.");
-    expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("rejects registration when alumni verification status is REJECTED", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-user-123", email: "test@example.com" } },
-      error: null,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "user-123",
-      email: "test@example.com",
-      name: "John Doe",
-      auth_user_id: "auth-user-123",
-      is_active: true,
-      alumni_profile: { verification_status: "REJECTED" },
-      industry_partner_profile: null,
-    });
-
-    const result = await createAlumniProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Your registration application was not approved.");
-    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

@@ -5,42 +5,20 @@ const REDIRECT_ERROR = "NEXT_REDIRECT";
 
 const {
   redirectMock,
-  getUserMock,
   resolveAuthSessionMock,
-  resolveAuthSessionFromUserMock,
   resolvePostLoginDestinationMock,
   programFindManyMock,
-  yearLevelFindManyMock,
-  getActiveTermIdMock,
 } = vi.hoisted(() => ({
   redirectMock: vi.fn((path: string) => {
     throw new Error(`${REDIRECT_ERROR}:${path}`);
   }),
-  getUserMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
-  resolveAuthSessionFromUserMock: vi.fn(),
   resolvePostLoginDestinationMock: vi.fn(),
   programFindManyMock: vi.fn(),
-  yearLevelFindManyMock: vi.fn(),
-  getActiveTermIdMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
   redirect: redirectMock,
-}));
-
-vi.mock("next/link", () => ({
-  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
-  ),
-}));
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(async () => ({
-    auth: {
-      getUser: getUserMock,
-    },
-  })),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -48,31 +26,15 @@ vi.mock("@/lib/db/prisma", () => ({
     program: {
       findMany: programFindManyMock,
     },
-    yearLevel: {
-      findMany: yearLevelFindManyMock,
-    },
   },
-}));
-
-vi.mock("@/features/academic-calendar/services/resolve-active-term", () => ({
-  getActiveTermId: getActiveTermIdMock,
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
-  resolveAuthSessionFromUser: resolveAuthSessionFromUserMock,
 }));
 
 vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
   resolvePostLoginDestination: resolvePostLoginDestinationMock,
-}));
-
-vi.mock("@/app/(public)/onboarding/student-profile-form", () => ({
-  StudentProfileForm: ({ email, name }: { email: string; name: string }) => (
-    <div>
-      Student form for {email} ({name})
-    </div>
-  ),
 }));
 
 vi.mock("@/features/users/components/alumni-onboarding-form", () => ({
@@ -91,111 +53,35 @@ vi.mock("@/features/users/components/industry-partner-onboarding-form", () => ({
   ),
 }));
 
-vi.mock("@/features/users/components/faculty-onboarding-form", () => ({
-  FacultyOnboardingForm: ({ email, name }: { email: string; name: string }) => (
-    <div data-testid="faculty-form">
-      Faculty form for {email} ({name})
-    </div>
-  ),
-}));
-
 import OnboardingPage from "@/app/(public)/onboarding/page";
 
 describe("OnboardingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getUserMock.mockResolvedValue({
-      data: {
-        user: {
-          id: "user-1",
-          email: "student@acd.edu.ph",
-          user_metadata: { full_name: "Jamie Cruz" },
-        },
-      },
-      error: null,
-    });
-    resolveAuthSessionMock.mockResolvedValue({
-      activeRole: null,
-      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
-    });
-    resolveAuthSessionFromUserMock.mockResolvedValue({
-      name: "Jamie Cruz",
-      activeRole: null,
-      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
-    });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     programFindManyMock.mockResolvedValue([]);
-    yearLevelFindManyMock.mockResolvedValue([]);
-    getActiveTermIdMock.mockResolvedValue("term-uuid-123");
   });
 
-  it("redirects unauthenticated requests to login", async () => {
-    getUserMock.mockResolvedValue({
-      data: { user: null },
-      error: new Error("auth failed"),
-    });
+  it("redirects when no session resolves", async () => {
+    resolveAuthSessionMock.mockResolvedValue(null);
 
     await expect(OnboardingPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
       `${REDIRECT_ERROR}:/`
     );
+    expect(programFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("redirects complete users through resolvePostLoginDestination", async () => {
-    resolveAuthSessionFromUserMock.mockResolvedValue({
-      activeRole: "STUDENT",
-      profileGate: { status: "COMPLETE" },
+  it("renders alumni onboarding for the session's own alumni gate", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "alumni@example.com",
+      name: "Jamie Cruz",
+      roles: ["ALUMNI"],
+      activeRole: "ALUMNI",
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
 
-    await expect(OnboardingPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
-      `${REDIRECT_ERROR}:/student/dashboard`
-    );
-    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
-      requestedPath: "/dashboard",
-      intent: null,
-      activeRole: "STUDENT",
-      profileGate: { status: "COMPLETE" },
-    });
-    expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
-      id: "user-1",
-      email: "student@acd.edu.ph",
-    });
-    expect(resolveAuthSessionMock).not.toHaveBeenCalled();
-  });
-
-  it("renders the student form path for incomplete users with intent=student", async () => {
-    const page = await OnboardingPage({
-      searchParams: Promise.resolve({ intent: "student", step: "form" }),
-    });
-
-    render(page);
-    expect(
-      screen.getByText("Student form for student@acd.edu.ph (Jamie Cruz)")
-    ).toBeInTheDocument();
-    expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
-      id: "user-1",
-      email: "student@acd.edu.ph",
-    });
-  });
-
-  it("passes the canonical session name to alumni onboarding", async () => {
-    getUserMock.mockResolvedValue({
-      data: {
-        user: {
-          id: "user-1",
-          email: "alumni@example.com",
-          user_metadata: {
-            full_name: "Alumni Member",
-            given_name: "Alumni",
-            family_name: "Member",
-          },
-        },
-      },
-      error: null,
-    });
-
-    const page = await OnboardingPage({
-      searchParams: Promise.resolve({ intent: "alumni" }),
-    });
+    const page = await OnboardingPage({ searchParams: Promise.resolve({ intent: "alumni" }) });
 
     render(page);
     expect(screen.getByTestId("alumni-form")).toHaveTextContent(
@@ -203,35 +89,104 @@ describe("OnboardingPage", () => {
     );
   });
 
-  it("passes the canonical session name to faculty onboarding", async () => {
-    getUserMock.mockResolvedValue({
-      data: {
-        user: {
-          id: "user-1",
-          email: "teacher@acd.edu.ph",
-        },
-      },
-      error: null,
+  it("renders industry partner onboarding for the session's own industry partner gate", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "partner@example.com",
+      name: "Jamie Cruz",
+      roles: ["INDUSTRY_PARTNER"],
+      activeRole: "INDUSTRY_PARTNER",
+      profileGate: { status: "INDUSTRY_PARTNER_ONBOARDING_REQUIRED", intent: "industry-partner" },
     });
 
-    const page = await OnboardingPage({
-      searchParams: Promise.resolve({ intent: "faculty" }),
-    });
-
-    render(page);
-    expect(screen.getByTestId("faculty-form")).toHaveTextContent(
-      "Faculty form for teacher@acd.edu.ph (Jamie Cruz)"
-    );
-  });
-
-  it("passes the canonical session name to industry partner onboarding", async () => {
     const page = await OnboardingPage({
       searchParams: Promise.resolve({ intent: "industry-partner" }),
     });
 
     render(page);
     expect(screen.getByTestId("industry-form")).toHaveTextContent(
-      "Industry form for student@acd.edu.ph (Jamie Cruz)"
+      "Industry form for partner@example.com (Jamie Cruz)"
     );
+  });
+
+  it("refuses a form when the requested intent is not the session's own gate", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "alumni@example.com",
+      name: "Jamie Cruz",
+      roles: ["ALUMNI"],
+      activeRole: "ALUMNI",
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/alumni/dashboard");
+
+    // An Alumni session must not reach the Industry Partner form by editing the
+    // query string: the gate, not the URL, decides which form renders.
+    await expect(
+      OnboardingPage({ searchParams: Promise.resolve({ intent: "industry-partner" }) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/alumni/dashboard`);
+    expect(programFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("routes an awaiting-placement Student to its guidance status instead of a form", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "student@acd.edu.ph",
+      name: "Jamie Cruz",
+      roles: ["STUDENT"],
+      activeRole: "STUDENT",
+      profileGate: { status: "STUDENT_PLACEMENT_REQUIRED" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/unprovisioned-student");
+
+    await expect(
+      OnboardingPage({ searchParams: Promise.resolve({ intent: "student" }) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/status/unprovisioned-student`);
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: null,
+      intent: null,
+      activeRole: "STUDENT",
+      profileGate: { status: "STUDENT_PLACEMENT_REQUIRED" },
+    });
+  });
+
+  it("routes an affiliation-less Faculty session to faculty registration, not a form", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "teacher@acd.edu.ph",
+      name: "Jamie Cruz",
+      roles: ["FACULTY"],
+      activeRole: "FACULTY",
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/register/faculty");
+
+    await expect(
+      OnboardingPage({ searchParams: Promise.resolve({ intent: "faculty" }) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/register/faculty`);
+    expect(programFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["INACTIVE", "/status/inactive"],
+    ["REJECTED_EXTERNAL_ACCOUNT", "/status/rejected"],
+    ["AUTH_METHOD_MISMATCH", "/status/method-mismatch"],
+    ["FACULTY_APPROVAL_PENDING", "/status/faculty-pending"],
+    ["COMPLETE", "/alumni/dashboard"],
+  ])("renders no form for the %s verdict", async (status, destination) => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "person@example.com",
+      name: "Jamie Cruz",
+      roles: ["ALUMNI"],
+      activeRole: "ALUMNI",
+      profileGate: status === "AUTH_METHOD_MISMATCH" ? { status, role: "ALUMNI" } : { status },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue(destination);
+
+    await expect(
+      OnboardingPage({ searchParams: Promise.resolve({ intent: "alumni" }) })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:${destination}`);
+    expect(programFindManyMock).not.toHaveBeenCalled();
   });
 });

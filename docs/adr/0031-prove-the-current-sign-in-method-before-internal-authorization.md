@@ -22,12 +22,13 @@ The same gap exists at the OAuth callback. GoTrue serves every OAuth provider th
 System CLOIE treats the current sign-in method as a **proved, server-verified fact** and refuses internal authorization without it.
 
 1. A session is a **proved Google session** only when all of the following hold: the verified access-token claims resolve `amr` to `oauth`; the recorded `app_metadata.provider` is `google`; no proved `password`, `otp`, or `recovery` method is present in `amr`; and no other method is present. Anything else resolves to no proved method, or to a proved non-Google method. Both deny every internal role.
-2. A proved password, one-time-code, or recovery method **outranks** OAuth when a claim carries both: the credential step is what actually established the session.
+2. A proved credential method **outranks** OAuth when a claim carries both. Recovery and ambiguous OTP outrank password, so a mixed claim cannot turn a code session into normal workspace authority.
 3. `user_metadata` is never consulted as evidence of a method or a provider. `app_metadata` is only corroboration for an `oauth` session, never a session method on its own.
 4. System CLOIE enables **Google as its only OAuth provider** on every target (see `[auth.external.google]` in `supabase/config.toml`; every other external provider is disabled). Adding an OAuth provider requires revisiting this ADR, because the single-`amr` `oauth` value would then be ambiguous.
 5. The OAuth callback proves Google **before** any first-link, role claim, account creation, or provisional-name replacement, and refuses the session otherwise.
-6. Internal Server Actions re-prove the method from verified claims at the action boundary. Authorization is not inherited from a page, and a linked account does not make a password session acceptable.
+6. Internal Server Actions re-prove the method from verified claims at the action boundary. Authorization is not inherited from a page, and a linked account does not make a password session acceptable. The centralized session boundary enforces this for every internal caller at once: it resolves the profile gate from the **selected** role and then withholds that role from the session whenever the gate denies access (`AUTH_METHOD_MISMATCH`, `INACTIVE`, `REJECTED_EXTERNAL_ACCOUNT`, `FACULTY_APPROVAL_PENDING`, `FACULTY_REQUEST_REJECTED`, `STUDENT_PLACEMENT_REQUIRED`). Because internal authorization reads `activeRole`, a null active role fails every role guard closed without a per-action guard.
 7. Domain linkage ownership is explicit: a password-verified identity may claim only an **external-eligible** unlinked account. An unlinked account holding an internal role is Secretary-provisioned, stays Google-owned, and is never claimed by the password path — otherwise the account's own Google sign-in would later fail closed as an identity conflict.
+8. GoTrue v2.196.0 emits `amr: otp` for both signup verification and recovery. System CLOIE uses the strict `signup` verification type, which rejects recovery codes, and signs a short-lived signup proof bound to the verified token's subject, session ID, and expiry. The session resolver accepts OTP for external onboarding only with that exact proof. Raw OTP, recovery, and unproved sessions cannot enter any workspace. Password-update success and failure both end the recovery session; logout clears signup proof.
 
 ## Considered options
 
@@ -40,6 +41,9 @@ System CLOIE treats the current sign-in method as a **proved, server-verified fa
 ## Consequences
 
 - Internal workspaces require a current Google sign-in, enforced at the centralized session boundary, at the OAuth callback, and at internal Server Actions. A recovery session is confined to changing the credential.
+- A denied gate withholds the role rather than erasing it: `roles` still carries the assigned-role set and the gate still names the role behind a method mismatch, so `/select-role` and `switchActiveRole` can still deliberately move to a role the session may actually use (switching re-resolves the gate and rebuilds the destination). Gates that only redirect — role selection, role-specific onboarding, deferred enrollment — keep the active role so those entry routes stay reachable.
+- `STUDENT_PLACEMENT_REQUIRED` withholds the Student role even though the session is otherwise a proved Google session: placement is institution-recorded, so the account waits for the Secretary's office rather than entering any Student workspace. `FACULTY_ONBOARDING_REQUIRED` keeps its role, because the explicit Faculty registration request is the one self-service step a person may still complete.
+- Gates that already own a method check remain, and are now defense in depth rather than the only defense: `canViewCourseRoster` and `canDeployCourseBoundEvaluation` check `INACTIVE` only, so a method mismatch is still refused by the withheld active role rather than by those policies.
 - Alumni and Industry Partner accept either method, and the external email path is the only writer of password credentials — Supabase Auth holds them, and the application schema has no password column.
 - Enabling a second OAuth provider on any target is a security change, not a configuration detail.
 - The resolver, the callback, and the internal actions each own one explicit proof, so a regression is testable at each boundary.
@@ -47,6 +51,7 @@ System CLOIE treats the current sign-in method as a **proved, server-verified fa
 ## Related
 
 - `src/features/auth/services/resolve-auth-method.ts`
+- `src/features/auth/services/resolve-auth-session.ts`
 - `src/features/users/services/resolve-profile-gate.ts`
 - `src/app/api/auth/callback/route.ts`
 - `src/lib/actions/faculty-actions.ts`

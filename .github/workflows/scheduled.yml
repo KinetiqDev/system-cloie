@@ -71,6 +71,29 @@ jobs:
         env:
           NODE_ENV: test
           NODE_OPTIONS: --max-old-space-size=4096
+  # Real Supabase Auth + bundled mail catcher (issue #649). The signed CI
+  # cookie bypasses GoTrue, so password, six-digit code, and recovery are
+  # otherwise unproved. Local CLI stack only; never a hosted target.
+  auth-integration:
+    name: Auth Integration (real GoTrue)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d
+        with:
+          version: 10.30.3
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run real Auth + mail-catcher integration
+        run: pnpm test:auth-integration
   database-integration:
     name: Database Integration (live RLS)
     runs-on: ubuntu-latest
@@ -128,6 +151,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
       CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      # Server-only HMAC secret for the pre-auth legal acknowledgement ticket;
+      # every gated Server Action fails closed without it.
+      CLOIE_LEGAL_TICKET_SECRET: "ci-test-legal-ticket-secret-must-be-32-chars!!"
       CLOIE_CI_TEST_ENABLED: "true"
       CLOIE_DEPLOYMENT_KIND: "ci-test"
       CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
@@ -161,7 +187,7 @@ jobs:
       - name: Restore Next.js compiler cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
-          path: .next/cache
+          path: .next/cache/turbopack
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
@@ -206,6 +232,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
       CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      # Server-only HMAC secret for the pre-auth legal acknowledgement ticket;
+      # every gated Server Action fails closed without it.
+      CLOIE_LEGAL_TICKET_SECRET: "ci-test-legal-ticket-secret-must-be-32-chars!!"
       CLOIE_CI_TEST_ENABLED: "true"
       CLOIE_DEPLOYMENT_KIND: "ci-test"
       CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
@@ -237,7 +266,7 @@ jobs:
       - name: Restore Next.js compiler cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
-          path: .next/cache
+          path: .next/cache/turbopack
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
@@ -279,6 +308,9 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
       NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
       CONFIRMATION_SECRET: "ci-test-confirmation-secret-must-be-32-chars-long!!"
+      # Server-only HMAC secret for the pre-auth legal acknowledgement ticket;
+      # every gated Server Action fails closed without it.
+      CLOIE_LEGAL_TICKET_SECRET: "ci-test-legal-ticket-secret-must-be-32-chars!!"
       CLOIE_CI_TEST_ENABLED: "true"
       CLOIE_DEPLOYMENT_KIND: "ci-test"
       CLOIE_CI_TEST_SESSION_SECRET: "ci-test-session-secret-must-be-32-chars-long-!!"
@@ -310,7 +342,7 @@ jobs:
       - name: Restore Next.js compiler cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
-          path: .next/cache
+          path: .next/cache/turbopack
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-

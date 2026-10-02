@@ -25,9 +25,8 @@ const PENDING_VERIFICATION_EMAIL_COOKIE = "cloie_pending_verify_email";
 const PENDING_VERIFICATION_ROLE_COOKIE = "cloie_pending_external_role";
 
 /**
- * Matches the provider's signup-code lifetime. A longer pin would show an
- * address whose code can no longer arrive; a shorter one would drop the pin
- * while the code is still valid.
+ * Matches the configured signup-code lifetime. Expiry drops the convenience
+ * pin; verification still depends on the provider accepting the code.
  */
 const PENDING_VERIFICATION_MAX_AGE_SECONDS = 60 * 60;
 
@@ -66,14 +65,21 @@ export async function readPendingVerificationEmail(): Promise<string | null> {
 }
 
 /**
- * Reads the external role chosen at registration; null when there is none or
- * the stored value is not one the external entrance may claim. Accepts only
- * Alumni and Industry Partner, so a forged or stale cookie degrades to "no role
- * remembered" rather than naming an internal role.
+ * Reads the external role only for the address that registration pinned.
+ * Another registration in the same browser must not retarget a verified
+ * account to that registration's role.
  */
-export async function readPendingExternalRole(): Promise<SystemRole | null> {
+export async function readPendingExternalRole(email: string): Promise<SystemRole | null> {
   try {
     const cookieStore = await cookies();
+    const pinnedEmail = cookieStore.get(PENDING_VERIFICATION_EMAIL_COOKIE)?.value;
+    const parsedEmail = externalEmailContinueSchema.safeParse({ email: pinnedEmail?.trim() });
+    if (
+      !parsedEmail.success ||
+      parsedEmail.data.email.toLowerCase() !== email.trim().toLowerCase()
+    ) {
+      return null;
+    }
     const value = cookieStore.get(PENDING_VERIFICATION_ROLE_COOKIE)?.value;
     if (!value) return null;
     const parsed = externalRoleSchema.safeParse(value.trim().toUpperCase());

@@ -35,6 +35,72 @@ type ExternalIdentityLinkOutcome = {
  * module so that importing the action from a Client Component never reaches
  * Prisma through the module graph.
  */
+
+/**
+ * An email-matched account may be claimed only while it is unlinked and
+ * external-eligible. A role-less record is claimable only when this verified
+ * identity carries the role it will grant; with no role there is nothing to
+ * prove the record belongs to this person, so it is left alone.
+ */
+function isClaimableExistingAccount(
+  account: {
+    auth_user_id: string | null;
+    roles: Array<{ role: SystemRole }>;
+  },
+  role: SystemRole | null
+): boolean {
+  if (account.auth_user_id) return false;
+  if (account.roles.some((row) => GOOGLE_ONLY_ROLE_SET.has(row.role))) return false;
+  return account.roles.length > 0 || role !== null;
+}
+
+type Transaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+type LinkInput = {
+  authUserId: string;
+  name: string | null;
+};
+
+type ExistingAccount = {
+  id: string;
+  auth_user_id: string | null;
+  roles: Array<{ role: SystemRole }>;
+};
+
+/**
+ * Claims an email-matched account for a verified external identity: link it,
+ * store the name collected at signup, and grant the requested external role.
+ * An account that is not claimable, or whose link another identity won first,
+ * is left exactly as it was.
+ */
+async function claimExistingAccount(
+  tx: Transaction,
+  account: ExistingAccount,
+  input: LinkInput,
+  role: SystemRole | null
+): Promise<ExternalIdentityLinkOutcome> {
+  if (!isClaimableExistingAccount(account, role)) {
+    return { linked: false, existingUserId: account.id };
+  }
+
+  const updated = await tx.user.updateMany({
+    where: { id: account.id, auth_user_id: null },
+    data: {
+      auth_user_id: input.authUserId,
+      ...(input.name ? { name: input.name } : {}),
+    },
+  });
+  if (updated.count !== 1) {
+    // Already linked to another identity, or the race was lost: never
+    // overwrite the existing link.
+    return { linked: false, existingUserId: account.id };
+  }
+
+  if (role && !account.roles.some((row) => row.role === role)) {
+    await tx.userRole.create({ data: { user_id: account.id, role } });
+  }
+  return { linked: true, existingUserId: account.id };
+}
 export async function linkExternalVerifiedIdentity(input: {
   authUserId: string;
   email: string;
@@ -55,31 +121,7 @@ export async function linkExternalVerifiedIdentity(input: {
       include: { roles: { select: { role: true } } },
     });
     if (byEmail) {
-      const hasInternalRole = byEmail.roles.some((row) => GOOGLE_ONLY_ROLE_SET.has(row.role));
-      if (hasInternalRole || (!role && byEmail.roles.length === 0)) {
-        return { linked: false, existingUserId: byEmail.id };
-      }
-
-      // Unlinked external-eligible account: link the verified identity, store
-      // the name collected at signup, and grant the requested external role.
-      if (!byEmail.auth_user_id) {
-        const updated = await tx.user.updateMany({
-          where: { id: byEmail.id, auth_user_id: null },
-          data: {
-            auth_user_id: input.authUserId,
-            ...(input.name ? { name: input.name } : {}),
-          },
-        });
-        if (updated.count === 1) {
-          if (role && !byEmail.roles.some((row) => row.role === role)) {
-            await tx.userRole.create({ data: { user_id: byEmail.id, role } });
-          }
-          return { linked: true, existingUserId: byEmail.id };
-        }
-      }
-      // Already linked to another identity, or the race was lost: never
-      // overwrite the existing link.
-      return { linked: false, existingUserId: byEmail.id };
+      return claimExistingAccount(tx, byEmail, input, role);
     }
 
     // A verified external identity is only ever created around the role the

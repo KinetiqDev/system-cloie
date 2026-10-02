@@ -3,7 +3,6 @@ import { EnrollmentSource, Prisma, SystemRole, VerificationStatus } from "@prism
 import { prisma } from "@/lib/db/prisma";
 import type {
   AddRoleToExistingUserInput,
-  AssignRoleInput,
   CreateProgramHeadAssignmentInput,
 } from "../schemas/secretary-user";
 
@@ -42,41 +41,6 @@ export async function toggleUserActive(id: string, is_active: boolean): Promise<
   return { success: true, data: undefined };
 }
 
-export async function assignUserRole(
-  input: AssignRoleInput
-): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-  if (input.user_id === session.userId)
-    return { success: false, error: "Cannot modify own account." };
-
-  try {
-    const role = await prisma.userRole.create({
-      data: {
-        user_id: input.user_id,
-        role: input.role,
-      },
-    });
-
-    return { success: true, data: { id: role.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `${input.role.replaceAll("_", " ")} is already assigned to this user.`,
-      };
-    }
-
-    throw error;
-  }
-}
-
 /**
  * Grants one additional role to an existing account and applies that role's
  * supporting record in a single transaction, so a role can never be committed
@@ -109,6 +73,7 @@ export async function addRoleToExistingUser(
 
   const contextResult = await resolveRoleEntryContext({
     role: input.role,
+    grantedByRole: session.activeRole,
     email: user.email,
     program_id: input.program_id,
     program_ids: input.program_ids,

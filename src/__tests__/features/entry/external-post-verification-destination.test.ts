@@ -1,14 +1,30 @@
 /**
  * @vitest-environment node
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SystemRole } from "@prisma/client";
 import { resolveExternalPostVerificationDestination } from "@/features/entry/services/resolve-external-post-verification-destination";
+import { rememberVerifiedSignupSession } from "@/features/auth/services/signup-session-proof";
 
-const { findUserMock, readRoleMock } = vi.hoisted(() => ({
+const { findUserMock, readRoleMock, cookieValues } = vi.hoisted(() => ({
   findUserMock: vi.fn(),
   readRoleMock: vi.fn(),
+  cookieValues: new Map<string, string>(),
 }));
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({
+    get: (name: string) => (cookieValues.has(name) ? { value: cookieValues.get(name) } : undefined),
+    set: (name: string, value: string) => cookieValues.set(name, value),
+  })),
+}));
+
+const signupClaims = {
+  sub: "verified-identity",
+  session_id: "signup-session",
+  exp: 2_000_000_000,
+  amr: [{ method: "otp" }],
+};
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: { user: { findUnique: findUserMock } },
@@ -33,11 +49,15 @@ function externalAccount() {
 }
 
 describe("external post-verification destination", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    cookieValues.clear();
+    vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-signup-proof-test-secret-012345678901");
+    await rememberVerifiedSignupSession(signupClaims);
     readRoleMock.mockResolvedValue(null);
     findUserMock.mockResolvedValue(externalAccount());
   });
+  afterEach(() => vi.unstubAllEnvs());
 
   it.each([SystemRole.ALUMNI, null])(
     "opens the chosen onboarding when the previous active role is %s",
@@ -46,7 +66,8 @@ describe("external post-verification destination", () => {
       expect(
         await resolveExternalPostVerificationDestination(
           "verified-identity",
-          SystemRole.INDUSTRY_PARTNER
+          SystemRole.INDUSTRY_PARTNER,
+          signupClaims
         )
       ).toEqual({
         activeRole: SystemRole.INDUSTRY_PARTNER,
@@ -74,7 +95,8 @@ describe("external post-verification destination", () => {
       expect(
         await resolveExternalPostVerificationDestination(
           "verified-identity",
-          SystemRole.INDUSTRY_PARTNER
+          SystemRole.INDUSTRY_PARTNER,
+          signupClaims
         )
       ).toEqual({ activeRole: SystemRole.INDUSTRY_PARTNER, path });
     }
@@ -87,7 +109,8 @@ describe("external post-verification destination", () => {
     expect(
       await resolveExternalPostVerificationDestination(
         "verified-identity",
-        SystemRole.INDUSTRY_PARTNER
+        SystemRole.INDUSTRY_PARTNER,
+        signupClaims
       )
     ).toEqual({ activeRole: SystemRole.ALUMNI, path: "/alumni/dashboard" });
   });

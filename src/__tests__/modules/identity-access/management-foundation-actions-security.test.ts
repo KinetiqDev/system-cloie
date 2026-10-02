@@ -8,7 +8,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 vi.mock("@/features/users/services/manage-users", () => ({
   toggleUserActive: vi.fn(() => Promise.resolve({ success: true })),
-  assignUserRole: vi.fn(() => Promise.resolve({ success: true, data: { id: "role-1" } })),
+  addRoleToExistingUser: vi.fn(() => Promise.resolve({ success: true, data: { id: "role-1" } })),
   removeRoleFromUser: vi.fn(() => Promise.resolve({ success: true })),
   createProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
   deactivateProgramHeadAssignment: vi.fn(() => Promise.resolve({ success: true })),
@@ -27,7 +27,7 @@ vi.mock("@/lib/db/prisma", () => ({
 import {
   bulkToggleCoursesActiveAction,
   toggleUserActiveAction,
-  assignUserRoleAction,
+  addRoleToExistingUserAction,
   removeRoleFromUserAction,
   createProgramHeadAssignmentAction,
   deactivateProgramHeadAssignmentAction,
@@ -37,7 +37,7 @@ import {
 
 import {
   toggleUserActive,
-  assignUserRole,
+  addRoleToExistingUser,
   removeRoleFromUser,
   createProgramHeadAssignment,
   deactivateProgramHeadAssignment,
@@ -104,7 +104,7 @@ describe("management-foundation-actions security", () => {
     });
   });
 
-  describe("assignUserRoleAction", () => {
+  describe("addRoleToExistingUserAction", () => {
     function makeFormData(userId: string, role: string) {
       const fd = new FormData();
       fd.set("user_id", userId);
@@ -114,7 +114,7 @@ describe("management-foundation-actions security", () => {
 
     it("rejects unauthenticated", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await assignUserRoleAction(
+      const result = await addRoleToExistingUserAction(
         makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
       );
       expect(result).toEqual({ success: false, error: "Authentication required." });
@@ -122,7 +122,7 @@ describe("management-foundation-actions security", () => {
 
     it("rejects wrong role", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await assignUserRoleAction(
+      const result = await addRoleToExistingUserAction(
         makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
       );
       expect(result).toEqual({ success: false, error: "Insufficient permissions." });
@@ -130,7 +130,7 @@ describe("management-foundation-actions security", () => {
 
     it("rejects right role + self-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await assignUserRoleAction(
+      const result = await addRoleToExistingUserAction(
         makeFormData("11111111-1111-4111-a111-111111111111", ROLES.FACULTY)
       );
       expect(result).toEqual({ success: false, error: "Cannot modify own account." });
@@ -138,13 +138,15 @@ describe("management-foundation-actions security", () => {
 
     it("accepts right role + other-target", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await assignUserRoleAction(
+      const result = await addRoleToExistingUserAction(
         makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
       );
-      expect(assignUserRole).toHaveBeenCalledWith({
-        user_id: "44444444-4444-4444-b444-444444444444",
-        role: ROLES.FACULTY,
-      });
+      expect(addRoleToExistingUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: "44444444-4444-4444-b444-444444444444",
+          role: ROLES.FACULTY,
+        })
+      );
       expect(result).toEqual({ success: true });
     });
   });

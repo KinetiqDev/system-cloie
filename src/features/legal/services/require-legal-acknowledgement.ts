@@ -6,12 +6,12 @@ import {
 import type { TicketIntent } from "@/features/auth/services/role-intent";
 
 /**
- * Server-side legal acknowledgement gate for identity and role mutations.
- *
- * The OAuth callback already verifies the ticket before the code exchange; this
- * guard extends the same rule to the non-Google paths (issue #649), so no
- * Server Action can create an account, a role, or a role profile without a
- * current, unexpired, version-matched acknowledgement of the same entrance.
+ * Server-side legal acknowledgement gate for public entry and role requests.
+ * The OAuth callback verifies and consumes its ticket before linked-account
+ * onboarding. Email signup, verification, password sign-in and recovery verify
+ * the external entrance ticket directly. Ordinary authenticated profile and
+ * administrative writes rely on their authorized session, not a consumed entry
+ * ticket.
  *
  * A missing, expired, tampered, or intent-mismatched ticket fails closed.
  */

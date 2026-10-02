@@ -1,7 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import type { Role } from "@/lib/constants/roles";
+import { createClient, type SupabaseServerClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
 import {
@@ -11,10 +12,14 @@ import {
   VERIFY_EMAIL_PATH,
 } from "@/features/entry/services/pending-external-registration";
 import { linkExternalVerifiedIdentity } from "@/features/users/services/link-external-identity";
-import { linkedProviderNames } from "@/features/auth/services/resolve-auth-method";
+import {
+  linkedProviderNames,
+  type VerifiedAuthIdentity,
+} from "@/features/auth/services/resolve-auth-method";
 import { writeActiveRoleCookie } from "@/features/auth/services/active-role-cookie";
 import { resolveExternalPostVerificationDestination } from "@/features/entry/services/resolve-external-post-verification-destination";
 import { isNextRedirectError } from "@/lib/utils/next-redirect";
+import { rememberVerifiedSignupSession } from "@/features/auth/services/signup-session-proof";
 import {
   externalEmailContinueSchema,
   externalRegisterSchema,
@@ -25,7 +30,6 @@ import {
   resendCodeSchema,
   verifyEmailCodeSchema,
 } from "@/lib/schemas/external-entry";
-
 /**
  * `LEGAL_ACKNOWLEDGEMENT_REQUIRED` marks the one failure a client cannot
  * recover from on its own: the acknowledgement ticket is missing or expired,
@@ -221,6 +225,54 @@ export async function registerExternalAccount(input: unknown): Promise<ExternalE
 }
 
 /**
+ * Proves the strict signup purpose before any domain linkage. GoTrue accepts a
+ * recovery code at the strict purpose on some versions, so the signed,
+ * session-bound proof is what separates a real signup verification from any
+ * other code session. A session that cannot be proved signs out and is
+ * refused, leaving no accepted proof behind.
+ */
+async function proveVerifiedSignupSession(
+  supabase: SupabaseServerClient
+): Promise<{ ok: true; claims: unknown } | { ok: false }> {
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims) {
+    await supabase.auth.signOut();
+    return { ok: false };
+  }
+  try {
+    await rememberVerifiedSignupSession(data.claims);
+  } catch {
+    await supabase.auth.signOut();
+    return { ok: false };
+  }
+  return { ok: true, claims: data.claims };
+}
+
+/**
+ * Establishes the domain account behind a verified external identity. The
+ * canonical name comes from what was collected at registration, never from the
+ * email local part.
+ */
+async function linkVerifiedExternalIdentity(
+  user: VerifiedAuthIdentity,
+  email: string,
+  metadata: Record<string, unknown>,
+  role: Role | null
+): Promise<void> {
+  // Linkage runs only for a genuinely verified password identity. An account
+  // that also carries a federated identity keeps its existing domain record.
+  if (linkedProviderNames(user).includes("google")) return;
+
+  const collected = typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
+  await linkExternalVerifiedIdentity({
+    authUserId: user.id,
+    email,
+    name: collected.length > 0 ? collected : null,
+    role,
+  });
+}
+
+/**
  * Confirms inbox control with a 6-digit code before any domain linkage.
  * The response never implies institutional approval.
  */
@@ -244,7 +296,7 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
     const { data, error } = await supabase.auth.verifyOtp({
       email: parsed.data.email,
       token: parsed.data.token,
-      type: "email",
+      type: "signup",
     });
     if (error || !data.user) {
       return neutralFailure(
@@ -252,25 +304,18 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
       );
     }
 
+    const proof = await proveVerifiedSignupSession(supabase);
+    if (!proof.ok) {
+      return neutralFailure("Verification is temporarily unavailable. Try again shortly.");
+    }
+
     const metadata = data.user.user_metadata ?? {};
     const requested = externalRoleSchema.safeParse(metadata.requested_role);
-    const role = (await readPendingExternalRole()) ?? (requested.success ? requested.data : null);
+    const email = data.user.email ?? parsed.data.email;
+    const role =
+      (await readPendingExternalRole(email)) ?? (requested.success ? requested.data : null);
 
-    // Linkage runs only for a genuinely verified password identity. An account
-    // that also carries a federated identity keeps its existing domain record.
-    const providers = linkedProviderNames(data.user);
-    if (!providers.includes("google")) {
-      const collected =
-        typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
-      const email = data.user.email ?? parsed.data.email;
-
-      await linkExternalVerifiedIdentity({
-        authUserId: data.user.id,
-        email,
-        name: collected.length > 0 ? collected : null,
-        role,
-      });
-    }
+    await linkVerifiedExternalIdentity(data.user, email, metadata, role);
 
     // Inbox control is proven, so the pins have served their purpose.
     await clearPendingExternalRegistration();
@@ -279,7 +324,11 @@ export async function verifyExternalCode(input: unknown): Promise<ExternalEntryR
     // the ordinary post-login resolver with that role selected. Without this
     // redirect the person stands on the code step holding an account whose
     // onboarding they were never routed into.
-    const destination = await resolveExternalPostVerificationDestination(data.user.id, role);
+    const destination = await resolveExternalPostVerificationDestination(
+      data.user.id,
+      role,
+      proof.claims
+    );
     if (destination) {
       await writeActiveRoleCookie(destination.activeRole);
       redirect(destination.path);
@@ -375,17 +424,20 @@ export async function confirmPasswordRecovery(input: unknown): Promise<ExternalE
       );
     }
 
-    // Confined to the credential change: no role, profile, or enrollment write
-    // is reachable from this session, and the session ends immediately after.
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: parsed.data.newPassword,
-    });
-    if (updateError) {
-      return neutralFailure("The new password was not accepted. Try again.");
+    // A recovery session must end on failed updates too, not only success.
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: parsed.data.newPassword,
+      });
+      if (updateError) {
+        return neutralFailure(
+          "The new password was not accepted. Request a new recovery code and try again."
+        );
+      }
+      return neutralSuccess(NEUTRAL_RECOVERY_CONFIRM_MESSAGE);
+    } finally {
+      await supabase.auth.signOut();
     }
-
-    await supabase.auth.signOut();
-    return neutralSuccess(NEUTRAL_RECOVERY_CONFIRM_MESSAGE);
   } catch {
     return neutralFailure("Recovery is temporarily unavailable. Try again shortly.");
   }

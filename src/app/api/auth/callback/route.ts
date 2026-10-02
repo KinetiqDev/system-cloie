@@ -9,7 +9,7 @@ import { resolveSelfServiceEligibility } from "@/features/auth/services/self-ser
 import { resolveGoogleAccountName } from "@/features/auth/services/resolve-google-account-name";
 import { SystemRole, type User, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { resolveSessionAuthMethod } from "@/features/auth/services/resolve-auth-method";
+import { resolveAuthMethodFromClaims } from "@/features/auth/services/resolve-auth-method";
 import { isEntryIntent, isTicketIntent, intentToRole } from "@/features/auth/services/role-intent";
 import {
   readActiveRoleCookie,
@@ -117,8 +117,10 @@ export async function GET(request: Request) {
   // "some OAuth provider", and a code replayed from another provider (or a
   // magic-link code reaching this route) would otherwise be accepted as a
   // Google sign-in and could bind a provisioned account to the wrong identity.
-  const exchangeClaims = await resolveSessionAuthMethod(() => supabase.auth.getClaims());
-  if (exchangeClaims !== "google") {
+  const exchange = await supabase.auth.getClaims().catch(() => ({ data: null, error: true }));
+  const exchangeClaims = exchange.error ? null : exchange.data?.claims;
+  const exchangeMethod = resolveAuthMethodFromClaims(exchangeClaims);
+  if (exchangeMethod !== "google") {
     await supabase.auth.signOut();
     return redirectWithClearedTicket(`${siteUrl}/status/method-mismatch`);
   }
@@ -472,6 +474,7 @@ export async function GET(request: Request) {
   const session = await resolveAuthSessionFromUser({
     id: authUserId,
     email: normalizedEmail,
+    claims: exchangeClaims,
   });
 
   const activeRoleCookie = await readActiveRoleCookie();
@@ -498,7 +501,7 @@ export async function GET(request: Request) {
           // The exchange above proved Google before this point, and the
           // stored Faculty review state travels with the account: a pending
           // or rejected claim must resolve to its status, never COMPLETE.
-          authMethod: exchangeClaims,
+          authMethod: exchangeMethod,
           facultyApprovalStatus: session.facultyApprovalStatus,
         }).profileGate
       : (session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" });

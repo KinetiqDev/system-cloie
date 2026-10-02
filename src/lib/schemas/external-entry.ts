@@ -17,8 +17,6 @@ const passwordField = z
 
 export const externalRoleSchema = z.enum(["ALUMNI", "INDUSTRY_PARTNER"]);
 
-export type ExternalRole = z.infer<typeof externalRoleSchema>;
-
 export const externalEmailContinueSchema = z.object({
   email: emailField,
 });
@@ -43,7 +41,7 @@ export const externalRegisterSchema = z.object({
   role: externalRoleSchema,
 });
 
-export type ExternalRegisterInput = z.infer<typeof externalRegisterSchema>;
+type ExternalRegisterInput = z.infer<typeof externalRegisterSchema>;
 
 export const externalRegisterFormSchema = externalRegisterSchema;
 

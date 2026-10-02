@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// fallow-ignore-file unused-file
 /**
  * CLI wrapper around the risk-domain classifier (issue #551).
  *
@@ -26,7 +25,7 @@ if (!forceAll && changedFiles.length > 0 && changedFiles.length <= 40) {
   for (const file of changedFiles) console.log(`  - ${file}`);
 }
 console.log(`[select-checks] Risk domains: ${selection.domains.join(", ") || "(none)"}`);
-for (const key of ["run_build", "run_database", "run_browser", "run_visual"]) {
+for (const key of Object.keys(selection).filter((key) => key.startsWith("run_"))) {
   console.log(`[select-checks] ${key}=${selection[key]}`);
 }
 

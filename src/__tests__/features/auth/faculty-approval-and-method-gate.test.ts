@@ -91,6 +91,29 @@ describe("auth method enforcement", () => {
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "recovery" }] })).toBe("recovery");
   });
 
+  it("keeps recovery confinement when recovery appears with another method", () => {
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "password" }, { method: "recovery" }],
+      })
+    ).toBe("recovery");
+  });
+
+  it("keeps ambiguous OTP sessions confined when password is also recorded", () => {
+    expect(resolveAuthMethodFromClaims({ amr: [{ method: "password" }, { method: "otp" }] })).toBe(
+      "otp"
+    );
+  });
+
+  it("refuses Google proof when an unknown method accompanies OAuth", () => {
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }, { method: "unknown" }],
+        app_metadata: { provider: "google" },
+      })
+    ).toBeNull();
+  });
+
   it("refuses an oauth session from any provider other than Google", () => {
     // Adversarial: a code replayed from another enabled OAuth provider must
     // never be accepted as a Google sign-in.
@@ -214,6 +237,25 @@ describe("auth method enforcement", () => {
       });
 
       expect(session.profileGate).toEqual({ status: "COMPLETE" });
+    }
+  );
+
+  it.each([ROLES.ALUMNI, ROLES.INDUSTRY_PARTNER])(
+    "refuses recovery workspace access for external role %s",
+    (role) => {
+      const session = buildAuthSessionSnapshot({
+        userId: "user-recovering",
+        email: "person@example.com",
+        roles: [role],
+        studentProfileId: null,
+        alumniProfileId: role === ROLES.ALUMNI ? "alumni-profile" : null,
+        industryPartnerProfileId: role === ROLES.INDUSTRY_PARTNER ? "partner-profile" : null,
+        alumniVerificationStatus: "APPROVED",
+        industryPartnerVerificationStatus: "APPROVED",
+        authMethod: "recovery",
+      });
+
+      expect(session.profileGate).toEqual({ status: "AUTH_METHOD_MISMATCH", role });
     }
   );
 

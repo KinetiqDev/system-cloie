@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useForm, type Resolver, type SubmitHandler } from "react-hook-form";
+import { useForm, type Resolver, type SubmitHandler, type UseFormRegister } from "react-hook-form";
 import { Lock } from "lucide-react";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
@@ -21,7 +21,48 @@ import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-messag
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { EntryField, EntryFieldShell } from "./entry-field";
 
+/**
+ * Read-only address for a registration that just pinned it: re-typing an
+ * address the person cannot see is the most common reason a code step fails,
+ * so the value stays visible with a lock and a link back to registration.
+ */
+function LockedVerifyEmail({
+  register,
+}: {
+  register: ReturnType<UseFormRegister<VerifyEmailCodeInput>>;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="verify-email">Email address</Label>
+      <div className="relative">
+        <Input
+          {...register}
+          id="verify-email"
+          readOnly
+          autoComplete="email"
+          aria-describedby="verify-email-hint"
+          className="bg-surface-muted text-foreground pr-11"
+        />
+        <Lock
+          className="text-muted-foreground pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2"
+          aria-hidden="true"
+        />
+      </div>
+      <p id="verify-email-hint" className="text-body-sm text-muted-foreground">
+        The code goes to this address.
+      </p>
+      <Link
+        href="/register/external"
+        aria-describedby="verify-email-hint"
+        className="text-link hover:text-primary-hover inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
+      >
+        Registered the wrong address?
+      </Link>
+    </div>
+  );
+}
 const RESEND_COOLDOWN_SECONDS = 60;
 
 /**
@@ -137,82 +178,51 @@ export function VerifyEmailForm({
       <EntryFormMessageView message={message} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="verify-email">Email address</Label>
-          {emailLocked ? (
-            <>
-              <div className="relative">
-                <Input
-                  {...register("email")}
-                  id="verify-email"
-                  readOnly
-                  autoComplete="email"
-                  aria-describedby="verify-email-hint"
-                  className="bg-surface-muted text-foreground pr-11"
-                />
-                <Lock
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2"
-                  aria-hidden="true"
-                />
-              </div>
-              <p id="verify-email-hint" className="text-body-sm text-muted-foreground">
-                The code goes to this address.
-              </p>
-              <Link
-                href="/register/external"
-                aria-describedby="verify-email-hint"
-                className="text-link hover:text-primary-hover inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
-              >
-                Registered the wrong address?
-              </Link>
-            </>
-          ) : (
+        {emailLocked ? (
+          <LockedVerifyEmail register={register("email")} />
+        ) : (
+          <EntryField
+            id="verify-email"
+            label="Email address"
+            error={errors.email?.message}
+            control={{
+              type: "email",
+              autoComplete: "email",
+              inputMode: "email",
+              placeholder: "you@example.com",
+              ...register("email"),
+            }}
+          />
+        )}
+
+        <EntryFieldShell
+          id="verify-code"
+          label="6-digit verification code"
+          error={errors.token?.message}
+        >
+          {(describedBy) => (
             <>
               <Input
-                {...register("email")}
-                id="verify-email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                aria-invalid={errors.email ? true : undefined}
-                aria-describedby={errors.email ? "verify-email-error" : undefined}
+                id="verify-code"
+                type="text"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="123456"
+                className="text-center text-lg tracking-[0.5em] tabular-nums"
+                aria-invalid={errors.token ? true : undefined}
+                aria-describedby={describedBy ?? "verify-code-hint"}
+                {...register("token")}
               />
-              {errors.email && (
-                <p id="verify-email-error" role="alert" className="text-destructive text-sm">
-                  {errors.email.message}
+              {!errors.token && (
+                <p id="verify-code-hint" className="text-body-sm text-muted-foreground">
+                  The code expires after its lifetime. No dashboard or evaluation access is granted
+                  before verification.
                 </p>
               )}
             </>
           )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="verify-code">6-digit verification code</Label>
-          <Input
-            id="verify-code"
-            type="text"
-            autoComplete="one-time-code"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="123456"
-            className="text-center text-lg tracking-[0.5em] tabular-nums"
-            aria-invalid={errors.token ? true : undefined}
-            aria-describedby={errors.token ? "verify-code-error" : "verify-code-hint"}
-            {...register("token")}
-          />
-          {!errors.token && (
-            <p id="verify-code-hint" className="text-body-sm text-muted-foreground">
-              The code expires after its lifetime. No dashboard or evaluation access is granted
-              before verification.
-            </p>
-          )}
-          {errors.token && (
-            <p id="verify-code-error" role="alert" className="text-destructive text-sm">
-              {errors.token.message}
-            </p>
-          )}
-        </div>
+        </EntryFieldShell>
         {mustAcknowledge && (
           <EntryLegalCheckbox
             id="verify-email-legal"

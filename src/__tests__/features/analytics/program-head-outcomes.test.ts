@@ -763,9 +763,9 @@ describe("getProgramHeadOutcomes", () => {
   });
 
   it("resolves ratings written without a binding ID through publication-time item bindings", async () => {
-    // The live student submission flow writes quantitative items with only
-    // section/item keys (no cilo_question_binding_id); the Outcomes read must
-    // still attach them to their published bindings via evaluation + keys.
+    // Ratings submitted before per-answer attribution existed, and ratings whose
+    // binding was later deleted (the FK resolves to null), carry no binding id.
+    // The Outcomes read must still attach them via evaluation + question keys.
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 5,

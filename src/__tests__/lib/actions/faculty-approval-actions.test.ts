@@ -8,7 +8,7 @@ import {
   rejectFacultyRequestAction,
 } from "@/lib/actions/faculty-approval-actions";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
+import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 import {
   approveFacultyAccessRequest,
   rejectFacultyAccessRequest,
@@ -16,10 +16,6 @@ import {
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: vi.fn(),
-}));
-
-vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
-  requireLegalAcknowledgement: vi.fn(),
 }));
 
 vi.mock("@/features/users/services/manage-faculty-access-requests", () => ({
@@ -31,10 +27,20 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
-function secretarySession(overrides: Record<string, unknown> = {}) {
+function secretarySession(overrides: Partial<AuthSessionSnapshot> = {}): AuthSessionSnapshot {
   return {
     userId: "secretary-1",
+    email: "secretary@acd.edu.ph",
+    name: "System CLOIE Secretary",
+    roles: [ROLES.SECRETARY],
     activeRole: ROLES.SECRETARY,
+    studentProfileId: null,
+    alumniProfileId: null,
+    industryPartnerProfileId: null,
+    alumniVerificationStatus: null,
+    industryPartnerVerificationStatus: null,
+    facultyApprovalStatus: null,
+    authMethod: "google",
     profileGate: { status: "COMPLETE" },
     ...overrides,
   };
@@ -43,17 +49,12 @@ function secretarySession(overrides: Record<string, unknown> = {}) {
 describe("faculty decision actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (requireLegalAcknowledgement as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      acknowledged: true,
-    });
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
-      secretarySession()
-    );
-    (approveFacultyAccessRequest as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    vi.mocked(resolveAuthSession).mockResolvedValue(secretarySession());
+    vi.mocked(approveFacultyAccessRequest).mockResolvedValue({
       success: true,
       status: "APPROVED",
     });
-    (rejectFacultyAccessRequest as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    vi.mocked(rejectFacultyAccessRequest).mockResolvedValue({
       success: true,
       status: "REJECTED",
     });
@@ -81,8 +82,18 @@ describe("faculty decision actions", () => {
     });
   });
 
+  it("decides from an authorized session alone, with no entry ticket to re-obtain", async () => {
+    // The signed acknowledgement ticket is per sign-in and is cleared by the
+    // OAuth callback, so a Secretary reviewing requests after a normal entry
+    // holds none. The decision must still go through rather than dead-ending.
+    const result = await approveFacultyRequestAction({ userId: USER_ID });
+
+    expect(result).toEqual({ success: true });
+    expect(approveFacultyAccessRequest).toHaveBeenCalled();
+  });
+
   it("refuses a caller whose active role is not Secretary", async () => {
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+    vi.mocked(resolveAuthSession).mockResolvedValue(
       secretarySession({ activeRole: ROLES.PROGRAM_HEAD })
     );
 
@@ -92,26 +103,39 @@ describe("faculty decision actions", () => {
     expect(approveFacultyAccessRequest).not.toHaveBeenCalled();
   });
 
-  it("refuses without a current legal acknowledgement", async () => {
-    (requireLegalAcknowledgement as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      acknowledged: false,
-      reason: "expired",
-    });
-
-    const result = await rejectFacultyRequestAction({ userId: USER_ID });
-
-    expect(result.success).toBe(false);
-    expect(rejectFacultyAccessRequest).not.toHaveBeenCalled();
-  });
-
-  it("refuses a Secretary session that is not ready", async () => {
-    (resolveAuthSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+  it("refuses a Secretary whose account is not ready", async () => {
+    vi.mocked(resolveAuthSession).mockResolvedValue(
       secretarySession({ profileGate: { status: "INACTIVE" } })
     );
 
     const result = await approveFacultyRequestAction({ userId: USER_ID });
 
     expect(result.success).toBe(false);
+    expect(approveFacultyAccessRequest).not.toHaveBeenCalled();
+  });
+
+  it("refuses a non-Google Secretary session through the method gate", async () => {
+    // A password/OTP session resolves SECRETARY to AUTH_METHOD_MISMATCH, so
+    // the readiness check still refuses it without an explicit method test.
+    vi.mocked(resolveAuthSession).mockResolvedValue(
+      secretarySession({
+        authMethod: "password",
+        profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.SECRETARY },
+      })
+    );
+
+    const result = await rejectFacultyRequestAction({ userId: USER_ID });
+
+    expect(result).toEqual({ success: false, error: "Your Secretary account is not ready." });
+    expect(rejectFacultyAccessRequest).not.toHaveBeenCalled();
+  });
+
+  it("refuses when there is no session at all", async () => {
+    vi.mocked(resolveAuthSession).mockResolvedValue(null);
+
+    const result = await approveFacultyRequestAction({ userId: USER_ID });
+
+    expect(result).toEqual({ success: false, error: "Secretary access required." });
     expect(approveFacultyAccessRequest).not.toHaveBeenCalled();
   });
 
@@ -123,7 +147,7 @@ describe("faculty decision actions", () => {
   });
 
   it("surfaces a service failure instead of claiming success", async () => {
-    (approveFacultyAccessRequest as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    vi.mocked(approveFacultyAccessRequest).mockResolvedValue({
       success: false,
       error: "Faculty request not found.",
     });
@@ -131,5 +155,22 @@ describe("faculty decision actions", () => {
     const result = await approveFacultyRequestAction({ userId: USER_ID });
 
     expect(result).toEqual({ success: false, error: "Faculty request not found." });
+  });
+
+  it("surfaces an archived-program refusal from the service", async () => {
+    vi.mocked(approveFacultyAccessRequest).mockResolvedValue({
+      success: false,
+      error:
+        "This applicant's requested program is archived or inactive. Decline this request and ask them to request an active program.",
+    });
+
+    const result = await approveFacultyRequestAction({ userId: USER_ID });
+
+    expect(result.success).toBe(false);
+    expect(result).toEqual({
+      success: false,
+      error:
+        "This applicant's requested program is archived or inactive. Decline this request and ask them to request an active program.",
+    });
   });
 });

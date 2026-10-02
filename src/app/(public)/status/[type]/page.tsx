@@ -56,7 +56,7 @@ const STATUS_CONFIGS = {
   },
   inactive: {
     title: "Account Inactive",
-    description: "Your CLOIE account is currently inactive.",
+    description: "Your System CLOIE account is currently inactive.",
     details:
       "This account has been deactivated by a system administrator. You cannot access the system dashboards. Please reach out to administration or IT support if you believe this is an error.",
     icon: Ban,
@@ -76,25 +76,25 @@ const STATUS_CONFIGS = {
     title: "Enrollment Deferred",
     description: "No active academic term configured.",
     details:
-      "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in CLOIE. Please contact a school administrator to configure the academic calendar.",
+      "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in System CLOIE. Please contact a school administrator to configure the academic calendar.",
     icon: CalendarDays,
     color: "warning",
     showRetry: false,
   },
   "missing-google-name": {
     title: "Google Account Name Required",
-    description: "Your Google account does not provide a usable display name for CLOIE.",
+    description: "Your Google account does not provide a usable display name for System CLOIE.",
     details:
-      "CLOIE needs the name on your Google account before it can create or first-link your institutional account. Open your Google Account profile, set a full name, then return to role selection and sign in again. No account was created or linked by this attempt.",
+      "System CLOIE needs the name on your Google account before it can create or first-link your institutional account. Open your Google Account profile, set a full name, then return to sign-in and try again. No account was created or linked by this attempt.",
     icon: IdCard,
     color: "warning",
     showRetry: true,
   },
   "identity-conflict": {
     title: "Sign-In Could Not Be Completed",
-    description: "This Google sign-in cannot be connected to the matching CLOIE account.",
+    description: "This Google sign-in cannot be connected to the matching System CLOIE account.",
     details:
-      "The account email is already associated with a different sign-in identity. Your existing CLOIE record was left unchanged. Sign out, return to role selection, and use the Google account originally linked to this email, or contact IT support for help.",
+      "The account email is already associated with a different sign-in identity. Your existing System CLOIE record was left unchanged. Sign out and use the Google account originally linked to this email, or contact IT support for help.",
     icon: UserRoundX,
     color: "danger",
     showRetry: true,
@@ -128,9 +128,9 @@ const STATUS_CONFIGS = {
   },
   "method-mismatch": {
     title: "Different Sign-In Method Required",
-    description: "This workspace requires your current ACD Google sign-in.",
+    description: "This session cannot open the selected workspace.",
     details:
-      "Password and recovery sessions cannot open internal workspaces (Student, Faculty, Secretary, Dean, Program Head, or General Education Coordinator). Sign out, then sign in again with your ACD Google account. External participants may use either method on the Alumni and partner entrance.",
+      "Recovery sessions can only change your password. Sign out and sign in again afterward. Internal workspaces require your current ACD Google sign-in. Alumni and Industry Partner workspaces accept Google or email-password sign-in.",
     icon: ShieldAlert,
     color: "info",
     showRetry: true,

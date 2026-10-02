@@ -15,7 +15,7 @@ describe("buildAuthSessionSnapshot", () => {
     expect(session.profileGate).toEqual({ status: "ROLE_SELECTION_REQUIRED" });
   });
 
-  it("marks students without a profile as requiring onboarding", () => {
+  it("marks an unplaced student as awaiting institution-recorded placement", () => {
     const session = buildAuthSessionSnapshot({
       userId: "user-2",
       email: "student@acd.edu.ph",
@@ -25,8 +25,7 @@ describe("buildAuthSessionSnapshot", () => {
 
     expect(session.activeRole).toBe(ROLES.STUDENT);
     expect(session.profileGate).toEqual({
-      status: "STUDENT_ONBOARDING_REQUIRED",
-      intent: "student",
+      status: "STUDENT_PLACEMENT_REQUIRED",
     });
   });
 

@@ -1668,12 +1668,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(public)/onboarding/student-profile-form.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "route",
-  },
-  {
     path: "src/app/(public)/portal/page.tsx",
     disposition: "task",
     taskId: 23,
@@ -3192,12 +3186,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/users/components/evaluation-list-browser.tsx",
     disposition: "task",
     taskId: 24,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/users/components/faculty-onboarding-form.tsx",
-    disposition: "task",
-    taskId: 18,
     category: "feature_component",
   },
   {

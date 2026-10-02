@@ -628,7 +628,7 @@ export default async function globalSetup(): Promise<void> {
   );
   assertContract(
     gestechBsit.facultyId === E2E_CONTRACT.demoFaculty.id && gestechBsit.hasPublishedEvaluation,
-    "GESTECH BSIT MORNING must be owned by the demo Faculty and published-locked"
+    "GESTECH BSIT MORNING must be owned by the demo Faculty and have a published evaluation"
   );
   assertContract(
     mm201.facultyId !== E2E_CONTRACT.demoFaculty.id,
@@ -657,6 +657,26 @@ export default async function globalSetup(): Promise<void> {
     seededStudentIds.size === expectedSeedStudentIds.length &&
       expectedSeedStudentIds.every((id) => seededStudentIds.has(id)),
     `GESTECH BSBA MORNING roster must start from the pristine seed (expected only ${expectedSeedStudentIds.join(", ")}). Re-seed the disposable database before re-running the e2e suite.`
+  );
+
+  // The curated visual baseline screenshots this roster, so its member count
+  // must be the seeded one. No journey writes it; the pin keeps a stale
+  // database from silently shipping a different baseline.
+  const baselineMemberships = await prisma.courseAssignmentMembership.findMany({
+    where: {
+      course_assignment_id: gestechBsit.id,
+      is_active: true,
+    },
+    select: { student_user_id: true },
+  });
+  const baselineStudentIds = new Set(
+    baselineMemberships.map((membership) => membership.student_user_id)
+  );
+  const expectedBaselineStudentIds = E2E_CONTRACT.rosterAssignments.gestechBsit.visualMemberIds;
+  assertContract(
+    baselineStudentIds.size === expectedBaselineStudentIds.length &&
+      expectedBaselineStudentIds.every((id) => baselineStudentIds.has(id)),
+    `GESTECH BSIT MORNING roster must match the curated visual membership contract. Re-seed the disposable database before re-running the e2e suite.`
   );
 
   const [courseResponse, bottomUpResponse] = await Promise.all([

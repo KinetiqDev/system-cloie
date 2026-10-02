@@ -32,6 +32,7 @@ const {
     resetPasswordForEmail: vi.fn(),
     updateUser: vi.fn(),
     signOut: vi.fn(),
+    getClaims: vi.fn(),
   },
   redirectMock: vi.fn(),
   cookieSetMock: vi.fn(),
@@ -97,13 +98,29 @@ vi.mock("@/lib/supabase/server", () => ({
       resetPasswordForEmail: supabaseMocks.resetPasswordForEmail,
       updateUser: supabaseMocks.updateUser,
       signOut: supabaseMocks.signOut,
+      getClaims: supabaseMocks.getClaims,
     },
   })),
+}));
+
+vi.mock("@/features/auth/services/signup-session-proof", () => ({
+  rememberVerifiedSignupSession: vi.fn(),
 }));
 
 describe("external entry actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMocks.getClaims.mockResolvedValue({
+      data: {
+        claims: {
+          sub: "auth-1",
+          session_id: "signup-session",
+          exp: 2_000_000_000,
+          amr: [{ method: "otp" }],
+        },
+      },
+      error: null,
+    });
   });
 
   it("email-first Continue always advances on a valid email", async () => {
@@ -194,9 +211,11 @@ describe("external entry actions", () => {
       error: null,
       data: { user: { id: "auth-1", identities: [{ provider: "email" }] } },
     });
-    cookieGetMock.mockImplementation((name: string) =>
-      name === "cloie_pending_external_role" ? { value: "INDUSTRY_PARTNER" } : undefined
-    );
+    cookieGetMock.mockImplementation((name: string) => {
+      if (name === "cloie_pending_external_role") return { value: "INDUSTRY_PARTNER" };
+      if (name === "cloie_pending_verify_email") return { value: "dara@example.com" };
+      return undefined;
+    });
     // The verified address belongs to an unlinked, roleless external account
     // that this password identity is allowed to claim.
     findUniqueMock.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
@@ -243,6 +262,40 @@ describe("external entry actions", () => {
     // on the code step holding an account they cannot use.
     expect(writeActiveRoleCookieMock).toHaveBeenCalledWith("INDUSTRY_PARTNER");
     expect(redirectMock).toHaveBeenCalledWith("/onboarding?intent=industry-partner");
+  });
+
+  it("does not give a verified address the role from another pending registration", async () => {
+    supabaseMocks.verifyOtp.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: "auth-first",
+          email: "first@example.com",
+          identities: [{ provider: "email" }],
+          user_metadata: { display_name: "First Holder", requested_role: "ALUMNI" },
+        },
+      },
+    });
+    cookieGetMock.mockImplementation((name: string) => {
+      if (name === "cloie_pending_external_role") return { value: "INDUSTRY_PARTNER" };
+      if (name === "cloie_pending_verify_email") return { value: "second@example.com" };
+      return undefined;
+    });
+    findUniqueMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({ id: "first-domain" });
+    resolveDestinationMock.mockResolvedValue(null);
+
+    await verifyExternalCode({ email: "first@example.com", token: "123456" });
+
+    expect(createUserMock).toHaveBeenCalledWith({
+      data: {
+        auth_user_id: "auth-first",
+        email: "first@example.com",
+        name: "First Holder",
+        roles: { create: { role: "ALUMNI" } },
+      },
+      select: { id: true },
+    });
   });
 
   it("keeps the neutral completion message when no session resolves for the verified identity", async () => {
@@ -294,4 +347,27 @@ describe("external entry actions", () => {
     expect(result.success).toBe(true);
     expect(supabaseMocks.signOut).toHaveBeenCalled();
   });
+
+  it.each(["rejected", "thrown"])(
+    "ends the recovery session when the password update is %s",
+    async (failure) => {
+      supabaseMocks.verifyOtp.mockResolvedValue({ error: null });
+      supabaseMocks.signOut.mockResolvedValue({ error: null });
+      if (failure === "rejected") {
+        supabaseMocks.updateUser.mockResolvedValue({ error: new Error("Password rejected") });
+      } else {
+        supabaseMocks.updateUser.mockRejectedValue(new Error("Transport failed"));
+      }
+
+      const result = await confirmPasswordRecovery({
+        email: "recovering@example.com",
+        token: "123456",
+        newPassword: "new-password-9",
+        confirmPassword: "new-password-9",
+      });
+
+      expect(result.success).toBe(false);
+      expect(supabaseMocks.signOut).toHaveBeenCalledTimes(1);
+    }
+  );
 });

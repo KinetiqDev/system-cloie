@@ -105,8 +105,11 @@ test("the in-page back control asks before discarding staged alignment changes",
   await loginAs(page, fx.demoFaculty.email);
   await enterDirtyAlignmentWorkspace(page, "ITRES1");
 
-  // BackLink renders a link-styled `<a>` carrying role="button".
-  await page.getByRole("button", { name: /Back to Manage CILOs/ }).click();
+  // BackLink is a real navigation link: the shared control renders a link
+  // styled as a button, and the guard intercepts in-app anchor clicks. Locating
+  // it by its link role keeps the journey on the semantic element the app
+  // ships, so the discard confirmation is still exercised.
+  await page.getByRole("link", { name: "Back to Manage CILOs" }).click();
 
   const confirmation = discardConfirmation(page);
   await expect(confirmation).toBeVisible();

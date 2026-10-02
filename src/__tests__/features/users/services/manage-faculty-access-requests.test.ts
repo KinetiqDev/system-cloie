@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   approveFacultyAccessRequest,
+  createFacultyAccessRequest,
   rejectFacultyAccessRequest,
 } from "@/features/users/services/manage-faculty-access-requests";
 
@@ -15,6 +16,7 @@ const {
   deleteManyAffiliationMock,
   upsertUserRoleMock,
   findFirstAffiliationMock,
+  upsertRequestMock,
   findUniqueProgramMock,
   transactionMock,
 } = vi.hoisted(() => ({
@@ -25,6 +27,7 @@ const {
   deleteManyAffiliationMock: vi.fn(),
   upsertUserRoleMock: vi.fn(),
   findFirstAffiliationMock: vi.fn(),
+  upsertRequestMock: vi.fn(),
   findUniqueProgramMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
@@ -32,8 +35,7 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     program: { findUnique: findUniqueProgramMock },
-    facultyAccessRequest: { findUnique: findUniqueRequestMock },
-    facultyProgramAffiliation: { findFirst: findFirstAffiliationMock },
+    facultyAccessRequest: { findUnique: findUniqueRequestMock, upsert: upsertRequestMock },
     $transaction: transactionMock,
   },
 }));
@@ -41,6 +43,67 @@ vi.mock("@/lib/db/prisma", () => ({
 const FACULTY_ID = "faculty-1";
 const PROGRAM_ID = "550e8400-e29b-41d4-a716-446655440000";
 const OTHER_PROGRAM_ID = "660e8400-e29b-41d4-a716-446655441111";
+
+describe("createFacultyAccessRequest", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
+      callback({
+        facultyAccessRequest: { upsert: upsertRequestMock },
+        facultyProgramAffiliation: { findFirst: findFirstAffiliationMock },
+        userRole: { upsert: upsertUserRoleMock },
+      })
+    );
+    upsertRequestMock.mockResolvedValue({ status: "PENDING" });
+    findUniqueProgramMock.mockResolvedValue({ id: PROGRAM_ID, is_active: true });
+    findFirstAffiliationMock.mockResolvedValue(null);
+  });
+
+  it("writes a PENDING request and no program affiliation", async () => {
+    const result = await createFacultyAccessRequest({
+      userId: FACULTY_ID,
+      programId: PROGRAM_ID,
+    });
+
+    expect(result).toEqual({ success: true, status: "PENDING" });
+    expect(upsertUserRoleMock).toHaveBeenCalledWith(
+      expect.objectContaining({ create: { user_id: FACULTY_ID, role: "FACULTY" } })
+    );
+    // The affiliation is deliberately absent: approval is what grants it, so a
+    // self-request never reaches an active Faculty workspace on its own.
+    expect(upsertAffiliationMock).not.toHaveBeenCalled();
+    expect(upsertRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: { user_id: FACULTY_ID, program_id: PROGRAM_ID },
+        update: expect.objectContaining({ status: "PENDING", decided_by: null }),
+      })
+    );
+  });
+
+  it("refuses an archived program without opening a transaction", async () => {
+    findUniqueProgramMock.mockResolvedValue({ id: PROGRAM_ID, is_active: false });
+
+    const result = await createFacultyAccessRequest({
+      userId: FACULTY_ID,
+      programId: PROGRAM_ID,
+    });
+
+    expect(result.success).toBe(false);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an account that already holds an active affiliation", async () => {
+    findFirstAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
+
+    const result = await createFacultyAccessRequest({
+      userId: FACULTY_ID,
+      programId: PROGRAM_ID,
+    });
+
+    expect(result.success).toBe(false);
+    expect(upsertRequestMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("rejectFacultyAccessRequest", () => {
   beforeEach(() => {
@@ -158,6 +221,7 @@ describe("approveFacultyAccessRequest", () => {
       program_id: PROGRAM_ID,
       status: "PENDING",
       user: { is_active: true },
+      program: { is_active: true },
     });
 
     const result = await approveFacultyAccessRequest({
@@ -186,6 +250,7 @@ describe("approveFacultyAccessRequest", () => {
       program_id: PROGRAM_ID,
       status: "PENDING",
       user: { is_active: false },
+      program: { is_active: true },
     });
 
     const result = await approveFacultyAccessRequest({
@@ -204,6 +269,7 @@ describe("approveFacultyAccessRequest", () => {
       program_id: PROGRAM_ID,
       status: "APPROVED",
       user: { is_active: true },
+      program: { is_active: true },
     });
 
     const result = await approveFacultyAccessRequest({
@@ -218,6 +284,48 @@ describe("approveFacultyAccessRequest", () => {
     expect(upsertAffiliationMock).not.toHaveBeenCalled();
     expect(deleteManyAffiliationMock).not.toHaveBeenCalled();
     expect(updateManyAffiliationMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a program archived while the request waited for review", async () => {
+    // The request-time check saw an active program. Program activity is
+    // re-read inside this transaction, so an archived program can never
+    // receive a new active affiliation through a stale PENDING row.
+    findUniqueRequestMock.mockResolvedValue({
+      id: "request-1",
+      program_id: PROGRAM_ID,
+      status: "PENDING",
+      user: { is_active: true },
+      program: { is_active: false },
+    });
+
+    const result = await approveFacultyAccessRequest({
+      requestUserId: FACULTY_ID,
+      decidedByUserId: "secretary-1",
+    });
+
+    expect(result.success).toBe(false);
+    expect(upsertAffiliationMock).not.toHaveBeenCalled();
+    expect(updateRequestMock).not.toHaveBeenCalled();
+  });
+
+  it("reads the program inside the decision transaction, not before it", async () => {
+    findUniqueRequestMock.mockResolvedValue({
+      id: "request-1",
+      program_id: PROGRAM_ID,
+      status: "PENDING",
+      user: { is_active: true },
+      program: { is_active: true },
+    });
+
+    await approveFacultyAccessRequest({
+      requestUserId: FACULTY_ID,
+      decidedByUserId: "secretary-1",
+    });
+
+    const selected = findUniqueRequestMock.mock.calls[0]?.[0] as {
+      select: { program: { select: { is_active: boolean } } };
+    };
+    expect(selected.select.program.select.is_active).toBe(true);
   });
 
   it("does not touch a program the request never named", async () => {

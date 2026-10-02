@@ -20,9 +20,10 @@ import type { Role } from "@/lib/constants/roles";
  */
 export async function resolveExternalPostVerificationDestination(
   authUserId: string,
-  requestedRole: Role | null
+  requestedRole: Role | null,
+  claims: unknown
 ): Promise<{ activeRole: Role; path: string } | null> {
-  const session = await resolveAuthSessionFromUser({ id: authUserId, email: null });
+  const session = await resolveAuthSessionFromUser({ id: authUserId, email: null, claims });
   const selected = externalRoleSchema.safeParse(requestedRole);
   const role =
     selected.success && session.roles.includes(selected.data) ? selected.data : session.activeRole;

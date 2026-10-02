@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { isInstitutionalEmail } from "@/lib/utils/email-domain";
+import { ROLES, type Role } from "@/lib/constants/roles";
 import {
   INSTITUTIONAL_EMAIL_MESSAGE,
   type CreateUserBySecretaryInput,
@@ -98,6 +99,13 @@ type RoleEntryContextInput = {
   role: SystemRole;
   /** Email of the account receiving the role — created or already existing. */
   email: string;
+  /**
+   * The granting account's active role. Student provisioning is Secretary-only
+   * (issue #649, story 5), and this is the authorization input that makes the
+   * rule hold for the role grant on an existing account as well as for account
+   * creation, so a Dean-held admin context cannot provision a Student.
+   */
+  grantedByRole: Role;
   program_id?: string;
   /** Managed programs for a Program Head grant; legacy single `program_id` falls back to a one-item set. */
   program_ids?: string[];
@@ -107,6 +115,14 @@ type RoleEntryContextInput = {
   graduation_year?: number;
   company_name?: string;
 };
+
+/**
+ * Roles the institution reserves to the Secretary for the grant itself. A Dean
+ * may still activate, deactivate, and revoke the accounts a Secretary created,
+ * but a Student role only ever enters the assigned-role set through the
+ * Secretary's authority.
+ */
+const SECRETARY_ONLY_GRANT_ROLES: SystemRole[] = [SystemRole.STUDENT];
 
 /**
  * Applies the role-entry gates for a Secretary-granted role: the
@@ -120,6 +136,7 @@ export async function resolveRoleEntryContext(
   const {
     role,
     email,
+    grantedByRole,
     program_id,
     program_ids,
     major_id,
@@ -128,6 +145,13 @@ export async function resolveRoleEntryContext(
     graduation_year,
     company_name,
   } = input;
+
+  if (SECRETARY_ONLY_GRANT_ROLES.includes(role) && grantedByRole !== ROLES.SECRETARY) {
+    return {
+      success: false,
+      error: "Only a Secretary can provision a Student account.",
+    };
+  }
 
   const emailError = institutionalEmailError(role, email);
   if (emailError) {
@@ -266,12 +290,13 @@ type UserExistsResult = {
 type CreateUserBySecretaryResult = ServiceResult<{ id: string }> | UserExistsResult;
 
 export async function createUserBySecretary(
-  input: CreateUserBySecretaryInput
+  input: CreateUserBySecretaryInput & { grantedByRole: Role }
 ): Promise<CreateUserBySecretaryResult> {
   const {
     name,
     email,
     role,
+    grantedByRole,
     program_id,
     program_ids,
     major_id,
@@ -283,6 +308,7 @@ export async function createUserBySecretary(
   } = input;
 
   const contextResult = await resolveRoleEntryContext({
+    grantedByRole,
     role,
     email,
     program_id,

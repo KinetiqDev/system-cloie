@@ -21,6 +21,7 @@ import {
 } from "./entry-legal-acknowledgement";
 import { PasswordInput } from "./password-input";
 import { EntryFormMessageView, type EntryFormMessage } from "./entry-form-message";
+import { EntryField, EntryFieldShell } from "./entry-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,79 +158,67 @@ export function ResetPasswordForm({ prefilledEmail }: { prefilledEmail?: string 
   return (
     <div className="space-y-5">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="reset-email">Email address</Label>
-          <Input
-            id="reset-email"
-            type="email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="you@example.com"
-            aria-invalid={errors.email ? true : undefined}
-            aria-describedby={errors.email ? "reset-email-error" : undefined}
-            {...register("email")}
-          />
-          {errors.email && (
-            <p id="reset-email-error" role="alert" className="text-destructive text-sm">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
+        <EntryField
+          id="reset-email"
+          label="Email address"
+          error={errors.email?.message}
+          control={{
+            type: "email",
+            autoComplete: "email",
+            inputMode: "email",
+            placeholder: "you@example.com",
+            ...register("email"),
+          }}
+        />
 
-        <div className="space-y-2">
-          <Label htmlFor="reset-code">6-digit recovery code</Label>
-          <Input
-            id="reset-code"
-            type="text"
-            autoComplete="one-time-code"
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="123456"
-            className="text-center text-lg tracking-[0.5em] tabular-nums"
-            aria-invalid={errors.token ? true : undefined}
-            aria-describedby={errors.token ? "reset-code-error" : undefined}
-            {...register("token")}
-          />
-          {errors.token && (
-            <p id="reset-code-error" role="alert" className="text-destructive text-sm">
-              {errors.token.message}
-            </p>
-          )}
-        </div>
+        <EntryField
+          id="reset-code"
+          label="6-digit recovery code"
+          error={errors.token?.message}
+          control={{
+            type: "text",
+            autoComplete: "one-time-code",
+            inputMode: "numeric",
+            maxLength: 6,
+            placeholder: "123456",
+            className: "text-center text-lg tracking-[0.5em] tabular-nums",
+            ...register("token"),
+          }}
+        />
 
-        <div className="space-y-2">
-          <Label htmlFor="reset-new-password">New password</Label>
-          <PasswordInput
-            id="reset-new-password"
-            autoComplete="new-password"
-            placeholder="At least 8 characters"
-            aria-invalid={errors.newPassword ? true : undefined}
-            aria-describedby={errors.newPassword ? "reset-new-password-error" : undefined}
-            {...register("newPassword")}
-          />
-          {errors.newPassword && (
-            <p id="reset-new-password-error" role="alert" className="text-destructive text-sm">
-              {errors.newPassword.message}
-            </p>
+        <EntryFieldShell
+          id="reset-new-password"
+          label="New password"
+          error={errors.newPassword?.message}
+        >
+          {(describedBy) => (
+            <PasswordInput
+              id="reset-new-password"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              aria-invalid={errors.newPassword ? true : undefined}
+              aria-describedby={describedBy}
+              {...register("newPassword")}
+            />
           )}
-        </div>
+        </EntryFieldShell>
 
-        <div className="space-y-2">
-          <Label htmlFor="reset-confirm-password">Confirm new password</Label>
-          <PasswordInput
-            id="reset-confirm-password"
-            autoComplete="new-password"
-            placeholder="Repeat your new password"
-            aria-invalid={errors.confirmPassword ? true : undefined}
-            aria-describedby={errors.confirmPassword ? "reset-confirm-password-error" : undefined}
-            {...register("confirmPassword")}
-          />
-          {errors.confirmPassword && (
-            <p id="reset-confirm-password-error" role="alert" className="text-destructive text-sm">
-              {errors.confirmPassword.message}
-            </p>
+        <EntryFieldShell
+          id="reset-confirm-password"
+          label="Confirm new password"
+          error={errors.confirmPassword?.message}
+        >
+          {(describedBy) => (
+            <PasswordInput
+              id="reset-confirm-password"
+              autoComplete="new-password"
+              placeholder="Repeat your new password"
+              aria-invalid={errors.confirmPassword ? true : undefined}
+              aria-describedby={describedBy}
+              {...register("confirmPassword")}
+            />
           )}
-        </div>
+        </EntryFieldShell>
         <EntryLegalCheckbox
           id="reset-password-legal"
           checked={legalAccepted}

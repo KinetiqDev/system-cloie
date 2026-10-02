@@ -9,7 +9,7 @@ System CLOIE accounts may hold more than one distinct assigned role so one authe
 
 The database enforces uniqueness per `(user_id, role)` rather than per user. A server-managed, HTTP-only active-role cookie records the requested context but grants no role by itself. Session resolution accepts it only when the role still exists on the domain account. Missing, stale, or invalid selections fail closed to role selection rather than falling back to unrelated authority.
 
-Eligible self-service claims may add Faculty, Student, Alumni, or Industry Partner roles to an already-linked account. Pre-provisioned roles remain administrator-assigned. Cancelling an incomplete claim may remove only the specifically requested assigned role and only while that role's required profile artifact is absent. Switching active context never creates, revokes, or completes a role.
+Eligible self-service claims may add Alumni or Industry Partner roles to an already-linked account. Students are Secretary-provisioned only. Faculty self-requests create a role-scoped PENDING review state with no affiliation or workspace authority; Secretary approval grants the requested scope. Administrative roles remain provisioned. A multi-role account with no valid active-role selection must deliberately select a workspace rather than silently inherit the first role. Cancelling an incomplete claim may remove only the specifically requested assigned role and only while that role's required profile artifact is absent. Switching active context never creates, revokes, or completes a role.
 
 ## Considered options
 

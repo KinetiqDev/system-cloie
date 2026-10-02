@@ -4,6 +4,7 @@ import {
   expectNoAxeViolations,
   loginAs,
   respondentRow,
+  waitForAnimationsToSettle,
   waitForStableState,
 } from "./support/helpers";
 
@@ -137,11 +138,17 @@ test.describe("accessibility sweep", () => {
     await page.keyboard.press("ArrowDown");
     const roleListbox = page.getByRole("listbox");
     await expect(roleListbox).toBeVisible();
+    // The popup scales in (zoom-in-95); measure once the entrance animation has
+    // settled so the rect reflects the real layout box, not a mid-transform one.
+    await waitForAnimationsToSettle(page.locator('[data-slot="select-content"]'));
     const optionSizing = await roleListbox
       .getByRole("option")
       .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height));
     expect(optionSizing.length).toBeGreaterThan(0);
-    expect(optionSizing.every((height) => height >= 40)).toBe(true);
+    expect(
+      optionSizing.every((height) => height >= 40),
+      `select options must meet the 40px desktop floor, got ${JSON.stringify(optionSizing)}`
+    ).toBe(true);
     const popupBounds = await page.locator('[data-slot="select-content"]').evaluate((popup) => {
       const rect = popup.getBoundingClientRect();
       return {
@@ -161,6 +168,10 @@ test.describe("accessibility sweep", () => {
     await expect(roleCombobox).toContainText("Faculty");
     // The dynamic Program field appears for the Faculty role.
     await expect(page.getByRole("combobox", { name: /Affiliated program/i })).toBeVisible();
+    // Selecting an option restores focus to the trigger once the popup closes.
+    // Assert that instead of racing it: tabbing from the popup's option would
+    // leave the form entirely.
+    await expect(roleCombobox).toBeFocused();
 
     // Move to the submit control by keyboard and submit the incomplete form.
     let submitted = false;

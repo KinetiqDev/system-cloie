@@ -71,6 +71,7 @@ export async function submitStudentEvaluationResponse({
       },
       course_bound: {
         include: {
+          cilo_question_bindings: true,
           course_assignment: {
             include: { course: true },
           },
@@ -134,6 +135,7 @@ export async function submitStudentEvaluationResponse({
       finalizeResponseSubmission({
         answers,
         assignmentId: assignment.id,
+        ciloQuestionBindings: assignment.course_bound?.cilo_question_bindings,
         createData: {
           assignment_id: assignment.id,
           deployment_id: assignment.course_bound_id ?? assignment.central_deployment_id ?? "",

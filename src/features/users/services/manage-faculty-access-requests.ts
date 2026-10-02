@@ -1,7 +1,7 @@
 import { FacultyApprovalStatus, SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
-export type FacultyAccessRequestOutcome =
+type FacultyAccessRequestOutcome =
   | { success: true; status: FacultyApprovalStatus }
   | { success: false; error: string };
 
@@ -17,7 +17,7 @@ export type FacultyAccessRequestOutcome =
  * Secretary-provisioned Faculty (ADR 0001) does not use this service: it is
  * complete and active at creation time.
  */
-export async function requestFacultyAccess(input: {
+export async function createFacultyAccessRequest(input: {
   userId: string;
   programId: string;
 }): Promise<FacultyAccessRequestOutcome> {
@@ -80,6 +80,11 @@ export async function approveFacultyAccessRequest(input: {
         program_id: true,
         status: true,
         user: { select: { is_active: true } },
+        // Approval re-reads the program inside this transaction: the
+        // request-time existence and active checks cannot speak for a program
+        // archived while the request waited for review, and an archived
+        // program must never receive a new active affiliation.
+        program: { select: { is_active: true } },
       },
     });
     if (!request) return { success: false as const, error: "Faculty request not found." };
@@ -93,6 +98,14 @@ export async function approveFacultyAccessRequest(input: {
       return {
         success: false as const,
         error: "This applicant's account is deactivated. Reactivate it before approving.",
+      };
+    }
+
+    if (!request.program.is_active) {
+      return {
+        success: false as const,
+        error:
+          "This applicant's requested program is archived or inactive. Decline this request and ask them to request an active program.",
       };
     }
 

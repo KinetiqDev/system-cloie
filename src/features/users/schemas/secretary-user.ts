@@ -31,11 +31,6 @@ const optionalNumberField = z.preprocess((value) => {
   return Number.isNaN(parsed) ? undefined : parsed;
 }, z.number().int().positive().optional());
 
-export const assignRoleSchema = z.object({
-  user_id: z.string().uuid(),
-  role: z.nativeEnum(SystemRole),
-});
-
 /**
  * Role grant on an existing account: the account is addressed by `user_id` and
  * the role-specific context mirrors the account-creation fields so both entry
@@ -67,6 +62,5 @@ export const deactivateProgramHeadAssignmentSchema = z.object({
   program_head_id: z.string().uuid(),
 });
 
-export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
 export type AddRoleToExistingUserInput = z.infer<typeof addRoleToExistingUserSchema>;
 export type CreateProgramHeadAssignmentInput = z.infer<typeof createProgramHeadAssignmentSchema>;

@@ -47,6 +47,28 @@ const BROWSER_PREFIXES = ["src/", "e2e/", "playwright.config.ts"];
 // being modified.
 const CI_INFRASTRUCTURE_PREFIXES = [".github/workflows/", "scripts/ci/"];
 
+// Paths that select the real Supabase Auth + mail-catcher gate. It proves what
+// a signed CI cookie cannot: password, six-digit code, recovery, and the
+// no-autoconfirm invariant the external entry flow rests on. Credential,
+// template, and Auth-configuration changes select it alongside the auth
+// domain; CI verification machinery selects it through the fail-closed path.
+const AUTH_INTEGRATION_PREFIXES = [
+  "src/features/auth/",
+  "src/lib/supabase/",
+  "src/app/api/auth/",
+  "src/features/legal/",
+  "src/features/users/services/resolve-profile-gate.ts",
+  "src/lib/actions/external-entry-actions.ts",
+  "src/lib/schemas/external-entry.ts",
+  "src/features/entry/",
+  "supabase/config.toml",
+  "supabase/templates/",
+  "supabase/migrations/",
+  "package.json",
+  "pnpm-lock.yaml",
+  "src/__tests__/auth/",
+];
+
 // Paths that select the production build.
 const BUILD_PREFIXES = [
   "src/",
@@ -69,7 +91,7 @@ function matchesAny(file, prefixes) {
 /**
  * @param {string[]} changedFiles repository-relative changed paths
  * @param {{ all?: boolean }} options force the full matrix (scheduled runs)
- * @returns {{ run_build: boolean, run_database: boolean, run_browser: boolean, run_visual: boolean, domains: string[] }}
+ * @returns {{ run_build: boolean, run_database: boolean, run_browser: boolean, run_visual: boolean, run_auth_integration: boolean, domains: string[] }}
  */
 export function selectChecks(changedFiles, options = {}) {
   if (options.all) {
@@ -78,6 +100,7 @@ export function selectChecks(changedFiles, options = {}) {
       run_database: true,
       run_browser: true,
       run_visual: true,
+      run_auth_integration: true,
       domains: ["full-matrix"],
     };
   }
@@ -100,12 +123,18 @@ export function selectChecks(changedFiles, options = {}) {
     touchesCiInfrastructure || SHARED_DATABASE_DOMAINS.some((domain) => domains.includes(domain));
   const runBuild =
     touchesCiInfrastructure || files.some((file) => matchesAny(file, BUILD_PREFIXES));
+  // Credential, template, and Auth-configuration changes select the real Auth
+  // gate; CI machinery changes select it through the fail-closed path, because
+  // a PR that edits the gate machinery must not be able to skip the gate.
+  const runAuthIntegration =
+    touchesCiInfrastructure || files.some((file) => matchesAny(file, AUTH_INTEGRATION_PREFIXES));
 
   return {
     run_build: runBuild,
     run_database: runDatabase,
     run_browser: runBrowser,
     run_visual: runBrowser,
+    run_auth_integration: runAuthIntegration,
     domains,
   };
 }

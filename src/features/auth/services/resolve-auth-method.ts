@@ -4,11 +4,12 @@ import type { User } from "@supabase/supabase-js";
  * The sign-in method proved for the current System CLOIE session.
  *
  * `google` is the only method that satisfies an internal role (issue #649).
- * `password` covers credential sign-in; `otp` covers a six-digit email
- * confirmation code; `recovery` covers a password-recovery session, which is
- * confined to the credential change and never carries workspace authority.
+ * `password` covers credential sign-in. GoTrue emits `otp` for both signup
+ * and recovery codes, so raw OTP sessions carry no workspace authority.
+ * `verified-signup` requires the application's signed, session-bound proof
+ * that the strict signup-code action accepted this session.
  */
-export type AuthMethod = "google" | "password" | "otp" | "recovery";
+export type AuthMethod = "google" | "password" | "verified-signup" | "otp" | "recovery";
 
 type SessionKind = "oauth" | "dev" | "dedicated-demo" | "ci-test";
 
@@ -80,12 +81,15 @@ export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null 
   // A proved credential method outranks OAuth: when a claim carries both, the
   // password, one-time-code, or recovery step is what actually established
   // this session, so the session must not be trusted as a Google sign-in.
-  if (methods.includes(AMR_PASSWORD) || methods.includes(EMAIL_PROVIDER)) return "password";
-  if (methods.includes(AMR_OTP)) return "otp";
   if (methods.includes(AMR_RECOVERY)) return "recovery";
+  if (methods.includes(AMR_OTP)) return "otp";
+  if (methods.includes(AMR_PASSWORD) || methods.includes(EMAIL_PROVIDER)) return "password";
 
   if (methods.includes(AMR_OAUTH)) {
-    return readRecordedProvider(claims) === GOOGLE_PROVIDER ? "google" : null;
+    return methods.every((method) => method === AMR_OAUTH) &&
+      readRecordedProvider(claims) === GOOGLE_PROVIDER
+      ? "google"
+      : null;
   }
   return null;
 }
@@ -101,22 +105,8 @@ export function resolveAuthMethodForSession(mode: SessionKind, claims: unknown):
   return resolveAuthMethodFromClaims(claims);
 }
 
-/**
- * Reads the verified access-token claims for the current session. `getClaims`
- * validates the JWT against the Auth server rather than trusting the cookie, so
- * a forged `amr` claim can never open an internal role.
- */
-export async function resolveSessionAuthMethod(
-  getClaims: () => Promise<{ data: { claims?: unknown } | null; error: unknown }>
-): Promise<AuthMethod | null> {
-  try {
-    const { data, error } = await getClaims();
-    if (error || !data) return null;
-    return resolveAuthMethodFromClaims(data.claims);
-  } catch {
-    return null;
-  }
-}
+/** The verified Auth identity shape the entry flow links a domain account to. */
+export type VerifiedAuthIdentity = Pick<User, "id" | "email" | "user_metadata" | "identities">;
 
 /**
  * The Auth identity's linked providers, used only to detect that a
