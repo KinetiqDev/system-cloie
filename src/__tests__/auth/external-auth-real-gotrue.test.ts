@@ -139,6 +139,28 @@ describe("external entry against real Supabase Auth (649)", () => {
     }
 
     /**
+     * Find the caught message for `email`, then extract its bare six-digit
+     * code. A link-only confirmation body carries no such code, so a `null`
+     * result is the "not the mail we need" answer, not a parse failure.
+     */
+    async function findCapturedCode(email: string, subject: string): Promise<string | null> {
+      const listing = (await (await fetch(`${mailUrl}/api/v1/messages?limit=50`)).json()) as {
+        messages: Array<{ ID: string; Subject: string; To: Array<{ Address: string }> }>;
+      };
+      const match = listing.messages.find(
+        (message) =>
+          message.Subject.includes(subject) &&
+          message.To.some((recipient) => recipient.Address === email)
+      );
+      if (!match) return null;
+
+      const full = (await (await fetch(`${mailUrl}/api/v1/message/${match.ID}`)).json()) as
+        | CaughtMessage
+        | undefined;
+      return (full?.Text ?? full?.HTML ?? "").match(/\b(\d{6})\b/)?.[1] ?? null;
+    }
+
+    /**
      * Await the caught message for `email`. GoTrue hands mail to the SMTP
      * catcher inside another container and exposes no in-process signal for
      * it, so delivery is awaited by re-reading the catcher listing on a bounded
@@ -151,24 +173,14 @@ describe("external entry against real Supabase Auth (649)", () => {
         if (performance.now() > deadline) {
           throw new Error(`No ${subject} mail captured for ${email}.`);
         }
-        const listing = (await (await fetch(`${mailUrl}/api/v1/messages?limit=50`)).json()) as {
-          messages: Array<{ ID: string; Subject: string; To: Array<{ Address: string }> }>;
-        };
-        const match = listing.messages.find(
-          (message) =>
-            message.Subject.includes(subject) &&
-            message.To.some((recipient) => recipient.Address === email)
-        );
-        if (match) {
-          const full = (await (await fetch(`${mailUrl}/api/v1/message/${match.ID}`)).json()) as
-            | CaughtMessage
-            | undefined;
-          // A link-only confirmation body carries no bare six-digit code, so
-          // this extraction is itself the assertion that the code is usable.
-          const code = (full?.Text ?? full?.HTML ?? "").match(/\b(\d{6})\b/)?.[1];
-          if (code) return code;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // This extraction is itself the assertion that the code is usable.
+        const code = await findCapturedCode(email, subject);
+        if (code) return code;
+        // Real-clock poll: the catcher runs in another container with no
+        // in-process signal, so fake timers cannot observe its arrival.
+        const { promise, resolve } = Promise.withResolvers<void>();
+        setTimeout(resolve, 100);
+        await promise;
       }
     }
 
