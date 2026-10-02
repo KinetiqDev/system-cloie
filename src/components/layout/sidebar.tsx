@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose } from "lucide-react";
+import type { ReactElement, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/constants/roles";
+import type { NavGroup, NavItem } from "@/lib/constants/navigation";
 import {
   getDeanActiveItem,
   getDeanNavGroups,
@@ -47,6 +49,63 @@ const LABEL_FOLDED = "max-w-0 -translate-x-1 opacity-0";
 /** Destinations arrive with the same drift the fold uses to leave. */
 const ARRIVAL =
   "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-200";
+/** Below lg the Dean's rail is still a rail, so it shows no names either. */
+const RAIL_LABEL_HIDE_BELOW_LG = "md:hidden lg:inline";
+
+interface RailRowProps {
+  collapsed: boolean;
+  /** The destination's name, repeated where the rail has no room to show it. */
+  label: string;
+  children: ReactElement;
+}
+
+/**
+ * A rail row names itself.
+ *
+ * Collapsed, the row loses its visible label, so a tooltip beside it repeats the
+ * accessible name (design.md §8.4). Expanded the row stands alone, and a tooltip
+ * would only restate what is already on screen.
+ */
+function RailRow({ collapsed, label, children }: RailRowProps) {
+  if (!collapsed) {
+    return children;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+interface FoldedLabelProps {
+  collapsed: boolean;
+  /** The Dean's rail starts at md and only earns its labels at lg. */
+  railBelowLg?: boolean;
+  children: ReactNode;
+}
+
+/**
+ * A destination's name, under the fold.
+ *
+ * Collapsed hides it at every width. Otherwise a width-driven rail hides it below
+ * lg, which the caller signals with `railBelowLg`.
+ */
+function FoldedLabel({ collapsed, railBelowLg = false, children }: FoldedLabelProps) {
+  return (
+    <span
+      className={cn(
+        LABEL_MOTION,
+        collapsed ? LABEL_FOLDED : cn(LABEL_OPEN, railBelowLg && RAIL_LABEL_HIDE_BELOW_LG)
+      )}
+    >
+      {children}
+    </span>
+  );
+}
 
 interface SidebarProps {
   user?: {
@@ -92,73 +151,14 @@ export function Sidebar({
 
       <div className={cn("flex flex-1 flex-col overflow-y-auto py-6", collapsed ? "px-2" : "px-4")}>
         <nav id={NAV_ID} aria-label="Primary navigation" className="space-y-1">
-          {mainNav.map((item) => {
-            const isActive = activeItem === item;
-            const count = item.badgeCount && item.badgeCount > 0 ? item.badgeCount : null;
-            const key = getNavItemIdentity(item);
-            const row = (
-              <NavigationRow
-                key={key}
-                href={item.href}
-                active={isActive}
-                aria-current={isActive ? "page" : undefined}
-                iconOnly={collapsed}
-                className={collapsed ? undefined : "justify-between"}
-              >
-                <span
-                  className={cn(
-                    "flex items-center transition-[gap] duration-200 ease-out motion-reduce:transition-none",
-                    collapsed ? "gap-0" : "gap-3"
-                  )}
-                >
-                  <span className="relative flex shrink-0 items-center justify-center">
-                    <item.icon
-                      className={cn(
-                        "size-5",
-                        isActive
-                          ? "text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
-                      )}
-                      aria-hidden="true"
-                    />
-                    {collapsed && count && (
-                      <span
-                        aria-hidden="true"
-                        className="bg-sidebar-primary absolute -top-1 -right-1 size-2 rounded-full"
-                      />
-                    )}
-                  </span>
-                  <span className={cn(LABEL_MOTION, collapsed ? LABEL_FOLDED : LABEL_OPEN)}>
-                    {navLabel(item.name, count)}
-                  </span>
-                </span>
-                {!collapsed && count && (
-                  <span
-                    className={cn(
-                      "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 leading-none",
-                      isActive
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                        : "bg-sidebar-accent text-sidebar-accent-foreground",
-                      "text-label-sm"
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-              </NavigationRow>
-            );
-
-            return collapsed ? (
-              <Tooltip key={key}>
-                <TooltipTrigger render={row} />
-                <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
-                  {navLabel(item.name, count)}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              row
-            );
-          })}
+          {mainNav.map((item) => (
+            <PrimaryNavRow
+              key={getNavItemIdentity(item)}
+              item={item}
+              active={activeItem === item}
+              collapsed={collapsed}
+            />
+          ))}
         </nav>
 
         {secondaryNav.length > 0 && (
@@ -179,9 +179,7 @@ export function Sidebar({
                 title={collapsed ? item.name : undefined}
               >
                 <item.icon className="text-sidebar-foreground/50 size-4 shrink-0" />
-                <span className={cn(LABEL_MOTION, collapsed ? LABEL_FOLDED : LABEL_OPEN)}>
-                  {item.name}
-                </span>
+                <FoldedLabel collapsed={collapsed}>{item.name}</FoldedLabel>
               </NavigationRow>
             ))}
           </nav>
@@ -190,6 +188,161 @@ export function Sidebar({
 
       <SidebarFooter user={user} collapsed={collapsed} />
     </aside>
+  );
+}
+
+interface PrimaryNavRowProps {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+}
+
+/**
+ * One primary destination.
+ *
+ * The icon carries the selected/inactive roles; the unread count sits at the
+ * expanded row's trailing edge, or becomes a dot on the icon once the row folds.
+ */
+function PrimaryNavRow({ item, active, collapsed }: PrimaryNavRowProps) {
+  const count = item.badgeCount && item.badgeCount > 0 ? item.badgeCount : null;
+
+  return (
+    <RailRow collapsed={collapsed} label={navLabel(item.name, count)}>
+      <NavigationRow
+        href={item.href}
+        active={active}
+        aria-current={active ? "page" : undefined}
+        iconOnly={collapsed}
+        className={collapsed ? undefined : "justify-between"}
+      >
+        <span
+          className={cn(
+            "flex items-center transition-[gap] duration-200 ease-out motion-reduce:transition-none",
+            collapsed ? "gap-0" : "gap-3"
+          )}
+        >
+          <PrimaryNavIcon icon={item.icon} active={active} count={count} collapsed={collapsed} />
+          <FoldedLabel collapsed={collapsed}>{navLabel(item.name, count)}</FoldedLabel>
+        </span>
+        {!collapsed && count && (
+          <span
+            className={cn(
+              "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 leading-none",
+              active
+                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                : "bg-sidebar-accent text-sidebar-accent-foreground",
+              "text-label-sm"
+            )}
+          >
+            {count}
+          </span>
+        )}
+      </NavigationRow>
+    </RailRow>
+  );
+}
+
+interface PrimaryNavIconProps {
+  icon: NavItem["icon"];
+  active: boolean;
+  /** Folded, the count rides the icon as a dot because the pill has no room. */
+  count: number | null;
+  collapsed: boolean;
+}
+
+function PrimaryNavIcon({ icon: Icon, active, count, collapsed }: PrimaryNavIconProps) {
+  return (
+    <span className="relative flex shrink-0 items-center justify-center">
+      <Icon
+        className={cn(
+          "size-5",
+          active
+            ? "text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground"
+        )}
+        aria-hidden="true"
+      />
+      {collapsed && count && (
+        <span
+          aria-hidden="true"
+          className="bg-sidebar-primary absolute -top-1 -right-1 size-2 rounded-full"
+        />
+      )}
+    </span>
+  );
+}
+
+interface DeanNavRowProps {
+  item: Pick<NavGroup, "name" | "href" | "icon">;
+  active: boolean;
+  collapsed: boolean;
+  /** A section's children sit under their heading, in the compact type scale. */
+  nested?: boolean;
+  /** A section heading keeps the rail's standard inset; a destination sits flush. */
+  section?: boolean;
+}
+
+/**
+ * A Dean destination, at either level of the rail.
+ *
+ * Collapsed hides labels at every width. Otherwise the tablet rail hides them
+ * below lg through the label's own breakpoint classes.
+ */
+function DeanNavRow({ item, active, collapsed, nested = false, section = false }: DeanNavRowProps) {
+  const rail = !collapsed;
+
+  return (
+    <RailRow collapsed={collapsed} label={item.name}>
+      <NavigationRow
+        href={item.href}
+        active={active}
+        rail={rail}
+        iconOnly={collapsed}
+        aria-current={active ? "page" : undefined}
+        title={rail ? item.name : undefined}
+        className={cn(nested && "text-body-sm", collapsed && !section && "px-0")}
+      >
+        <item.icon className={cn("shrink-0", nested ? "size-4" : "size-5")} aria-hidden="true" />
+        <FoldedLabel collapsed={collapsed} railBelowLg>
+          {item.name}
+        </FoldedLabel>
+      </NavigationRow>
+    </RailRow>
+  );
+}
+
+interface DeanNavGroupProps {
+  group: NavGroup;
+  /** Resolved once, then read by the section and each of its children. */
+  activeItem: (NavItem | NavGroup) | null;
+  collapsed: boolean;
+}
+
+/** One Dean section: a heading that is itself a destination, plus its children. */
+function DeanNavGroup({ group, activeItem, collapsed }: DeanNavGroupProps) {
+  // A section and its destinations can share an href, so both have to match.
+  const active = activeItem?.href === group.href && activeItem.name === group.name;
+
+  return (
+    <div>
+      <DeanNavRow item={group} active={active} collapsed={collapsed} section />
+      <div
+        className={cn(
+          "border-sidebar-border mt-1 hidden gap-1 border-l pl-2 md:flex md:flex-col",
+          collapsed ? "ml-3" : "ml-4"
+        )}
+      >
+        {group.items.map((item) => (
+          <DeanNavRow
+            key={item.href}
+            item={item}
+            active={activeItem === item}
+            collapsed={collapsed}
+            nested
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -202,46 +355,7 @@ function DeanSidebar({
   const activeItem = getDeanActiveItem(pathname);
   const groups = getDeanNavGroups();
   const [dashboard, profile] = getDeanStandaloneNav();
-  // Collapsed hides labels at every width. Otherwise the tablet rail hides them
-  // below lg through the row's own breakpoint classes.
   const rail = !collapsed;
-
-  const renderLink = (item: typeof dashboard, compact = false, nested = false) => {
-    const active = activeItem === item;
-    const row = (
-      <NavigationRow
-        key={item.href}
-        href={item.href}
-        active={active}
-        rail={rail && compact}
-        iconOnly={collapsed}
-        aria-current={active ? "page" : undefined}
-        title={rail && compact ? item.name : undefined}
-        className={cn(nested && "text-body-sm", collapsed && "px-0")}
-      >
-        <item.icon className={cn("shrink-0", nested ? "size-4" : "size-5")} aria-hidden="true" />
-        <span
-          className={cn(
-            LABEL_MOTION,
-            collapsed ? LABEL_FOLDED : cn(LABEL_OPEN, "md:hidden lg:inline")
-          )}
-        >
-          {item.name}
-        </span>
-      </NavigationRow>
-    );
-
-    return collapsed ? (
-      <Tooltip key={item.href}>
-        <TooltipTrigger render={row} />
-        <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
-          {item.name}
-        </TooltipContent>
-      </Tooltip>
-    ) : (
-      row
-    );
-  };
 
   return (
     <aside
@@ -263,54 +377,16 @@ function DeanSidebar({
         className={cn("flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6", rail && "lg:px-4")}
         aria-label="Dean navigation"
       >
-        {renderLink(dashboard, true)}
-        {groups.map((group) => {
-          const active = activeItem?.href === group.href && activeItem.name === group.name;
-          const groupRow = (
-            <NavigationRow
-              href={group.href}
-              active={active}
-              rail={rail}
-              iconOnly={collapsed}
-              aria-current={active ? "page" : undefined}
-              title={rail ? group.name : undefined}
-            >
-              <group.icon className="size-5 shrink-0" aria-hidden="true" />
-              <span
-                className={cn(
-                  LABEL_MOTION,
-                  collapsed ? LABEL_FOLDED : cn(LABEL_OPEN, "md:hidden lg:inline")
-                )}
-              >
-                {group.name}
-              </span>
-            </NavigationRow>
-          );
-
-          return (
-            <div key={group.href}>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger render={groupRow} />
-                  <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
-                    {group.name}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                groupRow
-              )}
-              <div
-                className={cn(
-                  "border-sidebar-border mt-1 hidden gap-1 border-l pl-2 md:flex md:flex-col",
-                  collapsed ? "ml-3" : "ml-4"
-                )}
-              >
-                {group.items.map((item) => renderLink(item, true, true))}
-              </div>
-            </div>
-          );
-        })}
-        {renderLink(profile, true)}
+        <DeanNavRow item={dashboard} active={activeItem === dashboard} collapsed={collapsed} />
+        {groups.map((group) => (
+          <DeanNavGroup
+            key={group.href}
+            group={group}
+            activeItem={activeItem}
+            collapsed={collapsed}
+          />
+        ))}
+        <DeanNavRow item={profile} active={activeItem === profile} collapsed={collapsed} />
       </nav>
       <SidebarFooter user={user} collapsed={collapsed} />
     </aside>
@@ -426,17 +502,22 @@ function SidebarFooter({ user, collapsed }: { user?: SidebarProps["user"]; colla
         <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
           <span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span>
         </div>
-        {!collapsed && (
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-label-md text-sidebar-foreground truncate font-semibold">
-              {user?.name || "User"}
-            </span>
-            <span className="text-caption text-sidebar-foreground/60 truncate">
-              {user?.email || "No email provided"}
-            </span>
-          </div>
-        )}
+        {!collapsed && <SidebarIdentity user={user} />}
       </div>
+    </div>
+  );
+}
+
+/** The expanded footer's identity block; the rail keeps only the monogram. */
+function SidebarIdentity({ user }: { user?: SidebarProps["user"] }) {
+  return (
+    <div className="flex flex-col overflow-hidden">
+      <span className="text-label-md text-sidebar-foreground truncate font-semibold">
+        {user?.name || "User"}
+      </span>
+      <span className="text-caption text-sidebar-foreground/60 truncate">
+        {user?.email || "No email provided"}
+      </span>
     </div>
   );
 }

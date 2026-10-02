@@ -344,6 +344,7 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   shows neither the wordmark nor the control below lg.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
+- Sidebar row rendering shares the collapsed tooltip and label fold. Primary destinations own their badge display; Dean destinations and groups keep the tablet rail rules. Role and active-destination resolution remain in the sidebar.
 - Active states use selected/primary tokens.
 - Theme does not change route grouping or navigation priority.
 - Dark navigation uses light logo plates.

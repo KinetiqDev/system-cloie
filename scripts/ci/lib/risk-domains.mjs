@@ -22,11 +22,20 @@
  *   without changing the classifier.
  */
 
+const IDENTITY_ACTION_PATHS = [
+  "src/lib/actions/faculty-actions.ts",
+  "src/lib/actions/faculty-approval-actions.ts",
+  "src/lib/actions/onboarding-actions.ts",
+  "src/lib/actions/alumni-actions.ts",
+  "src/lib/actions/industry-partner-actions.ts",
+  "src/lib/actions/external-entry-actions.ts",
+];
+
 // Domain → path prefixes. A changed file joins every matching domain.
 const DOMAIN_PREFIXES = {
   schema: ["prisma/", "supabase/", "src/lib/db/", "scripts/ci/apply-migrations.sh"],
   auth: ["src/features/auth/", "src/lib/supabase/", "src/proxy.ts"],
-  role: ["src/features/users/"],
+  role: ["src/features/users/", ...IDENTITY_ACTION_PATHS],
   response: ["src/features/responses/", "src/features/response-review/"],
   publication: ["src/features/evaluations/", "src/features/course-assignments/"],
   navigation: ["src/app/", "src/components/layout/"],
@@ -53,12 +62,12 @@ const CI_INFRASTRUCTURE_PREFIXES = [".github/workflows/", "scripts/ci/"];
 // template, and Auth-configuration changes select it alongside the auth
 // domain; CI verification machinery selects it through the fail-closed path.
 const AUTH_INTEGRATION_PREFIXES = [
+  ...IDENTITY_ACTION_PATHS,
   "src/features/auth/",
   "src/lib/supabase/",
   "src/app/api/auth/",
   "src/features/legal/",
   "src/features/users/services/resolve-profile-gate.ts",
-  "src/lib/actions/external-entry-actions.ts",
   "src/lib/schemas/external-entry.ts",
   "src/features/entry/",
   "supabase/config.toml",

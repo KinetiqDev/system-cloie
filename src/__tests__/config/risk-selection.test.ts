@@ -178,6 +178,19 @@ describe("risk-domain check selection (551)", () => {
     expect(selectChecks(["README.md"]).run_auth_integration).toBe(false);
   });
 
+  it.each([
+    "src/lib/actions/faculty-actions.ts",
+    "src/lib/actions/faculty-approval-actions.ts",
+    "src/lib/actions/onboarding-actions.ts",
+    "src/lib/actions/alumni-actions.ts",
+    "src/lib/actions/industry-partner-actions.ts",
+    "src/lib/actions/external-entry-actions.ts",
+  ])("selects database and real Auth checks for the direct identity writer %s", (file) => {
+    const selection = selectChecks([file]);
+    expect(selection.run_database).toBe(true);
+    expect(selection.run_auth_integration).toBe(true);
+  });
+
   it("selects everything when the caller forces the full matrix", () => {
     const selection = selectChecks(["README.md"], { all: true });
     expect(selection.run_build).toBe(true);

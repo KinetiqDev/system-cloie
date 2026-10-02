@@ -14,7 +14,7 @@ This is the repeatable evidence path for issue #193 and the authenticated perfor
 - Keep demo secrets, allowlists, OAuth credentials, database connection secrets, cookies, access tokens, refresh tokens, and private response data outside the repository and outside trace exports.
 - Disable the dedicated demo configuration or destroy the disposable environment after the evidence window.
 
-The application permits one reviewed test-only authentication mechanism for production builds: the signed demo session defined by ADR 0008. It is valid only in a dedicated isolated demo deployment and cannot be enabled on the primary public Production deployment.
+Production-mode builds permit signed demo sessions on a dedicated isolated demo deployment and signed CI test sessions against the verified disposable CI database. Neither mechanism may be enabled on the primary public Production deployment. CI journeys prove application behavior, not live authentication or deployment readiness.
 
 ## Disposable Environment Setup
 

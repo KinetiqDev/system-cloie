@@ -1800,6 +1800,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/entry/components/entry-field.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
     path: "src/features/entry/components/google-entry-button.tsx",
     disposition: "task",
     taskId: 23,

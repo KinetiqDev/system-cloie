@@ -151,7 +151,7 @@ pnpm supabase:start
 
 Restart the local stack after editing `supabase/config.toml`. To inspect captured mail, open the catcher interface on port `54324`.
 
-`pnpm test:auth-integration` starts the local stack only when needed, runs real signup, strict signup-purpose verification, code reuse rejection, duplicate signup, and password recovery against the catcher, then stops only a stack it started. The opt-in suite refuses non-loopback endpoints. CI selects this gate for credential, legal, Auth configuration, template, and verification-infrastructure changes. These checks do not certify SMTP, sending-domain authentication, Google linking, or institutional approval on a deployment target.
+`pnpm test:auth-integration` starts the local stack only when needed, runs real signup, strict signup-purpose verification, code reuse rejection, duplicate signup, and password recovery against the catcher, then stops only a stack it started. The opt-in suite refuses non-loopback endpoints. CI selects this gate for credential, legal, Auth configuration, template, and verification-infrastructure changes. Direct Faculty-request, approval, onboarding, external-entry, Alumni-profile, and Industry Partner-profile actions also select database and real Auth checks, because their authorization cannot rely on a page gate. These checks do not certify SMTP, sending-domain authentication, Google linking, or institutional approval on a deployment target.
 
 ## Verification
 
