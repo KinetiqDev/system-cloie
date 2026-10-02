@@ -2,18 +2,6 @@ import { AcademicSemester, AcademicTerm, StudentSection, YearLevel } from "@pris
 
 import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "./year-levels";
 
-// Re-export from centralized academic-period module for backward compatibility
-export {
-  ALLOWED_SEMESTER_TERM_PAIRS,
-  formatSchoolYearCode,
-  parseSchoolYearCode,
-  assertValidSemesterTerm,
-  isValidSemesterTerm,
-  getSemesterTermLabel,
-  getSemesterShortLabel,
-  getTermShortLabel,
-} from "./academic-period";
-
 export const SEMESTER_OPTIONS = [
   { label: "1st Semester", value: AcademicSemester.FIRST },
   { label: "2nd Semester", value: AcademicSemester.SECOND },

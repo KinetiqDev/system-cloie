@@ -1,11 +1,11 @@
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import {
   buildSubmittedResponseSections,
   type SubmittedResponseSection,
 } from "./get-student-submitted-response-review";
+import { mapSavedAnswerItems } from "./map-saved-answer-items";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -85,17 +85,10 @@ export async function getCentralDeploymentSubmittedReview(
 
   const deployment = response.assignment.central_deployment;
 
-  const answers: Record<string, string | number> = {};
-
-  for (const item of response.quant_items) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "quantitative", item.item_key)] =
-      item.rating_value;
-  }
-
-  for (const item of response.qual_items) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "qualitative", item.prompt_key)] =
-      item.text_content;
-  }
+  const answers = mapSavedAnswerItems({
+    qualitativeItems: response.qual_items,
+    quantitativeItems: response.quant_items,
+  });
 
   return {
     responseId: response.id,

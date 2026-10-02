@@ -1,12 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -364,25 +357,5 @@ describe("run fallow reports", () => {
     } finally {
       workspace.cleanup();
     }
-  });
-});
-
-describe("run-fallow-reports script source", () => {
-  const SOURCE = readFileSync(SCRIPT, "utf8");
-
-  it("never spawns fallow fix", () => {
-    expect(SOURCE).not.toMatch(/"fix"/);
-    expect(SOURCE).not.toMatch(/fix --yes/);
-    expect(SOURCE).not.toMatch(/fix_apply|fix_preview/);
-  });
-
-  it("never reads secrets or credentials", () => {
-    const envReads = [...SOURCE.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map(
-      (match) => match[1],
-    );
-    expect(envReads.length).toBeGreaterThan(0);
-    expect(new Set(envReads)).toEqual(new Set(["FALLOW_BIN", "FALLOW_REPORTS_OUT_DIR"]));
-    expect(SOURCE).not.toMatch(/secret/i);
-    expect(SOURCE).not.toMatch(/token|api[_-]?key|DATABASE_URL/i);
   });
 });

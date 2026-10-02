@@ -1,20 +1,10 @@
 // fallow-ignore-file code-duplication
-import {
-  EnrollmentSource,
-  InviteStatus,
-  Prisma,
-  SystemRole,
-  VerificationStatus,
-} from "@prisma/client";
+import { EnrollmentSource, Prisma, SystemRole, VerificationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {
   AddRoleToExistingUserInput,
   AssignRoleInput,
-  CreateExternalInviteDraftInput,
-  CreateFacultyAffiliationInput,
   CreateProgramHeadAssignmentInput,
-  UpdateIndustryPartnerProfileInput,
-  UpdateStudentAcademicContextInput,
 } from "../schemas/secretary-user";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -31,30 +21,6 @@ async function userHasRole(userId: string, role: SystemRole) {
   });
 
   return !!record;
-}
-
-async function ensureProgramMajorRelation(programId: string, majorId?: string) {
-  if (!majorId) {
-    return { success: true as const };
-  }
-
-  const major = await prisma.major.findUnique({
-    where: { id: majorId },
-    select: { id: true, program_id: true },
-  });
-
-  if (!major) {
-    return { success: false as const, error: "Selected major was not found." };
-  }
-
-  if (major.program_id !== programId) {
-    return {
-      success: false as const,
-      error: "Selected major does not belong to the selected program.",
-    };
-  }
-
-  return { success: true as const };
 }
 
 export async function toggleUserActive(id: string, is_active: boolean): Promise<ServiceResult> {
@@ -488,50 +454,6 @@ export async function removeRoleFromUser(userId: string, role: SystemRole): Prom
   return { success: true, data: undefined };
 }
 
-export async function upsertStudentAcademicContext(
-  input: UpdateStudentAcademicContextInput
-): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  const hasStudentRole = await userHasRole(input.user_id, SystemRole.STUDENT);
-
-  if (!hasStudentRole) {
-    return {
-      success: false,
-      error: "Assign the Student role before saving academic context.",
-    };
-  }
-
-  const programMajorCheck = await ensureProgramMajorRelation(input.program_id, input.major_id);
-
-  if (!programMajorCheck.success) {
-    return programMajorCheck;
-  }
-
-  // Phase 9: Only update static cohort fields - enrollment data is in StudentEnrollment
-  await prisma.studentAcademicProfile.upsert({
-    where: { user_id: input.user_id },
-    update: {
-      program_id: input.program_id,
-      major_id: input.major_id ?? null,
-    },
-    create: {
-      user_id: input.user_id,
-      program_id: input.program_id,
-      major_id: input.major_id ?? null,
-    },
-  });
-
-  return { success: true, data: undefined };
-}
-
 export async function deleteStudentAcademicContext(userId: string): Promise<ServiceResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
@@ -556,81 +478,6 @@ export async function deleteStudentAcademicContext(userId: string): Promise<Serv
 
   await prisma.studentAcademicProfile.delete({
     where: { user_id: userId },
-  });
-
-  return { success: true, data: undefined };
-}
-
-export async function createFacultyProgramAffiliation(
-  input: CreateFacultyAffiliationInput
-): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-  if (input.faculty_id === session.userId) {
-    return { success: false, error: "Cannot modify own account." };
-  }
-
-  const hasFacultyRole = await userHasRole(input.faculty_id, SystemRole.FACULTY);
-
-  if (!hasFacultyRole) {
-    return {
-      success: false,
-      error: "Assign the Faculty role before adding a faculty-program affiliation.",
-    };
-  }
-
-  try {
-    await prisma.facultyProgramAffiliation.upsert({
-      where: {
-        faculty_id_program_id: {
-          faculty_id: input.faculty_id,
-          program_id: input.program_id,
-        },
-      },
-      update: {
-        is_active: true,
-      },
-      create: {
-        faculty_id: input.faculty_id,
-        program_id: input.program_id,
-        is_active: true,
-      },
-    });
-
-    return { success: true, data: undefined };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: "This faculty-program affiliation already exists.",
-      };
-    }
-
-    throw error;
-  }
-}
-
-export async function deactivateFacultyProgramAffiliation(id: string): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  await prisma.facultyProgramAffiliation.update({
-    where: { id },
-    data: {
-      is_active: false,
-    },
   });
 
   return { success: true, data: undefined };
@@ -841,45 +688,6 @@ export async function applyProgramHeadAssignmentSet(
   }
 }
 
-export async function upsertIndustryPartnerProfile(
-  input: UpdateIndustryPartnerProfileInput
-): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  const hasIndustryRole = await userHasRole(input.user_id, SystemRole.INDUSTRY_PARTNER);
-
-  if (!hasIndustryRole) {
-    return {
-      success: false,
-      error: "Assign the Industry Partner role before saving a partner profile.",
-    };
-  }
-
-  await prisma.industryPartnerProfile.upsert({
-    where: { user_id: input.user_id },
-    update: {
-      company_name: input.company_name,
-      position: input.position ?? null,
-      program_id: input.program_id ?? null,
-    },
-    create: {
-      user_id: input.user_id,
-      company_name: input.company_name,
-      position: input.position ?? null,
-      program_id: input.program_id ?? null,
-    },
-  });
-
-  return { success: true, data: undefined };
-}
-
 export async function deleteIndustryPartnerProfile(userId: string): Promise<ServiceResult> {
   const session = await resolveAuthSession();
   if (!session || !session.activeRole) {
@@ -904,83 +712,6 @@ export async function deleteIndustryPartnerProfile(userId: string): Promise<Serv
 
   await prisma.industryPartnerProfile.delete({
     where: { user_id: userId },
-  });
-
-  return { success: true, data: undefined };
-}
-
-export async function createExternalInviteDraft(
-  input: CreateExternalInviteDraftInput
-): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  try {
-    const invite = await prisma.externalStakeholderInvite.create({
-      data: {
-        email: input.email,
-        role: input.role,
-        program_id: input.program_id ?? null,
-        invitee_name: input.invitee_name ?? null,
-        company_name: input.company_name ?? null,
-        note: input.note ?? null,
-        status: InviteStatus.DRAFT,
-      },
-    });
-
-    return { success: true, data: { id: invite.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: "An invite draft already exists for this email, role, and program.",
-      };
-    }
-
-    throw error;
-  }
-}
-
-export async function updateExternalInviteStatus(
-  id: string,
-  status: InviteStatus
-): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  const invite = await prisma.externalStakeholderInvite.findUnique({
-    where: { id },
-    select: { status: true },
-  });
-
-  if (!invite) {
-    return { success: false, error: "Invite draft not found." };
-  }
-
-  if (invite.status === InviteStatus.ACCEPTED && status !== InviteStatus.ACCEPTED) {
-    return {
-      success: false,
-      error: "Accepted invites cannot be reverted from the admin draft flow.",
-    };
-  }
-
-  await prisma.externalStakeholderInvite.update({
-    where: { id },
-    data: {
-      status,
-    },
   });
 
   return { success: true, data: undefined };

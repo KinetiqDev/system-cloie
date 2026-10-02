@@ -4,8 +4,8 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import type { StudentEvaluationSection } from "@/features/responses/types";
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
 import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
-import { buildQualitativeUpserts, buildQuantitativeUpserts } from "./build-draft-upserts";
 import { mapTemplateStructureToSections } from "./map-template-structure";
+import { saveResponseDraft } from "./save-response-draft";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -102,73 +102,29 @@ export async function saveCentralDeploymentDraft({
     };
   }
 
-  let response = await prisma.response.findUnique({
-    where: {
+  const result = await saveResponseDraft({
+    answers,
+    client: prisma,
+    createData: {
       assignment_id: assignment.id,
+      deployment_id: assignment.central_deployment_id!,
+      deployment_type: DeploymentType.CENTRAL,
+      respondent_id: authSession.userId,
+      status: ResponseStatus.IN_PROGRESS,
     },
+    section,
   });
 
-  if (response?.status === ResponseStatus.SUBMITTED) {
+  if (result.status === "ALREADY_SUBMITTED") {
     return {
       error: "This evaluation has already been submitted.",
       success: false,
     };
   }
 
-  if (!response) {
-    response = await prisma.response.create({
-      data: {
-        assignment_id: assignment.id,
-        deployment_id: assignment.central_deployment_id!,
-        deployment_type: DeploymentType.CENTRAL,
-        respondent_id: authSession.userId,
-        status: ResponseStatus.IN_PROGRESS,
-      },
-    });
-  }
-
-  const updatedAt = new Date().toISOString();
-  const quantitativeUpserts = buildQuantitativeUpserts({
-    answers,
-    responseId: response.id,
-    section,
-    updatedAt,
-  });
-  const qualitativeUpserts = buildQualitativeUpserts({
-    answers,
-    responseId: response.id,
-    section,
-    updatedAt,
-  });
-
-  await prisma.quantitativeResponseItem.deleteMany({
-    where: {
-      response_id: response.id,
-      section_key: section.id,
-    },
-  });
-  await prisma.qualitativeResponseItem.deleteMany({
-    where: {
-      response_id: response.id,
-      section_key: section.id,
-    },
-  });
-
-  if (quantitativeUpserts.length > 0) {
-    await prisma.quantitativeResponseItem.createMany({
-      data: quantitativeUpserts,
-    });
-  }
-
-  if (qualitativeUpserts.length > 0) {
-    await prisma.qualitativeResponseItem.createMany({
-      data: qualitativeUpserts,
-    });
-  }
-
   return {
-    responseId: response.id,
-    savedAt: updatedAt,
+    responseId: result.responseId,
+    savedAt: result.savedAt,
     success: true,
   };
 }

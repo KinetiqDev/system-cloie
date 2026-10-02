@@ -2853,12 +2853,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/course-row-assignments-sheet.tsx",
-    disposition: "task",
-    taskId: 15,
-    category: "feature_component",
-  },
-  {
     path: "src/features/course-assignments/components/edit-course-assignment-dialog.tsx",
     disposition: "task",
     taskId: 15,
@@ -2943,13 +2937,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/faculty-published-filter-bar.tsx",
-    disposition: "task",
-    taskId: 22,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/evaluations/components/program-head-published-filter-bar.tsx",
+    path: "src/features/evaluations/components/published-evaluation-filter-bar.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",

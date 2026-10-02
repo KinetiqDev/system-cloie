@@ -19,8 +19,6 @@ import {
   preflightCourseAssignmentDeletion,
   bulkCreateCourseAssignments,
 } from "@/features/course-assignments/services/manage-course-assignments";
-import { listCourseAssignmentsForFaculty } from "@/features/course-assignments/services/list-course-assignments-for-faculty";
-import { listCourseAssignments } from "@/features/course-assignments/services/list-course-assignments";
 import { searchFacultyPool } from "@/features/course-assignments/services/search-faculty-pool";
 import type {
   CreateCourseAssignmentInput,
@@ -31,8 +29,6 @@ import type {
   BulkCreateCourseAssignmentsInput,
 } from "@/features/course-assignments/schemas/course-assignment";
 import type {
-  ListCourseAssignmentsFilter,
-  ListOptions,
   CourseAssignmentDeletionPreflight,
   CourseAssignmentResult,
 } from "@/features/course-assignments/types";
@@ -265,24 +261,6 @@ export async function bulkCreateCourseAssignmentsAction(input: BulkCreateCourseA
   }
 
   return result;
-}
-
-/**
- * Load assignments for the explicitly opened course-assignment sheet.
- * The role-owned list routes read their initial page in Server Components.
- */
-export async function loadCourseAssignmentsForSheetAction(
-  filter: ListCourseAssignmentsFilter,
-  options?: ListOptions
-) {
-  return listCourseAssignments(filter, options);
-}
-
-/**
- * List course assignments for Faculty.
- */
-export async function listCourseAssignmentsForFacultyAction(facultyId?: string) {
-  return listCourseAssignmentsForFaculty(facultyId);
 }
 
 /**

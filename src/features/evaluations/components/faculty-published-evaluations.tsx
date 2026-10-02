@@ -31,7 +31,7 @@ import {
   filterPublishedEvaluations,
   hasActivePublishedFilters,
 } from "./filter-published-evaluations";
-import { FacultyPublishedFilterBar } from "./faculty-published-filter-bar";
+import { PublishedEvaluationFilterBar } from "./published-evaluation-filter-bar";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
@@ -199,9 +199,10 @@ export function FacultyPublishedEvaluations({
   return (
     <div className="space-y-4">
       {evaluations.length > 0 && (
-        <FacultyPublishedFilterBar
+        <PublishedEvaluationFilterBar
           filters={filters}
           periods={periodOptions}
+          record="evaluation"
           courses={courseOptions}
           onFiltersChange={handleFiltersChange}
         />

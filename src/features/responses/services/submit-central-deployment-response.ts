@@ -1,11 +1,13 @@
 import { DeploymentType, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { parseStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
 import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
 import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
-import { lockResponseSubmission } from "./lock-response-submission";
+import {
+  ALREADY_SUBMITTED_ERROR,
+  finalizeResponseSubmission,
+} from "./finalize-response-submission";
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -83,114 +85,20 @@ export async function submitCentralDeploymentResponse({
   });
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      await lockResponseSubmission(tx, assignment.id);
-      let response = await tx.response.findUnique({
-        where: {
+    const result = await prisma.$transaction((tx) =>
+      finalizeResponseSubmission({
+        answers,
+        assignmentId: assignment.id,
+        createData: {
           assignment_id: assignment.id,
+          deployment_id: assignment.central_deployment_id!,
+          deployment_type: DeploymentType.CENTRAL,
+          respondent_id: authSession.userId,
+          status: ResponseStatus.IN_PROGRESS,
         },
-      });
-
-      if (response?.status === ResponseStatus.SUBMITTED) {
-        throw new Error("ALREADY_SUBMITTED");
-      }
-
-      if (!response) {
-        response = await tx.response.create({
-          data: {
-            assignment_id: assignment.id,
-            deployment_id: assignment.central_deployment_id!,
-            deployment_type: DeploymentType.CENTRAL,
-            respondent_id: authSession.userId,
-            status: ResponseStatus.IN_PROGRESS,
-          },
-        });
-      }
-
-      const quantitativeItems = Object.entries(answers)
-        .map(([answerKey, value]) => {
-          const parsed = parseStudentEvaluationAnswerKey(answerKey);
-
-          if (!parsed || parsed.kind !== "quantitative" || typeof value !== "number") {
-            return null;
-          }
-
-          return {
-            item_key: parsed.itemKey,
-            rating_value: value,
-            response_id: response.id,
-            section_key: parsed.sectionKey,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is {
-            item_key: string;
-            rating_value: number;
-            response_id: string;
-            section_key: string;
-          } => item !== null
-        );
-
-      const qualitativeItems = Object.entries(answers)
-        .map(([answerKey, value]) => {
-          const parsed = parseStudentEvaluationAnswerKey(answerKey);
-
-          if (!parsed || parsed.kind !== "qualitative" || typeof value !== "string") {
-            return null;
-          }
-
-          return {
-            prompt_key: parsed.itemKey,
-            response_id: response.id,
-            section_key: parsed.sectionKey,
-            text_content: value,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is {
-            prompt_key: string;
-            response_id: string;
-            section_key: string;
-            text_content: string;
-          } => item !== null
-        );
-
-      await tx.quantitativeResponseItem.deleteMany({
-        where: { response_id: response.id },
-      });
-      await tx.qualitativeResponseItem.deleteMany({
-        where: { response_id: response.id },
-      });
-
-      if (quantitativeItems.length > 0) {
-        await tx.quantitativeResponseItem.createMany({ data: quantitativeItems });
-      }
-
-      if (qualitativeItems.length > 0) {
-        await tx.qualitativeResponseItem.createMany({ data: qualitativeItems });
-      }
-
-      const submittedAt = new Date().toISOString();
-
-      await tx.response.update({
-        data: {
-          status: ResponseStatus.SUBMITTED,
-          submitted_at: new Date(submittedAt),
-        },
-        where: {
-          id: response.id,
-        },
-      });
-
-      return {
-        responseId: response.id,
-        submittedAt,
-      };
-    });
+        tx,
+      })
+    );
 
     return {
       responseId: result.responseId,
@@ -199,7 +107,7 @@ export async function submitCentralDeploymentResponse({
       success: true,
     };
   } catch (error) {
-    if (error instanceof Error && error.message === "ALREADY_SUBMITTED") {
+    if (error instanceof Error && error.message === ALREADY_SUBMITTED_ERROR) {
       return {
         error: "This evaluation has already been submitted.",
         success: false,

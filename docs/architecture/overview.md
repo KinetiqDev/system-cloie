@@ -38,6 +38,12 @@ Two couplings are approved direct composition rather than interfaces, and are re
 
 The table lists three consumer edges across two owning modules. A seam qualifies by owning a shared contract, not by its consumer count. The roster interface serves two consumers, because roster membership is the single authoritative eligibility source for both. The aggregator interface serves one, because it owns the canonical CILO, question, participation, and scale calculation: a review surface that re-derived that arithmetic could disagree with the analytics it reviews. What is never promoted is a single caller's private query, which would make an internal detail public before anything needs it.
 
+Within Responses, Course-bound and Central answering retain separate authorization and eligibility checks, then share `save-response-draft` for section-scoped replacement and `finalize-response-submission` for locked, transactional finalization. Saved-answer readers reuse `map-saved-answer-items`. These internal modules do not authorize callers or change the response lifecycle.
+
+Published lists use one `PublishedEvaluationFilterBar` for debounced search, period selection, clearing, and mobile filter disclosure. Faculty narrows by Course; Program Heads narrow by target stakeholder. The calling list retains ownership of URL navigation and authorized data.
+
+User administration keeps the live creation, role-grant, protected-edit, and role-revocation paths. Uncalled profile/invitation mutation helpers and the obsolete Course Assignment row sheet are removed; invitation records, assignment-table workflows, and database contracts are unchanged.
+
 ## Server-first rendering
 
 - Server Components are the default; `"use client"` boundaries are narrow and limited to state, hooks, browser APIs, event handlers, charts, drag-and-drop, and react-hook-form (rule owned by [AGENTS.md → Architecture](../../AGENTS.md)).

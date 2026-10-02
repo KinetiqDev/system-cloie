@@ -50,15 +50,3 @@ export const createMajorSchema = z.object({
 });
 
 export type CreateMajorInput = z.infer<typeof createMajorSchema>;
-
-export const updateMajorSchema = z.object({
-  id: z.string().uuid(),
-  name: z
-    .string()
-    .min(2, "Major name must be at least 2 characters")
-    .max(200, "Major name must be at most 200 characters")
-    .transform((val) => val.trim()),
-  is_active: z.boolean().optional(),
-});
-
-export type UpdateMajorInput = z.infer<typeof updateMajorSchema>;

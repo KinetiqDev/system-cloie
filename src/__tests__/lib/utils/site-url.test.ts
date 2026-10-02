@@ -1,24 +1,12 @@
 /**
  * @vitest-environment node
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getSiteUrl, getSiteUrlFromRequest } from "@/lib/utils/site-url";
 
 describe("getSiteUrl (server / no window)", () => {
-  let originalSiteUrl: string | undefined;
-
-  beforeEach(() => {
-    originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.NEXT_PUBLIC_SITE_URL;
-  });
-
-  afterEach(() => {
-    if (originalSiteUrl === undefined) {
-      delete process.env.NEXT_PUBLIC_SITE_URL;
-    } else {
-      process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
-    }
-  });
+  beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SITE_URL", undefined));
+  afterEach(() => vi.unstubAllEnvs());
 
   it("returns NEXT_PUBLIC_SITE_URL when set, stripping any trailing slash", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://cloie.example.com/";
@@ -35,20 +23,8 @@ describe("getSiteUrl (server / no window)", () => {
 });
 
 describe("getSiteUrlFromRequest (server)", () => {
-  let originalSiteUrl: string | undefined;
-
-  beforeEach(() => {
-    originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.NEXT_PUBLIC_SITE_URL;
-  });
-
-  afterEach(() => {
-    if (originalSiteUrl === undefined) {
-      delete process.env.NEXT_PUBLIC_SITE_URL;
-    } else {
-      process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
-    }
-  });
+  beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SITE_URL", undefined));
+  afterEach(() => vi.unstubAllEnvs());
 
   it("prefers NEXT_PUBLIC_SITE_URL when set", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://cloie.example.com/";
@@ -60,7 +36,10 @@ describe("getSiteUrlFromRequest (server)", () => {
 
   it("derives the origin from the Host header and x-forwarded-proto behind a proxy", () => {
     const request = new Request("https://localhost:3000/api/auth/callback", {
-      headers: { host: "dom-pubmed-herbal-transparent.trycloudflare.com", "x-forwarded-proto": "https" },
+      headers: {
+        host: "dom-pubmed-herbal-transparent.trycloudflare.com",
+        "x-forwarded-proto": "https",
+      },
     });
     expect(getSiteUrlFromRequest(request)).toBe(
       "https://dom-pubmed-herbal-transparent.trycloudflare.com"
