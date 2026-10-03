@@ -7,7 +7,6 @@ const { createSchoolYearActionMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/actions/secretary-school-year-actions", () => ({
   createSchoolYearAction: createSchoolYearActionMock,
-  setActiveTermInstanceAction: vi.fn(),
 }));
 
 import { SchoolYearForm } from "@/features/academic-calendar/components/school-year-form";
@@ -31,9 +30,7 @@ describe("SchoolYearForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/please enter a valid start year/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/please enter a valid start year/i)).toBeInTheDocument();
     });
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(input).toHaveAttribute("aria-describedby", "start-year-error");
@@ -73,7 +70,10 @@ describe("SchoolYearForm", () => {
       expect(screen.getByText("Start year already exists")).toBeInTheDocument();
     });
     expect(screen.getByLabelText("Start Year")).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByLabelText("Start Year")).toHaveAttribute("aria-describedby", "start-year-error");
+    expect(screen.getByLabelText("Start Year")).toHaveAttribute(
+      "aria-describedby",
+      "start-year-error"
+    );
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 

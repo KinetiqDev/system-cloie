@@ -25,7 +25,7 @@ The academic period used to scope course assignments: a regular-semester academi
 _Avoid_: Summer term, calendar period
 
 **Active academic period**:
-Exactly the AcademicTermInstance whose status is ACTIVE — at most one exists at any time (partial unique index `one_active_academic_period`). Activation additionally requires the School Year to be active, with `active_semester` matching the period's semester. Legacy "active term" phrasing (`setActiveTermInstance`, `getActiveTermId`, the "Set Active Term" dialog) denotes the same concept.
+Exactly the AcademicTermInstance whose status is ACTIVE — at most one exists at any time (partial unique index `one_active_academic_period`). Activation additionally requires the School Year to be active, with `active_semester` matching the period's semester, and runs through `transitionPeriodStatus`. Legacy "active term" phrasing (`getActiveTermId`, the "Set Active Term" dialog) denotes the same concept.
 _Avoid_: Upcoming period, historical period
 
 **Canonical term (structural term)**:

@@ -10,14 +10,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/actions/secretary-school-year-actions", () => ({
   createSchoolYearAction: vi.fn(),
-  updateSchoolYearAction: vi.fn(),
   archiveSchoolYearAction: vi.fn(),
   activateSchoolYearAction: vi.fn(),
   deactivateSchoolYearAction: vi.fn(),
   setActiveSemesterAction: vi.fn(),
-  updateTermInstanceAction: vi.fn(),
-  deleteTermInstanceAction: vi.fn(),
-  setActiveTermInstanceAction: vi.fn(),
   transitionPeriodStatusAction: vi.fn(),
 }));
 
@@ -62,11 +58,13 @@ const archivedYear: SchoolYearWithTerms = {
   archivedBy: { id: "user-1", name: "Maria Santos" },
 };
 
-function renderPage(overrides: {
-  initialActive?: SchoolYearWithTerms[];
-  initialArchived?: SchoolYearWithTerms[];
-  initialTab?: "active" | "archived";
-} = {}) {
+function renderPage(
+  overrides: {
+    initialActive?: SchoolYearWithTerms[];
+    initialArchived?: SchoolYearWithTerms[];
+    initialTab?: "active" | "archived";
+  } = {}
+) {
   return render(
     <SchoolYearsClientPage
       initialActive={overrides.initialActive ?? [activeYear]}

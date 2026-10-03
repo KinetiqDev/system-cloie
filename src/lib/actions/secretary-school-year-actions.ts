@@ -7,7 +7,6 @@ import { resolveAuthSession } from "@/features/auth/services/resolve-auth-sessio
 import { ROLES } from "@/lib/constants/roles";
 import {
   createSchoolYear,
-  updateSchoolYear,
   archiveSchoolYear,
   activateSchoolYear,
   deactivateSchoolYear,
@@ -16,18 +15,13 @@ import {
 import {
   updateTermInstance,
   deleteTermInstance,
-  setActiveTermInstance,
 } from "@/features/academic-calendar/services/manage-term-instances";
 import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import {
   createSchoolYearSchema,
-  updateSchoolYearSchema,
   setActiveSemesterSchema,
 } from "@/features/academic-calendar/schemas/school-year";
-import {
-  updateTermInstanceSchema,
-  setActiveTermSchema,
-} from "@/features/academic-calendar/schemas/term-instance";
+import { updateTermInstanceSchema } from "@/features/academic-calendar/schemas/term-instance";
 import type { ServiceResult } from "@/lib/utils/service-result";
 import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-periods";
 
@@ -35,7 +29,7 @@ import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-pe
 // Authorization Helper
 // ============================================================================
 
-export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
+async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
   const session = await resolveAuthSession();
   if (!session || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
@@ -72,38 +66,6 @@ export async function createSchoolYearAction(
 
   if (result.success) {
     revalidatePath("/secretary/school-years");
-    revalidateAcademicPeriodReadModelRoutes();
-  }
-
-  return result;
-}
-
-export async function updateSchoolYearAction(
-  formData: FormData
-): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  const id = formData.get("id");
-  const startDateStr = formData.get("startDate");
-  const endDateStr = formData.get("endDate");
-
-  const parsed = updateSchoolYearSchema.safeParse({
-    id,
-    startDate: startDateStr ? new Date(startDateStr as string) : undefined,
-    endDate: endDateStr ? new Date(endDateStr as string) : undefined,
-  });
-
-  if (!parsed.success) {
-    const firstError = parsed.error.issues[0];
-    return { success: false, error: firstError?.message ?? "Invalid input" };
-  }
-
-  const result = await updateSchoolYear(parsed.data);
-
-  if (result.success) {
-    revalidatePath("/secretary/school-years");
-    revalidatePath(`/secretary/school-years/${result.data.id}`);
     revalidateAcademicPeriodReadModelRoutes();
   }
 
@@ -260,9 +222,7 @@ export async function updateTermInstanceAction(
   return result;
 }
 
-export async function deleteTermInstanceAction(
-  formData: FormData
-): Promise<ServiceResult> {
+export async function deleteTermInstanceAction(formData: FormData): Promise<ServiceResult> {
   const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
@@ -275,37 +235,6 @@ export async function deleteTermInstanceAction(
 
   if (result.success) {
     revalidatePath("/secretary/school-years");
-    revalidateAcademicPeriodReadModelRoutes();
-  }
-
-  return result;
-}
-
-export async function setActiveTermInstanceAction(
-  formData: FormData
-): Promise<ServiceResult<{ id: string; previousActiveId: string | null; rolloverSuggested: string | null }>> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  const termInstanceId = formData.get("termInstanceId");
-
-  const parsed = setActiveTermSchema.safeParse({
-    termInstanceId,
-  });
-
-  if (!parsed.success) {
-    const firstError = parsed.error.issues[0];
-    return { success: false, error: firstError?.message ?? "Invalid input" };
-  }
-
-  const result = await setActiveTermInstance(parsed.data.termInstanceId);
-
-  if (result.success) {
-    revalidatePath("/secretary/school-years");
-    // Also revalidate any pages that show the active term badge
-    revalidatePath("/secretary/dashboard");
-    revalidatePath("/program-head/dashboard");
-    revalidatePath("/faculty/dashboard");
     revalidateAcademicPeriodReadModelRoutes();
   }
 

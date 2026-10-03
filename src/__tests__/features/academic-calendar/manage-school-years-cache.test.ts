@@ -29,7 +29,6 @@ import { prisma } from "@/lib/db/prisma";
 import {
   archiveSchoolYear,
   createSchoolYear,
-  updateSchoolYear,
 } from "@/features/academic-calendar/services/manage-school-years";
 
 const secretary = createAuthSessionSnapshot({
@@ -42,35 +41,19 @@ describe("Academic Calendar School Year writers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretary);
-    vi.mocked(prisma.$transaction).mockImplementation((callback) =>
-      callback(prisma as never)
-    );
+    vi.mocked(prisma.$transaction).mockImplementation((callback) => callback(prisma as never));
   });
 
   it("invalidates shared period data after creating a School Year", async () => {
-    vi.mocked(prisma.schoolYear.create).mockResolvedValue({ id: "sy-1", code: "2026-2027" } as never);
+    vi.mocked(prisma.schoolYear.create).mockResolvedValue({
+      id: "sy-1",
+      code: "2026-2027",
+    } as never);
 
     await expect(createSchoolYear({ startYear: 2026 })).resolves.toEqual({
       success: true,
       data: { id: "sy-1", code: "2026-2027" },
     });
-    expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
-  });
-
-  it("invalidates shared period data after updating a School Year", async () => {
-    vi.mocked(prisma.schoolYear.findUnique).mockResolvedValue({
-      id: "sy-1",
-      is_archived: false,
-    } as never);
-    vi.mocked(prisma.schoolYear.update).mockResolvedValue({ id: "sy-1" } as never);
-
-    await expect(
-      updateSchoolYear({
-        id: "sy-1",
-        startDate: new Date("2026-08-01"),
-        endDate: new Date("2027-05-31"),
-      })
-    ).resolves.toEqual({ success: true, data: { id: "sy-1" } });
     expect(invalidateAcademicPeriodReadModelTagsMock).toHaveBeenCalledWith();
   });
 

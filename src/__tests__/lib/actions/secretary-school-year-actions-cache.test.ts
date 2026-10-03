@@ -4,28 +4,24 @@ const {
   resolveAuthSessionMock,
   revalidatePathMock,
   createSchoolYearMock,
-  updateSchoolYearMock,
   archiveSchoolYearMock,
   activateSchoolYearMock,
   deactivateSchoolYearMock,
   setActiveSemesterMock,
   updateTermInstanceMock,
   deleteTermInstanceMock,
-  setActiveTermInstanceMock,
   transitionPeriodStatusMock,
   revalidateAcademicPeriodReadModelRoutesMock,
 } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   createSchoolYearMock: vi.fn(),
-  updateSchoolYearMock: vi.fn(),
   archiveSchoolYearMock: vi.fn(),
   activateSchoolYearMock: vi.fn(),
   deactivateSchoolYearMock: vi.fn(),
-  setActiveSemesterMock: vi.fn(),
   updateTermInstanceMock: vi.fn(),
   deleteTermInstanceMock: vi.fn(),
-  setActiveTermInstanceMock: vi.fn(),
+  setActiveSemesterMock: vi.fn(),
   transitionPeriodStatusMock: vi.fn(),
   revalidateAcademicPeriodReadModelRoutesMock: vi.fn(),
 }));
@@ -36,7 +32,6 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 }));
 vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
   createSchoolYear: createSchoolYearMock,
-  updateSchoolYear: updateSchoolYearMock,
   archiveSchoolYear: archiveSchoolYearMock,
   activateSchoolYear: activateSchoolYearMock,
   deactivateSchoolYear: deactivateSchoolYearMock,
@@ -45,7 +40,6 @@ vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
 vi.mock("@/features/academic-calendar/services/manage-term-instances", () => ({
   updateTermInstance: updateTermInstanceMock,
   deleteTermInstance: deleteTermInstanceMock,
-  setActiveTermInstance: setActiveTermInstanceMock,
 }));
 vi.mock("@/features/academic-calendar/services/manage-academic-period-lifecycle", () => ({
   transitionPeriodStatus: transitionPeriodStatusMock,
@@ -61,9 +55,7 @@ import {
   deactivateSchoolYearAction,
   deleteTermInstanceAction,
   setActiveSemesterAction,
-  setActiveTermInstanceAction,
   transitionPeriodStatusAction,
-  updateSchoolYearAction,
   updateTermInstanceAction,
 } from "@/lib/actions/secretary-school-year-actions";
 
@@ -84,34 +76,40 @@ describe("Secretary academic-period actions", () => {
   });
 
   it.each([
-    ["create school year", createSchoolYearAction, createSchoolYearMock, form({ startYear: "2026" })],
     [
-      "update school year",
-      updateSchoolYearAction,
-      updateSchoolYearMock,
-      form({ id: SCHOOL_YEAR_ID, startDate: "2026-08-01", endDate: "2027-05-31" }),
+      "create school year",
+      createSchoolYearAction,
+      createSchoolYearMock,
+      form({ startYear: "2026" }),
     ],
-    ["archive school year", archiveSchoolYearAction, archiveSchoolYearMock, form({ id: "school-year-1" })],
+    [
+      "archive school year",
+      archiveSchoolYearAction,
+      archiveSchoolYearMock,
+      form({ id: "school-year-1" }),
+    ],
     [
       "update term instance",
       updateTermInstanceAction,
       updateTermInstanceMock,
       form({ id: PERIOD_ID, startDate: "2026-08-01", endDate: "2026-12-31" }),
     ],
-    ["delete term instance", deleteTermInstanceAction, deleteTermInstanceMock, form({ id: PERIOD_ID })],
     [
-      "activate term instance",
-      setActiveTermInstanceAction,
-      setActiveTermInstanceMock,
-      form({ termInstanceId: PERIOD_ID }),
+      "delete term instance",
+      deleteTermInstanceAction,
+      deleteTermInstanceMock,
+      form({ id: PERIOD_ID }),
     ],
-  ])("revalidates the period routes after a successful %s mutation", async (_name, action, service, data) => {
-    service.mockResolvedValue({ success: true, data: { id: "period-1" } });
+  ])(
+    "revalidates the period routes after a successful %s mutation",
+    async (_name, action, service, data) => {
+      service.mockResolvedValue({ success: true, data: { id: "period-1" } });
 
-    await action(data);
+      await action(data);
 
-    expect(revalidateAcademicPeriodReadModelRoutesMock).toHaveBeenCalledTimes(1);
-  });
+      expect(revalidateAcademicPeriodReadModelRoutesMock).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it("does not revalidate period routes when the service rejects a mutation", async () => {
     createSchoolYearMock.mockResolvedValue({ success: false, error: "invalid" });

@@ -11,10 +11,7 @@ import {
   canDeactivateSchoolYear,
   canSetActiveSemester,
 } from "../policies";
-import type {
-  CreateSchoolYearInput,
-  UpdateSchoolYearInput,
-} from "../schemas/school-year";
+import type { CreateSchoolYearInput } from "../schemas/school-year";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
@@ -123,9 +120,7 @@ export async function backfillCanonicalTermInstances(): Promise<
   const backfilled: { schoolYearId: string; created: number }[] = [];
 
   for (const schoolYear of schoolYears) {
-    const existing = new Set(
-      schoolYear.term_instances.map((t) => `${t.semester}:${t.term ?? ""}`)
-    );
+    const existing = new Set(schoolYear.term_instances.map((t) => `${t.semester}:${t.term ?? ""}`));
     const missing = CANONICAL_TERMS.filter(
       (canonical) => !existing.has(`${canonical.semester}:${canonical.term ?? ""}`)
     );
@@ -149,48 +144,12 @@ export async function backfillCanonicalTermInstances(): Promise<
 }
 
 /**
- * Update an existing School Year.
- */
-export async function updateSchoolYear(
-  input: UpdateSchoolYearInput
-): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifyAdminAccess();
-  if (!auth.success) return auth;
-
-  const existing = await prisma.schoolYear.findUnique({
-    where: { id: input.id },
-    select: { id: true, is_archived: true },
-  });
-
-  if (!existing) {
-    return { success: false, error: "School year not found" };
-  }
-
-  if (existing.is_archived) {
-    return { success: false, error: "Cannot modify an archived school year" };
-  }
-
-  const updated = await prisma.schoolYear.update({
-    where: { id: input.id },
-    data: {
-      start_date: input.startDate ?? null,
-      end_date: input.endDate ?? null,
-    },
-  });
-
-  invalidateAcademicPeriodReadModelTags();
-  return { success: true, data: { id: updated.id } };
-}
-
-/**
  * Archive a School Year.
  * Rejects the active School Year and any School Year containing the active
  * period. All reads, checks, and the write run in one Serializable transaction
  * so a concurrent activation cannot leave an archived School Year active.
  */
-export async function archiveSchoolYear(
-  id: string
-): Promise<ServiceResult<{ id: string }>> {
+export async function archiveSchoolYear(id: string): Promise<ServiceResult<{ id: string }>> {
   const auth = await verifyAdminAccess();
   if (!auth.success) return auth;
 
@@ -494,8 +453,7 @@ export async function setActiveSemester(
         if (conflictingActivePeriod) {
           return {
             success: false,
-            error:
-              "Cannot change the active semester while a period in another semester is active",
+            error: "Cannot change the active semester while a period in another semester is active",
           };
         }
 
