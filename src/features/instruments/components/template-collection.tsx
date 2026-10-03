@@ -147,9 +147,7 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
       {filledSections.map((section) => (
         <section key={section.heading ?? "templates"} className="space-y-4">
           {section.heading && (
-            <h3 className="text-label-sm text-muted-foreground tracking-wider uppercase">
-              {section.heading}
-            </h3>
+            <h2 className="text-heading-lg text-foreground text-pretty">{section.heading}</h2>
           )}
           {view === "card" ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

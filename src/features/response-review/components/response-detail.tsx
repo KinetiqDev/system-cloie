@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ type ResponseDetailProps = {
   analyticsHref: string;
   /** Selected-Program id for outcome deep links (§27.6 reverse trace). */
   programId: string;
+  /** Trail rendered directly below the page title (§12). */
+  breadcrumbs?: ReactNode;
 };
 
 export function ResponseDetail({
@@ -27,6 +29,7 @@ export function ResponseDetail({
   evaluationHref,
   analyticsHref,
   programId,
+  breadcrumbs,
 }: ResponseDetailProps) {
   const { respondent, evaluation } = response;
 
@@ -52,7 +55,8 @@ export function ResponseDetail({
           <Badge variant="outline">Submitted response</Badge>
           <Badge variant="secondary">Identified review</Badge>
         </div>
-        <h1 className="text-heading-lg text-balance">{respondent.name}</h1>
+        <h1 className="text-heading-xl text-balance">{respondent.name}</h1>
+        {breadcrumbs ? <div className="pt-1">{breadcrumbs}</div> : null}
         <p className="text-body-md text-text-secondary text-pretty">
           {respondentContextLabel(respondent) ?? "No additional respondent context"}
         </p>

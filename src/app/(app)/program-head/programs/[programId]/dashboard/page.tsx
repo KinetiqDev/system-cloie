@@ -1,4 +1,3 @@
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { BarChart3, CalendarDays, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
 import Link from "next/link";
@@ -75,13 +74,15 @@ export default async function SelectedProgramDashboardPage({
   ];
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <header className="border-border flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
-          <h1 className="text-heading-lg text-balance">{dashboard.programCode} dashboard</h1>
-          <p className="text-body-md text-foreground max-w-3xl font-semibold text-pretty">
+          <h1 className="text-heading-xl text-balance">Dashboard</h1>
+          <Badge
+            variant="secondary"
+            className="text-body-sm h-auto max-w-full self-start px-3 py-1 text-pretty whitespace-normal"
+          >
             {dashboard.programLabel}
-          </p>
+          </Badge>
           <div className="text-text-secondary flex min-w-0 flex-wrap items-center gap-2 text-sm">
             <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
             <span className="text-text-primary font-medium">

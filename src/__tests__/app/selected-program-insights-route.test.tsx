@@ -166,7 +166,7 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
@@ -424,7 +424,8 @@ describe("selected Program insights routes", () => {
       searchParams: Promise.resolve({ tab: " trends " }),
     });
     render(page);
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("No submitted evidence")).toBeInTheDocument();
   });
 
   it("shows the active-filter count on the mobile filter trigger", async () => {
@@ -536,7 +537,7 @@ describe("selected Program insights routes", () => {
 
     expect(trendsMock).toHaveBeenCalledWith("program-bsed", { tab: "trends" });
     expect(analyticsMock).not.toHaveBeenCalled();
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
     expect(screen.getByText("No comparable history")).toBeInTheDocument();
     expect(screen.getByText("2024-2025 · 1st Semester · 1st Term")).toBeInTheDocument();
     expect(screen.getByText("4.40")).toBeInTheDocument();
@@ -604,7 +605,7 @@ describe("selected Program insights routes", () => {
 
     expect(stakeholdersMock).toHaveBeenCalledWith("program-bsed", { tab: "stakeholders" });
     expect(analyticsMock).not.toHaveBeenCalled();
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
     expect(screen.getByText("Evidence sources are kept separate")).toBeInTheDocument();
     expect((await screen.findAllByText("Course-bound student evidence")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("Alumni evidence")).length).toBeGreaterThan(0);
@@ -790,7 +791,7 @@ describe("selected Program insights routes", () => {
     );
   });
 
-  it("renders the outcomes no-evidence empty state on the landing", async () => {
+  it("renders the outcomes landing without any analytics empty state when outcomes exist", async () => {
     const Page = await loadAnalyticsPage();
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
@@ -800,7 +801,9 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
+    expect(screen.queryByText("No evaluation assignments")).not.toBeInTheDocument();
+    expect(screen.queryByText("No mapped outcome evidence")).not.toBeInTheDocument();
   });
 
   it("renders all 5 canonical tab navigation links without a dedicated AI tab", async () => {
@@ -877,7 +880,9 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(resolveProgramHeadContextMock).toHaveBeenCalledWith("program-bsed");
-    expect(screen.getByText(/BSED — Bachelor of Secondary Education/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Reports are scoped to the selected BSED Program only/)
+    ).toBeInTheDocument();
     expect(screen.getByText("Course-bound CILO summary")).toBeInTheDocument();
     expect(screen.getByText("Stakeholder deployment completion")).toBeInTheDocument();
     expect(screen.getByText("Program outcome attainment digest")).toBeInTheDocument();

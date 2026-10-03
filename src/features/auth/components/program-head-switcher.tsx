@@ -20,8 +20,8 @@ import type { ProgramHeadProgram } from "@/features/auth/services/resolve-progra
 
 /**
  * Topbar dropdown that switches the active Program context while staying on
- * the same page. Renders nothing when the Program Head manages at most one
- * Program or when no Program context is selected in the pathname.
+ * the same page. Single-program accounts get a non-interactive scope label.
+ * Renders nothing when no Program context is selected in the pathname.
  */
 export function ProgramHeadSwitcher({
   programs,
@@ -34,12 +34,22 @@ export function ProgramHeadSwitcher({
   const activeProgramId =
     getProgramHeadProgramIdFromPathname(pathname) ?? explicitActiveProgramId ?? null;
 
-  if (!activeProgramId || programs.length <= 1) {
+  if (!activeProgramId) {
     return null;
   }
   const activeProgram = programs.find((program) => program.id === activeProgramId);
   if (!activeProgram) {
     return null;
+  }
+  if (programs.length === 1) {
+    return (
+      <span
+        className="text-body-sm text-sidebar-foreground max-w-44 truncate font-medium"
+        title={`${activeProgram.code} — ${activeProgram.name}`}
+      >
+        {activeProgram.code}
+      </span>
+    );
   }
 
   // Preserve the current child page so switching context does not drop the

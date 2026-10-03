@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import type { ParticipationSummary } from "@/features/analytics/aggregators/types";
 import { STAKEHOLDER_LABELS } from "@/features/analytics/program-head-dashboard-labels";
@@ -25,14 +25,14 @@ export function ProgramHeadStakeholderProgress({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Response progress by stakeholder</CardTitle>
+        <h2 className="text-heading-lg">Response progress by stakeholder</h2>
         <CardDescription>
           Assignment completion by stakeholder, paired with distinct respondent counts.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="grid grid-cols-[minmax(0,6rem)_minmax(2.5rem,1fr)_minmax(0,auto)] gap-y-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]">
         {rows.length === 0 ? (
-          <Empty>
+          <Empty className="col-span-full">
             <EmptyTitle>No eligible evaluation assignments</EmptyTitle>
             <EmptyDescription>
               Nothing was assigned in this period yet, so there is no progress to chart.
@@ -43,7 +43,7 @@ export function ProgramHeadStakeholderProgress({
             <Link
               key={row.stakeholder}
               href={stakeholdersHref}
-              className="focus-visible:ring-ring -mx-2 grid grid-cols-[minmax(0,6rem)_minmax(2.5rem,1fr)_minmax(0,auto)] items-center gap-2 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:gap-3 pointer-coarse:min-h-11"
+              className="focus-visible:ring-ring col-span-full -mx-2 grid grid-cols-subgrid items-center gap-2 rounded-lg px-2 py-1.5 focus-visible:ring-2 focus-visible:outline-none sm:gap-3 pointer-coarse:min-h-11"
               aria-label={`${STAKEHOLDER_LABELS[row.stakeholder] ?? row.stakeholder.replaceAll("_", " ").toLowerCase()}: ${row.respondentCount.toLocaleString()} ${row.respondentCount === 1 ? "respondent" : "respondents"}, ${row.submitted.toLocaleString()} of ${row.assigned.toLocaleString()} assignments submitted, ${Math.round((row.completionRate ?? 0) * 100)} percent complete, ${row.inProgress.toLocaleString()} in progress, ${row.notStarted.toLocaleString()} not started`}
             >
               <span className="min-w-0">
@@ -87,7 +87,7 @@ export function ProgramHeadStakeholderProgress({
             </Link>
           ))
         )}
-        <div className="text-muted-foreground text-label-sm mt-1 flex flex-wrap gap-x-4 gap-y-1">
+        <div className="text-muted-foreground text-label-sm col-span-full mt-1 flex flex-wrap gap-x-4 gap-y-1">
           <span className="flex items-center gap-1.5">
             <span
               aria-hidden="true"

@@ -96,9 +96,9 @@ export function ProgramHeadResponsesRouteFallback() {
       className="flex min-w-0 flex-col gap-6"
     >
       <RouteProgress />
-      <Skeleton className="h-4 w-56" />
       <header className="border-border flex flex-col gap-2 border-b pb-5">
-        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-11 w-56" />
         <Skeleton className="h-4 w-full max-w-3xl" />
       </header>
       <nav aria-label="Loading response views" className="border-border grid grid-cols-2 border-b">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   Empty,
   EmptyContent,
@@ -65,20 +65,17 @@ export function ProgramHeadResponsesLanding({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs
-        items={[
-          { label: "Responses", href: rootHref },
-          { label: isCourse ? "Course evaluations" : "Program-wide evaluations" },
-        ]}
-      />
-
       <header className="border-border flex flex-col gap-2 border-b pb-5">
-        <h1 className="text-heading-lg text-balance">Responses</h1>
-        <p className="text-body-md text-text-secondary max-w-3xl text-pretty">
-          <span className="text-foreground font-semibold">
-            {program.code} — {program.name}
-          </span>
-          {" · "}Review participation and open identified submitted responses.
+        <h1 className="text-heading-xl text-balance">Responses</h1>
+        <Breadcrumbs
+          className="text-body-sm"
+          items={[
+            { label: "Responses", href: rootHref },
+            { label: isCourse ? "Course evaluations" : "Program-wide evaluations" },
+          ]}
+        />
+        <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
+          Review participation and open identified submitted responses for {program.code}.
         </p>
       </header>
 
@@ -127,7 +124,7 @@ function EvaluationEvidence({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Evaluation evidence</CardTitle>
+        <h2 className="text-heading-lg">Evaluation evidence</h2>
         <CardDescription aria-live="polite">
           {data.total.toLocaleString()} {data.total === 1 ? "evaluation" : "evaluations"} in this
           view

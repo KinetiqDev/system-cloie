@@ -82,9 +82,9 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
   return (
     <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
       <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+        <h2 id={titleId} className="text-heading-lg text-foreground">
           {title}
-        </h3>
+        </h2>
         <span className="text-muted-foreground text-xs font-medium">Comparable runs</span>
       </div>
       <div className="border-border/60 bg-background/50 h-72 w-full rounded-xl border p-3">

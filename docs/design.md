@@ -209,11 +209,20 @@ Exact sizes live in `globals.css`.
 - Headings use primary foreground, not cyan decoration.
 - Legal content uses `.legal-prose`.
 
+#### Program Head page hierarchy
+
+- Page titles use one semantic `h1` with `.text-heading-xl`, Manrope 700 at 28 px with a 36 px line height. Use the same token on desktop and mobile; long titles wrap rather than shrink or truncate.
+- Major sections use `h2` with `.text-heading-lg`, 20 px with a 26 px line height. Subsections use `h3` with `.text-heading-md`; compact card titles use `.text-title-md`.
+- Supporting page descriptions use `.text-body-sm`; paragraphs and evidence retain the appropriate body token. Do not rely on heading-like `div` elements to convey section structure.
+- Useful breadcrumbs sit directly below the H1, before descriptive copy. Omit single-item trails that only repeat the page title.
+- The selected-program control owns persistent program scope. Do not repeat a program-scope banner or full program name in each page description. The Dashboard uses the title "Dashboard" and a wrapping neutral badge for the program name, keeping program identity separate from the page title.
+
 ### 6.2 Spacing, Layout, and Density
 
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
+- Dashboard stakeholder progress rows share column tracks across labels, bars, and counts. Every bar has the same available width so differing assignment-count lengths cannot distort visual comparisons.
 - Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
 - Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Landing and public entry actions use the standard `default` button size: 40 px on desktop, 44 px on touch-capable devices, and 14 px labels. Public entry inputs, selects, and grouped controls match those heights through `entry-controls`; input text stays 16 px to avoid mobile browser zoom.
 - `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.

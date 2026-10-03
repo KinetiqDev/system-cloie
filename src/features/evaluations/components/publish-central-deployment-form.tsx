@@ -216,7 +216,7 @@ export function PublishCentralDeploymentForm({
         {backNavigation && <BackLink href={backNavigation.href}>{backNavigation.label}</BackLink>}
         {/* Page header */}
         <div className="space-y-1">
-          <h1 className="text-heading-lg">Publish Evaluation Tool</h1>
+          <h1 className="text-heading-xl text-foreground text-pretty">Publish Evaluation Tool</h1>
           <p className="text-body-md text-muted-foreground">
             Deploy an evaluation instrument to target stakeholders within{" "}
             <span className="font-semibold">{programLabel}</span>.

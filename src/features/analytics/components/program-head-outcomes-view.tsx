@@ -190,7 +190,7 @@ export function ProgramHeadOutcomesView({
 
       {data.programWideOutcomes.length > 0 && (
         <div className="flex flex-col gap-3">
-          <h3 className="text-title-sm text-foreground">Program-wide GO evidence</h3>
+          <h2 className="text-heading-lg text-foreground">Program-wide GO evidence</h2>
           <div className="border-border overflow-x-auto rounded-lg border">
             <Table aria-label="Program-wide evidence by graduate outcome">
               <TableHeader>
@@ -261,7 +261,7 @@ function OutcomesExactValueTable({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-title-sm text-foreground">Exact values by Graduate Outcome</h3>
+      <h2 className="text-heading-lg text-foreground">Exact values by Graduate Outcome</h2>
       <div className="border-border overflow-x-auto rounded-lg border">
         <Table aria-label="Exact values by graduate outcome">
           <TableHeader>

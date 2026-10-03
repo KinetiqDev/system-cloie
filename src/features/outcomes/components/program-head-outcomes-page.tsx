@@ -282,7 +282,10 @@ export function ProgramHeadOutcomesPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-heading-xl text-foreground text-pretty">Graduate Outcomes</h1>
-          <p className="text-body-sm text-muted-foreground mt-1">{program.name}</p>
+          <p className="text-body-sm text-muted-foreground mt-1">
+            Define this Program&apos;s Graduate Outcomes and map them to Course Intended Learning
+            Outcomes.
+          </p>
         </div>
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button

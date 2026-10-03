@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
@@ -86,7 +86,7 @@ export function ProgramHeadGoSummary({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Graduate Outcome summary</CardTitle>
+        <h2 className="text-heading-lg">Graduate Outcome summary</h2>
         <CardDescription>
           One evidence source at a time; select a GO to open Analytics.
         </CardDescription>

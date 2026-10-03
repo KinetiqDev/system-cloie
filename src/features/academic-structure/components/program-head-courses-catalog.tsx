@@ -550,7 +550,6 @@ export function ProgramHeadCoursesCatalog({
     paginatedCourses.map((course) => course.id),
     `${program.id}:${statusFilter}:${search}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
-  const programLabel = program.name;
 
   function requestSingleStatusChange(course: ProgramHeadCourseItem) {
     setStatusChange({
@@ -622,9 +621,9 @@ export function ProgramHeadCoursesCatalog({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="text-heading-lg">Courses</h1>
-          <p className="text-body-md text-text-secondary">
-            Manage program-wide and major-specific courses for <span>{programLabel}</span>.
+          <h1 className="text-heading-xl text-foreground text-pretty">Courses</h1>
+          <p className="text-body-sm text-muted-foreground">
+            Manage program-wide and major-specific Courses in this Program.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

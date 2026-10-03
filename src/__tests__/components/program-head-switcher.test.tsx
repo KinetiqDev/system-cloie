@@ -26,10 +26,11 @@ describe("ProgramHeadSwitcher", () => {
     pathnameMock.mockReset();
   });
 
-  it("renders nothing for a single assigned Program", () => {
+  it("shows single-program scope without offering a switch action", () => {
     pathnameMock.mockReturnValue("/program-head/programs/program-1/dashboard");
     render(<ProgramHeadSwitcher programs={[programs[0]]} />);
 
+    expect(screen.getByText(programs[0].code)).toBeVisible();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
