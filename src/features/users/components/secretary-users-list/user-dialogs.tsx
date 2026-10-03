@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BookOpen, Building2, GraduationCap, Loader2, Mail, Plus } from "lucide-react";
+import { BookOpen, Building2, GraduationCap, Mail, Plus } from "lucide-react";
 import { SystemRole } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -286,17 +286,10 @@ function RevokeRoleButton({
             type="button"
             size="sm"
             variant="destructive"
-            disabled={isRevoking}
+            loading={isRevoking}
             onClick={onConfirm}
           >
-            {isRevoking ? (
-              <>
-                <Loader2 className="animate-spin" data-icon="inline-start" />
-                Revoking…
-              </>
-            ) : (
-              "Revoke role"
-            )}
+            {isRevoking ? "Revoking…" : "Revoke role"}
           </Button>
         </div>
       </PopoverContent>
@@ -652,15 +645,8 @@ function AddRolePopover({
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isAdding || !role}>
-              {isAdding ? (
-                <>
-                  <Loader2 className="animate-spin" data-icon="inline-start" />
-                  Adding…
-                </>
-              ) : (
-                "Add role"
-              )}
+            <Button type="submit" size="sm" loading={isAdding} disabled={!role}>
+              {isAdding ? "Adding…" : "Add role"}
             </Button>
           </div>
         </form>

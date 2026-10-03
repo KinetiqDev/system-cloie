@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 type PublicLoadingVariant = "form" | "status";
 
@@ -52,11 +53,12 @@ function StatusSkeleton() {
 export function PublicRouteLoading({ variant }: { variant: PublicLoadingVariant }) {
   return (
     <div
-      className="w-full min-w-0"
+      className="flex w-full min-w-0 flex-col gap-4"
       role="status"
       aria-busy="true"
       aria-label={loadingLabels[variant]}
     >
+      <RouteProgress />
       {variant === "form" && <FormSkeleton />}
       {variant === "status" && <StatusSkeleton />}
     </div>

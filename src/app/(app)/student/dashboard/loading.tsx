@@ -1,9 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 export default function StudentDashboardLoading() {
   return (
-    <div className="space-y-8">
+    <div
+      className="flex min-w-0 flex-col gap-8"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading dashboard"
+    >
+      <RouteProgress />
       {/* Hero Card Skeleton */}
       <section className="bg-surface border-border mb-8 rounded-2xl border p-6 lg:p-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">

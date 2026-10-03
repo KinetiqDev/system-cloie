@@ -14,8 +14,7 @@ export function CourseRosterRetry() {
     <Button
       type="button"
       variant="outline"
-      disabled={isPending}
-      aria-busy={isPending || undefined}
+      loading={isPending}
       onClick={() => startTransition(() => router.refresh())}
     >
       <RotateCw data-icon="inline-start" aria-hidden="true" />

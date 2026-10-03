@@ -1,6 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 function EvidenceTableSkeleton() {
   return (
@@ -94,6 +95,7 @@ export function ProgramHeadResponsesRouteFallback() {
       aria-label="Loading responses"
       className="flex min-w-0 flex-col gap-6"
     >
+      <RouteProgress />
       <Skeleton className="h-4 w-56" />
       <header className="border-border flex flex-col gap-2 border-b pb-5">
         <Skeleton className="h-7 w-40" />

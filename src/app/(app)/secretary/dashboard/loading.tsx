@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 export default function Loading({ showHeader = true }: { showHeader?: boolean }) {
   return (
@@ -9,6 +10,7 @@ export default function Loading({ showHeader = true }: { showHeader?: boolean })
       aria-label="Loading dashboard"
       aria-busy="true"
     >
+      <RouteProgress />
       {showHeader ? (
         <div className="flex flex-col gap-2">
           <Skeleton className="h-8 w-64 max-w-full" />

@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type React from "react";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -151,6 +151,35 @@ describe("Program Head desktop navigation", () => {
 
       unmount();
     }
+  });
+  it("shows a destination tooltip on keyboard focus in the collapsed rail", async () => {
+    render(<Sidebar roles={[ROLES.SECRETARY]} collapsed />);
+    fireEvent.keyDown(document, { key: "Tab" });
+    act(() => screen.getByRole("link", { name: "Users" }).focus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent("Users")
+    );
+  });
+
+  it("shows Dean destination tooltips in the width-driven tablet rail", async () => {
+    pathnameMock.mockReturnValue("/dean/dashboard");
+    render(<Sidebar roles={[ROLES.DEAN]} />);
+    fireEvent.keyDown(document, { key: "Tab" });
+    act(() => screen.getByRole("link", { name: "Dashboard" }).focus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent("Dashboard")
+    );
+  });
+
+  it("identifies the collapsed footer avatar on keyboard focus", async () => {
+    render(<Sidebar roles={[ROLES.SECRETARY]} collapsed user={{ name: "Ada Lovelace" }} />);
+    fireEvent.keyDown(document, { key: "Tab" });
+    act(() => screen.getByLabelText("Ada Lovelace").focus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        "Ada Lovelace"
+      )
+    );
   });
 
   it("keeps the expanded lockup and hides it in the rail", () => {

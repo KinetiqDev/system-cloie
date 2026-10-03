@@ -100,7 +100,7 @@ export function ReviewModal({
       <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="font-bold">
         Go Back
       </Button>
-      <Button onClick={onSubmit} disabled={isSubmitting} className="min-w-[140px] px-8 font-bold">
+      <Button onClick={onSubmit} loading={isSubmitting} className="min-w-[140px] px-8 font-bold">
         {isSubmitting ? "Submitting..." : "Confirm & Submit"}
       </Button>
     </>

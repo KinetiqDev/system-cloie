@@ -342,6 +342,11 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   names itself in a tooltip; the brand mark is the expand affordance, because a 64px rail has no
   room for a second control beside it. The Dean rail between md and lg is width-driven, so it
   shows neither the wordmark nor the control below lg.
+- The fold is one authored moment. The rail width and the content gutter that clears it move on a
+  single shared timing from `FOLD_MOTION` (`src/components/layout/sidebar-fold.ts`) so the page can
+  never tear away from the rail mid-fold; honor reduced motion by removing the transition. Rail
+  destinations, including the Dean's width-driven md–lg rail and the footer identity, name
+  themselves with the design-system `Tooltip` at the rail delay and offset — never a native `title`.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
 - Sidebar row rendering shares the collapsed tooltip and label fold. Primary destinations own their badge display; Dean destinations and groups keep the tablet rail rules. Role and active-destination resolution remain in the sidebar.
@@ -389,6 +394,8 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Approved kinds: success, warning, error/danger, information.
 - Use route skeletons, local spinners, actionable empty states, and adjacent `role="alert"` errors.
 - Loading stays perceivable under reduced motion: spinner pairs a pulse fallback with text or skeleton context.
+- Route boundaries pair the skeleton with `RouteProgress` (`src/components/ui/route-progress.tsx`), an indeterminate top bar so a slow load reads as alive rather than frozen. It animates transform only and falls back to a static partial fill under `prefers-reduced-motion`.
+- Use the shared `Spinner` and the `Button` `loading` prop for every pending state. Do not hand-roll `Loader2`, `animate-spin`, or a custom spin in a feature component.
 - Preserve current URL-toast consumption and cleanup; toasts are dismissible with a keyboard- and touch-operable control.
 - Use Dialog on desktop and Drawer on mobile where established.
 - Overlays stay inside the viewport: the body scrolls its own overflow and the header and action row stay pinned, so a long body (for example an expanded column guide) never pushes the actions off screen.
@@ -476,7 +483,8 @@ Appearance must not alter breakpoints, density, information hierarchy, navigatio
 - Focus: visible on every surface; never remove the ring.
 - Press: optional 1 px translation.
 - Async: preserve width, prevent duplicates, communicate loading and result.
-- Motion: 150–300 ms; animate opacity/transform, not layout dimensions.
+- Motion: 150–300 ms; prefer opacity/transform over layout dimensions. The sidebar fold is the
+  bounded exception: its width and the page gutter transition together at 300 ms (§8.4).
 - No decorative loops or blocked input; honor reduced motion.
 - Resolve theme before first paint; avoid long page fades and flashes.
 
