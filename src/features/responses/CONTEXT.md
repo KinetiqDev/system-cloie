@@ -23,7 +23,7 @@ _Avoid_: Question id, answer id
 ## Availability and eligibility
 
 **Availability window**:
-A deployment is answerable only while ACTIVE or SCHEDULED and activation time <= now <= deadline. The same gate serves both course-bound and central student deployments.
+A deployment is answerable only while ACTIVE or SCHEDULED and activation time <= now <= deadline. A null bound imposes no time limit. `services/deployment-availability.ts` owns the shared predicate and unavailable message for course-bound and central answering; both list and mutation paths use it.
 _Avoid_: Open period, active-only check
 
 **Eligibility gate**:

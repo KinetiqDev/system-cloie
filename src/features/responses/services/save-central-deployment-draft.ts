@@ -2,8 +2,7 @@ import { DeploymentType, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type { StudentEvaluationSection } from "@/features/responses/types";
-import { isCentralDeploymentAvailable } from "./central-deployment-availability";
-import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
+import { DEPLOYMENT_UNAVAILABLE_ERROR, isDeploymentAvailable } from "./deployment-availability";
 import { mapTemplateStructureToSections } from "./map-template-structure";
 import { saveResponseDraft } from "./save-response-draft";
 
@@ -83,9 +82,9 @@ export async function saveCentralDeploymentDraft({
     };
   }
 
-  if (!isCentralDeploymentAvailable(assignment.central_deployment)) {
+  if (!isDeploymentAvailable(assignment.central_deployment)) {
     return {
-      error: CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR,
+      error: DEPLOYMENT_UNAVAILABLE_ERROR,
       success: false,
     };
   }

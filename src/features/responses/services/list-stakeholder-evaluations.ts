@@ -8,7 +8,7 @@ import type {
   StudentEvaluationSession,
 } from "@/features/responses/types";
 import { mapTemplateStructureToSections } from "./map-template-structure";
-import { isCentralDeploymentAvailable } from "./central-deployment-availability";
+import { isDeploymentAvailable } from "./deployment-availability";
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ export async function listStakeholderEvaluations(
       const response = assignment.response ?? null;
 
       // Skip unavailable deployments unless already submitted
-      if (!response?.submitted_at && !isCentralDeploymentAvailable(deployment, now)) {
+      if (!response?.submitted_at && !isDeploymentAvailable(deployment, now)) {
         return [];
       }
 
@@ -150,7 +150,9 @@ export async function listStakeholderEvaluations(
             majorName: deployment.major?.name ?? null,
             programCode: deployment.program?.code ?? null,
             programName: deployment.program?.name ?? null,
-            yearLevelName: deployment.year_level ? getYearLevelDisplay(deployment.year_level) : null,
+            yearLevelName: deployment.year_level
+              ? getYearLevelDisplay(deployment.year_level)
+              : null,
           }),
           section,
           session,

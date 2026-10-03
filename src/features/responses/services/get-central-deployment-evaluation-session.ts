@@ -4,7 +4,7 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
-import { isCentralDeploymentAvailable } from "./central-deployment-availability";
+import { isDeploymentAvailable } from "./deployment-availability";
 import { mapSavedAnswerItems } from "./map-saved-answer-items";
 import { mapTemplateStructureToSections } from "./map-template-structure";
 
@@ -37,7 +37,7 @@ function evaluationIsReadable(
   // Keep submitted evaluations readable after the deployment window closes.
   // Only the wizard needs the availability gate; review pages must not 404
   // on an answered evaluation.
-  return Boolean(response?.submitted_at) || isCentralDeploymentAvailable(deployment);
+  return Boolean(response?.submitted_at) || isDeploymentAvailable(deployment);
 }
 
 // ─── Public types ───────────────────────────────────────────────────────────

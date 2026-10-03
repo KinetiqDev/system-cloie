@@ -12,10 +12,7 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
-import {
-  isCentralDeploymentAvailable,
-  isCourseBoundEvaluationAvailable,
-} from "./course-bound-availability";
+import { isDeploymentAvailable } from "./deployment-availability";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
@@ -228,7 +225,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
     const courseBound = assignment.course_bound;
 
     if (!courseBound || assignment.response?.submitted_at) return [];
-    if (!isCourseBoundEvaluationAvailable(courseBound, now)) return [];
+    if (!isDeploymentAvailable(courseBound, now)) return [];
 
     return [toCourseBoundEvaluationEligibilityAssignment(courseBound.course_assignment)];
   });
@@ -245,7 +242,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
         if (assignment.course_bound) {
           const courseBound = assignment.course_bound;
 
-          if (!response?.submitted_at && !isCourseBoundEvaluationAvailable(courseBound, now)) {
+          if (!response?.submitted_at && !isDeploymentAvailable(courseBound, now)) {
             return null;
           }
 
@@ -307,7 +304,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
         ) {
           const deployment = assignment.central_deployment;
 
-          if (!response?.submitted_at && !isCentralDeploymentAvailable(deployment, now)) {
+          if (!response?.submitted_at && !isDeploymentAvailable(deployment, now)) {
             return null;
           }
 
