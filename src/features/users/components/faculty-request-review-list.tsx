@@ -179,8 +179,8 @@ export function FacultyRequestReviewList({
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 py-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-title-lg text-foreground font-bold tracking-tight">Faculty requests</h1>
-        <p className="text-body-md text-muted-foreground">
+        <h1 className="text-heading-xl text-foreground text-pretty">Faculty Requests</h1>
+        <p className="text-body-sm text-text-secondary">
           Review Faculty registration requests. A request grants no Faculty access until you approve
           it.
         </p>

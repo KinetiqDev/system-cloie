@@ -164,8 +164,8 @@ export function SecretaryUsersList({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-text-primary text-2xl font-black">User Management</h1>
-        <p className="text-muted-foreground text-sm">
+        <h1 className="text-heading-xl text-text-primary">User Management</h1>
+        <p className="text-body-sm text-text-secondary">
           Manage users, roles, and academic contexts across the institution.
         </p>
       </div>
@@ -174,8 +174,8 @@ export function SecretaryUsersList({
 
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h2 className="font-heading text-text-primary text-2xl font-black">Users</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="text-heading-lg text-text-primary">Users</h2>
+          <p className="text-body-sm text-text-secondary">
             {total} total user{total !== 1 ? "s" : ""}
           </p>
         </div>

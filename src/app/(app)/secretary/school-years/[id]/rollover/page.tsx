@@ -91,10 +91,10 @@ export default async function TermRolloverPage({ params }: PageProps) {
 
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold">Term Rollover</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-heading-xl text-balance">Term Rollover</h1>
+        <p className="text-body-sm text-text-secondary">
           Roll over student enrollments from one term to the next within{" "}
-          <span className="font-semibold">{schoolYear.code}</span>.
+          <span className="text-text-primary font-semibold">{schoolYear.code}</span>.
         </p>
       </div>
 

@@ -57,7 +57,7 @@ export function SchoolYearsClientPage({
   return (
     <div className="container mx-auto flex w-full max-w-6xl flex-col gap-6 py-4 sm:py-6">
       <div className="flex max-w-3xl flex-col gap-2">
-        <h1 className="text-heading-lg tracking-tight text-balance">School Years</h1>
+        <h1 className="text-heading-xl text-balance">School Years</h1>
         <p className="text-body-sm text-text-secondary leading-relaxed text-pretty">
           Manage academic years, semesters, and their terms.
         </p>

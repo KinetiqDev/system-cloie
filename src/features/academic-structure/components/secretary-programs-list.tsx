@@ -295,7 +295,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
       {/* Header */}
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-heading-lg text-balance">Academic Programs</h1>
+          <h1 className="text-heading-xl text-balance">Academic Programs</h1>
           <p className="text-body-sm text-text-secondary hidden max-w-2xl text-pretty sm:block">
             Manage academic programs, their majors, and program metadata across the college.
           </p>

@@ -254,8 +254,8 @@ export function ManagementCoursesList({
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-heading-lg">Courses</h1>
-        <p className="text-body-md text-text-secondary">
+        <h1 className="text-heading-xl text-balance">Courses</h1>
+        <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
           Manage the shared course catalog for general education, program-wide, and major-specific
           contexts.
         </p>

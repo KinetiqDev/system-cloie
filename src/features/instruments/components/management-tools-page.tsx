@@ -16,10 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { showToast } from "@/components/ui/toast";
 import {
   toggleAdminTemplateActiveAction,
@@ -148,7 +145,7 @@ export function ManagementToolsPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-body-sm text-text-secondary">
             Manage institutional baseline evaluation templates. These templates can be adopted by
             program heads for their programs.
           </p>
