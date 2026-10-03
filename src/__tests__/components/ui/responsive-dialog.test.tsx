@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveDialog,
+  ResponsiveDialogBody,
   ResponsiveDialogClose,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
@@ -47,6 +48,22 @@ function Example() {
     </ResponsiveDialog>
   );
 }
+function BodyExample({ gutter }: { gutter?: boolean }) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Edit record</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody gutter={gutter} data-testid="body">
+          Field
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
+  );
+}
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -74,5 +91,16 @@ describe("ResponsiveDialog", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+  it("keeps the body gutter by default and lets a body opt out", async () => {
+    stubViewport(false);
+    const { unmount } = render(<BodyExample />);
+
+    const body = await screen.findByTestId("body");
+    expect(body).toHaveClass("px-4", "py-4");
+    unmount();
+
+    render(<BodyExample gutter={false} />);
+    expect(await screen.findByTestId("body")).not.toHaveClass("px-4", "py-4");
   });
 });
