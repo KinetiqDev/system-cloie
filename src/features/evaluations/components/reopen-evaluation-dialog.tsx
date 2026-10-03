@@ -76,7 +76,7 @@ export function ReopenEvaluationDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+          <ResponsiveDialogBody>
             <FieldGroup>
               <Field data-invalid={Boolean(error)}>
                 <FieldLabel htmlFor="reopen-deadline">New deadline</FieldLabel>

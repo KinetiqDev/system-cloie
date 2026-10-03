@@ -62,7 +62,6 @@ export function CourseCreateDialog({
         </ResponsiveDialogHeader>
 
         <ResponsiveDialogBody
-          className="px-4 py-4 md:p-0"
           onSubmitCapture={() => {
             submittingRef.current = true;
           }}

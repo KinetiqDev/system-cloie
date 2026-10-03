@@ -88,7 +88,7 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+          <ResponsiveDialogBody>
             <div className="grid gap-4">
               <Field data-invalid={!!error}>
                 <FieldLabel htmlFor="startYear">Start Year</FieldLabel>

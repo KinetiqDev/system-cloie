@@ -52,7 +52,7 @@ export function GenEdCourseDialog({
               : "Create a college-wide General Education course."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+        <ResponsiveDialogBody>
           <CourseForm
             action={course ? updateGenEdCourseAction : createGenEdCourseAction}
             programs={[]}

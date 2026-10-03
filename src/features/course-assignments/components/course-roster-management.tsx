@@ -1510,7 +1510,10 @@ export function RosterManagementDialog({
               <ResponsiveDialogTitle>{workspaceTitle}</ResponsiveDialogTitle>
               <ResponsiveDialogDescription>{workspaceDescription}</ResponsiveDialogDescription>
             </ResponsiveDialogHeader>
-            <ResponsiveDialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-6 sm:py-4">
+            <ResponsiveDialogBody
+              gutter={false}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-6 sm:py-4"
+            >
               {body}
             </ResponsiveDialogBody>
             <ResponsiveDialogFooter className="border-border bg-background mx-0 mb-0 shrink-0 flex-row border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">

@@ -433,7 +433,7 @@ function CourseFormDialog({
       <ResponsiveDialogContent desktopClassName="sm:max-w-lg">
         <CourseDialogHeader mode={mode} />
         <form action={handleSubmit} className="contents">
-          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+          <ResponsiveDialogBody>
             {mode === "edit" && course && <input type="hidden" name="id" value={course.id} />}
             <CourseDialogStatus error={error} />
 

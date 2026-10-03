@@ -84,7 +84,7 @@ export function SetActiveTermDialog({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <ResponsiveDialogBody className="flex flex-col gap-4 px-4 py-4 md:p-0">
+        <ResponsiveDialogBody className="flex flex-col gap-4">
           <Alert variant="information">
             <Info className="h-4 w-4" />
             <AlertDescription>

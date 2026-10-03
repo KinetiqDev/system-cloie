@@ -238,7 +238,7 @@ export function ILOFormDialog(props: ILOFormDialogProps) {
               : "Update Institutional Learning Outcome details."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <ResponsiveDialogBody className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-0">
+        <ResponsiveDialogBody className="pb-[max(1rem,env(safe-area-inset-bottom))]">
           {props.mode === "create" ? (
             <CreateForm onClose={() => props.onOpenChange(false)} />
           ) : (

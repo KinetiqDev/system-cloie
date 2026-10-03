@@ -97,7 +97,7 @@ export function ReviewModal({
 
   const footer = (
     <>
-      <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="font-bold">
+      <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="font-bold">
         Go Back
       </Button>
       <Button onClick={onSubmit} loading={isSubmitting} className="min-w-[140px] px-8 font-bold">
