@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
+import { E2E_CONTRACT } from "./support/contract";
 import {
   expectNoAxeViolations,
   loginAs,
@@ -274,6 +275,23 @@ test.describe("accessibility sweep", () => {
     await loginAs(page, fx.beedPh.email);
     await page.goto(`/program-head/programs/${fx.bsit.id}/dashboard`);
     await expect(page.getByText("Not Found", { exact: false })).toBeVisible();
+    await expectNoAxeViolations(page);
+  });
+
+  test("Dean tablet footer identity is reachable by Tab", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await loginAs(page, fixture().demoDean.email);
+    await page.goto("/dean/dashboard");
+    await waitForStableState(page);
+
+    const avatar = page.getByRole("img", { name: E2E_CONTRACT.demoDean.name, exact: true });
+    await expect(avatar).toBeVisible();
+    for (let index = 0; index < 40; index++) {
+      await page.keyboard.press("Tab");
+      if (await avatar.evaluate((element) => element === document.activeElement)) break;
+    }
+    await expect(avatar).toBeFocused();
+    await expect(page.getByRole("tooltip")).toHaveText(E2E_CONTRACT.demoDean.name);
     await expectNoAxeViolations(page);
   });
 });

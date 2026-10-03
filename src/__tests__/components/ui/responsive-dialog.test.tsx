@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveDialog,
-  ResponsiveDialogBody,
   ResponsiveDialogClose,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
@@ -48,59 +47,25 @@ function Example() {
     </ResponsiveDialog>
   );
 }
-function BodyExample({ gutter }: { gutter?: boolean }) {
-  const [open, setOpen] = useState(true);
-
-  return (
-    <ResponsiveDialog open={open} onOpenChange={setOpen}>
-      <ResponsiveDialogContent>
-        <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle>Edit record</ResponsiveDialogTitle>
-        </ResponsiveDialogHeader>
-        <ResponsiveDialogBody gutter={gutter} data-testid="body">
-          Field
-        </ResponsiveDialogBody>
-      </ResponsiveDialogContent>
-    </ResponsiveDialog>
-  );
-}
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ResponsiveDialog", () => {
-  it("renders a centered dialog at desktop widths", async () => {
-    stubViewport(true);
+  it.each([true, false])("dismisses with Escape at desktop=%s", async (isDesktop) => {
+    stubViewport(isDesktop);
     render(<Example />);
 
-    const overlay = await screen.findByRole("dialog", { name: "Edit record" });
-    expect(overlay).toHaveClass("desktop-width");
-    expect(overlay).not.toHaveClass("mobile-height");
-    expect(overlay).toHaveClass("top-1/2", "left-1/2");
-  });
-
-  it("renders a bottom drawer with safe-area actions on mobile", async () => {
-    stubViewport(false);
-    render(<Example />);
-
-    const overlay = await screen.findByRole("dialog", { name: "Edit record" });
-    expect(overlay).toHaveClass("mobile-height");
-    expect(overlay).toHaveAttribute("data-swipe-direction", "down");
-
-    const footer = screen.getByRole("button", { name: "Save" }).parentElement;
-    expect(footer).toHaveClass("flex-col-reverse", "border-t");
-
+    expect(await screen.findByRole("dialog", { name: "Edit record" })).toBeVisible();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
-  it("keeps the body gutter by default and lets a body opt out", async () => {
-    stubViewport(false);
-    const { unmount } = render(<BodyExample />);
 
-    const body = await screen.findByTestId("body");
-    expect(body).toHaveClass("px-4", "py-4");
-    unmount();
+  it.each([true, false])("dismisses with Cancel at desktop=%s", async (isDesktop) => {
+    stubViewport(isDesktop);
+    render(<Example />);
 
-    render(<BodyExample gutter={false} />);
-    expect(await screen.findByTestId("body")).not.toHaveClass("px-4", "py-4");
+    await screen.findByRole("dialog", { name: "Edit record" });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

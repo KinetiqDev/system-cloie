@@ -269,6 +269,7 @@ interface DeanNavRowProps {
   item: Pick<NavGroup, "name" | "href" | "icon">;
   active: boolean;
   collapsed: boolean;
+  isLargeScreen: boolean;
   /** A section's children sit under their heading, in the compact type scale. */
   nested?: boolean;
   /** A section heading keeps the rail's standard inset; a destination sits flush. */
@@ -281,9 +282,15 @@ interface DeanNavRowProps {
  * Collapsed hides labels at every width. Otherwise the tablet rail hides them
  * below lg through the label's own breakpoint classes.
  */
-function DeanNavRow({ item, active, collapsed, nested = false, section = false }: DeanNavRowProps) {
+function DeanNavRow({
+  item,
+  active,
+  collapsed,
+  isLargeScreen,
+  nested = false,
+  section = false,
+}: DeanNavRowProps) {
   const rail = !collapsed;
-  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
 
   return (
     <RailRow collapsed={collapsed || !isLargeScreen} label={item.name}>
@@ -309,16 +316,23 @@ interface DeanNavGroupProps {
   /** Resolved once, then read by the section and each of its children. */
   activeItem: (NavItem | NavGroup) | null;
   collapsed: boolean;
+  isLargeScreen: boolean;
 }
 
 /** One Dean section: a heading that is itself a destination, plus its children. */
-function DeanNavGroup({ group, activeItem, collapsed }: DeanNavGroupProps) {
+function DeanNavGroup({ group, activeItem, collapsed, isLargeScreen }: DeanNavGroupProps) {
   // A section and its destinations can share an href, so both have to match.
   const active = activeItem?.href === group.href && activeItem.name === group.name;
 
   return (
     <div>
-      <DeanNavRow item={group} active={active} collapsed={collapsed} section />
+      <DeanNavRow
+        item={group}
+        active={active}
+        collapsed={collapsed}
+        isLargeScreen={isLargeScreen}
+        section
+      />
       <div
         className={cn(
           "border-sidebar-border mt-1 hidden gap-1 border-l pl-2 md:flex md:flex-col",
@@ -331,6 +345,7 @@ function DeanNavGroup({ group, activeItem, collapsed }: DeanNavGroupProps) {
             item={item}
             active={activeItem === item}
             collapsed={collapsed}
+            isLargeScreen={isLargeScreen}
             nested
           />
         ))}
@@ -349,6 +364,7 @@ function DeanSidebar({
   const groups = getDeanNavGroups();
   const [dashboard, profile] = getDeanStandaloneNav();
   const rail = !collapsed;
+  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   return (
     <aside
       data-collapsed={collapsed ? "true" : "false"}
@@ -362,7 +378,6 @@ function DeanSidebar({
         collapsed={collapsed}
         onToggle={onToggleCollapsed}
         href={dashboard.href}
-        // The Dean rail starts at md, so the wordmark and the toggle wait for lg.
         railBelowLg
       />
       <nav
@@ -370,18 +385,29 @@ function DeanSidebar({
         className={cn("flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6", rail && "lg:px-4")}
         aria-label="Dean navigation"
       >
-        <DeanNavRow item={dashboard} active={activeItem === dashboard} collapsed={collapsed} />
+        <DeanNavRow
+          item={dashboard}
+          active={activeItem === dashboard}
+          collapsed={collapsed}
+          isLargeScreen={isLargeScreen}
+        />
         {groups.map((group) => (
           <DeanNavGroup
             key={group.href}
             group={group}
             activeItem={activeItem}
             collapsed={collapsed}
+            isLargeScreen={isLargeScreen}
           />
         ))}
-        <DeanNavRow item={profile} active={activeItem === profile} collapsed={collapsed} />
+        <DeanNavRow
+          item={profile}
+          active={activeItem === profile}
+          collapsed={collapsed}
+          isLargeScreen={isLargeScreen}
+        />
       </nav>
-      <SidebarFooter user={user} collapsed={collapsed} />
+      <SidebarFooter user={user} collapsed={collapsed || !isLargeScreen} />
     </aside>
   );
 }

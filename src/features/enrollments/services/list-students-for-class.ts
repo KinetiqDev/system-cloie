@@ -4,16 +4,11 @@ import { ROLES } from "@/lib/constants/roles";
 import type { SystemRole } from "@prisma/client";
 import type { StudentRecord, ListStudentsForClassFilter, EnrollmentResult } from "../types";
 
-/**
- * List students for a class (program/year/section combination).
- * Used in Phase 6-7 publish flows for targeting.
- */
 export async function listStudentsForClass(
   filter: ListStudentsForClassFilter
 ): Promise<EnrollmentResult<StudentRecord[]>> {
   const authSession = await resolveAuthSession();
 
-  // PH and Faculty can view class rosters
   const allowedRoles: SystemRole[] = [
     ROLES.SECRETARY,
     ROLES.DEAN,
@@ -62,7 +57,7 @@ export async function listStudentsForClass(
     }));
 
     return { success: true, data: students };
-  } catch (error) {
+  } catch {
     return { success: false, error: "Failed to list students for class." };
   }
 }

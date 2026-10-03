@@ -26,6 +26,7 @@ vi.mock("next/link", () => ({
 
 describe("Program Head desktop navigation", () => {
   afterEach(() => {
+    vi.unstubAllGlobals();
     pathnameMock.mockReturnValue("/program-head/programs/program-2/tools/new");
     vi.restoreAllMocks();
   });
@@ -175,6 +176,30 @@ describe("Program Head desktop navigation", () => {
     render(<Sidebar roles={[ROLES.SECRETARY]} collapsed user={{ name: "Ada Lovelace" }} />);
     fireEvent.keyDown(document, { key: "Tab" });
     act(() => screen.getByLabelText("Ada Lovelace").focus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        "Ada Lovelace"
+      )
+    );
+  });
+
+  it("identifies the Dean footer by keyboard in the tablet rail", async () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+    pathnameMock.mockReturnValue("/dean/dashboard");
+    render(<Sidebar roles={[ROLES.DEAN]} user={{ name: "Ada Lovelace" }} />);
+
+    const avatar = screen.getByRole("img", { name: "Ada Lovelace" });
+    expect(avatar.tabIndex).toBe(0);
+    fireEvent.keyDown(document, { key: "Tab" });
+    act(() => avatar.focus());
     await waitFor(() =>
       expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
         "Ada Lovelace"

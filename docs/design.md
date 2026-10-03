@@ -347,6 +347,7 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   never tear away from the rail mid-fold; honor reduced motion by removing the transition. Rail
   destinations, including the Dean's width-driven md–lg rail and the footer identity, name
   themselves with the design-system `Tooltip` at the rail delay and offset — never a native `title`.
+- The Dean tablet rail uses the compact footer too: hide the expanded name/email block and make the avatar keyboard-focusable so its identity tooltip is available without hover.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
 - Sidebar row rendering shares the collapsed tooltip and label fold. Primary destinations own their badge display; Dean destinations and groups keep the tablet rail rules. Role and active-destination resolution remain in the sidebar.
