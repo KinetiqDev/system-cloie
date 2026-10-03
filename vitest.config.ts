@@ -5,7 +5,6 @@ import { discoverDatabaseSuites } from "./scripts/lib/database-suite-discovery";
 
 const toolingIntegrationTests = [
   "src/__tests__/scripts/refresh-fallow-baselines.test.ts",
-  "src/__tests__/scripts/fallow-baseline-audit.test.ts",
   "src/__tests__/scripts/fallow-platform-verification.test.ts",
   "src/__tests__/scripts/run-fallow-audit.test.ts",
   "src/__tests__/scripts/run-fallow-reports.test.ts",

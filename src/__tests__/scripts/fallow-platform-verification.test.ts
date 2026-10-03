@@ -162,14 +162,8 @@ function expectValidSarif(fixture: GateFixture): SarifReport {
 }
 
 const UNUSED_SOURCE: Array<[string, string]> = [
-  [
-    "src/index.ts",
-    'import { usedExport } from "./unused";\nconsole.log(usedExport);\n',
-  ],
-  [
-    "src/unused.ts",
-    "export const usedExport = 1;\nexport const orphanExport = 42;\n",
-  ],
+  ["src/index.ts", 'import { usedExport } from "./unused";\nconsole.log(usedExport);\n'],
+  ["src/unused.ts", "export const usedExport = 1;\nexport const orphanExport = 42;\n"],
 ];
 
 // Operator-free body: `??`/`||` chains inflate cyclomatic and cognitive
@@ -197,10 +191,7 @@ const DUPLICATION_SOURCE: Array<[string, string]> = [
     "src/index.ts",
     'import { transformA, transformB } from "./a";\nexport const result = [transformA({}), transformB({})];\n',
   ],
-  [
-    "src/a.ts",
-    `${duplicatedTransform("transformA")}${duplicatedTransform("transformB")}`,
-  ],
+  ["src/a.ts", `${duplicatedTransform("transformA")}${duplicatedTransform("transformB")}`],
 ];
 
 describe("fallow platform verification through the CI gate", () => {
@@ -306,6 +297,43 @@ describe("fallow platform verification through the CI gate", () => {
         sarif.runs.some((run) => (run.results ?? []).length > 0),
         "the warning-only audit must retain the finding in its SARIF artifact"
       ).toBe(true);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  it("parses the committed baseline bytes and rejects a corrupted baseline", () => {
+    const fixture = createFixture("committed-baselines", [
+      ["src/index.ts", "export const x = 1;\n"],
+    ]);
+    try {
+      // Replace the fixture's generated baselines with the bytes actually
+      // committed under fallow-baselines/: the gate must parse all three
+      // through the real fallow code path, or the policy's baseline wiring is
+      // broken in a way no generated fixture can reveal.
+      for (const analyzer of ANALYZERS) {
+        writeFileSync(
+          join(fixture.work, "fallow-baselines", analyzer.file),
+          readFileSync(join(PROJECT_ROOT, "fallow-baselines", analyzer.file))
+        );
+      }
+      git(fixture.work, ["add", "-A"]);
+      git(fixture.work, ["commit", "-qm", "committed baselines"]);
+
+      const accepted = runGateScript(fixture);
+      expect(accepted.status, "committed baselines must parse as fallow baselines").not.toBe(2);
+
+      // Negative control: corrupting one committed baseline must trip the same
+      // strict parse, proving the acceptance above is meaningful. The parse
+      // failure lands in the retained audit artifact, not on stderr.
+      writeFileSync(join(fixture.work, "fallow-baselines", "dupes.json"), '{"garbage": true}\n');
+      const rejected = runGateScript(fixture);
+      expect(rejected.status).toBe(2);
+      expect(
+        JSON.parse(readFileSync(join(fixture.outDir, "audit.json"), "utf8")) as {
+          message?: string;
+        }
+      ).toMatchObject({ message: expect.stringContaining("failed to parse") });
     } finally {
       fixture.cleanup();
     }
