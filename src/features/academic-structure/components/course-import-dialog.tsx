@@ -675,7 +675,7 @@ export function CourseImportDialog({ open, onOpenChange, config }: CourseImportD
             </ResponsiveDialogClose>
           </div>
         </ResponsiveDialogHeader>
-        <ResponsiveDialogBody className="px-4 py-5 sm:px-6">
+        <ResponsiveDialogBody gutter={false} className="px-4 py-5 sm:px-6">
           {step === "file" && (
             <FileStep
               config={config}

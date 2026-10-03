@@ -9,10 +9,7 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
-import {
-  isCentralDeploymentAvailable,
-  isCourseBoundEvaluationAvailable,
-} from "./course-bound-availability";
+import { isDeploymentAvailable } from "./deployment-availability";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
@@ -29,7 +26,7 @@ function countSectionItems(sections: StudentEvaluationSection[]) {
 type CourseBoundEvaluationRecord = {
   activation_at: Date | null;
   deadline_at: Date | null;
-  status: Parameters<typeof isCourseBoundEvaluationAvailable>[0]["status"];
+  status: Parameters<typeof isDeploymentAvailable>[0]["status"];
   course_assignment: Parameters<typeof toCourseBoundEvaluationEligibilityAssignment>[0];
 };
 
@@ -48,7 +45,7 @@ async function courseBoundAssignmentIsReadable(
   if (response?.submitted_at ?? null) {
     return true;
   }
-  if (!isCourseBoundEvaluationAvailable(evaluation)) {
+  if (!isDeploymentAvailable(evaluation)) {
     return false;
   }
   const eligibility = await resolveCourseBoundEvaluationEligibility(
@@ -241,7 +238,7 @@ export async function getStudentAssignedEvaluationSession(
     // only the wizard needs the availability gate, and this route redirects a
     // submitted session to its history page rather than 404-ing it.
     const response = assignment.response ?? null;
-    if (!(response?.submitted_at ?? null) && !isCentralDeploymentAvailable(deployment)) {
+    if (!(response?.submitted_at ?? null) && !isDeploymentAvailable(deployment)) {
       return null;
     }
 

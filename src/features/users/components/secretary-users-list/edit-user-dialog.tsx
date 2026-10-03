@@ -3,9 +3,10 @@
 
 import { useEffect, useState, useTransition, useMemo } from "react";
 import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@prisma/client";
-import { Loader2, Mail, LockKeyhole, CheckCircle2, AlertCircle } from "lucide-react";
+import { Mail, LockKeyhole, CheckCircle2, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
   DialogContent,
@@ -536,7 +537,7 @@ function EditUserDialogBody({
           aria-live="polite"
           className="text-muted-foreground flex items-center gap-2 py-6 text-sm"
         >
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          <Spinner className="size-4" aria-hidden="true" />
           Loading user record…
         </div>
       )}
@@ -587,7 +588,7 @@ function EditUserDialogBody({
                       className="text-muted-foreground flex items-center gap-2 text-sm"
                       role="status"
                     >
-                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      <Spinner className="size-4" aria-hidden="true" />
                       Loading {formatRole(pendingRole)} profile…
                     </p>
                   )}
@@ -1024,17 +1025,10 @@ function EditUserDialogBody({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || isSwitchingRole}
+              loading={isSubmitting || isSwitchingRole}
               className="flex-1 sm:flex-none"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" data-icon="inline-start" />
-                  Saving…
-                </>
-              ) : (
-                "Save changes"
-              )}
+              {isSubmitting ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </form>
@@ -1200,15 +1194,8 @@ function EditUserDialogBody({
             >
               Keep editing
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1 sm:flex-none">
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" data-icon="inline-start" />
-                  Confirming…
-                </>
-              ) : (
-                "Confirm and Save"
-              )}
+            <Button type="submit" loading={isSubmitting} className="flex-1 sm:flex-none">
+              {isSubmitting ? "Confirming…" : "Confirm and Save"}
             </Button>
           </div>
         </form>

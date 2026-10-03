@@ -150,11 +150,21 @@ function ResponsiveDialogDescription({
   );
 }
 
-function ResponsiveDialogBody({ className, ...props }: React.ComponentProps<"div">) {
+function ResponsiveDialogBody({
+  className,
+  gutter = true,
+  ...props
+}: React.ComponentProps<"div"> & { gutter?: boolean }) {
   return (
     <div
       data-slot="responsive-dialog-body"
-      className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain", className)}
+      className={cn(
+        "min-h-0 flex-1 overflow-y-auto overscroll-contain",
+        // Focus rings paint 3px outside controls; the 4px inset keeps them inside the scroll clip.
+        // Mobile keeps the drawer's px-4 gutter; desktop cancels the inset with a negative margin.
+        gutter && "px-4 py-4 md:-m-1 md:p-1",
+        className
+      )}
       {...props}
     />
   );

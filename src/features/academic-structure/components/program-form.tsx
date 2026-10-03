@@ -94,7 +94,7 @@ export function ProgramForm({
       </div>
 
       {formId ? null : (
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" loading={isPending}>
           {isPending ? "Saving..." : submitLabel}
         </Button>
       )}

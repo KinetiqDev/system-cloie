@@ -82,7 +82,7 @@ async function findSubmittedResponse(courseBoundEvaluationId: string, deployment
 }
 
 async function verifySeededIdentity(
-  contract: { id: string; email: string },
+  contract: { id: string; email: string; name?: string },
   expectedRole: string
 ): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: contract.id } });
@@ -91,6 +91,12 @@ async function verifySeededIdentity(
     user?.email === contract.email,
     `seeded user ${contract.email} email drift: got "${user?.email}"`
   );
+  if (contract.name !== undefined) {
+    assertContract(
+      user?.name === contract.name,
+      `seeded user ${contract.email} name drift: got "${user?.name}"`
+    );
+  }
   const userRole = await prisma.userRole.findFirst({ where: { user_id: contract.id } });
   assertContract(
     userRole?.role === expectedRole,

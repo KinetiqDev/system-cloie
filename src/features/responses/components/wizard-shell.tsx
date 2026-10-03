@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { ReviewModal } from "./review-modal";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime } from "@/lib/utils/date-format";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type { StudentEvaluationSection } from "@/features/responses/types";
@@ -594,7 +595,8 @@ export function WizardShell({
         <div className="mb-3 flex items-center justify-between sm:mb-4">
           <BackLink href={returnRoute}>Back to Dashboard</BackLink>
           <div className="text-text-muted text-label-sm flex items-center gap-2 font-bold tracking-wider uppercase">
-            <Save className="size-4" /> {isSaving ? "Saving..." : savedTimeText}
+            {isSaving ? <Spinner size="sm" aria-hidden="true" /> : <Save className="size-4" />}{" "}
+            {isSaving ? "Saving..." : savedTimeText}
           </div>
         </div>
         <h1 className="font-heading text-heading-md mb-2 font-black sm:mb-3">{title}</h1>

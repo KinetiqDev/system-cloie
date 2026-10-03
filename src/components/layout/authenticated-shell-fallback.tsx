@@ -1,13 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 export function AuthenticatedShellFallback() {
   return (
     <div
-      className="bg-background flex min-h-screen w-full"
+      className="bg-background relative flex min-h-screen w-full"
       role="status"
       aria-busy="true"
       aria-label="Loading application"
     >
+      <RouteProgress className="absolute inset-x-0 top-0 z-10" />
       <aside className="border-border bg-surface fixed inset-y-0 left-0 hidden w-64 flex-col border-r lg:flex">
         <div className="border-border flex h-16 shrink-0 items-center border-b px-6">
           <Skeleton aria-hidden="true" className="size-8 rounded" />

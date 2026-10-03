@@ -47,21 +47,6 @@ export type CourseAssignmentSearchParams = Record<string, string | string[] | un
 
 const MAX_PAGE = 10_000;
 const MAX_QUERY_LENGTH = 100;
-const queryKeys = [
-  "page",
-  "termInstanceId",
-  "courseId",
-  "facultyId",
-  "programId",
-  "yearLevel",
-  "section",
-  "courseScope",
-  "isActive",
-  "roster",
-  "q",
-  "sort",
-  "dir",
-] as const;
 
 const uuidSchema = z.string().uuid();
 const pageSchema = z.coerce.number().int().min(1).max(MAX_PAGE);
@@ -274,10 +259,6 @@ export function isCanonicalCourseAssignmentListState(
   }
 
   return raw.toString() === serializeCourseAssignmentListState(state, role).toString();
-}
-
-export function getCourseAssignmentListQueryKeys(): readonly string[] {
-  return queryKeys;
 }
 
 export function toCourseAssignmentListOptions(state: CourseAssignmentListUrlState) {

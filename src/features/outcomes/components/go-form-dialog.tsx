@@ -244,7 +244,7 @@ export function GOFormDialog({ mode, programId, go, open, onOpenChange }: GOForm
               : "Update Graduate Outcome details."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <ResponsiveDialogBody className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-0">
+        <ResponsiveDialogBody className="pb-[max(1rem,env(safe-area-inset-bottom))]">
           {mode === "create" ? (
             <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
           ) : (

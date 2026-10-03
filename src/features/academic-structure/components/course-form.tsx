@@ -370,7 +370,7 @@ export function CourseForm({
       </div>
 
       {formId ? null : (
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" loading={isPending}>
           {isPending ? "Saving..." : submitLabel}
         </Button>
       )}

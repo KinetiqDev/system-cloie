@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buildProgramHeadEditToolPath } from "@/lib/constants/program-head-routes";
-import { encodeQuestionKey } from "../services/central-deployment-go-plan";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type { CentralPublishReadiness } from "../types";
 
 /** Unbound questions listed inline before the rest fold into a disclosure. */

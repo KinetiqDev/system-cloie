@@ -36,7 +36,7 @@ export function CreateProgramDialog({ open, onOpenChange }: CreateProgramDialogP
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+        <ResponsiveDialogBody>
           <ProgramForm
             action={createProgramAction}
             submitLabel="Create Program"

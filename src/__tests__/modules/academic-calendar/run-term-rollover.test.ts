@@ -63,6 +63,29 @@ function mockNonAdmin() {
   });
 }
 
+describe.each([runTermRollover, previewTermRollover])("rollover authorization", (operation) => {
+  it.each([null, ROLES.FACULTY])(
+    "rejects an assigned Secretary with active role %s",
+    async (activeRole) => {
+      vi.clearAllMocks();
+      resolveAuthSessionMock.mockResolvedValue({
+        userId: "secretary-1",
+        roles: [ROLES.SECRETARY, ROLES.FACULTY],
+        activeRole,
+      });
+
+      const result = await operation({
+        sourceTermInstanceId: "term-1",
+        targetTermInstanceId: "term-2",
+      });
+
+      expect(result).toEqual({ success: false, error: "Admin access required." });
+      expect(termInstanceFindUniqueMock).not.toHaveBeenCalled();
+      expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();
+    }
+  );
+});
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("runTermRollover", () => {
@@ -388,9 +411,7 @@ describe("runTermRollover", () => {
     ]);
 
     // Student already enrolled in target term
-    studentEnrollmentFindManyMock.mockResolvedValueOnce([
-      { student_user_id: "student-1" },
-    ]);
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([{ student_user_id: "student-1" }]);
 
     const result = await runTermRollover({
       sourceTermInstanceId: "term-1",

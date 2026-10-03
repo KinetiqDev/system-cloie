@@ -2085,6 +2085,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "ui_primitive",
   },
   {
+    path: "src/components/ui/route-progress.tsx",
+    disposition: "already_compliant",
+    category: "ui_primitive",
+    notes:
+      "Indeterminate route-loading progress bar; token-driven, transform-only animation, motion-reduce static fallback",
+  },
+  {
     path: "src/components/ui/checkbox.tsx",
     disposition: "task",
     taskId: 4,

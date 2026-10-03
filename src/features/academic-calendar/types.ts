@@ -76,31 +76,6 @@ export interface CreateSchoolYearInput {
 }
 
 /**
- * Input for updating a School Year.
- */
-export interface UpdateSchoolYearInput {
-  id: string;
-  startDate?: Date;
-  endDate?: Date;
-}
-
-/**
- * Input for updating a Term Instance.
- */
-export interface UpdateTermInstanceInput {
-  id: string;
-  startDate?: Date;
-  endDate?: Date;
-}
-
-/**
- * Input for setting the active term instance.
- */
-export interface SetActiveTermInput {
-  termInstanceId: string;
-}
-
-/**
  * Filter options for listing School Years.
  */
 export interface ListSchoolYearsFilter {

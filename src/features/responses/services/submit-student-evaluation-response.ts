@@ -5,11 +5,7 @@ import {
   resolveCourseBoundEvaluationEligibility,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
-import {
-  isCentralDeploymentAvailable,
-  isCourseBoundEvaluationAvailable,
-  STUDENT_EVALUATION_UNAVAILABLE_ERROR,
-} from "./course-bound-availability";
+import { DEPLOYMENT_UNAVAILABLE_ERROR, isDeploymentAvailable } from "./deployment-availability";
 import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
 import {
   ALREADY_SUBMITTED_ERROR,
@@ -101,13 +97,9 @@ export async function submitStudentEvaluationResponse({
     };
   }
 
-  const isAvailable = assignment.course_bound
-    ? isCourseBoundEvaluationAvailable(assignment.course_bound)
-    : isCentralDeploymentAvailable(deployment);
-
-  if (!isAvailable) {
+  if (!isDeploymentAvailable(deployment)) {
     return {
-      error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
+      error: DEPLOYMENT_UNAVAILABLE_ERROR,
       success: false,
     };
   }
@@ -119,7 +111,7 @@ export async function submitStudentEvaluationResponse({
     );
     if (!eligibility.eligible) {
       return {
-        error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
+        error: DEPLOYMENT_UNAVAILABLE_ERROR,
         success: false,
       };
     }

@@ -569,7 +569,7 @@ export function CourseAssignmentFormDialog({
   const stepContent = (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <WizardStepper steps={STEPS} currentStep={step} />
-      <div className="min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain py-1">
+      <div className="-mx-1 min-h-0 min-w-0 flex-1 overflow-x-clip overflow-y-auto overscroll-contain px-1 py-1">
         <AssignmentStepContent
           step={step}
           termInstances={termInstances}
@@ -625,13 +625,17 @@ export function CourseAssignmentFormDialog({
   if (!isDesktop) {
     return (
       <Drawer open={open} onOpenChange={handleOpenChange} showSwipeHandle>
-        <DrawerContent className="flex max-h-[min(92dvh,48rem)] min-w-0 flex-col overflow-x-clip px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <DrawerHeader className="px-0 pt-4 text-left">
-            <DrawerTitle>Assign Faculty to Course</DrawerTitle>
-            <DrawerDescription>Complete the class assignment details.</DrawerDescription>
-          </DrawerHeader>
-          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden py-3">{stepContent}</div>
-          <DrawerFooter className="px-0 pt-3">{footer}</DrawerFooter>
+        <DrawerContent className="max-h-[min(92dvh,48rem)] min-w-0 overflow-x-clip">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+            <DrawerHeader className="px-0 pt-4 text-left">
+              <DrawerTitle>Assign Faculty to Course</DrawerTitle>
+              <DrawerDescription>Complete the class assignment details.</DrawerDescription>
+            </DrawerHeader>
+            <div className="-mx-1 flex min-h-0 min-w-0 flex-1 overflow-hidden px-1 py-3">
+              {stepContent}
+            </div>
+            <DrawerFooter className="px-0 pt-3">{footer}</DrawerFooter>
+          </div>
         </DrawerContent>
       </Drawer>
     );

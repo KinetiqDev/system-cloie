@@ -6,11 +6,7 @@ import {
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
 import type { StudentEvaluationSection } from "@/features/responses/types";
-import {
-  isCentralDeploymentAvailable,
-  isCourseBoundEvaluationAvailable,
-  STUDENT_EVALUATION_UNAVAILABLE_ERROR,
-} from "./course-bound-availability";
+import { DEPLOYMENT_UNAVAILABLE_ERROR, isDeploymentAvailable } from "./deployment-availability";
 import { mapTemplateStructureToSections } from "./map-template-structure";
 import { saveResponseDraft } from "./save-response-draft";
 
@@ -107,13 +103,9 @@ export async function saveStudentEvaluationDraft({
     };
   }
 
-  const isAvailable = assignment.course_bound
-    ? isCourseBoundEvaluationAvailable(assignment.course_bound)
-    : isCentralDeploymentAvailable(deployment);
-
-  if (!isAvailable) {
+  if (!isDeploymentAvailable(deployment)) {
     return {
-      error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
+      error: DEPLOYMENT_UNAVAILABLE_ERROR,
       success: false,
     };
   }
@@ -125,7 +117,7 @@ export async function saveStudentEvaluationDraft({
     );
     if (!eligibility.eligible) {
       return {
-        error: STUDENT_EVALUATION_UNAVAILABLE_ERROR,
+        error: DEPLOYMENT_UNAVAILABLE_ERROR,
         success: false,
       };
     }

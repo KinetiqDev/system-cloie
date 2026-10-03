@@ -115,7 +115,7 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative max-w-sm flex-1">
+          <div className="relative max-w-sm min-w-0 flex-1">
             <Search
               aria-hidden="true"
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -130,7 +130,11 @@ export function FacultyEvaluationRespondents({ respondents }: Props) {
               className="pl-9"
             />
           </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+          <div
+            className="flex flex-wrap gap-2 sm:shrink-0 sm:flex-nowrap"
+            role="group"
+            aria-label="Filter by status"
+          >
             {STATUS_FILTERS.map((filter) => {
               const label =
                 filter === "ALL"

@@ -14,6 +14,7 @@ import {
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import {
   getSnapshotSectionItems,
   isSnapshotSection,
@@ -117,7 +118,7 @@ export async function getProgramHeadCentralEvaluationDetail(
   // Attach GO bindings to question results
   const questionResults: ProgramHeadCentralQuestionResult[] = questionResultsBase.map((q) => ({
     ...q,
-    goBindings: goDisplayByQuestionKey.get(`${q.sectionKey}|${q.itemKey}`) ?? [],
+    goBindings: goDisplayByQuestionKey.get(encodeQuestionKey(q.sectionKey, q.itemKey)) ?? [],
   }));
 
   const scaleGroups = groupRatingsByScale(
@@ -274,11 +275,12 @@ function buildCentralRatingRows(
         return [];
       }
       scaleKeys.add(scale.key);
-      const goBindings = goByQuestionKey.get(`${item.section_key}|${item.item_key}`) ?? [];
+      const questionKey = encodeQuestionKey(item.section_key, item.item_key);
+      const goBindings = goByQuestionKey.get(questionKey) ?? [];
       ratingRows.push({
         sectionKey: item.section_key,
         itemKey: item.item_key,
-        prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
+        prompt: snapshotItems.get(questionKey)?.prompt ?? item.item_key,
         ratingValue: item.rating_value,
         responseId: response.id,
         scale,
@@ -323,13 +325,13 @@ function buildCentralIndexes(
   const snapshotItems = new Map<string, { prompt: string }>();
   for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
     for (const item of getSnapshotSectionItems(section)) {
-      snapshotItems.set(`${section.key}|${item.key}`, { prompt: item.prompt });
+      snapshotItems.set(encodeQuestionKey(section.key, item.key), { prompt: item.prompt });
     }
   }
   const goByQuestionKey = new Map<string, CentralGoRatingRow["goBindings"]>();
   const goDisplayByQuestionKey = new Map<string, ProgramWideGoBinding[]>();
   for (const sb of goSnapshots) {
-    const key = `${sb.section_key}|${sb.item_key}`;
+    const key = encodeQuestionKey(sb.section_key, sb.item_key);
     const entry = {
       goId: sb.go_id ?? sb.go_code_snapshot,
       goCode: sb.go_code_snapshot,

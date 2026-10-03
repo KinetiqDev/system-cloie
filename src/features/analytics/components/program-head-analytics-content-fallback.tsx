@@ -1,6 +1,7 @@
 import { BarChart3, SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 import { tabsListVariants, tabsTriggerClass } from "@/components/ui/tabs-styles";
 import { cn } from "@/lib/utils";
 import {
@@ -96,6 +97,7 @@ export function ProgramHeadAnalyticsRouteFallback() {
       aria-label="Loading analytics"
       className="flex min-w-0 flex-col gap-6"
     >
+      <RouteProgress />
       <Skeleton className="h-4 w-40" />
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
         <div className="flex items-center gap-2">

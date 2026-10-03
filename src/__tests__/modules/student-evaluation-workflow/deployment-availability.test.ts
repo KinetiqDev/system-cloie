@@ -1,12 +1,12 @@
 import { DeploymentStatus } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { isCourseBoundEvaluationAvailable } from "@/features/responses/services/course-bound-availability";
+import { isDeploymentAvailable } from "@/features/responses/services/deployment-availability";
 
-describe("isCourseBoundEvaluationAvailable", () => {
+describe("isDeploymentAvailable", () => {
   it("keeps scheduled evaluations unavailable before activation", () => {
     expect(
-      isCourseBoundEvaluationAvailable(
+      isDeploymentAvailable(
         {
           activation_at: new Date("2026-05-15T00:00:00.000Z"),
           deadline_at: new Date("2026-05-20T00:00:00.000Z"),
@@ -19,7 +19,7 @@ describe("isCourseBoundEvaluationAvailable", () => {
 
   it("treats scheduled evaluations as available once activation passes", () => {
     expect(
-      isCourseBoundEvaluationAvailable(
+      isDeploymentAvailable(
         {
           activation_at: new Date("2026-05-15T00:00:00.000Z"),
           deadline_at: new Date("2026-05-20T00:00:00.000Z"),
@@ -32,7 +32,7 @@ describe("isCourseBoundEvaluationAvailable", () => {
 
   it("keeps inactive evaluations unavailable even after activation", () => {
     expect(
-      isCourseBoundEvaluationAvailable(
+      isDeploymentAvailable(
         {
           activation_at: new Date("2026-05-01T00:00:00.000Z"),
           deadline_at: new Date("2026-05-20T00:00:00.000Z"),
@@ -45,7 +45,7 @@ describe("isCourseBoundEvaluationAvailable", () => {
 
   it("keeps expired evaluations unavailable", () => {
     expect(
-      isCourseBoundEvaluationAvailable(
+      isDeploymentAvailable(
         {
           activation_at: new Date("2026-05-01T00:00:00.000Z"),
           deadline_at: new Date("2026-05-10T00:00:00.000Z"),

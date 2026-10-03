@@ -195,7 +195,9 @@ export function ManageMajorsDialog({
             <DialogTitle>Manage Majors — {program.code}</DialogTitle>
             <DialogDescription>Add, toggle, or remove majors for {program.name}.</DialogDescription>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">{content}</div>
+          <div className="-mx-1 -mb-1 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-1 pb-1">
+            {content}
+          </div>
         </DialogContent>
       </Dialog>
     );
@@ -203,14 +205,18 @@ export function ManageMajorsDialog({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-      <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-8">
-        <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
-          <DrawerTitle>Manage Majors — {program.code}</DrawerTitle>
-          <DrawerDescription className="line-clamp-2">
-            Add, toggle, or remove majors for {program.name}.
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-2">{content}</div>
+      <DrawerContent className="max-h-[85dvh]">
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-8">
+          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
+            <DrawerTitle>Manage Majors — {program.code}</DrawerTitle>
+            <DrawerDescription className="line-clamp-2">
+              Add, toggle, or remove majors for {program.name}.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-1 pb-2">
+            {content}
+          </div>
+        </div>
       </DrawerContent>
     </Drawer>
   );

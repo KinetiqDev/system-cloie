@@ -2,7 +2,7 @@ import { CourseBoundEvaluationExclusionCategory, DeploymentStatus } from "@prism
 import { isLikertQuestion, type TemplateStructure } from "@/features/instruments/types";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { isNeutralOtherExplanation } from "../exclusion-text";
-import { encodeQuestionKey } from "./central-deployment-go-plan";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type {
   CourseBoundEvaluationExclusionInput,
   PublishCourseBoundEvaluationResult,

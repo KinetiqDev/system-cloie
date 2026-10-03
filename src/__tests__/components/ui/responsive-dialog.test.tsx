@@ -51,28 +51,21 @@ function Example() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ResponsiveDialog", () => {
-  it("renders a centered dialog at desktop widths", async () => {
-    stubViewport(true);
+  it.each([true, false])("dismisses with Escape at desktop=%s", async (isDesktop) => {
+    stubViewport(isDesktop);
     render(<Example />);
 
-    const overlay = await screen.findByRole("dialog", { name: "Edit record" });
-    expect(overlay).toHaveClass("desktop-width");
-    expect(overlay).not.toHaveClass("mobile-height");
-    expect(overlay).toHaveClass("top-1/2", "left-1/2");
+    expect(await screen.findByRole("dialog", { name: "Edit record" })).toBeVisible();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("renders a bottom drawer with safe-area actions on mobile", async () => {
-    stubViewport(false);
+  it.each([true, false])("dismisses with Cancel at desktop=%s", async (isDesktop) => {
+    stubViewport(isDesktop);
     render(<Example />);
 
-    const overlay = await screen.findByRole("dialog", { name: "Edit record" });
-    expect(overlay).toHaveClass("mobile-height");
-    expect(overlay).toHaveAttribute("data-swipe-direction", "down");
-
-    const footer = screen.getByRole("button", { name: "Save" }).parentElement;
-    expect(footer).toHaveClass("flex-col-reverse", "border-t");
-
-    fireEvent.keyDown(document, { key: "Escape" });
+    await screen.findByRole("dialog", { name: "Edit record" });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });

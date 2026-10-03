@@ -4,6 +4,7 @@ import { listStudentsForClass } from "@/features/enrollments/services/list-stude
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
+import { prisma } from "@/lib/db/prisma";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
 vi.mock("@/lib/db/prisma", () => ({
@@ -42,10 +43,28 @@ describe("list-students-for-class", () => {
     }
   });
 
+  it.each([null, ROLES.STUDENT])(
+    "denies assigned Faculty with active role %s",
+    async (activeRole) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+        createAuthSessionSnapshot({ roles: [ROLES.FACULTY, ROLES.STUDENT], activeRole })
+      );
+      vi.mocked(prisma.studentEnrollment.findMany).mockClear();
+
+      const result = await listStudentsForClass({
+        termInstanceId: "term-1",
+        programId: "program-1",
+        yearLevel: YearLevel.FIRST_YEAR,
+      });
+
+      expect(result).toEqual({ success: false, error: "Access denied." });
+      expect(prisma.studentEnrollment.findMany).not.toHaveBeenCalled();
+    }
+  );
+
   it("should return students for faculty", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
 
-    const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.studentEnrollment.findMany).mockResolvedValue([
       {
         student_user_id: "student-1",
@@ -109,7 +128,6 @@ describe("list-students-for-class", () => {
   it("should filter by section when provided", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
 
-    const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.studentEnrollment.findMany).mockResolvedValue([] as never);
 
     await listStudentsForClass({
@@ -131,7 +149,6 @@ describe("list-students-for-class", () => {
   it("projects opaque complete names including compound and punctuation values", async () => {
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockFacultySession);
 
-    const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.studentEnrollment.findMany).mockResolvedValue([
       {
         student_user_id: "student-2",
@@ -173,5 +190,4 @@ describe("list-students-for-class", () => {
       })
     );
   });
-
 });

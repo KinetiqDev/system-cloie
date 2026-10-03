@@ -3,6 +3,7 @@ import type {
   TemplateGoQuestionBinding,
   TemplateStructure,
 } from "../types";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 
 /**
  * Draft authoring bindings: identity, validity, and payload projection.
@@ -21,15 +22,6 @@ import type {
  * save; this module never drops a binding to satisfy it, because choosing which
  * axis to discard is not derivable here.
  */
-
-/**
- * Question identity as a structural tuple, never a separator join. Section and
- * question keys are arbitrary nonempty strings that may contain separators, so
- * a joined key would merge distinct questions such as `(a, b:c)` with `(a:b, c)`.
- */
-export function encodeQuestionBindingKey(sectionKey: string, itemKey: string): string {
-  return JSON.stringify([sectionKey, itemKey]);
-}
 
 /** Resolve an encoded key back to its section and question; null for a foreign key. */
 function decodeQuestionBindingKey(
@@ -66,7 +58,7 @@ function liveBindingKeys(structure: TemplateStructure): Set<string> {
   for (const section of structure) {
     for (const question of section.questions) {
       if (question.type !== "likert") continue;
-      keys.add(encodeQuestionBindingKey(section.key, question.key));
+      keys.add(encodeQuestionKey(section.key, question.key));
     }
   }
   return keys;
@@ -127,7 +119,7 @@ export function collectGoBindings(
   return structure.flatMap((section) =>
     section.questions.flatMap((question) => {
       if (question.type !== "likert") return [];
-      const goIds = goBindings[encodeQuestionBindingKey(section.key, question.key)] ?? [];
+      const goIds = goBindings[encodeQuestionKey(section.key, question.key)] ?? [];
       return goIds
         .filter(Boolean)
         .map((goId) => ({ itemKey: question.key, goId, sectionKey: section.key }));

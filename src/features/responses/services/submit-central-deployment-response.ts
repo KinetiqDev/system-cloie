@@ -1,8 +1,7 @@
 import { DeploymentType, ResponseStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { isCentralDeploymentAvailable } from "./central-deployment-availability";
-import { CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR } from "./central-deployment-availability";
+import { DEPLOYMENT_UNAVAILABLE_ERROR, isDeploymentAvailable } from "./deployment-availability";
 import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
 import {
   ALREADY_SUBMITTED_ERROR,
@@ -72,9 +71,9 @@ export async function submitCentralDeploymentResponse({
     };
   }
 
-  if (!isCentralDeploymentAvailable(assignment.central_deployment)) {
+  if (!isDeploymentAvailable(assignment.central_deployment)) {
     return {
-      error: CENTRAL_DEPLOYMENT_UNAVAILABLE_ERROR,
+      error: DEPLOYMENT_UNAVAILABLE_ERROR,
       success: false,
     };
   }

@@ -25,5 +25,5 @@ _Avoid_: Delete enrollment, hard removal
 ## Lookup
 
 **Class lookup**:
-Roster preview keyed by term instance + program + year level, optionally narrowed by section and major; it returns active enrollments as student records whose name is the canonical opaque account name per ADR 0014. Publication flows use it to target respondents.
+Roster preview keyed by term instance + program + year level, optionally narrowed by section and major; it returns active enrollments as student records whose name is the canonical opaque account name per ADR 0014. Publication flows use it to target respondents. Reads require the server-authorized active Secretary, Dean, Program Head, or Faculty role; assigned roles alone do not authorize a withheld session or a different selected role.
 _Avoid_: Full roster export, directory query

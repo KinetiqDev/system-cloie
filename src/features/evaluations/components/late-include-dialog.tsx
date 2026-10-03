@@ -179,7 +179,7 @@ export function LateIncludeDialog({
             >
               Cancel
             </Button>
-            <Button type="button" onClick={submit} disabled={isPending}>
+            <Button type="button" onClick={submit} loading={isPending}>
               {isPending ? "Including..." : "Confirm late inclusion"}
             </Button>
           </DialogFooter>

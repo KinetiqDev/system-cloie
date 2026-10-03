@@ -34,7 +34,7 @@ export default async function TermRolloverPage({ params }: PageProps) {
   // 1. Verify admin access
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.SECRETARY)) {
+  if (authSession?.activeRole !== ROLES.SECRETARY) {
     redirect("/unauthorized");
   }
 

@@ -1,5 +1,6 @@
 // fallow-ignore-file code-duplication
 import { describeScale, ratingBelongsToScale, type ScaleIdentity } from "./scale-identity";
+import { encodeQuestionKey } from "./question-identity";
 import { groupRatingsByScale, type QuantitativeRating } from "./quantitative";
 import type {
   CiloContributingQuestion,
@@ -51,8 +52,7 @@ type CiloAggregate = {
 
 function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow): void {
   aggregate.ratings.push({ rating: toRating(row), scale: row.scale });
-  // Question identity is a structural tuple, never a separator join.
-  const questionKey = JSON.stringify([row.sectionKey, row.itemKey]);
+  const questionKey = encodeQuestionKey(row.sectionKey, row.itemKey);
   if (!aggregate.questions.has(questionKey)) {
     aggregate.questions.set(questionKey, {
       sectionKey: row.sectionKey,
@@ -201,8 +201,7 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
   const byQuestion = new Map<string, QuestionAggregate>();
 
   for (const row of rows) {
-    // Question identity is a structural tuple, never a separator join.
-    const questionKey = JSON.stringify([row.sectionKey, row.itemKey]);
+    const questionKey = encodeQuestionKey(row.sectionKey, row.itemKey);
     let aggregate = byQuestion.get(questionKey);
     if (!aggregate) {
       aggregate = { row, entries: [] };

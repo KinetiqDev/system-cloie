@@ -25,7 +25,7 @@ The academic period used to scope course assignments: a regular-semester academi
 _Avoid_: Summer term, calendar period
 
 **Active academic period**:
-Exactly the AcademicTermInstance whose status is ACTIVE — at most one exists at any time (partial unique index `one_active_academic_period`). Activation additionally requires the School Year to be active, with `active_semester` matching the period's semester. Legacy "active term" phrasing (`setActiveTermInstance`, `getActiveTermId`, the "Set Active Term" dialog) denotes the same concept.
+Exactly the AcademicTermInstance whose status is ACTIVE — at most one exists at any time (partial unique index `one_active_academic_period`). Activation additionally requires the School Year to be active, with `active_semester` matching the period's semester, and runs through `transitionPeriodStatus`. Legacy "active term" phrasing (`getActiveTermId`, the "Set Active Term" dialog) denotes the same concept.
 _Avoid_: Upcoming period, historical period
 
 **Canonical term (structural term)**:
@@ -60,7 +60,7 @@ The Secretary-controlled status change of an AcademicTermInstance (PLANNED→ACT
 _Avoid_: Term editing, status editing
 
 **Term rollover**:
-Secretary-gated operation copying the source term's active student enrollments into a target term. Year level carries unchanged within a School Year and promotes (1st→2nd→3rd→4th→graduating) across School Years. Graduating students and missing data surface as GRADUATING / MISSING_DATA exceptions; duplicate targets are skipped idempotently via skipDuplicates (the `DUPLICATE` exception type is reserved and rendered by the exceptions table but never emitted). Created enrollments carry source ROLLOVER.
+Secretary-gated operation copying the source term's active student enrollments into a target term. Preview and execution require the server-authorized active Secretary role, not merely an assigned Secretary role; a withheld role or another selected role grants no access. Year level carries unchanged within a School Year and promotes (1st→2nd→3rd→4th→graduating) across School Years. Graduating students and missing data surface as GRADUATING / MISSING_DATA exceptions; duplicate targets are skipped idempotently via skipDuplicates (the `DUPLICATE` exception type is reserved and rendered by the exceptions table but never emitted). Created enrollments carry source ROLLOVER.
 
 **Period readiness snapshot**:
 Immutable per-period record of outcome readiness, persisted atomically inside the transaction promoting a period ACTIVE→COMPLETED. A DB trigger forbids UPDATE/DELETE; reads branch on its schema version — version 1 keeps the legacy at-least-one-target semantics, version 2 carries typed payloads under the exhaustive manifestation rule.

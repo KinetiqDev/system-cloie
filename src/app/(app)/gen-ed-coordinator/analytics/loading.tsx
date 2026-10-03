@@ -1,8 +1,15 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 export default function GenEdCoordinatorAnalyticsLoading() {
   return (
-    <div className="space-y-6">
+    <div
+      className="flex min-w-0 flex-col gap-6"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <RouteProgress />
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-80" />

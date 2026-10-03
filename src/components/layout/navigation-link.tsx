@@ -18,7 +18,7 @@ function PendingIndicator({ onPendingChange }: { onPendingChange: (pending: bool
   return (
     <span
       aria-hidden="true"
-      className={`pointer-events-none absolute top-2 right-2 size-1.5 rounded-full bg-current transition-opacity motion-reduce:transition-none ${pending ? "animate-pulse opacity-100" : "opacity-0"}`}
+      className={`pointer-events-none absolute top-2 right-2 size-1.5 rounded-full bg-current transition-opacity motion-reduce:transition-none ${pending ? "animate-pulse opacity-100 motion-reduce:animate-none" : "opacity-0"}`}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RouteProgress } from "@/components/ui/route-progress";
 
 type RespondentLoadingVariant = "evaluations" | "evaluation" | "history" | "submission" | "profile";
 
@@ -252,7 +253,13 @@ function ProfileSkeleton() {
 
 export function RespondentRouteLoading({ variant }: { variant: RespondentLoadingVariant }) {
   return (
-    <div className="min-w-0" role="status" aria-busy="true" aria-label={loadingLabels[variant]}>
+    <div
+      className="flex min-w-0 flex-col gap-4"
+      role="status"
+      aria-busy="true"
+      aria-label={loadingLabels[variant]}
+    >
+      <RouteProgress />
       {variant === "evaluations" && <EvaluationListSkeleton />}
       {variant === "evaluation" && <EvaluationSkeleton />}
       {variant === "history" && <HistorySkeleton />}

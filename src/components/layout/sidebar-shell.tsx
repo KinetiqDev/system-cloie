@@ -5,6 +5,7 @@ import type { Role } from "@/lib/constants/roles";
 import { sidebarCollapsedCookieHeader } from "@/lib/preferences/sidebar-preference";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./sidebar";
+import { FOLD_MOTION } from "./sidebar-fold";
 
 interface SidebarShellProps {
   user?: {
@@ -74,7 +75,7 @@ export function SidebarShell({
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
       />
-      <div className={cn("flex min-w-0 flex-1 flex-col", contentOffset)}>
+      <div className={cn("flex min-w-0 flex-1 flex-col", FOLD_MOTION, contentOffset)}>
         {header}
         {children}
         {footer}

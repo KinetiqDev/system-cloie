@@ -48,10 +48,7 @@ const YEAR_LEVEL_PROMOTION: Record<YearLevel, YearLevel | null> = {
  * The year level for the target term: carried unchanged within the same
  * School Year, promoted (1st->2nd->3rd->4th->graduating) across School Years.
  */
-function nextYearLevelFor(
-  currentYearLevel: YearLevel,
-  sameSchoolYear: boolean
-): YearLevel | null {
+function nextYearLevelFor(currentYearLevel: YearLevel, sameSchoolYear: boolean): YearLevel | null {
   return sameSchoolYear ? currentYearLevel : YEAR_LEVEL_PROMOTION[currentYearLevel];
 }
 
@@ -68,7 +65,7 @@ export async function runTermRollover({
   // 1. Verify admin access
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.SECRETARY)) {
+  if (authSession?.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Admin access required." };
   }
 
@@ -250,7 +247,7 @@ export async function previewTermRollover({
   // 1. Verify admin access
   const authSession = await resolveAuthSession();
 
-  if (!authSession?.roles?.includes(ROLES.SECRETARY)) {
+  if (authSession?.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Admin access required." };
   }
 

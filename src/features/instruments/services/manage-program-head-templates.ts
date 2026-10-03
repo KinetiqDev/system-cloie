@@ -1,5 +1,6 @@
 // fallow-ignore-file code-duplication
 import { EvaluationTemplateType, Prisma } from "@prisma/client";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import { prisma } from "@/lib/db/prisma";
 import {
   revalidateProgramHeadAssignment,
@@ -43,11 +44,6 @@ export function normalizeGoQuestionBindings(input: {
 }):
   | { success: true; bindings: ProgramHeadGoBindingItem[]; missingQuestionKeys: string[] }
   | { success: false; error: string } {
-  // Template keys may contain any nonempty string, so the question identity
-  // must be a structurally encoded tuple — never a separator join.
-  const encodeQuestionKey = (sectionKey: string, itemKey: string) =>
-    JSON.stringify([sectionKey, itemKey]);
-
   const questionMap = new Map(
     listTemplateLikertQuestions(input.structure).map((question) => [
       encodeQuestionKey(question.sectionKey, question.itemKey),

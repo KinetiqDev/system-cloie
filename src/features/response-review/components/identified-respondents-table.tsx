@@ -132,7 +132,7 @@ export function IdentifiedRespondentsTable({
           </span>
         </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="relative w-full lg:max-w-sm">
+          <div className="relative w-full min-w-0 lg:max-w-sm lg:flex-1">
             <Search
               aria-hidden="true"
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
@@ -149,7 +149,7 @@ export function IdentifiedRespondentsTable({
             />
           </div>
           <div
-            className="flex flex-wrap gap-2"
+            className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap"
             role="group"
             aria-label="Filter respondents by status"
           >

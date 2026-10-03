@@ -174,7 +174,7 @@ describe("operational route loading boundaries", () => {
     render(<SecretaryUsersLoading />);
 
     const status = screen.getByRole("status", { name: "Loading users" });
-    const kpiGrid = status.firstElementChild?.querySelector(':scope > [class~="md:grid-cols-4"]');
+    const kpiGrid = status.querySelector('[class~="md:grid-cols-4"]');
 
     expect(kpiGrid).toBeInTheDocument();
     expect(kpiGrid?.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(8);

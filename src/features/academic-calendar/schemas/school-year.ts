@@ -29,30 +29,6 @@ export const createSchoolYearSchema = z
 export type CreateSchoolYearInput = z.infer<typeof createSchoolYearSchema>;
 
 /**
- * Zod schema for updating a School Year.
- */
-export const updateSchoolYearSchema = z
-  .object({
-    id: z.string().uuid("Invalid school year ID"),
-    startDate: z.date().optional(),
-    endDate: z.date().optional(),
-  })
-  .refine(
-    (data) => {
-      if (data.startDate && data.endDate) {
-        return data.startDate < data.endDate;
-      }
-      return true;
-    },
-    {
-      message: "End date must be after start date",
-      path: ["endDate"],
-    }
-  );
-
-export type UpdateSchoolYearInput = z.infer<typeof updateSchoolYearSchema>;
-
-/**
  * Zod schema for setting the active semester of a School Year.
  */
 export const setActiveSemesterSchema = z.object({

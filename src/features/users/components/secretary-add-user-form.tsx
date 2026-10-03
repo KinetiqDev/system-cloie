@@ -35,6 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -46,7 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { YEAR_LEVEL_OPTIONS, STUDENT_SECTION_OPTIONS } from "@/lib/constants/academic";
-import { AlertCircle, Info, Loader2, UserCheck, UserPlus, UserRoundCog } from "lucide-react";
+import { AlertCircle, Info, UserCheck, UserPlus, UserRoundCog } from "lucide-react";
 import { formatRole, getRoleBadgeClass } from "../lib/role-visuals";
 import { cn } from "@/lib/utils";
 
@@ -540,7 +541,7 @@ export function AddUserForm({
   const emailHelper =
     lookup.status === "checking" ? (
       <span className="inline-flex items-center gap-1">
-        <Loader2 className="size-3 animate-spin" />
+        <Spinner size="sm" aria-hidden="true" />
         Checking this email…
       </span>
     ) : lookup.status === "error" ? (
@@ -978,13 +979,15 @@ export function AddUserForm({
           <Button
             type="submit"
             className="w-full gap-2 font-semibold sm:w-auto"
-            disabled={isSubmitting || everyRoleAssigned}
+            loading={isSubmitting}
+            disabled={everyRoleAssigned}
           >
             {isSubmitting ? (
-              <>
-                <Loader2 className="animate-spin" data-icon="inline-start" />
-                {existingUser ? "Adding role…" : "Creating user…"}
-              </>
+              existingUser ? (
+                "Adding role…"
+              ) : (
+                "Creating user…"
+              )
             ) : existingUser ? (
               <>
                 Add role

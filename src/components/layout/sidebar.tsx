@@ -23,6 +23,8 @@ import {
 } from "@/lib/constants/navigation";
 import { ROLES } from "@/lib/constants/roles";
 import { NavigationRow } from "./navigation-row";
+import { FOLD_MOTION } from "./sidebar-fold";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 
 // The plate keeps the navy artwork legible against the dark sidebar.
 const LOGO_CLASS_NAME = "h-10";
@@ -32,16 +34,7 @@ const TOOLTIP_DELAY = 300;
 /** Clears the rail edge so a rail tooltip never covers the icons beside it. */
 const RAIL_TOOLTIP_OFFSET = 12;
 
-/**
- * The fold.
- *
- * Collapsing occludes each label — the text is squeezed to zero width, drifts
- * toward the rail edge, and fades — while the icons settle into the rail's
- * centre. The rail width itself snaps: design.md §10 keeps layout dimensions out
- * of transitions, and a width tween would desync the fixed rail from the content
- * gutter, which moves in discrete steps. Reduced motion keeps the opacity fade
- * and drops the spatial movement.
- */
+// Labels fold within the rail while FOLD_MOTION synchronizes its width and the page gutter.
 const LABEL_MOTION =
   "overflow-hidden whitespace-nowrap transition-[max-width,opacity,transform] duration-200 ease-out motion-reduce:transition-[opacity] motion-reduce:duration-150";
 const LABEL_OPEN = "max-w-[20rem] opacity-100";
@@ -140,6 +133,7 @@ export function Sidebar({
       data-collapsed={collapsed ? "true" : "false"}
       className={cn(
         "border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden flex-col overflow-hidden border-r lg:flex",
+        FOLD_MOTION,
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -171,16 +165,15 @@ export function Sidebar({
               </div>
             )}
             {secondaryNav.map((item) => (
-              <NavigationRow
-                key={item.name}
-                href={item.href}
-                secondary
-                iconOnly={collapsed}
-                title={collapsed ? item.name : undefined}
-              >
-                <item.icon className="text-sidebar-foreground/50 size-4 shrink-0" />
-                <FoldedLabel collapsed={collapsed}>{item.name}</FoldedLabel>
-              </NavigationRow>
+              <RailRow key={item.name} collapsed={collapsed} label={item.name}>
+                <NavigationRow href={item.href} secondary iconOnly={collapsed}>
+                  <item.icon
+                    className="text-sidebar-foreground/50 size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <FoldedLabel collapsed={collapsed}>{item.name}</FoldedLabel>
+                </NavigationRow>
+              </RailRow>
             ))}
           </nav>
         )}
@@ -276,6 +269,7 @@ interface DeanNavRowProps {
   item: Pick<NavGroup, "name" | "href" | "icon">;
   active: boolean;
   collapsed: boolean;
+  isLargeScreen: boolean;
   /** A section's children sit under their heading, in the compact type scale. */
   nested?: boolean;
   /** A section heading keeps the rail's standard inset; a destination sits flush. */
@@ -288,18 +282,25 @@ interface DeanNavRowProps {
  * Collapsed hides labels at every width. Otherwise the tablet rail hides them
  * below lg through the label's own breakpoint classes.
  */
-function DeanNavRow({ item, active, collapsed, nested = false, section = false }: DeanNavRowProps) {
+function DeanNavRow({
+  item,
+  active,
+  collapsed,
+  isLargeScreen,
+  nested = false,
+  section = false,
+}: DeanNavRowProps) {
   const rail = !collapsed;
 
   return (
-    <RailRow collapsed={collapsed} label={item.name}>
+    <RailRow collapsed={collapsed || !isLargeScreen} label={item.name}>
       <NavigationRow
         href={item.href}
+        aria-label={item.name}
         active={active}
         rail={rail}
         iconOnly={collapsed}
         aria-current={active ? "page" : undefined}
-        title={rail ? item.name : undefined}
         className={cn(nested && "text-body-sm", collapsed && !section && "px-0")}
       >
         <item.icon className={cn("shrink-0", nested ? "size-4" : "size-5")} aria-hidden="true" />
@@ -316,16 +317,23 @@ interface DeanNavGroupProps {
   /** Resolved once, then read by the section and each of its children. */
   activeItem: (NavItem | NavGroup) | null;
   collapsed: boolean;
+  isLargeScreen: boolean;
 }
 
 /** One Dean section: a heading that is itself a destination, plus its children. */
-function DeanNavGroup({ group, activeItem, collapsed }: DeanNavGroupProps) {
+function DeanNavGroup({ group, activeItem, collapsed, isLargeScreen }: DeanNavGroupProps) {
   // A section and its destinations can share an href, so both have to match.
   const active = activeItem?.href === group.href && activeItem.name === group.name;
 
   return (
     <div>
-      <DeanNavRow item={group} active={active} collapsed={collapsed} section />
+      <DeanNavRow
+        item={group}
+        active={active}
+        collapsed={collapsed}
+        isLargeScreen={isLargeScreen}
+        section
+      />
       <div
         className={cn(
           "border-sidebar-border mt-1 hidden gap-1 border-l pl-2 md:flex md:flex-col",
@@ -338,6 +346,7 @@ function DeanNavGroup({ group, activeItem, collapsed }: DeanNavGroupProps) {
             item={item}
             active={activeItem === item}
             collapsed={collapsed}
+            isLargeScreen={isLargeScreen}
             nested
           />
         ))}
@@ -356,12 +365,13 @@ function DeanSidebar({
   const groups = getDeanNavGroups();
   const [dashboard, profile] = getDeanStandaloneNav();
   const rail = !collapsed;
-
+  const isLargeScreen = useMediaQuery("(min-width: 1024px)");
   return (
     <aside
       data-collapsed={collapsed ? "true" : "false"}
       className={cn(
         "border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden flex-col overflow-hidden border-r md:flex",
+        FOLD_MOTION,
         collapsed ? "w-16" : "w-16 lg:w-64"
       )}
     >
@@ -369,7 +379,6 @@ function DeanSidebar({
         collapsed={collapsed}
         onToggle={onToggleCollapsed}
         href={dashboard.href}
-        // The Dean rail starts at md, so the wordmark and the toggle wait for lg.
         railBelowLg
       />
       <nav
@@ -377,18 +386,29 @@ function DeanSidebar({
         className={cn("flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6", rail && "lg:px-4")}
         aria-label="Dean navigation"
       >
-        <DeanNavRow item={dashboard} active={activeItem === dashboard} collapsed={collapsed} />
+        <DeanNavRow
+          item={dashboard}
+          active={activeItem === dashboard}
+          collapsed={collapsed}
+          isLargeScreen={isLargeScreen}
+        />
         {groups.map((group) => (
           <DeanNavGroup
             key={group.href}
             group={group}
             activeItem={activeItem}
             collapsed={collapsed}
+            isLargeScreen={isLargeScreen}
           />
         ))}
-        <DeanNavRow item={profile} active={activeItem === profile} collapsed={collapsed} />
+        <DeanNavRow
+          item={profile}
+          active={activeItem === profile}
+          collapsed={collapsed}
+          isLargeScreen={isLargeScreen}
+        />
       </nav>
-      <SidebarFooter user={user} collapsed={collapsed} />
+      <SidebarFooter user={user} collapsed={collapsed || !isLargeScreen} />
     </aside>
   );
 }
@@ -499,9 +519,16 @@ function SidebarFooter({ user, collapsed }: { user?: SidebarProps["user"]; colla
   return (
     <div className={cn("border-sidebar-border mt-auto border-t", collapsed ? "p-2" : "p-4")}>
       <div className={cn("flex items-center gap-3", collapsed ? "justify-center" : "px-3 py-2")}>
-        <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full">
-          <span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span>
-        </div>
+        <RailRow collapsed={collapsed} label={user?.name || "User"}>
+          <div
+            role="img"
+            tabIndex={collapsed ? 0 : undefined}
+            aria-label={user?.name || "User"}
+            className="bg-sidebar-primary text-sidebar-primary-foreground focus-visible:outline-ring flex size-9 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <span className="text-body-sm font-semibold">{user?.name?.[0] || "U"}</span>
+          </div>
+        </RailRow>
         {!collapsed && <SidebarIdentity user={user} />}
       </div>
     </div>

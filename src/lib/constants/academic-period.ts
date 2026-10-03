@@ -246,21 +246,3 @@ export function getTermShortLabel(term: AcademicTerm | null | undefined): string
       return "";
   }
 }
-
-/**
- * Canonical semester ordering for chronological comparisons.
- * FIRST (0) -> SECOND (1) -> SUMMER (2)
- */
-export const SEMESTER_ORDER: Record<AcademicSemester, number> = {
-  [AcademicSemester.FIRST]: 0,
-  [AcademicSemester.SECOND]: 1,
-  [AcademicSemester.SUMMER]: 2,
-};
-
-/**
- * Compare two semesters for chronological ordering.
- * Returns negative if a comes before b, positive if a comes after b, 0 if equal.
- */
-export function compareSemesters(a: AcademicSemester, b: AcademicSemester): number {
-  return SEMESTER_ORDER[a] - SEMESTER_ORDER[b];
-}

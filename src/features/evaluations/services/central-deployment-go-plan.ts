@@ -3,6 +3,7 @@ import {
   type TemplateLikertQuestionOption,
   type TemplateStructure,
 } from "@/features/instruments/types";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 
 type CentralGoBindingRow = {
   go_id: string | null;
@@ -33,15 +34,6 @@ type CentralGoBindingPlan = {
   unboundQuestions: TemplateLikertQuestionOption[];
   coveredGos: CentralGoOption[];
 };
-
-/**
- * Template keys may contain any nonempty string, so the question identity
- * must be a structurally encoded tuple, never a separator join. Shared by the
- * binding plan and by list rendering that keys rows by question identity.
- */
-export function encodeQuestionKey(sectionKey: string, itemKey: string): string {
-  return JSON.stringify([sectionKey, itemKey]);
-}
 
 /**
  * Plans the publication-time GO snapshot rows for a PROGRAM_WIDE template.
