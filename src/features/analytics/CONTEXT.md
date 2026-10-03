@@ -113,6 +113,10 @@ _Avoid_: Raw comment text on the dashboard
 Course-bound quantitative evidence connected either through a frozen direct question-to-GO publication binding or through a published evaluation's CILO question binding and that CILO's current GO mapping in the selected Program. Each submitted response item contributes once per `(response, evaluation, question, GO)`, even when both paths name the same GO. Institutional Outcome evidence is not Program GO evidence.
 _Avoid_: Universal outcome attainment, duplicate direct-plus-CILO contribution, ILO-to-GO evidence
 
+**Question identity encoding**:
+`analytics/aggregators/question-identity` owns every canonical identity key: the `(section, item)` question tuple, the evaluation-scoped binding tuple, and the `(response, evaluation, question, GO)` contribution tuple. Section and item keys are arbitrary nonempty strings, so each is a structurally encoded tuple rather than a separator join — a separator join would merge `(a, b:c)` with `(a:b, c)`, giving one question the other's prompt, binding, and pooled mean. Analytics, Responses, Instruments, Evaluations, and Response Review all key through these helpers, so a question keeps one identity across authoring, publication, answering, and review.
+_Avoid_: Separator-joined question keys, per-feature encoder copies, reusing the question tuple where a contribution needs its response and GO components
+
 **Current-mapping interpretation**:
 The grouping of historical Course-bound ratings by the selected Program's current CILO-to-GO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
 _Avoid_: Publication-time GO result, immutable historical mapping result

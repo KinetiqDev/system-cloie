@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type { SaveFacultyTemplateDraftInput } from "../schemas/program-head-template";
 import { listTemplateLikertQuestions, toTemplateStructure, type TemplateStructure } from "../types";
 
@@ -164,16 +165,6 @@ async function resolveFacultyCourseContext(input: {
   );
 }
 
-/** Question identity as a structural tuple, never a separator join. */
-function encodeQuestionKey(sectionKey: string, itemKey: string): string {
-  return JSON.stringify([sectionKey, itemKey]);
-}
-
-/** Binding identity as a structural tuple, never a separator join. */
-function encodeGoBindingKey(goId: string, sectionKey: string, itemKey: string): string {
-  return JSON.stringify([goId, sectionKey, itemKey]);
-}
-
 async function validateDraftBindings(input: {
   bindings: SaveFacultyTemplateDraftInput["cilo_question_bindings"];
   boundCourseId?: string | null;
@@ -331,7 +322,8 @@ function normalizeCourseBoundGoBinding(
     };
   }
 
-  const pairKey = encodeGoBindingKey(binding.goId, binding.sectionKey, binding.itemKey);
+  // GO-binding identity, distinct from the question tuple.
+  const pairKey = JSON.stringify([binding.goId, binding.sectionKey, binding.itemKey]);
   if (lookup.usedPairs.has(pairKey)) {
     return {
       success: false,

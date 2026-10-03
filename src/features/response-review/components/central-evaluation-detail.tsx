@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { describeScale } from "@/features/analytics/aggregators/scale-identity";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
@@ -218,7 +219,7 @@ export function CentralEvaluationDetail({
                   const quantitative = question.quantitative;
                   const evidence = questionEvidence(question);
                   return (
-                    <TableRow key={`${question.sectionKey}|${question.itemKey}`}>
+                    <TableRow key={encodeQuestionKey(question.sectionKey, question.itemKey)}>
                       <TableCell className="break-words whitespace-normal">
                         {question.itemKey}
                       </TableCell>

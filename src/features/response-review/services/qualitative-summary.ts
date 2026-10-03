@@ -1,4 +1,5 @@
 import { buildReviewWordCloudTokens } from "@/features/analytics/services/qualitative-nlp";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type { QualitativeSummary } from "../types";
 
 type SubmittedResponseWithQualitative = {
@@ -28,7 +29,8 @@ export function buildQualitativeSummary(
       hasText = true;
       texts.push(item.text_content);
       const prompt =
-        promptByItemKey.get(`${item.section_key}|${item.prompt_key}`)?.prompt ?? item.prompt_key;
+        promptByItemKey.get(encodeQuestionKey(item.section_key, item.prompt_key))?.prompt ??
+        item.prompt_key;
       promptCounts.set(prompt, (promptCounts.get(prompt) ?? 0) + 1);
     }
     if (hasText) {

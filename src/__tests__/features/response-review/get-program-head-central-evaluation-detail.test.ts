@@ -297,6 +297,98 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     ]);
   });
 
+  it("binds GO snapshots to the question whose keys they name, even with separators", async () => {
+    // ("a", "b|c") and ("a|b", "c") are distinct questions. A separator-joined
+    // lookup gives both the first question's GO binding and rating.
+    const likertDescriptors = [
+      { value: 1, label: "Strongly Disagree" },
+      { value: 2, label: "Disagree" },
+      { value: 3, label: "Neutral" },
+      { value: 4, label: "Agree" },
+      { value: 5, label: "Strongly Agree" },
+    ];
+    centralDeploymentFindFirstMock.mockResolvedValue({
+      ...MOCK_DEPLOYMENT,
+      instrument: {
+        ...MOCK_DEPLOYMENT.instrument,
+        structure_snapshot: [
+          {
+            key: "a",
+            title: "Section A",
+            items: [
+              { key: "b|c", kind: "quantitative", prompt: "Prompt of a/b|c", likertDescriptors },
+            ],
+          },
+          {
+            key: "a|b",
+            title: "Section A|B",
+            items: [
+              { key: "c", kind: "quantitative", prompt: "Prompt of a|b/c", likertDescriptors },
+            ],
+          },
+        ],
+      },
+      go_snapshots: [
+        {
+          go_id: "plo-1",
+          go_code_snapshot: "GO-1",
+          go_description_snapshot: "Bound to a/b|c",
+          section_key: "a",
+          item_key: "b|c",
+        },
+        {
+          go_id: "plo-2",
+          go_code_snapshot: "GO-2",
+          go_description_snapshot: "Bound to a|b/c",
+          section_key: "a|b",
+          item_key: "c",
+        },
+      ],
+    });
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([
+      {
+        id: "response-1",
+        submitted_at: new Date("2026-01-05T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        quant_items: [
+          {
+            cilo_question_binding_id: null,
+            section_key: "a",
+            item_key: "b|c",
+            rating_value: 5,
+          },
+          {
+            cilo_question_binding_id: null,
+            section_key: "a|b",
+            item_key: "c",
+            rating_value: 2,
+          },
+        ],
+        qual_items: [],
+      },
+    ]);
+    studentEnrollmentFindManyMock.mockResolvedValue([]);
+
+    const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
+
+    expect(result).not.toBeNull();
+
+    // Each GO keeps only its own question's rating.
+    expect(result!.goResults).toHaveLength(2);
+    expect(result!.goResults.find((go) => go.goCode === "GO-1")!.mean).toBe(5);
+    expect(result!.goResults.find((go) => go.goCode === "GO-2")!.mean).toBe(2);
+
+    // Each question carries only its own GO binding and prompt.
+    const first = result!.questionResults.find((q) => q.sectionKey === "a")!;
+    const second = result!.questionResults.find((q) => q.sectionKey === "a|b")!;
+    expect(first.prompt).toBe("Prompt of a/b|c");
+    expect(first.goBindings.map((binding) => binding.code)).toEqual(["GO-1"]);
+    expect(second.prompt).toBe("Prompt of a|b/c");
+    expect(second.goBindings.map((binding) => binding.code)).toEqual(["GO-2"]);
+  });
+
   it("labels unbound central questions as General evaluation items", async () => {
     const deploymentWithoutBindings = {
       ...MOCK_DEPLOYMENT,

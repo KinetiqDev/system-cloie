@@ -10,6 +10,7 @@ import {
 } from "@/features/analytics/aggregators/cilo";
 import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import {
   resolveItemScaleIdentity,
@@ -102,7 +103,7 @@ export async function getProgramHeadCourseEvaluationDetail(
   const snapshotItems = new Map<string, { prompt: string }>();
   for (const section of Array.isArray(snapshot) ? snapshot.filter(isSnapshotSection) : []) {
     for (const item of getSnapshotSectionItems(section)) {
-      snapshotItems.set(`${section.key}|${item.key}`, { prompt: item.prompt });
+      snapshotItems.set(encodeQuestionKey(section.key, item.key), { prompt: item.prompt });
     }
   }
 
@@ -111,7 +112,7 @@ export async function getProgramHeadCourseEvaluationDetail(
     { cilo_id: string | null; cilo_description_snapshot: string }
   >();
   for (const binding of evaluation.cilo_question_bindings) {
-    bindingByQuestionKey.set(`${binding.section_key}|${binding.item_key}`, {
+    bindingByQuestionKey.set(encodeQuestionKey(binding.section_key, binding.item_key), {
       cilo_id: binding.cilo_id,
       cilo_description_snapshot: binding.cilo_description_snapshot,
     });
@@ -283,11 +284,12 @@ function toCourseRatingRow(
   bindingByQuestionKey: Map<string, { cilo_id: string | null; cilo_description_snapshot: string }>,
   ciloMappings: Map<string, CiloGoMapping[]>
 ): OutcomeItemRatingRow {
-  const binding = bindingByQuestionKey.get(`${item.section_key}|${item.item_key}`);
+  const questionKey = encodeQuestionKey(item.section_key, item.item_key);
+  const binding = bindingByQuestionKey.get(questionKey);
   return {
     sectionKey: item.section_key,
     itemKey: item.item_key,
-    prompt: snapshotItems.get(`${item.section_key}|${item.item_key}`)?.prompt ?? item.item_key,
+    prompt: snapshotItems.get(questionKey)?.prompt ?? item.item_key,
     ratingValue: item.rating_value,
     responseId,
     scale,

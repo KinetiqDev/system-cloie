@@ -4,8 +4,8 @@
  * Template section/item keys may contain any nonempty string, so every
  * question, binding, contribution, and contributor identity must be a
  * structurally encoded tuple — never a separator join. Separator-joined keys
- * merge distinct questions such as `(a, b:c)` with `(a:b, c)` and silently
- * discard valid ratings.
+ * merge distinct questions such as `(a, b:c)` with `(a:b, c)`, which then
+ * share a prompt, a binding, and one pooled mean.
  */
 
 /** Section/item identity as a structural tuple, never a separator join. */

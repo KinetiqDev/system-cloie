@@ -572,6 +572,9 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
       // Scale identity
       "resolveItemScaleIdentity",
       "describeScale",
+      // Question identity: review keys its snapshot and binding lookups the
+      // same canonical way, so separator-bearing keys stay distinct questions
+      "encodeQuestionKey",
       // Metric vocabulary
       "CiloGoMapping",
       "CiloMetric",

@@ -96,10 +96,10 @@ import type {
   TemplateSettingsInput,
 } from "../types";
 import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
+import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import {
   collectCiloBindings,
   collectGoBindings,
-  encodeQuestionBindingKey,
   pruneDraftBindings,
 } from "../services/draft-bindings";
 
@@ -593,14 +593,14 @@ export function TemplateBuilder({
       ),
       ciloQuestionBindings: Object.fromEntries(
         (facultyConfig?.initialBindings ?? []).map((binding) => [
-          encodeQuestionBindingKey(binding.sectionKey, binding.itemKey),
+          encodeQuestionKey(binding.sectionKey, binding.itemKey),
           binding.ciloId,
         ])
       ),
       goQuestionBindings: (() => {
         const map: Record<string, string[]> = {};
         for (const binding of initialGoBindings ?? []) {
-          const key = encodeQuestionBindingKey(binding.sectionKey, binding.itemKey);
+          const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
           if (!map[key]) map[key] = [];
           map[key].push(binding.goId);
         }
@@ -617,7 +617,7 @@ export function TemplateBuilder({
         if (!facultyConfig) return {};
         const map: Record<string, string[]> = {};
         for (const binding of facultyConfig.initialGoBindings ?? initialGoBindings ?? []) {
-          const key = encodeQuestionBindingKey(binding.sectionKey, binding.itemKey);
+          const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
           if (!map[key]) map[key] = [];
           if (!map[key].includes(binding.goId)) map[key].push(binding.goId);
         }
@@ -2315,18 +2315,18 @@ function SectionCard({
                 facultyMode={facultyMode}
                 onCiloBindingChange={onCiloBindingChange}
                 selectedCiloLabel={selectedCiloLabels.get(
-                  ciloQuestionBindings[encodeQuestionBindingKey(section.key, question.key)] ?? ""
+                  ciloQuestionBindings[encodeQuestionKey(section.key, question.key)] ?? ""
                 )}
                 ciloQuestionCounts={ciloQuestionCounts}
                 selectedCiloId={
-                  ciloQuestionBindings[encodeQuestionBindingKey(section.key, question.key)] ?? ""
+                  ciloQuestionBindings[encodeQuestionKey(section.key, question.key)] ?? ""
                 }
                 goOptions={programWideMode ? goOptions : (courseBoundGoBinding?.options ?? [])}
                 selectedGoIds={
                   (programWideMode
                     ? goQuestionBindings
                     : (courseBoundGoBinding?.questionBindings ?? {}))[
-                    encodeQuestionBindingKey(section.key, question.key)
+                    encodeQuestionKey(section.key, question.key)
                   ] ?? []
                 }
                 programWideMode={programWideMode}
@@ -2512,7 +2512,7 @@ function QuestionCard({
                   const ciloId = !value || value === "none" ? "" : value;
 
                   // Update CILO binding
-                  onCiloBindingChange(encodeQuestionBindingKey(sectionKey, question.key), ciloId);
+                  onCiloBindingChange(encodeQuestionKey(sectionKey, question.key), ciloId);
 
                   // Auto-populate an untitled question with the CILO description.
                   // A CILO may be reused across questions, so an already-written
@@ -2582,7 +2582,7 @@ function QuestionCard({
                 archivedGoLookup={archivedGoLookup}
                 disabled={Boolean(selectedCiloId)}
                 onChange={(goIds) =>
-                  onGoBindingsChange(encodeQuestionBindingKey(sectionKey, question.key), goIds)
+                  onGoBindingsChange(encodeQuestionKey(sectionKey, question.key), goIds)
                 }
               />
               {selectedCiloId ? (
@@ -2621,7 +2621,7 @@ function QuestionCard({
                 labelId={`go-binding-label-${question.key}`}
                 archivedGoLookup={archivedGoLookup}
                 onChange={(goIds) =>
-                  onGoBindingsChange(encodeQuestionBindingKey(sectionKey, question.key), goIds)
+                  onGoBindingsChange(encodeQuestionKey(sectionKey, question.key), goIds)
                 }
               />
               {selectedGoIds.length === 0 && (

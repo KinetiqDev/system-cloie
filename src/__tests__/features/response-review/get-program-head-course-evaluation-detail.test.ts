@@ -301,6 +301,119 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     });
   });
 
+  it("keeps separator-bearing section and item keys on distinct questions", async () => {
+    // Section/item keys are arbitrary nonempty strings, so ("a", "b|c") and
+    // ("a|b", "c") are two questions. A separator-joined lookup merges them:
+    // one question serves the other's prompt, binding, and GO evidence.
+    const likertDescriptors = [
+      { value: 1, label: "Not Achieved" },
+      { value: 2, label: "Slightly Achieved" },
+      { value: 3, label: "Moderately Achieved" },
+      { value: 4, label: "Mostly Achieved" },
+      { value: 5, label: "Fully Achieved" },
+    ];
+    courseBoundEvaluationFindFirstMock.mockResolvedValue({
+      ...MOCK_EVALUATION,
+      instrument: {
+        structure_snapshot: [
+          {
+            key: "a",
+            title: "Section A",
+            items: [
+              { key: "b|c", kind: "quantitative", prompt: "Prompt of a/b|c", likertDescriptors },
+              { key: "e|f", kind: "qualitative", prompt: "Prompt of a/e|f" },
+            ],
+          },
+          {
+            key: "a|b",
+            title: "Section A|B",
+            items: [
+              { key: "c", kind: "quantitative", prompt: "Prompt of a|b/c", likertDescriptors },
+            ],
+          },
+          {
+            key: "a|e",
+            title: "Section A|E",
+            items: [{ key: "f", kind: "qualitative", prompt: "Prompt of a|e/f" }],
+          },
+        ],
+      },
+      cilo_question_bindings: [
+        {
+          id: "binding-first",
+          cilo_id: "cilo-1",
+          cilo_description_snapshot: "CILO of a/b|c",
+          section_key: "a",
+          item_key: "b|c",
+        },
+      ],
+    });
+    evaluationAssignmentFindManyMock.mockResolvedValue([
+      { respondent_id: "user-s1", response: { status: "SUBMITTED" } },
+    ]);
+    responseFindManyMock.mockResolvedValue([
+      {
+        id: "response-1",
+        submitted_at: new Date("2026-01-04T08:00:00.000Z"),
+        respondent_id: "user-s1",
+        respondent: { name: "Juan dela Cruz" },
+        quant_items: [
+          {
+            cilo_question_binding_id: "binding-first",
+            section_key: "a",
+            item_key: "b|c",
+            rating_value: 5,
+          },
+          {
+            cilo_question_binding_id: null,
+            section_key: "a|b",
+            item_key: "c",
+            rating_value: 2,
+          },
+        ],
+        qual_items: [
+          { section_key: "a", prompt_key: "e|f", text_content: "Answer of a/e|f" },
+          { section_key: "a|e", prompt_key: "f", text_content: "Answer of a|e/f" },
+        ],
+      },
+    ]);
+    studentEnrollmentFindManyMock.mockResolvedValue([]);
+
+    const result = await getProgramHeadCourseEvaluationDetail("prog-beed", "eval-1");
+
+    expect(result).not.toBeNull();
+
+    // Ratings: two distinct questions, each keeping its own mean.
+    expect(result!.questionResults).toHaveLength(2);
+    const first = result!.questionResults.find((q) => q.sectionKey === "a")!;
+    const second = result!.questionResults.find((q) => q.sectionKey === "a|b")!;
+    expect(first.itemKey).toBe("b|c");
+    expect(first.quantitative?.mean).toBe(5);
+    expect(first.quantitative?.ratingCount).toBe(1);
+    expect(second.itemKey).toBe("c");
+    expect(second.quantitative?.mean).toBe(2);
+    expect(second.quantitative?.ratingCount).toBe(1);
+
+    // Prompts: each question reports its own snapshot prompt.
+    expect(first.prompt).toBe("Prompt of a/b|c");
+    expect(second.prompt).toBe("Prompt of a|b/c");
+
+    // Bindings: only the bound question is CILO-bound; the unbound one is GENERAL.
+    expect(first.binding.type).toBe("CILO");
+    expect(second.binding.type).toBe("GENERAL");
+    expect(result!.ciloResults).toHaveLength(1);
+    expect(result!.ciloResults[0].quantitative?.mean).toBe(5);
+
+    // Qualitative prompts: ("a","e|f") and ("a|e","f") are separate prompts.
+    expect(result!.qualitative.prompts).toHaveLength(2);
+    expect(result!.qualitative.prompts).toEqual(
+      expect.arrayContaining([
+        { prompt: "Prompt of a/e|f", answerCount: 1 },
+        { prompt: "Prompt of a|e/f", answerCount: 1 },
+      ])
+    );
+  });
+
   it("never fetches IN_PROGRESS response bodies", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
     evaluationAssignmentFindManyMock.mockResolvedValue([]);
