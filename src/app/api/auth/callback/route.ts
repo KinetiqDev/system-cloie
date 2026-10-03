@@ -9,7 +9,8 @@ import { resolveSelfServiceEligibility } from "@/features/auth/services/self-ser
 import { resolveGoogleAccountName } from "@/features/auth/services/resolve-google-account-name";
 import { SystemRole, type User, type UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { isRoleIntent, intentToRole } from "@/features/auth/services/role-intent";
+import { resolveAuthMethodFromClaims } from "@/features/auth/services/resolve-auth-method";
+import { isEntryIntent, isTicketIntent, intentToRole } from "@/features/auth/services/role-intent";
 import {
   readActiveRoleCookie,
   setActiveRoleCookie,
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
   const ticket = readCookieValue(request.headers.get("cookie"), LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME);
   const ticketVerification = verifyLegalAcknowledgementTicket(ticket, intentParam ?? "");
 
-  if (!intentParam || !isRoleIntent(intentParam) || !ticketVerification.valid) {
+  if (!intentParam || !isTicketIntent(intentParam) || !ticketVerification.valid) {
     return redirectWithClearedTicket(`${siteUrl}/`);
   }
 
@@ -107,6 +108,21 @@ export async function GET(request: Request) {
 
   if (error || !data.user) {
     return redirectWithClearedTicket(`${siteUrl}/login?error=auth-failure`);
+  }
+
+  // The callback is System CLOIE's only Google entry point, and GoTrue serves
+  // every OAuth provider through this same PKCE code exchange. The exchanged
+  // session is therefore proved Google before any internal first-link, role
+  // claim, or provisional-name replacement: `amr: oauth` alone would only prove
+  // "some OAuth provider", and a code replayed from another provider (or a
+  // magic-link code reaching this route) would otherwise be accepted as a
+  // Google sign-in and could bind a provisioned account to the wrong identity.
+  const exchange = await supabase.auth.getClaims().catch(() => ({ data: null, error: true }));
+  const exchangeClaims = exchange.error ? null : exchange.data?.claims;
+  const exchangeMethod = resolveAuthMethodFromClaims(exchangeClaims);
+  if (exchangeMethod !== "google") {
+    await supabase.auth.signOut();
+    return redirectWithClearedTicket(`${siteUrl}/status/method-mismatch`);
   }
 
   const email = data.user.email || "";
@@ -411,7 +427,16 @@ export async function GET(request: Request) {
     }
   } else {
     if (!targetRole) {
+      // Role-less entry intent with no matching domain account: nothing to
+      // link and nothing to claim. Staff entrances require a provisioned
+      // account; external Google holders without one register first.
       await supabase.auth.signOut();
+      if (isEntryIntent(intentParam) && intentParam === "staff") {
+        return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
+      }
+      if (isEntryIntent(intentParam) && intentParam === "external") {
+        return redirectWithClearedTicket(`${siteUrl}/register/external`);
+      }
       return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
     }
 
@@ -449,6 +474,7 @@ export async function GET(request: Request) {
   const session = await resolveAuthSessionFromUser({
     id: authUserId,
     email: normalizedEmail,
+    claims: exchangeClaims,
   });
 
   const activeRoleCookie = await readActiveRoleCookie();
@@ -472,7 +498,11 @@ export async function GET(request: Request) {
           alumniProfileId: session.alumniProfileId,
           industryPartnerProfileId: session.industryPartnerProfileId,
           alumniVerificationStatus: session.alumniVerificationStatus,
-          industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+          // The exchange above proved Google before this point, and the
+          // stored Faculty review state travels with the account: a pending
+          // or rejected claim must resolve to its status, never COMPLETE.
+          authMethod: exchangeMethod,
+          facultyApprovalStatus: session.facultyApprovalStatus,
         }).profileGate
       : (session?.profileGate ?? { status: "ROLE_SELECTION_REQUIRED" });
 

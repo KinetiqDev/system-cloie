@@ -30,10 +30,14 @@ vi.mock("@/features/auth/services/resolve-post-login-destination", () => ({
 vi.mock("@/features/academic-calendar/services/resolve-active-term", () => ({
   getActiveTermId: getActiveTermIdMock,
 }));
+const findFirstFacultyAffiliationMock = vi.hoisted(() => vi.fn());
+const findUniqueFacultyRequestMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     studentEnrollment: { findUnique: findUniqueEnrollmentMock },
-    facultyProgramAffiliation: { findFirst: vi.fn() },
+    facultyProgramAffiliation: { findFirst: findFirstFacultyAffiliationMock },
+    facultyAccessRequest: { findUnique: findUniqueFacultyRequestMock },
   },
 }));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ set: cookieSetMock })) }));
@@ -60,6 +64,8 @@ describe("switchActiveRole", () => {
     });
     getActiveTermIdMock.mockResolvedValue("active-term-1");
     findUniqueEnrollmentMock.mockResolvedValue({ is_active: true });
+    findFirstFacultyAffiliationMock.mockResolvedValue(null);
+    findUniqueFacultyRequestMock.mockResolvedValue({ status: "PENDING" });
   });
 
   it("preserves Student enrollment readiness when switching roles", async () => {
@@ -82,5 +88,59 @@ describe("switchActiveRole", () => {
     });
     expect(cookieSetMock).toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("blocks a pending Faculty request on switch instead of recomputing COMPLETE", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "person@acd.edu.ph",
+      name: "Person One",
+      roles: [ROLES.FACULTY, ROLES.STUDENT],
+      activeRole: ROLES.STUDENT,
+      studentProfileId: "student-profile-1",
+      alumniProfileId: null,
+      industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
+      authMethod: "google",
+      facultyApprovalStatus: "PENDING",
+      profileGate: { status: "COMPLETE" },
+    });
+
+    await expect(switchActiveRole(ROLES.FACULTY)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: null,
+      intent: null,
+      activeRole: ROLES.FACULTY,
+      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+    });
+  });
+
+  it("blocks a password session on switch even when the role is assigned", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "user-1",
+      email: "person@acd.edu.ph",
+      name: "Person One",
+      roles: [ROLES.SECRETARY],
+      activeRole: ROLES.SECRETARY,
+      studentProfileId: null,
+      alumniProfileId: null,
+      industryPartnerProfileId: null,
+      alumniVerificationStatus: null,
+      industryPartnerVerificationStatus: null,
+      authMethod: "password",
+      facultyApprovalStatus: null,
+      profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.SECRETARY },
+    });
+
+    await expect(switchActiveRole(ROLES.SECRETARY)).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: null,
+      intent: null,
+      activeRole: ROLES.SECRETARY,
+      profileGate: { status: "AUTH_METHOD_MISMATCH", role: ROLES.SECRETARY },
+    });
   });
 });

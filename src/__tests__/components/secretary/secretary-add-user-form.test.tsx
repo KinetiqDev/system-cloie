@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StudentSection, SystemRole, YearLevel } from "@prisma/client";
 import { AddUserForm } from "@/features/users/components/secretary-add-user-form";
 
@@ -1074,15 +1074,17 @@ describe("SecretaryAddUserForm existing account pivot", () => {
     );
   }
 
-  function typeEmail(email: string) {
+  async function typeEmail(email: string) {
     const input = screen.getByLabelText(/email address/i);
-    fireEvent.change(input, { target: { value: email } });
-    fireEvent.blur(input);
+    await act(async () => {
+      fireEvent.change(input, { target: { value: email } });
+      fireEvent.blur(input);
+    });
   }
 
   it("pivots to add-role mode when the email already belongs to an account", async () => {
     renderForm();
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
 
     await screen.findByText(existingUser.name);
 
@@ -1099,7 +1101,7 @@ describe("SecretaryAddUserForm existing account pivot", () => {
   it("submits the new role and its program context to addRoleAction", async () => {
     addRoleAction.mockResolvedValue({ success: true });
     renderForm();
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
     await screen.findByText(existingUser.name);
 
     fireEvent.click(screen.getByRole("option", { name: /^faculty$/i }));
@@ -1120,7 +1122,7 @@ describe("SecretaryAddUserForm existing account pivot", () => {
   it("submits several managed programs when granting Program Head to an existing account", async () => {
     addRoleAction.mockResolvedValue({ success: true });
     renderForm();
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
     await screen.findByText(existingUser.name);
 
     fireEvent.click(screen.getByRole("option", { name: /^program head$/i }));
@@ -1145,11 +1147,11 @@ describe("SecretaryAddUserForm existing account pivot", () => {
 
   it("returns to account creation when the email no longer matches an account", async () => {
     renderForm();
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
     await screen.findByText(existingUser.name);
 
     mockLookupUserByEmailAction.mockResolvedValue({ success: true, found: false });
-    typeEmail("new.person@acd.edu.ph");
+    await typeEmail("new.person@acd.edu.ph");
 
     await waitFor(() => {
       expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument();
@@ -1161,11 +1163,11 @@ describe("SecretaryAddUserForm existing account pivot", () => {
   it("restores the name typed before pivoting", async () => {
     renderForm();
     fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Jane Doe" } });
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
     await screen.findByText(existingUser.name);
 
     mockLookupUserByEmailAction.mockResolvedValue({ success: true, found: false });
-    typeEmail("jane.doe@acd.edu.ph");
+    await typeEmail("jane.doe@acd.edu.ph");
 
     await waitFor(() => {
       expect(screen.getByLabelText(/^name$/i)).toHaveValue("Jane Doe");
@@ -1199,7 +1201,7 @@ describe("SecretaryAddUserForm existing account pivot", () => {
     fireEvent.change(screen.getByLabelText(/^name$/i), { target: { value: "Maria Santos" } });
     // Blur resolves the lookup once (still "absent") and cancels the debounce,
     // so the pivot below can only come from the create-submit signal.
-    typeEmail(existingUser.email);
+    await typeEmail(existingUser.email);
 
     fireEvent.click(screen.getByRole("button", { name: /create user/i }));
 

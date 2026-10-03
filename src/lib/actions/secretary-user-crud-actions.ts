@@ -19,7 +19,7 @@ type CreateUserActionResult =
 
 async function verifySecretaryAccess(): Promise<ActionResult> {
   const session = await resolveAuthSession();
-  if (!session?.roles?.includes(ROLES.SECRETARY)) {
+  if (!session?.activeRole || session.activeRole !== ROLES.SECRETARY) {
     return { success: false, error: "Secretary access required" };
   }
   return { success: true };
@@ -56,7 +56,7 @@ export async function createUserBySecretaryAction(
     };
   }
 
-  const result = await createUserBySecretary(parsed.data);
+  const result = await createUserBySecretary({ ...parsed.data, grantedByRole: ROLES.SECRETARY });
 
   if (!result.success) {
     // An existing account is a pivot, not a creation failure: hand the caller

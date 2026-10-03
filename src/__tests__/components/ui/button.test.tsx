@@ -61,9 +61,9 @@ describe("Button", () => {
   });
 
   describe("size classes", () => {
-    it("applies default size h-8", () => {
+    it("uses a 40px standard desktop control", () => {
       render(<Button>Action</Button>);
-      expect(screen.getByRole("button")).toHaveClass("h-8");
+      expect(screen.getByRole("button")).toHaveClass("h-10", "px-4");
     });
 
     it("applies xs size h-6", () => {
@@ -71,14 +71,14 @@ describe("Button", () => {
       expect(screen.getByRole("button")).toHaveClass("h-6");
     });
 
-    it("applies sm size h-7", () => {
+    it("keeps compact controls at 32px with readable labels", () => {
       render(<Button size="sm">Small</Button>);
-      expect(screen.getByRole("button")).toHaveClass("h-7");
+      expect(screen.getByRole("button")).toHaveClass("h-8", "text-sm");
     });
 
-    it("applies lg size h-9", () => {
+    it("gives large actions a 48px floor and allows long labels to wrap", () => {
       render(<Button size="lg">Large</Button>);
-      expect(screen.getByRole("button")).toHaveClass("h-9");
+      expect(screen.getByRole("button")).toHaveClass("min-h-12", "whitespace-normal", "text-base");
     });
 
     it("applies icon sizes", () => {
@@ -87,18 +87,18 @@ describe("Button", () => {
           ✕
         </Button>
       );
-      expect(screen.getByRole("button")).toHaveClass("size-8");
+      expect(screen.getByRole("button")).toHaveClass("size-10");
     });
 
     it.each([
       ["default", "pointer-coarse:h-11"],
       ["xs", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
       ["sm", "pointer-coarse:h-11 pointer-coarse:min-w-11"],
-      ["lg", "pointer-coarse:h-12"],
+      ["lg", "min-h-12"],
       ["icon", "pointer-coarse:size-11"],
       ["icon-xs", "pointer-coarse:size-11"],
       ["icon-sm", "pointer-coarse:size-11"],
-      ["icon-lg", "pointer-coarse:size-12"],
+      ["icon-lg", "size-12"],
     ] as const)("size %s carries a coarse-pointer touch target override", (size, coarseClass) => {
       expect(buttonVariants({ size })).toContain(coarseClass);
     });

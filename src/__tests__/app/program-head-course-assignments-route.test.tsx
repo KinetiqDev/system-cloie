@@ -51,7 +51,6 @@ vi.mock("@/lib/db/prisma", () => ({
   },
 }));
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
-  loadCourseAssignmentsForSheetAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),

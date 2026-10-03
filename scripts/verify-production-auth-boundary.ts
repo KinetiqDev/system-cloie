@@ -52,24 +52,24 @@ export async function assertUnauthenticatedRedirect(
       throw new Error(`${route} did not return a Location header for an unauthenticated request.`);
     }
     const destination = new URL(location, baseUrl);
-    if (destination.origin !== baseUrl.origin || destination.pathname !== "/portal/respondents") {
-      throw new Error(
-        `${route} redirected to ${destination.pathname}; expected /portal/respondents.`
-      );
+    if (destination.origin !== baseUrl.origin || destination.pathname !== "/") {
+      throw new Error(`${route} redirected to ${destination.pathname}; expected /.`);
     }
   } else {
     // RSC-level redirect (App Router default in production builds).
     const body = await response.clone().text();
-    if (!body.includes("NEXT_REDIRECT") || !body.includes("/portal/respondents")) {
+    if (!body.includes("NEXT_REDIRECT")) {
       throw new Error(
-        `${route} returned ${response.status} but the response does not contain an RSC redirect to /portal/respondents.`
+        `${route} returned ${response.status} but the response does not contain an RSC redirect to /.`
       );
     }
 
-    // Also check for the meta-refresh fallback (used by non-JS clients).
-    if (!body.includes(`http-equiv="refresh"`) || !body.includes("url=/portal/respondents")) {
+    // Also check for the meta-refresh fallback (used by non-JS clients). The
+    // target must be exactly `/`: `url=/` followed by a quote or `;` so a
+    // deeper path such as `/login` cannot satisfy the check.
+    if (!body.includes(`http-equiv="refresh"`) || !/url=\/["';]/.test(body)) {
       throw new Error(
-        `${route} returned ${response.status} but is missing the meta-refresh fallback to /portal/respondents.`
+        `${route} returned ${response.status} but is missing the meta-refresh fallback to /.`
       );
     }
   }

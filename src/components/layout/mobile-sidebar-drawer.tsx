@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import type { Role } from "@/lib/constants/roles";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -154,13 +154,7 @@ export function MobileSidebarDrawer({
               aria-label="System CLOIE — Dashboard"
               className="focus-visible:outline-ring flex items-center gap-3 rounded-md transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
             >
-              <Image
-                src="/logos/cloie-logo.svg"
-                alt="System CLOIE"
-                width={442}
-                height={500}
-                className="border-border h-7 w-auto rounded border bg-white p-0.5"
-              />
+              <CloieLogoMark className="h-10" />
               <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
             </Link>
             <button

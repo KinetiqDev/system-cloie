@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { resetIncompleteRoleClaim, registerStudentProfile } from "@/lib/actions/onboarding-actions";
-import { prisma } from "@/lib/db/prisma";
+import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
 import { ROLES } from "@/lib/constants/roles";
 
 const REDIRECT_ERROR = "NEXT_REDIRECT";
@@ -9,19 +7,8 @@ const REDIRECT_ERROR = "NEXT_REDIRECT";
 const {
   redirectMock,
   resolveAuthSessionMock,
-  resolveAuthenticatedDomainUserMock,
   deleteManyUserRoleMock,
   deleteUserRoleMock,
-  updateUserMock,
-  upsertStudentProfileMock,
-  findUniqueUserRoleMock,
-  createUserRoleMock,
-  findUniqueProgramMock,
-  findUniqueMajorMock,
-  transactionMock,
-  createClientMock,
-  getActiveTermIdMock,
-  upsertEnrollmentForActiveTermMock,
   findUniqueStudentProfileMock,
   findFirstFacultyAffiliationMock,
   findUniqueAlumniProfileMock,
@@ -31,19 +18,8 @@ const {
     throw new Error(`${REDIRECT_ERROR}:${path}`);
   }),
   resolveAuthSessionMock: vi.fn(),
-  resolveAuthenticatedDomainUserMock: vi.fn(),
   deleteManyUserRoleMock: vi.fn(),
   deleteUserRoleMock: vi.fn(),
-  updateUserMock: vi.fn(),
-  upsertStudentProfileMock: vi.fn(),
-  findUniqueUserRoleMock: vi.fn(),
-  createUserRoleMock: vi.fn(),
-  findUniqueProgramMock: vi.fn(),
-  findUniqueMajorMock: vi.fn(),
-  transactionMock: vi.fn(),
-  createClientMock: vi.fn(),
-  getActiveTermIdMock: vi.fn(),
-  upsertEnrollmentForActiveTermMock: vi.fn(),
   findUniqueStudentProfileMock: vi.fn(),
   findFirstFacultyAffiliationMock: vi.fn(),
   findUniqueAlumniProfileMock: vi.fn(),
@@ -58,30 +34,9 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
 
-vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
-  resolveAuthenticatedDomainUser: resolveAuthenticatedDomainUserMock,
-}));
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: createClientMock,
-}));
-
-vi.mock("@/features/academic-calendar/services/resolve-active-term", () => ({
-  getActiveTermId: getActiveTermIdMock,
-}));
-
-vi.mock("@/features/enrollments/services/manage-student-enrollments", () => ({
-  upsertEnrollmentForActiveTerm: upsertEnrollmentForActiveTermMock,
-}));
-
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    $transaction: transactionMock,
-    user: {
-      update: updateUserMock,
-    },
     studentAcademicProfile: {
-      upsert: upsertStudentProfileMock,
       findUnique: findUniqueStudentProfileMock,
     },
     facultyProgramAffiliation: {
@@ -96,25 +51,11 @@ vi.mock("@/lib/db/prisma", () => ({
     userRole: {
       deleteMany: deleteManyUserRoleMock,
       delete: deleteUserRoleMock,
-      findUnique: findUniqueUserRoleMock,
-      create: createUserRoleMock,
-    },
-    program: {
-      findUnique: findUniqueProgramMock,
-    },
-    major: {
-      findUnique: findUniqueMajorMock,
     },
   },
 }));
-const validAcademicPayload = {
-  program_id: "550e8400-e29b-41d4-a716-446655440000",
-  major_id: "660e8400-e29b-41d4-a716-446655441111",
-  year_level: "FIRST_YEAR" as const,
-  section: "MORNING" as const,
-};
 
-describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
+describe("resetIncompleteRoleClaim", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findUniqueStudentProfileMock.mockResolvedValue(null);
@@ -123,26 +64,7 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     findUniqueIndustryPartnerProfileMock.mockResolvedValue(null);
   });
 
-  it("deletes user roles when profile status is not complete and redirects to /portal", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "user-123",
-      email: "test@example.com",
-      roles: [ROLES.STUDENT],
-      activeRole: ROLES.STUDENT,
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED" },
-    });
-
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
-
-    expect(deleteUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.STUDENT } },
-    });
-    expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
-  });
-
-  it("redirects faculty role resets to the staff portal", async () => {
+  it("deletes an incomplete faculty claim and redirects to staff sign-in", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "faculty@acd.edu.ph",
@@ -151,7 +73,7 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
       profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/staff`);
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/login/staff`);
 
     expect(deleteUserRoleMock).toHaveBeenCalledWith({
       where: { user_id_role: { user_id: "user-123", role: ROLES.FACULTY } },
@@ -159,67 +81,59 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
   });
 
-  it("does not delete user roles when profile status is complete and redirects to /portal", async () => {
+  it("deletes an incomplete alumni claim and redirects to the landing", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "test@example.com",
-      roles: [ROLES.STUDENT],
-      activeRole: ROLES.STUDENT,
-      profileGate: { status: "COMPLETE" },
+      email: "alumni@example.com",
+      roles: [ROLES.ALUMNI],
+      activeRole: ROLES.ALUMNI,
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
-    expect(deleteUserRoleMock).not.toHaveBeenCalled();
-    expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
+    expect(deleteUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "user-123", role: ROLES.ALUMNI } },
+    });
   });
 
-  it("preserves a completed Student role during deferred enrollment", async () => {
+  it("never treats a Student claim as incomplete: Student placement has no self-service form to abandon", async () => {
+    // Student placement is institution-recorded (issue #649), so there is no
+    // profile artifact a Student could abandon and no reason to delete the
+    // role. Deleting it here would strip a legitimately provisioned Student.
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
       email: "student@acd.edu.ph",
       roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
-      profileGate: { status: "DEFERRED_ENROLLMENT" },
+      profileGate: { status: "STUDENT_PLACEMENT_REQUIRED" },
     });
-    findUniqueStudentProfileMock.mockResolvedValue({ id: "completed-student-profile" });
 
-    await expect(resetIncompleteRoleClaim(ROLES.STUDENT)).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
-    expect(findUniqueStudentProfileMock).toHaveBeenCalledWith({
-      where: { user_id: "user-123" },
-      select: { id: true },
-    });
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
+    expect(findUniqueStudentProfileMock).not.toHaveBeenCalled();
   });
 
-  it("does not delete user roles when the session has no active role", async () => {
+  it("does not delete roles when the session has no active role", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "test@example.com",
-      roles: [ROLES.STUDENT],
+      email: "faculty@acd.edu.ph",
+      roles: [ROLES.FACULTY],
       activeRole: null,
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED" },
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
   });
 
-  it("redirects to /portal when there is no authenticated session", async () => {
+  it("redirects to the landing when there is no authenticated session", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
-    await expect(resetIncompleteRoleClaim()).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim()).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
     expect(deleteManyUserRoleMock).not.toHaveBeenCalled();
@@ -228,389 +142,55 @@ describe("Onboarding Actions - resetIncompleteRoleClaim", () => {
   it("deletes the requested incomplete role when the cookie resolves to a complete role", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "test@example.com",
-      roles: [ROLES.FACULTY, ROLES.STUDENT],
+      email: "person@example.com",
+      roles: [ROLES.FACULTY, ROLES.ALUMNI],
       activeRole: ROLES.FACULTY,
       profileGate: { status: "COMPLETE" },
     });
-    findUniqueStudentProfileMock.mockResolvedValue(null);
+    findUniqueAlumniProfileMock.mockResolvedValue(null);
     const formData = new FormData();
-    formData.set("role", ROLES.STUDENT);
+    formData.set("role", ROLES.ALUMNI);
 
-    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
     expect(deleteUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.STUDENT } },
-    });
-  });
-
-  it("accepts the requested role as a direct argument", async () => {
-    resolveAuthSessionMock.mockResolvedValue({
-      userId: "user-123",
-      email: "faculty@acd.edu.ph",
-      roles: [ROLES.FACULTY],
-      activeRole: null,
-      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
-    });
-    findFirstFacultyAffiliationMock.mockResolvedValue(null);
-
-    await expect(resetIncompleteRoleClaim(ROLES.FACULTY)).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/staff`
-    );
-
-    expect(deleteUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "user-123", role: ROLES.FACULTY } },
+      where: { user_id_role: { user_id: "user-123", role: ROLES.ALUMNI } },
     });
   });
 
   it("ignores a requested role that is not assigned to the user", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "test@example.com",
+      email: "person@example.com",
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
       profileGate: { status: "COMPLETE" },
     });
     const formData = new FormData();
-    formData.set("role", ROLES.STUDENT);
+    formData.set("role", ROLES.ALUMNI);
 
     await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/staff`
+      `${REDIRECT_ERROR}:/login/staff`
     );
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
-    expect(findUniqueStudentProfileMock).not.toHaveBeenCalled();
+    expect(findUniqueAlumniProfileMock).not.toHaveBeenCalled();
   });
 
   it("keeps a requested role that already has a completed profile", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-123",
-      email: "test@example.com",
-      roles: [ROLES.FACULTY, ROLES.STUDENT],
+      email: "person@example.com",
+      roles: [ROLES.FACULTY, ROLES.ALUMNI],
       activeRole: ROLES.FACULTY,
       profileGate: { status: "COMPLETE" },
     });
-    findUniqueStudentProfileMock.mockResolvedValue({ id: "profile-1" });
+    findUniqueAlumniProfileMock.mockResolvedValue({ id: "profile-1" });
     const formData = new FormData();
-    formData.set("role", ROLES.STUDENT);
+    formData.set("role", ROLES.ALUMNI);
 
-    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
-    );
+    await expect(resetIncompleteRoleClaim(formData)).rejects.toThrow(`${REDIRECT_ERROR}:/`);
 
     expect(deleteUserRoleMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("registerStudentProfile Server Action", () => {
-  const mockGetUser = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    createClientMock.mockResolvedValue({
-      auth: {
-        getUser: mockGetUser,
-      },
-    });
-
-    transactionMock.mockImplementation(async (callback: any) => {
-      return callback(prisma);
-    });
-
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "student-123",
-      email: "student@acd.edu.ph",
-      name: "Jane Doe",
-      auth_user_id: "auth-student-123",
-      is_active: true,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    findUniqueUserRoleMock.mockResolvedValue(null);
-
-    findUniqueProgramMock.mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-
-    findUniqueMajorMock.mockResolvedValue({
-      id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-
-    getActiveTermIdMock.mockResolvedValue("term-123");
-    upsertEnrollmentForActiveTermMock.mockResolvedValue({ success: true });
-  });
-
-  it("should fail if user is not authenticated", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("Authentication session invalid or missing.");
-  });
-
-  it("should fail if the domain user cannot be resolved", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue(null);
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.error).toContain("account identity could not be resolved");
-    expect(transactionMock).not.toHaveBeenCalled();
-  });
-
-  it("should fail if the program does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    findUniqueProgramMock.mockResolvedValue(null);
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("The selected program does not exist.");
-  });
-
-  it("should fail if the program is archived or inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    findUniqueProgramMock.mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("The selected program is archived or inactive.");
-  });
-
-  it("should fail if the major does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    findUniqueMajorMock.mockResolvedValue(null);
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("The selected major does not exist.");
-  });
-
-  it("should fail if the major is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    findUniqueMajorMock.mockResolvedValue({
-      id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("The selected major is archived or inactive.");
-  });
-
-  it("should fail if the major belongs to a different program", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    findUniqueMajorMock.mockResolvedValue({
-      id: "660e8400-e29b-41d4-a716-446655441111",
-      program_id: "different-program-uuid",
-      is_active: true,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("The selected major does not belong to the selected program.");
-  });
-
-  it("should register student and create enrollment successfully if active term exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBe(true);
-    expect(resolveAuthenticatedDomainUserMock).toHaveBeenCalledWith({
-      authUserId: "auth-student-123",
-      email: "student@acd.edu.ph",
-    });
-    expect(transactionMock).toHaveBeenCalled();
-    expect(updateUserMock).not.toHaveBeenCalled();
-    expect(findUniqueUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "student-123", role: ROLES.STUDENT } },
-    });
-    expect(createUserRoleMock).toHaveBeenCalledWith({
-      data: {
-        user_id: "student-123",
-        role: ROLES.STUDENT,
-      },
-    });
-    expect(upsertStudentProfileMock).toHaveBeenCalledWith({
-      where: { user_id: "student-123" },
-      update: {
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: "660e8400-e29b-41d4-a716-446655441111",
-      },
-      create: {
-        user_id: "student-123",
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        major_id: "660e8400-e29b-41d4-a716-446655441111",
-      },
-    });
-    expect(upsertEnrollmentForActiveTermMock).toHaveBeenCalledWith({
-      studentUserId: "student-123",
-      termInstanceId: "term-123",
-      programId: "550e8400-e29b-41d4-a716-446655440000",
-      majorId: "660e8400-e29b-41d4-a716-446655441111",
-      yearLevel: "FIRST_YEAR",
-      section: "MORNING",
-      source: "ONBOARDING",
-    });
-  });
-
-  it("preserves the stored canonical name when client identity is injected", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-
-    const result = await registerStudentProfile({
-      ...validAcademicPayload,
-      first_name: "Hacker",
-      last_name: "Name",
-      name: "Hacker Name",
-    } as any);
-
-    expect(result.success).toBe(true);
-    expect(updateUserMock).not.toHaveBeenCalled();
-    expect(upsertStudentProfileMock).toHaveBeenCalled();
-  });
-
-  it("allows registration when the user holds a different role (multi-role)", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    // No STUDENT role claimed yet; other roles no longer block registration.
-    findUniqueUserRoleMock.mockResolvedValue(null);
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBe(true);
-    expect(findUniqueUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "student-123", role: ROLES.STUDENT } },
-    });
-    expect(createUserRoleMock).toHaveBeenCalledWith({
-      data: {
-        user_id: "student-123",
-        role: ROLES.STUDENT,
-      },
-    });
-    expect(upsertStudentProfileMock).toHaveBeenCalled();
-  });
-
-  it("rejects registration when the resolved domain user is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "student-123",
-      email: "student@acd.edu.ph",
-      name: "Jane Doe",
-      auth_user_id: "auth-student-123",
-      is_active: false,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.error).toBe("Your CLOIE account is currently inactive.");
-    expect(transactionMock).not.toHaveBeenCalled();
-  });
-
-  it("should register student and skip enrollment if no active term exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    getActiveTermIdMock.mockResolvedValue(null);
-
-    const result = await registerStudentProfile({
-      program_id: "550e8400-e29b-41d4-a716-446655440000",
-      major_id: "",
-      year_level: "",
-      section: "",
-    });
-
-    expect(result.success).toBe(true);
-    expect(upsertStudentProfileMock).toHaveBeenCalled();
-    expect(upsertEnrollmentForActiveTermMock).not.toHaveBeenCalled();
-    expect(updateUserMock).not.toHaveBeenCalled();
-  });
-
-  it("should fail if the student email domain is not authorized", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@gmail.com" } },
-      error: null,
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBeUndefined();
-    expect(result.error).toBe("Institutional email domain is required for student registration.");
-  });
-
-  it("should return failure result if upsertEnrollmentForActiveTerm fails", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acdeducation.com" } },
-      error: null,
-    });
-    upsertEnrollmentForActiveTermMock.mockResolvedValue({
-      success: false,
-      error: "Enrollment transaction failed",
-    });
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Enrollment transaction failed");
-  });
-
-  it("should return client-safe unexpected error message if database transaction fails", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-student-123", email: "student@acd.edu.ph" } },
-      error: null,
-    });
-    transactionMock.mockRejectedValue(new Error("Db connection lost"));
-
-    const result = await registerStudentProfile(validAcademicPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("An unexpected error occurred while processing your request.");
   });
 });

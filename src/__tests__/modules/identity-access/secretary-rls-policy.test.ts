@@ -1,315 +1,307 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { afterEach, describe, it, expect } from "vitest";
 import crypto from "node:crypto";
+
+import { SystemRole } from "@prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { RLS_AUTH_UUIDS } from "@/lib/db/rls-test-identities";
-import { runRlsProbe } from "@/lib/db/rls-test-helpers";
-import { U } from "../../../../prisma/seed/constants/ids";
+import { runAnonProbe, runRlsProbe } from "@/lib/db/rls-test-helpers";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function readSupabaseMigrationsDir(): string {
-  // __dirname is src/__tests__/modules/identity-access/ -> walk up four levels
-  return join(__dirname, "..", "..", "..", "..", "supabase", "migrations");
-}
-
-function listMigrationFiles(): string[] {
-  const dir = readSupabaseMigrationsDir();
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort(); // chronological order via timestamped prefixes
-}
-
-function readMigrationContent(filename: string): string {
-  const dir = readSupabaseMigrationsDir();
-  const path = join(dir, filename);
-  if (!existsSync(path)) {
-    return "";
-  }
-  return readFileSync(path, "utf-8");
-}
+const CALENDAR_TABLES = ["school_years", "academic_term_instances"] as const;
 
 /**
- * Replays the append-only migration ledger in chronological order and returns
- * the body of the LAST `CREATE POLICY "Enable write access for secretary only"`
- * statement targeting the given table. This mirrors how Postgres itself reaches
- * the live state: older migrations create the policy, newer migrations DROP+reCREATE
- * it. Only the most recent CREATE definition survives in the live database.
+ * Purpose-built accounts for the identities the old role-join policy wrongly
+ * honoured. Each owns a fixed Auth UUID so `auth.uid()` resolves to it through
+ * the disposable harness GUC stub. The seeded demo accounts are never mutated,
+ * so later suites see the fixture exactly as seeded.
  */
-function latestCreatePolicyBody(table: "school_years" | "academic_term_instances"): string {
-  const files = listMigrationFiles();
-  let last: string = "";
-  for (const f of files) {
-    const content = readMigrationContent(f);
-    const re = new RegExp(
-      `CREATE POLICY "Enable write access for secretary only"\\s+ON\\s+${table}[\\s\\S]*?\\);\\s*$`,
-      "m"
-    );
-    const matches = content.match(re);
-    if (matches && matches.length > 0) {
-      last = matches[matches.length - 1];
-    }
-  }
-  return last;
-}
-
-describe("Secretary RLS policy: migration ledger integrity (always runs)", () => {
-  // Static guard: verify the migration ledger's FINAL state for both secretary-only
-  // RLS policies uses `u.auth_user_id = auth.uid()` (the column that holds the
-  // Supabase Auth UUID) and NOT `u.id = auth.uid()` (the public.users PK, which is
-  // a separate gen_random_uuid() UUID).
-  //
-  // Background: the original rename migration 20260618124311 copied `u.id = auth.uid()`
-  // from the legacy 20260510003018 admin-only policy, but `auth.uid()` returns the
-  // auth UUID (stored in `User.auth_user_id`), not the public-users PK. The fix
-  // lives in 20260618153711_fix_secretary_rls_user_join.sql, which DROPs and re-CREATEs
-  // both policies with the corrected join. Because migrations are append-only ledger
-  // history, this test replays them in chronological order and asserts the FINAL shape.
-
-  it("school_years secretary policy uses u.auth_user_id = auth.uid() (not u.id)", () => {
-    const body = latestCreatePolicyBody("school_years");
-    expect(
-      body,
-      "expected a CREATE POLICY 'Enable write access for secretary only' ON school_years somewhere in the migration ledger"
-    ).not.toBe("");
-    expect(body).toContain("FOR ALL TO authenticated");
-    expect(body).toContain("USING (");
-    expect(body).toContain("WITH CHECK (");
-    expect(body).toContain("ur.role = 'SECRETARY'");
-    expect(body).toContain("u.auth_user_id = auth.uid()");
-    expect(
-      body.includes("u.id = auth.uid()"),
-      "final 'Enable write access for secretary only' ON school_years must NOT use the wrong join u.id = auth.uid()"
-    ).toBe(false);
-  });
-
-  it("academic_term_instances secretary policy uses u.auth_user_id = auth.uid() (not u.id)", () => {
-    const body = latestCreatePolicyBody("academic_term_instances");
-    expect(
-      body,
-      "expected a CREATE POLICY 'Enable write access for secretary only' ON academic_term_instances somewhere in the migration ledger"
-    ).not.toBe("");
-    expect(body).toContain("FOR ALL TO authenticated");
-    expect(body).toContain("USING (");
-    expect(body).toContain("WITH CHECK (");
-    expect(body).toContain("ur.role = 'SECRETARY'");
-    expect(body).toContain("u.auth_user_id = auth.uid()");
-    expect(
-      body.includes("u.id = auth.uid()"),
-      "final 'Enable write access for secretary only' ON academic_term_instances must NOT use the wrong join u.id = auth.uid()"
-    ).toBe(false);
-  });
-
-  it("fix migration file re-creates both secretary policies with the corrected join", () => {
-    const fixFile = "20260618153711_fix_secretary_rls_user_join.sql";
-    const expectedPath = join(readSupabaseMigrationsDir(), fixFile);
-    expect(existsSync(expectedPath), `expected the RLS fix migration at ${expectedPath}`).toBe(
-      true
-    );
-
-    const content = readMigrationContent(fixFile);
-    expect(content).toContain(
-      `DROP POLICY IF EXISTS "Enable write access for secretary only" ON school_years;`
-    );
-    expect(content).toContain(
-      `DROP POLICY IF EXISTS "Enable write access for secretary only" ON academic_term_instances;`
-    );
-    // Inspect just the CREATE POLICY statements (not the SQL comments which
-    // legitimately reference the broken pattern they're describing).
-    const createStatements =
-      content.match(/CREATE POLICY "Enable write access for secretary only"[\s\S]*?\);/g) || [];
-    expect(createStatements.length).toBe(2);
-    for (const stmt of createStatements) {
-      expect(stmt).not.toContain("u.id = auth.uid()");
-      expect(stmt).toContain("u.auth_user_id = auth.uid()");
-    }
-  });
-});
+const PROBE_ACCOUNTS = {
+  DEACTIVATED_SECRETARY: {
+    authUid: "00000000-0000-4000-8000-000000000003",
+    email: "rls-deactivated-secretary@cloie.test",
+  },
+  MULTI_ROLE_SECRETARY: {
+    authUid: "00000000-0000-4000-8000-000000000004",
+    email: "rls-multi-role-secretary@cloie.test",
+  },
+} as const;
 
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
-  "Secretary RLS Policies (live DB behavior)",
+  "Academic calendar database boundary (live DB behavior)",
   () => {
-    it("SECRETARY can write to school_years (INSERT school_years)", async () => {
-      const code = `RLS-SEC-${crypto.randomUUID()}`;
-      try {
-        await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
-            code
-          );
+    // The deactivated and multi-role accounts are created per test to prove the
+    // boundary refuses exactly the identities the old role join honoured; both
+    // are reverted afterwards so the fixture database stays as seeded.
+    afterEach(async () => {
+      await removeProbeAccounts();
+    });
+
+    /**
+     * Create (or refresh) one probe account with its Auth link and roles. Kept
+     * out of the seed so the disposable database needs no new fixture for a
+     * boundary that must refuse every identity.
+     */
+    async function createProbeAccount(
+      account: { authUid: string; email: string },
+      input: { name: string; isActive: boolean; roles: SystemRole[] }
+    ): Promise<{ authUid: string }> {
+      const user = await prisma.user.upsert({
+        where: { email: account.email },
+        update: { name: input.name, is_active: input.isActive, auth_user_id: account.authUid },
+        create: {
+          email: account.email,
+          name: input.name,
+          is_active: input.isActive,
+          auth_user_id: account.authUid,
+        },
+      });
+      for (const role of input.roles) {
+        await prisma.userRole.upsert({
+          where: { user_id_role: { user_id: user.id, role } },
+          update: {},
+          create: { user_id: user.id, role },
         });
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code } });
       }
-    });
+      return { authUid: account.authUid };
+    }
 
-    it("SECRETARY can write to school_years (UPDATE school_years)", async () => {
-      const code = `RLS-SEC-UPD-${crypto.randomUUID()}`;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code } });
-        const rows = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-          return tx.$executeRawUnsafe(
-            `UPDATE "school_years" SET "start_date" = '2026-01-01' WHERE "id" = $1::uuid`,
-            sy.id
-          );
-        });
-        expect(rows).toBe(1);
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code } });
-      }
-    });
+    /**
+     * Every identity the calendar boundary must refuse, including the ones the
+     * old role-join policy wrongly honoured: a linked Secretary account that is
+     * deactivated, and a real multi-role holder who holds a SECRETARY row
+     * without being in the Secretary workspace. Both are derived per test from
+     * the Auth UUIDs the disposable harness already stubs, so no seed fixture
+     * is added for a boundary that must refuse everyone.
+     */
+    async function calendarDenialIdentities(): Promise<{ label: string; uid: string }[]> {
+      const identities: { label: string; uid: string }[] = [
+        { label: "SECRETARY", uid: RLS_AUTH_UUIDS.SECRETARY },
+        { label: "FACULTY", uid: RLS_AUTH_UUIDS.FACULTY },
+        { label: "PROGRAM_HEAD_BSIT", uid: RLS_AUTH_UUIDS.PROGRAM_HEAD_BSIT },
+      ];
 
-    it("SECRETARY can write to academic_term_instances", async () => {
-      const syCode = `RLS-TI-${crypto.randomUUID()}`;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
-        try {
-          await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-            await tx.$executeRawUnsafe(
-              `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "updated_at") VALUES ($1::uuid, '1ST', now())`,
-              sy.id
-            );
-          });
-        } finally {
-          await prisma.academicTermInstance.deleteMany({
-            where: { school_year_id: sy.id },
-          });
-        }
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
-      }
-    });
+      // A linked SECRETARY whose account is deactivated. The old policy matched
+      // it because it never read users.is_active.
+      const deactivated = await createProbeAccount(PROBE_ACCOUNTS.DEACTIVATED_SECRETARY, {
+        name: "RLS Deactivated Secretary",
+        isActive: false,
+        roles: [SystemRole.SECRETARY],
+      });
+      identities.push({
+        label: "DEACTIVATED_SECRETARY",
+        uid: deactivated.authUid,
+      });
 
-    it("SECRETARY can UPDATE academic_term_instances", async () => {
-      const syCode = `RLS-TI-UPD-${crypto.randomUUID()}`;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
-        try {
-          const term = await prisma.academicTermInstance.create({
-            data: { school_year_id: sy.id, semester: "FIRST" as const },
-          });
-          const rows = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-            return tx.$executeRawUnsafe(
-              `UPDATE "academic_term_instances" SET "status" = 'COMPLETED' WHERE "id" = $1::uuid`,
-              term.id
-            );
-          });
-          expect(rows).toBe(1);
-        } finally {
-          await prisma.academicTermInstance.deleteMany({
-            where: { school_year_id: sy.id },
-          });
-        }
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
-      }
-    });
+      // A linked, active account holding SECRETARY and FACULTY: the multi-role
+      // shape the server resolves an active role for. The old policy matched it
+      // on role alone, with no workspace decision.
+      const multiRole = await createProbeAccount(PROBE_ACCOUNTS.MULTI_ROLE_SECRETARY, {
+        name: "RLS Multi-Role Secretary",
+        isActive: true,
+        roles: [SystemRole.SECRETARY, SystemRole.FACULTY],
+      });
+      identities.push({ label: "MULTI_ROLE_SECRETARY", uid: multiRole.authUid });
 
-    it("Non-SECRETARY role is denied INSERT to school_years", async () => {
-      const code = `RLS-DENY-${crypto.randomUUID()}`;
-      await expect(
-        runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
-            code
-          );
-        })
-      ).rejects.toMatchObject({ meta: { code: "42501" } });
-      // Verify no row was created (the probe above should have rolled back,
-      // but let's be explicit).
-      const row = await prisma.schoolYear.findUnique({ where: { code } });
-      expect(row).toBeNull();
-    });
+      return identities;
+    }
 
-    it("Non-SECRETARY role is denied UPDATE to school_years", async () => {
-      const code = `RLS-DENY-UPD-${crypto.randomUUID()}`;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code } });
-        const rows = await runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
-          return tx.$executeRawUnsafe(
-            `UPDATE "school_years" SET "start_date" = '2026-01-01' WHERE "id" = $1::uuid`,
-            sy.id
-          );
-        });
-        // RLS makes the row invisible for UPDATE → 0 rows affected, no error.
-        expect(rows).toBe(0);
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code } });
-      }
-    });
+    /** Remove every probe account this suite created; seeded rows are untouched. */
+    async function removeProbeAccounts(): Promise<void> {
+      await prisma.user.deleteMany({
+        where: { email: { in: Object.values(PROBE_ACCOUNTS).map((account) => account.email) } },
+      });
+    }
 
-    it("Non-SECRETARY role is denied INSERT to academic_term_instances", async () => {
-      const syCode = `RLS-DENY-TI-${crypto.randomUUID()}`;
-      let syId: string | undefined;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
-        syId = sy.id;
+    async function fixtureSchoolYearCode(): Promise<string> {
+      return `RLS-CAL-${crypto.randomUUID()}`;
+    }
+
+    async function cleanupSchoolYear(code: string): Promise<void> {
+      const sy = await prisma.schoolYear.findUnique({ where: { code } });
+      if (!sy) return;
+      await prisma.academicTermInstance.deleteMany({ where: { school_year_id: sy.id } });
+      await prisma.schoolYear.delete({ where: { id: sy.id } });
+    }
+
+    it("refuses every direct SELECT on school_years, including for a linked Secretary", async () => {
+      for (const identity of await calendarDenialIdentities()) {
         await expect(
-          runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
-            await tx.$executeRawUnsafe(
-              `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "updated_at") VALUES ($1::uuid, '1ST', now())`,
-              sy.id
-            );
-          })
+          runRlsProbe(identity.uid, (tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "school_years"`)
+          ),
+          `${identity.label} must not read school_years directly`
         ).rejects.toMatchObject({ meta: { code: "42501" } });
-      } finally {
-        if (syId) {
-          await prisma.academicTermInstance.deleteMany({
-            where: { school_year_id: syId },
-          });
-        }
-        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
       }
     });
 
-    it("Non-SECRETARY role is denied UPDATE to academic_term_instances", async () => {
-      const syCode = `RLS-DENY-TI-UPD-${crypto.randomUUID()}`;
-      try {
-        const sy = await prisma.schoolYear.create({ data: { code: syCode } });
+    it("refuses every direct SELECT on academic_term_instances, including for a linked Secretary", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        await expect(
+          runRlsProbe(identity.uid, (tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "academic_term_instances"`)
+          ),
+          `${identity.label} must not read academic_term_instances directly`
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      }
+    });
+
+    it("refuses direct INSERT on school_years for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const code = await fixtureSchoolYearCode();
         try {
-          const term = await prisma.academicTermInstance.create({
-            data: { school_year_id: sy.id, semester: "FIRST" as const },
-          });
-          const rows = await runRlsProbe(RLS_AUTH_UUIDS.FACULTY, async (tx) => {
-            return tx.$executeRawUnsafe(
-              `UPDATE "academic_term_instances" SET "status" = 'COMPLETED' WHERE "id" = $1::uuid`,
-              term.id
-            );
-          });
-          // RLS makes the row invisible for UPDATE → 0 rows affected, no error.
-          expect(rows).toBe(0);
+          await expect(
+            runRlsProbe(identity.uid, (tx) =>
+              tx.$executeRawUnsafe(
+                `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
+                code
+              )
+            ),
+            `${identity.label} must not insert school_years directly`
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
         } finally {
-          await prisma.academicTermInstance.deleteMany({
-            where: { school_year_id: sy.id },
-          });
+          await cleanupSchoolYear(code);
         }
-      } finally {
-        await prisma.schoolYear.deleteMany({ where: { code: syCode } });
       }
     });
 
-    it("proves corrected auth_user_id = auth.uid() linkage behaviorally", async () => {
-      // The secretary RLS policy checks `u.auth_user_id = auth.uid()`.
-      // If we set auth.uid() to the public users.id PK (which is a different
-      // UUID generated by gen_random_uuid()), the policy must NOT match.
-      // This proves the corrected join works — the fix fixed the bug.
-      const code = `RLS-LINK-${crypto.randomUUID()}`;
-      // The public PK of the ADMIN/Secretary user — deliberately NOT the
-      // auth UUID. The policy must reject this, proving the correct join.
-      const wrongId = U.ADMIN;
-      await expect(
-        runRlsProbe(wrongId, async (tx) => {
-          await tx.$executeRawUnsafe(
-            `INSERT INTO "school_years" ("code", "created_at", "updated_at") VALUES ($1, now(), now())`,
-            code
-          );
-        })
-      ).rejects.toMatchObject({ meta: { code: "42501" } });
-      const row = await prisma.schoolYear.findUnique({ where: { code } });
-      expect(row).toBeNull();
+    it("refuses direct UPDATE on school_years for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const code = await fixtureSchoolYearCode();
+        try {
+          const sy = await prisma.schoolYear.create({ data: { code } });
+          await expect(
+            runRlsProbe(identity.uid, (tx) =>
+              tx.$executeRawUnsafe(
+                `UPDATE "school_years" SET "start_date" = '2026-01-01' WHERE "id" = $1::uuid`,
+                sy.id
+              )
+            ),
+            `${identity.label} must not update school_years directly`
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        } finally {
+          await cleanupSchoolYear(code);
+        }
+      }
+    });
+
+    it("refuses direct DELETE on school_years for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const code = await fixtureSchoolYearCode();
+        try {
+          const sy = await prisma.schoolYear.create({ data: { code } });
+          await expect(
+            runRlsProbe(identity.uid, (tx) =>
+              tx.$executeRawUnsafe(`DELETE FROM "school_years" WHERE "id" = $1::uuid`, sy.id)
+            ),
+            `${identity.label} must not delete school_years directly`
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        } finally {
+          await cleanupSchoolYear(code);
+        }
+      }
+    });
+
+    it("refuses direct INSERT on academic_term_instances for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const parent = await prisma.$queryRaw<{ id: string }[]>`
+          SELECT "id" FROM "school_years" ORDER BY "created_at" ASC LIMIT 1`;
+        expect(parent[0], "seeded school year required for term instance fixture").toBeTruthy();
+        await expect(
+          runRlsProbe(identity.uid, (tx) =>
+            tx.$executeRawUnsafe(
+              `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "term", "updated_at") VALUES ($1::uuid, 'SUMMER', NULL, now())`,
+              parent[0].id
+            )
+          ),
+          `${identity.label} must not insert academic_term_instances directly`
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      }
+    });
+
+    it("refuses direct UPDATE on academic_term_instances for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const code = await fixtureSchoolYearCode();
+        try {
+          const sy = await prisma.schoolYear.create({ data: { code } });
+          const term = await prisma.academicTermInstance.create({
+            data: { school_year_id: sy.id, semester: "SUMMER" as const, term: null },
+          });
+          await expect(
+            runRlsProbe(identity.uid, (tx) =>
+              tx.$executeRawUnsafe(
+                `UPDATE "academic_term_instances" SET "status" = 'COMPLETED' WHERE "id" = $1::uuid`,
+                term.id
+              )
+            ),
+            `${identity.label} must not update academic_term_instances directly`
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        } finally {
+          await cleanupSchoolYear(code);
+        }
+      }
+    });
+
+    it("refuses direct DELETE on academic_term_instances for every calendar identity", async () => {
+      for (const identity of await calendarDenialIdentities()) {
+        const code = await fixtureSchoolYearCode();
+        try {
+          const sy = await prisma.schoolYear.create({ data: { code } });
+          const term = await prisma.academicTermInstance.create({
+            data: { school_year_id: sy.id, semester: "SUMMER" as const, term: null },
+          });
+          await expect(
+            runRlsProbe(identity.uid, (tx) =>
+              tx.$executeRawUnsafe(
+                `DELETE FROM "academic_term_instances" WHERE "id" = $1::uuid`,
+                term.id
+              )
+            ),
+            `${identity.label} must not delete academic_term_instances directly`
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        } finally {
+          await cleanupSchoolYear(code);
+        }
+      }
+    });
+
+    it("refuses anon reads and writes on both calendar tables", async () => {
+      for (const table of CALENDAR_TABLES) {
+        await expect(
+          runAnonProbe((tx) => tx.$executeRawUnsafe(`SELECT count(*) FROM "${table}"`)),
+          `anon must not read ${table}`
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+        await expect(
+          runAnonProbe((tx) => tx.$executeRawUnsafe(`INSERT INTO "${table}" DEFAULT VALUES`)),
+          `anon must not write ${table}`
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      }
+    });
+
+    it("keeps the authorized Prisma server path functional", async () => {
+      // The calendar must remain writable through the service-role connection
+      // the lifecycle services use; the boundary above only closes direct
+      // anon/authenticated access.
+      const code = await fixtureSchoolYearCode();
+      try {
+        const sy = await prisma.schoolYear.create({
+          data: { code, start_date: new Date("2026-06-01") },
+        });
+        const term = await prisma.academicTermInstance.create({
+          data: { school_year_id: sy.id, semester: "SUMMER" as const, term: null },
+        });
+        const updated = await prisma.schoolYear.update({
+          where: { id: sy.id },
+          data: { end_date: new Date("2027-05-31") },
+        });
+        expect(updated.end_date?.toISOString()).toBe("2027-05-31T00:00:00.000Z");
+        const storedTerm = await prisma.academicTermInstance.findUnique({
+          where: { id: term.id },
+          include: { school_year: true },
+        });
+        expect(storedTerm?.school_year.end_date?.toISOString()).toBe("2027-05-31T00:00:00.000Z");
+      } finally {
+        await cleanupSchoolYear(code);
+      }
     });
   }
 );

@@ -13,7 +13,7 @@ export default async function GenEdCoordinatorCoursesPage() {
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   if (session.activeRole !== ROLES.GEN_ED_COORDINATOR) {

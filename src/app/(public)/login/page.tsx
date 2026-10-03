@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -15,9 +17,9 @@ export default async function LoginPage({
   const resolvedSearchParams = await searchParams;
   const error = resolvedSearchParams?.error;
 
-  // Bare /login with no error — redirect to the main portal
+  // Bare /login with no error — the scoped entrances live on the landing page.
   if (!error) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   return (
@@ -32,14 +34,7 @@ export default async function LoginPage({
             height={56}
             className="shrink-0 object-contain"
           />
-          <Image
-            src="/logos/cloie-logo.svg"
-            alt="System CLOIE"
-            width={442}
-            height={500}
-            className="border-border h-14 w-auto shrink-0 rounded border bg-white object-contain p-1"
-            priority
-          />
+          <CloieLogoMark className="h-14" priority />
         </div>
         <h1 className="text-display-md text-primary font-bold tracking-tight">System CLOIE</h1>
         <p className="text-muted-foreground mt-2 text-center">
@@ -60,28 +55,44 @@ export default async function LoginPage({
         </Alert>
       )}
 
-      {/* Back to portal link */}
+      {/* Back to entrances link */}
       <Card className="border-border bg-surface shadow-sm">
         <CardHeader className="space-y-3 pt-8 pb-6 text-center">
           <CardTitle className="text-heading-lg text-foreground font-bold">Welcome Back</CardTitle>
           <CardDescription className="text-body-md text-muted-foreground mx-auto max-w-[280px]">
-            Return to the portal selection to choose your role.
+            Return to the System CLOIE entrances to choose how you sign in.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6 pb-8">
-          <p className="text-body-sm text-muted-foreground text-center">
-            Choose a role from the public portal to review the legal documents before Google
-            sign-in.
-          </p>
+          <div className="flex flex-col gap-2 text-center">
+            <Link
+              href="/login/student"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            >
+              Student sign in
+            </Link>
+            <Link
+              href="/login/staff"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            >
+              Staff sign in
+            </Link>
+            <Link
+              href="/login/external"
+              className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+            >
+              Alumni &amp; partner sign in
+            </Link>
+          </div>
 
           <div className="text-center">
-            <a
-              href="/portal/respondents"
+            <Link
+              href="/"
               className="text-caption text-muted-foreground hover:text-foreground transition-colors"
             >
-              Go to portal selection →
-            </a>
+              Back to all entrances →
+            </Link>
           </div>
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@ import type { Role } from "@/lib/constants/roles";
 import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 
 export function createAuthSessionSnapshot(
-  overrides: Partial<Omit<AuthSessionSnapshot, "activeRole">> & {
+  overrides: Partial<AuthSessionSnapshot> & {
     userId?: string;
     roles?: Role[];
   } = {}
@@ -13,12 +13,14 @@ export function createAuthSessionSnapshot(
     email: overrides.email ?? null,
     name: overrides.name ?? null,
     roles,
-    activeRole: roles[0] ?? null,
+    activeRole: overrides.activeRole ?? (roles.length === 1 ? roles[0] : null),
     studentProfileId: overrides.studentProfileId ?? null,
     alumniProfileId: overrides.alumniProfileId ?? null,
     industryPartnerProfileId: overrides.industryPartnerProfileId ?? null,
     alumniVerificationStatus: overrides.alumniVerificationStatus ?? null,
     industryPartnerVerificationStatus: overrides.industryPartnerVerificationStatus ?? null,
+    facultyApprovalStatus: overrides.facultyApprovalStatus ?? null,
+    authMethod: overrides.authMethod ?? "google",
     profileGate: overrides.profileGate ?? { status: "COMPLETE" },
   };
 }

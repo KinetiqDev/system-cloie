@@ -1,8 +1,4 @@
 import { redirect } from "next/navigation";
-import { PortalShell } from "@/features/portals";
-import { ROLE_CARDS_RESPONDENT } from "@/features/portals/lib/role-card-config";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
@@ -10,30 +6,10 @@ export const metadata = {
   description: "Sign in as a Student, Alumni, or Industry Partner",
 };
 
+/**
+ * Retired entry (issue #649): the mixed respondent portal is replaced by the
+ * dedicated Student entrance and the external Alumni/partner entrance.
+ */
 export default async function RespondentPortalPage() {
-  const session = await resolveAuthSession();
-
-  if (session && session.profileGate.status !== "ROLE_SELECTION_REQUIRED") {
-    redirect(
-      resolvePostLoginDestination({
-        requestedPath: "/dashboard",
-        intent: "intent" in session.profileGate ? session.profileGate.intent : null,
-        activeRole: session.activeRole,
-        profileGate: session.profileGate,
-      })
-    );
-  }
-
-  return (
-    <PortalShell
-      title="Welcome to System CLOIE"
-      subtitle="Select your role to access your personalized dashboard and tools."
-      cards={ROLE_CARDS_RESPONDENT}
-      session={session ? { email: session.email ?? "", isComplete: false } : null}
-      backLink={{
-        label: "Back to portal selection",
-        href: "/",
-      }}
-    />
-  );
+  redirect("/");
 }

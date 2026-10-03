@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -15,6 +16,8 @@ import {
   ArrowLeft,
   UserRoundX,
   IdCard,
+  GraduationCap,
+  Hourglass,
 } from "lucide-react";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -53,7 +56,7 @@ const STATUS_CONFIGS = {
   },
   inactive: {
     title: "Account Inactive",
-    description: "Your CLOIE account is currently inactive.",
+    description: "Your System CLOIE account is currently inactive.",
     details:
       "This account has been deactivated by a system administrator. You cannot access the system dashboards. Please reach out to administration or IT support if you believe this is an error.",
     icon: Ban,
@@ -73,31 +76,66 @@ const STATUS_CONFIGS = {
     title: "Enrollment Deferred",
     description: "No active academic term configured.",
     details:
-      "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in CLOIE. Please contact a school administrator to configure the academic calendar.",
+      "Your Student academic profile was successfully registered, but your enrollment could not be processed because there is currently no active academic term set in System CLOIE. Please contact a school administrator to configure the academic calendar.",
     icon: CalendarDays,
     color: "warning",
     showRetry: false,
   },
   "missing-google-name": {
     title: "Google Account Name Required",
-    description: "Your Google account does not provide a usable display name for CLOIE.",
+    description: "Your Google account does not provide a usable display name for System CLOIE.",
     details:
-      "CLOIE needs the name on your Google account before it can create or first-link your institutional account. Open your Google Account profile, set a full name, then return to role selection and sign in again. No account was created or linked by this attempt.",
+      "System CLOIE needs the name on your Google account before it can create or first-link your institutional account. Open your Google Account profile, set a full name, then return to sign-in and try again. No account was created or linked by this attempt.",
     icon: IdCard,
     color: "warning",
     showRetry: true,
   },
   "identity-conflict": {
     title: "Sign-In Could Not Be Completed",
-    description: "This Google sign-in cannot be connected to the matching CLOIE account.",
+    description: "This Google sign-in cannot be connected to the matching System CLOIE account.",
     details:
-      "The account email is already associated with a different sign-in identity. Your existing CLOIE record was left unchanged. Sign out, return to role selection, and use the Google account originally linked to this email, or contact IT support for help.",
+      "The account email is already associated with a different sign-in identity. Your existing System CLOIE record was left unchanged. Sign out and use the Google account originally linked to this email, or contact IT support for help.",
     icon: UserRoundX,
     color: "danger",
     showRetry: true,
   },
+  "unprovisioned-student": {
+    title: "Student Account Not Set Up Yet",
+    description: "Your ACD Google account is not linked to a Student record yet.",
+    details:
+      "Student accounts are created by the Secretary's office before first sign-in. Please contact the Secretary's office or IT support to have your Student account provisioned. Do not use Faculty registration — it cannot create a Student account.",
+    icon: GraduationCap,
+    color: "warning",
+    showRetry: true,
+  },
+  "faculty-pending": {
+    title: "Faculty Request Pending Review",
+    description: "Your Faculty request is waiting for institutional review.",
+    details:
+      "Your request grants no Faculty workspace access until your eligibility is confirmed. If it is approved, your Faculty workspace opens on your next sign-in. If it is declined, you will see the outcome with reapplication steps.",
+    icon: Hourglass,
+    color: "warning",
+    showRetry: false,
+  },
+  "faculty-rejected": {
+    title: "Faculty Request Not Approved",
+    description: "Your Faculty request was not approved following institutional review.",
+    details:
+      "You do not have Faculty workspace access. You may submit a new Faculty request with corrected details from Faculty registration, or contact the Secretary's office for guidance.",
+    icon: XCircle,
+    color: "danger",
+    showRetry: false,
+  },
+  "method-mismatch": {
+    title: "Different Sign-In Method Required",
+    description: "This session cannot open the selected workspace.",
+    details:
+      "Recovery sessions can only change your password. Sign out and sign in again afterward. Internal workspaces require your current ACD Google sign-in. Alumni and Industry Partner workspaces accept Google or email-password sign-in.",
+    icon: ShieldAlert,
+    color: "info",
+    showRetry: true,
+  },
 } as const;
-
 type StatusType = keyof typeof STATUS_CONFIGS;
 
 function isStatusType(type: string): type is StatusType {
@@ -176,14 +214,7 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
             height={48}
             className="shrink-0 object-contain"
           />
-          <Image
-            src="/logos/cloie-logo.svg"
-            alt="System CLOIE"
-            width={442}
-            height={500}
-            className="border-border h-12 w-auto shrink-0 rounded border bg-white object-contain p-1"
-            priority
-          />
+          <CloieLogoMark className="h-12" priority />
         </div>
         <h1 className="text-heading-xl text-primary font-bold tracking-tight">System CLOIE</h1>
         <p className="text-label-sm text-muted-foreground mt-1 tracking-wider uppercase">
@@ -223,13 +254,9 @@ export default async function StatusPage({ params, searchParams }: PageProps) {
 
           <div className="flex flex-col gap-3 pt-2">
             {config.showRetry && (
-              <Button
-                render={<Link href="/portal/respondents" />}
-                className="w-full"
-                variant="default"
-              >
+              <Button render={<Link href="/" />} className="w-full" variant="default">
                 <ArrowLeft className="mr-2 size-4" />
-                Back to Role Selection
+                Back to System CLOIE Entrances
               </Button>
             )}
 

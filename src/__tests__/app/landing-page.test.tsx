@@ -25,24 +25,50 @@ function renderHome() {
 }
 
 describe("Landing page", () => {
-  it("renders both portal choice cards with preserved copy and hrefs", () => {
+  it("renders the three scoped audience entrances with correct hrefs", () => {
     renderHome();
 
     expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
-    expect(screen.getByText("Select your portal to sign in or register.")).toBeInTheDocument();
-    expect(screen.getByText("ACD Staff & Faculty")).toBeInTheDocument();
-    expect(screen.getByText("Students, Alumni & Partners")).toBeInTheDocument();
+    expect(screen.getByText(/Turn responses into learning-outcome evidence/i)).toBeInTheDocument();
 
-    const staffCard = screen.getByRole("link", { name: /ACD Staff & Faculty/i });
-    const respondentCard = screen.getByRole("link", { name: /Students, Alumni & Partners/i });
-    expect(staffCard.getAttribute("href")).toBe("/portal/staff");
-    expect(respondentCard.getAttribute("href")).toBe("/portal/respondents");
+    const studentCard = screen.getByRole("link", { name: /Students/i });
+    const staffCard = screen.getByRole("link", { name: /Staff & Faculty/i });
+    const externalCard = screen.getByRole("link", { name: /Alumni & Partners/i });
+    expect(studentCard.getAttribute("href")).toBe("/login/student");
+    expect(staffCard.getAttribute("href")).toBe("/login/staff");
+    expect(externalCard.getAttribute("href")).toBe("/login/external");
   });
-  it("keeps the two-column desktop card grid", () => {
-    const { container } = renderHome();
-    const grid = container.querySelector(".md\\:grid-cols-2");
-    expect(grid).not.toBeNull();
-    expect(grid!.className).toContain("grid-cols-1");
+
+  it("keeps each audience card a single link", () => {
+    renderHome();
+    for (const name of ["Students", "Staff & Faculty", "Alumni & Partners"]) {
+      const card = screen.getByRole("link", { name: `Sign in: ${name}` });
+      expect(card.querySelector("button, a")).toBeNull();
+    }
+  });
+
+  it("explains what System CLOIE is and is not, without testimonials", () => {
+    renderHome();
+
+    expect(screen.getByText("What System CLOIE is")).toBeInTheDocument();
+    expect(screen.getByText("What it is not")).toBeInTheDocument();
+    expect(screen.getByText(/Not a learning management system/i)).toBeInTheDocument();
+    expect(screen.queryByText(/testimonial/i)).toBeNull();
+  });
+
+  it("links Faculty registration, help, and legal documents", () => {
+    renderHome();
+
+    expect(screen.getByRole("link", { name: /Submit a Faculty request/i })).toHaveAttribute(
+      "href",
+      "/register/faculty"
+    );
+    expect(screen.getByText("Help and frequently asked questions")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Privacy Notice" })).toHaveAttribute(
+      "href",
+      "/privacy"
+    );
+    expect(screen.getByRole("link", { name: "Terms of Use" })).toHaveAttribute("href", "/terms");
   });
 
   it("uses semantic muted text instead of legacy text tokens", () => {

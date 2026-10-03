@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type BackLinkBase = {
   children: ReactNode;
   className?: string;
+  size?: "sm" | "default";
 };
 
 type BackLinkHref = BackLinkBase & {
@@ -29,7 +30,7 @@ export type BackLinkProps = BackLinkHref | BackLinkAction;
  * Use `href` for plain navigation and `onClick` only when leaving needs a guard
  * (for example the template builder's unsaved-changes confirm).
  */
-export function BackLink({ children, className, ...props }: BackLinkProps) {
+export function BackLink({ children, className, size = "sm", ...props }: BackLinkProps) {
   // Secondary (not muted) text: the muted role now clears AA on the app
   // background, but secondary stays the safer upward-navigation ink.
   const styles = cn("-ml-2 w-fit gap-1.5 text-text-secondary hover:text-foreground", className);
@@ -37,15 +38,19 @@ export function BackLink({ children, className, ...props }: BackLinkProps) {
   if (props.href !== undefined) {
     const href = props.href;
     return (
-      <Button render={<Link href={href} />} variant="ghost" size="sm" className={styles}>
+      <Link
+        href={href}
+        data-slot="button"
+        className={buttonVariants({ variant: "ghost", size, className: styles })}
+      >
         <ArrowLeft data-icon="inline-start" aria-hidden="true" />
         {children}
-      </Button>
+      </Link>
     );
   }
 
   return (
-    <Button type="button" onClick={props.onClick} variant="ghost" size="sm" className={styles}>
+    <Button type="button" onClick={props.onClick} variant="ghost" size={size} className={styles}>
       <ArrowLeft data-icon="inline-start" aria-hidden="true" />
       {children}
     </Button>

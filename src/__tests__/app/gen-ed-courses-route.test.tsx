@@ -46,7 +46,9 @@ describe("gen-ed-coordinator/courses route", () => {
     const Page = await loadPage();
     const rendered = await Page();
     expect(listCoursesMock).toHaveBeenCalled();
-    expect(rendered).toMatchObject({ props: { courses: expect.any(Array), summary: expect.any(Object) } });
+    expect(rendered).toMatchObject({
+      props: { courses: expect.any(Array), summary: expect.any(Object) },
+    });
   });
 
   it("redirects non-coordinator to /unauthorized before loading courses", async () => {
@@ -60,23 +62,27 @@ describe("gen-ed-coordinator/courses route", () => {
     expect(listCoursesMock).not.toHaveBeenCalled();
   });
 
-  it("redirects unauth to portal", async () => {
+  it("redirects unauth to the landing", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
     const Page = await loadPage();
-    await expect(Page()).rejects.toThrow(`${REDIRECT_ERROR}:/portal/respondents`);
+    await expect(Page()).rejects.toThrow(`${REDIRECT_ERROR}:/`);
   });
 
   it("is read-only — catalog props have no program/major/mutation branch", async () => {
     listCoursesMock.mockResolvedValue({
       success: true,
       data: {
-        courses: [{ id: "1", code: "GEMATH", title: "Math", is_active: true, updated_at: new Date() }],
+        courses: [
+          { id: "1", code: "GEMATH", title: "Math", is_active: true, updated_at: new Date() },
+        ],
         summary: { total: 1, active: 1, archived: 0 },
       },
     });
     const Page = await loadPage();
     const rendered = await Page();
-    expect(rendered).toMatchObject({ props: { courses: expect.any(Array), summary: expect.any(Object) } });
+    expect(rendered).toMatchObject({
+      props: { courses: expect.any(Array), summary: expect.any(Object) },
+    });
     expect((rendered as { props: Record<string, unknown> }).props).not.toHaveProperty("program");
     expect((rendered as { props: Record<string, unknown> }).props).not.toHaveProperty("majors");
   });

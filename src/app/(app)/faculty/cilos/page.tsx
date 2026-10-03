@@ -23,7 +23,7 @@ export default async function FacultyCilosPage({ searchParams }: FacultyCilosPag
   const { term: termInstanceId, type, q, view } = await searchParams;
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   // When no term is explicitly chosen, default the filter to the current

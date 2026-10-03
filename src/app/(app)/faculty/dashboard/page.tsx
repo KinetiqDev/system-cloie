@@ -43,7 +43,7 @@ export const metadata = { title: buildPageTitle("Dashboard", "Faculty") };
 // fallow-ignore-next-line complexity
 export default async function FacultyDashboardPage() {
   const session = await resolveAuthSession();
-  if (!session) redirect("/portal/respondents");
+  if (!session) redirect("/");
   if (session.activeRole !== ROLES.FACULTY) redirect("/unauthorized");
 
   const dashboard = await getFacultyDashboard(session.userId);

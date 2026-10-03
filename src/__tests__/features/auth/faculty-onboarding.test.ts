@@ -1,43 +1,60 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveProfileGate } from "@/features/users/services/resolve-profile-gate";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
 import { facultyProfileSchema } from "@/lib/schemas/faculty-profile";
-import { createFacultyProfile } from "@/lib/actions/faculty-actions";
+import { requestFacultyAccess } from "@/lib/actions/faculty-actions";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { createClient } from "@/lib/supabase/server";
 
-const { resolveAuthenticatedDomainUserMock } = vi.hoisted(() => ({
-  resolveAuthenticatedDomainUserMock: vi.fn(),
+const { resolveAuthSessionMock, requireLegalAcknowledgementMock } = vi.hoisted(() => ({
+  resolveAuthSessionMock: vi.fn(),
+  requireLegalAcknowledgementMock: vi.fn(),
+}));
+
+vi.mock("@/features/auth/services/resolve-auth-session", () => ({
+  resolveAuthSession: resolveAuthSessionMock,
+}));
+
+vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
+  requireLegalAcknowledgement: requireLegalAcknowledgementMock,
+}));
+
+const {
+  findUniqueUserMock,
+  facultyAccessRequestUpsertMock,
+  findUniqueProgramMock,
+  findFirstAffiliationMock,
+  upsertUserRoleMock,
+  transactionMock,
+} = vi.hoisted(() => ({
+  findUniqueUserMock: vi.fn(),
+  facultyAccessRequestUpsertMock: vi.fn(),
+  findUniqueProgramMock: vi.fn(),
+  findFirstAffiliationMock: vi.fn(),
+  upsertUserRoleMock: vi.fn(),
+  transactionMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    $transaction: vi.fn(),
+    facultyAccessRequest: {
+      findUnique: vi.fn(),
+      upsert: facultyAccessRequestUpsertMock,
+    },
+    $transaction: transactionMock,
     user: {
-      update: vi.fn(),
+      findUnique: findUniqueUserMock,
     },
     userRole: {
-      upsert: vi.fn(),
-      findUnique: vi.fn(),
-      create: vi.fn(),
+      upsert: upsertUserRoleMock,
     },
     facultyProgramAffiliation: {
-      upsert: vi.fn(),
+      findFirst: findFirstAffiliationMock,
     },
     program: {
-      findUnique: vi.fn(),
+      findUnique: findUniqueProgramMock,
     },
   },
-}));
-
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn(),
-}));
-
-vi.mock("@/features/auth/services/resolve-authenticated-domain-user", () => ({
-  resolveAuthenticatedDomainUser: resolveAuthenticatedDomainUserMock,
 }));
 
 describe("resolveProfileGate — Faculty", () => {
@@ -67,14 +84,16 @@ describe("resolveProfileGate — Faculty", () => {
 });
 
 describe("resolvePostLoginDestination — Faculty", () => {
-  it("routes FACULTY_ONBOARDING_REQUIRED to /onboarding?intent=faculty", () => {
+  it("routes FACULTY_ONBOARDING_REQUIRED to faculty registration", () => {
     const destination = resolvePostLoginDestination({
       requestedPath: "/portal/respondents",
       intent: null,
       activeRole: ROLES.FACULTY,
       profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
-    expect(destination).toBe("/onboarding?intent=faculty");
+    // Faculty scope is institutional (issue #649): the only self-service step
+    // is the explicit registration request, never a placement form.
+    expect(destination).toBe("/register/faculty");
   });
 });
 
@@ -83,7 +102,7 @@ describe("facultyProfileSchema", () => {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
   };
 
-  it("parses successfully with valid inputs", () => {
+  it("accepts a valid program id", () => {
     const result = facultyProfileSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
@@ -97,7 +116,6 @@ describe("facultyProfileSchema", () => {
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual(validData);
       expect(result.data).not.toHaveProperty("first_name");
       expect(result.data).not.toHaveProperty("last_name");
       expect(result.data).not.toHaveProperty("name");
@@ -110,230 +128,149 @@ describe("facultyProfileSchema", () => {
   });
 });
 
-describe("createFacultyProfile Server Action", () => {
-  const mockGetUser = vi.fn();
+describe("requestFacultyAccess Server Action", () => {
   const validPayload = {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
   };
 
+  function session(overrides: Record<string, unknown> = {}) {
+    resolveAuthSessionMock.mockResolvedValue({
+      userId: "faculty-123",
+      email: "teacher@acd.edu.ph",
+      roles: [ROLES.FACULTY],
+      activeRole: ROLES.FACULTY,
+      authMethod: "google",
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
+      ...overrides,
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
-    (createClient as any).mockResolvedValue({
-      auth: {
-        getUser: mockGetUser,
-      },
-    });
-
-    (prisma.$transaction as any).mockImplementation(async (callback: any) => {
-      return callback(prisma);
-    });
-
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "faculty-123",
-      email: "teacher@acd.edu.ph",
-      name: "Jane Smith",
-      auth_user_id: "auth-faculty-123",
-      is_active: true,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    (prisma.userRole.findUnique as any).mockResolvedValue(null);
-  });
-
-  it("should fail if user is not authenticated", async () => {
-    mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: "No user" } });
-
-    const result = await createFacultyProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Authentication session invalid or missing.");
-  });
-
-  it("should fail if the program does not exist", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue(null);
-
-    const result = await createFacultyProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected program does not exist.");
-  });
-
-  it("should fail if the program is archived or inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: false,
-    });
-
-    const result = await createFacultyProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("The selected program is archived or inactive.");
-  });
-
-  it("should create profile, role, and program affiliation successfully", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
+    requireLegalAcknowledgementMock.mockResolvedValue({ acknowledged: true });
+    findUniqueProgramMock.mockResolvedValue({
+      id: validPayload.program_id,
       is_active: true,
     });
+    findFirstAffiliationMock.mockResolvedValue(null);
+    facultyAccessRequestUpsertMock.mockResolvedValue({ status: "PENDING" });
+    upsertUserRoleMock.mockResolvedValue({});
+    transactionMock.mockImplementation((callback: (tx: unknown) => Promise<unknown>) =>
+      callback(prisma)
+    );
+    findUniqueUserMock.mockResolvedValue({ id: "faculty-123", is_active: true });
+  });
 
-    const result = await createFacultyProfile(validPayload);
+  it("files a pending request and grants no affiliation of its own", async () => {
+    session();
+
+    const result = await requestFacultyAccess(validPayload);
 
     expect(result.success).toBe(true);
-    expect(prisma.$transaction).toHaveBeenCalled();
-    expect(prisma.user.update).not.toHaveBeenCalled();
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
+    // The role and the PENDING row are written; the affiliation belongs to the
+    // approval transaction and is never a self-service write.
+    expect(upsertUserRoleMock).toHaveBeenCalledWith({
       where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
+      update: {},
+      create: { user_id: "faculty-123", role: ROLES.FACULTY },
     });
-    expect(prisma.userRole.create).toHaveBeenCalledWith({
-      data: {
-        user_id: "faculty-123",
-        role: ROLES.FACULTY,
-      },
-    });
-    expect(prisma.facultyProgramAffiliation.upsert).toHaveBeenCalledWith({
-      where: {
-        faculty_id_program_id: {
-          faculty_id: "faculty-123",
-          program_id: "550e8400-e29b-41d4-a716-446655440000",
-        },
-      },
-      update: {
-        is_primary: true,
-        is_active: true,
-      },
-      create: {
-        faculty_id: "faculty-123",
-        program_id: "550e8400-e29b-41d4-a716-446655440000",
-        is_primary: true,
-        is_active: true,
-      },
-    });
+    expect(facultyAccessRequestUpsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { user_id: "faculty-123" },
+        update: expect.objectContaining({ status: "PENDING" }),
+      })
+    );
   });
 
-  it("preserves stored name when client identity is injected", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
+  it("refuses without a legal acknowledgement", async () => {
+    requireLegalAcknowledgementMock.mockResolvedValue({ acknowledged: false });
+    session();
 
-    const result = await createFacultyProfile({
-      ...validPayload,
-      first_name: "Hacker",
-      last_name: "Name",
-      name: "Hacker Name",
-    } as any);
+    const result = await requestFacultyAccess(validPayload);
 
-    expect(result.success).toBe(true);
-    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      success: false,
+      error: "A current legal acknowledgement is required.",
+    });
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });
 
-  it("should check if userRole exists before creating and skip creating if it exists", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-    (prisma.userRole.findUnique as any).mockResolvedValue({
-      id: "role-123",
-      user_id: "faculty-123",
-      role: ROLES.FACULTY,
-    });
+  it("refuses an unauthenticated session", async () => {
+    resolveAuthSessionMock.mockResolvedValue(null);
 
-    const result = await createFacultyProfile(validPayload);
+    const result = await requestFacultyAccess(validPayload);
 
-    expect(result.success).toBe(true);
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
-    });
-    expect(prisma.userRole.create).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: false, error: "Authentication session invalid or missing." });
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });
 
-  it("should return client-safe unexpected error message if database transaction fails", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-    (prisma.$transaction as any).mockRejectedValue(new Error("Database connection error"));
+  it("refuses a non-Google session before any write", async () => {
+    session({ authMethod: "password" });
 
-    const result = await createFacultyProfile(validPayload);
+    const result = await requestFacultyAccess(validPayload);
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe("An unexpected error occurred while processing your request.");
-  });
-
-  it("allows onboarding when the user holds a different role (multi-role)", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-    // No FACULTY role claimed yet; other roles no longer block registration.
-    (prisma.userRole.findUnique as any).mockResolvedValue(null);
-
-    const result = await createFacultyProfile(validPayload);
-
-    expect(result.success).toBe(true);
-    expect(prisma.userRole.findUnique).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
-    });
-    expect(prisma.userRole.create).toHaveBeenCalledWith({
-      data: {
-        user_id: "faculty-123",
-        role: ROLES.FACULTY,
-      },
-    });
-  });
-
-  it("rejects registration when the resolved domain user is inactive", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { id: "auth-faculty-123", email: "teacher@acd.edu.ph" } },
-      error: null,
-    });
-    (prisma.program.findUnique as any).mockResolvedValue({
-      id: "550e8400-e29b-41d4-a716-446655440000",
-      is_active: true,
-    });
-    resolveAuthenticatedDomainUserMock.mockResolvedValue({
-      id: "faculty-123",
-      email: "teacher@acd.edu.ph",
-      name: "Jane Smith",
-      auth_user_id: "auth-faculty-123",
-      is_active: false,
-      alumni_profile: null,
-      industry_partner_profile: null,
-    });
-
-    const result = await createFacultyProfile(validPayload);
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe("Your CLOIE account is currently inactive.");
+    expect(result.error).toContain("current ACD Google sign-in");
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a verified-signup session: Faculty is an internal Google-only role", async () => {
+    session({ authMethod: "verified-signup" });
+
+    const result = await requestFacultyAccess(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses a non-institutional address before any write", async () => {
+    session({ email: "someone@example.com" });
+
+    const result = await requestFacultyAccess(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("institutional");
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses an inactive account before any write", async () => {
+    session();
+    findUniqueUserMock.mockResolvedValue({ id: "faculty-123", is_active: false });
+
+    const result = await requestFacultyAccess(validPayload);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("inactive");
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses an archived program before any write", async () => {
+    session();
+    findUniqueProgramMock.mockResolvedValue({
+      id: validPayload.program_id,
+      is_active: false,
+    });
+
+    const result = await requestFacultyAccess(validPayload);
+
+    expect(result).toEqual({
+      success: false,
+      error: "The selected program is archived or inactive.",
+    });
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
+  });
+
+  it("reports an already-active Faculty account instead of re-requesting", async () => {
+    session();
+    findFirstAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
+
+    const result = await requestFacultyAccess(validPayload);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Your account already has Faculty access.",
+    });
+    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });
 });

@@ -100,7 +100,7 @@ export const privacyNotice: LegalDocument = {
         {
           type: "bullets",
           items: [
-            "Google Sign-In and authentication data, including email address, name, provider identifier, verification information, session timestamps, and basic provider metadata",
+            "Authentication and account data, including email address, name, provider identifier, sign-in method, verification code confirmations, verification status, session timestamps, and basic provider metadata",
             "General account and role data, including name, email, system role, account and verification status, authorized program scope, and account timestamps",
             "Student data, including academic program and major, academic term, year level, section, enrollment status, assigned courses, and evaluation instruments",
             "Faculty and academic personnel data, including program affiliations, assigned courses and sections, organizational scope, managed outcomes, evaluation instruments, and administrative actions",
@@ -113,7 +113,7 @@ export const privacyNotice: LegalDocument = {
         },
         {
           type: "paragraph",
-          text: "System CLOIE uses available name information and email to create or match an application account. It does not request or store the user's Google password or access unrelated Google account content such as Gmail, Drive, Calendar, Contacts, or photographs.",
+          text: "System CLOIE uses available name information and email to create or match an application account. Passwords set for external Alumni and Industry Partner accounts are held only by Supabase Auth, which stores them hashed; System CLOIE neither requests nor stores a Google password and does not access unrelated Google account content such as Gmail, Drive, Calendar, Contacts, or photographs.",
         },
       ],
     },
@@ -124,8 +124,8 @@ export const privacyNotice: LegalDocument = {
         {
           type: "bullets",
           items: [
-            "Directly from the user during Google Sign-In, onboarding, verification, profile completion, or evaluation submission",
-            "From Google through the user-authorized OAuth sign-in process",
+            "Directly from the user during sign-in, onboarding, verification, profile completion, registration, or evaluation submission",
+            "From Google through the user-authorized OAuth sign-in process, or from an email address the user verifies with a one-time code",
             "From authorized ACD personnel who create, upload, assign, or verify institutional records",
             "From authorized faculty members, program heads, administrators, or internship coordinators",
             "From existing institutional records where the transfer is authorized and compatible with the declared purpose",
@@ -178,18 +178,17 @@ export const privacyNotice: LegalDocument = {
       ],
     },
     {
-      id: "google-oauth",
-      title: "Google OAuth and Supabase Authentication",
+      id: "sign-in-methods",
+      title: "Sign-In Methods and Supabase Authentication",
       blocks: [
         {
           type: "ordered",
           items: [
-            "The user is redirected to Google's authorization interface",
-            "Google identifies the information requested by the application",
-            "The user may approve or cancel the request",
-            "Google returns authorized identity information to Supabase Auth",
-            "Supabase Auth creates or resolves an authenticated identity and session",
-            "System CLOIE creates or matches the corresponding account and authorized role",
+            "The user chooses a System CLOIE entrance: Google Sign-In for every role, or an email-first entrance for Alumni and Industry Partner",
+            "On a Google entrance, the user is redirected to Google's authorization interface, may approve or cancel, and Google returns authorized identity information to Supabase Auth",
+            "On the email-first entrance, the user registers an account, receives a six-digit verification code, and confirms inbox control before any account linkage",
+            "Supabase Auth creates or resolves an authenticated identity and session, and holds any password credential in hashed form",
+            "System CLOIE creates or matches the corresponding account and authorized role only after that identity is established",
           ],
         },
         {
@@ -198,7 +197,11 @@ export const privacyNotice: LegalDocument = {
         },
         {
           type: "paragraph",
-          text: "Revoking System CLOIE's access from a Google account stops future authorization but does not automatically delete records already lawfully stored by ACD. A separate data-subject request may be required.",
+          text: "Verification codes, their delivery, and their expiry are used only to confirm control of an email address or to complete a password recovery. A verification code never by itself grants access to a dashboard, an evaluation, or an approved role. Password recovery is confined to setting a new credential and does not bypass any role, profile, or legal gate.",
+        },
+        {
+          type: "paragraph",
+          text: "Revoking System CLOIE's access from a Google account, or losing access to a verified email address, stops future authorization but does not automatically delete records already lawfully stored by ACD. A separate data-subject request may be required.",
         },
       ],
     },
@@ -536,22 +539,23 @@ export const termsOfUse: LegalDocument = {
     },
     {
       id: "accounts",
-      title: "Accounts and Google Sign-In",
+      title: "Accounts and Sign-In",
       blocks: [
         {
           type: "bullets",
           items: [
-            "Sign in using your own authorized Google account",
+            "Sign in using your own authorized account — your ACD Google account for internal roles, or your verified email address for Alumni and Industry Partner",
             "Provide accurate account and profile information",
             "Use an official institutional account where required",
-            "Keep your Google account and device secure and sign out on shared devices",
+            "Keep your sign-in method, credential, and device secure, and sign out on shared devices",
+            "Never share a verification code, and treat a recovery code as a credential that authorizes only a password change",
             "Avoid sharing an authenticated session and report suspected compromise immediately",
             "Do not use another person's account, impersonate another user, create multiple accounts to bypass restrictions, or misrepresent your role, program, organization, or eligibility",
           ],
         },
         {
           type: "paragraph",
-          text: "System CLOIE does not collect or store the user's Google password.",
+          text: "System CLOIE does not collect or store the user's Google password. A password chosen for an external Alumni or Industry Partner account is held by Supabase Auth in hashed form, and System CLOIE stores no copy of it. Internal Student, Faculty, Secretary, Dean, Program Head, and General Education Coordinator workspaces always require a current Google sign-in; a password, one-time-code, or recovery session cannot open them.",
         },
       ],
     },
@@ -962,7 +966,7 @@ export const termsOfUse: LegalDocument = {
       blocks: [
         {
           type: "paragraph",
-          text: "By selecting Agree and Continue with Google, I confirm that I have read and understood the System CLOIE Terms of Use; will use System CLOIE only for authorized purposes; will protect my account and respect role-based access restrictions; will maintain the confidentiality of restricted information; will not manipulate evaluation results or attempt to identify respondents; and understand that System CLOIE use is also subject to the Privacy Notice and applicable ACD policies.",
+          text: "By selecting Agree and Continue, I confirm that I have read and understood the System CLOIE Terms of Use; will use System CLOIE only for authorized purposes; will protect my account and respect role-based access restrictions; will maintain the confidentiality of restricted information; will not manipulate evaluation results or attempt to identify respondents; and understand that System CLOIE use is also subject to the Privacy Notice and applicable ACD policies.",
         },
       ],
     },

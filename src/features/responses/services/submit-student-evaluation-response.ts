@@ -5,14 +5,16 @@ import {
   resolveCourseBoundEvaluationEligibility,
   toCourseBoundEvaluationEligibilityAssignment,
 } from "@/features/course-assignments/services/course-assignment-roster";
-import { parseStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import {
   isCentralDeploymentAvailable,
   isCourseBoundEvaluationAvailable,
   STUDENT_EVALUATION_UNAVAILABLE_ERROR,
 } from "./course-bound-availability";
-import { assertSubmissionIsAllowed } from "./submit-student-course-bound-response";
-import { lockResponseSubmission } from "./lock-response-submission";
+import { assertSubmissionIsAllowed } from "./assert-submission-is-allowed";
+import {
+  ALREADY_SUBMITTED_ERROR,
+  finalizeResponseSubmission,
+} from "./finalize-response-submission";
 
 type SubmissionAnswers = Record<string, unknown>;
 
@@ -69,6 +71,7 @@ export async function submitStudentEvaluationResponse({
       },
       course_bound: {
         include: {
+          cilo_question_bindings: true,
           course_assignment: {
             include: { course: true },
           },
@@ -128,116 +131,23 @@ export async function submitStudentEvaluationResponse({
   });
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      await lockResponseSubmission(tx, assignment.id);
-      let response = await tx.response.findUnique({
-        where: {
+    const result = await prisma.$transaction((tx) =>
+      finalizeResponseSubmission({
+        answers,
+        assignmentId: assignment.id,
+        ciloQuestionBindings: assignment.course_bound?.cilo_question_bindings,
+        createData: {
           assignment_id: assignment.id,
+          deployment_id: assignment.course_bound_id ?? assignment.central_deployment_id ?? "",
+          deployment_type: assignment.course_bound
+            ? DeploymentType.COURSE_BOUND
+            : DeploymentType.CENTRAL,
+          respondent_id: authSession.userId,
+          status: ResponseStatus.IN_PROGRESS,
         },
-      });
-
-      if (response?.status === ResponseStatus.SUBMITTED) {
-        throw new Error("ALREADY_SUBMITTED");
-      }
-
-      if (!response) {
-        response = await tx.response.create({
-          data: {
-            assignment_id: assignment.id,
-            deployment_id: assignment.course_bound_id ?? assignment.central_deployment_id ?? "",
-            deployment_type: assignment.course_bound
-              ? DeploymentType.COURSE_BOUND
-              : DeploymentType.CENTRAL,
-            respondent_id: authSession.userId,
-            status: ResponseStatus.IN_PROGRESS,
-          },
-        });
-      }
-
-      const quantitativeItems = Object.entries(answers)
-        .map(([answerKey, value]) => {
-          const parsed = parseStudentEvaluationAnswerKey(answerKey);
-
-          if (!parsed || parsed.kind !== "quantitative" || typeof value !== "number") {
-            return null;
-          }
-
-          return {
-            item_key: parsed.itemKey,
-            rating_value: value,
-            response_id: response.id,
-            section_key: parsed.sectionKey,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is {
-            item_key: string;
-            rating_value: number;
-            response_id: string;
-            section_key: string;
-          } => item !== null
-        );
-
-      const qualitativeItems = Object.entries(answers)
-        .map(([answerKey, value]) => {
-          const parsed = parseStudentEvaluationAnswerKey(answerKey);
-
-          if (!parsed || parsed.kind !== "qualitative" || typeof value !== "string") {
-            return null;
-          }
-
-          return {
-            prompt_key: parsed.itemKey,
-            response_id: response.id,
-            section_key: parsed.sectionKey,
-            text_content: value,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is {
-            prompt_key: string;
-            response_id: string;
-            section_key: string;
-            text_content: string;
-          } => item !== null
-        );
-
-      await tx.quantitativeResponseItem.deleteMany({
-        where: { response_id: response.id },
-      });
-      await tx.qualitativeResponseItem.deleteMany({
-        where: { response_id: response.id },
-      });
-
-      if (quantitativeItems.length > 0) {
-        await tx.quantitativeResponseItem.createMany({ data: quantitativeItems });
-      }
-
-      if (qualitativeItems.length > 0) {
-        await tx.qualitativeResponseItem.createMany({ data: qualitativeItems });
-      }
-
-      const submittedAt = new Date().toISOString();
-
-      await tx.response.update({
-        data: {
-          status: ResponseStatus.SUBMITTED,
-          submitted_at: new Date(submittedAt),
-        },
-        where: {
-          id: response.id,
-        },
-      });
-
-      return {
-        responseId: response.id,
-        submittedAt,
-      };
-    });
+        tx,
+      })
+    );
 
     return {
       responseId: result.responseId,
@@ -246,7 +156,7 @@ export async function submitStudentEvaluationResponse({
       success: true,
     };
   } catch (error) {
-    if (error instanceof Error && error.message === "ALREADY_SUBMITTED") {
+    if (error instanceof Error && error.message === ALREADY_SUBMITTED_ERROR) {
       return {
         error: "This evaluation has already been submitted.",
         success: false,

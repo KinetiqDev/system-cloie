@@ -65,6 +65,7 @@ const FACULTY_NAV: NavItem[] = [
 const SECRETARY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/secretary/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/secretary/users", icon: Users2 },
+  { name: "Faculty Requests", href: "/secretary/faculty-requests", icon: ClipboardList },
   { name: "School Years", href: "/secretary/school-years", icon: Calendar },
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },

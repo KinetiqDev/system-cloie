@@ -4,24 +4,57 @@ import { getDatabaseSuiteCompleteness } from "./lib/database-suite-discovery";
 
 loadEnvConfig(process.cwd());
 
+const MIN_SUITE_COUNT = 9;
+const REQUIRED_SUITES = [
+  "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",
+];
+
+type CompletenessFailure = {
+  headline: string;
+  items: string[];
+  hint?: string;
+};
+
+/**
+ * Single source of truth for the completeness verdict. Orphaned gated suites
+ * fail first, then the minimum-count warning, then the required-suite check —
+ * the order the CLI reports them in.
+ */
 export function evaluateCompleteness(
   suites: string[],
-  gatedFiles: string[],
   orphans: string[]
-): { ok: boolean; errors: string[] } {
-  const errors: string[] = [];
+): { warnings: string[]; failure: CompletenessFailure | null } {
   if (orphans.length > 0) {
-    errors.push(`gated suites fall outside convention: ${orphans.join(", ")}`);
+    return {
+      warnings: [],
+      failure: {
+        headline:
+          "Database suite completeness FAILED — gated suites fall outside the database command convention:",
+        items: orphans,
+        hint: '\nFix: ensure the suite is gated with describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1") so it is discovered by the repository convention.',
+      },
+    };
   }
-  if (suites.length < 9) {
-    // warning, not error
+
+  const warnings =
+    suites.length < MIN_SUITE_COUNT
+      ? [
+          `Completeness warning: expected at least ${MIN_SUITE_COUNT} database suites, got ${suites.length}.`,
+        ]
+      : [];
+
+  const missing = REQUIRED_SUITES.filter((f) => !suites.includes(f));
+  if (missing.length > 0) {
+    return {
+      warnings,
+      failure: {
+        headline: "Completeness FAILED — required suites not discovered:",
+        items: missing,
+      },
+    };
   }
-  const mustInclude = [
-    "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",
-  ];
-  const missing = mustInclude.filter((f) => !suites.includes(f));
-  if (missing.length > 0) errors.push(`required suites missing: ${missing.join(", ")}`);
-  return { ok: errors.length === 0, errors };
+
+  return { warnings, failure: null };
 }
 
 function main(): void {
@@ -34,31 +67,14 @@ function main(): void {
     `Found ${gatedFiles.length} gated files mentioning RUN_DATABASE_INTEGRATION_TESTS (excluding meta/config).`
   );
 
-  if (orphans.length > 0) {
-    console.error(
-      "Database suite completeness FAILED — gated suites fall outside the database command convention:"
-    );
-    for (const o of orphans) console.error(`  - ${o}`);
-    console.error(
-      '\nFix: ensure the suite is gated with describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1") so it is discovered by the repository convention.'
-    );
-    process.exitCode = 1;
-    return;
-  }
+  const { warnings, failure } = evaluateCompleteness(suites, orphans);
 
-  if (suites.length < 9) {
-    console.error(
-      `Completeness warning: expected at least 9 database suites, got ${suites.length}.`
-    );
-  }
+  for (const warning of warnings) console.error(warning);
 
-  const mustInclude = [
-    "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts",
-  ];
-  const missing = mustInclude.filter((f) => !suites.includes(f));
-  if (missing.length > 0) {
-    console.error("Completeness FAILED — required suites not discovered:");
-    for (const m of missing) console.error(`  - ${m}`);
+  if (failure) {
+    console.error(failure.headline);
+    for (const item of failure.items) console.error(`  - ${item}`);
+    if (failure.hint) console.error(failure.hint);
     process.exitCode = 1;
     return;
   }

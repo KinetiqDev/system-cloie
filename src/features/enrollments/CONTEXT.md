@@ -9,13 +9,13 @@ One student's placement in a program, year level, and section for a single term 
 _Avoid_: Class membership, course assignment membership
 
 **Enrollment source**:
-The provenance of an enrollment row: `ONBOARDING` (student self-service onboarding), `ROLLOVER` (term rollover), or `SECRETARY` (admin-created). Onboarding upserts are restricted to the `ONBOARDING` source; secretary upserts may use any source.
+The provenance of an enrollment row: `ROLLOVER` (term rollover) or `SECRETARY` (admin-created or Secretary-corrected). Student placement is institution-recorded (issue #649), so there is no self-service source: every placement row is written by the Secretary's office or by term rollover.
 _Avoid_: Import origin, registration channel
 
 ## Lifecycle
 
 **Enrollment upsert**:
-The operation that, for the same student + term, updates the existing row in place and forces `is_active` true; otherwise it creates a new row. The onboarding flow upserts only the active term, while the secretary flow can upsert any term. The Secretary user-edit flow applies this rule to the active term when it sets a Student's placement.
+The operation the Secretary user-edit flow performs for the same student + term: it updates the existing row in place and forces `is_active` true, otherwise it creates a new row. It targets only the active term; no administrative flow targets an arbitrary term.
 _Avoid_: Merge, replace
 
 **Soft deactivation**:

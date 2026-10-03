@@ -2,21 +2,43 @@
 
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { createClient } from "@/lib/supabase/server";
 import { alumniProfileSchema, type AlumniProfileInput } from "@/lib/schemas/alumni-profile";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
-import { resolveAuthenticatedDomainUser } from "@/features/auth/services/resolve-authenticated-domain-user";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 
 export async function createAlumniProfile(data: AlumniProfileInput) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user || !user.email) {
+    // The centralized session boundary is the identity and readiness source: it
+    // verifies the access-token claims, so a raw one-time-code or recovery
+    // session — which carries no workspace authority — can never reach this
+    // write (issue #649).
+    const authSession = await resolveAuthSession();
+    if (!authSession) {
       return { success: false, error: "Authentication session invalid or missing." };
+    }
+
+    // The account-state and institutional-review verdicts speak first, so an
+    // inactive or rejected account learns exactly why.
+    if (authSession.profileGate.status === "INACTIVE") {
+      return { success: false, error: "Your System CLOIE account is currently inactive." };
+    }
+    if (authSession.profileGate.status === "REJECTED_EXTERNAL_ACCOUNT") {
+      return { success: false, error: "Your registration application was not approved." };
+    }
+
+    // Alumni is chosen during registration, so this action only completes the
+    // profile of the workspace the session is actually in: Alumni must be the
+    // selected active role and must be waiting for exactly this onboarding
+    // step. A withheld role, another role's pending gate, or a raw code session
+    // grants nothing here.
+    if (
+      authSession.activeRole !== ROLES.ALUMNI ||
+      authSession.profileGate.status !== "ALUMNI_ONBOARDING_REQUIRED"
+    ) {
+      return {
+        success: false,
+        error: "This session cannot complete Alumni onboarding. Sign in again and continue.",
+      };
     }
 
     // Client-injected identity fields are stripped by Zod.
@@ -57,72 +79,27 @@ export async function createAlumniProfile(data: AlumniProfileInput) {
       }
     }
 
-    const domainUser = await resolveAuthenticatedDomainUser({
-      authUserId: user.id,
-      email: user.email,
-    });
-
-    if (!domainUser) {
-      return {
-        success: false,
-        error:
-          "Your account identity could not be resolved. Please sign out and sign in with Google again.",
-      };
-    }
-
-    if (!domainUser.name.trim()) {
-      return {
-        success: false,
-        error: "Your account name is not available. Please sign out and sign in with Google again.",
-      };
-    }
-
-    // Preserve account-state and external verification gates on direct Server Action calls.
-    // Matches profileGate INACTIVE / REJECTED_EXTERNAL_ACCOUNT.
-    if (!domainUser.is_active) {
-      return { success: false, error: "Your CLOIE account is currently inactive." };
-    }
-    if (domainUser.alumni_profile?.verification_status === "REJECTED") {
-      return { success: false, error: "Your registration application was not approved." };
-    }
-
-    // Role + alumni profile only. Never create a User and never write client identity.
-    await prisma.$transaction(async (tx) => {
-      const existingRole = await tx.userRole.findUnique({
-        where: { user_id_role: { user_id: domainUser.id, role: ROLES.ALUMNI } },
-      });
-      if (!existingRole) {
-        await tx.userRole.create({
-          data: {
-            user_id: domainUser.id,
-            role: ROLES.ALUMNI,
-          },
-        });
-      }
-
-      await tx.alumniProfile.upsert({
-        where: { user_id: domainUser.id },
-        update: {
-          graduation_year: validatedData.graduation_year,
-          program_id: validatedData.program_id,
-          major_id: validatedData.major_id || null,
-        },
-        create: {
-          user_id: domainUser.id,
-          graduation_year: validatedData.graduation_year,
-          program_id: validatedData.program_id,
-          major_id: validatedData.major_id || null,
-        },
-      });
+    // Profile only: the role was assigned during verified registration, so no
+    // user, role, or identity field is written here.
+    await prisma.alumniProfile.upsert({
+      where: { user_id: authSession.userId },
+      update: {
+        graduation_year: validatedData.graduation_year,
+        program_id: validatedData.program_id,
+        major_id: validatedData.major_id || null,
+      },
+      create: {
+        user_id: authSession.userId,
+        graduation_year: validatedData.graduation_year,
+        program_id: validatedData.program_id,
+        major_id: validatedData.major_id || null,
+      },
     });
 
     return { success: true };
   } catch (error: unknown) {
     console.error("Failed to create alumni profile:", error);
-    if (error instanceof Error && error.message.startsWith("ROLE_MISMATCH")) {
-      return { success: false, error: "Your account is already registered with a different role." };
-    }
-    // Handle Prisma unique constraint violation (e.g., role or profile already exists)
+    // A Prisma unique constraint violation means the profile already exists.
     if (isUniqueConstraintError(error)) {
       return { success: false, error: "You already have an alumni profile." };
     }

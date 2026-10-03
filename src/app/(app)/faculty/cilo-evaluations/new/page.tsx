@@ -33,7 +33,7 @@ export default async function NewFacultyCiloEvaluationPage({
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const redirectPath = ensureRoleAccess({

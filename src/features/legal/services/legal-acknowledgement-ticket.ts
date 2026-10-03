@@ -1,18 +1,22 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { LEGAL_VERSIONS } from "../legal-versions";
-import { isRoleIntent, roleToIntent, type RoleIntent } from "@/features/auth/services/role-intent";
-
-export const LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME = "cloie_legal_ack";
-export const LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS = 15 * 60;
-const CLOCK_SKEW_SECONDS = 60;
+import {
+  isTicketIntent,
+  toCanonicalTicketIntent,
+  type TicketIntent,
+} from "@/features/auth/services/role-intent";
 
 type LegalAcknowledgementPayload = {
-  intent: RoleIntent;
+  intent: TicketIntent;
   privacyVersion: string;
   termsVersion: string;
   issuedAt: number;
   expiresAt: number;
 };
+
+export const LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME = "cloie_legal_ack";
+export const LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS = 15 * 60;
+const CLOCK_SKEW_SECONDS = 60;
 
 export type LegalTicketVerification =
   | { valid: true; payload: LegalAcknowledgementPayload }
@@ -55,7 +59,7 @@ function isPayload(value: unknown): value is LegalAcknowledgementPayload {
   const payload = value as Partial<LegalAcknowledgementPayload>;
   return (
     typeof payload.intent === "string" &&
-    isRoleIntent(payload.intent) &&
+    isTicketIntent(payload.intent) &&
     payload.privacyVersion === LEGAL_VERSIONS.privacy &&
     payload.termsVersion === LEGAL_VERSIONS.terms &&
     Number.isSafeInteger(payload.issuedAt) &&
@@ -67,7 +71,7 @@ function isPayload(value: unknown): value is LegalAcknowledgementPayload {
 }
 
 export function createLegalAcknowledgementTicket(
-  intent: RoleIntent,
+  intent: TicketIntent,
   now = Math.floor(Date.now() / 1000)
 ): string {
   const secret = getSecret();
@@ -91,7 +95,8 @@ export function verifyLegalAcknowledgementTicket(
 ): LegalTicketVerification {
   const secret = getSecret();
   if (!secret) return { valid: false, reason: "not-configured" };
-  if (!value || !isRoleIntent(intent)) return { valid: false, reason: "missing-or-invalid-intent" };
+  if (!value || !isTicketIntent(intent))
+    return { valid: false, reason: "missing-or-invalid-intent" };
 
   const [encodedPayload, encodedSignature, ...extraParts] = value.split(".");
   if (
@@ -119,7 +124,7 @@ export function verifyLegalAcknowledgementTicket(
 
   try {
     const payload = JSON.parse(payloadBytes.toString("utf8")) as unknown;
-    if (!isPayload(payload) || payload.intent !== roleToIntent(intent)) {
+    if (!isPayload(payload) || payload.intent !== toCanonicalTicketIntent(intent)) {
       return { valid: false, reason: "intent-or-version-mismatch" };
     }
     if (
@@ -139,7 +144,10 @@ export function getLegalAcknowledgementCookieOptions() {
   return {
     httpOnly: true,
     maxAge: LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
-    path: "/api/auth",
+    // App scope: the ticket must reach page-URL Server Actions (e.g.
+    // /register/external) as well as /api/auth. It stays httpOnly, short
+    // lived, and signed, and the callback clears it with these same options.
+    path: "/",
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV !== "development",
   };

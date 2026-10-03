@@ -65,6 +65,10 @@ A real new account or first OAuth link with no usable provider name fails safely
 
 Google-derived names apply only to real Supabase Google OAuth callbacks. Development authentication and dedicated demo authentication provide seeded domain identities and retain fixture-controlled names. They do not pretend to have Google provider metadata and do not trigger first-link name replacement.
 
+### External password-account naming amendment
+
+External email-password registration collects the canonical account name before strict signup verification. A successful verification creates the domain account using that name. Later Google sign-in on the same linked Auth identity preserves the established name; it is not a provisional Secretary-created name. A different identity presenting the same email fails closed. Google-derived naming remains authoritative for new Google-only accounts and first links of unlinked Secretary-created accounts.
+
 ### Account and authorization invariants
 
 This decision does not change:

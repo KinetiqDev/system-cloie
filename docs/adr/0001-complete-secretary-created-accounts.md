@@ -21,6 +21,10 @@ Secretary-created accounts must be **complete for their selected CLOIE account r
 
 The identity-name authority defined here is partially superseded by [ADR 0014: Google-Authoritative Account Names](0014-google-authoritative-account-names.md). The Student ID requirement is superseded by [ADR 0015: Name-Based Course Roster Resolution and Student ID Removal](0015-name-based-course-roster-resolution-and-student-id-removal.md). This ADR remains authoritative for role completeness, atomic creation, enrollment, program, verification, and account-state rules.
 
+### External authentication amendment
+
+[ADR 0031](0031-prove-the-current-sign-in-method-before-internal-authorization.md) replaces the Google-only authentication assumption for Alumni and Industry Partner. Supabase Auth owns email passwords and six-digit codes; no application password column exists. Internal roles remain Google-only. Student provisioning is Secretary-only, and self-requested Faculty requires role-scoped approval before affiliation and workspace access. Secretary-created accounts still require atomic role completeness and institution-recorded academic scope.
+
 ### Role completeness rules
 
 | Role             | Required information at creation                                                                                              | Role-specific record                                                                                        |

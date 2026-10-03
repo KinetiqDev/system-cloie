@@ -34,14 +34,6 @@ vi.mock("@/features/course-assignments/services/manage-course-assignments", () =
   ),
 }));
 
-vi.mock("@/features/course-assignments/services/list-course-assignments", () => ({
-  listCourseAssignments: vi.fn(),
-}));
-
-vi.mock("@/features/course-assignments/services/list-course-assignments-for-faculty", () => ({
-  listCourseAssignmentsForFaculty: vi.fn(),
-}));
-
 vi.mock("@/features/course-assignments/services/search-faculty-pool", () => ({
   searchFacultyPool: vi.fn(),
 }));

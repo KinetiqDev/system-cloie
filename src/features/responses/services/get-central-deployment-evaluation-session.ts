@@ -1,48 +1,14 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
 import { isCentralDeploymentAvailable } from "./central-deployment-availability";
+import { mapSavedAnswerItems } from "./map-saved-answer-items";
 import { mapTemplateStructureToSections } from "./map-template-structure";
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
-
-type QuantitativeSavedAnswerItem = {
-  item_key: string;
-  rating_value: number;
-  section_key: string;
-};
-
-type QualitativeSavedAnswerItem = {
-  prompt_key: string;
-  section_key: string;
-  text_content: string;
-};
-
-function mapSavedAnswerItems({
-  qualitativeItems,
-  quantitativeItems,
-}: {
-  qualitativeItems: QualitativeSavedAnswerItem[];
-  quantitativeItems: QuantitativeSavedAnswerItem[];
-}): Record<string, number | string> {
-  const answers: Record<string, number | string> = {};
-
-  for (const item of quantitativeItems) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "quantitative", item.item_key)] =
-      item.rating_value;
-  }
-
-  for (const item of qualitativeItems) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "qualitative", item.prompt_key)] =
-      item.text_content;
-  }
-
-  return answers;
-}
 
 function countSectionItems(sections: StudentEvaluationSection[]) {
   return sections.reduce((total, section) => total + section.items.length, 0);

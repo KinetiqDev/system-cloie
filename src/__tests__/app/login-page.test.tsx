@@ -9,15 +9,16 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next/image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element -- Mocking next/image in test environment
   default: (props: React.ComponentProps<"img">) => <img alt={props.alt ?? ""} {...props} />,
 }));
 
 describe("LoginPage", () => {
-  it("redirects to the respondent portal when no error is present", async () => {
+  it("redirects to the System CLOIE landing when no error is present", async () => {
     await LoginPage({
       searchParams: Promise.resolve({}),
     });
-    expect(redirectMock).toHaveBeenCalledWith("/portal/respondents");
+    expect(redirectMock).toHaveBeenCalledWith("/");
     expect(redirectMock).toHaveBeenCalledTimes(1);
   });
 

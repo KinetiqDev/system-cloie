@@ -36,7 +36,6 @@ vi.mock("@/features/course-assignments/services/load-course-assignment-list-page
   loadCourseAssignmentListPage: loadListPageMock,
 }));
 vi.mock("@/lib/actions/course-assignment-actions", () => ({
-  loadCourseAssignmentsForSheetAction: vi.fn(),
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),

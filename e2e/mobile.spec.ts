@@ -7,6 +7,7 @@ import {
   expectQuestionUnanswered,
   loginAs,
   rateQuestion,
+  waitForAnimationsToSettle,
 } from "./support/helpers";
 
 /**
@@ -131,6 +132,22 @@ test("faculty roster drawer: same workflow, focus restoration, and dismissal pro
   await previewFilter.click();
   const filterListbox = page.getByRole("listbox");
   await expect(filterListbox).toBeVisible();
+  const previewTriggerBounds = await previewFilter.boundingBox();
+  expect(previewTriggerBounds?.height).toBeGreaterThanOrEqual(44);
+  // The popup scales in (zoom-in-95); measure once the entrance animation has
+  // settled so the rect reflects the real layout box, not a mid-transform one.
+  await waitForAnimationsToSettle(page.locator('[data-slot="select-content"]'));
+  const optionHeights = await filterListbox
+    .getByRole("option")
+    .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height));
+  expect(optionHeights.length).toBeGreaterThan(0);
+  expect(
+    optionHeights.every((height) => height >= 44),
+    `select options must meet the 44px touch floor, got ${JSON.stringify(optionHeights)}`
+  ).toBe(true);
+  expect(await filterListbox.evaluate((list) => getComputedStyle(list).overscrollBehaviorY)).toBe(
+    "contain"
+  );
   const filterBounds = await filterListbox.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const drawerElement = document.querySelector('[data-slot="drawer-popup"]');

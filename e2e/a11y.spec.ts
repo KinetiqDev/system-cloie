@@ -4,6 +4,7 @@ import {
   expectNoAxeViolations,
   loginAs,
   respondentRow,
+  waitForAnimationsToSettle,
   waitForStableState,
 } from "./support/helpers";
 
@@ -135,13 +136,42 @@ test.describe("accessibility sweep", () => {
     const roleCombobox = page.getByRole("combobox", { name: "Role" });
     await expect(roleCombobox).toBeFocused();
     await page.keyboard.press("ArrowDown");
-    await expect(page.getByRole("listbox")).toBeVisible();
+    const roleListbox = page.getByRole("listbox");
+    await expect(roleListbox).toBeVisible();
+    // The popup scales in (zoom-in-95); measure once the entrance animation has
+    // settled so the rect reflects the real layout box, not a mid-transform one.
+    await waitForAnimationsToSettle(page.locator('[data-slot="select-content"]'));
+    const optionSizing = await roleListbox
+      .getByRole("option")
+      .evaluateAll((options) => options.map((option) => option.getBoundingClientRect().height));
+    expect(optionSizing.length).toBeGreaterThan(0);
+    expect(
+      optionSizing.every((height) => height >= 40),
+      `select options must meet the 40px desktop floor, got ${JSON.stringify(optionSizing)}`
+    ).toBe(true);
+    const popupBounds = await page.locator('[data-slot="select-content"]').evaluate((popup) => {
+      const rect = popup.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: innerWidth,
+        height: innerHeight,
+      };
+    });
+    expect(popupBounds.left).toBeGreaterThanOrEqual(0);
+    expect(popupBounds.right).toBeLessThanOrEqual(popupBounds.width);
+    expect(popupBounds.bottom).toBeLessThanOrEqual(popupBounds.height);
     // Base UI Select typeahead: typing highlights the matching option.
     await page.keyboard.type("Faculty");
     await page.keyboard.press("Enter");
     await expect(roleCombobox).toContainText("Faculty");
     // The dynamic Program field appears for the Faculty role.
     await expect(page.getByRole("combobox", { name: /Affiliated program/i })).toBeVisible();
+    // Selecting an option restores focus to the trigger once the popup closes.
+    // Assert that instead of racing it: tabbing from the popup's option would
+    // leave the form entirely.
+    await expect(roleCombobox).toBeFocused();
 
     // Move to the submit control by keyboard and submit the incomplete form.
     let submitted = false;

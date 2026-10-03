@@ -16,7 +16,6 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   createCourseAssignmentAction: vi.fn(),
   bulkCreateCourseAssignmentsAction: vi.fn(),
   searchFacultyPoolAction: vi.fn(),
-  loadCourseAssignmentsForSheetAction: vi.fn(),
   updateCourseAssignmentAction: vi.fn(),
   activateCourseAssignmentAction: vi.fn(),
   deactivateCourseAssignmentAction: vi.fn(),

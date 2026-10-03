@@ -30,19 +30,27 @@ describe("resolveSelfServiceEligibility", () => {
     }
   );
 
-  it("allows self-service claims with a valid domain", () => {
-    validateRoleDomainMock.mockReturnValue({ valid: true });
+  it("refuses a Student self-claim even on an institutional email", () => {
     expect(
       resolveSelfServiceEligibility({
         email: "student@acd.edu.ph",
         targetRole: SystemRole.STUDENT,
         intent: "student",
       })
+    ).toEqual({ destination: "/status/unprovisioned-student" });
+    expect(validateRoleDomainMock).not.toHaveBeenCalled();
+  });
+
+  it("allows a Faculty self-service claim with a valid domain", () => {
+    validateRoleDomainMock.mockReturnValue({ valid: true });
+    expect(
+      resolveSelfServiceEligibility({
+        email: "faculty@acd.edu.ph",
+        targetRole: SystemRole.FACULTY,
+        intent: "faculty",
+      })
     ).toBeNull();
-    expect(validateRoleDomainMock).toHaveBeenCalledWith(
-      "student@acd.edu.ph",
-      SystemRole.STUDENT
-    );
+    expect(validateRoleDomainMock).toHaveBeenCalledWith("faculty@acd.edu.ph", SystemRole.FACULTY);
   });
 
   it("allows external role claims for any domain", () => {
@@ -71,9 +79,9 @@ describe("resolveSelfServiceEligibility", () => {
     validateRoleDomainMock.mockReturnValue({ valid: false, reason: "invalid_domain" });
     const result = resolveSelfServiceEligibility({
       email: "user@gmail.com",
-      targetRole: SystemRole.STUDENT,
-      intent: "student",
+      targetRole: SystemRole.FACULTY,
+      intent: "faculty",
     });
-    expect(result).toEqual({ destination: "/status/invalid-domain?role=student" });
+    expect(result).toEqual({ destination: "/status/invalid-domain?role=faculty" });
   });
 });

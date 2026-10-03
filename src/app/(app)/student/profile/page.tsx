@@ -1,7 +1,10 @@
-import { Book, GraduationCap, Mail, ShieldCheck, User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Book, GraduationCap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  ProfileDataPrivacyNotice,
+  ProfilePersonalInfoCard,
+} from "@/features/users/components/profile-cards";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { buildPageTitle } from "@/lib/page-title";
@@ -45,39 +48,12 @@ export default async function StudentProfilePage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
-              <User className="size-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-bold">Personal Information</CardTitle>
-              <CardDescription>Basic account details</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Full Name
-              </label>
-              <p className="text-sm font-semibold">{fullName}</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Email Address
-              </label>
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Mail className="text-text-muted size-4" />
-                {profile?.user.email ?? "No email available"}
-              </div>
-            </div>
-            <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
-                Role: Student
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfilePersonalInfoCard
+          fullName={fullName}
+          email={profile?.user.email}
+          role="Student"
+          labelClassName="text-text-muted text-label-sm font-black tracking-widest uppercase"
+        />
 
         <Card className="border-border shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
@@ -137,24 +113,7 @@ export default async function StudentProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border border-l-primary border-l-4 shadow-sm md:col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="bg-primary-soft text-selected-fg shrink-0 rounded-lg p-2">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  Your evaluation responses are handled confidentially. Authorized Program Heads may
-                  review submitted responses for quality assurance and accreditation purposes. Once
-                  an evaluation is finalized and submitted, it cannot be modified to protect the
-                  integrity of results.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfileDataPrivacyNotice />
       </div>
     </div>
   );

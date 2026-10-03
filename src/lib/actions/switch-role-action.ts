@@ -38,14 +38,21 @@ async function resolveSelectedRoleReadiness(userId: string, role: Role) {
   }
 
   if (role === "FACULTY") {
-    const affiliation = await prisma.facultyProgramAffiliation.findFirst({
-      where: { faculty_id: userId, is_active: true },
-      select: { id: true },
-    });
-    return { hasFacultyAffiliation: affiliation !== null };
+    const [affiliation, request] = await Promise.all([
+      prisma.facultyProgramAffiliation.findFirst({
+        where: { faculty_id: userId, is_active: true },
+        select: { id: true },
+      }),
+      prisma.facultyAccessRequest.findUnique({
+        where: { user_id: userId },
+        select: { status: true },
+      }),
+    ]);
+    return {
+      hasFacultyAffiliation: affiliation !== null,
+      facultyApprovalStatus: request?.status ?? null,
+    };
   }
-
-  return {};
 }
 export async function switchActiveRole(role: string): Promise<void> {
   const session = await resolveAuthSession();
@@ -87,6 +94,12 @@ export async function switchActiveRole(role: string): Promise<void> {
           industryPartnerProfileId: session.industryPartnerProfileId,
           alumniVerificationStatus: session.alumniVerificationStatus,
           industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
+          // The boundary already judged the method; carry its verdict and the
+          // stored Faculty review state so a pending, rejected, or mismatched
+          // session cannot recompute COMPLETE on switch. Fresh FACULTY
+          // readiness still wins through the spread below.
+          authMethod: session.authMethod,
+          facultyApprovalStatus: session.facultyApprovalStatus,
           ...readiness,
         }).profileGate;
 

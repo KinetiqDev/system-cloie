@@ -1,4 +1,4 @@
-import { buildReviewWordCloudTokens } from "@/features/analytics/services/get-course-bound-review-detail";
+import { buildReviewWordCloudTokens } from "@/features/analytics/services/qualitative-nlp";
 import type { QualitativeSummary } from "../types";
 
 type SubmittedResponseWithQualitative = {

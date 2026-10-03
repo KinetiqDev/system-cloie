@@ -153,6 +153,9 @@ describe("listCourseAssignments – role-aware scope enforcement", () => {
       userId: "secretary-ph-1",
       email: "secretary-ph@test.com",
       roles: [ROLES.SECRETARY, ROLES.PROGRAM_HEAD],
+      // A multi-role account has no implicit role: the active role must be
+      // selected deliberately, and Secretary scope applies once it is.
+      activeRole: ROLES.SECRETARY,
     });
 
     vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockSecretaryProgramHeadSession);

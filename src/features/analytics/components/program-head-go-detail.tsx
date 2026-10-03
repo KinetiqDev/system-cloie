@@ -1,19 +1,34 @@
 import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
 import { ProgramHeadLikertDistribution } from "./program-head-likert-distribution";
 
+/** How many decimals the detail mean carries beyond the two-decimal summary. */
+const DETAIL_MEAN_DECIMALS = 4;
+
 /**
- * Contextual detail for one Graduate Outcome evidence row: the full-precision
- * mean, scale-separated Likert distributions, and a diagnostic count of
- * ratings excluded from the valid aggregate.
+ * Rounds to a bounded number of decimals and drops trailing zeros, so the
+ * detail mean shows the narrowest exact-looking value without the trailing
+ * float noise a raw IEEE-754 division exposes (3.8703703703703702).
+ */
+function formatBoundedMean(value: number, decimals: number): string {
+  return value.toFixed(decimals).replace(/\.?0+$/, "");
+}
+
+/**
+ * Contextual detail for one Graduate Outcome evidence row: the mean at higher
+ * precision than the two-decimal summary, scale-separated Likert
+ * distributions, and a diagnostic count of ratings excluded from the valid
+ * aggregate.
  */
 export function ProgramHeadGODetail({ outcome }: { outcome: ProgramHeadOutcomeDTO }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
-          <span className="text-label-sm text-text-secondary">Mean Rating (full precision)</span>
+          <span className="text-label-sm text-text-secondary">Mean Rating (higher precision)</span>
           <span className="text-body-md text-foreground tabular-nums">
-            {outcome.meanRating === null ? "—" : String(outcome.meanRating)}
+            {outcome.meanRating === null
+              ? "—"
+              : formatBoundedMean(outcome.meanRating, DETAIL_MEAN_DECIMALS)}
           </span>
         </div>
         <div className="flex flex-col gap-1">

@@ -9,9 +9,6 @@ vi.mock("@/lib/actions/alumni-actions", () => ({
 vi.mock("@/lib/actions/industry-partner-actions", () => ({
   createIndustryPartnerProfile: vi.fn(),
 }));
-vi.mock("@/lib/actions/faculty-actions", () => ({
-  createFacultyProfile: vi.fn(),
-}));
 vi.mock("@/lib/actions/onboarding-actions", () => ({
   resetIncompleteRoleClaim: vi.fn(),
 }));
@@ -58,7 +55,6 @@ vi.mock("@/components/ui/select", () => ({
 }));
 
 import { AlumniOnboardingForm } from "@/features/users/components/alumni-onboarding-form";
-import { FacultyOnboardingForm } from "@/features/users/components/faculty-onboarding-form";
 import { IndustryPartnerOnboardingForm } from "@/features/users/components/industry-partner-onboarding-form";
 
 describe("role onboarding account identity", () => {
@@ -70,15 +66,6 @@ describe("role onboarding account identity", () => {
       <AlumniOnboardingForm
         key="alumni"
         email="alumni@example.com"
-        name={accountName}
-        programs={[]}
-      />,
-    ],
-    [
-      "faculty",
-      <FacultyOnboardingForm
-        key="faculty"
-        email="faculty@acd.edu.ph"
         name={accountName}
         programs={[]}
       />,

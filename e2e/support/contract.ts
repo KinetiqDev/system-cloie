@@ -40,12 +40,13 @@ export const E2E_CONTRACT = {
       yearLevel: "FIRST_YEAR",
       section: "MORNING",
     },
-    /** GESTECH BSIT MORNING: owned by the demo Faculty but locked by a published evaluation. */
+    /** Published GESTECH BSIT roster. No journey mutates it; used for visual evidence. */
     gestechBsit: {
       courseCode: "GESTECH",
       programCode: "BSIT",
       yearLevel: "FIRST_YEAR",
       section: "MORNING",
+      visualMemberIds: [U.STU_BSIT],
     },
     /** ITRES1 BSIT AFTERNOON: owned by the demo Faculty, active, no published evaluation. */
     itres1Afternoon: {

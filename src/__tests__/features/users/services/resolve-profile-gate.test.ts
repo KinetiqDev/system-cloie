@@ -14,7 +14,7 @@ describe("resolveProfileGate", () => {
     expect(result).toEqual({ status: "ROLE_SELECTION_REQUIRED" });
   });
 
-  it("returns STUDENT_ONBOARDING_REQUIRED if user has STUDENT role but no profile", () => {
+  it("returns STUDENT_PLACEMENT_REQUIRED if user has STUDENT role but no profile", () => {
     const result = resolveProfileGate({
       roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
@@ -22,7 +22,7 @@ describe("resolveProfileGate", () => {
       alumniProfileId: null,
       industryPartnerProfileId: null,
     });
-    expect(result).toEqual({ status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" });
+    expect(result).toEqual({ status: "STUDENT_PLACEMENT_REQUIRED" });
   });
 
   it("returns ALUMNI_ONBOARDING_REQUIRED if user has ALUMNI role but no profile", () => {

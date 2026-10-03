@@ -63,15 +63,6 @@ export type TableAccessDisposition =
       justification: string;
     };
 
-/** Secretary-write calendar boundary: SECRETARY writes, everyone else read-only. */
-const CALENDAR_BOUNDARY_EVIDENCE = [
-  { identity: "SECRETARY", operation: "select", expect: "allowed" },
-  { identity: "SECRETARY", operation: "write", expect: "allowed" },
-  { identity: "FACULTY", operation: "select", expect: "allowed" },
-  { identity: "FACULTY", operation: "write", expect: "denied" },
-  { identity: "PROGRAM_HEAD_BSIT", operation: "write", expect: "denied" },
-] as const satisfies readonly RlsProbeEvidence[];
-
 /** Authenticated read-only boundary: every authenticated identity reads, none writes. */
 const AUTHENTICATED_READ_EVIDENCE = [
   { identity: "SECRETARY", operation: "select", expect: "allowed" },
@@ -83,14 +74,17 @@ const AUTHENTICATED_READ_EVIDENCE = [
 
 export const TABLE_ACCESS_DISPOSITIONS = {
   // academic-calendar.prisma
-  school_years: {
-    kind: "role-aware-rls",
-    evidence: CALENDAR_BOUNDARY_EVIDENCE,
-  },
-  academic_term_instances: {
-    kind: "role-aware-rls",
-    evidence: CALENDAR_BOUNDARY_EVIDENCE,
-  },
+  //
+  // The calendar tables are server-only (issue #649): their former role-aware
+  // policy authorized any identity holding an assigned SECRETARY row, ignoring
+  // the server-resolved active role, account activity, and the proved sign-in
+  // method (ADR 0031). No Data API consumer reads or writes them, so the
+  // boundary is now the same deny-all used by every other Prisma table and
+  // calendar authorization is owned by the server path
+  // (secretary-school-year-actions.ts and the academic-calendar lifecycle
+  // services), which ADR 0012 keeps Secretary-only.
+  school_years: { kind: "server-only" },
+  academic_term_instances: { kind: "server-only" },
   academic_period_readiness_snapshots: { kind: "server-only" },
 
   // academic-structure.prisma
@@ -116,6 +110,7 @@ export const TABLE_ACCESS_DISPOSITIONS = {
     kind: "authenticated-read",
     evidence: AUTHENTICATED_READ_EVIDENCE,
   },
+  faculty_access_requests: { kind: "server-only" },
   student_academic_profiles: { kind: "server-only" },
   industry_partner_profiles: { kind: "server-only" },
   industry_partner_program_affiliations: { kind: "server-only" },

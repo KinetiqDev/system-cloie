@@ -40,31 +40,31 @@ describe("SessionGuard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     ensureRoleAccessMock.mockReturnValue(null);
-    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
+    resolvePostLoginDestinationMock.mockReturnValue("/status/unprovisioned-student");
   });
 
-  it("redirects unauthenticated users to portal", async () => {
+  it("redirects unauthenticated users to the landing", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
-      `${REDIRECT_ERROR}:/portal/respondents`
+      `${REDIRECT_ERROR}:/`
     );
   });
 
   it("redirects onboarding-required users through resolvePostLoginDestination", async () => {
     resolveAuthSessionMock.mockResolvedValue({
-      activeRole: ROLES.STUDENT,
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
+      activeRole: ROLES.ALUMNI,
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
 
     await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
-      `${REDIRECT_ERROR}:/onboarding?intent=student`
+      `${REDIRECT_ERROR}:/status/unprovisioned-student`
     );
     expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
       requestedPath: "/dashboard",
-      intent: "student",
-      activeRole: ROLES.STUDENT,
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
+      intent: "alumni",
+      activeRole: ROLES.ALUMNI,
+      profileGate: { status: "ALUMNI_ONBOARDING_REQUIRED", intent: "alumni" },
     });
   });
 
@@ -143,12 +143,15 @@ describe("SessionGuard", () => {
     });
   });
 
-  it("redirects student role users to onboarding when their student profile is missing", async () => {
+  it("refuses a Student route when the profile gate has not recorded a placement", async () => {
+    // The gate is the only Student readiness verdict: SessionGuard must honour
+    // it instead of re-deriving a self-service onboarding redirect that no
+    // longer exists (issue #649).
     resolveAuthSessionMock.mockResolvedValue({
       roles: [ROLES.STUDENT],
       activeRole: ROLES.STUDENT,
       studentProfileId: null,
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
+      profileGate: { status: "STUDENT_PLACEMENT_REQUIRED" },
     });
 
     await expect(
@@ -156,7 +159,13 @@ describe("SessionGuard", () => {
         children: <div>Protected</div>,
         allowedRoles: [ROLES.STUDENT],
       })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/onboarding?intent=student`);
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/status/unprovisioned-student`);
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
+      requestedPath: "/dashboard",
+      intent: null,
+      activeRole: ROLES.STUDENT,
+      profileGate: { status: "STUDENT_PLACEMENT_REQUIRED" },
+    });
   });
 
   it("renders children for an allowed complete user", async () => {

@@ -9,8 +9,8 @@ import LoginLoading from "@/app/(public)/login/loading";
 import StatusLoading from "@/app/(public)/status/[type]/loading";
 
 const loadingRoutes = [
-  [StaffPortalLoading, "Loading portal"],
-  [RespondentPortalLoading, "Loading portal"],
+  [StaffPortalLoading, "Loading page"],
+  [RespondentPortalLoading, "Loading page"],
   [OnboardingLoading, "Loading form"],
   [LoginLoading, "Loading page"],
   [StatusLoading, "Loading page"],
@@ -34,25 +34,5 @@ describe("public route loading boundaries", () => {
     expect(status).not.toHaveTextContent(
       /@|student|alumni|partner|faculty|secretary|dean|program head|202\d/i
     );
-  });
-
-  it("reserves five role cards and the wide staff grid", () => {
-    render(<StaffPortalLoading />);
-
-    const status = screen.getByRole("status", { name: "Loading portal" });
-    const grid = status.querySelector(".xl\\:grid-cols-4");
-
-    expect(grid).toBeInTheDocument();
-    expect(grid?.children).toHaveLength(5);
-  });
-
-  it("reserves three role cards and the compact respondent grid", () => {
-    render(<RespondentPortalLoading />);
-
-    const status = screen.getByRole("status", { name: "Loading portal" });
-    const grid = status.querySelector(".lg\\:grid-cols-3");
-
-    expect(grid).toBeInTheDocument();
-    expect(grid?.children).toHaveLength(3);
   });
 });

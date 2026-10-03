@@ -22,6 +22,7 @@ model Program {
   alumni_profiles                       AlumniProfile[]
   student_enrollments                   StudentEnrollment[]
   course_assignments                    CourseAssignment[]
+  faculty_access_requests                   FacultyAccessRequest[]
 
   @@map("programs")
 }

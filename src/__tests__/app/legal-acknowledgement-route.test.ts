@@ -19,7 +19,7 @@ describe("legal acknowledgement route", () => {
   it("issues a secure acknowledgement cookie for current versions", async () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -30,10 +30,22 @@ describe("legal acknowledgement route", () => {
     expect(cookie).toContain("SameSite=lax");
   });
 
+  it("issues tickets for role-less staff and external entry intents", async () => {
+    for (const intent of ["staff", "external"]) {
+      const response = await POST(
+        acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
+          body: JSON.stringify({ intent, privacyVersion: "1.1", termsVersion: "1.1" }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("set-cookie") ?? "").toContain("cloie_legal_ack=");
+    }
+  });
   it.each([
-    { intent: "unknown", privacyVersion: "1.0", termsVersion: "1.0" },
-    { intent: "student", privacyVersion: "0.9", termsVersion: "1.0" },
-    { intent: "student", privacyVersion: "1.0", termsVersion: "0.9" },
+    { intent: "unknown", privacyVersion: "1.1", termsVersion: "1.1" },
+    { intent: "student", privacyVersion: "0.9", termsVersion: "1.1" },
+    { intent: "student", privacyVersion: "1.1", termsVersion: "0.9" },
   ])("rejects stale or unknown acknowledgement input", async (body) => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
@@ -48,7 +60,7 @@ describe("legal acknowledgement route", () => {
     const response = await POST(
       new Request("https://cloie.test/api/auth/legal-acknowledgement", {
         method: "POST",
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -60,7 +72,7 @@ describe("legal acknowledgement route", () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
         headers: { origin: "https://evil.example" },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -72,7 +84,7 @@ describe("legal acknowledgement route", () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
         headers: { origin },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -84,7 +96,7 @@ describe("legal acknowledgement route", () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
         headers: { origin: "https://cloie.test" },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -101,7 +113,7 @@ describe("legal acknowledgement route", () => {
           host: "dom-pubmed-herbal-transparent.trycloudflare.com",
           origin: "https://dom-pubmed-herbal-transparent.trycloudflare.com",
         },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -118,7 +130,7 @@ describe("legal acknowledgement route", () => {
           host: "dom-pubmed-herbal-transparent.trycloudflare.com",
           origin: "https://localhost:3000",
         },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -135,7 +147,7 @@ describe("legal acknowledgement route", () => {
           host: "CLOIE.TEST",
           origin: "https://cloie.test",
         },
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 
@@ -146,7 +158,7 @@ describe("legal acknowledgement route", () => {
   it("accepts requests without an origin header (non-browser clients)", async () => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {
-        body: JSON.stringify({ intent: "student", privacyVersion: "1.0", termsVersion: "1.0" }),
+        body: JSON.stringify({ intent: "student", privacyVersion: "1.1", termsVersion: "1.1" }),
       })
     );
 

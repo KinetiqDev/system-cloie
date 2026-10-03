@@ -11,7 +11,7 @@ The primary end-to-end workflows, each traced to the domain contexts that own it
 
 ## 1. Role entry and onboarding gates
 
-1. A person enters through the **role selection portal** and picks one intended role; the signed legal-acknowledgement ticket gates the OAuth callback before Google code exchange ([auth](../../src/features/auth/CONTEXT.md), [legal](../../src/features/legal/CONTEXT.md)).
+1. A person chooses the Student, staff, Faculty-registration, or external entrance. A signed legal-acknowledgement ticket binds that entrance before Google code exchange; external registration binds the selected Alumni or Industry Partner role ([auth](../../src/features/auth/CONTEXT.md), [legal](../../src/features/legal/CONTEXT.md)).
 2. Google authenticates the identity; the account is matched by exact normalized email. Eligible self-service claims may add Faculty, Student, Alumni, or Industry Partner to an already-linked account; Secretary, Dean, Program Head, and General Education Coordinator remain pre-provisioned ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).
 3. The server validates the requested active role against the account's assigned-role set. A multi-role account without a valid selection goes to role selection; authorization and the **profile gate** use only the selected active role ([ADR 0022](../adr/0022-multi-role-accounts-with-active-role-context.md), [users](../../src/features/users/CONTEXT.md)).
 4. Self-service external (Alumni, Industry Partner) profiles start as **pending external verification**; Secretary-created external profiles are institution-verified at creation ([auth](../../src/features/auth/CONTEXT.md), [users](../../src/features/users/CONTEXT.md)).

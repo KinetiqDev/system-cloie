@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isRoleIntent, roleToIntent } from "@/features/auth/services/role-intent";
+import { toCanonicalTicketIntent } from "@/features/auth/services/role-intent";
 import { LEGAL_VERSIONS } from "@/features/legal/legal-versions";
 import {
   createLegalAcknowledgementTicket,
@@ -73,22 +73,22 @@ export async function POST(request: Request) {
   const intent = typeof value.intent === "string" ? value.intent : null;
   const privacyVersion = typeof value.privacyVersion === "string" ? value.privacyVersion : null;
   const termsVersion = typeof value.termsVersion === "string" ? value.termsVersion : null;
+  const canonicalIntent = intent ? toCanonicalTicketIntent(intent) : null;
 
   if (
     !intent ||
-    !isRoleIntent(intent) ||
+    !canonicalIntent ||
     privacyVersion !== LEGAL_VERSIONS.privacy ||
     termsVersion !== LEGAL_VERSIONS.terms
   ) {
-    return NextResponse.json({ error: "The legal documents must be acknowledged using current versions." }, { status: 400 });
+    return NextResponse.json(
+      { error: "The legal documents must be acknowledged using current versions." },
+      { status: 400 }
+    );
   }
 
   try {
     const response = NextResponse.json({ success: true });
-    const canonicalIntent = roleToIntent(intent);
-    if (!canonicalIntent) {
-      return NextResponse.json({ error: "The selected role is not supported." }, { status: 400 });
-    }
     response.cookies.set(
       LEGAL_ACKNOWLEDGEMENT_COOKIE_NAME,
       createLegalAcknowledgementTicket(canonicalIntent),
@@ -96,6 +96,9 @@ export async function POST(request: Request) {
     );
     return response;
   } catch {
-    return NextResponse.json({ error: "Legal acknowledgement is temporarily unavailable." }, { status: 503 });
+    return NextResponse.json(
+      { error: "Legal acknowledgement is temporarily unavailable." },
+      { status: 503 }
+    );
   }
 }

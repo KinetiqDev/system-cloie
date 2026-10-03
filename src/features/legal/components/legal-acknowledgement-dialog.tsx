@@ -18,13 +18,13 @@ import { createClient } from "@/lib/supabase/client";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import { LEGAL_ACKNOWLEDGEMENT_CONTENT } from "../acknowledgement-content";
 import { LEGAL_VERSIONS } from "../legal-versions";
-import type { RoleIntent } from "@/features/auth/services/role-intent";
+import type { TicketIntent } from "@/features/auth/services/role-intent";
 
 type LegalAcknowledgementDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   roleTitle: string;
-  intent: RoleIntent;
+  intent: TicketIntent;
 };
 
 export function LegalAcknowledgementDialog({

@@ -120,9 +120,9 @@ export type ProgramWideResponseContext = {
 };
 
 /**
- * Program Head identified submitted-response detail (spec §40). Faculty and
- * Dean never receive this shape; their flow keeps
- * `CourseBoundResponseReview` with its anonymized respondent label.
+ * Program Head identified submitted-response detail (spec §40). No other role
+ * receives this shape; Faculty and Dean read aggregate Analytics evidence
+ * instead of individual responses.
  */
 export type ProgramHeadSubmittedResponseDetail = {
   responseId: string;

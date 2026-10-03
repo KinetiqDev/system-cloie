@@ -21,7 +21,7 @@ export default async function FacultyAddCiloPage({
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const params = (await searchParams) ?? {};

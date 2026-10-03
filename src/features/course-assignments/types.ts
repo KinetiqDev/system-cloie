@@ -41,60 +41,6 @@ export type CourseAssignmentItem = {
   rosterMembershipCount?: number;
 };
 
-/**
- * Input for creating a course assignment.
- */
-export type CreateCourseAssignmentInput = {
-  termInstanceId: string;
-  facultyId: string;
-  courseId: string;
-  programId: string;
-  yearLevel: YearLevel;
-  section: StudentSection;
-  selectedProgramId?: string;
-};
-
-/**
- * Input for updating a course assignment.
- */
-export type UpdateCourseAssignmentInput = {
-  assignmentId: string;
-  programId?: string;
-  selectedProgramId?: string;
-  yearLevel?: YearLevel;
-  section?: StudentSection;
-  facultyId?: string;
-};
-
-/**
- * Input for deactivating a course assignment.
- */
-export type DeactivateCourseAssignmentInput = {
-  assignmentId: string;
-  programId?: string;
-};
-
-/**
- * Input for activating a course assignment.
- */
-export type ActivateCourseAssignmentInput = {
-  assignmentId: string;
-  programId?: string;
-};
-
-/**
- * Input for deleting a course assignment (hard delete).
- */
-export type DeleteCourseAssignmentInput = {
-  assignmentId: string;
-  programId?: string;
-  confirmationLabel: string;
-  revision: string;
-  membershipCount: number;
-  activeMembershipCount: number;
-  removedMembershipCount: number;
-};
-
 export type CourseAssignmentDeletionPreflight = {
   id: string;
   label: string;
@@ -104,14 +50,6 @@ export type CourseAssignmentDeletionPreflight = {
   activeMembershipCount: number;
   removedMembershipCount: number;
   courseBoundEvaluationCount: number;
-};
-
-/**
- * Input for bulk creating course assignments.
- */
-export type BulkCreateCourseAssignmentsInput = {
-  assignments: CreateCourseAssignmentInput[];
-  selectedProgramId?: string;
 };
 
 /**

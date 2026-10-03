@@ -44,7 +44,7 @@ import {
   formatTargetStakeholder,
   hasActivePublishedFilters,
 } from "@/features/evaluations/components/filter-published-evaluations";
-import { ProgramHeadPublishedFilterBar } from "@/features/evaluations/components/program-head-published-filter-bar";
+import { PublishedEvaluationFilterBar } from "@/features/evaluations/components/published-evaluation-filter-bar";
 import {
   DEFAULT_PUBLISHED_FILTERS,
   normalizePublishedQuery,
@@ -502,9 +502,10 @@ function ProgramHeadPublishedDeployments({
     <>
       <div className="flex min-w-0 flex-col gap-4">
         {deployments.length > 0 && (
-          <ProgramHeadPublishedFilterBar
+          <PublishedEvaluationFilterBar
             filters={filters}
             periods={periodOptions}
+            record="deployment"
             targets={targetOptions}
             onFiltersChange={handleFiltersChange}
           />

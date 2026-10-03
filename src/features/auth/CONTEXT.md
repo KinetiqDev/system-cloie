@@ -28,11 +28,11 @@ A self-service role claim that has assigned the System CLOIE account role but ha
 _Avoid_: Completed account, role change
 
 **Incomplete role cancellation**:
-A request to abandon one assigned self-service role before its required profile artifact exists. The requested role is checked against the account's assigned-role set and removed only while its own completion artifact remains absent; another active role and a completed deferred Student profile are preserved.
+A request to abandon one assigned self-service role before its required profile artifact exists. The requested role is checked against the account's assigned-role set and removed only while its own completion artifact remains absent; another active role is preserved. Student is never cancellable this way: it has no self-service artifact, and cancelling would strip a legitimately provisioned account.
 _Avoid_: Account deletion, active role selection, completed-role revocation
 
 **Pre-provisioned role**:
-A System CLOIE account role that must be created by an administrator before the person can enter through the role selection portal.
+A System CLOIE account role that an administrator must create before the person can sign in through the staff entrance.
 _Avoid_: Invite-only when the account is already created directly by an administrator
 
 **Managed role transition**:
@@ -79,13 +79,29 @@ _Avoid_: Any ACD subdomain, any school-looking email
 A System CLOIE role for people participating from outside the current institution: Alumni or Industry Partner.
 _Avoid_: Guest role, public role
 
-**Role selection portal**:
-The single public entry point where a person chooses the System CLOIE role they want to enter with before continuing through authentication and any required onboarding.
-_Avoid_: Separate sign-up pages per role
+**Scoped entrance**:
+One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), Faculty registration, or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
+_Avoid_: Role selection portal, one shared role card grid
 
 **Public entry**:
-The role selection portal is the primary way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
-_Avoid_: Role-less login as the main entry point
+The scoped entrances plus the System CLOIE landing page are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
+_Avoid_: Role-less login as the main entry point, retired portal selection
+
+**Entry intent**:
+The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a role; the callback resolves the existing account, requires provisioning for an unknown staff address, and sends an unknown external address to external registration. External registration binds the chosen role's intent (`alumni` or `industry-partner`) to its Google action, so a new Google holder claims that role and enters its onboarding instead of returning to registration; the external sign-in entrance keeps the role-less intent because returning holders resolve through their existing session.
+_Avoid_: Role claim, authorization decision
+
+**Google-only internal role**:
+An internal role — Student, Faculty, Secretary, Dean, Program Head, or General Education Coordinator — that may only be used from a current Google sign-in. A password, one-time-code, or recovery session for the same Auth identity is refused at the centralized session boundary and at internal Server Actions, and Alumni and Industry Partner are the only roles that may use email-password alongside Google.
+_Avoid_: Any authenticated session, user_metadata provider claim
+
+**Proved Google session**:
+A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the recorded `app_metadata.provider` is `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. `user_metadata` is never consulted because the person can edit it.
+_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider
+
+**Recovery-confined session**:
+A verified recovery-code session that may change the password but cannot enter any internal or external workspace. Raw code sessions are not workspace-authorized. A verified signup may continue external onboarding only when the server has proved its signup purpose for that exact session. Both successful and failed password updates end the recovery session before normal sign-in resumes.
+_Avoid_: External workspace session, recovery as institutional approval
 
 **External stakeholder invite**:
 A Secretary-managed invitation (ExternalStakeholderInvite) that offers an Alumni or Industry Partner person entry into System CLOIE, with statuses DRAFT, SENT, ACCEPTED, and REVOKED and an optional program scope; it is the parallel invite-based entry path alongside self-service external sign-up.
@@ -118,6 +134,10 @@ _Avoid_: Role stack, simultaneous authority, primary role
 **Active account role**:
 The one assigned role currently used for dashboard access, authorization, onboarding gates, and account-state decisions.
 _Avoid_: Any assigned role, client-granted role, primary role
+
+**Withheld active role**:
+The state of an active role whose profile gate denies access: a Google-only role opened by a password, one-time-code, or recovery session, an inactive account, a rejected external account, a Faculty request not yet approved, or a Student awaiting institution-recorded placement. The session still reports the assigned role and the gate still names it, but `activeRole` resolves to no role, so every internal role guard fails closed while the workspace switcher can still move to a role the session may actually use. Gates that redirect to a self-service route a person may still complete — role selection, Faculty registration, external onboarding, deferred enrollment — do not withhold.
+_Avoid_: Revoked role, unassigned role, inactive session
 
 **Active role selection**:
 A person's choice among their assigned account roles. Selection changes authorization context but does not create, revoke, or complete a role.
@@ -191,16 +211,8 @@ _Avoid_: Active course assignment, preparation access
 A Program Head assigning themselves teaching capability only for a course within a program they manage.
 _Avoid_: Unrestricted self-assignment, second Faculty role
 
-**Faculty self-service account**:
-A Faculty account claimed through the role selection portal using an institutional email and completed by choosing a faculty program affiliation.
-_Avoid_: Faculty pending account, faculty pre-provisioned account
-
-**Self-declared enrollment**:
-A Student-provided academic enrollment claim used by System CLOIE to place the student in an active term, program, year level, and section.
-_Avoid_: Registrar-verified enrollment, official enrollment record
-
 **Secretary-recorded enrollment**:
-A Secretary-provided academic enrollment record for a Student account in the active academic term, including program, year level, and section; a Secretary-created Student account should receive this record at creation time when an active term exists.
+A Secretary-provided academic enrollment record for a Student account in the active academic term, including program, year level, and section; a Secretary-created Student account should receive this record at creation time when an active term exists. It is the only writer of a Student's placement — no self-service form exists.
 _Avoid_: Self-declared enrollment, optional profile note
 
 **Student academic profile**:

@@ -2,8 +2,6 @@
 import { Prisma, type SystemRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type {
-  CreateBaselineTemplateInput,
-  UpdateBaselineTemplateInput,
   CreateBaselineTemplateWithStructureInput,
   UpdateBaselineTemplateWithStructureInput,
 } from "../schemas/template";
@@ -65,61 +63,6 @@ export async function getBaselineTemplate(id: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Create (legacy — without structure)
-// ---------------------------------------------------------------------------
-
-export async function createBaselineTemplate(
-  input: CreateBaselineTemplateInput
-): Promise<ServiceResult<{ id: string }>> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  try {
-    const result = await prisma.$transaction(async (tx) => {
-      const template = await tx.instrumentTemplate.create({
-        data: {
-          code: input.code,
-          name: input.name,
-          description: input.description ?? null,
-          is_faculty_accessible:
-            input.template_type === "COURSE_BOUND" && input.is_faculty_accessible,
-          program_id: null,
-          structure: emptyStructure,
-          template_type: input.template_type,
-        },
-      });
-
-      await tx.instrumentVersion.create({
-        data: {
-          template_id: template.id,
-          version_number: 1,
-          structure_snapshot: emptyStructure,
-        },
-      });
-
-      return template;
-    });
-
-    return { success: true, data: { id: result.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A template with the code "${input.code}" already exists.`,
-      };
-    }
-
-    throw error;
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Create with structure (for template builder)
 // ---------------------------------------------------------------------------
 
@@ -165,64 +108,6 @@ export async function createBaselineTemplateWithStructure(
     });
 
     return { success: true, data: { id: result.id } };
-  } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return {
-        success: false,
-        error: `A template with the code "${input.code}" already exists.`,
-      };
-    }
-
-    throw error;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Update (legacy — metadata only)
-// ---------------------------------------------------------------------------
-
-export async function updateBaselineTemplate(
-  input: UpdateBaselineTemplateInput
-): Promise<ServiceResult> {
-  const session = await resolveAuthSession();
-  if (!session || !session.activeRole) {
-    return { success: false, error: "Authentication required." };
-  }
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN];
-  if (!allowedRoles.includes(session.activeRole)) {
-    return { success: false, error: "Insufficient permissions." };
-  }
-
-  const existing = await prisma.instrumentTemplate.findUnique({
-    where: { id: input.id },
-    select: { program_id: true },
-  });
-
-  if (!existing) {
-    return { success: false, error: "Template not found." };
-  }
-
-  if (existing.program_id !== null) {
-    return {
-      success: false,
-      error: "Only baseline (institutional) templates can be managed here.",
-    };
-  }
-
-  try {
-    await prisma.instrumentTemplate.update({
-      where: { id: input.id },
-      data: {
-        code: input.code,
-        name: input.name,
-        description: input.description ?? null,
-        is_faculty_accessible:
-          input.template_type === "COURSE_BOUND" && input.is_faculty_accessible,
-        template_type: input.template_type,
-      },
-    });
-
-    return { success: true, data: undefined };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return {

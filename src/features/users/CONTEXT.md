@@ -5,7 +5,7 @@ Users defines System CLOIE account administration — the readiness gates an acc
 ## Role lifecycle
 
 **Profile gate**:
-The per-role readiness verdict resolved at sign-in that states what an account must finish before entering its portal: ROLE_SELECTION_REQUIRED (no role chosen), a role-specific onboarding requirement (STUDENT_ONBOARDING_REQUIRED, FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED), INACTIVE (deactivated account), REJECTED_EXTERNAL_ACCOUNT (rejected alumni or industry partner verification), DEFERRED_ENROLLMENT (student profile present but no active enrollment), or COMPLETE (portal entry allowed).
+The per-role readiness verdict resolved at sign-in that states what an account must finish before entering its portal: ROLE_SELECTION_REQUIRED (no role chosen), a role-specific onboarding requirement (FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED), STUDENT_PLACEMENT_REQUIRED (Secretary-provisioned Student whose placement the institution has not recorded yet), INACTIVE (deactivated account), REJECTED_EXTERNAL_ACCOUNT (rejected alumni or industry partner verification), FACULTY_APPROVAL_PENDING or FACULTY_REQUEST_REJECTED (a self-submitted Faculty request awaiting or refused by Secretary review), DEFERRED_ENROLLMENT (student profile present but no active enrollment), AUTH_METHOD_MISMATCH (a Google-only role opened by a password, one-time-code or recovery session), or COMPLETE (portal entry allowed). A Student has no self-service onboarding step: placement is institution-recorded, so STUDENT_PLACEMENT_REQUIRED routes to the Secretary-guidance status rather than a form. A gate that only redirects to an entry route keeps the account's active role; a gate that denies authority withholds it, so role guards fail closed.
 _Avoid_: account status, sign-in result
 
 **Assigned-role set**:
@@ -22,7 +22,11 @@ _Avoid_: Inferring a replacement role at submit time, silently retargeting stale
 
 **Secretary add-role pivot**:
 The Add User form's email-first entry: an address that already belongs to an account switches the form from account creation to granting a new role on that account, showing the account's canonical name and current roles and offering only roles it does not hold yet. A grant writes the `(user_id, role)` pair together with the role's supporting record, so the account keeps its identity and history. If creation races the lookup, the creation result names the existing account and the form pivots instead of reporting a duplicate.
-_Avoid_: Duplicate account, merging accounts, replacing roles
+
+
+**Secretary-only Student provisioning**:
+A Student role enters the assigned-role set only under a Secretary's authority, through either account creation or the role grant on an existing account. Both entry points share one role-entry gate that reads the granting account's active role, so the shared administrative role held by a Dean does not extend to provisioning: a Dean may activate, deactivate, and revoke the accounts a Secretary created, but cannot create or grant a Student. The grant stays a single atomic write of the role row together with its academic context and active-term placement, so narrowing the grant never leaves a partial Student account.
+_Avoid_: Admin-may-provision, self-provisioned Student, role-membership grant
 
 **Secretary term placement set**:
 The Secretary Edit User flow's write of a Student's current-term placement: year level and section save together into the unique enrollment row for the active Academic Period — created with source `SECRETARY` when the Student has none, updated in place and reactivated otherwise. It requires an active Academic Period, leaves the static academic profile and other terms' enrollments untouched, and is a Protected account edit reviewed before saving.
@@ -32,9 +36,11 @@ _Avoid_: Bulk placement update, term rollover, profile-only correction
 The Secretary Users list's year level and section filters read the Student's enrollment row in the active Academic Period — the same row the Secretary term placement set writes and the Year & Section column displays. They are honored only alongside the Student role context, and only while that period is active and the Student is not already filtered to awaiting placement; elsewhere the list canonicalizes them away rather than keep a filter it cannot show. Program and major filters read the static student academic context.
 _Avoid_: Year level over enrollment history, section from the academic profile, placement filters without an active Academic Period
 
-**Role provisioning category**:
-The role-card taxonomy (self_service_internal, self_service_external, pre_provisioned_admin, provisioned_faculty) that drives which roles appear on the portal's role cards and whether an ACD institutional email is required at sign-up. Staff-facing roles are pre-provisioned by a Secretary; Faculty additionally appears as a self-service internal option.
-_Avoid_: permission level, access tier
+**Faculty approval state**:
+The role-scoped PENDING / APPROVED / REJECTED review state on a self-submitted Faculty request. A self-request writes the FACULTY role together with a PENDING request and no program affiliation, so the profile gate resolves it to FACULTY_APPROVAL_PENDING and the Faculty workspace stays closed; approval creates the primary active affiliation in the same transaction. It never deactivates the account globally and never reuses external VerificationStatus. A rejected request revokes only the affiliation that approval granted — a Secretary-provisioned primary or additional program is never touched, and revocation deactivates rather than deletes so the affiliation history stays on the account. Secretary-provisioned Faculty has no request row and is complete at creation.
+_Avoid_: Account deactivation, external verification status, deleting affiliations
+
+Approval revalidates both account activity and the requested Program's activity inside the decision transaction. A Program archived while the request awaits review cannot receive an active Faculty affiliation.
 
 ## Provisioning and invitations
 

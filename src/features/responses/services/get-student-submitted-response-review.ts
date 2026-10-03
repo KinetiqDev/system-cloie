@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import { mapTemplateStructureToSections } from "@/features/responses/services/map-template-structure";
+import { mapSavedAnswerItems } from "@/features/responses/services/map-saved-answer-items";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
@@ -164,17 +165,10 @@ export async function getStudentSubmittedResponseReview(
     return null;
   }
 
-  const answers: Record<string, string | number> = {};
-
-  for (const item of response.quant_items) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "quantitative", item.item_key)] =
-      item.rating_value;
-  }
-
-  for (const item of response.qual_items) {
-    answers[buildStudentEvaluationAnswerKey(item.section_key, "qualitative", item.prompt_key)] =
-      item.text_content;
-  }
+  const answers = mapSavedAnswerItems({
+    qualitativeItems: response.qual_items,
+    quantitativeItems: response.quant_items,
+  });
 
   if (response.assignment.course_bound) {
     const ca = response.assignment.course_bound.course_assignment;

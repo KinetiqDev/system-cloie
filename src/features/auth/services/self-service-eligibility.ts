@@ -2,7 +2,10 @@ import { SystemRole } from "@prisma/client";
 import { validateRoleDomain } from "./validate-role-domain";
 
 export type SelfServiceEligibilityFailure = {
-  destination: "/status/pre-provisioning-required" | `/status/invalid-domain?role=${string}`;
+  destination:
+    | "/status/pre-provisioning-required"
+    | "/status/unprovisioned-student"
+    | `/status/invalid-domain?role=${string}`;
 };
 
 /**
@@ -21,6 +24,13 @@ export function resolveSelfServiceEligibility(options: {
   intent: string;
 }): SelfServiceEligibilityFailure | null {
   const { email, targetRole, intent } = options;
+
+  // Student provisioning is Secretary-only (issue #649): the account must
+  // already exist with its role before the first OAuth link, so a Student
+  // self-claim on a roleless account is refused with Secretary guidance.
+  if (targetRole === SystemRole.STUDENT) {
+    return { destination: "/status/unprovisioned-student" };
+  }
 
   const isPreProvisioned =
     targetRole === SystemRole.SECRETARY ||

@@ -15,7 +15,7 @@ describe("buildAuthSessionSnapshot", () => {
     expect(session.profileGate).toEqual({ status: "ROLE_SELECTION_REQUIRED" });
   });
 
-  it("marks students without a profile as requiring onboarding", () => {
+  it("marks an unplaced student as awaiting institution-recorded placement", () => {
     const session = buildAuthSessionSnapshot({
       userId: "user-2",
       email: "student@acd.edu.ph",
@@ -25,8 +25,7 @@ describe("buildAuthSessionSnapshot", () => {
 
     expect(session.activeRole).toBe(ROLES.STUDENT);
     expect(session.profileGate).toEqual({
-      status: "STUDENT_ONBOARDING_REQUIRED",
-      intent: "student",
+      status: "STUDENT_PLACEMENT_REQUIRED",
     });
   });
 
@@ -144,7 +143,7 @@ describe("buildAuthSessionSnapshot", () => {
     expect(session.profileGate).toEqual(profileGate);
   });
 
-  it("regression check: uses only the first role if multiple roles are provided (ignores stack priority resolution)", () => {
+  it("leaves activeRole null on a multi-role account so selection is deliberate", () => {
     const session = buildAuthSessionSnapshot({
       userId: "user-regression",
       email: "regression@acd.edu.ph",
@@ -152,8 +151,20 @@ describe("buildAuthSessionSnapshot", () => {
       studentProfileId: "profile-1",
     });
 
-    // It should select STUDENT (roles[0]) as the activeRole, even though FACULTY used to have higher priority in resolution
-    expect(session.activeRole).toBe(ROLES.STUDENT);
+    expect(session.activeRole).toBeNull();
+    expect(session.profileGate).toEqual({ status: "ROLE_SELECTION_REQUIRED" });
+  });
+
+  it("resolves the sole assigned role as the active role", () => {
+    const session = buildAuthSessionSnapshot({
+      userId: "user-solo",
+      email: "solo@acd.edu.ph",
+      roles: [ROLES.FACULTY],
+      studentProfileId: null,
+      hasFacultyAffiliation: true,
+    });
+
+    expect(session.activeRole).toBe(ROLES.FACULTY);
     expect(session.profileGate).toEqual({ status: "COMPLETE" });
   });
 

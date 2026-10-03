@@ -1,57 +1,51 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { UserPlus, ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
-import { YearLevel } from "@prisma/client";
-import { prisma } from "@/lib/db/prisma";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { resolveAuthSessionFromUser } from "@/features/auth/services/resolve-auth-session";
+import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
-import { createClient } from "@/lib/supabase/server";
-import { StudentProfileForm } from "./student-profile-form";
+import { prisma } from "@/lib/db/prisma";
 import { AlumniOnboardingForm } from "@/features/users/components/alumni-onboarding-form";
 import { IndustryPartnerOnboardingForm } from "@/features/users/components/industry-partner-onboarding-form";
-import { FacultyOnboardingForm } from "@/features/users/components/faculty-onboarding-form";
-import { resetIncompleteRoleClaim } from "@/lib/actions/onboarding-actions";
-import { ROLES } from "@/lib/constants/roles";
-import { getActiveTermId } from "@/features/academic-calendar/services/resolve-active-term";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Complete Your Profile") };
 
+type OnboardingSearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  searchParams: OnboardingSearchParams;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    redirect("/portal/respondents");
+  // One centralized, claim-verified session boundary: this page never reads the
+  // raw Supabase user, so an unproved access token cannot reach a form.
+  const session = await resolveAuthSession();
+  if (!session) {
+    redirect("/");
   }
 
-  const session = await resolveAuthSessionFromUser({
-    id: user.id,
-    email: user.email ?? null,
-  });
-  if (session && session.profileGate.status === "COMPLETE") {
+  const gate = session.profileGate;
+
+  // This page holds the external onboarding forms only. Every other verdict —
+  // inactive, method-refused, rejected, pending Faculty review,
+  // awaiting-role-selection, awaiting-placement, or already complete — and
+  // every intent that is not the session's own external gate resolves to the
+  // destination that verdict names, so no form is reachable by an unrelated
+  // session or a hand-edited query string (issue #649).
+  const resolvedParams = await searchParams;
+  const requestedIntent = typeof resolvedParams?.intent === "string" ? resolvedParams.intent : "";
+  const gateIntent = "intent" in gate ? gate.intent : null;
+  const externalOnboardingGate =
+    gateIntent === "alumni" || gateIntent === "industry-partner" ? gateIntent : null;
+
+  if (!externalOnboardingGate || externalOnboardingGate !== requestedIntent) {
     redirect(
       resolvePostLoginDestination({
-        requestedPath: "/dashboard",
-        intent: null,
+        requestedPath: null,
+        intent: gateIntent,
         activeRole: session.activeRole,
-        profileGate: session.profileGate,
+        profileGate: gate,
       })
     );
   }
-
-  const resolvedParams = await searchParams;
-  const intent = resolvedParams?.intent as string | undefined;
-  const step = resolvedParams?.step as string | undefined;
 
   const programs = await prisma.program.findMany({
     where: { is_active: true },
@@ -59,107 +53,21 @@ export default async function OnboardingPage({
     orderBy: { code: "asc" },
   });
 
-  if (intent === "faculty") {
-    return (
-      <div className="mx-auto w-full max-w-2xl py-8">
-        <FacultyOnboardingForm email={user.email!} name={session?.name ?? ""} programs={programs} />
-      </div>
-    );
-  }
+  const identity = {
+    email: session.email ?? "",
+    name: session.name ?? "",
+  };
 
-  if (intent === "alumni") {
-    return (
-      <div className="mx-auto w-full max-w-2xl py-8">
-        <AlumniOnboardingForm email={user.email!} name={session?.name ?? ""} programs={programs} />
-      </div>
-    );
-  }
-
-  if (intent === "industry-partner") {
-    return (
-      <div className="mx-auto w-full max-w-2xl py-8">
-        <IndustryPartnerOnboardingForm
-          email={user.email!}
-          name={session?.name ?? ""}
-          programs={programs}
-        />
-      </div>
-    );
-  }
-
-  if (intent === "student" && step === "form") {
-    const nStudForm = (user.email ?? "").trim().toLowerCase();
-    if (!nStudForm.endsWith("@acd.edu.ph") && !nStudForm.endsWith("@acdeducation.com")) {
-      redirect("/portal/respondents");
-    }
-    const yearLevels = Object.values(YearLevel);
-    const activeTermId = await getActiveTermId();
-    const hasActiveTerm = !!activeTermId;
-
-    return (
-      <div className="mx-auto w-full max-w-2xl py-8">
-        <StudentProfileForm
-          email={user.email!}
-          name={session?.name ?? ""}
-          programs={programs}
-          yearLevels={yearLevels}
-          hasActiveTerm={hasActiveTerm}
-        />
-      </div>
-    );
-  }
-
-  if (intent === "student") {
-    const nStud = (user.email ?? "").trim().toLowerCase();
-    if (!nStud.endsWith("@acd.edu.ph") && !nStud.endsWith("@acdeducation.com")) {
-      redirect("/portal/respondents");
-    }
-    return (
-      <div className="mx-auto w-full max-w-lg">
-        <Card className="border-border overflow-hidden shadow-sm">
-          <div className="bg-primary flex items-center justify-center py-10">
-            <div className="bg-on-primary/20 flex size-16 items-center justify-center rounded-2xl">
-              <UserPlus className="text-on-primary size-8" />
-            </div>
-          </div>
-
-          <CardContent className="space-y-6 px-8 py-8">
-            <h1 className="font-heading text-primary text-heading-lg text-center font-bold">
-              Complete Your Student Profile
-            </h1>
-
-            <div className="border-warning bg-warning-soft/30 flex gap-3 rounded-lg border-l-4 p-4">
-              <CheckCircle className="text-warning mt-0.5 size-5 shrink-0" />
-              <p className="text-body-sm text-muted-foreground">
-                We found your ACD account, but your student profile is not yet set up. Please
-                complete your registration to access the platform.
-              </p>
-            </div>
-
-            <Button
-              render={<Link href="?intent=student&step=form" />}
-              size="lg"
-              className="w-full font-semibold"
-            >
-              Continue Setup
-              <ArrowRight className="size-4" data-icon="inline-end" />
-            </Button>
-            <form action={resetIncompleteRoleClaim} className="flex w-full justify-center">
-              <input type="hidden" name="role" value={ROLES.STUDENT} />
-              <Button
-                type="submit"
-                variant="ghost"
-                className="text-muted-foreground hover:text-foreground min-h-11 w-full gap-2"
-              >
-                <ArrowLeft className="size-4" />
-                Cancel / Back to Role Selection
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  redirect("/portal/respondents");
+  // The gate above proved the requested intent is this session's own external
+  // onboarding step, so exactly one form is reachable here. No Student
+  // placement form exists: placement is institution-recorded (issue #649).
+  return (
+    <div className="mx-auto w-full max-w-2xl py-8">
+      {externalOnboardingGate === "alumni" ? (
+        <AlumniOnboardingForm {...identity} programs={programs} />
+      ) : (
+        <IndustryPartnerOnboardingForm {...identity} programs={programs} />
+      )}
+    </div>
+  );
 }

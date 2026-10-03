@@ -26,7 +26,7 @@ The full procedure — host layout, secrets, first deployment, redeployments, sc
 
 ## Demo deployment separation (ADR 0008)
 
-The dedicated demo deployment is an **isolated production-mode System CLOIE deployment** with its own database, resettable demo data, and explicitly enabled signed demo sessions for demonstrations and route-performance evidence. Primary Production stays OAuth-only, must never enable demo authentication, and its database must never be the demo reset target. Isolation is enforced in code (see [auth-and-authorization.md](auth-and-authorization.md)) and verified by the scheduled CI `demo-reset-gate` job. Provisioning, reset, rollback, and incident-disable procedures live in the [dedicated demo deployment runbook](../runbooks/dedicated-demo-deployment.md).
+The dedicated demo deployment is an **isolated production-mode System CLOIE deployment** with its own database, resettable demo data, and explicitly enabled signed demo sessions for demonstrations and route-performance evidence. Primary Production permits Google and external email-password authentication, must never enable demo authentication, and its database must never be the demo reset target. Isolation is enforced in code (see [auth-and-authorization.md](auth-and-authorization.md)) and verified by the scheduled CI `demo-reset-gate` job. Provisioning, reset, rollback, and incident-disable procedures live in the [dedicated demo deployment runbook](../runbooks/dedicated-demo-deployment.md).
 
 ## Production browser evidence
 
@@ -34,11 +34,14 @@ Accepted production-behavior evidence (production-mode server, real routes) foll
 
 ## CI environments
 
-CI never touches a hosted database. Every job that needs one starts its own disposable `postgres:16-alpine` service container:
+Real credential behavior runs through `pnpm test:auth-integration` against the local Supabase CLI stack and bundled mail catcher. It uses no hosted target, cleans up only test-created Auth identities, and stops only a stack it started.
+
+CI never touches a hosted database. The database and browser jobs each start their own disposable `postgres:16-alpine` service:
 
 - **Database integration** and **browser E2E** jobs set `DATABASE_URL`/`DIRECT_URL` to the disposable instance, replay the canonical migration history (`scripts/ci/apply-migrations.sh`), and seed the deterministic fixture (`pnpm db:seed`).
 - **Browser E2E** runs the app in production mode (`next build` + `next start`) with `CLOIE_CI_TEST_ENABLED=true` and `CLOIE_DEPLOYMENT_KIND=ci-test`, enabling the isolated signed CI test session (allowlisted seeded accounts, filesystem-marker-verified CI identity — see [auth-and-authorization.md](auth-and-authorization.md)). The marker file is created by the workflow immediately before the production server starts.
-- The scheduled workflow adds cross-browser and **production-boundary** verification: a production-mode server must refuse the dev-login endpoint (`verify:production-auth-boundary`), proving the demo/dev/CI regimes stay off in production.
+- **Production build** and the scheduled **production-boundary** job start a primary-production server with demo/CI sessions disabled. They verify protected-route redirects and refusal of dev, demo and CI test login endpoints through `verify:production-auth-boundary`.
+- **Next.js cache** is restored as `.next/cache/turbopack` only. Canonical academic term rows are created without ids, so every fresh seed renumbers them; a restored `.next/cache/fetch-cache` would hand a read model the previous database's row ids, and pages that look a period up by id would resolve not-found.
 
 Gate inventory and job details: [overview.md → CI gate inventory](overview.md#ci-gate-inventory). Workflow sources: `.github/workflows/ci.yml`, `.github/workflows/scheduled.yml`, `.github/workflows/code-intelligence.yml`.
 

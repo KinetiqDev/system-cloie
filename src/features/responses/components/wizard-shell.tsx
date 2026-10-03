@@ -195,14 +195,15 @@ function QuantitativeItemField({
       <div
         role="radiogroup"
         aria-labelledby={titleId}
-        className="flex w-full max-w-full min-w-0 flex-wrap gap-4 sm:gap-6"
+        className="grid w-full max-w-md gap-1 sm:gap-3"
+        style={{ gridTemplateColumns: `repeat(${item.scale.length}, minmax(0, 1fr))` }}
       >
         {item.scale.map((v, idx) => {
           const descriptorLabel = item.descriptorLabels?.[idx];
           return (
             <label
               key={v}
-              className="group flex min-w-0 cursor-pointer flex-col items-center gap-1"
+              className="group flex min-w-0 cursor-pointer flex-col items-center gap-1 text-center"
             >
               <input
                 type="radio"
@@ -212,11 +213,11 @@ function QuantitativeItemField({
                 onChange={() => onValueChange(item.itemKey, v)}
                 className="peer sr-only"
               />
-              <div className="border-border-strong peer-focus-visible:ring-ring peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary peer-checked:text-on-primary flex size-12 touch-manipulation items-center justify-center rounded-full border-2 text-lg font-bold transition-[color,background-color,border-color,box-shadow,transform] peer-focus-visible:ring-3 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100">
+              <div className="border-border-strong peer-focus-visible:ring-ring peer-checked:bg-primary peer-checked:border-primary hover:bg-primary-soft hover:border-primary peer-checked:text-on-primary flex size-11 touch-manipulation items-center justify-center rounded-full border-2 text-lg font-bold transition-[color,background-color,border-color,box-shadow,transform] peer-focus-visible:ring-3 active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100 sm:size-12">
                 {v}
               </div>
               {descriptorLabel && (
-                <span className="text-text-muted text-caption mt-0.5 max-w-[80px] min-w-0 text-center leading-tight [overflow-wrap:anywhere] break-words">
+                <span className="text-text-muted text-caption mt-0.5 w-full min-w-0 leading-tight [overflow-wrap:anywhere]">
                   {descriptorLabel}
                 </span>
               )}
@@ -601,7 +602,7 @@ export function WizardShell({
           <p className="text-text-secondary text-body-md mb-2 sm:mb-3">{courseTitle}</p>
         )}
         <div className="space-y-1.5">
-          <div className="text-text-muted text-label-sm flex justify-between font-bold uppercase">
+          <div className="text-text-secondary text-body-sm flex flex-wrap justify-between gap-x-3 font-semibold">
             <span>
               Section {currentStep + 1} of {totalSteps}
             </span>
@@ -609,14 +610,14 @@ export function WizardShell({
           </div>
           <Progress
             value={progress}
-            className="h-2"
+            className="[&_[data-slot=progress-track]]:h-2.5"
             aria-label={`Section progress: ${Math.round(progress)}%`}
           />
           {totalSteps > 1 && (
             <div
               role="list"
               aria-label="Section completion"
-              className="mt-2 flex flex-wrap items-center gap-1.5"
+              className="mt-3 flex flex-wrap items-center gap-2"
             >
               {sections.map((section, index) => {
                 const complete = isSectionComplete(section, answers);
@@ -633,7 +634,7 @@ export function WizardShell({
                     role="listitem"
                     aria-current={isCurrent ? "step" : undefined}
                     className={cn(
-                      "text-caption flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium",
+                      "text-body-sm flex size-8 items-center justify-center rounded-full border font-semibold sm:size-9",
                       complete
                         ? "border-success/40 bg-success/10 text-success"
                         : isCurrent
@@ -642,7 +643,7 @@ export function WizardShell({
                     )}
                   >
                     {complete ? (
-                      <Check className="size-3" />
+                      <Check className="size-4" />
                     ) : (
                       <span aria-hidden="true">{index + 1}</span>
                     )}

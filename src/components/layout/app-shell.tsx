@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Sidebar } from "./sidebar";
+import { cookies } from "next/headers";
+import { SidebarShell } from "./sidebar-shell";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
 import {
@@ -16,6 +17,7 @@ import type { RoleSwitcherUser } from "@/features/auth/components/role-switcher-
 import type { Role } from "@/lib/constants/roles";
 import type { ProgramHeadProgram } from "@/features/auth/services/resolve-program-head-context";
 import { getMobileNavMode } from "@/lib/constants/navigation";
+import { isSidebarCollapsed, SIDEBAR_COLLAPSED_COOKIE } from "@/lib/preferences/sidebar-preference";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -32,7 +34,7 @@ interface AppShellProps {
   programHeadPrograms?: ProgramHeadProgram[];
   initialSelectedProgramId?: string | null;
 }
-export function AppShell({
+export async function AppShell({
   children,
   user,
   roles,
@@ -46,61 +48,61 @@ export function AppShell({
   const activeRoles = activeRole ? [activeRole] : (roles ?? []);
   const mobileNavMode = getMobileNavMode(activeRoles);
   const isDean = activeRole === "DEAN";
+  // Resolved here so the sidebar and the content gutter both start in the
+  // remembered state, instead of snapping after hydration.
+  const cookieStore = await cookies();
+  const sidebarCollapsed = isSidebarCollapsed(cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value);
 
   return (
     <div className="bg-background flex min-h-screen w-full">
-      {/* Desktop Sidebar (hidden on mobile/tablet) */}
-      <Sidebar user={user} roles={activeRoles} activeProgramId={initialSelectedProgramId} />
-      {/* Main Content Area */}
-      <div
-        className={
-          isDean
-            ? "flex min-w-0 flex-1 flex-col md:pl-16 lg:pl-64"
-            : "flex min-w-0 flex-1 flex-col lg:pl-64"
-        }
-      >
-        {/* Top App Bar — includes hamburger trigger for admin/dean/ph/faculty */}
-        <Topbar
-          user={user}
-          mobileNavMode={mobileNavMode}
-          roles={activeRoles}
-          appearanceEnabled={appearanceEnabled}
-          activeProgramId={initialSelectedProgramId}
-        >
-          {demoEnabled && (
-            <div
-              role="status"
-              aria-label="Dedicated demo environment"
-              className="border-border bg-surface text-text-secondary hidden rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide shadow-xs sm:block"
-            >
-              Dedicated demo environment
-            </div>
-          )}
-          <ActiveRoleSwitcher roles={roles ?? []} activeRole={activeRole ?? null} />
-          {programHeadPrograms && (
-            <ProgramHeadSwitcher
-              programs={programHeadPrograms}
-              activeProgramId={initialSelectedProgramId}
+      {/* Desktop sidebar (hidden on mobile/tablet) and the gutter it offsets */}
+      <SidebarShell
+        user={user}
+        roles={activeRoles}
+        activeProgramId={initialSelectedProgramId ?? null}
+        isDean={isDean}
+        defaultCollapsed={sidebarCollapsed}
+        header={
+          <Topbar
+            user={user}
+            mobileNavMode={mobileNavMode}
+            roles={activeRoles}
+            appearanceEnabled={appearanceEnabled}
+            activeProgramId={initialSelectedProgramId}
+          >
+            {demoEnabled && (
+              <div
+                role="status"
+                aria-label="Dedicated demo environment"
+                className="border-border bg-surface text-text-secondary hidden rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide shadow-xs sm:block"
+              >
+                Dedicated demo environment
+              </div>
+            )}
+            <ActiveRoleSwitcher roles={roles ?? []} activeRole={activeRole ?? null} />
+            {programHeadPrograms && (
+              <ProgramHeadSwitcher
+                programs={programHeadPrograms}
+                activeProgramId={initialSelectedProgramId}
+              />
+            )}
+            <DevRoleSwitcher activeEmail={user?.email} />
+            <DemoRoleSwitcher enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
+            <DevRoleSwitcherDesktop activeEmail={user?.email} />
+            <DemoRoleSwitcherDesktop
+              enabled={demoEnabled}
+              activeEmail={user?.email}
+              users={demoUsers}
             />
-          )}
-          <DevRoleSwitcher activeEmail={user?.email} />
-          <DemoRoleSwitcher enabled={demoEnabled} activeEmail={user?.email} users={demoUsers} />
-          <DevRoleSwitcherDesktop activeEmail={user?.email} />
-          <DemoRoleSwitcherDesktop
-            enabled={demoEnabled}
-            activeEmail={user?.email}
-            users={demoUsers}
-          />
-        </Topbar>
-
+          </Topbar>
+        }
+        footer={mobileNavMode === "bottom-nav" ? <MobileNav roles={activeRoles} /> : undefined}
+      >
         {/* Page Content */}
         <main className="mx-auto flex w-full max-w-[1600px] min-w-0 flex-1 flex-col overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-8">
           {children}
         </main>
-
-        {/* Mobile Bottom Navigation — only for Student/Alumni/Industry Partner */}
-        {mobileNavMode === "bottom-nav" && <MobileNav roles={activeRoles} />}
-      </div>
+      </SidebarShell>
     </div>
   );
 }

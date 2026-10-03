@@ -23,9 +23,9 @@ import { gotoStable, screenshotStable, useReducedMotion } from "./support/visual
  * neither submits nor saves a draft.
  */
 test.describe("@visual curated baseline (desktop)", () => {
-  test("public entry: login", async ({ page }) => {
+  test("public entry: student login", async ({ page }) => {
     await useReducedMotion(page);
-    await gotoStable(page, "/login");
+    await gotoStable(page, "/login/student");
     await screenshotStable(page, "public-login.png");
   });
 
@@ -59,9 +59,14 @@ test.describe("@visual curated baseline (desktop)", () => {
 
   test("Faculty roster workspace and Manage roster overlay", async ({ page }) => {
     const fx = fixture();
+    // GESTECH BSIT MORNING is the curated baseline's roster: owned by the demo
+    // Faculty, seeded with one active member, and — unlike GESTECH BSBA
+    // MORNING — never written by any other journey. The baseline therefore
+    // shows the pristine seeded member count instead of whatever the roster
+    // mutation journeys happened to add earlier in the run.
     await useReducedMotion(page);
     await loginAs(page, fx.demoFaculty.email);
-    await gotoStable(page, `/course-rosters/${fx.gestechBsba.id}`);
+    await gotoStable(page, `/course-rosters/${fx.gestechBsit.id}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await screenshotStable(page, "faculty-roster-workspace.png");
 
@@ -70,12 +75,8 @@ test.describe("@visual curated baseline (desktop)", () => {
     const dialog = page.getByRole("dialog", { name: "Manage roster" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("tab", { name: "Add one Student" }).click();
-    await dialog
-      .getByRole("searchbox", { name: "Search students" })
-      .fill(fx.rosterStudents.suggested.name);
-    await dialog
-      .getByRole("button", { name: new RegExp(fx.rosterStudents.suggested.name) })
-      .click();
+    await dialog.getByRole("searchbox", { name: "Search students" }).fill(fx.demoStudent.name);
+    await dialog.getByRole("button", { name: new RegExp(fx.demoStudent.name) }).click();
     await dialog.getByRole("button", { name: "Add Student" }).click();
     await expect(
       dialog.getByText("Student is already an active member of this Course roster.")

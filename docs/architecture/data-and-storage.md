@@ -56,6 +56,11 @@ The rule: preserve existing SQL-backed constraints rather than replacing them wi
 
 Every Prisma-backed application table has exactly one declared access boundary — role-aware RLS, authenticated read-only, server-only, or an approved application-layer authorization exception. The registry is `src/lib/db/table-access-dispositions.ts`, verified deterministically and against live database probes (`pnpm verify:table-dispositions`). Terminology and invariants: `src/features/auth/CONTEXT.md` ("Table access disposition").
 
+The academic calendar tables (`school_years`, `academic_term_instances`) are **server-only** (migration `20261002124800_close_direct_calendar_access.sql`). Their previous role-aware policy authorized any identity holding an assigned `SECRETARY` row, which had no workspace context: it could not honor the active role resolved per session and could not carry the HTTP-only sign-in method gate ([ADR 0031](../adr/0031-prove-the-current-sign-in-method-before-internal-authorization.md)).
+
+- **Breaking for direct clients:** an authenticated Data API client can no longer read or write the calendar. Nothing in the application used that path — Supabase clients are used for Auth only, and all calendar reads and writes go through Prisma.
+- **Unchanged server behavior:** the authorized Secretary calendar path is identical. Prisma connections bypass RLS and privilege checks, and `secretary-school-year-actions.ts` plus the `academic-calendar` lifecycle services re-authorize the session on every call ([ADR 0012](../adr/0012-secretary-controlled-academic-calendar-state.md)). The live suite asserts both halves: direct denial for every probe identity, and continued Prisma writes.
+
 ## Caching policy summary
 
 The full policy is owned by [AGENTS.md → Rendering and Caching](../../AGENTS.md); the data-relevant core:

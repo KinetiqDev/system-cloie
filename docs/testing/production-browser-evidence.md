@@ -7,13 +7,14 @@ This is the repeatable evidence path for issue #193 and the authenticated perfor
 - Run `pnpm build` and `pnpm start`; do not use `pnpm dev` for accepted evidence.
 - Use either disposable real Supabase-authenticated test accounts or the separately reviewed signed demo session in an isolated dedicated demo deployment.
 - The dedicated demo deployment MUST use a production-mode build and a resettable non-Production database or dataset.
-- The primary public Production deployment remains OAuth-only. Demo variables MUST NOT be configured there, and its database MUST NOT be used for demo resets.
+- Primary Production permits Google and external email-password authentication. Demo variables MUST NOT be configured there, and its database MUST NOT be used for demo resets.
 - `cloie_dev_auth` and `POST /api/auth/dev-login` remain development-only and MUST NOT be used after `pnpm build` and `pnpm start`.
 - Signed demo-session evidence measures route rendering, server reads, hydration, navigation, UI, and LCP. It does not measure Google OAuth exchange, callback, or Supabase Auth session-refresh latency.
+- Signed CI and demo sessions do not prove password, verification, recovery, or provider-linking behavior. `pnpm test:auth-integration` separately exercises real local GoTrue and the bundled mail catcher; it does not prove live SMTP delivery or Google provider linking.
 - Keep demo secrets, allowlists, OAuth credentials, database connection secrets, cookies, access tokens, refresh tokens, and private response data outside the repository and outside trace exports.
 - Disable the dedicated demo configuration or destroy the disposable environment after the evidence window.
 
-The application permits one reviewed test-only authentication mechanism for production builds: the signed demo session defined by ADR 0008. It is valid only in a dedicated isolated demo deployment and cannot be enabled on the primary public Production deployment.
+Production-mode builds permit signed demo sessions on a dedicated isolated demo deployment and signed CI test sessions against the verified disposable CI database. Neither mechanism may be enabled on the primary public Production deployment. CI journeys prove application behavior, not live authentication or deployment readiness.
 
 ## Disposable Environment Setup
 
@@ -34,7 +35,7 @@ pnpm start
 PRODUCTION_EVIDENCE_BASE_URL=http://127.0.0.1:3000 pnpm verify:production-auth-boundary
 ```
 
-The check must pass before any authenticated trace is accepted. It verifies that representative protected routes redirect to `/portal/respondents` without a session and that `POST /api/auth/dev-login` remains unavailable outside development. A dedicated demo deployment also runs the demo-boundary check defined by ADR 0008.
+The check must pass before any authenticated trace is accepted. It verifies that representative protected routes redirect to `/` without a session and that `POST /api/auth/dev-login` remains unavailable outside development. A dedicated demo deployment also runs the demo-boundary check defined by ADR 0008.
 
 ## Browser Trace Procedure
 
@@ -55,7 +56,7 @@ Use a fresh browser context for each role. Clear site data or sign out before ch
 6. Inspect the trace's LCP insight and record the selected LCP element and all four breakdown values: TTFB, resource load delay, resource load duration, and element render delay.
 7. Inspect the Network panel and record only relevant request metadata for `document`, `fetch`, and `script` requests: method, same-origin path or redacted origin category, status, transfer size, and duration. Do not include request headers, cookies, authorization values, query values containing identifiers, or response bodies with private data.
 8. For Course Assignments, confirm the first authorized records are present in the initial document/RSC response and that no mount-time read is required. For Faculty Dashboard, identify chart/word-cloud script chunks and whether they are deferred. For Dean Dashboard, record the initial document and relevant data requests without copying response payloads.
-9. Sign out, start a fresh context, and repeat the protected-route no-session check. The response must redirect to `/portal/respondents` and must not contain protected headings, records, or role navigation.
+9. Sign out, start a fresh context, and repeat the protected-route no-session check. The response must redirect to `/` and must not contain protected headings, records, or role navigation.
 
 ## Evidence Record
 

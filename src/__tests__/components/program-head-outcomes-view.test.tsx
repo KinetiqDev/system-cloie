@@ -235,7 +235,7 @@ describe("ProgramHeadOutcomesView", () => {
     );
   });
 
-  it("shows the lollipop chart insight and exact-value alternative", async () => {
+  it("shows the mean bar chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
     expect(await screen.findByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
@@ -251,9 +251,17 @@ describe("ProgramHeadOutcomesView", () => {
     fireEvent.click(go1Summary);
     const go1Detail = go1Summary.closest("details")!;
 
-    // Full-precision mean as an accessible exact-value alternative.
-    expect(within(go1Detail).getByText("Mean Rating (full precision)")).toBeInTheDocument();
-    expect(within(go1Detail).getByText(String(13 / 3))).toBeInTheDocument();
+    // Higher-precision mean as an accessible exact-value alternative, bounded
+    // to four decimals instead of the raw float's sixteen.
+    expect(within(go1Detail).getByText("Mean Rating (higher precision)")).toBeInTheDocument();
+    expect(within(go1Detail).getByText("4.3333")).toBeInTheDocument();
+    expect(within(go1Detail).queryByText(String(13 / 3))).not.toBeInTheDocument();
+    // The two-decimal summary figure above the disclosure stays the default.
+    expect(
+      within(screen.getByRole("table", { name: "Exact values by graduate outcome" })).getByText(
+        "4.33"
+      )
+    ).toBeInTheDocument();
 
     // Scale-resolved distribution with snapshot-derived labels and shares.
     expect(within(go1Detail).getByText("Likert distribution by scale")).toBeInTheDocument();
@@ -291,7 +299,7 @@ describe("ProgramHeadOutcomesView", () => {
 
     const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
     expect(go1Detail).toHaveAttribute("open");
-    expect(within(go1Detail).getByText("Mean Rating (full precision)")).toBeInTheDocument();
+    expect(within(go1Detail).getByText("Mean Rating (higher precision)")).toBeInTheDocument();
     // The selected row carries the highlight; other rows stay closed.
     expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
     // Program-wide row also highlights.
@@ -300,6 +308,26 @@ describe("ProgramHeadOutcomesView", () => {
     });
     const pwRow = within(programWideTable).getByRole("row", { name: /GO-1.*Alumni/ });
     expect(pwRow.className).toContain("bg-primary-soft");
+  });
+
+  it("lists an unrated outcome row in the exact table with an em dash mean", () => {
+    const dto = outcomeDTO();
+    dto.outcomes.push({
+      ...dto.outcomes[0],
+      goId: "go-c",
+      code: "GO-3",
+      name: "Unrated outcome",
+      meanRating: null,
+      ratingCount: 0,
+      submittedResponseCount: 4,
+      excludedRatingCount: 4,
+    });
+    renderView(dto);
+
+    const exactTable = screen.getByRole("table", { name: "Exact values by graduate outcome" });
+    const row = within(exactTable).getByRole("row", { name: /GO-3.*Unrated outcome/ });
+    const [, meanCell] = within(row).getAllByRole("cell");
+    expect(within(meanCell).getByText("—")).toBeInTheDocument();
   });
 
   it("leaves every row closed without a selected GO", () => {

@@ -9,6 +9,7 @@ import {
 } from "@/features/legal/services/legal-acknowledgement-ticket";
 
 const {
+  getClaimsMock,
   exchangeCodeForSessionMock,
   signOutMock,
   resolveAuthSessionMock,
@@ -23,6 +24,7 @@ const {
   upsertUserRoleMock,
   transactionMock,
 } = vi.hoisted(() => ({
+  getClaimsMock: vi.fn(),
   exchangeCodeForSessionMock: vi.fn(),
   signOutMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
@@ -58,6 +60,7 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       exchangeCodeForSession: exchangeCodeForSessionMock,
       signOut: signOutMock,
+      getClaims: getClaimsMock,
     },
   })),
 }));
@@ -106,6 +109,11 @@ describe("auth callback route", () => {
     vi.unstubAllEnvs();
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloie.test");
     vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
+    // The callback proves the exchanged session is Google before any link.
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
+      error: null,
+    });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: "STUDENT",
@@ -151,7 +159,7 @@ describe("auth callback route", () => {
     findUniqueUserMock.mockResolvedValue(null);
 
     const response = await GET(
-      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
     );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
@@ -175,8 +183,8 @@ describe("auth callback route", () => {
   it("rejects a valid intent without an acknowledgement ticket before exchanging OAuth code", async () => {
     const response = await GET(
       callbackRequest(
-        "https://cloie.test/api/auth/callback?code=abc&intent=student",
-        "student",
+        "https://cloie.test/api/auth/callback?code=abc&intent=faculty",
+        "faculty",
         false
       )
     );
@@ -751,7 +759,143 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/status/inactive");
   });
 
-  it("allows multi-role claim when the intent does not match the stored role", async () => {
+  it("allows a self-service Alumni claim on a multi-role account", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "alum@example.com",
+          user_metadata: { name: "Alumni Person" },
+        },
+      },
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: VALID_UUID_1,
+      email: "alum@example.com",
+      name: "Alumni Person",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+    });
+    upsertUserRoleMock.mockResolvedValue({
+      id: "role-2",
+      user_id: "domain-user-1",
+      role: SystemRole.ALUMNI,
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: null,
+      roles: ["FACULTY", "ALUMNI"],
+      profileGate: { status: "COMPLETE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/select-role");
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni")
+    );
+
+    expect(updateUserMock).not.toHaveBeenCalled();
+    expect(updateManyUserMock).not.toHaveBeenCalled();
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(upsertUserRoleMock).toHaveBeenCalledWith({
+      where: { user_id_role: { user_id: "domain-user-1", role: SystemRole.ALUMNI } },
+      update: {},
+      create: { user_id: "domain-user-1", role: SystemRole.ALUMNI },
+    });
+    expect(response.headers.get("location")).toContain("/select-role");
+  });
+
+  it("refuses an exchanged session that is not a proven Google sign-in", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "user@acd.edu.ph",
+          user_metadata: { name: "Attacker" },
+        },
+      },
+    });
+    // A code replayed from another OAuth provider: `amr: oauth` alone is not
+    // Google proof, and this must be refused before any account is linked,
+    // claimed, or created.
+    getClaimsMock.mockResolvedValue({
+      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "github" } } },
+      error: null,
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: null,
+      email: "user@acd.edu.ph",
+      name: "Provisional",
+      is_active: true,
+      roles: [{ role: SystemRole.FACULTY }],
+    });
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
+    );
+
+    expect(signOutMock).toHaveBeenCalled();
+    expect(response.headers.get("location")).toContain("/status/method-mismatch");
+    expect(updateManyUserMock).not.toHaveBeenCalled();
+    expect(createUserMock).not.toHaveBeenCalled();
+    expect(createUserRoleMock).not.toHaveBeenCalled();
+    expect(upsertUserRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves a fresh Faculty claim to the pending gate, never COMPLETE", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "user@acd.edu.ph",
+          user_metadata: { name: "Faculty Person" },
+        },
+      },
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: VALID_UUID_1,
+      email: "user@acd.edu.ph",
+      name: "Faculty Person",
+      is_active: true,
+      roles: [{ role: SystemRole.STUDENT }],
+    });
+    upsertUserRoleMock.mockResolvedValue({
+      id: "role-2",
+      user_id: "domain-user-1",
+      role: SystemRole.FACULTY,
+    });
+    // The stored review state travels with the account: a pending request
+    // must survive the claimed-role snapshot rebuild.
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: null,
+      roles: ["STUDENT", "FACULTY"],
+      studentProfileId: "student-profile-1",
+      alumniProfileId: null,
+      industryPartnerProfileId: null,
+      facultyApprovalStatus: "PENDING",
+      authMethod: "google",
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
+    );
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      })
+    );
+    expect(response.headers.get("location")).toContain("/status/faculty-pending");
+  });
+
+  it("refuses a Student self-claim on an already-linked multi-role account", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -770,31 +914,18 @@ describe("auth callback route", () => {
       is_active: true,
       roles: [{ role: SystemRole.FACULTY }],
     });
-    upsertUserRoleMock.mockResolvedValue({
-      id: "role-2",
-      user_id: "domain-user-1",
-      role: SystemRole.STUDENT,
-    });
-    resolveAuthSessionFromUserMock.mockResolvedValue({
-      activeRole: null,
-      roles: ["FACULTY", "STUDENT"],
-      profileGate: { status: "COMPLETE" },
-    });
-    resolvePostLoginDestinationMock.mockReturnValue("/select-role");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
     );
 
-    expect(updateUserMock).not.toHaveBeenCalled();
+    // Student provisioning is Secretary-only: no role is created, no name is
+    // replaced, and the session is terminated with guidance.
+    expect(upsertUserRoleMock).not.toHaveBeenCalled();
+    expect(createUserRoleMock).not.toHaveBeenCalled();
     expect(updateManyUserMock).not.toHaveBeenCalled();
-    expect(signOutMock).not.toHaveBeenCalled();
-    expect(upsertUserRoleMock).toHaveBeenCalledWith({
-      where: { user_id_role: { user_id: "domain-user-1", role: SystemRole.STUDENT } },
-      update: {},
-      create: { user_id: "domain-user-1", role: SystemRole.STUDENT },
-    });
-    expect(response.headers.get("location")).toContain("/select-role");
+    expect(signOutMock).toHaveBeenCalled();
+    expect(response.headers.get("location")).toContain("/status/unprovisioned-student");
   });
 
   it("denies role mismatch on first link before mutation", async () => {
@@ -826,6 +957,55 @@ describe("auth callback route", () => {
     expect(updateManyUserMock).not.toHaveBeenCalled();
     expect(signOutMock).toHaveBeenCalledTimes(1);
     expect(response.headers.get("location")).toContain("/status/role-mismatch");
+  });
+
+  it("registers a new Industry Partner Google holder into its onboarding, not back to registration", async () => {
+    // Regression: /register/external used to bind the role-less `external`
+    // intent, so a new Google holder was signed out and sent back to the page
+    // they came from. The page now binds the chosen role intent, so a new
+    // Google holder claims that role and enters its onboarding.
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "partner@example.com",
+          user_metadata: { name: "Partner Person" },
+        },
+      },
+    });
+    findUniqueUserMock.mockResolvedValue(null);
+    createUserMock.mockResolvedValue({
+      id: "new-user-id",
+      auth_user_id: VALID_UUID_1,
+      email: "partner@example.com",
+      name: "Partner Person",
+      roles: [{ role: SystemRole.INDUSTRY_PARTNER }],
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: "INDUSTRY_PARTNER",
+      roles: ["INDUSTRY_PARTNER"],
+      profileGate: { status: "INDUSTRY_PARTNER_ONBOARDING_REQUIRED", intent: "industry-partner" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=industry-partner");
+
+    const response = await GET(
+      callbackRequest(
+        "https://cloie.test/api/auth/callback?code=abc&intent=industry-partner",
+        "industry-partner"
+      )
+    );
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(createUserMock).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        roles: { create: { role: SystemRole.INDUSTRY_PARTNER } },
+      }),
+      include: { roles: true },
+    });
+    expect(response.headers.get("location")).toBe(
+      "https://cloie.test/onboarding?intent=industry-partner"
+    );
   });
 
   it("uses resolvePostLoginDestination for successful redirects", async () => {
@@ -866,10 +1046,6 @@ describe("auth callback route", () => {
       intent: "faculty",
       activeRole: "FACULTY",
       profileGate: { status: "COMPLETE" },
-    });
-    expect(resolveAuthSessionFromUserMock).toHaveBeenCalledWith({
-      id: VALID_UUID_1,
-      email: "user@acd.edu.ph",
     });
     expect(resolveAuthSessionMock).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toContain("/faculty/dashboard");
@@ -998,7 +1174,7 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/faculty/dashboard");
   });
 
-  it("assigns role to roleless existing user when they log in with a valid self-service intent", async () => {
+  it("assigns a self-service Faculty role to a roleless existing user", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -1020,26 +1196,26 @@ describe("auth callback route", () => {
     createUserRoleMock.mockResolvedValue({
       id: "role-1",
       user_id: "domain-user-1",
-      role: SystemRole.STUDENT,
+      role: SystemRole.FACULTY,
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
-      activeRole: "STUDENT",
-      roles: ["STUDENT"],
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
+      activeRole: "FACULTY",
+      roles: ["FACULTY"],
+      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
+    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
 
     const response = await GET(
-      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
     );
 
     expect(createUserRoleMock).toHaveBeenCalledWith({
       data: {
         user_id: "domain-user-1",
-        role: SystemRole.STUDENT,
+        role: SystemRole.FACULTY,
       },
     });
-    expect(response.headers.get("location")).toBe("https://cloie.test/onboarding?intent=student");
+    expect(response.headers.get("location")).toBe("https://cloie.test/status/faculty-pending");
   });
 
   it("blocks roleless existing user claiming a pre-provisioned role", async () => {
@@ -1091,7 +1267,7 @@ describe("auth callback route", () => {
     });
 
     const response = await GET(
-      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
     );
 
     expect(signOutMock).toHaveBeenCalledTimes(1);
@@ -1121,7 +1297,7 @@ describe("auth callback route", () => {
     });
 
     const response = await GET(
-      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
     );
 
     expect(updateUserMock).not.toHaveBeenCalled();
@@ -1168,7 +1344,7 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");
   });
 
-  it("atomically links and assigns a role for an allowed unlinked roleless self-service claim", async () => {
+  it("atomically links and assigns a role for an allowed unlinked roleless Faculty claim", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -1193,7 +1369,7 @@ describe("auth callback route", () => {
     createUserRoleMock.mockResolvedValue({
       id: "role-1",
       user_id: "domain-user-roleless",
-      role: SystemRole.STUDENT,
+      role: SystemRole.FACULTY,
     });
     findUniqueUserMock.mockResolvedValueOnce({
       // re-fetch inside transaction after claim + role
@@ -1202,17 +1378,17 @@ describe("auth callback route", () => {
       auth_user_id: VALID_UUID_1,
       is_active: true,
       name: "Google Roleless",
-      roles: [{ role: SystemRole.STUDENT }],
+      roles: [{ role: SystemRole.FACULTY }],
     });
     resolveAuthSessionFromUserMock.mockResolvedValue({
-      activeRole: "STUDENT",
-      roles: ["STUDENT"],
-      profileGate: { status: "STUDENT_ONBOARDING_REQUIRED", intent: "student" },
+      activeRole: "FACULTY",
+      roles: ["FACULTY"],
+      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
+    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
 
     const response = await GET(
-      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=student", "student")
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
     );
 
     expect(transactionMock).toHaveBeenCalledTimes(1);
@@ -1226,11 +1402,11 @@ describe("auth callback route", () => {
     expect(createUserRoleMock).toHaveBeenCalledWith({
       data: {
         user_id: "domain-user-roleless",
-        role: SystemRole.STUDENT,
+        role: SystemRole.FACULTY,
       },
     });
     expect(updateUserMock).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toBe("https://cloie.test/onboarding?intent=student");
+    expect(response.headers.get("location")).toBe("https://cloie.test/status/faculty-pending");
   });
 
   describe("Bootstrap Secretary Path", () => {
@@ -1450,6 +1626,76 @@ describe("auth callback route", () => {
 
       expect(signOutMock).toHaveBeenCalled();
       expect(response.headers.get("location")).toContain("/status/pre-provisioning-required");
+    });
+  });
+
+  describe("role-less entry intents", () => {
+    function entryExchange(email: string) {
+      exchangeCodeForSessionMock.mockResolvedValue({
+        error: null,
+        data: {
+          user: {
+            id: VALID_UUID_1,
+            email,
+            user_metadata: { name: "Entry User" },
+          },
+        },
+      });
+    }
+
+    it("sends unmatched staff entrants to provisioning guidance without creating anything", async () => {
+      entryExchange("new-staff@acd.edu.ph");
+      findUniqueUserMock.mockResolvedValue(null);
+
+      const response = await GET(
+        callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=staff", "staff")
+      );
+
+      expect(signOutMock).toHaveBeenCalledTimes(1);
+      expect(createUserMock).not.toHaveBeenCalled();
+      expect(createUserRoleMock).not.toHaveBeenCalled();
+      expect(response.headers.get("location")).toBe(
+        "https://cloie.test/status/pre-provisioning-required"
+      );
+    });
+
+    it("sends unmatched external entrants to external registration without creating anything", async () => {
+      entryExchange("new-partner@example.com");
+      findUniqueUserMock.mockResolvedValue(null);
+
+      const response = await GET(
+        callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=external", "external")
+      );
+
+      expect(signOutMock).toHaveBeenCalledTimes(1);
+      expect(createUserMock).not.toHaveBeenCalled();
+      expect(createUserRoleMock).not.toHaveBeenCalled();
+      expect(response.headers.get("location")).toBe("https://cloie.test/register/external");
+    });
+
+    it("resolves linked multi-role accounts through the session without claiming a role", async () => {
+      entryExchange("linked-staff@acd.edu.ph");
+      findUniqueUserMock.mockResolvedValue({
+        id: "linked-user-id",
+        email: "linked-staff@acd.edu.ph",
+        auth_user_id: VALID_UUID_1,
+        is_active: true,
+        name: "Linked Staff",
+        roles: [{ role: SystemRole.FACULTY }, { role: SystemRole.PROGRAM_HEAD }],
+      });
+      resolveAuthSessionFromUserMock.mockResolvedValue({
+        userId: "linked-user-id",
+        activeRole: "FACULTY",
+        roles: ["FACULTY", "PROGRAM_HEAD"],
+        profileGate: { status: "COMPLETE" },
+      });
+
+      const response = await GET(
+        callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=staff", "staff")
+      );
+
+      expect(signOutMock).not.toHaveBeenCalled();
+      expect(response.headers.get("location")).toBe("https://cloie.test/select-role");
     });
   });
 });

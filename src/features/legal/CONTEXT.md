@@ -5,7 +5,7 @@ Legal defines the privacy notice and terms of use content versioning for System 
 ## Documents and versions
 
 **Legal document kind**:
-Either `privacy` (System CLOIE Privacy Notice) or `terms` (System CLOIE Terms of Use). Each kind pins its current version from `LEGAL_VERSIONS` (currently `1.0` for both) and carries approval status, effective date, and last-updated metadata on the document.
+Either `privacy` (System CLOIE Privacy Notice) or `terms` (System CLOIE Terms of Use). Each kind pins its current version from `LEGAL_VERSIONS` (currently `1.1` for both) and carries approval status, effective date, and last-updated metadata on the document.
 _Avoid_: Policy page, terms doc
 
 **Pending institutional approval**:
@@ -19,7 +19,7 @@ An HMAC-SHA256-signed base64url token whose payload binds the chosen role intent
 _Avoid_: Consent token, OAuth state parameter
 
 **Acknowledgement cookie**:
-The `cloie_legal_ack` cookie that carries the acknowledgement ticket from the acknowledgement route to the OAuth callback. It is httpOnly with `sameSite: lax`, scoped to `/api/auth`, and cleared (maxAge zero) once the callback finishes with it.
+The `cloie_legal_ack` cookie that carries the acknowledgement ticket from the acknowledgement route to the OAuth callback and to page-URL Server Actions. It is httpOnly with `sameSite: lax`, scoped to `/`, and cleared (maxAge zero) once the callback finishes with it.
 _Avoid_: Persistent login cookie, session cookie
 
 ## Privacy disclosure

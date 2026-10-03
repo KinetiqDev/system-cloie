@@ -66,7 +66,7 @@ export default async function SelectRolePage() {
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   if (session.roles.length <= 1) {

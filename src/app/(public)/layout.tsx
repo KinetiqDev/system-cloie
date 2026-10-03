@@ -17,7 +17,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           className="hover:bg-muted hover:text-foreground"
         />
       </div>
-      <main className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
+      <main className="entry-controls flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
         <Suspense fallback={<PublicRouteLoading variant="status" />}>{children}</Suspense>
       </main>
     </div>

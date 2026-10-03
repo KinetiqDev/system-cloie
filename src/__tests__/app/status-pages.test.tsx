@@ -24,8 +24,12 @@ describe("StatusPage", () => {
     render(page);
 
     expect(screen.getByText("Institutional Email Required")).toBeInTheDocument();
-    expect(screen.getByText(/requires signing in with an official ACD institutional email address/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/requires signing in with an official ACD institutional email address/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i })
+    ).toBeInTheDocument();
 
     const form = screen.getByRole("button", { name: /sign out of account/i }).closest("form");
     expect(form).not.toBeNull();
@@ -41,7 +45,11 @@ describe("StatusPage", () => {
     render(page);
 
     expect(screen.getByText("Institutional Email Required")).toBeInTheDocument();
-    expect(screen.getByText(/the PROGRAM HEAD role requires signing in with an official ACD institutional email/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /the PROGRAM HEAD role requires signing in with an official ACD institutional email/i
+      )
+    ).toBeInTheDocument();
   });
 
   it("renders pre-provisioning-required status page", async () => {
@@ -52,8 +60,12 @@ describe("StatusPage", () => {
     render(page);
 
     expect(screen.getByText("Account Provisioning Required")).toBeInTheDocument();
-    expect(screen.getByText(/your account is not yet provisioned for this role/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/your account is not yet provisioned for this role/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i })
+    ).toBeInTheDocument();
   });
 
   it("renders role-mismatch status page", async () => {
@@ -65,7 +77,9 @@ describe("StatusPage", () => {
 
     expect(screen.getByText("Role Mismatch")).toBeInTheDocument();
     expect(screen.getByText(/does not match your registered account role/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i })
+    ).toBeInTheDocument();
   });
 
   it("renders inactive status page without a retry button", async () => {
@@ -76,7 +90,9 @@ describe("StatusPage", () => {
     render(page);
 
     expect(screen.getByText("Account Inactive")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /back to role selection/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /back to system cloie entrances/i })
+    ).not.toBeInTheDocument();
   });
 
   it("renders rejected status page", async () => {
@@ -110,13 +126,15 @@ describe("StatusPage", () => {
 
     expect(screen.getByText("Google Account Name Required")).toBeInTheDocument();
     expect(
-      screen.getByText(/does not provide a usable display name for CLOIE/i)
+      screen.getByText(/does not provide a usable display name for System CLOIE/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/set a full name/i)).toBeInTheDocument();
     expect(screen.getByText(/no account was created or linked/i)).toBeInTheDocument();
     expect(screen.queryByText(/auth_user_id/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/user_metadata/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i })
+    ).toBeInTheDocument();
   });
 
   it("renders identity-conflict status without disclosing internal identifiers", async () => {
@@ -127,11 +145,15 @@ describe("StatusPage", () => {
     render(page);
 
     expect(screen.getByText("Sign-In Could Not Be Completed")).toBeInTheDocument();
-    expect(screen.getByText(/cannot be connected to the matching CLOIE account/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cannot be connected to the matching System CLOIE account/i)
+    ).toBeInTheDocument();
     expect(screen.getByText(/left unchanged/i)).toBeInTheDocument();
     expect(screen.queryByText(/auth_user_id/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/00000000-0000-0000-0000/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /back to role selection/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i })
+    ).toBeInTheDocument();
   });
 
   it("routes missing or invalid status types to notFound", async () => {
@@ -141,5 +163,17 @@ describe("StatusPage", () => {
         searchParams: Promise.resolve({}),
       })
     ).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("routes the retry button to the System CLOIE landing, never the retired portal", async () => {
+    const page = await StatusPage({
+      params: Promise.resolve({ type: "role-mismatch" }),
+      searchParams: Promise.resolve({}),
+    });
+    render(page);
+
+    expect(
+      screen.getByRole("link", { name: /back to system cloie entrances/i }).getAttribute("href")
+    ).toBe("/");
   });
 });

@@ -19,14 +19,24 @@ describe("legal acknowledgement ticket", () => {
     if (result.valid) {
       expect(result.payload).toEqual({
         intent: "industry-partner",
-        privacyVersion: "1.0",
-        termsVersion: "1.0",
+        privacyVersion: "1.1",
+        termsVersion: "1.1",
         issuedAt: 1000,
         expiresAt: 1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
       });
     }
   });
 
+  it("signs and verifies role-less staff and external entry tickets", () => {
+    const staffTicket = createLegalAcknowledgementTicket("staff", 1000);
+    expect(verifyLegalAcknowledgementTicket(staffTicket, "staff", 1001).valid).toBe(true);
+    expect(verifyLegalAcknowledgementTicket(staffTicket, "external", 1001).valid).toBe(false);
+    expect(verifyLegalAcknowledgementTicket(staffTicket, "faculty", 1001).valid).toBe(false);
+
+    const externalTicket = createLegalAcknowledgementTicket("external", 1000);
+    expect(verifyLegalAcknowledgementTicket(externalTicket, "external", 1001).valid).toBe(true);
+    expect(verifyLegalAcknowledgementTicket(externalTicket, "staff", 1001).valid).toBe(false);
+  });
   it("rejects malformed, tampered, expired, and mismatched tickets", () => {
     const ticket = createLegalAcknowledgementTicket("student", 1000);
     expect(verifyLegalAcknowledgementTicket(null, "student", 1001).valid).toBe(false);
@@ -85,8 +95,7 @@ describe("legal acknowledgement ticket", () => {
     const lastCharacter = signature!.at(-1)!;
     const lastIndex = alphabet.indexOf(lastCharacter);
     const nonCanonicalLastIndex = (lastIndex & 0b111100) | 1;
-    const nonCanonicalSignature =
-      signature!.slice(0, -1) + alphabet[nonCanonicalLastIndex];
+    const nonCanonicalSignature = signature!.slice(0, -1) + alphabet[nonCanonicalLastIndex];
 
     expect(nonCanonicalSignature).not.toBe(signature);
     expect(
@@ -95,8 +104,7 @@ describe("legal acknowledgement ticket", () => {
 
     const payloadLastCharacter = payload!.at(-1)!;
     const payloadLastIndex = alphabet.indexOf(payloadLastCharacter);
-    const nonCanonicalPayload =
-      payload!.slice(0, -1) + alphabet[(payloadLastIndex & 0b111100) | 1];
+    const nonCanonicalPayload = payload!.slice(0, -1) + alphabet[(payloadLastIndex & 0b111100) | 1];
     expect(nonCanonicalPayload).not.toBe(payload);
     expect(
       verifyLegalAcknowledgementTicket(`${nonCanonicalPayload}.${signature}`, "student", 1001)

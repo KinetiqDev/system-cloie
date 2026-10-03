@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 function getAuthLoginEndpoint(): string {
@@ -31,6 +31,26 @@ export async function waitForStableState(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const root = document.documentElement;
     return Array.from(root.attributes).every((attribute) => !attribute.name.startsWith("aria-"));
+  });
+}
+
+/**
+ * Waits until `locator`'s subtree has no running or pending CSS animation.
+ *
+ * `getBoundingClientRect()` reports the *transformed* box, so an option row
+ * measured while its popup's entrance animation is still running comes back
+ * scaled down (`zoom-in-95` renders the popup at 0.95). The control was never
+ * undersized — the sample raced the animation. Waiting for the animation to
+ * settle measures the real layout box, which keeps touch-target thresholds
+ * meaningful instead of hiding them.
+ */
+export async function waitForAnimationsToSettle(locator: Locator): Promise<void> {
+  await locator.evaluate(async (element) => {
+    await Promise.all(
+      element
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished.catch(() => undefined))
+    );
   });
 }
 

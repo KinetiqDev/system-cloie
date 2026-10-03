@@ -41,6 +41,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: {
       getUser: getUserMock,
+      // A real Google session carries amr oauth plus the recorded provider.
+      getClaims: async () => ({
+        data: {
+          claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } },
+        },
+        error: null,
+      }),
     },
   })),
 }));
@@ -134,11 +141,13 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
 
-  it("returns onboarding-required state for an authenticated student without a profile", async () => {
+  it("returns placement-required state for an authenticated student without a profile", async () => {
     const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
     getUserMock.mockResolvedValue({
       data: { user: { id: "user-2", email: "student@acd.edu.ph" } },
@@ -154,15 +163,17 @@ describe("resolveAuthSession", () => {
       email: "student@acd.edu.ph",
       name: null,
       roles: [ROLES.STUDENT],
-      activeRole: ROLES.STUDENT,
+      // Placement is institution-recorded, so the gate denies the role itself.
+      activeRole: null,
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: {
-        status: "STUDENT_ONBOARDING_REQUIRED",
-        intent: "student",
+        status: "STUDENT_PLACEMENT_REQUIRED",
       },
     });
   });
@@ -189,6 +200,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });
@@ -210,11 +223,13 @@ describe("resolveAuthSession", () => {
       alumniProfileId: "alumni-profile",
       alumniVerificationStatus: "PENDING",
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });
 
-  it("requires onboarding for mixed faculty and student users when the faculty affiliation is missing", async () => {
+  it("requires deliberate selection for a multi-role account instead of adopting the first role", async () => {
     const { resolveAuthSession } = await import("@/features/auth/services/resolve-auth-session");
     getUserMock.mockResolvedValue({
       data: { user: { id: "user-4", email: "faculty@acd.edu.ph" } },
@@ -231,16 +246,15 @@ describe("resolveAuthSession", () => {
       email: "faculty@acd.edu.ph",
       name: null,
       roles: [ROLES.FACULTY, ROLES.STUDENT],
-      activeRole: ROLES.FACULTY,
+      activeRole: null,
       studentProfileId: null,
       alumniProfileId: null,
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
-      profileGate: {
-        status: "FACULTY_ONBOARDING_REQUIRED",
-        intent: "faculty",
-      },
+      facultyApprovalStatus: null,
+      authMethod: "google",
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
 
@@ -266,6 +280,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
   });
@@ -293,6 +309,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: {
         status: "FACULTY_ONBOARDING_REQUIRED",
         intent: "faculty",
@@ -325,6 +343,8 @@ describe("resolveAuthSession", () => {
       industryPartnerProfileId: null,
       alumniVerificationStatus: null,
       industryPartnerVerificationStatus: null,
+      facultyApprovalStatus: null,
+      authMethod: "google",
       profileGate: { status: "COMPLETE" },
     });
   });

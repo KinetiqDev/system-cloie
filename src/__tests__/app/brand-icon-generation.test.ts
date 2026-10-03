@@ -58,8 +58,8 @@ describe("brand icon generation", () => {
     const icon = readFileSync(join(root, "src/app/icon.svg"), "utf8");
     const placement = icon.match(/<svg x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/);
     expect(placement).not.toBeNull();
-    expect(Number(placement![1])).toBeCloseTo(72.128);
-    expect(placement!.slice(2)).toEqual(["48", "367.744", "416"]);
+    expect(Number(placement![1])).toBeCloseTo(79.2);
+    expect(placement!.slice(2)).toEqual(["56", "353.6", "400"]);
     expect(icon).not.toContain("height='500'");
     expect(readFileSync(join(root, "public/logos/cloie-logo.svg"), "utf8")).toBe(source);
   });

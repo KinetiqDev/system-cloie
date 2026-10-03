@@ -1,8 +1,11 @@
-import { Book, Mail, ShieldCheck, User } from "lucide-react";
+import { Book } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import {
+  ProfileDataPrivacyNotice,
+  ProfilePersonalInfoCard,
+} from "@/features/users/components/profile-cards";
 import { prisma } from "@/lib/db/prisma";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -12,7 +15,7 @@ export default async function AlumniProfilePage() {
   const session = await resolveAuthSession();
 
   if (!session) {
-    redirect("/portal/respondents");
+    redirect("/");
   }
 
   const user = await prisma.user.findUnique({
@@ -47,40 +50,12 @@ export default async function AlumniProfilePage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Personal Information */}
-        <Card className="border-border shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-            <div className="bg-primary-soft text-selected-fg rounded-lg p-2">
-              <User className="size-5" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-bold">Personal Information</CardTitle>
-              <CardDescription>Basic account details</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Full Name
-              </label>
-              <p className="text-sm font-semibold">{fullName}</p>
-            </div>
-            <div className="space-y-1">
-              <label className="text-text-muted text-label-sm font-black tracking-widest uppercase">
-                Email Address
-              </label>
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Mail className="text-text-muted size-4" />
-                {user?.email ?? "No email available"}
-              </div>
-            </div>
-            <div className="pt-2">
-              <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-bold">
-                Role: Alumni
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfilePersonalInfoCard
+          fullName={fullName}
+          email={user?.email}
+          role="Alumni"
+          labelClassName="text-text-muted text-label-sm font-black tracking-widest uppercase"
+        />
 
         {/* Program Context */}
         <Card className="border-border shadow-sm">
@@ -114,25 +89,7 @@ export default async function AlumniProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Data Privacy Notice */}
-        <Card className="border-border border-l-primary border-l-4 shadow-sm md:col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="bg-primary-soft text-selected-fg shrink-0 rounded-lg p-2">
-                <ShieldCheck className="size-5" />
-              </div>
-              <div className="space-y-2">
-                <h2 className="text-text-primary font-bold">Data Privacy & Responses</h2>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  Your evaluation responses are handled confidentially. Authorized Program Heads may
-                  review submitted responses for quality assurance and accreditation purposes. Once
-                  an evaluation is finalized and submitted, it cannot be modified to protect the
-                  integrity of results.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ProfileDataPrivacyNotice />
       </div>
     </div>
   );

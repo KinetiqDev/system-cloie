@@ -1,6 +1,10 @@
 import type { Database } from "@/types/supabase-database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+
+/** Server-side Supabase client bound to the request's Auth cookies. */
+export type SupabaseServerClient = SupabaseClient<Database>;
 
 export async function createClient() {
   const cookieStore = await cookies();

@@ -25,21 +25,12 @@ vi.mock("next/headers", () => ({
 import { POST } from "@/app/api/auth/logout/route";
 
 describe("auth logout route", () => {
-  let originalSiteUrl: string | undefined;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.NEXT_PUBLIC_SITE_URL;
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", undefined);
   });
 
-  afterEach(() => {
-    if (originalSiteUrl === undefined) {
-      delete process.env.NEXT_PUBLIC_SITE_URL;
-    } else {
-      process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
-    }
-  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("redirects to the public NEXT_PUBLIC_SITE_URL when set", async () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://cloie.example.com";
@@ -49,7 +40,7 @@ describe("auth logout route", () => {
     );
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://cloie.example.com/portal/respondents");
+    expect(response.headers.get("location")).toBe("https://cloie.example.com/");
     expect(signOutMock).toHaveBeenCalled();
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_dev_auth");
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_demo_auth");
@@ -61,6 +52,6 @@ describe("auth logout route", () => {
     );
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe("https://request.example.com/portal/respondents");
+    expect(response.headers.get("location")).toBe("https://request.example.com/");
   });
 });

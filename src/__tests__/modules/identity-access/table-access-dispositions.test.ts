@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { prisma } from "@/lib/db/prisma";
@@ -38,9 +37,12 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       DispositionEntry,
       { kind: "role-aware-rls" } | { kind: "authenticated-read" }
     >;
-    const roleAwareTables = Object.entries(TABLE_ACCESS_DISPOSITIONS).filter(
+    // `role-aware-rls` is compared through the declared vocabulary rather than
+    // the registry's narrowed literal types, so a future role-aware table is
+    // still caught by the "no live probe runner" guard below.
+    const evidenceTables = Object.entries(TABLE_ACCESS_DISPOSITIONS).filter(
       (entry): entry is [string, EvidenceBearingDisposition] =>
-        entry[1].kind === "role-aware-rls" || entry[1].kind === "authenticated-read"
+        entry[1].kind === "authenticated-read" || (entry[1].kind as string) === "role-aware-rls"
     );
     const serverOnlyTables = Object.entries(TABLE_ACCESS_DISPOSITIONS).filter(
       ([, disposition]) => disposition.kind === "server-only"
@@ -156,107 +158,6 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
     }
 
     /**
-     * Write probe shape: create a fixture row (as the probed identity when it
-     * is a writer, otherwise as SECRETARY), then attempt an UPDATE of that row
-     * as the probed identity. RLS denial surfaces as 0 affected rows (UPDATE
-     * USING hides the row) or error 42501 (INSERT WITH CHECK).
-     */
-    const CALENDAR_WRITERS: Record<RlsProbeIdentity, boolean> = {
-      SECRETARY: true,
-      PROGRAM_HEAD_BSIT: false,
-      FACULTY: false,
-    };
-
-    async function probeCalendarTable(
-      table: "school_years" | "academic_term_instances",
-      identity: RlsProbeIdentity
-    ): Promise<LiveProbeResult> {
-      const authUid = RLS_AUTH_UUIDS[identity];
-      const code = `RLS-PROBE-${crypto.randomUUID()}`;
-
-      const parent = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "school_years" ORDER BY "created_at" ASC LIMIT 1`;
-      expect(parent[0], "seeded school year required for term instance fixture").toBeTruthy();
-
-      const createRow = (asUid: string): Promise<string> =>
-        runRlsProbe(asUid, async (tx) => {
-          const rows =
-            table === "school_years"
-              ? await tx.$queryRawUnsafe<{ id: string }[]>(
-                  `INSERT INTO "school_years" ("code", "updated_at") VALUES ($1, now()) RETURNING "id"`,
-                  code
-                )
-              : await tx.$queryRawUnsafe<{ id: string }[]>(
-                  `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "term", "updated_at") VALUES ($1::uuid, 'SUMMER', 'FIRST_TERM', now()) RETURNING "id"`,
-                  parent[0].id
-                );
-          return rows[0].id;
-        });
-
-      const select = await probeSelect(table, authUid);
-
-      let fixtureId: string;
-      try {
-        fixtureId = CALENDAR_WRITERS[identity]
-          ? await createRow(authUid)
-          : await createRow(RLS_AUTH_UUIDS.SECRETARY);
-      } catch (error) {
-        if (!isPermissionDenied(error)) throw error;
-        return { select, write: false };
-      }
-
-      const updateSql = `UPDATE "${table}" SET "end_date" = now() WHERE "id" = $1::uuid`;
-      let write = false;
-      try {
-        if (CALENDAR_WRITERS[identity]) {
-          write = await probeUpdateOutcome(authUid, updateSql, fixtureId);
-        } else {
-          // Denied identities: every write command must fail — UPDATE/DELETE
-          // affect zero rows (USING hides the row), INSERT throws 42501.
-          const updateDenied = !(await probeUpdateOutcome(authUid, updateSql, fixtureId));
-          let insertDenied: boolean;
-          let preparedParentId: string | null = null;
-          try {
-            if (table === "academic_term_instances") {
-              // Fresh parent school year so the denied INSERT targets a unique
-              // (school_year_id, semester, term) combination.
-              preparedParentId = await runRlsProbe(RLS_AUTH_UUIDS.SECRETARY, async (tx) => {
-                const rows = await tx.$queryRawUnsafe<{ id: string }[]>(
-                  `INSERT INTO "school_years" ("code", "updated_at") VALUES ($1, now()) RETURNING "id"`,
-                  `RLS-PROBE-${crypto.randomUUID()}`
-                );
-                return rows[0].id;
-              });
-              insertDenied = await probeInsertDenied(
-                authUid,
-                `INSERT INTO "academic_term_instances" ("school_year_id", "semester", "term", "updated_at") VALUES ($1::uuid, 'SUMMER', 'FIRST_TERM', now())`,
-                preparedParentId
-              );
-            } else {
-              insertDenied = await probeInsertDenied(
-                authUid,
-                `INSERT INTO "school_years" ("code", "updated_at") VALUES ($1, now())`,
-                `RLS-PROBE-${crypto.randomUUID()}`
-              );
-            }
-          } finally {
-            if (preparedParentId !== null) {
-              await prisma.$executeRawUnsafe(
-                `DELETE FROM "school_years" WHERE "id" = $1::uuid`,
-                preparedParentId
-              );
-            }
-          }
-          const deleteDenied = await probeDeleteDenied(authUid, table, fixtureId);
-          write = !(updateDenied && insertDenied && deleteDenied);
-        }
-      } finally {
-        await prisma.$executeRawUnsafe(`DELETE FROM "${table}" WHERE "id" = $1::uuid`, fixtureId);
-      }
-      return { select, write };
-    }
-
-    /**
      * Authenticated-read tables: every authenticated identity may SELECT every
      * row (read policy USING true), while every write command is denied —
      * UPDATE/DELETE affect zero rows because no policies exist, INSERT throws
@@ -294,8 +195,6 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         string,
         (identity: RlsProbeIdentity) => Promise<LiveProbeResult>
       > = {
-        school_years: probeCalendarTable.bind(null, "school_years"),
-        academic_term_instances: probeCalendarTable.bind(null, "academic_term_instances"),
         users: probeAuthenticatedReadTable.bind(null, "users", "name"),
         user_roles: probeAuthenticatedReadTable.bind(null, "user_roles", "role"),
         program_head_assignments: probeAuthenticatedReadTable.bind(
@@ -305,7 +204,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         ),
       };
 
-      for (const [table, disposition] of roleAwareTables) {
+      for (const [table, disposition] of evidenceTables) {
         describe(`table ${table}`, () => {
           it("has a live probe runner backing its evidence", () => {
             expect(
@@ -346,6 +245,61 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
           it("denies authenticated INSERT", () => expectAuthenticatedInsertDenied(table));
         });
       }
+    });
+
+    describe("faculty access requests stay server-only for every identity", () => {
+      // The pending-approval state is a private account/administration
+      // record. A multi-role holder, a deactivated account, and a student must
+      // all be refused exactly like any other authenticated identity, so no
+      // policy, claim, or role can widen it.
+      it("is classified server-only in the registry", () => {
+        expect(TABLE_ACCESS_DISPOSITIONS.faculty_access_requests).toEqual({ kind: "server-only" });
+      });
+
+      it.each(["SECRETARY", "PROGRAM_HEAD_BSIT", "FACULTY"] as const)(
+        "denies SELECT and INSERT to the %s probe identity",
+        async (identity) => {
+          const authUid = RLS_AUTH_UUIDS[identity];
+          await expect(
+            runRlsProbe(authUid, (tx) =>
+              tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+            )
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+          await expect(
+            runRlsProbe(authUid, (tx) =>
+              tx.$executeRawUnsafe(`INSERT INTO "faculty_access_requests" DEFAULT VALUES`)
+            )
+          ).rejects.toMatchObject({ meta: { code: "42501" } });
+        }
+      );
+
+      it("denies SELECT to a deactivated account's identity", async () => {
+        // The seeded inactive fixture exists to prove account-state gates; the
+        // request table must not become readable through it either.
+        const inactive = await prisma.user.findFirst({
+          where: { is_active: false },
+          select: { id: true, email: true },
+        });
+        expect(inactive, "seeded deactivated fixture required").toBeTruthy();
+        const linked = await prisma.user.findFirst({
+          where: { auth_user_id: { not: null } },
+          select: { auth_user_id: true },
+        });
+        expect(linked?.auth_user_id).toBeTruthy();
+        await expect(
+          runRlsProbe(linked!.auth_user_id as string, (tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+          )
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      });
+
+      it("denies anon access to the request table", async () => {
+        await expect(
+          runAnonProbe((tx) =>
+            tx.$executeRawUnsafe(`SELECT count(*) FROM "faculty_access_requests"`)
+          )
+        ).rejects.toMatchObject({ meta: { code: "42501" } });
+      });
     });
 
     describe("server-only tables deny anon and authenticated directly", () => {

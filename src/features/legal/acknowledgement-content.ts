@@ -2,7 +2,7 @@ export const LEGAL_ACKNOWLEDGEMENT_CONTENT = {
   privacy: {
     shortTitle: "Privacy Notice",
     paragraphs: [
-      "System CLOIE uses Google Sign-In through Supabase Auth to securely authenticate your account. When you continue, System CLOIE may receive your name, email address, and a unique authentication identifier from Google. It does not access your Google password, Gmail, Google Drive, Google Calendar, contacts, or other unrelated Google account content.",
+      "System CLOIE authenticates your account through Supabase Auth. Depending on the entrance you choose, System CLOIE may receive your name, email address, and a unique authentication identifier from Google Sign-In, or it may verify an email address you provide and store a credential there instead. System CLOIE never receives or stores your Google password, and it does not access your Gmail, Google Drive, Google Calendar, contacts, or other unrelated Google account content.",
       "Your information is used to create or match your account, verify your role and eligibility, provide access to assigned evaluations, prevent duplicate submissions, and support academic quality assurance, accreditation, and program improvement.",
     ],
   },

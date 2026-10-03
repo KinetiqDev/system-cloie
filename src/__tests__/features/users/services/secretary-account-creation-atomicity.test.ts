@@ -90,6 +90,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
         name,
         email,
         role: SystemRole.FACULTY,
+        grantedByRole: SystemRole.SECRETARY,
         program_id: programId,
       });
       expect(created.success).toBe(true);
@@ -111,6 +112,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
           name: "Duplicate Faculty",
           email,
           role: SystemRole.FACULTY,
+          grantedByRole: SystemRole.SECRETARY,
           program_id: programId,
         });
         // The duplicate is reported as a pivot to the existing account, not as
@@ -162,6 +164,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       const result = await createUserBySecretary({
         name: "E2E Student Atomicity",
         email,
+        grantedByRole: SystemRole.SECRETARY,
         role: SystemRole.STUDENT,
         program_id: programId,
         major_id: majorId,
@@ -204,6 +207,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       const failure = await createUserBySecretary({
         name: "Should not exist",
         email: failingEmail,
+        grantedByRole: SystemRole.SECRETARY,
         role: SystemRole.FACULTY,
         program_id: bogusProgramId,
       });
@@ -221,6 +225,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       const email = `e2e-ind-${crypto.randomUUID()}@example.com`;
       const result = await createUserBySecretary({
         name: "E2E Industry Atomicity",
+        grantedByRole: SystemRole.SECRETARY,
         email,
         role: SystemRole.INDUSTRY_PARTNER,
         company_name: "Acme Verification Corp",

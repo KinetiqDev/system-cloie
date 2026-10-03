@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut } from "lucide-react";
-import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import type { Role } from "@/lib/constants/roles";
@@ -82,13 +82,7 @@ export function Topbar({
           <MobileSidebarDrawer roles={roles} user={user} activeProgramId={activeProgramId} />
         ) : (
           <>
-            <Image
-              src="/logos/cloie-logo.svg"
-              alt="System CLOIE"
-              width={442}
-              height={500}
-              className="border-border h-7 w-auto rounded border bg-white p-0.5"
-            />
+            <CloieLogoMark className="h-9" />
             <span className="text-title-md text-link font-bold tracking-tight">System CLOIE</span>
           </>
         )}

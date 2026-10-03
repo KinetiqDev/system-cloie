@@ -70,6 +70,69 @@ describe("Select", () => {
     });
   });
 
+  describe("popup sizing and positioning", () => {
+    it("opens outside the trigger with viewport-bounded width and reduced-motion support", () => {
+      render(
+        <Select defaultOpen>
+          <SelectTrigger aria-label="Program">
+            <SelectValue placeholder="Program" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="beed">Bachelor of Elementary Education</SelectItem>
+          </SelectContent>
+        </Select>
+      );
+      const popup = document.querySelector('[data-slot="select-content"]');
+      expect(popup).toHaveAttribute("data-align-trigger", "false");
+      expect(popup).toHaveClass(
+        "max-w-(--available-width)",
+        "p-1",
+        "motion-reduce:animate-none",
+        "flex-col",
+        "overflow-hidden"
+      );
+      expect(screen.getByRole("listbox")).toHaveClass(
+        "min-h-0",
+        "overflow-y-auto",
+        "overscroll-contain"
+      );
+      const item = screen.getByRole("option");
+      expect(item).toHaveClass("min-h-10", "py-2", "pointer-coarse:min-h-11");
+      expect(screen.getByText("Bachelor of Elementary Education")).toHaveClass(
+        "min-w-0",
+        "whitespace-normal",
+        "break-words"
+      );
+    });
+
+    it("preserves selected state, disabled options, and explicit alignment overrides", () => {
+      render(
+        <Select defaultOpen defaultValue="admin" name="role">
+          <SelectTrigger aria-label="Role">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent alignItemWithTrigger>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="editor">Editor</SelectItem>
+            <SelectItem value="disabled" disabled>
+              Unavailable
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      );
+      expect(document.querySelector('[data-slot="select-content"]')).toHaveAttribute(
+        "data-align-trigger",
+        "true"
+      );
+      expect(screen.getByRole("option", { name: "Unavailable" })).toHaveAttribute("data-disabled");
+      expect(screen.getByRole("option", { name: "Admin" })).toHaveAttribute(
+        "aria-selected",
+        "true"
+      );
+      expect(document.querySelector('input[name="role"]')).toHaveValue("admin");
+    });
+  });
+
   describe("visible label and a11y wiring", () => {
     it("associates a visible label via aria-label on the trigger", () => {
       renderBasicSelect();

@@ -11,23 +11,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { useMediaQuery } from "@/components/ui/use-media-query";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { formatSchoolYearCode } from "@/lib/constants/academic-period";
 import { createSchoolYearAction } from "@/lib/actions/secretary-school-year-actions";
 import { showToast } from "@/components/ui/toast";
+
+const FORM_ID = "school-year-form";
 
 interface SchoolYearFormProps {
   open: boolean;
@@ -75,95 +71,74 @@ export function SchoolYearForm({ open, onOpenChange, onSuccess }: SchoolYearForm
     setIsSubmitting(false);
   }
 
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  const formBody = (
-    <div className="grid gap-4 py-4">
-      <Field data-invalid={!!error}>
-        <FieldLabel htmlFor="startYear">Start Year</FieldLabel>
-        <FieldContent>
-          <Input
-            id="startYear"
-            type="number"
-            min={2000}
-            max={2100}
-            placeholder={currentYear.toString()}
-            value={startYear}
-            onChange={(e) => {
-              setStartYear(e.target.value);
-              if (error) setError(null);
-            }}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "start-year-error" : "start-year-help"}
-            required
-          />
-          <FieldDescription id="start-year-help">
-            Example: Enter &quot;2025&quot; to create school year &quot;2025-2026&quot;
-          </FieldDescription>
-          <FieldError id="start-year-error">{error}</FieldError>
-        </FieldContent>
-      </Field>
-
-      {previewCode && (
-        <div className="bg-muted rounded-md p-3 text-center">
-          <span className="text-muted-foreground text-sm">Preview: </span>
-          <span className="font-semibold">{previewCode}</span>
-        </div>
-      )}
-    </div>
-  );
-
-  const footer = (
-    <div className="flex justify-end gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => onOpenChange(false)}
-        disabled={isSubmitting}
-      >
-        Cancel
-      </Button>
-      <Button type="submit" form="school-year-form" loading={isSubmitting} disabled={!startYear}>
-        {isSubmitting ? "Creating…" : "Create"}
-      </Button>
-    </div>
-  );
-
-  if (!isDesktop) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-        <DrawerContent className="flex max-h-[85dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-          <DrawerHeader className="shrink-0 px-0 pt-4 pb-2 text-left">
-            <DrawerTitle>Create School Year</DrawerTitle>
-            <DrawerDescription className="line-clamp-2">
-              Create a new school year (e.g., 2025-2026). This will serve as a container for
-              academic term instances.
-            </DrawerDescription>
-          </DrawerHeader>
-          <form id="school-year-form" onSubmit={handleSubmit} noValidate className="contents">
-            <div className="min-h-0 flex-1 overflow-y-auto pb-2">{formBody}</div>
-            <div className="shrink-0 pt-3">{footer}</div>
-          </form>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit} noValidate>
-          <DialogHeader>
-            <DialogTitle>Create School Year</DialogTitle>
-            <DialogDescription>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent desktopClassName="sm:max-w-[425px]">
+        <form
+          id={FORM_ID}
+          onSubmit={handleSubmit}
+          noValidate
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Create School Year</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Create a new school year (e.g., 2025-2026). This will serve as a container for
               academic term instances.
-            </DialogDescription>
-          </DialogHeader>
-          {formBody}
-          {footer}
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <ResponsiveDialogBody className="px-4 py-4 md:p-0">
+            <div className="grid gap-4">
+              <Field data-invalid={!!error}>
+                <FieldLabel htmlFor="startYear">Start Year</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="startYear"
+                    type="number"
+                    min={2000}
+                    max={2100}
+                    placeholder={currentYear.toString()}
+                    value={startYear}
+                    onChange={(e) => {
+                      setStartYear(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? "start-year-error" : "start-year-help"}
+                    required
+                  />
+                  <FieldDescription id="start-year-help">
+                    Example: Enter &quot;2025&quot; to create school year &quot;2025-2026&quot;
+                  </FieldDescription>
+                  <FieldError id="start-year-error">{error}</FieldError>
+                </FieldContent>
+              </Field>
+
+              {previewCode && (
+                <div className="bg-muted rounded-md p-3 text-center">
+                  <span className="text-muted-foreground text-sm">Preview: </span>
+                  <span className="font-semibold">{previewCode}</span>
+                </div>
+              )}
+            </div>
+          </ResponsiveDialogBody>
+
+          <ResponsiveDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form={FORM_ID} loading={isSubmitting} disabled={!startYear}>
+              {isSubmitting ? "Creating…" : "Create"}
+            </Button>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

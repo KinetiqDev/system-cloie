@@ -1,21 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getSiteUrl } from "@/lib/utils/site-url";
 
 describe("getSiteUrl (browser)", () => {
-  let originalSiteUrl: string | undefined;
-
-  beforeEach(() => {
-    originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    delete process.env.NEXT_PUBLIC_SITE_URL;
-  });
-
-  afterEach(() => {
-    if (originalSiteUrl === undefined) {
-      delete process.env.NEXT_PUBLIC_SITE_URL;
-    } else {
-      process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
-    }
-  });
+  beforeEach(() => vi.stubEnv("NEXT_PUBLIC_SITE_URL", undefined));
+  afterEach(() => vi.unstubAllEnvs());
 
   it("prefers NEXT_PUBLIC_SITE_URL over window.location.origin", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://public.example.com";

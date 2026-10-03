@@ -1409,6 +1409,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/secretary/faculty-requests/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/features/users/components/faculty-request-review-list.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
     path: "src/app/(app)/select-role/page.tsx",
     disposition: "task",
     taskId: 18,
@@ -1656,12 +1668,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(public)/onboarding/student-profile-form.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "route",
-  },
-  {
     path: "src/app/(public)/portal/page.tsx",
     disposition: "task",
     taskId: 23,
@@ -1690,6 +1696,174 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 23,
     category: "route",
+  },
+  {
+    path: "src/app/(public)/login/student/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/login/student/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/login/staff/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/login/staff/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/login/external/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/login/external/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/register/faculty/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/register/faculty/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/register/external/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/register/external/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/verify-email/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/verify-email/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/forgot-password/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/forgot-password/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/reset-password/page.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/app/(public)/reset-password/loading.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "route",
+  },
+  {
+    path: "src/features/entry/components/entry-shell.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/entry-field.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/google-entry-button.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/entry-form-message.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/external-email-form.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/external-register-form.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/verify-email-form.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/password-input.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/password-recovery-forms.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/faculty-register-form.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/entry-help-faq.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/entry/components/entry-legal-acknowledgement.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
   },
   {
     path: "src/app/(public)/status/[type]/loading.tsx",
@@ -1754,6 +1928,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 25,
     category: "route",
+  },
+  {
+    path: "src/components/brand/cloie-logo-mark.tsx",
+    disposition: "task",
+    taskId: 11,
+    category: "layout",
   },
   {
     path: "src/components/dashboard-quick-actions.tsx",
@@ -1840,10 +2020,21 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "layout",
   },
   {
+    path: "src/components/layout/sidebar-shell.tsx",
+    disposition: "task",
+    taskId: 11,
+    category: "layout",
+  },
+  {
     path: "src/components/layout/topbar.tsx",
     disposition: "task",
     taskId: 11,
     category: "layout",
+  },
+  {
+    path: "src/components/stakeholder-portal-pages.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
   },
   {
     path: "src/components/ui/alert-dialog.tsx",
@@ -2235,18 +2426,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/anonymized-response-cards.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/anonymized-response-detail.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
     path: "src/features/response-review/components/central-evaluation-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -2264,18 +2443,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
     path: "src/features/response-review/components/response-detail.tsx",
     disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/course-bound-review-tabs.tsx",
-    disposition: "task",
-    taskId: 10,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/course-mean-pie-chart.tsx",
-    disposition: "task",
-    taskId: 9,
     category: "feature_component",
   },
   {
@@ -2312,12 +2479,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/analytics/components/mean-bar-chart.tsx",
     disposition: "task",
     taskId: 9,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/analytics/components/published-course-bound-list.tsx",
-    disposition: "task",
-    taskId: 10,
     category: "feature_component",
   },
   {
@@ -2507,11 +2668,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
-    path: "src/features/analytics/components/program-head-go-lollipop-chart.tsx",
+    path: "src/features/analytics/components/program-head-go-mean-bar-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client lollipop chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
+      "Client horizontal bar chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
   },
   {
     path: "src/features/analytics/components/program-head-contributor-matrix.tsx",
@@ -2525,7 +2686,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "New server component exposing full-precision mean, scale-separated distributions, and excluded-rating diagnostics",
+      "New server component exposing the higher-precision mean, scale-separated distributions, and excluded-rating diagnostics",
   },
   {
     path: "src/features/analytics/components/program-head-likert-distribution.tsx",
@@ -2692,12 +2853,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/course-row-assignments-sheet.tsx",
-    disposition: "task",
-    taskId: 15,
-    category: "feature_component",
-  },
-  {
     path: "src/features/course-assignments/components/edit-course-assignment-dialog.tsx",
     disposition: "task",
     taskId: 15,
@@ -2737,19 +2892,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/dean/components/dean-oversight-loading.tsx",
     disposition: "task",
     taskId: 19,
-    category: "feature_component",
-  },
-
-  {
-    path: "src/features/enrollments/components/enrollment-editor-dialog.tsx",
-    disposition: "task",
-    taskId: 16,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/enrollments/components/student-enrollment-history.tsx",
-    disposition: "task",
-    taskId: 16,
     category: "feature_component",
   },
   {
@@ -2795,13 +2937,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/faculty-published-filter-bar.tsx",
-    disposition: "task",
-    taskId: 22,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/evaluations/components/program-head-published-filter-bar.tsx",
+    path: "src/features/evaluations/components/published-evaluation-filter-bar.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",
@@ -3017,24 +3153,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/portals/components/portal-shell.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/portals/components/role-selection-card.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/portals/components/session-banner.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
     path: "src/features/responses/components/likert-scale-replay.tsx",
     disposition: "task",
     taskId: 24,
@@ -3077,15 +3195,14 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/users/components/faculty-onboarding-form.tsx",
-    disposition: "task",
-    taskId: 18,
-    category: "feature_component",
-  },
-  {
     path: "src/features/users/components/industry-partner-onboarding-form.tsx",
     disposition: "task",
     taskId: 23,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/users/components/profile-cards.tsx",
+    disposition: "already_compliant",
     category: "feature_component",
   },
   {

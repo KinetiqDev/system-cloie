@@ -60,7 +60,7 @@ export function RoleSwitcherDropdown({
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <div className="grid gap-1.5 p-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5 p-2">
             <RoleSwitcherList
               activeEmail={activeEmail}
               error={error}

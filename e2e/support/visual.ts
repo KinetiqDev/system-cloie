@@ -27,6 +27,10 @@ export async function screenshotStable(
   name: string,
   options?: { mask?: Locator[] }
 ): Promise<void> {
+  // Client-side navigation keeps whatever scroll offset the previous page left
+  // behind, so the same screen can capture at different offsets depending on
+  // which journey ran first. The baseline is the top of the page.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await waitForStableState(page);
   await expect(page).toHaveScreenshot(name, options?.mask ? { mask: options.mask } : undefined);
 }

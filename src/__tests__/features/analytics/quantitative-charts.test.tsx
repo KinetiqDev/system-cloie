@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { CourseMeanPieChart } from "@/features/analytics/components/course-mean-pie-chart";
 import { StakeholderMeanPieChart } from "@/features/analytics/components/stakeholder-mean-pie-chart";
 import { MeanBarChart } from "@/features/analytics/components/mean-bar-chart";
 
@@ -9,84 +8,6 @@ function sectorFills(container: HTMLElement): string[] {
     (path) => path.getAttribute("fill") ?? ""
   );
 }
-
-describe("CourseMeanPieChart", () => {
-  const courses = [
-    { courseCode: "CS101", courseTitle: "Intro to CS", mean: 4.42, responseCount: 42 },
-    { courseCode: "CS201", courseTitle: "Data Structures", mean: 4.18, responseCount: 37 },
-    { courseCode: "CS301", courseTitle: "Operating Systems", mean: 3.86, responseCount: 29 },
-    { courseCode: "MATH101", courseTitle: "Calculus", mean: 4.65, responseCount: 31 },
-    { courseCode: "PHYS101", courseTitle: "Physics", mean: 3.94, responseCount: 24 },
-    { courseCode: "ENG101", courseTitle: "Technical Writing", mean: 4.3, responseCount: 19 },
-  ];
-
-  it("renders a distinct empty state when no course data exists", () => {
-    render(<CourseMeanPieChart data={[]} />);
-
-    expect(screen.getByText("No course data yet")).toBeInTheDocument();
-    expect(screen.getByText("No quantitative response data available yet.")).toBeInTheDocument();
-  });
-
-  it("resolves fills from semantic tokens and hatches categories beyond five", () => {
-    const { container } = render(<CourseMeanPieChart data={courses} />);
-
-    const fills = sectorFills(container);
-    expect(fills.slice(0, 5)).toEqual([
-      "var(--chart-1)",
-      "var(--chart-2)",
-      "var(--chart-3)",
-      "var(--chart-4)",
-      "var(--chart-5)",
-    ]);
-    expect(fills[5]).toMatch(/^url\(#course-mean-[A-Za-z0-9_]+-hatch-0-c1\)$/);
-    expect(container.querySelector('[id^="course-mean-"][id$="-hatch-0-c1"]')).not.toBeNull();
-  });
-
-  it("names the chart region from its title and insight", () => {
-    render(<CourseMeanPieChart data={courses} />);
-
-    const region = screen.getByRole("region", { name: "Overall Mean by Course" });
-    expect(region).toBeInTheDocument();
-    expect(region.getAttribute("aria-describedby")).not.toBeNull();
-    expect(document.getElementById(region.getAttribute("aria-describedby")!)!.textContent).toMatch(
-      /Highest mean: MATH101/
-    );
-  });
-
-  it("namespaces ids per instance so two charts stay distinct", () => {
-    const { container } = render(
-      <div>
-        <CourseMeanPieChart data={courses.slice(0, 3)} />
-        <CourseMeanPieChart data={courses.slice(3)} />
-      </div>
-    );
-
-    const regions = Array.from(container.querySelectorAll('[data-slot="chart"]'));
-    expect(regions).toHaveLength(2);
-    expect(new Set(regions.map((region) => region.getAttribute("data-chart"))).size).toBe(2);
-    const patternIds = Array.from(
-      container.querySelectorAll('[id*="course-mean-"][id*="-hatch-"]')
-    ).map((pattern) => pattern.id);
-    expect(new Set(patternIds).size).toBe(patternIds.length);
-  });
-
-  it("shows direct labels, a legend with response counts, insight, and exact values", () => {
-    const { container } = render(<CourseMeanPieChart data={courses} />);
-
-    expect(screen.getByText("CS101: 4.42")).toBeInTheDocument();
-    expect(screen.getByText("CS101 — Intro to CS (42 responses)")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Highest mean: MATH101 \(4\.65\)\. Lowest mean: CS301 \(3\.86\)\./)
-    ).toBeInTheDocument();
-    expect(screen.getByText("View exact values")).toBeInTheDocument();
-
-    const exactTable = container.querySelector("table");
-    expect(exactTable).not.toBeNull();
-    expect(exactTable!.textContent).toContain("CS101");
-    expect(exactTable!.textContent).toContain("4.42");
-    expect(exactTable!.textContent).toContain("42");
-  });
-});
 
 describe("StakeholderMeanPieChart", () => {
   const stakeholders = [

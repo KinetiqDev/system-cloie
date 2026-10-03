@@ -4,7 +4,10 @@ import { join, relative, resolve } from "node:path";
 const REPO_ROOT = resolve(process.cwd());
 
 const DATABASE_GATE_MARKER = "RUN_DATABASE_INTEGRATION_TESTS";
-const SKIP_IF_MARKER = "describe.skipIf";
+const SKIP_IF = "skipIf";
+// Suite convention: `describe.skipIf(<gate>)`. A suite gated with a bare
+// `skipIf` is reported as an orphan so it can be brought onto the convention.
+const CONVENTION_GATE = `describe.${SKIP_IF}`;
 
 const EXCLUDE_DIRS: Record<string, true> = {
   node_modules: true,
@@ -44,22 +47,17 @@ function walk(dir: string, out: string[]): void {
 }
 
 function isDatabaseSuiteContent(content: string): boolean {
-  return content.includes(DATABASE_GATE_MARKER) && content.includes(SKIP_IF_MARKER);
+  return content.includes(DATABASE_GATE_MARKER) && content.includes(CONVENTION_GATE);
 }
 
 function isGatedFileContent(content: string): boolean {
-  return (
-    content.includes(DATABASE_GATE_MARKER) &&
-    (content.includes("skipIf") || content.includes("RUN_DATABASE"))
-  );
+  return content.includes(DATABASE_GATE_MARKER) && content.includes(SKIP_IF);
 }
 
-export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
-  const srcRoot = join(repoRoot, "src");
+function selectTestFiles(repoRoot: string, matches: (content: string) => boolean): string[] {
   const candidates: string[] = [];
-  walk(srcRoot, candidates);
-
-  const suites: string[] = [];
+  walk(join(repoRoot, "src"), candidates);
+  const selected: string[] = [];
   for (const file of candidates) {
     const rel = relative(repoRoot, file);
     if (EXCLUDED_FILES[rel]) continue;
@@ -69,33 +67,18 @@ export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
     } catch {
       continue;
     }
-    if (isDatabaseSuiteContent(content)) suites.push(rel);
+    if (matches(content)) selected.push(rel);
   }
+  selected.sort();
+  return selected;
+}
 
-  suites.sort();
-  return suites;
+export function discoverDatabaseSuites(repoRoot: string = REPO_ROOT): string[] {
+  return selectTestFiles(repoRoot, isDatabaseSuiteContent);
 }
 
 function collectGatedFiles(repoRoot: string): string[] {
-  const allTestFiles: string[] = [];
-  walk(join(repoRoot, "src"), allTestFiles);
-  const gatedFiles: string[] = [];
-  for (const file of allTestFiles) {
-    const rel = relative(repoRoot, file);
-    if (EXCLUDED_FILES[rel]) continue;
-    if (rel === "src/__tests__/config/vitest-discovery.test.ts") continue;
-    let content: string;
-    try {
-      content = readFileSync(file, "utf8");
-    } catch {
-      continue;
-    }
-    if (!isGatedFileContent(content)) continue;
-    if (rel.includes("__tests__/config/vitest-discovery")) continue;
-    gatedFiles.push(rel);
-  }
-  gatedFiles.sort();
-  return gatedFiles;
+  return selectTestFiles(repoRoot, isGatedFileContent);
 }
 
 export function getDatabaseSuiteCompleteness(repoRoot: string = REPO_ROOT): {

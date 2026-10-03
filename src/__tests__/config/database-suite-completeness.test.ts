@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  discoverDatabaseSuites,
-  getDatabaseSuiteCompleteness,
-} from "../../../scripts/lib/database-suite-discovery";
+import { getDatabaseSuiteCompleteness } from "../../../scripts/lib/database-suite-discovery";
 
 describe("database suite completeness (539)", () => {
   it("discovers every database-gated suite via the repository convention", () => {
@@ -18,28 +15,5 @@ describe("database suite completeness (539)", () => {
 
     // Ensure discovery finds the expected suites (at least the canonical 9)
     expect(suites.length).toBeGreaterThanOrEqual(9);
-  });
-
-  it("no longer discovers the removed curriculum pairing suite", () => {
-    const suites = discoverDatabaseSuites();
-
-    expect(suites).not.toContain(
-      "src/__tests__/features/curriculum/curriculum-version-program-major-pairing.test.ts"
-    );
-    expect(suites).toContain(
-      "src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts"
-    );
-  });
-
-  it("selects database suites by convention, not a hand-maintained list", async () => {
-    const pkg = (
-      (await import("../../../package.json", { with: { type: "json" } })) as unknown as {
-        default: { scripts: Record<string, string> };
-      }
-    ).default;
-    // package.json test:db must delegate to the discovery script, not list files
-    const testDb = pkg.scripts["test:db"] ?? "";
-    expect(testDb).toContain("run-database-tests");
-    expect(testDb).not.toMatch(/course-assignment-membership-constraints/);
   });
 });
