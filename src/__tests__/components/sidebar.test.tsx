@@ -38,11 +38,14 @@ describe("Program Head desktop navigation", () => {
       "href",
       "/program-head/programs/program-2/dashboard"
     );
-    expect(screen.getByRole("link", { name: "Tools" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Evaluation Tools" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-2/tools"
     );
-    expect(screen.getByRole("link", { name: "Tools" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Evaluation Tools" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
     expect(
       screen.getAllByRole("link").filter((link) => link.getAttribute("aria-current") === "page")
     ).toHaveLength(1);
@@ -85,7 +88,7 @@ describe("Program Head desktop navigation", () => {
       "Programs",
       "Courses",
       "Course Assignments",
-      "Tools",
+      "Evaluation Tools",
       "Learning Outcomes",
     ]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
@@ -104,6 +107,24 @@ describe("Program Head desktop navigation", () => {
       "id",
       toggle.getAttribute("aria-controls")
     );
+  });
+
+  it.each([
+    [ROLES.SECRETARY, "/secretary/instruments"],
+    [ROLES.FACULTY, "/faculty/tools"],
+    [ROLES.PROGRAM_HEAD, "/program-head/programs/program-2/tools"],
+    [ROLES.DEAN, "/dean/academic-structure/instruments"],
+  ])("keeps %s Evaluation Tools accessible in expanded and collapsed navigation", (role, href) => {
+    pathnameMock.mockReturnValue(`${href}/new`);
+
+    for (const collapsed of [false, true]) {
+      const { unmount } = render(<Sidebar roles={[role]} collapsed={collapsed} />);
+      const link = screen.getByRole("link", { name: "Evaluation Tools" });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("aria-current", "page");
+      expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("resolves to icons only when collapsed, for every role", () => {

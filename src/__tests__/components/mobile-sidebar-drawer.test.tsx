@@ -126,8 +126,33 @@ describe("Dean mobile navigation drawer", () => {
 
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
     expect(screen.getByRole("link", { name: "Learning Outcomes" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Evaluation Tools" })).toBeInTheDocument();
   });
+
+  it.each([
+    [ROLES.SECRETARY, "/secretary/instruments"],
+    [ROLES.FACULTY, "/faculty/tools"],
+    [ROLES.PROGRAM_HEAD, "/program-head/programs/program-2/tools"],
+    [ROLES.DEAN, "/dean/academic-structure/instruments"],
+  ])(
+    "keeps %s Evaluation Tools current and closes the drawer on activation",
+    async (role, href) => {
+      pathnameMock.mockReturnValue(`${href}/new`);
+      render(<MobileSidebarDrawer roles={[role]} />);
+      fireEvent.click(screen.getByRole("button", { name: "Open navigation menu" }));
+
+      await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+      const link = screen.getByRole("link", { name: "Evaluation Tools" });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("aria-current", "page");
+      expect(screen.getByRole("dialog").querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+      expect(screen.queryByRole("link", { name: "Tools" })).not.toBeInTheDocument();
+
+      fireEvent.click(link);
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      expect(document.body.style.overflow).toBe("");
+    }
+  );
 
   it("preserves the selected Program in Program Head drawer links", async () => {
     pathnameMock.mockReturnValue("/program-head/programs/program-2/outcomes/mapping");

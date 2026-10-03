@@ -55,12 +55,26 @@ describe("navigation helpers", () => {
       "Dashboard",
       "My Course Rosters",
       "Manage CILOs",
-      "Tools",
+      "Evaluation Tools",
       "Analytics",
       "Profile",
     ]);
     expect(facultyNav.map((item) => item.href)).toContain("/faculty/analytics");
     expect(facultyNav.map((item) => item.href)).not.toContain("/faculty/cilo-evaluations");
+  });
+
+  it.each([
+    [ROLES.SECRETARY, "/secretary/instruments"],
+    [ROLES.FACULTY, "/faculty/tools"],
+    [ROLES.PROGRAM_HEAD, "/program-head/programs/program-2/tools"],
+  ])("labels %s evaluation tools consistently on desktop and mobile", (role, href) => {
+    const pathname = "/program-head/programs/program-2/tools/new";
+
+    for (const getNav of [getMainNavByRoles, getMobileNavByRoles]) {
+      const nav = getNav([role], pathname);
+      expect(nav.find((item) => item.href === href)?.name).toBe("Evaluation Tools");
+      expect(nav.some((item) => item.name === "Tools")).toBe(false);
+    }
   });
 
   it("does not include cilo-reviews in program head and dean nav", () => {
@@ -197,14 +211,14 @@ describe("navigation helpers", () => {
       getDeanNavGroups()
         .find((group) => group.name === "Academic Structure")
         ?.items.find((item) => item.href === "/dean/academic-structure/instruments")?.name
-    ).toBe("Tools");
+    ).toBe("Evaluation Tools");
   });
 
   it.each([
     ["/dean/academic-structure", "Academic Structure"],
     ["/dean/academic-structure/", "Academic Structure"],
     ["/dean/academic-structure/courses/abc/edit", "Courses"],
-    ["/dean/academic-structure/instruments", "Tools"],
+    ["/dean/academic-structure/instruments", "Evaluation Tools"],
     ["/dean/college-oversight/learning-outcomes", "Learning Outcomes"],
     ["/dean/profile/details", "Profile"],
   ])("selects one deepest destination for %s", (pathname, expectedName) => {
