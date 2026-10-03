@@ -307,10 +307,7 @@ describe("fallow platform verification through the CI gate", () => {
       ["src/index.ts", "export const x = 1;\n"],
     ]);
     try {
-      // Replace the fixture's generated baselines with the bytes actually
-      // committed under fallow-baselines/: the gate must parse all three
-      // through the real fallow code path, or the policy's baseline wiring is
-      // broken in a way no generated fixture can reveal.
+      // Generated fixtures cannot detect incompatibility in the committed baseline format.
       for (const analyzer of ANALYZERS) {
         writeFileSync(
           join(fixture.work, "fallow-baselines", analyzer.file),
@@ -323,9 +320,6 @@ describe("fallow platform verification through the CI gate", () => {
       const accepted = runGateScript(fixture);
       expect(accepted.status, "committed baselines must parse as fallow baselines").not.toBe(2);
 
-      // Negative control: corrupting one committed baseline must trip the same
-      // strict parse, proving the acceptance above is meaningful. The parse
-      // failure lands in the retained audit artifact, not on stderr.
       writeFileSync(join(fixture.work, "fallow-baselines", "dupes.json"), '{"garbage": true}\n');
       const rejected = runGateScript(fixture);
       expect(rejected.status).toBe(2);

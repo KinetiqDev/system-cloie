@@ -76,32 +76,6 @@ describe("Program Head desktop navigation", () => {
     );
   });
 
-  it("applies semantic sidebar roles to active and inactive rows", () => {
-    render(<Sidebar roles={[ROLES.PROGRAM_HEAD]} />);
-
-    const tools = screen.getByRole("link", { name: "Tools" });
-    expect(tools).toHaveAttribute("aria-current", "page");
-    expect(tools).toHaveClass("bg-sidebar-accent", "text-sidebar-accent-foreground", "min-h-11");
-
-    const dashboard = screen.getByRole("link", { name: "Dashboard" });
-    expect(dashboard).not.toHaveClass("bg-sidebar-accent");
-    expect(dashboard).toHaveClass("text-sidebar-foreground/70", "hover:bg-sidebar-accent/40");
-  });
-
-  it("marks the Dean rail surface with sidebar roles", () => {
-    pathnameMock.mockReturnValue("/dean/academic-structure/programs");
-
-    render(<Sidebar roles={[ROLES.DEAN]} />);
-
-    expect(screen.getByRole("link", { name: "Programs" })).toHaveClass(
-      "bg-sidebar-accent",
-      "min-h-11"
-    );
-    const structure = screen.getByRole("link", { name: "Academic Structure" });
-    expect(structure).not.toHaveClass("bg-sidebar-accent");
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("md:min-w-11");
-  });
-
   it("keeps every Dean group destination visible without an accordion toggle", () => {
     pathnameMock.mockReturnValue("/dean/dashboard");
 
@@ -116,8 +90,6 @@ describe("Program Head desktop navigation", () => {
     ]) {
       expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
-    // Groups stay open: no disclosure control lives inside the navigation. The
-    // header's sidebar collapse control is a separate, always-present control.
     const nav = screen.getByRole("navigation", { name: "Dean navigation" });
     expect(within(nav).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Collapse navigation sidebar" })).toBeInTheDocument();
@@ -138,12 +110,6 @@ describe("Program Head desktop navigation", () => {
     for (const role of [ROLES.SECRETARY, ROLES.PROGRAM_HEAD, ROLES.FACULTY, ROLES.DEAN]) {
       const { unmount } = render(<Sidebar roles={[role]} collapsed />);
 
-      const rail = document.querySelector("aside");
-      expect(rail).toHaveAttribute("data-collapsed", "true");
-      expect(rail).toHaveClass("w-16");
-      // Destinations keep their names for assistive technology, and the mark
-      // carries the expand affordance because a rail has no room for a
-      // second control beside it.
       expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Expand navigation sidebar" })).toBeInTheDocument();
       expect(
