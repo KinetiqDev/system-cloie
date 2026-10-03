@@ -64,6 +64,20 @@ describe("IndustryPartnerProfilePage affiliations", () => {
     expect(screen.getByText(`BSHM — ${BSHM.name}`)).toBeInTheDocument();
   });
 
+  it("allows long affiliation labels to wrap within the company card", async () => {
+    mockUser([{ program_id: BSHM.id, program: BSHM }], null);
+
+    render(await IndustryPartnerProfilePage());
+
+    const label = screen.getByText(`BSHM — ${BSHM.name}`);
+    const badge = label.closest('[data-slot="badge"]');
+
+    expect(label).toHaveClass("min-w-0", "wrap-anywhere");
+    expect(badge).toHaveClass("h-auto", "max-w-full", "whitespace-normal");
+    expect(badge).not.toHaveClass("h-5", "whitespace-nowrap");
+    expect(label.closest("li")).toHaveClass("min-w-0", "max-w-full");
+  });
+
   it("falls back to the legacy program when the join table holds nothing", async () => {
     mockUser([], BEED);
 

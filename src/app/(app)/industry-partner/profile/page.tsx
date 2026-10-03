@@ -72,7 +72,7 @@ export default async function IndustryPartnerProfilePage() {
         />
 
         {/* Company Context */}
-        <Card className="border-border shadow-sm">
+        <Card className="border-border min-w-0 shadow-sm">
           <CardHeader className="flex flex-row items-center gap-4 space-y-0">
             <div className="bg-secondary-soft text-text-secondary rounded-lg p-2">
               <Building2 className="size-5" />
@@ -110,13 +110,15 @@ export default async function IndustryPartnerProfilePage() {
               {affiliatedPrograms.length > 0 ? (
                 <ul className="flex flex-wrap gap-2">
                   {affiliatedPrograms.map((program) => (
-                    <li key={program.id}>
+                    <li key={program.id} className="max-w-full min-w-0">
                       <Badge
                         variant="secondary"
-                        className="bg-primary-soft text-selected-fg gap-1.5 font-bold"
+                        className="bg-primary-soft text-selected-fg h-auto max-w-full items-start gap-1.5 rounded-lg text-left font-bold whitespace-normal"
                       >
-                        <Book className="size-3.5" aria-hidden="true" />
-                        {program.code} — {program.name}
+                        <Book className="mt-0.5 shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 wrap-anywhere">
+                          {program.code} — {program.name}
+                        </span>
                       </Badge>
                     </li>
                   ))}
