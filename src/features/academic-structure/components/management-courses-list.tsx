@@ -506,7 +506,7 @@ export function ManagementCoursesList({
                       }
                     />
                   </TableCell>
-                  <TableCell className="w-[99%] max-w-[200px] align-top sm:max-w-[300px] md:w-auto md:max-w-none">
+                  <TableCell className="w-[99%] max-w-[200px] max-md:align-top sm:max-w-[300px] md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>
                       <span className="text-muted-foreground line-clamp-2 text-xs break-words whitespace-normal md:hidden">
