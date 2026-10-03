@@ -22,7 +22,7 @@ export const E2E_CONTRACT = {
   beedPh: { id: U.PH_BEED, email: "ph-beed@cloie.test", name: "Maria Santos" },
   demoFaculty: { id: U.FAC_BSIT, email: "demo-faculty@cloie.test", name: "Demo Faculty" },
   /** Secretary and Dean identities for the setup → oversight chain (issue #549). */
-  demoSecretary: { id: U.ADMIN, email: "demo-secretary@cloie.test", name: "Demo Secretary" },
+  demoSecretary: { id: U.ADMIN, email: "demo-secretary@cloie.test", name: "Demo Admin" },
   demoDean: { id: U.DEAN, email: "demo-dean@cloie.test", name: "Demo Dean" },
   /** General Education Coordinator identity (issue #547) — no Program assignment. */
   demoGenEd: { id: U.GENED, email: "demo-gened@cloie.test", name: "Gen Ed Coordinator" },

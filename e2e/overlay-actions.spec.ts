@@ -44,6 +44,21 @@ async function expectDialogActionsReachable(page: Page) {
   return { dialog, body, action };
 }
 
+async function expectResponsivePlacement(page: Page, mobile: boolean) {
+  const overlay = page.getByRole("dialog");
+  await expect
+    .poll(async () => {
+      const box = await overlay.boundingBox();
+      const viewport = page.viewportSize()!;
+      if (!box) return false;
+      return mobile
+        ? Math.abs(box.y + box.height - viewport.height) <= 2
+        : Math.abs(box.x + box.width / 2 - viewport.width / 2) <= 2 &&
+            Math.abs(box.y + box.height / 2 - viewport.height / 2) <= 2;
+    })
+    .toBe(true);
+}
+
 test("Course import dialog keeps its action reachable when the column guide overflows", async ({
   page,
 }) => {
@@ -57,6 +72,7 @@ test("Course import dialog keeps its action reachable when the column guide over
 
   await page.getByRole("button", { name: "Import CSV" }).click();
   const { body, action } = await expectDialogActionsReachable(page);
+  await expectResponsivePlacement(page, false);
 
   // The action stays pinned while the body scrolls its own content.
   await body.evaluate((node) => {
@@ -90,6 +106,7 @@ test("Course import drawer keeps its action reachable when the column guide over
 
   await page.getByRole("button", { name: "Import CSV" }).click();
   const { body, action } = await expectDialogActionsReachable(page);
+  await expectResponsivePlacement(page, true);
 
   await body.evaluate((node) => {
     node.scrollTop = node.scrollHeight;
@@ -98,3 +115,43 @@ test("Course import drawer keeps its action reachable when the column guide over
 
   await expectNoHorizontalOverflow(page);
 });
+
+for (const viewport of [
+  { width: 1280, height: 700 },
+  { width: 390, height: 700 },
+]) {
+  test(`Course editor keeps focused fields inside its scroll body at ${viewport.width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await loginAs(page, fixture().demoSecretary.email);
+    await page.goto("/secretary/courses");
+    await waitForStableState(page);
+    await page.getByRole("button", { name: "Add Course", exact: true }).click();
+    await expectResponsivePlacement(page, viewport.width < 768);
+
+    const dialog = page.getByRole("dialog", { name: "Add New Course" });
+    const field = dialog.getByRole("textbox", { name: "Course Code", exact: true });
+    await field.focus();
+    await expect(field).toBeFocused();
+    const containment = await field.evaluate((element) => {
+      const body = element.closest('[data-slot="responsive-dialog-body"]')!;
+      const fieldBox = element.getBoundingClientRect();
+      const bodyBox = body.getBoundingClientRect();
+      return {
+        left: fieldBox.left - bodyBox.left,
+        right: bodyBox.right - fieldBox.right,
+        top: fieldBox.top - bodyBox.top,
+      };
+    });
+    expect(containment.left).toBeGreaterThanOrEqual(3);
+    expect(containment.right).toBeGreaterThanOrEqual(3);
+    expect(containment.top).toBeGreaterThanOrEqual(3);
+    await expect(
+      dialog.getByRole("button", { name: "Create Course", exact: true })
+    ).toBeInViewport();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+}
