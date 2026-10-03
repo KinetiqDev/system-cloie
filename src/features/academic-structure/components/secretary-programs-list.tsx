@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -748,19 +748,19 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
 function KPICard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card className="min-w-0 overflow-hidden">
-      <CardHeader className="min-w-0 gap-2 p-3 sm:p-5">
+      <CardHeader className="flex-1">
         <div className="flex min-w-0 items-start justify-between gap-2">
-          <CardDescription className="text-label-sm text-muted-foreground min-w-0 leading-snug tracking-wide uppercase">
-            {label}
-          </CardDescription>
+          <CardTitle className="text-title-sm min-w-0">{label}</CardTitle>
           <div className="shrink-0" aria-hidden="true">
             {icon}
           </div>
         </div>
-        <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
-          {value.toLocaleString()}
-        </CardTitle>
       </CardHeader>
+      <CardContent>
+        <span className="text-heading-xl text-foreground tabular-nums">
+          {value.toLocaleString()}
+        </span>
+      </CardContent>
     </Card>
   );
 }
