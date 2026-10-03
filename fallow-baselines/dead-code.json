@@ -67,7 +67,6 @@
     "src/features/enrollments/services/manage-student-enrollments.ts:deactivateEnrollmentsForUser",
     "src/features/evaluations/components/assignment-picker.tsx:GroupedAssignmentPicker",
     "src/features/legal/index.ts:LEGAL_ACKNOWLEDGEMENT_CONTENT",
-    "src/features/portals/index.ts:HeroCard",
     "src/features/portals/index.ts:RoleSelectionCard",
     "src/features/portals/index.ts:ROLE_CARDS",
     "src/features/portals/index.ts:ROLE_CARDS_RESPONDENT",
@@ -249,9 +248,7 @@
   "unused_optional_dependencies": [],
   "unused_enum_members": [],
   "unused_class_members": [],
-  "unresolved_imports": [
-    "src/app/globals.css:./shadcn/tailwind.css"
-  ],
+  "unresolved_imports": ["src/app/globals.css:./shadcn/tailwind.css"],
   "unlisted_dependencies": [],
   "duplicate_exports": [
     "ActivateCourseAssignmentInput|src/features/course-assignments/schemas/course-assignment.ts|src/features/course-assignments/types.ts",

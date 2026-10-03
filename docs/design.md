@@ -211,11 +211,12 @@ Exact sizes live in `globals.css`.
 
 #### Program Head page hierarchy
 
-- Page titles use one semantic `h1` with `.text-heading-xl`, Manrope 700 at 28 px with a 36 px line height. Use the same token on desktop and mobile; long titles wrap rather than shrink or truncate.
+- Page titles use one semantic `h1` with `.text-heading-xl`, Manrope 700 at 28 px with a 36 px line height. Use the same token on desktop and mobile; long titles wrap rather than shrink or truncate. Response-review titles and respondent names also wrap unbroken tokens within the content width.
 - Major sections use `h2` with `.text-heading-lg`, 20 px with a 26 px line height. Subsections use `h3` with `.text-heading-md`; compact card titles use `.text-title-md`.
 - Supporting page descriptions use `.text-body-sm`; paragraphs and evidence retain the appropriate body token. Do not rely on heading-like `div` elements to convey section structure.
 - Useful breadcrumbs sit directly below the H1, before descriptive copy. Omit single-item trails that only repeat the page title.
 - The selected-program control owns persistent program scope. Do not repeat a program-scope banner or full program name in each page description. The Dashboard uses the title "Dashboard" and a wrapping neutral badge for the program name, keeping program identity separate from the page title.
+- Single-program accounts retain a compact scope control. Its accessible name includes the full program identity, and keyboard or touch activation reveals the wrapping code and name without offering a switch action.
 
 ### 6.2 Spacing, Layout, and Density
 

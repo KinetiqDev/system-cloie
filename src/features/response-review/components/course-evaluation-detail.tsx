@@ -59,7 +59,7 @@ export function CourseEvaluationDetail({
           <Badge variant="outline">Course evaluation</Badge>
           <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>
         </div>
-        <h1 className="text-heading-xl text-balance">{evaluation.title}</h1>
+        <h1 className="text-heading-xl text-balance wrap-anywhere">{evaluation.title}</h1>
         {breadcrumbs ? <div className="pt-1">{breadcrumbs}</div> : null}
         <p className="text-body-md text-text-secondary text-pretty">
           <span className="text-foreground font-semibold">

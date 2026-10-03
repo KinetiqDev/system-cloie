@@ -55,7 +55,7 @@ export function ResponseDetail({
           <Badge variant="outline">Submitted response</Badge>
           <Badge variant="secondary">Identified review</Badge>
         </div>
-        <h1 className="text-heading-xl text-balance">{respondent.name}</h1>
+        <h1 className="text-heading-xl text-balance wrap-anywhere">{respondent.name}</h1>
         {breadcrumbs ? <div className="pt-1">{breadcrumbs}</div> : null}
         <p className="text-body-md text-text-secondary text-pretty">
           {respondentContextLabel(respondent) ?? "No additional respondent context"}

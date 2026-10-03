@@ -12,6 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   buildProgramHeadDashboardPath,
   buildProgramHeadProgramPath,
 } from "@/lib/constants/program-head-routes";
@@ -20,7 +27,7 @@ import type { ProgramHeadProgram } from "@/features/auth/services/resolve-progra
 
 /**
  * Topbar dropdown that switches the active Program context while staying on
- * the same page. Single-program accounts get a non-interactive scope label.
+ * the same page. Single-program accounts can reveal their full scope identity.
  * Renders nothing when no Program context is selected in the pathname.
  */
 export function ProgramHeadSwitcher({
@@ -43,12 +50,23 @@ export function ProgramHeadSwitcher({
   }
   if (programs.length === 1) {
     return (
-      <span
-        className="text-body-sm text-sidebar-foreground max-w-44 truncate font-medium"
-        title={`${activeProgram.code} — ${activeProgram.name}`}
-      >
-        {activeProgram.code}
-      </span>
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Current Program: ${activeProgram.code} — ${activeProgram.name}`}
+            >
+              <span className="max-w-44 truncate">{activeProgram.code}</span>
+            </Button>
+          }
+        />
+        <PopoverContent align="end" className="max-w-[calc(100vw-2rem)]">
+          <PopoverTitle className="wrap-anywhere">{activeProgram.code}</PopoverTitle>
+          <PopoverDescription className="wrap-anywhere">{activeProgram.name}</PopoverDescription>
+        </PopoverContent>
+      </Popover>
     );
   }
 

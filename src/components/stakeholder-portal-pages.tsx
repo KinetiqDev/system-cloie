@@ -135,7 +135,7 @@ function StartableSection({
             <p className="text-body-sm text-text-secondary mx-auto max-w-sm">
               {draftCount > 0
                 ? "No evaluations are waiting to be started. Resume the draft above to submit it."
-                : "You don&apos;t have any active evaluations at the moment. Check back later or view your history."}
+                : "You don't have any active evaluations at the moment. Check back later or view your history."}
             </p>
           </div>
         )}

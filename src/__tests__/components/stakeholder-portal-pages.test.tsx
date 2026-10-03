@@ -153,6 +153,7 @@ describe("Stakeholder dashboard", () => {
     await renderDashboard();
 
     expect(screen.getByText("No pending evaluations")).toBeInTheDocument();
+    expect(screen.queryByText(/&(?:apos|quot|amp);/)).not.toBeInTheDocument();
   });
 
   it("links each portal's pending list to that portal's own pending tab", async () => {
