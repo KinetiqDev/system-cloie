@@ -291,7 +291,9 @@ test.describe("accessibility sweep", () => {
       if (await avatar.evaluate((element) => element === document.activeElement)) break;
     }
     await expect(avatar).toBeFocused();
-    await expect(page.getByRole("tooltip")).toHaveText(E2E_CONTRACT.demoDean.name);
+    const identityTooltip = page.locator('[data-slot="tooltip-content"]');
+    await expect(identityTooltip).toBeVisible();
+    await expect(identityTooltip).toHaveText(E2E_CONTRACT.demoDean.name);
     await expectNoAxeViolations(page);
   });
 });
