@@ -296,6 +296,7 @@ function DeanNavRow({
     <RailRow collapsed={collapsed || !isLargeScreen} label={item.name}>
       <NavigationRow
         href={item.href}
+        aria-label={item.name}
         active={active}
         rail={rail}
         iconOnly={collapsed}
