@@ -2,11 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import type { SystemRole } from "@prisma/client";
-import type {
-  StudentRecord,
-  ListStudentsForClassFilter,
-  EnrollmentResult,
-} from "../types";
+import type { StudentRecord, ListStudentsForClassFilter, EnrollmentResult } from "../types";
 
 /**
  * List students for a class (program/year/section combination).
@@ -18,8 +14,13 @@ export async function listStudentsForClass(
   const authSession = await resolveAuthSession();
 
   // PH and Faculty can view class rosters
-  const allowedRoles: SystemRole[] = [ROLES.SECRETARY, ROLES.DEAN, ROLES.PROGRAM_HEAD, ROLES.FACULTY];
-  if (!authSession?.roles?.some((r) => allowedRoles.includes(r))) {
+  const allowedRoles: SystemRole[] = [
+    ROLES.SECRETARY,
+    ROLES.DEAN,
+    ROLES.PROGRAM_HEAD,
+    ROLES.FACULTY,
+  ];
+  if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return { success: false, error: "Access denied." };
   }
 
@@ -48,10 +49,7 @@ export async function listStudentsForClass(
           },
         },
       },
-      orderBy: [
-        { student: { name: "asc" } },
-        { student_user_id: "asc" },
-      ],
+      orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
     });
 
     const students: StudentRecord[] = enrollments.map((e) => ({

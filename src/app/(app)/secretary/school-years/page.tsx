@@ -18,7 +18,7 @@ interface SchoolYearsPageProps {
 export default async function SchoolYearsPage({ searchParams }: SchoolYearsPageProps) {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (session?.activeRole !== ROLES.SECRETARY) {
     redirect("/dashboard");
   }
 

@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: SchoolYearDetailPageProps): P
 export default async function SchoolYearDetailPage({ params }: SchoolYearDetailPageProps) {
   const session = await resolveAuthSession();
 
-  if (!session || !session.roles.includes(ROLES.SECRETARY)) {
+  if (session?.activeRole !== ROLES.SECRETARY) {
     redirect("/dashboard");
   }
 
