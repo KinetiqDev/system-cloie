@@ -268,6 +268,17 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 Theme selection must not change the page pattern.
 
+### Respondent dashboards
+
+- Student, Alumni, and Industry Partner dashboards lead with the available task: a saved draft's Resume action, or pending evaluations when no draft exists. Do not add a welcome hero above the task.
+- Keep useful student academic context beneath the page title. Account identity and role remain in application navigation; do not repeat a greeting or portal description.
+- Status summaries use three compact tiles in one responsive row. Pending excludes saved drafts; In Progress counts saved, unsubmitted drafts; Completed counts submitted responses.
+- Available status tiles are real links to the role's evaluations route with `tab=pending`, `tab=in-progress`, or `tab=submitted`. Show a navigation arrow, hover treatment, and keyboard focus. During deferred student enrollment, render noninteractive counts because evaluations redirect to the dashboard.
+- Evaluation tabs honor valid URL selections, default unknown values to Pending, preserve unrelated query parameters, and support browser Back and Forward. Narrow tab rows scroll within their own container rather than widening the page.
+- Resume progress describes answers saved, not submission completion. A fully answered draft remains explicitly unsubmitted until the respondent submits it.
+- Pending evaluations are ordered by earliest deadline, with undated evaluations last. Long evaluation titles and academic context wrap; mobile actions span the available width and retain a 44 px minimum target.
+- Loading placeholders follow the compact title, task, and summary structure. Empty states distinguish work waiting to be started from drafts that remain available to resume.
+
 ### Document Titles (browser tab)
 
 - Every route sets its document title via `buildPageTitle` (`src/lib/page-title.ts`); the root template appends `| System CLOIE`, so titles never hand-type the brand.
@@ -382,6 +393,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Use semantic header, hover, selected, and expanded states.
 - Contain wide tables in `overflow-x-auto`.
 - Cells that carry free text wrap (`whitespace-normal`) rather than forcing the table wider than its container; a required row control (for example a "View Response" link) must stay fully visible inside the container at every supported width, never clipped behind the table's own scroll.
+- Course catalogs use the shared `TableCell` vertical-centering default for desktop course codes. Only mobile stacked code and course details override it with `max-md:align-top`.
 - Use `aria-sort`; keyboard-enable clickable rows.
 - Status badges require text.
 - Avoid zebra striping unless clearly needed.

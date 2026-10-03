@@ -31,7 +31,7 @@ describe("EvaluationListCard", () => {
   test("shows progress bar when in progress", () => {
     render(<EvaluationListCard {...mockProps} status="IN_PROGRESS" progress={45} />);
 
-    expect(screen.getByText(/45% Complete/i)).toBeDefined();
-    expect(screen.getByRole("progressbar")).toBeDefined();
+    expect(screen.getByText(/45%/)).toBeDefined();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
   });
 });

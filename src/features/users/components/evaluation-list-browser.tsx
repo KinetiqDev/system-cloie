@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Empty } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,18 @@ interface EvaluationListBrowserProps {
   pending: StudentEvaluationListItem[];
   inProgress: StudentEvaluationListItem[];
   submitted: StudentEvaluationListItem[];
+}
+
+const EVALUATION_TABS = [
+  { value: "pending", label: "Pending" },
+  { value: "in-progress", label: "In Progress" },
+  { value: "submitted", label: "Submitted" },
+] as const;
+
+type EvaluationTab = (typeof EVALUATION_TABS)[number]["value"];
+
+function isEvaluationTab(value: string | null): value is EvaluationTab {
+  return EVALUATION_TABS.some((tab) => tab.value === value);
 }
 
 const SEARCHABLE_FIELDS: ReadonlyArray<keyof StudentEvaluationListItem> = [
@@ -65,12 +78,24 @@ export function EvaluationListBrowser({
   inProgress,
   submitted,
 }: EvaluationListBrowserProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredPending = useMemo(
-    () => filterItems(pending, searchTerm),
-    [pending, searchTerm]
-  );
+  const urlTab = searchParams.get("tab");
+  const resolvedUrlTab: EvaluationTab = isEvaluationTab(urlTab) ? urlTab : "pending";
+
+  function selectTab(value: string) {
+    if (!isEvaluationTab(value) || value === resolvedUrlTab) return;
+
+    // Native history updates Next's search params without rerunning the server read.
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    const query = params.toString();
+    window.history.pushState(null, "", `${pathname}?${query}${window.location.hash}`);
+  }
+
+  const filteredPending = useMemo(() => filterItems(pending, searchTerm), [pending, searchTerm]);
   const filteredInProgress = useMemo(
     () => filterItems(inProgress, searchTerm),
     [inProgress, searchTerm]
@@ -81,17 +106,21 @@ export function EvaluationListBrowser({
   );
 
   const searchActive = searchTerm.trim().length > 0;
-  const noMatchCopy = searchActive
-    ? "No evaluations match your search."
-    : undefined;
+  const noMatchCopy = searchActive ? "No evaluations match your search." : undefined;
 
   return (
-    <Tabs defaultValue="pending" className="w-full">
+    <Tabs value={resolvedUrlTab} onValueChange={selectTab} className="w-full">
       <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <TabsList variant="pill">
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-          <TabsTrigger value="submitted">Submitted</TabsTrigger>
+        <TabsList
+          variant="pill"
+          aria-label="Evaluation status"
+          className="max-w-full justify-start overflow-x-auto"
+        >
+          {EVALUATION_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <div className="relative w-full md:w-64">
@@ -117,18 +146,14 @@ export function EvaluationListBrowser({
       <TabsContent value="in-progress" className="pt-6">
         <EvaluationTabList
           items={filteredInProgress}
-          emptyCopy={
-            noMatchCopy ?? "Your in-progress evaluations will appear here."
-          }
+          emptyCopy={noMatchCopy ?? "Your in-progress evaluations will appear here."}
         />
       </TabsContent>
 
       <TabsContent value="submitted" className="pt-6">
         <EvaluationTabList
           items={filteredSubmitted}
-          emptyCopy={
-            noMatchCopy ?? "Your submitted evaluations will appear here."
-          }
+          emptyCopy={noMatchCopy ?? "Your submitted evaluations will appear here."}
         />
       </TabsContent>
     </Tabs>
