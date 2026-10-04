@@ -212,7 +212,7 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
             return result;
           })
           .finally(notifyCommitted);
-        await finalized;
+        await Promise.race([finalized, submission]);
         const draft = saveResponseDraft({
           client: draftClient,
           createData,
