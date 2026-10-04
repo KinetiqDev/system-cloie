@@ -65,13 +65,9 @@ export function assertAllowedQueryParameters(
   }
 }
 
-export function parseUuid(value: string | null, name: string): string {
+export function parseRequiredUuid(value: string | null, name: string): string {
   if (!value || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
     throw new DeanRouteBadRequestError(`Invalid ${name}.`);
   }
   return value;
-}
-
-export function parseRequiredUuid(value: string | null, name: string): string {
-  return parseUuid(value, name);
 }

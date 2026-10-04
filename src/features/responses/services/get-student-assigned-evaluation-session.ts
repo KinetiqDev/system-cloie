@@ -1,4 +1,3 @@
-import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import {
   resolveCourseBoundEvaluationEligibility,
   toCourseBoundEvaluationEligibilityAssignment,
@@ -9,18 +8,14 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
+import { buildCentralProgramLabel } from "./central-program-label";
 import { isDeploymentAvailable } from "./deployment-availability";
+import { prepareEvaluationSession } from "./evaluation-session";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
-import { mapSavedAnswerItems } from "./map-saved-answer-items";
-import { mapTemplateStructureToSections } from "./map-template-structure";
-
-function countSectionItems(sections: StudentEvaluationSection[]) {
-  return sections.reduce((total, section) => total + section.items.length, 0);
-}
 
 /** The availability window plus the assignment whose membership the gate reads. */
 type CourseBoundEvaluationRecord = {
@@ -39,7 +34,7 @@ type CourseBoundEvaluationRecord = {
  */
 async function courseBoundAssignmentIsReadable(
   evaluation: CourseBoundEvaluationRecord,
-  response: AssignmentResponseRecord | null,
+  response: { submitted_at: Date | null } | null,
   studentUserId: string
 ): Promise<boolean> {
   if (response?.submitted_at ?? null) {
@@ -53,64 +48,6 @@ async function courseBoundAssignmentIsReadable(
     studentUserId
   );
   return eligibility.eligible;
-}
-
-type AssignmentResponseRecord = {
-  id: string;
-  submitted_at: Date | null;
-  qual_items: Array<{ prompt_key: string; section_key: string; text_content: string }>;
-  quant_items: Array<{ item_key: string; rating_value: number; section_key: string }>;
-};
-
-/**
- * Prepared wizard session for one assignment: the frozen structure mapped to
- * sections, the saved answers keyed for the browser, and the progress session.
- * Course-bound and Central assignments share this derivation — their labels and
- * authorization gates are the only differences — so the structure snapshot and
- * response shapes are interpreted in exactly one place.
- */
-function prepareStudentEvaluationSession(
-  structureSnapshot: unknown,
-  response: AssignmentResponseRecord | null
-): {
-  sections: StudentEvaluationSection[];
-  savedAnswers: Record<string, number | string>;
-  session: StudentEvaluationSession;
-} {
-  const sections = mapTemplateStructureToSections(structureSnapshot);
-  const savedAnswers = response
-    ? mapSavedAnswerItems({
-        qualitativeItems: response.qual_items,
-        quantitativeItems: response.quant_items,
-      })
-    : {};
-  const answeredItems = response ? response.qual_items.length + response.quant_items.length : 0;
-
-  return {
-    sections,
-    savedAnswers,
-    session: {
-      answeredItems,
-      responseId: response?.id ?? null,
-      submittedAt: response?.submitted_at ?? null,
-      totalItems: countSectionItems(sections),
-    },
-  };
-}
-
-function buildCentralProgramLabel(input: {
-  majorName: string | null;
-  programCode: string | null;
-  programName: string | null;
-  yearLevelName: string | null;
-}) {
-  return [
-    input.programCode ?? input.programName ?? "Program-wide",
-    input.majorName,
-    input.yearLevelName,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join(" • ");
 }
 
 export type StudentAssignedEvaluationSession = {
@@ -208,7 +145,7 @@ export async function getStudentAssignedEvaluationSession(
 
     const ca = evaluation.course_assignment;
     const courseInfo = parseCourseInfoSnapshot(evaluation.course_info_snapshot);
-    const prepared = prepareStudentEvaluationSession(
+    const prepared = prepareEvaluationSession(
       evaluation.instrument.structure_snapshot,
       assignment.response ?? null
     );
@@ -242,10 +179,7 @@ export async function getStudentAssignedEvaluationSession(
       return null;
     }
 
-    const prepared = prepareStudentEvaluationSession(
-      deployment.instrument.structure_snapshot,
-      response
-    );
+    const prepared = prepareEvaluationSession(deployment.instrument.structure_snapshot, response);
 
     return {
       assignmentId: assignment.id,
@@ -253,12 +187,7 @@ export async function getStudentAssignedEvaluationSession(
       deadlineAt: deployment.deadline_at,
       deploymentType: "CENTRAL",
       evaluationTitle: deployment.deployment_name ?? deployment.instrument.template.name,
-      programLabel: buildCentralProgramLabel({
-        majorName: deployment.major?.name ?? null,
-        programCode: deployment.program?.code ?? null,
-        programName: deployment.program?.name ?? null,
-        yearLevelName: deployment.year_level ? getYearLevelDisplay(deployment.year_level) : null,
-      }),
+      programLabel: buildCentralProgramLabel(deployment),
       ...prepared,
     };
   }

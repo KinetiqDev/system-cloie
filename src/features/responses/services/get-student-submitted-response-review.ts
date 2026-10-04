@@ -1,7 +1,7 @@
-import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
+import { buildCentralProgramLabel } from "@/features/responses/services/central-program-label";
 import { mapTemplateStructureToSections } from "@/features/responses/services/map-template-structure";
 import { mapSavedAnswerItems } from "@/features/responses/services/map-saved-answer-items";
 import {
@@ -90,21 +90,6 @@ export type SubmittedResponseReview = {
   submittedAt: Date;
   sections: SubmittedResponseSection[];
 };
-
-function buildCentralProgramLabel(input: {
-  majorName: string | null;
-  programCode: string | null;
-  programName: string | null;
-  yearLevelName: string | null;
-}) {
-  return [
-    input.programCode ?? input.programName ?? "Program-wide",
-    input.majorName,
-    input.yearLevelName,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join(" • ");
-}
 
 export async function getStudentSubmittedResponseReview(
   responseId: string
@@ -201,14 +186,7 @@ export async function getStudentSubmittedResponseReview(
       evaluationTitle:
         response.assignment.central_deployment.deployment_name ??
         response.assignment.central_deployment.instrument.template.name,
-      programLabel: buildCentralProgramLabel({
-        majorName: response.assignment.central_deployment.major?.name ?? null,
-        programCode: response.assignment.central_deployment.program?.code ?? null,
-        programName: response.assignment.central_deployment.program?.name ?? null,
-        yearLevelName: response.assignment.central_deployment.year_level
-          ? getYearLevelDisplay(response.assignment.central_deployment.year_level)
-          : null,
-      }),
+      programLabel: buildCentralProgramLabel(response.assignment.central_deployment),
       responseId: response.id,
       sections: buildSubmittedResponseSections({
         answers,

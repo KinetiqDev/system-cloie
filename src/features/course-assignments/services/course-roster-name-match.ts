@@ -4,11 +4,7 @@ import { normalizeRosterName } from "./course-roster-csv";
 // scoped roster preview service (#394), which imports these types for its
 // candidate read model and row diagnostics.
 // fallow-ignore-next-line unused-type
-export type RosterNameMatchStatus =
-  | "EXACT_MATCH"
-  | "SUGGESTED_MATCH"
-  | "AMBIGUOUS"
-  | "NO_MATCH";
+export type RosterNameMatchStatus = "EXACT_MATCH" | "SUGGESTED_MATCH" | "AMBIGUOUS" | "NO_MATCH";
 
 // fallow-ignore-next-line unused-type
 export type RosterNameMatchReason =
@@ -21,13 +17,11 @@ export type RosterNameMatchReason =
   | "EQUAL_TIER"
   | "NO_EVIDENCE";
 
-// fallow-ignore-next-line unused-type
 export type RosterNameCandidate = {
   id: string;
   name: string;
 };
 
-// fallow-ignore-next-line unused-type
 export type RosterNameMatch = {
   status: RosterNameMatchStatus;
   reason: RosterNameMatchReason;
@@ -45,7 +39,14 @@ const SUGGESTION_TIERS = [
 type SuggestionReason = (typeof SUGGESTION_TIERS)[number];
 
 const SEPARATORS = /[-–—'’‘ʼ.]/gu;
-const SUFFIXES: Record<string, true> = { jr: true, sr: true, ii: true, iii: true, iv: true, v: true };
+const SUFFIXES: Record<string, true> = {
+  jr: true,
+  sr: true,
+  ii: true,
+  iii: true,
+  iv: true,
+  v: true,
+};
 
 /**
  * Unicode-aware case folding without a dependency: locale-independent
@@ -70,7 +71,9 @@ export function matchRosterName(
   candidates: readonly RosterNameCandidate[]
 ): RosterNameMatch {
   const exactIds = candidates
-    .filter((candidate) => normalizeRosterNameKey(uploadedName) === normalizeRosterNameKey(candidate.name))
+    .filter(
+      (candidate) => normalizeRosterNameKey(uploadedName) === normalizeRosterNameKey(candidate.name)
+    )
     .map((candidate) => candidate.id);
   if (exactIds.length === 1) {
     return { status: "EXACT_MATCH", reason: "EXACT", matchedIds: exactIds };

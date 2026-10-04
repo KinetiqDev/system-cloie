@@ -1,6 +1,6 @@
 import type { SystemRole } from "@prisma/client";
 
-export const ROLE_INTENTS = {
+const ROLE_INTENTS = {
   secretary: "SECRETARY",
   dean: "DEAN",
   "program-head": "PROGRAM_HEAD",

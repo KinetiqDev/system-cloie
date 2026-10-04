@@ -131,7 +131,6 @@ describe("getCentralDeploymentEvaluationSession", () => {
     expect(result).not.toBeNull();
     expect(result!.assignmentId).toBe("assignment-1");
     expect(result!.evaluationTitle).toBe("Alumni Feedback Survey");
-    expect(result!.programLabel).toBe("BSIT");
     expect(result!.sections).toHaveLength(1);
     expect(result!.sections[0].id).toBe("section-a");
     expect(result!.sections[0].items).toHaveLength(2);

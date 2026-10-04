@@ -1,9 +1,13 @@
 "use server";
 
-import { AcademicPeriodStatus, AcademicSemester, Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+import {
+  AcademicPeriodStatus,
+  AcademicSemester,
+  Prisma,
+  type Prisma as PrismaTypes,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
+import { verifySecretaryAccess } from "./secretary-access";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { canTransitionPeriod } from "../policies";
 import { persistPeriodReadinessSnapshot } from "./read-period-readiness";
@@ -44,10 +48,7 @@ function checkActivationHierarchy(period: PeriodWithSchoolYear): string | null {
  * Stable completion seam for readiness snapshot persistence.
  * Must run inside the same transaction that promotes ACTIVE -> COMPLETED.
  */
-async function onPeriodCompleted(
-  periodId: string,
-  tx: Tx
-): Promise<void> {
+async function onPeriodCompleted(periodId: string, tx: Tx): Promise<void> {
   await persistPeriodReadinessSnapshot(periodId, tx);
 }
 
@@ -95,11 +96,8 @@ export async function transitionPeriodStatus(
   periodId: string,
   target: AcademicPeriodStatus
 ): Promise<ServiceResult<{ id: string; status: AcademicPeriodStatus }>> {
-  const session = await resolveAuthSession();
-
-  if (session?.activeRole !== ROLES.SECRETARY) {
-    return { success: false, error: "Secretary access required" };
-  }
+  const auth = await verifySecretaryAccess();
+  if (!auth.success) return auth;
 
   try {
     let activePeriodChanged = false;

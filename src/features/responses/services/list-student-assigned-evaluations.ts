@@ -1,5 +1,3 @@
-import { YearLevel } from "@prisma/client";
-import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
@@ -12,7 +10,9 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
+import { buildCentralProgramLabel } from "./central-program-label";
 import { isDeploymentAvailable } from "./deployment-availability";
+import { buildEvaluationSession, buildFallbackSection } from "./evaluation-session";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotProgramLabel,
@@ -118,34 +118,6 @@ function buildStudentEvaluationListItem({
     session,
     status,
   };
-}
-
-function countSectionItems(sections: StudentEvaluationSection[]) {
-  return sections.reduce((total, section) => total + section.items.length, 0);
-}
-
-function buildFallbackSection(): StudentEvaluationSection {
-  return {
-    description: "",
-    id: "overview",
-    items: [],
-    name: "Overview",
-  };
-}
-
-function buildCentralProgramLabel(input: {
-  majorName: string | null;
-  programCode: string | null;
-  programName: string | null;
-  yearLevel: YearLevel | null;
-}) {
-  return [
-    input.programCode ?? input.programName ?? "Program-wide",
-    input.majorName,
-    input.yearLevel ? getYearLevelDisplay(input.yearLevel) : null,
-  ]
-    .filter((value): value is string => Boolean(value))
-    .join(" • ");
 }
 
 export async function listStudentAssignedEvaluations(): Promise<{
@@ -258,12 +230,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
             courseBound.instrument.structure_snapshot
           );
           const section = sections[0] ?? buildFallbackSection();
-          const session: StudentEvaluationSession = {
-            answeredItems: response ? response.qual_items.length + response.quant_items.length : 0,
-            responseId: response?.id ?? null,
-            submittedAt: response?.submitted_at ?? null,
-            totalItems: countSectionItems(sections),
-          };
+          const session = buildEvaluationSession(sections, response);
           const status = deriveStudentEvaluationStatus({
             answeredItems: session.answeredItems,
             deadlineAt: courseBound.deadline_at,
@@ -310,12 +277,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
 
           const sections = mapTemplateStructureToSections(deployment.instrument.structure_snapshot);
           const section = sections[0] ?? buildFallbackSection();
-          const session: StudentEvaluationSession = {
-            answeredItems: response ? response.qual_items.length + response.quant_items.length : 0,
-            responseId: response?.id ?? null,
-            submittedAt: response?.submitted_at ?? null,
-            totalItems: countSectionItems(sections),
-          };
+          const session = buildEvaluationSession(sections, response);
           const status = deriveStudentEvaluationStatus({
             answeredItems: session.answeredItems,
             deadlineAt: deployment.deadline_at,
@@ -340,12 +302,7 @@ export async function listStudentAssignedEvaluations(): Promise<{
             facultyName: null,
             href,
             now,
-            programLabel: buildCentralProgramLabel({
-              majorName: deployment.major?.name ?? null,
-              programCode: deployment.program?.code ?? null,
-              programName: deployment.program?.name ?? null,
-              yearLevel: deployment.year_level ?? null,
-            }),
+            programLabel: buildCentralProgramLabel(deployment),
             section,
             session,
           });

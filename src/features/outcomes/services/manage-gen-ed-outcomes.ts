@@ -116,7 +116,6 @@ export async function reorderILOs(orderedIds: string[]): Promise<ServiceResult> 
   return { success: true, data: undefined };
 }
 
-// fallow-ignore-next-line unused-type
 export type GECourseCILOMappings = {
   courseId: string;
   courseCode: string;
@@ -144,7 +143,11 @@ export async function listCILOILOMappingsForGE(): Promise<ServiceResult<GECourse
   }
 
   const courses = await prisma.course.findMany({
-    where: { is_active: true, course_scope: "GENERAL_EDUCATION", cilos: { some: { is_active: true } } },
+    where: {
+      is_active: true,
+      course_scope: "GENERAL_EDUCATION",
+      cilos: { some: { is_active: true } },
+    },
     select: {
       id: true,
       code: true,
@@ -189,10 +192,12 @@ export async function listCILOILOMappingsForGE(): Promise<ServiceResult<GECourse
       readiness: ciloIsAligned(
         {
           cilo_mappings: [],
-          cilo_institutional_outcome_mappings: cilo.cilo_institutional_outcome_mappings.map((m) => ({
-            manifestation: m.manifestation ?? null,
-            institutional_outcome: { is_active: m.institutional_outcome.is_active },
-          })),
+          cilo_institutional_outcome_mappings: cilo.cilo_institutional_outcome_mappings.map(
+            (m) => ({
+              manifestation: m.manifestation ?? null,
+              institutional_outcome: { is_active: m.institutional_outcome.is_active },
+            })
+          ),
         },
         "GENERAL_EDUCATION",
         null,

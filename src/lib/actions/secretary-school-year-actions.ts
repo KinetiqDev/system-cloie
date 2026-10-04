@@ -3,8 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AcademicPeriodStatus } from "@prisma/client";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
 import {
   createSchoolYear,
   archiveSchoolYear,
@@ -12,6 +10,7 @@ import {
   deactivateSchoolYear,
   setActiveSemester,
 } from "@/features/academic-calendar/services/manage-school-years";
+import { verifySecretaryAccess } from "@/features/academic-calendar/services/secretary-access";
 import {
   updateTermInstance,
   deleteTermInstance,
@@ -24,18 +23,6 @@ import {
 import { updateTermInstanceSchema } from "@/features/academic-calendar/schemas/term-instance";
 import type { ServiceResult } from "@/lib/utils/service-result";
 import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-periods";
-
-// ============================================================================
-// Authorization Helper
-// ============================================================================
-
-async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
-  const session = await resolveAuthSession();
-  if (!session || session.activeRole !== ROLES.SECRETARY) {
-    return { success: false, error: "Secretary access required" };
-  }
-  return { success: true, data: { userId: session.userId } };
-}
 
 // ============================================================================
 // School Year Actions

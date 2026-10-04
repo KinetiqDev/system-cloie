@@ -1,42 +1,13 @@
 import { TargetStakeholder } from "@prisma/client";
-import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import type {
-  StudentEvaluationListItem,
-  StudentEvaluationSection,
-  StudentEvaluationSession,
-} from "@/features/responses/types";
-import { mapTemplateStructureToSections } from "./map-template-structure";
+import type { StudentEvaluationListItem } from "@/features/responses/types";
+import { buildCentralProgramLabel } from "./central-program-label";
 import { isDeploymentAvailable } from "./deployment-availability";
+import { buildEvaluationSession, buildFallbackSection } from "./evaluation-session";
+import { mapTemplateStructureToSections } from "./map-template-structure";
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
-
-function buildProgramLabel(input: {
-  majorName: string | null;
-  programCode: string | null;
-  programName: string | null;
-  yearLevelName: string | null;
-}): string {
-  return (
-    [input.programCode ?? input.programName ?? "Program-wide", input.majorName, input.yearLevelName]
-      .filter((value): value is string => Boolean(value))
-      .join(" • ") || "College-wide"
-  );
-}
-
-function buildFallbackSection(): StudentEvaluationSection {
-  return {
-    description: "",
-    id: "overview",
-    items: [],
-    name: "Overview",
-  };
-}
-
-function countSectionItems(sections: StudentEvaluationSection[]) {
-  return sections.reduce((total, section) => total + section.items.length, 0);
-}
 
 // ─── Service ────────────────────────────────────────────────────────────────
 
@@ -107,15 +78,8 @@ export async function listStakeholderEvaluations(
 
       const sections = mapTemplateStructureToSections(deployment.instrument.structure_snapshot);
       const section = sections[0] ?? buildFallbackSection();
-      const totalItems = countSectionItems(sections);
-      const answeredItems = response ? response.qual_items.length + response.quant_items.length : 0;
-
-      const session: StudentEvaluationSession = {
-        answeredItems,
-        responseId: response?.id ?? null,
-        submittedAt: response?.submitted_at ?? null,
-        totalItems,
-      };
+      const session = buildEvaluationSession(sections, response);
+      const { answeredItems, totalItems } = session;
 
       const isSubmitted = !!response?.submitted_at;
       const isInProgress = !isSubmitted && !!response;
@@ -146,14 +110,7 @@ export async function listStakeholderEvaluations(
           facultyName: null,
           href,
           progress,
-          programLabel: buildProgramLabel({
-            majorName: deployment.major?.name ?? null,
-            programCode: deployment.program?.code ?? null,
-            programName: deployment.program?.name ?? null,
-            yearLevelName: deployment.year_level
-              ? getYearLevelDisplay(deployment.year_level)
-              : null,
-          }),
+          programLabel: buildCentralProgramLabel(deployment),
           section,
           session,
           status,

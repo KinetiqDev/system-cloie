@@ -30,10 +30,12 @@ _Avoid_: Open period, active-only check
 Course-bound answering additionally requires active Course Assignment membership resolved from the authoritative roster; without it the evaluation is not available to that student. Removing a Student after publication therefore revokes unsubmitted access without deleting their EvaluationAssignment, draft, or submitted response. Restoring eligibility before the evaluation closes restores access.
 _Avoid_: Enrollment check, deployment-wide availability
 
+`services/resolve-answerable-assignment.ts` owns assignment ownership, audience scope, availability, and Course-bound eligibility for both draft saves and final submissions. `save-evaluation-draft.ts` and `submit-evaluation-response.ts` use that resolver; the server actions bind the audience rather than accepting it from browser input.
+
 ## Draft and submission
 
 **Draft save**:
-Section-scoped save while IN_PROGRESS: the section's existing quantitative and qualitative items are replaced by the submitted answers, leaving other sections untouched.
+Section-scoped save while IN_PROGRESS: the section's existing quantitative and qualitative items are replaced by the submitted answers, leaving other sections untouched. Draft saves and final submissions acquire the same assignment lock before reading the response, and section replacement runs in one transaction. A racing draft therefore cannot overwrite finalized answers or leave a section partially replaced.
 _Avoid_: Full-response save, partial submission
 
 **Submission completeness**:
@@ -45,3 +47,5 @@ _Avoid_: Best-effort submit, optional-item submit
 **Student evaluation status**:
 The respondent-facing list states NOT_STARTED / IN_PROGRESS / DUE_SOON / SUBMITTED. DUE_SOON marks an untouched assignment whose deadline is within 3 days; SUBMITTED follows from a frozen `submitted_at`.
 _Avoid_: Overdue, pending
+
+`services/evaluation-session.ts` derives the shared progress counters and wizard saved-answer data. `services/central-program-label.ts` derives Central deployment scope labels for respondent lists and submitted reviews. The Central wizard session does not fetch or return a scope label because its routes do not display one.

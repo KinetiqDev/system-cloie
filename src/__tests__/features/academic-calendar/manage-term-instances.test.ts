@@ -2,8 +2,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   deleteTermInstance,
   updateTermInstance,
-  verifySecretaryAccess,
 } from "@/features/academic-calendar/services/manage-term-instances";
+import { verifySecretaryAccess } from "@/features/academic-calendar/services/secretary-access";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
@@ -30,7 +30,7 @@ vi.mock("@/lib/cache/academic-periods", () => ({
   invalidateAcademicPeriodReadModelTags: invalidateAcademicPeriodReadModelTagsMock,
 }));
 
-describe("manage-term-instances / verifySecretaryAccess", () => {
+describe("secretary-access / verifySecretaryAccess", () => {
   const mockSecretarySession = createAuthSessionSnapshot({
     userId: "sec-1",
     email: "secretary@test.com",

@@ -91,7 +91,7 @@ function makeAssignment(overrides?: {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-describe("submitCentralDeploymentResponse", () => {
+describe("submitEvaluationResponse (stakeholder)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -100,10 +100,10 @@ describe("submitCentralDeploymentResponse", () => {
   it("rejects unauthenticated requests", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -118,10 +118,10 @@ describe("submitCentralDeploymentResponse", () => {
     resolveAuthSessionMock.mockResolvedValue({ userId: "user-1" });
     findAssignmentMock.mockResolvedValue(null);
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "nonexistent-assignment",
       answers: validAnswers,
     });
@@ -144,10 +144,10 @@ describe("submitCentralDeploymentResponse", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -168,10 +168,10 @@ describe("submitCentralDeploymentResponse", () => {
       status: "SUBMITTED",
     });
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -191,10 +191,10 @@ describe("submitCentralDeploymentResponse", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -227,10 +227,10 @@ describe("submitCentralDeploymentResponse", () => {
     findResponseMock.mockResolvedValue({ id: "response-1", status: "IN_PROGRESS" });
     updateMock.mockResolvedValue({ id: "response-1" });
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    await submitCentralDeploymentResponse({
+    await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -255,10 +255,10 @@ describe("submitCentralDeploymentResponse", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });
@@ -293,10 +293,10 @@ describe("submitCentralDeploymentResponse", () => {
       central_deployment: null,
     });
 
-    const { submitCentralDeploymentResponse } =
-      await import("@/features/responses/services/submit-central-deployment-response");
+    const { submitEvaluationResponse } =
+      await import("@/features/responses/services/submit-evaluation-response");
 
-    const result = await submitCentralDeploymentResponse({
+    const result = await submitEvaluationResponse("STAKEHOLDER", {
       assignmentId: "assignment-1",
       answers: validAnswers,
     });

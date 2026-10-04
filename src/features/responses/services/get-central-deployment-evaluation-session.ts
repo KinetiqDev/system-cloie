@@ -5,26 +5,9 @@ import type {
   StudentEvaluationSession,
 } from "@/features/responses/types";
 import { isDeploymentAvailable } from "./deployment-availability";
-import { mapSavedAnswerItems } from "./map-saved-answer-items";
-import { mapTemplateStructureToSections } from "./map-template-structure";
+import { prepareEvaluationSession } from "./evaluation-session";
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
-
-function countSectionItems(sections: StudentEvaluationSection[]) {
-  return sections.reduce((total, section) => total + section.items.length, 0);
-}
-
-function buildProgramLabel(input: {
-  majorName: string | null;
-  programCode: string | null;
-  programName: string | null;
-}) {
-  return (
-    [input.programCode ?? input.programName, input.majorName]
-      .filter((v): v is string => Boolean(v))
-      .join(" • ") || "College-wide"
-  );
-}
 
 function evaluationIsReadable(
   response: { submitted_at: Date | null } | null,
@@ -45,7 +28,6 @@ function evaluationIsReadable(
 export type CentralDeploymentEvaluationSession = {
   assignmentId: string;
   evaluationTitle: string;
-  programLabel: string;
   sections: StudentEvaluationSection[];
   savedAnswers: Record<string, number | string>;
   session: StudentEvaluationSession;
@@ -87,8 +69,6 @@ export async function getCentralDeploymentEvaluationSession(
               template: true,
             },
           },
-          major: true,
-          program: true,
         },
       },
       response: {
@@ -114,33 +94,9 @@ export async function getCentralDeploymentEvaluationSession(
     return null;
   }
 
-  // Map template structure to wizard sections
-  const sections = mapTemplateStructureToSections(deployment.instrument.structure_snapshot);
-
-  // Load saved answers from existing response (if any)
-  const savedAnswers = response
-    ? mapSavedAnswerItems({
-        qualitativeItems: response.qual_items,
-        quantitativeItems: response.quant_items,
-      })
-    : {};
-  const answeredItems = response ? response.qual_items.length + response.quant_items.length : 0;
-
   return {
     assignmentId: assignment.id,
     evaluationTitle: deployment.deployment_name ?? deployment.instrument.template.name,
-    programLabel: buildProgramLabel({
-      majorName: deployment.major?.name ?? null,
-      programCode: deployment.program?.code ?? null,
-      programName: deployment.program?.name ?? null,
-    }),
-    sections,
-    savedAnswers,
-    session: {
-      responseId: response?.id ?? null,
-      answeredItems,
-      totalItems: countSectionItems(sections),
-      submittedAt: response?.submitted_at ?? null,
-    },
+    ...prepareEvaluationSession(deployment.instrument.structure_snapshot, response),
   };
 }
