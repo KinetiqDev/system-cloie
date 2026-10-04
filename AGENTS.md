@@ -111,6 +111,7 @@ During implementation:
 - Prefer targeted investigation before broad codebase changes.
 - Do not duplicate detailed skill procedures in this file; follow the applicable `SKILL.md`.
   For large or uncertain work, use the repository's planning skills. For implementation, review, debugging, UI, Supabase, or testing work, use the narrowest applicable project skill.
+  For opening a pull request and driving it to merge-ready — CI green, the Greptile verdict recorded, review threads resolved — use `/babysit-pr`.
   Project skills live under `.agents/skills/`; that directory is authoritative.
 
 ---
