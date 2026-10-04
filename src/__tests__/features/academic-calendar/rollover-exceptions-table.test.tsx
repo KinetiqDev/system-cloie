@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { RolloverExceptionsTable } from "@/features/academic-calendar/components/rollover-exceptions-table";
 import type { RolloverException } from "@/features/academic-calendar/services/run-term-rollover";
 
@@ -55,19 +55,5 @@ describe("RolloverExceptionsTable", () => {
     expect(screen.getByText("Missing Data")).toBeInTheDocument();
     expect(screen.getByText("Duplicate")).toBeInTheDocument();
     expect(screen.getByText("Student is in 4th year and marked for graduation.")).toBeInTheDocument();
-  });
-
-  it("renders the edit action only when onEditStudent is provided", () => {
-    const onEditStudent = vi.fn();
-    render(<RolloverExceptionsTable exceptions={[exception]} onEditStudent={onEditStudent} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-    expect(onEditStudent).toHaveBeenCalledWith("student-1");
-  });
-
-  it("omits the actions column when no edit callback is provided", () => {
-    render(<RolloverExceptionsTable exceptions={[exception]} />);
-    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Actions")).not.toBeInTheDocument();
   });
 });

@@ -150,6 +150,7 @@ export async function runTermRollover({
 
   // 5. Process each enrollment
   const exceptions: RolloverException[] = [];
+  let skippedCount = 0;
   const enrollmentsToCreate: Array<{
     student_user_id: string;
     term_instance_id: string;
@@ -170,7 +171,8 @@ export async function runTermRollover({
 
     // Check if already enrolled in target term (idempotency)
     if (existingStudentIds.has(enrollment.student_user_id)) {
-      continue; // Skip - already exists
+      skippedCount++;
+      continue;
     }
 
     // Prepare enrollment for creation
@@ -207,7 +209,6 @@ export async function runTermRollover({
   }
 
   // 7. Return results
-  const skippedCount = existingStudentIds.size;
   const processedCount = sourceEnrollments.length;
 
   return {
@@ -281,6 +282,7 @@ export async function previewTermRollover({
   // 5. Simulate processing
   const exceptions: RolloverException[] = [];
   let wouldCreateCount = 0;
+  let wouldSkipCount = 0;
 
   for (const enrollment of sourceEnrollments) {
     const nextYearLevel = resolveRolloverYearLevel(enrollment, sameSchoolYear);
@@ -290,7 +292,8 @@ export async function previewTermRollover({
     }
 
     if (existingStudentIds.has(enrollment.student_user_id)) {
-      continue; // Would skip
+      wouldSkipCount++;
+      continue;
     }
 
     wouldCreateCount++;
@@ -301,7 +304,7 @@ export async function previewTermRollover({
     data: {
       wouldProcessCount: sourceEnrollments.length,
       wouldCreateCount,
-      wouldSkipCount: existingStudentIds.size,
+      wouldSkipCount,
       exceptions,
     },
   };

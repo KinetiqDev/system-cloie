@@ -426,6 +426,84 @@ describe("runTermRollover", () => {
     }
   });
 
+  it("reports skippedCount as the students actually skipped, not all pre-enrolled students", async () => {
+    mockAuthenticatedAdmin();
+
+    termInstanceFindUniqueMock
+      .mockResolvedValueOnce({
+        id: "term-1",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      })
+      .mockResolvedValueOnce({
+        id: "term-2",
+        school_year: { is_archived: false, code: "2026-2027", id: "sy-2" },
+      });
+
+    // Three source enrollments: two promote normally, one is a 4th-year
+    // graduating exception (cross-school-year rollover).
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      {
+        student_user_id: "student-1",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FIRST_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-1", email: "student1@test.com", name: "John Doe" },
+      },
+      {
+        student_user_id: "student-2",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FIRST_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-2", email: "student2@test.com", name: "Jane Doe" },
+      },
+      {
+        student_user_id: "student-3",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FOURTH_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-3", email: "student3@test.com", name: "Bob Gray" },
+      },
+    ]);
+
+    // student-1 is already enrolled in the target term; s9 is enrolled in the
+    // target term but not part of this rollover cohort; student-2 is new.
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      { student_user_id: "student-1" },
+      { student_user_id: "student-9" },
+    ]);
+
+    studentEnrollmentCreateManyMock.mockResolvedValue({ count: 1 });
+
+    transactionMock.mockImplementation(async (callback) => {
+      return await callback({
+        studentEnrollment: {
+          createMany: studentEnrollmentCreateManyMock,
+        },
+      });
+    });
+
+    const result = await runTermRollover({
+      sourceTermInstanceId: "term-1",
+      targetTermInstanceId: "term-2",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.processedCount).toBe(3);
+      expect(result.data.createdCount).toBe(1);
+      // Only student-1 was skipped; the pre-enrolled cohort is not itself a
+      // skip, and student-3 is an exception, not a skip.
+      expect(result.data.skippedCount).toBe(1);
+      expect(result.data.exceptions).toHaveLength(1);
+    }
+  });
+
   it("flags students with missing program as exception", async () => {
     mockAuthenticatedAdmin();
 
@@ -609,6 +687,76 @@ describe("previewTermRollover", () => {
       expect(result.data.wouldProcessCount).toBe(2);
       expect(result.data.wouldCreateCount).toBe(2); // Both carried over unchanged
       expect(result.data.exceptions).toHaveLength(0); // No graduation within a school year
+    }
+
+    expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("reports wouldSkipCount as the students actually skipped, not all pre-enrolled students", async () => {
+    mockAuthenticatedAdmin();
+
+    termInstanceFindUniqueMock
+      .mockResolvedValueOnce({
+        id: "term-1",
+        school_year: { is_archived: false, code: "2025-2026", id: "sy-1" },
+      })
+      .mockResolvedValueOnce({
+        id: "term-2",
+        school_year: { is_archived: false, code: "2026-2027", id: "sy-2" },
+      });
+
+    // Two promote normally, one is a 4th-year graduating exception.
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      {
+        student_user_id: "student-1",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FIRST_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-1", email: "student1@test.com", name: "John Doe" },
+      },
+      {
+        student_user_id: "student-2",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FIRST_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-2", email: "student2@test.com", name: "Jane Doe" },
+      },
+      {
+        student_user_id: "student-3",
+        program_id: "program-1",
+        major_id: "major-1",
+        year_level: "FOURTH_YEAR",
+        section: null,
+        is_active: true,
+        student: { id: "student-3", email: "student3@test.com", name: "Bob Gray" },
+      },
+    ]);
+
+    // student-1 is pre-enrolled in the target; student-9 is enrolled there
+    // but outside this rollover cohort; student-2 is new.
+    studentEnrollmentFindManyMock.mockResolvedValueOnce([
+      { student_user_id: "student-1" },
+      { student_user_id: "student-9" },
+    ]);
+
+    const result = await previewTermRollover({
+      sourceTermInstanceId: "term-1",
+      targetTermInstanceId: "term-2",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.wouldProcessCount).toBe(3);
+      expect(result.data.wouldCreateCount).toBe(1);
+      // Only student-1 was skipped; the out-of-cohort pre-enrollment is not a
+      // skip, and student-3 is an exception, not a skip.
+      expect(result.data.wouldSkipCount).toBe(1);
+      expect(result.data.exceptions).toHaveLength(1);
     }
 
     expect(studentEnrollmentCreateManyMock).not.toHaveBeenCalled();

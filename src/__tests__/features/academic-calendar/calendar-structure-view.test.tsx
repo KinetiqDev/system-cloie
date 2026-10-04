@@ -377,6 +377,51 @@ describe("CalendarStructureView", () => {
     expect(transitionPeriodStatusActionMock).not.toHaveBeenCalled();
   });
 
+  it("links each School Year code to its detail page", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    const link = screen.getByRole("link", { name: "2026-2027" });
+    expect(link).toHaveAttribute("href", "/secretary/school-years/sy-1");
+  });
+
+  it("renders the School Year code as plain text when linkCode is false", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} linkCode={false} />);
+
+    expect(screen.queryByRole("link", { name: "2026-2027" })).not.toBeInTheDocument();
+    expect(screen.getByText("2026-2027").tagName).toBe("SPAN");
+  });
+
+  it("links an ACTIVE term to its rollover workspace and hides it elsewhere", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear()]} />);
+
+    const rolloverLinks = screen.getAllByRole("link", { name: "Term Rollover" });
+    expect(rolloverLinks).toHaveLength(1);
+    expect(rolloverLinks[0]).toHaveAttribute(
+      "href",
+      "/secretary/school-years/sy-1/rollover"
+    );
+    // The ACTIVE term is FIRST semester / SECOND_TERM in the fixture.
+    const activeTermRow = screen.getByText("ACTIVE").closest("div")?.parentElement;
+    expect(activeTermRow).not.toBeNull();
+    expect(activeTermRow).toContainElement(rolloverLinks[0]);
+  });
+
+  it("offers no rollover link when the school year is archived", () => {
+    render(<CalendarStructureView schoolYears={[schoolYear({ isArchived: true })]} />);
+
+    expect(screen.queryByRole("link", { name: "Term Rollover" })).not.toBeInTheDocument();
+  });
+
+  it("offers no rollover link on PLANNED terms", () => {
+    render(
+      <CalendarStructureView schoolYears={[schoolYear({ termInstances: [term()] })]} />
+    );
+
+    // The single fixture term is FIRST/FIRST_TERM with status PLANNED.
+    expect(screen.getAllByRole("button", { name: /Make Active/ }).length).toBe(1);
+    expect(screen.queryByRole("link", { name: "Term Rollover" })).not.toBeInTheDocument();
+  });
+
   it("uses destructive semantics on the confirmation action", async () => {
     render(<CalendarStructureView schoolYears={[schoolYear()]} />);
 

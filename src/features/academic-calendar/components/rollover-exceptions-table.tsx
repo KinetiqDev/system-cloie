@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Empty,
@@ -22,7 +21,6 @@ import type { RolloverException, RolloverExceptionType } from "../services/run-t
 
 interface RolloverExceptionsTableProps {
   exceptions: RolloverException[];
-  onEditStudent?: (studentUserId: string) => void;
 }
 
 const EXCEPTION_TYPE_CONFIG: Record<
@@ -36,7 +34,6 @@ const EXCEPTION_TYPE_CONFIG: Record<
 
 export function RolloverExceptionsTable({
   exceptions,
-  onEditStudent,
 }: RolloverExceptionsTableProps) {
   if (exceptions.length === 0) {
     return (
@@ -63,7 +60,6 @@ export function RolloverExceptionsTable({
             <TableHead>Type</TableHead>
             <TableHead>Current Year</TableHead>
             <TableHead>Reason</TableHead>
-            {onEditStudent && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -89,18 +85,6 @@ export function RolloverExceptionsTable({
                 <TableCell className="text-muted-foreground">
                   {exception.message}
                 </TableCell>
-                {onEditStudent && (
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEditStudent(exception.studentUserId)}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
-                )}
               </TableRow>
             );
           })}

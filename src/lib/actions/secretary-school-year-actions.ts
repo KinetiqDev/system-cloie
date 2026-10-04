@@ -11,16 +11,11 @@ import {
   setActiveSemester,
 } from "@/features/academic-calendar/services/manage-school-years";
 import { verifySecretaryAccess } from "@/features/academic-calendar/services/secretary-access";
-import {
-  updateTermInstance,
-  deleteTermInstance,
-} from "@/features/academic-calendar/services/manage-term-instances";
 import { transitionPeriodStatus } from "@/features/academic-calendar/services/manage-academic-period-lifecycle";
 import {
   createSchoolYearSchema,
   setActiveSemesterSchema,
 } from "@/features/academic-calendar/schemas/school-year";
-import { updateTermInstanceSchema } from "@/features/academic-calendar/schemas/term-instance";
 import type { ServiceResult } from "@/lib/utils/service-result";
 import { revalidateAcademicPeriodReadModelRoutes } from "@/lib/cache/academic-periods";
 
@@ -168,60 +163,6 @@ export async function setActiveSemesterAction(
     revalidatePath("/secretary/dashboard");
     revalidatePath("/program-head/dashboard");
     revalidatePath("/faculty/dashboard");
-    revalidateAcademicPeriodReadModelRoutes();
-  }
-
-  return result;
-}
-
-// ============================================================================
-// Term Instance Actions
-// ============================================================================
-
-export async function updateTermInstanceAction(
-  formData: FormData
-): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  const id = formData.get("id");
-  const startDateStr = formData.get("startDate");
-  const endDateStr = formData.get("endDate");
-
-  const parsed = updateTermInstanceSchema.safeParse({
-    id,
-    startDate: startDateStr ? new Date(startDateStr as string) : undefined,
-    endDate: endDateStr ? new Date(endDateStr as string) : undefined,
-  });
-
-  if (!parsed.success) {
-    const firstError = parsed.error.issues[0];
-    return { success: false, error: firstError?.message ?? "Invalid input" };
-  }
-
-  const result = await updateTermInstance(parsed.data);
-
-  if (result.success) {
-    revalidatePath("/secretary/school-years");
-    revalidateAcademicPeriodReadModelRoutes();
-  }
-
-  return result;
-}
-
-export async function deleteTermInstanceAction(formData: FormData): Promise<ServiceResult> {
-  const auth = await verifySecretaryAccess();
-  if (!auth.success) return auth;
-
-  const id = formData.get("id");
-  if (!id || typeof id !== "string") {
-    return { success: false, error: "Invalid term instance ID" };
-  }
-
-  const result = await deleteTermInstance(id);
-
-  if (result.success) {
-    revalidatePath("/secretary/school-years");
     revalidateAcademicPeriodReadModelRoutes();
   }
 
