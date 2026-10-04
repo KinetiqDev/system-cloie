@@ -13,7 +13,6 @@ import { DEPLOYMENT_UNAVAILABLE_ERROR, isDeploymentAvailable } from "./deploymen
 export type AnswerAudience = "STUDENT" | "STAKEHOLDER";
 
 type AnswerableAssignment = {
-  assignmentId: string;
   structureSnapshot: unknown;
   createData: Prisma.ResponseUncheckedCreateInput;
   /** Published CILO question bindings; only loaded for submissions, which attribute ratings to them. */
@@ -97,7 +96,6 @@ export async function resolveAnswerableAssignment({
   return {
     success: true,
     data: {
-      assignmentId: assignment.id,
       ciloQuestionBindings: courseBound?.cilo_question_bindings,
       createData: {
         assignment_id: assignment.id,

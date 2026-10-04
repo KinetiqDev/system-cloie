@@ -1,9 +1,11 @@
 import crypto from "node:crypto";
-import { DeploymentType, ResponseStatus, SystemRole } from "@prisma/client";
+import { DeploymentType, ResponseStatus, SystemRole, type Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db/prisma";
 import { D } from "../../../../prisma/seed/constants/ids";
 import { lockResponseSubmission } from "@/features/responses/services/lock-response-submission";
+import { saveResponseDraft } from "@/features/responses/services/save-response-draft";
+import { finalizeResponseSubmission } from "@/features/responses/services/finalize-response-submission";
 
 /**
  * Response lifecycle invariants: one-response enforcement, atomic submission,
@@ -103,7 +105,7 @@ async function addQualItem(responseId: string) {
 }
 
 /**
- * Mirrors the app's submission transaction (submit-student-evaluation-response):
+ * Mirrors finalizeResponseSubmission's transaction:
  * resolve the response by assignment, reject a SUBMITTED response, replace all
  * answer items, then flip status and freeze submitted_at.
  */
@@ -141,6 +143,111 @@ function errorCode(error: unknown): string | undefined {
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
   "Response lifecycle invariants",
   () => {
+    it("rejects a draft racing a submission without changing frozen answers", async () => {
+      const { evalAssignmentId, userId } = await seedTestAssignment();
+      let notifyDraftStarted!: () => void;
+      const draftStarted = new Promise<void>((resolve) => {
+        notifyDraftStarted = resolve;
+      });
+      let notifyCommitted!: () => void;
+      const committed = new Promise<void>((resolve) => {
+        notifyCommitted = resolve;
+      });
+      function instrument<T extends Prisma.TransactionClient>(client: T): T {
+        return new Proxy(client, {
+          get(target, key, receiver) {
+            if (key === "$executeRaw")
+              return (...args: Parameters<typeof target.$executeRaw>) => {
+                notifyDraftStarted();
+                return target.$executeRaw(...args);
+              };
+            if (key === "response")
+              return new Proxy(target.response, {
+                get(model, method, modelReceiver) {
+                  if (method === "findUnique")
+                    return async (...args: Parameters<typeof model.findUnique>) => {
+                      const result = await model.findUnique(...args);
+                      notifyDraftStarted();
+                      await committed;
+                      return result;
+                    };
+                  return Reflect.get(model, method, modelReceiver);
+                },
+              });
+            return Reflect.get(target, key, receiver);
+          },
+        });
+      }
+      const draftClient = new Proxy(instrument(prisma), {
+        get(target, key, receiver) {
+          if (key === "$transaction")
+            return <T>(work: (tx: Prisma.TransactionClient) => Promise<T>) =>
+              prisma.$transaction((tx) => work(instrument(tx)));
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      const createData = {
+        assignment_id: evalAssignmentId,
+        deployment_id: D.CB_BSIT_GESTECH,
+        deployment_type: DeploymentType.COURSE_BOUND,
+        respondent_id: userId,
+        status: ResponseStatus.IN_PROGRESS,
+      };
+      try {
+        const response = await createResponse(evalAssignmentId, userId, D.CB_BSIT_GESTECH);
+        let notifyFinalized!: () => void;
+        const finalized = new Promise<void>((resolve) => {
+          notifyFinalized = resolve;
+        });
+        const submission = prisma
+          .$transaction(async (tx) => {
+            const result = await finalizeResponseSubmission({
+              tx,
+              assignmentId: evalAssignmentId,
+              createData,
+              answers: { "feedback:quantitative:rating": 5 },
+            });
+            notifyFinalized();
+            await draftStarted;
+            return result;
+          })
+          .finally(notifyCommitted);
+        await finalized;
+        const draft = saveResponseDraft({
+          client: draftClient,
+          createData,
+          section: {
+            id: "feedback",
+            name: "Feedback",
+            description: "",
+            items: [
+              { kind: "quantitative", itemKey: "rating", prompt: "Rating", scale: [1, 2, 3, 4, 5] },
+            ],
+          },
+          answers: { "feedback:quantitative:rating": 1 },
+        });
+        const [submitted, savedDraft] = await Promise.all([submission, draft]);
+        expect(savedDraft).toEqual({ status: "ALREADY_SUBMITTED" });
+        const saved = await prisma.response.findUniqueOrThrow({
+          where: { id: response.id },
+          include: { quant_items: true },
+        });
+        expect(saved.status).toBe(ResponseStatus.SUBMITTED);
+        expect(saved.submitted_at?.toISOString()).toBe(submitted.submittedAt);
+        expect(
+          saved.quant_items.map(({ section_key, item_key, rating_value }) => ({
+            section_key,
+            item_key,
+            rating_value,
+          }))
+        ).toEqual([{ section_key: "feedback", item_key: "rating", rating_value: 5 }]);
+      } finally {
+        notifyDraftStarted();
+        notifyCommitted();
+        await cleanup({ evalAssignmentIds: [evalAssignmentId], userId });
+      }
+    }, 30000);
+
     it("enforces one response per assignment via the unique assignment_id constraint", async () => {
       const { evalAssignmentId, userId } = await seedTestAssignment();
       try {

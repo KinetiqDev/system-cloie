@@ -4,7 +4,6 @@ import type {
   StudentEvaluationSection,
   StudentEvaluationSession,
 } from "@/features/responses/types";
-import { buildCentralProgramLabel } from "./central-program-label";
 import { isDeploymentAvailable } from "./deployment-availability";
 import { prepareEvaluationSession } from "./evaluation-session";
 
@@ -29,7 +28,6 @@ function evaluationIsReadable(
 export type CentralDeploymentEvaluationSession = {
   assignmentId: string;
   evaluationTitle: string;
-  programLabel: string;
   sections: StudentEvaluationSection[];
   savedAnswers: Record<string, number | string>;
   session: StudentEvaluationSession;
@@ -71,8 +69,6 @@ export async function getCentralDeploymentEvaluationSession(
               template: true,
             },
           },
-          major: true,
-          program: true,
         },
       },
       response: {
@@ -101,7 +97,6 @@ export async function getCentralDeploymentEvaluationSession(
   return {
     assignmentId: assignment.id,
     evaluationTitle: deployment.deployment_name ?? deployment.instrument.template.name,
-    programLabel: buildCentralProgramLabel(deployment),
     ...prepareEvaluationSession(deployment.instrument.structure_snapshot, response),
   };
 }

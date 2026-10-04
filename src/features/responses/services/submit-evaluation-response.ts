@@ -75,7 +75,7 @@ export async function submitEvaluationResponse(
     if (error instanceof Error && error.message === ALREADY_SUBMITTED_ERROR) {
       return { error: "This evaluation has already been submitted.", success: false };
     }
-    console.error("Failed to submit evaluation response:", error);
+    console.error(`Failed to submit ${audience} evaluation response:`, error);
     return {
       error: "An unexpected error occurred while submitting your response.",
       success: false,
