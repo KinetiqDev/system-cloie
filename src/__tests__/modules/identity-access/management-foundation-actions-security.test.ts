@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 import { createAuthSessionSnapshot } from "@/__tests__/helpers/auth-session";
 import * as authModule from "@/features/auth/services/resolve-auth-session";
@@ -45,13 +45,109 @@ import {
   deleteIndustryPartnerProfile,
 } from "@/features/users/services/manage-users";
 
+const SECRETARY_ID = "11111111-1111-4111-a111-111111111111";
+const PROGRAM_HEAD_ID = "44444444-4444-4444-b444-444444444444";
+const PROGRAM_ID = "55555555-5555-4555-a555-555555555555";
+
+function roleGrantFormData(userId: string, role: string): FormData {
+  const formData = new FormData();
+  formData.set("user_id", userId);
+  formData.set("role", role);
+  return formData;
+}
+
+function programHeadAssignmentFormData(programHeadId: string): FormData {
+  const formData = new FormData();
+  formData.set("program_head_id", programHeadId);
+  formData.set("program_id", PROGRAM_ID);
+  return formData;
+}
+
+interface ActionGuards {
+  label: string;
+  /** The privileged service the action delegates to once its guards pass. */
+  service: Mock;
+  unauthenticated: () => Promise<unknown>;
+  wrongRole: () => Promise<unknown>;
+}
+
+interface AccountActionGuards extends ActionGuards {
+  /** The action addresses an account, so it refuses to target the caller. */
+  selfTarget: () => Promise<unknown>;
+}
+
+// Every one of these actions runs the same two guards, in the same order, with
+// the same error strings: a session with an active role is required, and only a
+// Secretary or Dean is allowed. Either guard refuses before any service call.
+const ACCOUNT_ACTION_GUARDS: AccountActionGuards[] = [
+  {
+    label: "toggleUserActiveAction",
+    service: vi.mocked(toggleUserActive),
+    unauthenticated: () => toggleUserActiveAction("other-user", true),
+    wrongRole: () => toggleUserActiveAction("other-user", true),
+    selfTarget: () => toggleUserActiveAction(SECRETARY_ID, true),
+  },
+  {
+    label: "addRoleToExistingUserAction",
+    service: vi.mocked(addRoleToExistingUser),
+    unauthenticated: () =>
+      addRoleToExistingUserAction(roleGrantFormData(PROGRAM_HEAD_ID, ROLES.FACULTY)),
+    wrongRole: () => addRoleToExistingUserAction(roleGrantFormData(PROGRAM_HEAD_ID, ROLES.FACULTY)),
+    selfTarget: () => addRoleToExistingUserAction(roleGrantFormData(SECRETARY_ID, ROLES.FACULTY)),
+  },
+  {
+    label: "removeRoleFromUserAction",
+    service: vi.mocked(removeRoleFromUser),
+    unauthenticated: () => removeRoleFromUserAction("other-user", ROLES.FACULTY),
+    wrongRole: () => removeRoleFromUserAction("other-user", ROLES.FACULTY),
+    selfTarget: () => removeRoleFromUserAction(SECRETARY_ID, ROLES.FACULTY),
+  },
+  {
+    label: "createProgramHeadAssignmentAction",
+    service: vi.mocked(createProgramHeadAssignment),
+    unauthenticated: () =>
+      createProgramHeadAssignmentAction(programHeadAssignmentFormData(PROGRAM_HEAD_ID)),
+    wrongRole: () =>
+      createProgramHeadAssignmentAction(programHeadAssignmentFormData(PROGRAM_HEAD_ID)),
+    selfTarget: () =>
+      createProgramHeadAssignmentAction(programHeadAssignmentFormData(SECRETARY_ID)),
+  },
+  {
+    label: "deleteStudentAcademicContextAction",
+    service: vi.mocked(deleteStudentAcademicContext),
+    unauthenticated: () => deleteStudentAcademicContextAction("other-user"),
+    wrongRole: () => deleteStudentAcademicContextAction("other-user"),
+    selfTarget: () => deleteStudentAcademicContextAction(SECRETARY_ID),
+  },
+  {
+    label: "deleteIndustryPartnerProfileAction",
+    service: vi.mocked(deleteIndustryPartnerProfile),
+    unauthenticated: () => deleteIndustryPartnerProfileAction("other-user"),
+    wrongRole: () => deleteIndustryPartnerProfileAction("other-user"),
+    selfTarget: () => deleteIndustryPartnerProfileAction(SECRETARY_ID),
+  },
+];
+
+const ACTION_GUARDS: ActionGuards[] = [
+  ...ACCOUNT_ACTION_GUARDS,
+  {
+    // Deactivating an assignment addresses a record identified by its own ids,
+    // so this action carries no self-target rule: only the id shape gates the
+    // write, and an allowed caller may deactivate their own assignment.
+    label: "deactivateProgramHeadAssignmentAction",
+    service: vi.mocked(deactivateProgramHeadAssignment),
+    unauthenticated: () => deactivateProgramHeadAssignmentAction(PROGRAM_ID, PROGRAM_HEAD_ID),
+    wrongRole: () => deactivateProgramHeadAssignmentAction(PROGRAM_ID, PROGRAM_HEAD_ID),
+  },
+];
+
 describe("management-foundation-actions security", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   const secretarySession = createAuthSessionSnapshot({
-    userId: "11111111-1111-4111-a111-111111111111",
+    userId: SECRETARY_ID,
     roles: [ROLES.SECRETARY],
   });
 
@@ -61,7 +157,7 @@ describe("management-foundation-actions security", () => {
   });
 
   const programHeadSession = createAuthSessionSnapshot({
-    userId: "44444444-4444-4444-b444-444444444444",
+    userId: PROGRAM_HEAD_ID,
     roles: [ROLES.PROGRAM_HEAD],
   });
 
@@ -77,263 +173,101 @@ describe("management-foundation-actions security", () => {
     });
   });
 
-  describe("toggleUserActiveAction", () => {
-    it("rejects unauthenticated", async () => {
+  it.each(ACTION_GUARDS)(
+    "$label refuses an unauthenticated caller",
+    async ({ service, unauthenticated }) => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await toggleUserActiveAction("other-user", true);
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
 
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await toggleUserActiveAction("other-user", true);
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await toggleUserActiveAction("11111111-1111-4111-a111-111111111111", true);
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
-
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await toggleUserActiveAction("other-user", true);
-      expect(toggleUserActive).toHaveBeenCalledWith("other-user", true);
-      expect(result).toEqual({ success: true });
-    });
-  });
-
-  describe("addRoleToExistingUserAction", () => {
-    function makeFormData(userId: string, role: string) {
-      const fd = new FormData();
-      fd.set("user_id", userId);
-      fd.set("role", role);
-      return fd;
-    }
-
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await addRoleToExistingUserAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
-      );
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await addRoleToExistingUserAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
-      );
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await addRoleToExistingUserAction(
-        makeFormData("11111111-1111-4111-a111-111111111111", ROLES.FACULTY)
-      );
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
-
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await addRoleToExistingUserAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", ROLES.FACULTY)
-      );
-      expect(addRoleToExistingUser).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: "44444444-4444-4444-b444-444444444444",
-          role: ROLES.FACULTY,
-        })
-      );
-      expect(result).toEqual({ success: true });
-    });
-  });
-
-  describe("removeRoleFromUserAction", () => {
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await removeRoleFromUserAction(
-        "11111111-1111-4111-a111-111111111111",
-        ROLES.FACULTY
-      );
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
-
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await removeRoleFromUserAction("other-user", ROLES.FACULTY);
-      expect(removeRoleFromUser).toHaveBeenCalledWith("other-user", ROLES.FACULTY);
-      expect(result).toEqual({ success: true });
-    });
-  });
-
-  describe("createProgramHeadAssignmentAction", () => {
-    function makeFormData(programHeadId: string, programId: string) {
-      const fd = new FormData();
-      fd.set("program_head_id", programHeadId);
-      fd.set("program_id", programId);
-      return fd;
-    }
-
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await createProgramHeadAssignmentAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", "55555555-5555-4555-a555-555555555555")
-      );
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await createProgramHeadAssignmentAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", "55555555-5555-4555-a555-555555555555")
-      );
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await createProgramHeadAssignmentAction(
-        makeFormData("11111111-1111-4111-a111-111111111111", "55555555-5555-4555-a555-555555555555")
-      );
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
-
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await createProgramHeadAssignmentAction(
-        makeFormData("44444444-4444-4444-b444-444444444444", "55555555-5555-4555-a555-555555555555")
-      );
-      expect(createProgramHeadAssignment).toHaveBeenCalledWith({
-        program_head_id: "44444444-4444-4444-b444-444444444444",
-        program_id: "55555555-5555-4555-a555-555555555555",
+      await expect(unauthenticated()).resolves.toEqual({
+        success: false,
+        error: "Authentication required.",
       });
-      expect(result).toEqual({ success: true });
-    });
-  });
+      expect(service).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(ACTION_GUARDS)(
+    "$label refuses a caller outside the Secretary and Dean roles",
+    async ({ service, wrongRole }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
+
+      await expect(wrongRole()).resolves.toEqual({
+        success: false,
+        error: "Insufficient permissions.",
+      });
+      expect(service).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(ACCOUNT_ACTION_GUARDS)(
+    "$label refuses an allowed caller targeting their own account",
+    async ({ service, selfTarget }) => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
+
+      await expect(selfTarget()).resolves.toEqual({
+        success: false,
+        error: "Cannot modify own account.",
+      });
+      expect(service).not.toHaveBeenCalled();
+    }
+  );
 
   describe("deactivateProgramHeadAssignmentAction", () => {
-    const ASSIGNMENT_ID = "55555555-5555-4555-a555-555555555555";
+    it("lets an allowed caller deactivate their own assignment", async () => {
+      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
 
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await deactivateProgramHeadAssignmentAction(
-        ASSIGNMENT_ID,
-        "44444444-4444-4444-b444-444444444444"
-      );
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await deactivateProgramHeadAssignmentAction(
-        ASSIGNMENT_ID,
-        "44444444-4444-4444-b444-444444444444"
-      );
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-      expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
+      await expect(
+        deactivateProgramHeadAssignmentAction(PROGRAM_ID, SECRETARY_ID)
+      ).resolves.toEqual({ success: true });
+      expect(deactivateProgramHeadAssignment).toHaveBeenCalledWith(PROGRAM_ID, SECRETARY_ID);
     });
 
     it("rejects a malformed assignment id before calling the service", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deactivateProgramHeadAssignmentAction(
-        "not-a-uuid",
-        "44444444-4444-4444-b444-444444444444"
-      );
+
+      const result = await deactivateProgramHeadAssignmentAction("not-a-uuid", PROGRAM_HEAD_ID);
+
       expect(result.success).toBe(false);
       expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
     });
 
     it("rejects a malformed program head id before calling the service", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deactivateProgramHeadAssignmentAction(ASSIGNMENT_ID, "not-a-uuid");
+
+      const result = await deactivateProgramHeadAssignmentAction(PROGRAM_ID, "not-a-uuid");
+
       expect(result.success).toBe(false);
       expect(deactivateProgramHeadAssignment).not.toHaveBeenCalled();
     });
+  });
 
-    it("accepts valid ids and forwards them to the service", async () => {
+  // The FormData actions read submitted fields, so their contract includes
+  // which form field becomes which service argument.
+  describe("submitted form payloads", () => {
+    it("addRoleToExistingUserAction reads the granted user and role from the form", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deactivateProgramHeadAssignmentAction(
-        ASSIGNMENT_ID,
-        "44444444-4444-4444-b444-444444444444"
+
+      const result = await addRoleToExistingUserAction(
+        roleGrantFormData(PROGRAM_HEAD_ID, ROLES.FACULTY)
       );
-      expect(deactivateProgramHeadAssignment).toHaveBeenCalledWith(
-        ASSIGNMENT_ID,
-        "44444444-4444-4444-b444-444444444444"
+
+      expect(addRoleToExistingUser).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: PROGRAM_HEAD_ID, role: ROLES.FACULTY })
       );
       expect(result).toEqual({ success: true });
     });
-  });
 
-  describe("deleteStudentAcademicContextAction", () => {
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await deleteStudentAcademicContextAction("other-user");
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await deleteStudentAcademicContextAction("other-user");
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
+    it("createProgramHeadAssignmentAction reads the program head and program from the form", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteStudentAcademicContextAction(
-        "11111111-1111-4111-a111-111111111111"
+
+      const result = await createProgramHeadAssignmentAction(
+        programHeadAssignmentFormData(PROGRAM_HEAD_ID)
       );
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
 
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteStudentAcademicContextAction("other-user");
-      expect(deleteStudentAcademicContext).toHaveBeenCalledWith("other-user");
-      expect(result).toEqual({ success: true });
-    });
-  });
-
-  describe("deleteIndustryPartnerProfileAction", () => {
-    it("rejects unauthenticated", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
-      const result = await deleteIndustryPartnerProfileAction("other-user");
-      expect(result).toEqual({ success: false, error: "Authentication required." });
-    });
-
-    it("rejects wrong role", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(studentSession);
-      const result = await deleteIndustryPartnerProfileAction("other-user");
-      expect(result).toEqual({ success: false, error: "Insufficient permissions." });
-    });
-
-    it("rejects right role + self-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteIndustryPartnerProfileAction(
-        "11111111-1111-4111-a111-111111111111"
-      );
-      expect(result).toEqual({ success: false, error: "Cannot modify own account." });
-    });
-
-    it("accepts right role + other-target", async () => {
-      vi.mocked(authModule.resolveAuthSession).mockResolvedValue(secretarySession);
-      const result = await deleteIndustryPartnerProfileAction("other-user");
-      expect(deleteIndustryPartnerProfile).toHaveBeenCalledWith("other-user");
+      expect(createProgramHeadAssignment).toHaveBeenCalledWith({
+        program_head_id: PROGRAM_HEAD_ID,
+        program_id: PROGRAM_ID,
+      });
       expect(result).toEqual({ success: true });
     });
   });

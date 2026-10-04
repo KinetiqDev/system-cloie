@@ -11,7 +11,6 @@ import {
   duplicateTemplate,
   toggleTemplateActive,
   deleteProgramHeadTemplate,
-  toggleFacultyAccessible,
 } from "@/features/instruments/services/manage-program-head-templates";
 import { buildProgramHeadToolsPath } from "@/lib/constants/program-head-routes";
 
@@ -21,24 +20,40 @@ function revalidateTools(programId: string) {
   revalidatePath(buildProgramHeadToolsPath(programId));
 }
 
-export async function createProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
+type TemplateFormJson =
+  | { error: string }
+  | { structure: unknown; programQuestionGoBindings: unknown };
+
+/**
+ * The builder submits the template structure and the program-wide GO
+ * question bindings as JSON strings. Both are read here so create and update
+ * report the same parse failure before the schema runs.
+ */
+function readTemplateFormJson(formData: FormData): TemplateFormJson {
   const rawStructure = formData.get("structure");
+  const rawGoBindings = formData.get("program_question_go_bindings");
   let structure: unknown = [];
+  let programQuestionGoBindings: unknown = [];
 
   try {
     structure = typeof rawStructure === "string" ? JSON.parse(rawStructure) : [];
   } catch {
-    return { success: false, error: "Invalid template structure." };
+    return { error: "Invalid template structure." } as const;
   }
-
-  const rawGoBindings = formData.get("program_question_go_bindings");
-  let programQuestionGoBindings: unknown = [];
 
   try {
     programQuestionGoBindings = typeof rawGoBindings === "string" ? JSON.parse(rawGoBindings) : [];
   } catch {
-    return { success: false, error: "Invalid GO question bindings." };
+    return { error: "Invalid GO question bindings." } as const;
   }
+
+  return { structure, programQuestionGoBindings } as const;
+}
+
+export async function createProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
+  const json = readTemplateFormJson(formData);
+
+  if ("error" in json) return { success: false, error: json.error };
 
   const parsed = createProgramHeadTemplateSchema.safeParse({
     name: formData.get("name"),
@@ -47,8 +62,8 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
-    structure,
-    __KEEP_program_question_go_bindings__: programQuestionGoBindings,
+    structure: json.structure,
+    __KEEP_program_question_go_bindings__: json.programQuestionGoBindings,
   });
 
   if (!parsed.success) {
@@ -69,23 +84,9 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
 }
 
 export async function updateProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
-  const rawStructure = formData.get("structure");
-  let structure: unknown = [];
+  const json = readTemplateFormJson(formData);
 
-  try {
-    structure = typeof rawStructure === "string" ? JSON.parse(rawStructure) : [];
-  } catch {
-    return { success: false, error: "Invalid template structure." };
-  }
-
-  const rawGoBindings = formData.get("program_question_go_bindings");
-  let programQuestionGoBindings: unknown = [];
-
-  try {
-    programQuestionGoBindings = typeof rawGoBindings === "string" ? JSON.parse(rawGoBindings) : [];
-  } catch {
-    return { success: false, error: "Invalid GO question bindings." };
-  }
+  if ("error" in json) return { success: false, error: json.error };
 
   const parsed = updateProgramHeadTemplateSchema.safeParse({
     id: formData.get("id"),
@@ -95,8 +96,8 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     is_active: formData.get("is_active"),
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
-    structure,
-    __KEEP_program_question_go_bindings__: programQuestionGoBindings,
+    structure: json.structure,
+    __KEEP_program_question_go_bindings__: json.programQuestionGoBindings,
   });
 
   if (!parsed.success) {
@@ -147,21 +148,6 @@ export async function toggleTemplateActiveAction(
 
 export async function deleteTemplateAction(programId: string, id: string): Promise<ActionResult> {
   const result = await deleteProgramHeadTemplate(programId, id);
-
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  revalidateTools(programId);
-  return { success: true };
-}
-
-export async function toggleFacultyAccessibleAction(
-  programId: string,
-  id: string,
-  is_faculty_accessible: boolean
-): Promise<ActionResult> {
-  const result = await toggleFacultyAccessible(programId, id, is_faculty_accessible);
 
   if (!result.success) {
     return { success: false, error: result.error };

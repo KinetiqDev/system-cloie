@@ -98,6 +98,14 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
+      - name: Test tooling subprocess contracts
+        if: matrix.project == 'node'
+        run: pnpm test:tooling-integration
+        env:
+          NODE_ENV: test
+          NODE_OPTIONS: --max-old-space-size=4096
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-for-testing
   production-build:
     name: Production Build
     # The production build remains the authoritative compilation and

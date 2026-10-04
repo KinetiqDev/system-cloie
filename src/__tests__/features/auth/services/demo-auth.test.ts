@@ -113,6 +113,18 @@ describe("dedicated demo authentication", () => {
     ).toBeNull();
   });
 
+  it("binds the session to the configured demo session secret", () => {
+    const value = createDemoSessionValue(USER_ID, 1_000);
+
+    // A rotated deployment secret must not accept a session minted under the
+    // previous one, so verification stays bound to the configured secret.
+    vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", "b".repeat(32));
+    expect(verifyDemoSessionValue(value, 1_001)).toBeNull();
+
+    vi.stubEnv("CLOIE_DEMO_SESSION_SECRET", SECRET);
+    expect(verifyDemoSessionValue(value, 1_001)).not.toBeNull();
+  });
+
   it("reads only the separate dedicated-demo cookie", async () => {
     getCookieMock.mockReturnValue({
       value: createDemoSessionValue(USER_ID, Math.floor(Date.now() / 1000)),

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
-import type { YearLevel, EnrollmentSource } from "@prisma/client";
+import type { YearLevel, EnrollmentSource, Prisma } from "@prisma/client";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,51 @@ function nextYearLevelFor(currentYearLevel: YearLevel, sameSchoolYear: boolean):
   return sameSchoolYear ? currentYearLevel : YEAR_LEVEL_PROMOTION[currentYearLevel];
 }
 
+type RolloverEnrollment = Prisma.StudentEnrollmentGetPayload<{
+  include: { student: { select: { id: true; email: true; name: true } } };
+}>;
+
+async function readRolloverCohort(sourceTermInstanceId: string, targetTermInstanceId: string) {
+  const sourceEnrollments = await prisma.studentEnrollment.findMany({
+    where: { term_instance_id: sourceTermInstanceId, is_active: true },
+    include: { student: { select: { id: true, email: true, name: true } } },
+    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
+  });
+  const existingTargetEnrollments = await prisma.studentEnrollment.findMany({
+    where: {
+      term_instance_id: targetTermInstanceId,
+      student_user_id: { in: sourceEnrollments.map((enrollment) => enrollment.student_user_id) },
+    },
+    select: { student_user_id: true },
+  });
+  return {
+    sourceEnrollments,
+    existingStudentIds: new Set(
+      existingTargetEnrollments.map((enrollment) => enrollment.student_user_id)
+    ),
+  };
+}
+
+function resolveRolloverYearLevel(
+  enrollment: RolloverEnrollment,
+  sameSchoolYear: boolean
+): YearLevel | RolloverException {
+  const nextYearLevel = nextYearLevelFor(enrollment.year_level, sameSchoolYear);
+  if (nextYearLevel !== null && enrollment.program_id) return nextYearLevel;
+  const exceptionType = nextYearLevel === null ? "GRADUATING" : "MISSING_DATA";
+  return {
+    studentUserId: enrollment.student.id,
+    studentName: enrollment.student.name,
+    studentEmail: enrollment.student.email,
+    exceptionType,
+    currentYearLevel: enrollment.year_level,
+    message:
+      exceptionType === "GRADUATING"
+        ? "Student is in 4th year and marked for graduation."
+        : "Missing program assignment.",
+  };
+}
+
 // ─── Main Service ──────────────────────────────────────────────────────────────
 
 /**
@@ -98,34 +143,10 @@ export async function runTermRollover({
   // carries each student's year level unchanged.
   const sameSchoolYear = sourceTerm.school_year.id === targetTerm.school_year.id;
 
-  // 3. Fetch active enrollments from source term
-  const sourceEnrollments = await prisma.studentEnrollment.findMany({
-    where: {
-      term_instance_id: sourceTermInstanceId,
-      is_active: true,
-    },
-    include: {
-      student: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
-  });
-
-  // 4. Check for existing enrollments in target term (idempotency)
-  const existingTargetEnrollments = await prisma.studentEnrollment.findMany({
-    where: {
-      term_instance_id: targetTermInstanceId,
-      student_user_id: { in: sourceEnrollments.map((e) => e.student_user_id) },
-    },
-    select: { student_user_id: true },
-  });
-
-  const existingStudentIds = new Set(existingTargetEnrollments.map((e) => e.student_user_id));
+  const { sourceEnrollments, existingStudentIds } = await readRolloverCohort(
+    sourceTermInstanceId,
+    targetTermInstanceId
+  );
 
   // 5. Process each enrollment
   const exceptions: RolloverException[] = [];
@@ -141,32 +162,9 @@ export async function runTermRollover({
   }> = [];
 
   for (const enrollment of sourceEnrollments) {
-    const student = enrollment.student;
-    const nextYearLevel = nextYearLevelFor(enrollment.year_level, sameSchoolYear);
-
-    // Check for graduating students (4th year)
-    if (nextYearLevel === null) {
-      exceptions.push({
-        studentUserId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
-        exceptionType: "GRADUATING",
-        currentYearLevel: enrollment.year_level,
-        message: "Student is in 4th year and marked for graduation.",
-      });
-      continue;
-    }
-
-    // Check for missing program/major data
-    if (!enrollment.program_id) {
-      exceptions.push({
-        studentUserId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
-        exceptionType: "MISSING_DATA",
-        currentYearLevel: enrollment.year_level,
-        message: "Missing program assignment.",
-      });
+    const nextYearLevel = resolveRolloverYearLevel(enrollment, sameSchoolYear);
+    if (typeof nextYearLevel !== "string") {
+      exceptions.push(nextYearLevel);
       continue;
     }
 
@@ -275,64 +273,19 @@ export async function previewTermRollover({
   // year level is carried over unchanged.
   const sameSchoolYear = sourceTerm.school_year.id === targetTerm.school_year.id;
 
-  // 3. Fetch source enrollments
-  const sourceEnrollments = await prisma.studentEnrollment.findMany({
-    where: {
-      term_instance_id: sourceTermInstanceId,
-      is_active: true,
-    },
-    include: {
-      student: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: [{ student: { name: "asc" } }, { student_user_id: "asc" }],
-  });
-
-  // 4. Check existing target enrollments
-  const existingTargetEnrollments = await prisma.studentEnrollment.findMany({
-    where: {
-      term_instance_id: targetTermInstanceId,
-      student_user_id: { in: sourceEnrollments.map((e) => e.student_user_id) },
-    },
-    select: { student_user_id: true },
-  });
-
-  const existingStudentIds = new Set(existingTargetEnrollments.map((e) => e.student_user_id));
+  const { sourceEnrollments, existingStudentIds } = await readRolloverCohort(
+    sourceTermInstanceId,
+    targetTermInstanceId
+  );
 
   // 5. Simulate processing
   const exceptions: RolloverException[] = [];
   let wouldCreateCount = 0;
 
   for (const enrollment of sourceEnrollments) {
-    const student = enrollment.student;
-    const nextYearLevel = nextYearLevelFor(enrollment.year_level, sameSchoolYear);
-
-    if (nextYearLevel === null) {
-      exceptions.push({
-        studentUserId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
-        exceptionType: "GRADUATING",
-        currentYearLevel: enrollment.year_level,
-        message: "Student is in 4th year and marked for graduation.",
-      });
-      continue;
-    }
-
-    if (!enrollment.program_id) {
-      exceptions.push({
-        studentUserId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
-        exceptionType: "MISSING_DATA",
-        currentYearLevel: enrollment.year_level,
-        message: "Missing program assignment.",
-      });
+    const nextYearLevel = resolveRolloverYearLevel(enrollment, sameSchoolYear);
+    if (typeof nextYearLevel !== "string") {
+      exceptions.push(nextYearLevel);
       continue;
     }
 

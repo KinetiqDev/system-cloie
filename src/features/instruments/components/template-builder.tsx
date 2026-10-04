@@ -411,10 +411,6 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
     return;
   }
 
-  if (nextIndex < 0 || nextIndex >= sameContainer.length) {
-    return;
-  }
-
   const target = sameContainer[nextIndex];
   const rect = context.droppableRects.get(target.id);
 
@@ -2476,7 +2472,7 @@ function QuestionCard({
             Question title{" "}
             {question.required && (
               <>
-                <span aria-hidden="true" className="text-danger font-bold">
+                <span aria-hidden="true" className="text-danger font-semibold">
                   *
                 </span>
                 <span className="sr-only"> (required)</span>

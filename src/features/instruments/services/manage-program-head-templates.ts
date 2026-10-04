@@ -170,7 +170,7 @@ export type ProgramHeadTemplateItem = {
   isReadOnly: boolean;
 };
 
-export type ListProgramHeadTemplatesResult = {
+type ListProgramHeadTemplatesResult = {
   templates: ProgramHeadTemplateItem[];
   program: { id: string; code: string; name: string };
 };
@@ -795,69 +795,6 @@ export async function deleteProgramHeadTemplate(
     if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
       return null;
     await tx.instrumentTemplate.delete({ where: { id } });
-    return true;
-  });
-  if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };
-
-  return { success: true, data: undefined };
-}
-
-export async function toggleFacultyAccessible(
-  programId: string,
-  id: string,
-  is_faculty_accessible: boolean
-): Promise<ServiceResult> {
-  const authResult = await requirePHSession(programId);
-
-  if (!authResult.success) {
-    return authResult;
-  }
-
-  const { userId, selectedProgram } = authResult.data;
-
-  const template = await prisma.instrumentTemplate.findUnique({
-    where: { id },
-    select: { id: true, program_id: true, faculty_owner_id: true, template_type: true },
-  });
-
-  if (!template) {
-    return { success: false, error: "Template not found." };
-  }
-
-  if (template.program_id === null || template.faculty_owner_id) {
-    return {
-      success: false,
-      error: "Institutional baseline templates cannot be modified.",
-    };
-  }
-
-  if (template.program_id !== selectedProgram.id) {
-    return {
-      success: false,
-      error: "You do not have permission to modify this template.",
-    };
-  }
-
-  if (template.template_type !== EvaluationTemplateType.COURSE_BOUND && is_faculty_accessible) {
-    return {
-      success: false,
-      error: "Only course-bound templates can be faculty-accessible.",
-    };
-  }
-
-  const writeResult = await prisma.$transaction(async (tx) => {
-    const currentProgram = await revalidateProgramHeadAssignment(tx, {
-      userId,
-      programId: selectedProgram.id,
-    });
-    if (!currentProgram) return null;
-    const currentTemplate = await tx.instrumentTemplate.findUnique({
-      where: { id },
-      select: { program_id: true, faculty_owner_id: true },
-    });
-    if (currentTemplate?.program_id !== selectedProgram.id || currentTemplate.faculty_owner_id)
-      return null;
-    await tx.instrumentTemplate.update({ where: { id }, data: { is_faculty_accessible } });
     return true;
   });
   if (!writeResult) return { success: false, error: "Selected Program is no longer assigned." };

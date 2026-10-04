@@ -10,8 +10,6 @@ import {
 } from "@prisma/client";
 import { type ServiceResult } from "@/lib/utils/service-result";
 
-export type { StudentSection };
-
 export type FacultyCourseContext = {
   courseCode: string;
   courseId: string;
@@ -31,7 +29,7 @@ export type FacultyManagedCiloContext = {
   programId: string;
 };
 
-export type FacultyManagedCiloItem = {
+type FacultyManagedCiloItem = {
   description: string;
   id: string;
 };
@@ -48,17 +46,6 @@ export type FacultyManagedCiloSaveInput = FacultyManagedCiloContext & {
 export type FacultyManagedCiloSaveResult = ServiceResult<{
   items: FacultyManagedCiloItem[];
 }>;
-
-export type CourseBoundPublicationCiloInput = {
-  description: string;
-  id: string;
-};
-
-export type CourseBoundCiloQuestionBindingInput = {
-  ciloId: string;
-  itemKey: string;
-  sectionKey: string;
-};
 
 /**
  * Phase 9: Simplified input using course assignment ID.
@@ -172,7 +159,7 @@ export type FacultyPublishedEvaluationItem = {
 /** Lifecycle pills for published-deployment collections. */
 export type PublishedStatusFilter = "ALL" | "ACTIVE" | "SCHEDULED" | "CLOSED" | "ARCHIVED";
 
-export type FacultyPublishedEvaluationCiloBinding = {
+type FacultyPublishedEvaluationCiloBinding = {
   ciloDescriptionSnapshot: string;
   ciloId: string | null;
   itemKey: string;
@@ -180,7 +167,7 @@ export type FacultyPublishedEvaluationCiloBinding = {
   sectionKey: string;
 };
 
-export type FacultyPublishedEvaluationTarget = {
+type FacultyPublishedEvaluationTarget = {
   programCode: string;
   programId: string;
   yearLevel: YearLevel | null;
@@ -274,18 +261,6 @@ export type ReopenFacultyEvaluationResult = ServiceResult<{
 // ============================================================================
 // Preview Central Deployment Respondents (Program Head publish flow)
 // ============================================================================
-
-/**
- * @deprecated Use PreviewCentralDeploymentInput with termInstanceId instead.
- * Legacy input kept for backward compatibility during Phase 7 transition.
- */
-export type PreviewCentralDeploymentInputLegacy = {
-  academicYear: string;
-  majorId?: string;
-  programId: string;
-  targetStakeholder: TargetStakeholder;
-  yearLevel?: YearLevel;
-};
 
 /**
  * Phase 7: Preview input supporting term instance ID for enrollment-based lookup.

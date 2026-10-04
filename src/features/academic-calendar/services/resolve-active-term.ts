@@ -57,14 +57,6 @@ export const resolveActiveTerm = cache(async (): Promise<ActiveTermContext | nul
 });
 
 /**
- * Check if an active period is configured.
- */
-export async function hasActiveTerm(): Promise<boolean> {
-  const context = await resolveActiveAcademicContext();
-  return context.assignmentPeriod !== null;
-}
-
-/**
  * Get the active period ID, or null if none exists.
  */
 export async function getActiveTermId(): Promise<string | null> {

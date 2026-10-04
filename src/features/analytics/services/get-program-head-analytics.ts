@@ -44,6 +44,14 @@ import {
   type QualitativeCorpusEvidence,
   type QualitativeCorpusItem,
 } from "./qualitative-analytics";
+import {
+  IMPOSSIBLE_TERM_INSTANCE_ID,
+  buildInstancePeriodLabel,
+  buildPeriodLabel,
+  buildPeriodOptions,
+  resolveSchoolYearLabel,
+  type TermInstanceSummary,
+} from "./academic-periods";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
 import type { AnalyticsFilterState } from "./program-head-analytics-state";
 import { buildProgramHeadResponsesPath } from "@/lib/constants/program-head-routes";
@@ -71,13 +79,6 @@ import type {
 // Helpers
 // ---------------------------------------------------------------------------
 
-type TermInstanceSummary = {
-  id: string;
-  semester: string;
-  term: string | null;
-  school_year: { id: string; code: string };
-};
-
 type ResolvedTermInstanceFilter = {
   where: { term_instance_id?: string | { in: string[] } };
   schoolYearLabel: string | null;
@@ -89,6 +90,10 @@ type ProgramHeadAnalyticsReadContext = {
   schoolYearLabel: string | null;
   termInstances: TermInstanceSummary[];
   periodInstances: TermInstanceSummary[];
+  /** Evidence-source narrowing for the filter set; null keeps every source. */
+  sourceScope: SourceScope | null;
+  programResponseScope: Record<string, unknown>;
+  programOpportunityScope: Record<string, unknown>;
 };
 
 function buildTermInstanceWhere(
@@ -106,9 +111,6 @@ function buildTermInstanceWhere(
   if (filters.semester) where.semester = filters.semester as AcademicSemester;
   return where;
 }
-
-/** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
-const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 /**
  * Evidence-source narrowing for analytics reads (§15). COURSE keeps only
@@ -275,21 +277,6 @@ async function listProgramPeriodOptions(programId: string): Promise<TermInstance
   return listMatchingTermInstances(programId);
 }
 
-async function resolveSchoolYearLabel(
-  schoolYearId: string | undefined,
-  instances: TermInstanceSummary[]
-): Promise<string | null> {
-  if (!schoolYearId) return null;
-  const codes = [...new Set(instances.map((instance) => instance.school_year.code))];
-  if (codes.length === 1) return codes[0];
-
-  const schoolYear = await prisma.schoolYear.findUnique({
-    where: { id: schoolYearId },
-    select: { code: true },
-  });
-  return schoolYear?.code ?? null;
-}
-
 export async function resolveTermInstanceFilter(
   programId: string,
   filters: Pick<AnalyticsFilterState, "termInstanceId" | "schoolYearId" | "semester">
@@ -318,41 +305,6 @@ export async function resolveTermInstanceFilter(
   };
 }
 
-const SEMESTER_LABELS: Record<string, string> = {
-  FIRST: "1st Semester",
-  SECOND: "2nd Semester",
-  SUMMER: "Summer",
-};
-
-const TERM_LABELS: Record<string, string> = {
-  FIRST_TERM: "1st Term",
-  SECOND_TERM: "2nd Term",
-};
-
-function buildPeriodOptions(instances: TermInstanceSummary[]) {
-  const schoolYears = new Map<string, string>();
-  const semesters = new Map<string, string>();
-  for (const instance of instances) {
-    schoolYears.set(instance.school_year.id, instance.school_year.code);
-    semesters.set(instance.semester, SEMESTER_LABELS[instance.semester] ?? instance.semester);
-  }
-
-  return {
-    schoolYears: [...schoolYears].map(([id, label]) => ({ id, label })),
-    semesters: [...semesters].map(([value, label]) => ({ value, label })),
-    termInstances: instances.map((instance) => {
-      return {
-        id: instance.id,
-        schoolYearId: instance.school_year.id,
-        schoolYearLabel: instance.school_year.code,
-        semester: instance.semester,
-        semesterLabel: SEMESTER_LABELS[instance.semester] ?? instance.semester,
-        termLabel: instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null,
-        label: buildInstancePeriodLabel(instance),
-      };
-    }),
-  };
-}
 const resolveProgramHeadAnalyticsReadContext = cache(
   async function resolveProgramHeadAnalyticsReadContext(
     programId: string,
@@ -368,12 +320,29 @@ const resolveProgramHeadAnalyticsReadContext = cache(
         listProgramPeriodOptions(selectedProgram.id),
       ]);
 
+    // Pure predicate construction for the authorized read: every read resolves
+    // the same Program-scoped evidence predicates from the same filter set.
+    // Responses tied to this program via central deployments OR course-bound
+    // evaluations, and every in-scope EvaluationAssignment is an evaluation
+    // opportunity regardless of response status.
+    const sourceScope = buildSourceScope(filters);
     return {
       selectedProgram,
       termInstanceWhere,
       schoolYearLabel,
       termInstances: instances,
       periodInstances,
+      sourceScope,
+      programResponseScope: buildProgramResponseScope(
+        selectedProgram.id,
+        termInstanceWhere,
+        sourceScope?.response
+      ),
+      programOpportunityScope: buildProgramOpportunityScope(
+        selectedProgram.id,
+        termInstanceWhere,
+        sourceScope?.assignment
+      ),
     };
   }
 );
@@ -398,28 +367,6 @@ export async function getProgramHeadAnalyticsFrame(
   };
 }
 
-export function buildPeriodLabel(
-  filters: Pick<AnalyticsFilterState, "semester" | "termInstanceId">,
-  schoolYearLabel: string | null,
-  instances: TermInstanceSummary[]
-): string | null {
-  if (filters.termInstanceId && instances.length === 1) {
-    return buildInstancePeriodLabel(instances[0]);
-  }
-  const parts: string[] = [];
-  if (schoolYearLabel) parts.push(`School Year ${schoolYearLabel}`);
-  if (filters.semester) parts.push(SEMESTER_LABELS[filters.semester] ?? filters.semester);
-  if (parts.length === 0) return null;
-  return parts.join(" · ");
-}
-
-/** Readable label for one canonical AcademicTermInstance. */
-function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
-  const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
-  const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
-  return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");
-}
-
 // ---------------------------------------------------------------------------
 // Main service function
 // ---------------------------------------------------------------------------
@@ -431,24 +378,14 @@ export async function getProgramHeadAnalytics(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
-    context;
-  // Responses tied to this program via central deployments OR course-bound evaluations,
-  // following the same scope predicate as the existing dashboard service.
-  const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.response
-  );
-
-  // Every in-scope EvaluationAssignment is an evaluation opportunity,
-  // regardless of response status.
-  const programOpportunityScope = buildProgramOpportunityScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.assignment
-  );
+  const {
+    selectedProgram,
+    programResponseScope,
+    programOpportunityScope,
+    schoolYearLabel,
+    termInstances,
+    periodInstances,
+  } = context;
 
   // One row per in-scope EvaluationAssignment: the canonical participation
   // denominator (resolved §5.12) with its response status. Submitted and
@@ -500,12 +437,10 @@ export async function getProgramHeadAnalytics(
     periodLabel,
   };
 
-  const emptyReason: OverviewEmptyReason =
-    participationSummary.assigned === 0
-      ? "no-assignments"
-      : participationSummary.submitted === 0
-        ? "no-submissions"
-        : null;
+  const emptyReason: OverviewEmptyReason = scopeEmptyReason(
+    participationSummary.assigned,
+    participationSummary.submitted
+  );
 
   return {
     scope,
@@ -1276,14 +1211,19 @@ export async function getProgramHeadOutcomes(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
-    context;
+  const {
+    selectedProgram,
+    termInstanceWhere,
+    sourceScope,
+    schoolYearLabel,
+    termInstances,
+    periodInstances,
+  } = context;
 
   // Course-bound GO evidence comes from CILO bindings; program-wide GO
   // evidence comes from published CentralDeploymentGoSnapshot bindings
   // (§5.9, §16.6). The evidence-source selection gates which read runs so one
   // source's evidence never leaks into the other section.
-  const sourceScope = buildSourceScope(filters);
   const {
     ratingRows,
     courseBoundOpportunityCount,
@@ -1465,15 +1405,8 @@ export async function getProgramHeadTrends(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
+  const { selectedProgram, programResponseScope, schoolYearLabel, termInstances, periodInstances } =
     context;
-
-  const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.response
-  );
 
   const [ratingRows, responseRows] = await Promise.all([
     prisma.quantitativeResponseItem.findMany({
@@ -1586,11 +1519,41 @@ const INSTRUMENT_VERSION_SELECT = {
 } as const;
 
 /**
+ * Assignment projection shared by the stakeholder and breakdown rating and
+ * response rows. Year-level targets are pre-filtered to the selected Program:
+ * attribution is defensible only for the Program that owns the evidence scope.
+ */
+function buildBreakdownAssignmentSelect(programId: string) {
+  return {
+    course_bound: {
+      select: {
+        id: true,
+        deployment_name: true,
+        course_assignment: {
+          select: { course: { select: { id: true, code: true, title: true } } },
+        },
+        instrument: INSTRUMENT_VERSION_SELECT,
+        targets: {
+          where: { program_id: programId },
+          select: { year_level: true },
+        },
+      },
+    },
+    central_deployment: {
+      select: {
+        target_stakeholder: true,
+        major: { select: { id: true, name: true } },
+        year_level: true,
+        instrument: INSTRUMENT_VERSION_SELECT,
+      },
+    },
+  } as const;
+}
+
+/**
  * Narrow rating-row projection for stakeholder and breakdown aggregation.
  * The output structurally matches `BreakdownRatingRow`, so the pure helpers
- * stay unit-testable without a database. Year-level targets are pre-filtered
- * to the selected Program: attribution is defensible only for the Program
- * that owns the evidence scope.
+ * stay unit-testable without a database.
  */
 function buildBreakdownRatingRowSelect(programId: string) {
   return {
@@ -1600,32 +1563,7 @@ function buildBreakdownRatingRowSelect(programId: string) {
     item_key: true,
     response: {
       select: {
-        assignment: {
-          select: {
-            course_bound: {
-              select: {
-                id: true,
-                deployment_name: true,
-                course_assignment: {
-                  select: { course: { select: { id: true, code: true, title: true } } },
-                },
-                instrument: INSTRUMENT_VERSION_SELECT,
-                targets: {
-                  where: { program_id: programId },
-                  select: { year_level: true },
-                },
-              },
-            },
-            central_deployment: {
-              select: {
-                target_stakeholder: true,
-                major: { select: { id: true, name: true } },
-                year_level: true,
-                instrument: INSTRUMENT_VERSION_SELECT,
-              },
-            },
-          },
-        },
+        assignment: { select: buildBreakdownAssignmentSelect(programId) },
       },
     },
   } as const;
@@ -1635,38 +1573,87 @@ function buildBreakdownRatingRowSelect(programId: string) {
  * Narrow response-row projection for bucket and breakdown response counts.
  * The output structurally matches the aggregators' `BreakdownResponseRow`, so
  * unrated submitted responses still contribute `submittedResponseCount`.
- * Year-level targets are pre-filtered to the selected Program.
  */
 function buildBreakdownResponseRowSelect(programId: string) {
   return {
     id: true,
-    assignment: {
-      select: {
-        course_bound: {
-          select: {
-            id: true,
-            deployment_name: true,
-            course_assignment: {
-              select: { course: { select: { id: true, code: true, title: true } } },
-            },
-            instrument: INSTRUMENT_VERSION_SELECT,
-            targets: {
-              where: { program_id: programId },
-              select: { year_level: true },
-            },
-          },
-        },
-        central_deployment: {
-          select: {
-            target_stakeholder: true,
-            major: { select: { id: true, name: true } },
-            year_level: true,
-            instrument: INSTRUMENT_VERSION_SELECT,
-          },
-        },
-      },
-    },
+    assignment: { select: buildBreakdownAssignmentSelect(programId) },
   } as const;
+}
+
+/**
+ * Submitted evidence the Stakeholders and Breakdowns reads share: the same
+ * Program-scoped predicates, the same four reads, the same instrument-version
+ * snapshots, and the same `emptyReason` precedence. Only the projection of
+ * those rows into buckets, courses, instruments, and contextual dimensions
+ * differs between the two views.
+ */
+type StakeholderBreakdownEvidence = {
+  ratingRows: BreakdownRatingRow[];
+  responseRows: BreakdownResponseRow[];
+  evaluationOpportunityCount: number;
+  submittedResponseCount: number;
+  snapshotById: Map<string, unknown>;
+};
+
+async function readStakeholderBreakdownEvidence(
+  selectedProgramId: string,
+  programResponseScope: Record<string, unknown>,
+  programOpportunityScope: Record<string, unknown>
+): Promise<StakeholderBreakdownEvidence> {
+  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
+    await Promise.all([
+      prisma.quantitativeResponseItem.findMany({
+        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
+        select: buildBreakdownRatingRowSelect(selectedProgramId),
+      }),
+      prisma.response.findMany({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+        select: buildBreakdownResponseRowSelect(selectedProgramId),
+      }),
+      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
+      prisma.response.count({
+        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
+      }),
+    ]);
+
+  const instrumentVersionIds = [
+    ...new Set(
+      ratingRows
+        .map(
+          (row) =>
+            row.response.assignment.course_bound?.instrument.id ??
+            row.response.assignment.central_deployment?.instrument.id
+        )
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const instrumentVersions =
+    instrumentVersionIds.length > 0
+      ? await prisma.instrumentVersion.findMany({
+          where: { id: { in: instrumentVersionIds } },
+          select: { id: true, structure_snapshot: true },
+        })
+      : [];
+
+  return {
+    ratingRows,
+    responseRows,
+    evaluationOpportunityCount,
+    submittedResponseCount,
+    snapshotById: new Map(
+      instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+    ),
+  };
+}
+
+/** Scope empty-state precedence shared by the analytics reads: opportunities, then submissions. */
+function scopeEmptyReason(
+  evaluationOpportunityCount: number,
+  submittedResponseCount: number
+): OverviewEmptyReason {
+  if (evaluationOpportunityCount === 0) return "no-assignments";
+  return submittedResponseCount === 0 ? "no-submissions" : null;
 }
 
 /**
@@ -1694,67 +1681,33 @@ export async function getProgramHeadStakeholders(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
-    context;
+  const {
+    selectedProgram,
+    programResponseScope,
+    programOpportunityScope,
+    schoolYearLabel,
+    termInstances,
+    periodInstances,
+  } = context;
 
-  const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(
+  const {
+    ratingRows,
+    responseRows,
+    evaluationOpportunityCount,
+    submittedResponseCount,
+    snapshotById,
+  } = await readStakeholderBreakdownEvidence(
     selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.response
-  );
-  const programOpportunityScope = buildProgramOpportunityScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.assignment
-  );
-
-  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
-    await Promise.all([
-      prisma.quantitativeResponseItem.findMany({
-        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
-        select: buildBreakdownRatingRowSelect(selectedProgram.id),
-      }),
-      prisma.response.findMany({
-        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-        select: buildBreakdownResponseRowSelect(selectedProgram.id),
-      }),
-      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
-      prisma.response.count({
-        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-      }),
-    ]);
-
-  const instrumentVersionIds = [
-    ...new Set(
-      ratingRows
-        .map(
-          (row) =>
-            row.response.assignment.course_bound?.instrument.id ??
-            row.response.assignment.central_deployment?.instrument.id
-        )
-        .filter((id): id is string => Boolean(id))
-    ),
-  ];
-  const instrumentVersions =
-    instrumentVersionIds.length > 0
-      ? await prisma.instrumentVersion.findMany({
-          where: { id: { in: instrumentVersionIds } },
-          select: { id: true, structure_snapshot: true },
-        })
-      : [];
-  const snapshotById = new Map(
-    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+    programResponseScope,
+    programOpportunityScope
   );
 
   const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
 
-  const emptyReason: ProgramHeadStakeholdersEmptyReason =
-    evaluationOpportunityCount === 0
-      ? "no-assignments"
-      : submittedResponseCount === 0
-        ? "no-submissions"
-        : null;
+  const emptyReason: ProgramHeadStakeholdersEmptyReason = scopeEmptyReason(
+    evaluationOpportunityCount,
+    submittedResponseCount
+  );
 
   return {
     scope: {
@@ -1818,57 +1771,25 @@ export async function getProgramHeadBreakdowns(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
-    context;
+  const {
+    selectedProgram,
+    programResponseScope,
+    programOpportunityScope,
+    schoolYearLabel,
+    termInstances,
+    periodInstances,
+  } = context;
 
-  const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(
+  const {
+    ratingRows,
+    responseRows,
+    evaluationOpportunityCount,
+    submittedResponseCount,
+    snapshotById,
+  } = await readStakeholderBreakdownEvidence(
     selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.response
-  );
-  const programOpportunityScope = buildProgramOpportunityScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.assignment
-  );
-
-  const [ratingRows, responseRows, evaluationOpportunityCount, submittedResponseCount] =
-    await Promise.all([
-      prisma.quantitativeResponseItem.findMany({
-        where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
-        select: buildBreakdownRatingRowSelect(selectedProgram.id),
-      }),
-      prisma.response.findMany({
-        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-        select: buildBreakdownResponseRowSelect(selectedProgram.id),
-      }),
-      prisma.evaluationAssignment.count({ where: programOpportunityScope }),
-      prisma.response.count({
-        where: { status: ResponseStatus.SUBMITTED, ...programResponseScope },
-      }),
-    ]);
-
-  const instrumentVersionIds = [
-    ...new Set(
-      ratingRows
-        .map(
-          (row) =>
-            row.response.assignment.course_bound?.instrument.id ??
-            row.response.assignment.central_deployment?.instrument.id
-        )
-        .filter((id): id is string => Boolean(id))
-    ),
-  ];
-  const instrumentVersions =
-    instrumentVersionIds.length > 0
-      ? await prisma.instrumentVersion.findMany({
-          where: { id: { in: instrumentVersionIds } },
-          select: { id: true, structure_snapshot: true },
-        })
-      : [];
-  const snapshotById = new Map(
-    instrumentVersions.map((version) => [version.id, version.structure_snapshot])
+    programResponseScope,
+    programOpportunityScope
   );
 
   const courseRows = buildCourseBreakdownRows(ratingRows, responseRows, snapshotById);
@@ -1888,12 +1809,10 @@ export async function getProgramHeadBreakdowns(
     YEAR_LEVEL_ATTRIBUTION_NOTE
   );
 
-  const emptyReason: ProgramHeadBreakdownsEmptyReason =
-    evaluationOpportunityCount === 0
-      ? "no-assignments"
-      : submittedResponseCount === 0
-        ? "no-submissions"
-        : null;
+  const emptyReason: ProgramHeadBreakdownsEmptyReason = scopeEmptyReason(
+    evaluationOpportunityCount,
+    submittedResponseCount
+  );
 
   return {
     scope: {
@@ -2056,20 +1975,14 @@ export async function getProgramHeadFeedback(
   const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
   if (!context) return null;
 
-  const { selectedProgram, termInstanceWhere, schoolYearLabel, termInstances, periodInstances } =
-    context;
-
-  const sourceScope = buildSourceScope(filters);
-  const programResponseScope = buildProgramResponseScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.response
-  );
-  const programOpportunityScope = buildProgramOpportunityScope(
-    selectedProgram.id,
-    termInstanceWhere,
-    sourceScope?.assignment
-  );
+  const {
+    selectedProgram,
+    programResponseScope,
+    programOpportunityScope,
+    schoolYearLabel,
+    termInstances,
+    periodInstances,
+  } = context;
 
   const [qualitativeRows, evaluationOpportunityCount, submittedResponseCount] = await Promise.all([
     prisma.qualitativeResponseItem.findMany({
@@ -2115,14 +2028,11 @@ export async function getProgramHeadFeedback(
 
   const aggregated = aggregateFeedbackEvidence(qualitativeRows);
   const promptProvenance = instrumentProvenanceLabels(aggregated.evidence.prompts);
+  // Feedback narrows the shared scope precedence with its own qualitative arm:
+  // an empty scope is already explained by its opportunities or submissions.
   const emptyReason: ProgramHeadFeedbackEmptyReason =
-    evaluationOpportunityCount === 0
-      ? "no-assignments"
-      : submittedResponseCount === 0
-        ? "no-submissions"
-        : aggregated.qualitativeItemCount === 0
-          ? "no-qualitative-evidence"
-          : null;
+    scopeEmptyReason(evaluationOpportunityCount, submittedResponseCount) ??
+    (aggregated.qualitativeItemCount === 0 ? "no-qualitative-evidence" : null);
 
   return {
     scope: {

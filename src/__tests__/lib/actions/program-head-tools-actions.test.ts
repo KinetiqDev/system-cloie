@@ -27,9 +27,10 @@ vi.mock("@/features/instruments/services/manage-program-head-templates", () => (
   duplicateTemplate: duplicateMock,
   toggleTemplateActive: toggleMock,
   deleteProgramHeadTemplate: deleteMock,
-  toggleFacultyAccessible: toggleMock,
 }));
-vi.mock("@/features/instruments/services/create-baseline-copy", () => ({ createBaselineCopy: baselineMock }));
+vi.mock("@/features/instruments/services/create-baseline-copy", () => ({
+  createBaselineCopy: baselineMock,
+}));
 vi.mock("@/features/evaluations/services/publish-central-deployment", () => ({
   publishCentralDeployment: publishMock,
   closeCentralDeployment: closeMock,
@@ -56,25 +57,21 @@ describe("Program Head Tools action freshness", () => {
     const { duplicateTemplateAction } = await import("@/lib/actions/program-head-template-actions");
     await duplicateTemplateAction(PROGRAM_ID, "template-1");
 
-    expect(revalidatePathMock).toHaveBeenCalledWith(
-      `/program-head/programs/${PROGRAM_ID}/tools`
-    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(`/program-head/programs/${PROGRAM_ID}/tools`);
     expect(revalidatePathMock).not.toHaveBeenCalledWith("/program-head/deployments");
   });
 
   it("revalidates the selected Tools path after a baseline copy", async () => {
-    const { createBaselineCopyAction } = await import("@/lib/actions/program-head-baseline-actions");
+    const { createBaselineCopyAction } =
+      await import("@/lib/actions/program-head-baseline-actions");
     await createBaselineCopyAction(PROGRAM_ID, "baseline-1", "Copy", [], []);
 
-    expect(revalidatePathMock).toHaveBeenCalledWith(
-      `/program-head/programs/${PROGRAM_ID}/tools`
-    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(`/program-head/programs/${PROGRAM_ID}/tools`);
   });
 
   it("revalidates the literal selected Tools pathname for deployment publish and close", async () => {
-    const { publishCentralDeploymentAction, closeCentralDeploymentAction } = await import(
-      "@/lib/actions/central-deployment-actions"
-    );
+    const { publishCentralDeploymentAction, closeCentralDeploymentAction } =
+      await import("@/lib/actions/central-deployment-actions");
     const formData = new FormData();
     formData.set("programId", PROGRAM_ID);
     formData.set("template_id", "00000000-0000-4000-8000-000000000002");
@@ -85,9 +82,7 @@ describe("Program Head Tools action freshness", () => {
     await publishCentralDeploymentAction(formData);
     await closeCentralDeploymentAction(PROGRAM_ID, "deployment-1");
 
-    expect(revalidatePathMock).toHaveBeenCalledWith(
-      `/program-head/programs/${PROGRAM_ID}/tools`
-    );
+    expect(revalidatePathMock).toHaveBeenCalledWith(`/program-head/programs/${PROGRAM_ID}/tools`);
     expect(revalidatePathMock).not.toHaveBeenCalledWith(
       `/program-head/programs/${PROGRAM_ID}/tools?tab=published`
     );

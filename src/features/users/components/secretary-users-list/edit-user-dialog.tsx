@@ -79,6 +79,34 @@ function formatPlacementChange(year: string | undefined, section: string | undef
   return `${yearLabel} • ${sectionLabel}`;
 }
 
+/** Joins one side of a review pair; an absent value renders as an empty segment. */
+function joinReviewValues(...values: (string | undefined)[]): string {
+  return values.join(" • ");
+}
+
+interface ReviewBlockProps {
+  heading: string;
+  previous: string;
+  next: string;
+  note?: string;
+}
+
+/** One reviewed change area: its heading, the Previous/New pair, and a trailing note. */
+function ReviewBlock({ heading, previous, next, note }: ReviewBlockProps) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold">{heading}</h4>
+      <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+        <div className="text-muted-foreground">Previous:</div>
+        <div>{previous}</div>
+        <div className="text-link font-medium">New:</div>
+        <div className="font-medium">{next}</div>
+      </div>
+      {note ? <p className="text-muted-foreground text-sm">{note}</p> : null}
+    </div>
+  );
+}
+
 const SECTION_OPTIONS: { label: string; value: StudentSection }[] = [
   { label: "Morning", value: "MORNING" },
   { label: "Afternoon", value: "AFTERNOON" },
@@ -1050,125 +1078,88 @@ function EditUserDialogBody({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="bg-muted/20 space-y-4 rounded-md border p-4">
               {confirmationSummary.profileChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Academic Profile Changes</h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>
-                      {confirmationSummary.oldValues.program} •{" "}
-                      {confirmationSummary.oldValues.major}
-                    </div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">
-                      {confirmationSummary.newValues.program} •{" "}
-                      {confirmationSummary.newValues.major}
-                    </div>
-                  </div>
-                </div>
+                <ReviewBlock
+                  heading="Academic Profile Changes"
+                  previous={joinReviewValues(
+                    confirmationSummary.oldValues.program,
+                    confirmationSummary.oldValues.major
+                  )}
+                  next={joinReviewValues(
+                    confirmationSummary.newValues.program,
+                    confirmationSummary.newValues.major
+                  )}
+                />
               )}
-
               {confirmationSummary.placementChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Active Term Placement Changes</h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>
-                      {formatPlacementChange(
-                        confirmationSummary.oldValues.year,
-                        confirmationSummary.oldValues.section
-                      )}
-                    </div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">
-                      {formatPlacementChange(
-                        confirmationSummary.newValues.year,
-                        confirmationSummary.newValues.section
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ReviewBlock
+                  heading="Active Term Placement Changes"
+                  previous={formatPlacementChange(
+                    confirmationSummary.oldValues.year,
+                    confirmationSummary.oldValues.section
+                  )}
+                  next={formatPlacementChange(
+                    confirmationSummary.newValues.year,
+                    confirmationSummary.newValues.section
+                  )}
+                />
               )}
-
               {confirmationSummary.facultyProgramChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Primary Program Affiliation Changes</h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>{confirmationSummary.oldValues.program}</div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">{confirmationSummary.newValues.program}</div>
-                  </div>
-                </div>
+                <ReviewBlock
+                  heading="Primary Program Affiliation Changes"
+                  previous={confirmationSummary.oldValues.program}
+                  next={confirmationSummary.newValues.program}
+                />
               )}
-
               {confirmationSummary.programHeadAssignmentChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Program Head Assignment Changes</h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>{confirmationSummary.oldValues.programs}</div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">{confirmationSummary.newValues.programs}</div>
-                  </div>
-                </div>
+                <ReviewBlock
+                  heading="Program Head Assignment Changes"
+                  previous={confirmationSummary.oldValues.programs}
+                  next={confirmationSummary.newValues.programs}
+                />
               )}
-
               {confirmationSummary.alumniChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">
-                    Alumni Academic History and Verification
-                  </h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>
-                      {confirmationSummary.oldValues.program} •{" "}
-                      {confirmationSummary.oldValues.major} •{" "}
-                      {confirmationSummary.oldValues.graduationYear} •{" "}
-                      {confirmationSummary.oldValues.verification}
-                    </div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">
-                      {confirmationSummary.newValues.program} •{" "}
-                      {confirmationSummary.newValues.major} •{" "}
-                      {confirmationSummary.newValues.graduationYear} •{" "}
-                      {confirmationSummary.newValues.verification}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    {verificationStatus
+                <ReviewBlock
+                  heading="Alumni Academic History and Verification"
+                  previous={joinReviewValues(
+                    confirmationSummary.oldValues.program,
+                    confirmationSummary.oldValues.major,
+                    confirmationSummary.oldValues.graduationYear,
+                    confirmationSummary.oldValues.verification
+                  )}
+                  next={joinReviewValues(
+                    confirmationSummary.newValues.program,
+                    confirmationSummary.newValues.major,
+                    confirmationSummary.newValues.graduationYear,
+                    confirmationSummary.newValues.verification
+                  )}
+                  note={
+                    verificationStatus
                       ? verificationEffect(verificationStatus)
-                      : "Choose a verification status."}
-                  </p>
-                </div>
+                      : "Choose a verification status."
+                  }
+                />
               )}
-
               {confirmationSummary.industryPartnerChanged && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">
-                    Industry Partner Organization and Verification
-                  </h4>
-                  <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
-                    <div className="text-muted-foreground">Previous:</div>
-                    <div>
-                      {confirmationSummary.oldValues.company} •{" "}
-                      {confirmationSummary.oldValues.position} •{" "}
-                      {confirmationSummary.oldValues.program} •{" "}
-                      {confirmationSummary.oldValues.verification}
-                    </div>
-                    <div className="text-link font-medium">New:</div>
-                    <div className="font-medium">
-                      {confirmationSummary.newValues.company} •{" "}
-                      {confirmationSummary.newValues.position} •{" "}
-                      {confirmationSummary.newValues.program} •{" "}
-                      {confirmationSummary.newValues.verification}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    {verificationStatus
+                <ReviewBlock
+                  heading="Industry Partner Organization and Verification"
+                  previous={joinReviewValues(
+                    confirmationSummary.oldValues.company,
+                    confirmationSummary.oldValues.position,
+                    confirmationSummary.oldValues.program,
+                    confirmationSummary.oldValues.verification
+                  )}
+                  next={joinReviewValues(
+                    confirmationSummary.newValues.company,
+                    confirmationSummary.newValues.position,
+                    confirmationSummary.newValues.program,
+                    confirmationSummary.newValues.verification
+                  )}
+                  note={
+                    verificationStatus
                       ? verificationEffect(verificationStatus)
-                      : "Choose a verification status."}
-                  </p>
-                </div>
+                      : "Choose a verification status."
+                  }
+                />
               )}
 
               <p className="text-muted-foreground flex items-start gap-2 pt-2 text-sm">
