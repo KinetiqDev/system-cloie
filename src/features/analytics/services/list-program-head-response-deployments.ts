@@ -13,12 +13,7 @@ import { describeScales, extractDistinctScales } from "../aggregators/scale-iden
 import { formatResponseYearLevel } from "../program-head-responses-labels";
 import type { ProgramHeadResponsesFilterState } from "./program-head-responses-state";
 
-const SEMESTER_LABELS: Record<string, string> = {
-  FIRST: "1st Semester",
-  SECOND: "2nd Semester",
-  SUMMER: "Summer",
-};
-const TERM_LABELS: Record<string, string> = { FIRST_TERM: "1st Term", SECOND_TERM: "2nd Term" };
+import { buildInstancePeriodLabel, toPeriodOption } from "./academic-periods";
 
 type ResponseStats = { assigned: number; submitted: number; mean: number | null };
 const EMPTY_RESPONSE_STATS: ResponseStats = { assigned: 0, submitted: 0, mean: null };
@@ -151,21 +146,6 @@ function centralDeploymentWhere(
     ...(completion ?? {}),
   };
 }
-
-function periodLabel(instance: {
-  school_year: { code: string };
-  semester: string;
-  term: string | null;
-}): string {
-  return [
-    instance.school_year.code,
-    SEMESTER_LABELS[instance.semester] ?? instance.semester,
-    instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-}
-
 async function getResponseStats(
   ids: string[],
   kind: "course_bound_id" | "central_deployment_id"
@@ -254,15 +234,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     periodOptions: {
       schoolYears: [],
       semesters: [],
-      termInstances: periods.map((period) => ({
-        id: period.id,
-        schoolYearId: period.school_year.id,
-        schoolYearLabel: period.school_year.code,
-        semester: period.semester,
-        semesterLabel: SEMESTER_LABELS[period.semester] ?? period.semester,
-        termLabel: period.term ? (TERM_LABELS[period.term] ?? period.term) : null,
-        label: periodLabel(period),
-      })),
+      termInstances: periods.map(toPeriodOption),
     },
     courses: courses.map((course) => ({
       id: course.id,
@@ -326,7 +298,7 @@ export async function listProgramHeadResponseDeployments(
         return {
           id: row.id,
           title: deploymentTitle(row.deployment_name, row.instrument.template.name),
-          period: periodLabel(row.term_instance),
+          period: buildInstancePeriodLabel(row.term_instance),
           status: row.status,
           assigned: value.assigned,
           submitted: value.submitted,
@@ -381,7 +353,7 @@ export async function listProgramHeadResponseDeployments(
       return {
         id: row.id,
         title: deploymentTitle(row.deployment_name, row.instrument.template.name),
-        period: periodLabel(row.term_instance),
+        period: buildInstancePeriodLabel(row.term_instance),
         status: row.status,
         assigned: value.assigned,
         submitted: value.submitted,

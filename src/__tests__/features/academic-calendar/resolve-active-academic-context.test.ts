@@ -17,7 +17,6 @@ vi.mock("@/lib/db/prisma", () => ({
 import { resolveActiveAcademicContext } from "@/features/academic-calendar/services/resolve-active-academic-context";
 import {
   getActiveTermId,
-  hasActiveTerm,
   resolveActiveTerm,
 } from "@/features/academic-calendar/services/resolve-active-term";
 
@@ -89,14 +88,6 @@ describe("active-term compatibility seams", () => {
 
     findFirstMock.mockResolvedValue(null);
     await expect(getActiveTermId()).resolves.toBeNull();
-  });
-
-  it("hasActiveTerm mirrors the presence of an active period", async () => {
-    findFirstMock.mockResolvedValue(activeTerm());
-    await expect(hasActiveTerm()).resolves.toBe(true);
-
-    findFirstMock.mockResolvedValue(null);
-    await expect(hasActiveTerm()).resolves.toBe(false);
   });
 
   it("resolveActiveTerm returns the full context shape and null when inactive", async () => {

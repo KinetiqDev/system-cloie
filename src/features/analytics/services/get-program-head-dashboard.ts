@@ -13,11 +13,11 @@ import {
   programHeadResponsesQuery,
 } from "./program-head-responses-state";
 import {
-  buildPeriodLabel,
   buildProgramOpportunityScope,
   buildProgramResponseScope,
   resolveTermInstanceFilter,
 } from "./get-program-head-analytics";
+import { buildInstancePeriodLabel, buildPeriodLabel } from "./academic-periods";
 import {
   getActiveTermId,
   resolveActiveTerm,
@@ -57,17 +57,6 @@ import {
 } from "../program-head-dashboard-labels";
 export { QUALITATIVE_TOKEN_CAP };
 import type { DashboardSourceKey } from "../program-head-dashboard-labels";
-
-const SEMESTER_FALLBACK_LABELS: Record<string, string> = {
-  FIRST: "1st Semester",
-  SECOND: "2nd Semester",
-  SUMMER: "Summer",
-};
-
-const TERM_FALLBACK_LABELS: Record<string, string> = {
-  FIRST_TERM: "1st Term",
-  SECOND_TERM: "2nd Term",
-};
 
 export type DashboardSourceMean = {
   sourceKey: DashboardSourceKey;
@@ -283,10 +272,11 @@ export function buildDashboardSourceMeans(
   });
 }
 
-/** Project course-derived GO metrics into the compact summary row shape (§13.8). */
-export function toDashboardGoRows(
+/** Project GO metrics into the compact summary row shape (§13.8). */
+function toGoSummaryRows(
   metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string
+  evidenceHrefFor: (goId: string) => string,
+  exclusionClause: string
 ): DashboardGoSummaryRow[] {
   return metrics.map((metric) => ({
     goId: metric.goId,
@@ -306,10 +296,21 @@ export function toDashboardGoRows(
       evaluationCount: metric.evaluationCount,
       questionCount: metric.questionCount,
       scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); unbound and general items are excluded.`,
+      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); ${exclusionClause}`,
       evidenceHref: evidenceHrefFor(metric.goId),
     },
   }));
+}
+
+/**
+ * Project course-derived GO metrics into the compact summary row shape (§13.8).
+ * Course evidence additionally excludes general items, which carry no GO binding.
+ */
+export function toDashboardGoRows(
+  metrics: GoMetric[],
+  evidenceHrefFor: (goId: string) => string
+): DashboardGoSummaryRow[] {
+  return toGoSummaryRows(metrics, evidenceHrefFor, "unbound and general items are excluded.");
 }
 
 /** Max of the single compatible scale group; null when mixed or unresolved. */
@@ -323,28 +324,7 @@ export function toCentralDashboardGoRows(
   metrics: GoMetric[],
   evidenceHrefFor: (goId: string) => string
 ): DashboardGoSummaryRow[] {
-  return metrics.map((metric) => ({
-    goId: metric.goId,
-    goCode: metric.goCode,
-    mean: metric.mean,
-    ratingCount: metric.ratingCount,
-    responseCount: metric.responseCount,
-    evaluationCount: metric.evaluationCount,
-    contributorCount: metric.questionCount,
-    contributorKind: "questions" as const,
-    spansMultipleScales: metric.spansMultipleScales,
-    scaleMax: singleScaleMax(metric),
-    hasEvidence: metric.ratingCount > 0,
-    evidenceSummary: {
-      ratingCount: metric.ratingCount,
-      responseCount: metric.responseCount,
-      evaluationCount: metric.evaluationCount,
-      questionCount: metric.questionCount,
-      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); unbound items are excluded.`,
-      evidenceHref: evidenceHrefFor(metric.goId),
-    },
-  }));
+  return toGoSummaryRows(metrics, evidenceHrefFor, "unbound items are excluded.");
 }
 
 /** Course question bindings keyed by evaluation plus section/item identity. */
@@ -666,13 +646,11 @@ export async function getProgramHeadDashboard(
     const activeTerm = await resolveActiveTerm();
     if (activeTerm?.termInstance.id === effectiveFilters.termInstanceId) {
       const { schoolYearCode, semester, term } = activeTerm.termInstance;
-      periodLabel = [
-        schoolYearCode,
-        SEMESTER_FALLBACK_LABELS[semester] ?? semester,
-        term ? (TERM_FALLBACK_LABELS[term] ?? term) : null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+      periodLabel = buildInstancePeriodLabel({
+        school_year: { code: schoolYearCode },
+        semester,
+        term,
+      });
     }
   }
 

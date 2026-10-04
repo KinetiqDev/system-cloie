@@ -4,15 +4,13 @@ import { z } from "zod";
 import { parseYearLevelInput } from "@/lib/constants/year-levels";
 
 export const SECRETARY_USERS_PAGE_SIZE = 15;
-export const SECRETARY_USERS_MAX_PAGE = 10_000;
+const SECRETARY_USERS_MAX_PAGE = 10_000;
 
-/** Canonical Secretary Users sort fields. Complete-name is the default. */
-export const SECRETARY_USERS_SORT_FIELDS = ["name", "email", "isActive"] as const;
+/** Canonical Secretary Users sort field. Complete-name is the default. */
+type SecretaryUsersSortField = "name" | "email" | "isActive";
 
 /** Legacy first/last sort values that canonicalize to complete-name sorting. */
 const LEGACY_NAME_SORT_FIELDS = new Set(["firstName", "lastName"]);
-
-type SecretaryUsersSortField = (typeof SECRETARY_USERS_SORT_FIELDS)[number];
 type SecretaryUsersSortDirection = "asc" | "desc";
 
 const roleValues = Object.values(SystemRole) as [SystemRole, ...SystemRole[]];

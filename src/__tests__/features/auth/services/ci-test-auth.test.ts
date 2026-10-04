@@ -4,7 +4,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCookieMock = vi.fn();
-const existsSyncMock = vi.fn((_path: string) => true);
+const existsSyncMock = vi.fn((path: string) => {
+  void path;
+  return true;
+});
 
 vi.mock("node:fs", () => ({
   existsSync: (path: string) => existsSyncMock(path),
@@ -118,6 +121,18 @@ describe("isolated CI test authentication", () => {
     expect(verifyCiTestSessionValue(valid, 1_000 + 4_000)).toBeNull();
     // Future issued
     expect(verifyCiTestSessionValue(valid, 500)).toBeNull();
+  });
+
+  it("binds the session to the configured CI test session secret", () => {
+    const valid = createCiTestSessionValue(USER_ID, 1_000);
+
+    // A rotated deployment secret must not accept a session minted under the
+    // previous one, so the shared signer stays bound to each flavor's secret.
+    vi.stubEnv("CLOIE_CI_TEST_SESSION_SECRET", "b".repeat(32));
+    expect(verifyCiTestSessionValue(valid, 1_000 + 60)).toBeNull();
+
+    vi.stubEnv("CLOIE_CI_TEST_SESSION_SECRET", SECRET);
+    expect(verifyCiTestSessionValue(valid, 1_000 + 60)).not.toBeNull();
   });
 
   it("reads only the separate CI test cookie", async () => {

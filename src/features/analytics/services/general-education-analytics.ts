@@ -17,6 +17,14 @@ import {
   extractDistinctScales,
 } from "../aggregators/scale-identity";
 import { getSnapshotSectionItems, isSnapshotSection } from "./snapshot-structure";
+import {
+  IMPOSSIBLE_TERM_INSTANCE_ID,
+  buildInstancePeriodLabel,
+  buildPeriodLabel,
+  buildPeriodOptions,
+  resolveSchoolYearLabel,
+  type TermInstanceSummary,
+} from "./academic-periods";
 import type { GeneralEducationAnalyticsFilterState } from "./general-education-analytics-state";
 import type {
   GeneralEducationAnalyticsDTO,
@@ -26,24 +34,6 @@ import type {
 } from "../general-education-analytics-types";
 
 // -- Period helpers (no selected-Program — cross-program GE scope) --------
-
-type TermInstanceSummary = {
-  id: string;
-  semester: string;
-  term: string | null;
-  school_year: { id: string; code: string };
-};
-
-const SEMESTER_LABELS: Record<string, string> = {
-  FIRST: "1st Semester",
-  SECOND: "2nd Semester",
-  SUMMER: "Summer",
-};
-const TERM_LABELS: Record<string, string> = {
-  FIRST_TERM: "1st Term",
-  SECOND_TERM: "2nd Term",
-};
-const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
 function buildTermInstanceWhere(
   filters: Pick<
@@ -65,48 +55,6 @@ function buildGeneralEducationCourseScope() {
   return { course: { course_scope: "GENERAL_EDUCATION" as const } };
 }
 
-function buildInstancePeriodLabel(instance: TermInstanceSummary): string {
-  const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;
-  const termLabel = instance.term ? (TERM_LABELS[instance.term] ?? instance.term) : null;
-  return [instance.school_year.code, semesterLabel, termLabel].filter(Boolean).join(" · ");
-}
-
-function buildPeriodOptions(instances: TermInstanceSummary[]) {
-  const schoolYears = new Map<string, string>();
-  const semesters = new Map<string, string>();
-  for (const i of instances) {
-    schoolYears.set(i.school_year.id, i.school_year.code);
-    semesters.set(i.semester, SEMESTER_LABELS[i.semester] ?? i.semester);
-  }
-  return {
-    schoolYears: [...schoolYears].map(([id, label]) => ({ id, label })),
-    semesters: [...semesters].map(([value, label]) => ({ value, label })),
-    termInstances: instances.map((i) => ({
-      id: i.id,
-      schoolYearId: i.school_year.id,
-      schoolYearLabel: i.school_year.code,
-      semester: i.semester,
-      semesterLabel: SEMESTER_LABELS[i.semester] ?? i.semester,
-      termLabel: i.term ? (TERM_LABELS[i.term] ?? i.term) : null,
-      label: buildInstancePeriodLabel(i),
-    })),
-  };
-}
-
-function buildPeriodLabel(
-  filters: GeneralEducationAnalyticsFilterState,
-  schoolYearLabel: string | null,
-  instances: TermInstanceSummary[]
-): string | null {
-  if (filters.termInstanceId && instances.length === 1) {
-    return buildInstancePeriodLabel(instances[0]);
-  }
-  const parts: string[] = [];
-  if (schoolYearLabel) parts.push(`School Year ${schoolYearLabel}`);
-  if (filters.semester) parts.push(SEMESTER_LABELS[filters.semester] ?? filters.semester);
-  return parts.length ? parts.join(" · ") : null;
-}
-
 async function listMatchingTermInstances(
   filters: GeneralEducationAnalyticsFilterState
 ): Promise<TermInstanceSummary[]> {
@@ -122,32 +70,17 @@ async function listMatchingTermInstances(
   });
 }
 
-async function resolveSchoolYearLabel(
-  schoolYearId: string | undefined,
-  instances: TermInstanceSummary[]
-): Promise<string | null> {
-  if (!schoolYearId) return null;
-  const codes = [...new Set(instances.map((i) => i.school_year.code))];
-  if (codes.length === 1) return codes[0];
-  const sy = await prisma.schoolYear.findUnique({
-    where: { id: schoolYearId },
-    select: { code: true },
-  });
-  return sy?.code ?? null;
-}
-
 type ResolvedTermFilter = {
   termInstanceWhere: Record<string, unknown>;
   schoolYearLabel: string | null;
   instances: TermInstanceSummary[];
-  hasMatchingTerm: boolean;
 };
 
 async function resolveTermInstanceFilter(
   filters: GeneralEducationAnalyticsFilterState
 ): Promise<ResolvedTermFilter> {
   if (!filters.termInstanceId && !filters.schoolYearId && !filters.semester) {
-    return { termInstanceWhere: {}, schoolYearLabel: null, instances: [], hasMatchingTerm: true };
+    return { termInstanceWhere: {}, schoolYearLabel: null, instances: [] };
   }
   const instances = await listMatchingTermInstances(filters);
   const schoolYearLabel = await resolveSchoolYearLabel(filters.schoolYearId, instances);
@@ -158,14 +91,12 @@ async function resolveTermInstanceFilter(
       termInstanceWhere: { term_instance_id: IMPOSSIBLE_TERM_INSTANCE_ID },
       schoolYearLabel: resolvedSchoolYearLabel,
       instances,
-      hasMatchingTerm: false,
     };
   }
   return {
     termInstanceWhere: { term_instance_id: { in: instances.map((i) => i.id) } },
     schoolYearLabel: resolvedSchoolYearLabel,
     instances,
-    hasMatchingTerm: true,
   };
 }
 

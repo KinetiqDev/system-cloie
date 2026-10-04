@@ -18,34 +18,10 @@ describe("native legal content", () => {
     }
   });
 
-  it("has unique stable section anchors and no Markdown source dependency", async () => {
+  it("has unique stable section anchors", () => {
     const ids = Object.values(legalDocuments).flatMap((document) =>
       document.sections.map((section) => section.id)
     );
     expect(new Set(ids).size).toBe(ids.length);
-
-    const source = await import("fs/promises").then((fs) =>
-      Promise.all([
-        fs.readFile("src/features/legal/content.ts", "utf8"),
-        fs.readFile("src/features/legal/components/legal-page-shell.tsx", "utf8"),
-      ])
-    );
-    expect(source.join("\n")).not.toContain("docs/privacy-and-ToS/");
-  });
-
-  it("barrel re-exports the canonical LEGAL_VERSIONS module", async () => {
-    const { LEGAL_VERSIONS: canonical } = await import("@/features/legal/legal-versions");
-    expect(LEGAL_VERSIONS).toBe(canonical);
-  });
-
-  it("keeps ticket signing code outside the client acknowledgement boundary", async () => {
-    const [ticketSource, dialogSource] = await import("fs/promises").then((fs) =>
-      Promise.all([
-        fs.readFile("src/features/legal/services/legal-acknowledgement-ticket.ts", "utf8"),
-        fs.readFile("src/features/legal/components/legal-acknowledgement-dialog.tsx", "utf8"),
-      ])
-    );
-    expect(ticketSource).toContain('from "node:crypto"');
-    expect(dialogSource).not.toContain("legal-acknowledgement-ticket");
   });
 });

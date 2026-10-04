@@ -15,7 +15,7 @@ import type {
 } from "@/features/analytics/program-head-analytics-types";
 import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-review/types";
 
-// §36/§40 cross-role response privacy: identified Program Head shapes are
+// §31/§36/§40 cross-role response privacy: identified Program Head shapes are
 // pinned separately from aggregate analytics payloads, and aggregate
 // analytics payloads remain de-identified. These checks pin compile-time
 // shape separation and runtime serialization leakage in one place so a

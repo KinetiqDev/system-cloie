@@ -713,6 +713,40 @@ export function buildProgramHeadOutcomeDtos(
 // ---------------------------------------------------------------------------
 
 /**
+ * Assignment context behind one submitted rating or response. Year-level
+ * targets are pre-filtered by the service to the selected Program; a single
+ * non-null target makes year-level attribution defensible.
+ */
+export type BreakdownAssignmentContext = {
+  course_bound: {
+    id: string;
+    deployment_name: string;
+    course_assignment: { course: { id: string; code: string; title: string } };
+    instrument: {
+      id: string;
+      version_number: number;
+      template: { name: string };
+    };
+    /**
+     * Year-level targets for the selected Program only. The service
+     * pre-filters targets by the selected Program; a single non-null
+     * target makes year-level attribution defensible.
+     */
+    targets: Array<{ year_level: YearLevel | null }>;
+  } | null;
+  central_deployment: {
+    target_stakeholder: TargetStakeholder;
+    major: { id: string; name: string } | null;
+    year_level: YearLevel | null;
+    instrument: {
+      id: string;
+      version_number: number;
+      template: { name: string };
+    };
+  } | null;
+};
+
+/**
  * Narrow structural rating row for stakeholder and breakdown aggregation.
  * The service's Prisma select output must structurally match this shape;
  * helpers stay pure and unit-testable.
@@ -722,73 +756,14 @@ export type BreakdownRatingRow = {
   response_id: string;
   section_key: string;
   item_key: string;
-  response: {
-    assignment: {
-      course_bound: {
-        id: string;
-        deployment_name: string;
-        course_assignment: { course: { id: string; code: string; title: string } };
-        instrument: {
-          id: string;
-          version_number: number;
-          template: { name: string };
-        };
-        /**
-         * Year-level targets for the selected Program only. The service
-         * pre-filters targets by the selected Program; a single non-null
-         * target makes year-level attribution defensible.
-         */
-        targets: Array<{ year_level: YearLevel | null }>;
-      } | null;
-      central_deployment: {
-        target_stakeholder: TargetStakeholder;
-        major: { id: string; name: string } | null;
-        year_level: YearLevel | null;
-        instrument: {
-          id: string;
-          version_number: number;
-          template: { name: string };
-        };
-      } | null;
-    };
-  };
+  response: { assignment: BreakdownAssignmentContext };
 };
 
 /** Narrow structural response row used for bucket response counts. */
 export type BreakdownResponseRow = {
   id: string;
-  assignment: {
-    course_bound: {
-      id: string;
-      deployment_name: string;
-      course_assignment: { course: { id: string; code: string; title: string } };
-      instrument: {
-        id: string;
-        version_number: number;
-        template: { name: string };
-      };
-      /**
-       * Year-level targets for the selected Program only. The service
-       * pre-filters targets by the selected Program; a single non-null
-       * target makes year-level attribution defensible.
-       */
-      targets: Array<{ year_level: YearLevel | null }>;
-    } | null;
-    central_deployment: {
-      target_stakeholder: TargetStakeholder;
-      major: { id: string; name: string } | null;
-      year_level: YearLevel | null;
-      instrument: {
-        id: string;
-        version_number: number;
-        template: { name: string };
-      };
-    } | null;
-  };
+  assignment: BreakdownAssignmentContext;
 };
-
-/** Assignment context shared by rating and response rows for attribution. */
-export type BreakdownAssignmentContext = BreakdownResponseRow["assignment"];
 
 /** Canonical evidence source metadata in display order. */
 const STAKEHOLDER_SOURCES: ReadonlyArray<{
@@ -1033,7 +1008,7 @@ export function buildCourseBreakdownRows(
       };
       byCourse.set(course.id, aggregate);
     }
-    accumulateInto(aggregate, row, ratingValueIsValid(row, snapshotById));
+    accumulateEvidenceRow(aggregate, row, ratingValueIsValid(row, snapshotById));
     aggregate.instruments.set(courseBound.instrument.id, instrumentLabel(courseBound.instrument));
     aggregate.evaluations.set(courseBound.id, courseBound.deployment_name);
   }
@@ -1263,19 +1238,6 @@ export function buildAttributionBreakdown(
   );
 
   return { rows, unspecified };
-}
-
-/** Accumulate one rating row into an existing breakdown aggregate. Only valid in-scale ratings add sums and counts. */
-function accumulateInto(
-  aggregate: BreakdownAggregate,
-  row: BreakdownRatingRow,
-  isValidRating: boolean
-): void {
-  if (isValidRating) {
-    aggregate.ratingSum += row.rating_value;
-    aggregate.ratingCount += 1;
-  }
-  aggregate.responseIds.add(row.response_id);
 }
 
 /** Accumulate one rating or response row: valid ratings add sums, both add identity. */

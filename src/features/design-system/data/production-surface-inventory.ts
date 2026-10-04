@@ -2283,12 +2283,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Link-based line tab row sharing the tabs recipe, for view switchers that navigate instead of swapping panels",
   },
   {
-    path: "src/features/academic-calendar/components/active-term-badge.tsx",
-    disposition: "task",
-    taskId: 13,
-    category: "feature_component",
-  },
-  {
     path: "src/features/academic-calendar/components/rollover-exceptions-table.tsx",
     disposition: "task",
     taskId: 13,

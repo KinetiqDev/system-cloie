@@ -10,7 +10,6 @@ import {
   type duplicateTemplate as DuplicateTemplate,
   type getProgramHeadTemplate as GetProgramHeadTemplate,
   type listProgramHeadTemplates as ListProgramHeadTemplates,
-  type toggleFacultyAccessible as ToggleFacultyAccessible,
   type toggleTemplateActive as ToggleTemplateActive,
   type updateProgramHeadTemplate as UpdateProgramHeadTemplate,
 } from "@/features/instruments/services/manage-program-head-templates";
@@ -136,7 +135,6 @@ describe("manage-program-head-templates", () => {
   let duplicateTemplate: typeof DuplicateTemplate;
   let deleteProgramHeadTemplate: typeof DeleteProgramHeadTemplate;
   let toggleTemplateActive: typeof ToggleTemplateActive;
-  let toggleFacultyAccessible: typeof ToggleFacultyAccessible;
   let getProgramHeadTemplate: typeof GetProgramHeadTemplate;
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -165,7 +163,6 @@ describe("manage-program-head-templates", () => {
     duplicateTemplate = mod.duplicateTemplate;
     deleteProgramHeadTemplate = mod.deleteProgramHeadTemplate;
     toggleTemplateActive = mod.toggleTemplateActive;
-    toggleFacultyAccessible = mod.toggleFacultyAccessible;
     getProgramHeadTemplate = mod.getProgramHeadTemplate;
   });
 
@@ -912,35 +909,6 @@ describe("manage-program-head-templates", () => {
       error: "Institutional baseline templates cannot be modified.",
     });
     expect(instrumentTemplateUpdateMock).not.toHaveBeenCalled();
-  });
-
-  // ─── toggleFacultyAccessible ───────────────────────────────────────
-
-  it("PH can toggle faculty accessible", async () => {
-    instrumentTemplateFindUniqueMock.mockResolvedValue({
-      id: TEMPLATE_ID,
-      program_id: PROGRAM_ID,
-      template_type: "COURSE_BOUND",
-    });
-    instrumentTemplateUpdateMock.mockResolvedValue({ id: TEMPLATE_ID });
-    transactionMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
-      fn({
-        instrumentTemplate: {
-          findUnique: instrumentTemplateFindUniqueMock.mockResolvedValue({
-            program_id: PROGRAM_ID,
-          }),
-          update: instrumentTemplateUpdateMock,
-        },
-      })
-    );
-
-    const result = await toggleFacultyAccessible(PROGRAM_ID, TEMPLATE_ID, true);
-
-    expect(result).toEqual({ success: true, data: undefined });
-    expect(instrumentTemplateUpdateMock).toHaveBeenCalledWith({
-      where: { id: TEMPLATE_ID },
-      data: { is_faculty_accessible: true },
-    });
   });
 
   // ─── Unique constraint on code ─────────────────────────────────────

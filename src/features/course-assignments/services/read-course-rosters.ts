@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Prisma, type SystemRole } from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { ROLES } from "@/lib/constants/roles";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
@@ -19,35 +20,43 @@ import type {
   CourseRosterDetail,
   CourseRosterDiscoveryResult,
   CourseRosterMember,
+  RosterEligibilityProjection,
   RosterServiceResult,
   RosterState,
 } from "../types";
 
-export const COURSE_ROSTER_DETAIL_PAGE_SIZE = 25;
+const COURSE_ROSTER_DETAIL_PAGE_SIZE = 25;
+
+/**
+ * Single source for the assignment shape every roster read projects: the
+ * discovery page and the detail page must return the same fields, so the two
+ * queries select through this one constant.
+ */
+const assignmentReadSelect = {
+  id: true,
+  faculty_id: true,
+  course_id: true,
+  program_id: true,
+  year_level: true,
+  section: true,
+  is_active: true,
+  course: { select: { code: true, title: true, course_scope: true } },
+  program: { select: { code: true, name: true } },
+  faculty: { select: { name: true, email: true } },
+  term_instance: {
+    select: {
+      id: true,
+      status: true,
+      semester: true,
+      term: true,
+      school_year: { select: { code: true } },
+    },
+  },
+  course_bound_evaluations: { select: { published_at: true } },
+} satisfies Prisma.CourseAssignmentSelect;
 
 type AssignmentReadRow = Prisma.CourseAssignmentGetPayload<{
-  select: {
-    id: true;
-    faculty_id: true;
-    course_id: true;
-    program_id: true;
-    year_level: true;
-    section: true;
-    is_active: true;
-    course: { select: { code: true; title: true; course_scope: true } };
-    program: { select: { code: true; name: true } };
-    faculty: { select: { name: true; email: true } };
-    term_instance: {
-      select: {
-        id: true;
-        status: true;
-        semester: true;
-        term: true;
-        school_year: { select: { code: true } };
-      };
-    };
-    course_bound_evaluations: { select: { published_at: true } };
-  };
+  select: typeof assignmentReadSelect;
 }>;
 
 type MembershipStudentRead = {
@@ -109,7 +118,7 @@ function projectMembershipEligibility(
     student_profile: RosterEligibilityStudent["student_profile"];
     enrollments: Array<{ term_instance_id?: string; program_id: string }>;
   }
-): ReturnType<typeof projectRosterEligibility> {
+): RosterEligibilityProjection {
   const studentForEligibility: RosterEligibilityStudent = {
     is_active: student.is_active,
     roles: student.roles,
@@ -206,7 +215,7 @@ async function getActivePeriodId() {
 }
 
 function assignmentWhere(
-  session: NonNullable<Awaited<ReturnType<typeof resolveAuthSession>>>,
+  session: AuthSessionSnapshot,
   options: { includeHistory: boolean; activePeriodId: string | null; search: string },
   programHeadProgramIds: string[]
 ): Prisma.CourseAssignmentWhereInput {
@@ -248,28 +257,7 @@ async function loadAssignmentRows(
   return Promise.all([
     prisma.courseAssignment.findMany({
       where,
-      select: {
-        id: true,
-        faculty_id: true,
-        course_id: true,
-        program_id: true,
-        year_level: true,
-        section: true,
-        is_active: true,
-        course: { select: { code: true, title: true, course_scope: true } },
-        program: { select: { code: true, name: true } },
-        faculty: { select: { name: true, email: true } },
-        term_instance: {
-          select: {
-            id: true,
-            status: true,
-            semester: true,
-            term: true,
-            school_year: { select: { code: true } },
-          },
-        },
-        course_bound_evaluations: { select: { published_at: true } },
-      },
+      select: assignmentReadSelect,
       orderBy: [
         { course: { code: "asc" } },
         { program: { code: "asc" } },
@@ -441,28 +429,7 @@ function mapDetailMember(
 async function findDetailedAssignment(assignmentId: string) {
   return prisma.courseAssignment.findUnique({
     where: { id: assignmentId },
-    select: {
-      id: true,
-      faculty_id: true,
-      course_id: true,
-      program_id: true,
-      year_level: true,
-      section: true,
-      is_active: true,
-      course: { select: { code: true, title: true, course_scope: true } },
-      program: { select: { code: true, name: true } },
-      faculty: { select: { name: true, email: true } },
-      term_instance: {
-        select: {
-          id: true,
-          status: true,
-          semester: true,
-          term: true,
-          school_year: { select: { code: true } },
-        },
-      },
-      course_bound_evaluations: { select: { published_at: true } },
-    },
+    select: assignmentReadSelect,
   });
 }
 

@@ -163,12 +163,9 @@ export type DeactivateCourseAssignmentInput = z.infer<typeof deactivateCourseAss
 export type ActivateCourseAssignmentInput = z.infer<typeof activateCourseAssignmentSchema>;
 export type DeleteCourseAssignmentInput = z.infer<typeof deleteCourseAssignmentSchema>;
 export type BulkCreateCourseAssignmentsInput = z.infer<typeof bulkCreateCourseAssignmentsSchema>;
-export type AddRosterMembershipInput = z.infer<typeof addRosterMembershipSchema>;
 // Confirmation preflight contract; the bulk confirmation write flow (#400)
 // is the first consumer.
 export type ConfirmRosterResolutionInput = z.infer<typeof confirmRosterResolutionSchema>;
-export type RestoreRosterMembershipInput = z.infer<typeof restoreRosterMembershipSchema>;
-export type RemoveRosterMembershipInput = z.infer<typeof removeRosterMembershipSchema>;
 export type PreviewCourseRosterInput = z.infer<typeof previewCourseRosterSchema>;
 
 // Public preview contract; consumers are the scoped candidate search

@@ -20,7 +20,7 @@ import { SystemRole, EnrollmentSource } from "@prisma/client";
 const NO_ACTIVE_PERIOD_PLACEMENT_ERROR =
   "No active Academic Period is set. Activate one before setting placement.";
 
-export function generateConfirmationToken(payload: string): string {
+function generateConfirmationToken(payload: string): string {
   const secret = getConfirmationSecret();
   const expiresAt = Date.now() + 5 * 60 * 1000;
   const raw = `${payload}|${expiresAt}`;

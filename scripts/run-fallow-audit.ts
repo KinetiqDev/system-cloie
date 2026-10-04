@@ -1,18 +1,15 @@
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
-import {
-  closeSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-} from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import type { SpawnSyncReturns } from "node:child_process";
+import { mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const require = createRequire(import.meta.url);
-
-const DEFAULT_OUT_DIR = join(process.cwd(), "artifacts", "fallow");
+import {
+  captureFallowReport,
+  DEFAULT_FALLOW_OUT_DIR,
+  resolveFallowBin,
+  signalDetail,
+  stderrDetail,
+} from "./lib/fallow-runner";
 
 const USAGE = `usage: run-fallow-audit.ts <base-sha>
 
@@ -38,30 +35,7 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
-function resolveFallowBin(): string {
-  const override = process.env.FALLOW_BIN;
-  if (override) {
-    return override;
-  }
-  return join(dirname(require.resolve("fallow/package.json")), "bin", "fallow");
-}
-
-function signalDetail(child: SpawnSyncReturns<string>): string {
-  return child.status === null && child.signal
-    ? ` (terminated by signal ${child.signal})`
-    : "";
-}
-
-function stderrDetail(child: SpawnSyncReturns<string>): string {
-  const detail = child.stderr.trim();
-  return detail ? `: ${detail}` : "";
-}
-
-function readJsonReport(
-  path: string,
-  child: SpawnSyncReturns<string>,
-  label: string
-): unknown {
+function readJsonReport(path: string, child: SpawnSyncReturns<string>, label: string): unknown {
   let parsed: unknown;
   try {
     const content = readFileSync(path, "utf8");
@@ -87,27 +61,20 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       fail("a base SHA is required");
     }
 
-    const outDir = process.env.FALLOW_AUDIT_OUT_DIR ?? DEFAULT_OUT_DIR;
+    const outDir = process.env.FALLOW_AUDIT_OUT_DIR ?? DEFAULT_FALLOW_OUT_DIR;
     mkdirSync(outDir, { recursive: true });
 
     const fallowBin = resolveFallowBin();
-    if (!existsSync(fallowBin)) {
-      fail(`could not find fallow binary at ${fallowBin}`);
-    }
-
-    const runAudit = (format: "json" | "sarif", outPath: string) => {
-      const outFd = openSync(outPath, "w");
-      const child = spawnSync(
-        process.execPath,
-        [fallowBin, "audit", "--base", baseSha, "--format", format, "--quiet"],
-        { stdio: ["ignore", outFd, "pipe"], encoding: "utf8" }
-      );
-      closeSync(outFd);
-      return child;
-    };
 
     const jsonPath = join(outDir, "audit.json");
     const sarifPath = join(outDir, "audit.sarif");
+
+    const runAudit = (format: "json" | "sarif", outPath: string) =>
+      captureFallowReport(
+        fallowBin,
+        ["audit", "--base", baseSha, "--format", format, "--quiet"],
+        outPath
+      );
 
     const jsonRun = runAudit("json", jsonPath);
     if (jsonRun.error) {

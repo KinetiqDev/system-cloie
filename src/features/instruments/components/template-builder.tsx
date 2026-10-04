@@ -411,10 +411,6 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
     return;
   }
 
-  if (nextIndex < 0 || nextIndex >= sameContainer.length) {
-    return;
-  }
-
   const target = sameContainer[nextIndex];
   const rect = context.droppableRects.get(target.id);
 

@@ -6,7 +6,7 @@ import { SystemRole, YearLevel, StudentSection, VerificationStatus } from "@pris
  * role-based user edit flow. Email and CLOIE account role remain immutable
  * and are not part of this schema.
  */
-export const baseIdentityEditSchema = z.object({
+const baseIdentityEditSchema = z.object({
   // Opaque canonical account name. Secretary correction is a base identity
   // edit and must not trigger academic/external protected confirmation.
   name: z
@@ -16,22 +16,18 @@ export const baseIdentityEditSchema = z.object({
     .max(200, "Name must be 200 characters or fewer."),
 });
 
-export type BaseIdentityEditInput = z.infer<typeof baseIdentityEditSchema>;
-
 /**
  * Student-specific edit fields for static profile and optional current placement.
  * Handled via superRefine in the combined schema to enforce conditional logic.
  */
-export const studentEditSchema = z.object({
+const studentEditSchema = z.object({
   program_id: z.string().uuid("Program is required."),
   major_id: z.string().uuid("Major is required.").nullable().optional(),
   year_level: z.nativeEnum(YearLevel, { message: "Year level is required." }).nullable().optional(),
   section: z.nativeEnum(StudentSection, { message: "Section is required." }).nullable().optional(),
 });
 
-export type StudentEditInput = z.infer<typeof studentEditSchema>;
-
-export const alumniEditSchema = z.object({
+const alumniEditSchema = z.object({
   graduation_year: z.coerce
     .number()
     .int("Graduation year must be a whole number")
@@ -44,9 +40,7 @@ export const alumniEditSchema = z.object({
   }),
 });
 
-export type AlumniEditInput = z.infer<typeof alumniEditSchema>;
-
-export const industryPartnerEditSchema = z.object({
+const industryPartnerEditSchema = z.object({
   company_name: z.string().trim().min(1, "Organization name is required."),
   position: z.string().trim().nullable().optional(),
   program_id: z.string().uuid("Affiliated program is invalid.").nullable().optional(),
@@ -54,8 +48,6 @@ export const industryPartnerEditSchema = z.object({
     message: "Verification status is required.",
   }),
 });
-
-export type IndustryPartnerEditInput = z.infer<typeof industryPartnerEditSchema>;
 
 /**
  * Secretary-managed edit request for the base identity of an account, and any

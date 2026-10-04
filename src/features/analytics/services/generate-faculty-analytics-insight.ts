@@ -13,6 +13,7 @@ import {
   AI_PACKET_MAX_PROMPT_TERMS,
   insightSectionSchema,
   normalizeInsightSection,
+  parseInsightJson,
   type InsightSection,
 } from "./ai-insight-contract";
 import {
@@ -612,24 +613,6 @@ async function requestFacultyInsight(
     };
   } catch {
     return { ok: false, state: "invalid-output" };
-  }
-}
-
-/**
- * OpenAI-compatible providers do not uniformly honor response_format; free
- * tiers in particular may fence the JSON object in markdown. Extract the JSON
- * payload before parsing instead of trusting the raw content shape.
- */
-function parseInsightJson(content: string): unknown {
-  const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  const candidate = (fenced ? fenced[1] : content).trim();
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    const start = candidate.indexOf("{");
-    const end = candidate.lastIndexOf("}");
-    if (start === -1 || end <= start) throw new Error("No JSON object in AI output");
-    return JSON.parse(candidate.slice(start, end + 1));
   }
 }
 
