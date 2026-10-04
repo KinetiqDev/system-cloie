@@ -276,7 +276,7 @@ Theme selection must not change the page pattern.
 - Status summaries use three compact tiles in one responsive row. Pending excludes saved drafts; In Progress counts saved, unsubmitted drafts; Completed counts submitted responses.
 - Available status tiles are real links to the role's evaluations route with `tab=pending`, `tab=in-progress`, or `tab=submitted`. Show a navigation arrow, hover treatment, and keyboard focus. During deferred student enrollment, render noninteractive counts because evaluations redirect to the dashboard.
 - Evaluation tabs honor valid URL selections, default unknown values to Pending, preserve unrelated query parameters, and support browser Back and Forward. Narrow tab rows scroll within their own container rather than widening the page.
-- Resume progress describes answers saved, not submission completion. A fully answered draft remains explicitly unsubmitted until the respondent submits it.
+- Resume progress on dashboards and evaluation lists describes answers saved, not submission completion. A fully answered draft remains explicitly unsubmitted until the respondent submits it.
 - Pending evaluations are ordered by earliest deadline, with undated evaluations last. Long evaluation titles and academic context wrap; mobile actions span the available width and retain a 44 px minimum target.
 - Loading placeholders follow the compact title, task, and summary structure. Empty states distinguish work waiting to be started from drafts that remain available to resume.
 

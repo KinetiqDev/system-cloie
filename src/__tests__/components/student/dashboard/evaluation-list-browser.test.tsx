@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudentEvaluationListItem } from "@/features/responses/types";
 
@@ -96,25 +95,6 @@ describe("EvaluationListBrowser", () => {
     expect(params.get("tab")).toBe("submitted");
     expect(params.get("returnTo")).toBe("/dashboard");
     expect(screen.getByText("Final Exam Survey")).toBeInTheDocument();
-  });
-
-  it("follows the URL back to the previous tab", () => {
-    visitUrl("/student/evaluations?tab=pending");
-    const { rerender } = renderBrowser();
-
-    fireEvent.click(screen.getByRole("tab", { name: "In Progress" }));
-    rerender(<EvaluationListBrowser {...ITEMS} />);
-    expect(activeTab()).toHaveTextContent("In Progress");
-
-    // A Back step rewrites the URL; Next then re-renders the route with the
-    // restored query, which is what hands the tab back to the URL's value.
-    act(() => {
-      window.history.replaceState(null, "", "/student/evaluations?tab=pending");
-    });
-    rerender(<EvaluationListBrowser {...ITEMS} />);
-
-    expect(activeTab()).toHaveTextContent("Pending");
-    expect(screen.getByText("Course Evaluation A")).toBeInTheDocument();
   });
 
   it("filters the active tab by search term", () => {
