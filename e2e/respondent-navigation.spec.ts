@@ -13,8 +13,8 @@ for (const width of [1440, 393]) {
         role === "student"
           ? fixture().demoStudent.email
           : role === "alumni"
-            ? "demo-alumni@cloie.test"
-            : "demo-industry@cloie.test"
+            ? fixture().demoAlumni.email
+            : fixture().demoIndustry.email
       );
       await page.goto(`/${role}/evaluations?returnTo=%2Fdashboard&tab=pending#status`);
 
