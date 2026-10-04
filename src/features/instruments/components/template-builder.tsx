@@ -2472,7 +2472,7 @@ function QuestionCard({
             Question title{" "}
             {question.required && (
               <>
-                <span aria-hidden="true" className="text-danger font-semibold">
+                <span aria-hidden="true" className="text-danger font-bold">
                   *
                 </span>
                 <span className="sr-only"> (required)</span>
