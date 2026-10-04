@@ -2,8 +2,6 @@
 
 import { Prisma, AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
 import { CANONICAL_TERMS, formatSchoolYearCode } from "@/lib/constants/academic-period";
 import {
   canActivateSchoolYear,
@@ -12,22 +10,10 @@ import {
   canSetActiveSemester,
 } from "../policies";
 import type { CreateSchoolYearInput } from "../schemas/school-year";
+import { verifySecretaryAccess } from "./secretary-access";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
-
-/**
- * Verify secretary authentication through the active account role.
- */
-async function verifyAdminAccess(): Promise<ServiceResult<{ userId: string }>> {
-  const session = await resolveAuthSession();
-
-  if (!session || session.activeRole !== ROLES.SECRETARY) {
-    return { success: false, error: "Secretary access required" };
-  }
-
-  return { success: true, data: { userId: session.userId } };
-}
 
 /**
  * Create a School Year together with its 5 canonical AcademicTermInstance
@@ -80,7 +66,7 @@ export async function createSchoolYearWithCanonicalTerms(
 export async function createSchoolYear(
   input: CreateSchoolYearInput
 ): Promise<ServiceResult<{ id: string; code: string }>> {
-  const auth = await verifyAdminAccess();
+  const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
   try {
@@ -150,7 +136,7 @@ export async function backfillCanonicalTermInstances(): Promise<
  * so a concurrent activation cannot leave an archived School Year active.
  */
 export async function archiveSchoolYear(id: string): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifyAdminAccess();
+  const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
   try {
@@ -240,7 +226,7 @@ export async function activateSchoolYear(
   schoolYearId: string,
   semester?: AcademicSemester
 ): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifyAdminAccess();
+  const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
   try {
@@ -346,7 +332,7 @@ export async function activateSchoolYear(
 export async function deactivateSchoolYear(
   schoolYearId: string
 ): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifyAdminAccess();
+  const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
   try {
@@ -417,7 +403,7 @@ export async function setActiveSemester(
   schoolYearId: string,
   semester: AcademicSemester
 ): Promise<ServiceResult<{ id: string }>> {
-  const auth = await verifyAdminAccess();
+  const auth = await verifySecretaryAccess();
   if (!auth.success) return auth;
 
   try {

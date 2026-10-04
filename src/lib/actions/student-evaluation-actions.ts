@@ -1,20 +1,20 @@
 "use server";
 
 import {
-  saveStudentEvaluationDraft,
-  type SaveStudentEvaluationDraftInput,
-} from "@/features/responses/services/save-student-evaluation-draft";
+  saveEvaluationDraft,
+  type SaveEvaluationDraftInput,
+} from "@/features/responses/services/save-evaluation-draft";
 import {
-  submitStudentEvaluationResponse,
-  type SubmitStudentEvaluationResponseInput,
-} from "@/features/responses/services/submit-student-evaluation-response";
+  submitEvaluationResponse,
+  type SubmitEvaluationResponseInput,
+} from "@/features/responses/services/submit-evaluation-response";
 
-export async function saveStudentEvaluationDraftAction(payload: SaveStudentEvaluationDraftInput) {
-  return await saveStudentEvaluationDraft(payload);
+export async function saveStudentEvaluationDraftAction(payload: SaveEvaluationDraftInput) {
+  return await saveEvaluationDraft("STUDENT", payload);
 }
 
 export async function submitStudentEvaluationResponseAction(
-  payload: SubmitStudentEvaluationResponseInput
+  payload: SubmitEvaluationResponseInput
 ) {
-  return await submitStudentEvaluationResponse(payload);
+  return await submitEvaluationResponse("STUDENT", payload);
 }

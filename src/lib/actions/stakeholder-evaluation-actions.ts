@@ -1,32 +1,22 @@
 "use server";
 
 import {
-  saveCentralDeploymentDraft,
-  type SaveCentralDeploymentDraftInput,
-} from "@/features/responses/services/save-central-deployment-draft";
+  saveEvaluationDraft,
+  type SaveEvaluationDraftInput,
+} from "@/features/responses/services/save-evaluation-draft";
 import {
-  submitCentralDeploymentResponse,
-  type SubmitCentralDeploymentResponseInput,
-} from "@/features/responses/services/submit-central-deployment-response";
+  submitEvaluationResponse,
+  type SubmitEvaluationResponseInput,
+} from "@/features/responses/services/submit-evaluation-response";
 
-/**
- * Save a draft for a central deployment evaluation.
- *
- * Thin `"use server"` wrapper — authenticates via session, works for any
- * stakeholder role (ALUMNI, INDUSTRY_PARTNER, GRADUATING_STUDENT).
- */
-export async function saveCentralDeploymentDraftAction(payload: SaveCentralDeploymentDraftInput) {
-  return await saveCentralDeploymentDraft(payload);
+/** Save a draft for a Central deployment evaluation (alumni, industry partner). */
+export async function saveCentralDeploymentDraftAction(payload: SaveEvaluationDraftInput) {
+  return await saveEvaluationDraft("STAKEHOLDER", payload);
 }
 
-/**
- * Submit a central deployment evaluation response.
- *
- * Thin `"use server"` wrapper — authenticates via session, works for any
- * stakeholder role (ALUMNI, INDUSTRY_PARTNER, GRADUATING_STUDENT).
- */
+/** Submit a Central deployment evaluation response (alumni, industry partner). */
 export async function submitCentralDeploymentResponseAction(
-  payload: SubmitCentralDeploymentResponseInput
+  payload: SubmitEvaluationResponseInput
 ) {
-  return await submitCentralDeploymentResponse(payload);
+  return await submitEvaluationResponse("STAKEHOLDER", payload);
 }

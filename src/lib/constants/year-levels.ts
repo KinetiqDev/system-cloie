@@ -6,7 +6,7 @@ import { normalizeFriendlyInput } from "./academic-period";
  * Display mapping for YearLevel enum values.
  * Maps FIRST_YEAR → "1st Year", etc.
  */
-export const YEAR_LEVEL_DISPLAY: Record<YearLevel, string> = {
+const YEAR_LEVEL_DISPLAY: Record<YearLevel, string> = {
   [YearLevel.FIRST_YEAR]: "1st Year",
   [YearLevel.SECOND_YEAR]: "2nd Year",
   [YearLevel.THIRD_YEAR]: "3rd Year",

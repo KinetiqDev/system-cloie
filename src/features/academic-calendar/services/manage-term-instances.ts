@@ -1,25 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
-import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-import { ROLES } from "@/lib/constants/roles";
+import { verifySecretaryAccess } from "./secretary-access";
 import { canDeleteTermInstance, isStructuralTerm } from "../policies";
 import type { UpdateTermInstanceInput } from "../schemas/term-instance";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import { invalidateAcademicPeriodReadModelTags } from "@/lib/cache/academic-periods";
-
-/**
- * Verify secretary access.
- */
-export async function verifySecretaryAccess(): Promise<ServiceResult<{ userId: string }>> {
-  const session = await resolveAuthSession();
-
-  if (!session || session.activeRole !== ROLES.SECRETARY) {
-    return { success: false, error: "Secretary access required" };
-  }
-
-  return { success: true, data: { userId: session.userId } };
-}
 
 /**
  * Update an existing Term Instance.

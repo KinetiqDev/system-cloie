@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { submitStudentEvaluationResponse } from "@/features/responses/services/submit-student-evaluation-response";
+import { submitEvaluationResponse } from "@/features/responses/services/submit-evaluation-response";
 import { buildCourseDerivedGoMetrics } from "@/features/analytics/aggregators/go";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 
@@ -137,7 +137,7 @@ function eligibleMembership() {
   };
 }
 
-describe("submitStudentEvaluationResponse", () => {
+describe("submitEvaluationResponse", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -154,7 +154,7 @@ describe("submitStudentEvaluationResponse", () => {
     vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
 
     await expect(
-      submitStudentEvaluationResponse({
+      submitEvaluationResponse("STUDENT", {
         answers: validAnswers,
         assignmentId: "assignment-1",
       })
@@ -186,7 +186,10 @@ describe("submitStudentEvaluationResponse", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
 
-    await submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" });
+    await submitEvaluationResponse("STUDENT", {
+      answers: validAnswers,
+      assignmentId: "assignment-1",
+    });
 
     expect(executeRawMock).toHaveBeenCalledTimes(1);
     expect(executeRawMock.mock.invocationCallOrder[0]).toBeLessThan(
@@ -204,7 +207,10 @@ describe("submitStudentEvaluationResponse", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-20T12:00:00.000Z"));
 
-    await submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" });
+    await submitEvaluationResponse("STUDENT", {
+      answers: validAnswers,
+      assignmentId: "assignment-1",
+    });
 
     // The one-response invariant replaces the whole prior item set.
     expect(deleteManyQuantMock).toHaveBeenCalledWith({ where: { response_id: "response-1" } });
@@ -241,7 +247,7 @@ describe("submitStudentEvaluationResponse", () => {
     updateMock.mockResolvedValue({ id: "response-new" });
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual(expect.objectContaining({ responseId: "response-new", success: true }));
 
     expect(createMock).toHaveBeenCalledWith({
@@ -260,7 +266,7 @@ describe("submitStudentEvaluationResponse", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1", status: "SUBMITTED" });
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual({
       error: "This evaluation has already been submitted.",
       success: false,
@@ -281,7 +287,7 @@ describe("submitStudentEvaluationResponse", () => {
     vi.setSystemTime(new Date("2026-05-10T00:00:00.000Z"));
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual({
       error: "This evaluation is not currently available.",
       success: false,
@@ -308,7 +314,7 @@ describe("submitStudentEvaluationResponse", () => {
     findAssignmentMock.mockResolvedValue(courseBoundAssignment());
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual({
       error: "This evaluation is not currently available.",
       success: false,
@@ -321,7 +327,7 @@ describe("submitStudentEvaluationResponse", () => {
     findAssignmentMock.mockResolvedValue(courseBoundAssignment());
 
     await expect(
-      submitStudentEvaluationResponse({
+      submitEvaluationResponse("STUDENT", {
         answers: { "section-a:quantitative:q1": 5 },
         assignmentId: "assignment-1",
       })
@@ -333,7 +339,7 @@ describe("submitStudentEvaluationResponse", () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual({
       error: "Authentication is required.",
       success: false,
@@ -345,7 +351,7 @@ describe("submitStudentEvaluationResponse", () => {
     findAssignmentMock.mockResolvedValue(null);
 
     await expect(
-      submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" })
+      submitEvaluationResponse("STUDENT", { answers: validAnswers, assignmentId: "assignment-1" })
     ).resolves.toEqual({
       error: "Evaluation assignment not found.",
       success: false,
@@ -371,7 +377,7 @@ describe("submitStudentEvaluationResponse", () => {
     updateMock.mockResolvedValue({ id: "response-central" });
 
     await expect(
-      submitStudentEvaluationResponse({
+      submitEvaluationResponse("STUDENT", {
         answers: validAnswers,
         assignmentId: "assignment-central",
       })
@@ -406,7 +412,10 @@ describe("submitStudentEvaluationResponse", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1" });
     updateMock.mockResolvedValue({ id: "response-1" });
 
-    await submitStudentEvaluationResponse({ answers: validAnswers, assignmentId: "assignment-1" });
+    await submitEvaluationResponse("STUDENT", {
+      answers: validAnswers,
+      assignmentId: "assignment-1",
+    });
 
     // GO analytics read submitted ratings through this binding relation, so an
     // unattributed rating drops out of every mapped outcome for its course.
@@ -493,7 +502,7 @@ describe("submitStudentEvaluationResponse", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1" });
     updateMock.mockResolvedValue({ id: "response-1" });
 
-    await submitStudentEvaluationResponse({
+    await submitEvaluationResponse("STUDENT", {
       answers: {
         "section-a:quantitative:shared": 4,
         "section-a:quantitative:unbound": 3,

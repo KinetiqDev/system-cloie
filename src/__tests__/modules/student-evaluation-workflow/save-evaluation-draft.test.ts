@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { saveStudentEvaluationDraft } from "@/features/responses/services/save-student-evaluation-draft";
+import { saveEvaluationDraft } from "@/features/responses/services/save-evaluation-draft";
 
 const {
   createMock,
@@ -102,7 +102,7 @@ function eligibleMembership() {
   };
 }
 
-describe("saveStudentEvaluationDraft", () => {
+describe("saveEvaluationDraft", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -116,7 +116,7 @@ describe("saveStudentEvaluationDraft", () => {
     createMock.mockResolvedValue({ id: "response-1" });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {
           "section-a:quantitative:q1": 4,
           "section-a:qualitative:remarks": "Clear and helpful explanations.",
@@ -137,7 +137,7 @@ describe("saveStudentEvaluationDraft", () => {
     findResponseByAssignmentMock.mockResolvedValue(null);
     createMock.mockResolvedValue({ id: "response-1" });
 
-    await saveStudentEvaluationDraft({
+    await saveEvaluationDraft("STUDENT", {
       answers: { "section-a:quantitative:q1": 4 },
       assignmentId: "assignment-1",
       sectionKey: "section-a",
@@ -185,7 +185,7 @@ describe("saveStudentEvaluationDraft", () => {
     createMock.mockResolvedValue({ id: "response-central" });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: { "section-a:quantitative:q1": 5 },
         assignmentId: "assignment-central",
         sectionKey: "section-a",
@@ -209,7 +209,7 @@ describe("saveStudentEvaluationDraft", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1", status: "IN_PROGRESS" });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {
           "section-a:quantitative:q1": 4,
           "section-a:qualitative:remarks": "Clear and helpful explanations.",
@@ -234,7 +234,7 @@ describe("saveStudentEvaluationDraft", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1", status: "IN_PROGRESS" });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {},
         assignmentId: "assignment-1",
         sectionKey: "section-missing",
@@ -252,7 +252,7 @@ describe("saveStudentEvaluationDraft", () => {
     findResponseByAssignmentMock.mockResolvedValue({ id: "response-1", status: "SUBMITTED" });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: { "section-a:quantitative:q1": 4 },
         assignmentId: "assignment-1",
         sectionKey: "section-a",
@@ -277,7 +277,7 @@ describe("saveStudentEvaluationDraft", () => {
     vi.setSystemTime(new Date("2026-05-10T00:00:00.000Z"));
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: { "section-a:quantitative:q1": 4 },
         assignmentId: "assignment-1",
         sectionKey: "section-a",
@@ -304,7 +304,7 @@ describe("saveStudentEvaluationDraft", () => {
     });
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {},
         assignmentId: "assignment-alumni",
         sectionKey: "section-a",
@@ -333,7 +333,7 @@ describe("saveStudentEvaluationDraft", () => {
     findAssignmentMock.mockResolvedValue(courseBoundAssignment());
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {},
         assignmentId: "assignment-1",
         sectionKey: "section-a",
@@ -349,7 +349,7 @@ describe("saveStudentEvaluationDraft", () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     await expect(
-      saveStudentEvaluationDraft({
+      saveEvaluationDraft("STUDENT", {
         answers: {},
         assignmentId: "assignment-1",
         sectionKey: "section-a",
