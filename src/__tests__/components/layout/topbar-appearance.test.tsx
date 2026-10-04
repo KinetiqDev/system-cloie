@@ -7,8 +7,10 @@ import { Topbar } from "@/components/layout/topbar";
 import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
 
 const refreshMock = vi.fn();
+const currentPathname = "/faculty/dashboard";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: refreshMock }),
+  usePathname: () => currentPathname,
 }));
 
 vi.mock("next/image", () => ({
@@ -58,10 +60,20 @@ describe("Topbar appearance integration", () => {
     );
   }
 
+  it("offers exactly one contextual-help action, pointing at the current page's article", () => {
+    renderTopbar(true);
+
+    const help = screen.getByRole("link", { name: /Help with this page/i });
+    expect(help).toHaveAttribute("href", "https://help.system-cloie.app/faculty/");
+    expect(help).toHaveAttribute("target", "_blank");
+    expect(help).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.getAllByRole("link", { name: /Help with this page/i })).toHaveLength(1);
+  });
+
   it("keeps the profile menu to identity and logout only", async () => {
     renderTopbar(true);
 
-    fireEvent.click(screen.getByRole("button", { name: /T/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^T\s*$/i }));
     await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
 
     expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
@@ -78,7 +90,7 @@ describe("Topbar appearance integration", () => {
     try {
       renderTopbar(true);
 
-      fireEvent.click(screen.getByRole("button", { name: /T/i }));
+      fireEvent.click(screen.getByRole("button", { name: /^T\s*$/i }));
       await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
       fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
 
@@ -101,7 +113,7 @@ describe("Topbar appearance integration", () => {
     try {
       renderTopbar(true);
 
-      fireEvent.click(screen.getByRole("button", { name: /T/i }));
+      fireEvent.click(screen.getByRole("button", { name: /^T\s*$/i }));
       await waitFor(() => expect(screen.getByRole("menu")).toBeInTheDocument());
       fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
       await waitFor(() => expect(screen.getByRole("alertdialog")).toBeInTheDocument());
@@ -131,6 +143,6 @@ describe("Topbar appearance integration", () => {
     renderTopbar(false);
 
     expect(screen.queryByRole("button", { name: "Appearance" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /T/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^T\s*$/i })).toBeInTheDocument();
   });
 });
