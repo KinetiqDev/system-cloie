@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Manrope, Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -9,20 +8,7 @@ import { ToastProvider } from "@/components/ui/toast";
 import { AppearanceBootstrapScript } from "@/features/design-system/components/appearance-bootstrap-script";
 import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
-
-const manrope = Manrope({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["600", "700"],
-});
-
-const inter = Inter({
-  variable: "--font-body",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600"],
-});
+import { inter, manrope } from "./fonts";
 
 export const metadata: Metadata = {
   title: {

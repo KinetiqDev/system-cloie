@@ -61,7 +61,7 @@
   }
 
   .legal-prose h2 {
-    @apply text-text-primary mt-0 text-xl leading-tight font-bold;
+    @apply text-text-primary font-heading mt-0 text-xl leading-tight font-bold;
   }
 
   .legal-prose-blocks {
@@ -111,9 +111,13 @@
 
 @theme inline {
   /* ---------- Fonts ---------- */
-  --font-heading: "Manrope", "Inter", "Segoe UI", Arial, sans-serif;
-  --font-body: "Inter", "Segoe UI", Arial, sans-serif;
-  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
+  /* --font-manrope / --font-inter are set on <html> by next/font (src/app/fonts.ts). */
+  --font-heading: var(--font-manrope), var(--font-inter), "Segoe UI", Arial, sans-serif;
+  --font-body: var(--font-inter), "Segoe UI", Arial, sans-serif;
+  --font-sans: var(--font-inter), "Segoe UI", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
 
   /* ---------- Colors — CLOIE Primary ---------- */
   --color-primary: var(--color-primary);
