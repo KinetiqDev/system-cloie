@@ -350,7 +350,7 @@ function SchoolYearCard({
             {linkCode ? (
               <Link
                 href={`/secretary/school-years/${year.id}`}
-                className="text-title-lg tabular-nums underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring rounded-sm"
+                className="text-title-lg focus-visible:ring-ring rounded-sm tabular-nums underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
               >
                 {year.code}
               </Link>
@@ -632,10 +632,7 @@ function TermActions({
       </Button>
       <Link
         href={`/secretary/school-years/${term.schoolYearId}/rollover`}
-        className={cn(
-          buttonVariants({ variant: "ghost", size: "sm" }),
-          "max-sm:col-span-2"
-        )}
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "max-sm:col-span-2")}
       >
         <ArrowRightLeft data-icon="inline-start" aria-hidden="true" />
         Term Rollover

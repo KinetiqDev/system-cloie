@@ -396,10 +396,7 @@ describe("CalendarStructureView", () => {
 
     const rolloverLinks = screen.getAllByRole("link", { name: "Term Rollover" });
     expect(rolloverLinks).toHaveLength(1);
-    expect(rolloverLinks[0]).toHaveAttribute(
-      "href",
-      "/secretary/school-years/sy-1/rollover"
-    );
+    expect(rolloverLinks[0]).toHaveAttribute("href", "/secretary/school-years/sy-1/rollover");
     // The ACTIVE term is FIRST semester / SECOND_TERM in the fixture.
     const activeTermRow = screen.getByText("ACTIVE").closest("div")?.parentElement;
     expect(activeTermRow).not.toBeNull();
@@ -413,9 +410,7 @@ describe("CalendarStructureView", () => {
   });
 
   it("offers no rollover link on PLANNED terms", () => {
-    render(
-      <CalendarStructureView schoolYears={[schoolYear({ termInstances: [term()] })]} />
-    );
+    render(<CalendarStructureView schoolYears={[schoolYear({ termInstances: [term()] })]} />);
 
     // The single fixture term is FIRST/FIRST_TERM with status PLANNED.
     expect(screen.getAllByRole("button", { name: /Make Active/ }).length).toBe(1);

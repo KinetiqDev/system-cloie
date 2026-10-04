@@ -54,6 +54,8 @@ describe("RolloverExceptionsTable", () => {
     expect(screen.getByText("Graduating")).toBeInTheDocument();
     expect(screen.getByText("Missing Data")).toBeInTheDocument();
     expect(screen.getByText("Duplicate")).toBeInTheDocument();
-    expect(screen.getByText("Student is in 4th year and marked for graduation.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Student is in 4th year and marked for graduation.")
+    ).toBeInTheDocument();
   });
 });
