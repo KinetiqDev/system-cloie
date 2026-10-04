@@ -165,8 +165,8 @@ describe("risk-domain check selection (551)", () => {
       "src/lib/schemas/external-entry.ts",
       "src/features/entry/components/verify-email-form.tsx",
       "supabase/config.toml",
-      "supabase/templates/confirm_signup.html",
-      "supabase/templates/recovery.html",
+      "public/auth-email/confirm_signup.html",
+      "public/auth-email/recovery.html",
       "supabase/migrations/20260927090000_add_faculty_access_requests.sql",
     ]) {
       expect(selectChecks([file]).run_auth_integration, file).toBe(true);

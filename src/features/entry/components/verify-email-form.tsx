@@ -216,8 +216,8 @@ export function VerifyEmailForm({
               />
               {!errors.token && (
                 <p id="verify-code-hint" className="text-body-sm text-muted-foreground">
-                  The code expires after its lifetime. No dashboard or evaluation access is granted
-                  before verification.
+                  The code expires 10 minutes after it is sent. No dashboard or evaluation access is
+                  granted before verification.
                 </p>
               )}
             </>

@@ -63,7 +63,7 @@ const NEUTRAL_VERIFY_MESSAGE =
   "If the code matches, your email is now verified. Continue to complete your registration.";
 
 const NEUTRAL_RESEND_MESSAGE =
-  "If a verification is pending for this email, a new code has been sent. Codes expire after their lifetime; wait for the cooldown before requesting again.";
+  "If a verification is pending for this email, a new code has been sent. Codes expire 10 minutes after they are sent; wait for the cooldown before requesting again.";
 
 const NEUTRAL_RECOVERY_MESSAGE =
   "If this email can recover its password, a 6-digit recovery code has been sent. Enter it with a new password to continue.";

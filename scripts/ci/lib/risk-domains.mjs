@@ -71,7 +71,7 @@ const AUTH_INTEGRATION_PREFIXES = [
   "src/lib/schemas/external-entry.ts",
   "src/features/entry/",
   "supabase/config.toml",
-  "supabase/templates/",
+  "public/auth-email/",
   "supabase/migrations/",
   "package.json",
   "pnpm-lock.yaml",

@@ -13,47 +13,99 @@ passwords hashed.
 
 Local CLI Docker stack: `supabase/config.toml` already sets `enable_signup =
 true`, `enable_confirmations = true`, `secure_password_change = true`,
-otp_length = 6, otp_expiry = 3600, and a 60s resend cooldown. Restart the
-local stack after editing the file. Local mail is captured by the built-in
-mail catcher; it is never delivered to a real inbox. Keep it that way for
-the dedicated demo deployment and disposable CI as well.
+`double_confirm_changes = true`, `minimum_password_length = 8`, otp_length = 6,
+otp_expiry = 600, and a 60s resend cooldown. Restart the local stack after
+editing the file. Local mail is captured by the built-in mail catcher; it is
+never delivered to a real inbox. Keep it that way for the dedicated demo
+deployment and disposable CI as well.
+
+That file configures the local CLI stack only. A remote self-hosted instance
+reads nothing from it; the same settings reach that instance through the
+Compose overlay described below.
 
 Every other target (staging, dedicated demo, disposable CI, production) is an
 independently deployed Supabase Docker instance. The operator configures mail
-there and **never** in this repository. Start from
-[`supabase/mail.env.example`](mail.env.example), which carries every required
-value as a `<<FILL: ...>>` token, and follow
-[docs/runbooks/external-entry-mail.md](../docs/runbooks/external-entry-mail.md)
-for the full procedure, the zero-cost relay rules, and verification. Copy it to
-`mail.env` in the deployment repository, not here; `supabase/mail.env` is
-git-ignored. The required settings on each real-delivery instance are:
+there and **never** in this repository. Two tracked artifacts carry the
+configuration:
+
+- [`supabase/docker-compose.auth-mail.yml`](docker-compose.auth-mail.yml) — a
+  Compose overlay that maps the Auth environment variables. It is an add-on to
+  the upstream `docker-compose.yml` in `system-cloie-infra/supabase/`, never a
+  stack on its own: it declares only `services.auth.environment`, so the
+  database, PostgREST, realtime, JWT keys, dashboard credentials, phone auth
+  and OAuth providers come from the base file untouched. Upstream Compose maps
+  the SMTP relay block and the signup/autoconfirm switches but ships no mapping
+  for the OTP lifetime, OTP length, mail cooldown, password minimum, secure
+  password change, secure email change, custom templates or subjects, or any
+  rate limit, so without the overlay an instance runs on GoTrue's own defaults
+  — including a 86400-second OTP lifetime.
+- [`supabase/mail.env.example`](mail.env.example) — the operator values as a
+  `<<FILL: ...>>` template. Copy it to `mail.env` in the deployment repository,
+  not here; `supabase/mail.env` is git-ignored.
+
+Apply them together from the directory holding the upstream `docker-compose.yml`,
+then follow [docs/runbooks/external-entry-mail.md](../docs/runbooks/external-entry-mail.md)
+for the relay choice, the zero-cost rules, and verification:
+
+```bash
+docker compose --env-file .env --env-file mail.env \
+  -f docker-compose.yml \
+  -f <path-to>/supabase/docker-compose.auth-mail.yml \
+  up -d --force-recreate auth
+```
+
+Both env files are required: `--env-file .env` carries the base stack's own
+values (`POSTGRES_PASSWORD`, `JWT_SECRET`, `API_EXTERNAL_URL`, …) and
+`--env-file mail.env` carries the values the overlay maps. Compose applies them
+in order: mail settings shared by the files intentionally resolve to `mail.env`.
+
+`--force-recreate` is required: these are container environment variables, and
+`docker compose restart auth` re-runs the container with its original
+environment. `supabase/config.toml` has no effect on a remote instance — it
+configures the local CLI stack only, so change it and `mail.env.example`
+together when a value changes on both, and keep the OTP lifetime identical in
+both.
+
+The settings the overlay makes explicit on each real-delivery instance:
 
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_ADMIN_EMAIL`, and
-  `SMTP_SENDER_NAME`, plus SPF and DKIM records for the sending domain.
+  `SMTP_SENDER_NAME`, plus the provider's domain-authentication DNS records.
   `SMTP_USER_NAME` is not a variable upstream Compose reads; the sender name
   arrives through `SMTP_SENDER_NAME`.
-- `GOTRUE_MAILER_TEMPLATES_CONFIRMATION` and
-  `GOTRUE_MAILER_TEMPLATES_RECOVERY` must point at HTTP(S) URLs the Auth
-  container can fetch, serving `supabase/templates/confirm_signup.html` and
-  `supabase/templates/recovery.html`. GoTrue fetches the body at send time and
-  treats an unreachable URL as a send failure. Its built-in defaults render a
-  link, not the `{{ .Token }}` the entry form needs, so mail can arrive and
-  still be unusable. `GOTRUE_MAILER_URLPATHS_*` is a different setting: it
-  builds link targets for link-based templates and stays unset here.
+- `MAILER_TEMPLATES_CONFIRMATION` and `MAILER_TEMPLATES_RECOVERY` must point at
+  HTTP(S) URLs the Auth container can fetch, serving
+  `public/auth-email/confirm_signup.html` and `public/auth-email/recovery.html`
+  at the application's `/auth-email/` URLs. These are the same files the local
+  CLI reads, not separately maintained copies.
+  GoTrue fetches the body at send time, caches it for ten minutes, and treats an
+  unreachable URL as a send failure. Its built-in defaults render a link, not
+  the `{{ .Token }}` the entry form needs, so mail can arrive and still be
+  unusable. `MAILER_URLPATHS_*` is a different setting: it builds link targets
+  for link-based templates and is left alone here.
 - `ENABLE_EMAIL_SIGNUP=true` and `ENABLE_EMAIL_AUTOCONFIRM=false`. Autoconfirm
   would let an unverified address reach domain linkage, and it also suppresses
   the verification mail entirely.
-- `GOTRUE_MAILER_OTP_EXP` (seconds; keep it at or below `GOTRUE_SECURITY_MAX_AGE`
-  so a code cannot outlive its session), `GOTRUE_MAILER_OTP_LENGTH=6`, and
-  `GOTRUE_MAILER_AUTOCONFIRM=false`.
-- Rate limits on the instance: mail send rate, `GOTRUE_RATE_LIMIT_EMAIL_SENT`,
-  `GOTRUE_RATE_LIMIT_OTP`, and the password minimum
-  (`GOTRUE_PASSWORD_MIN_LENGTH`, keep at 8 or more to match the app schema).
-- `ADDITIONAL_REDIRECT_URLS` must include every per-target System CLOIE
-  origin, including the `/verify-email` and `/reset-password` origins.
+- `MAILER_OTP_EXP=600` (seconds; one value governs every emailed code —
+  verification and recovery alike), `MAILER_OTP_LENGTH=6`, `SMTP_MAX_FREQUENCY=1m`
+  (the container key is `GOTRUE_SMTP_MAX_FREQUENCY`; there is no
+  `GOTRUE_MAILER_MAX_FREQUENCY`, and no `GOTRUE_SECURITY_MAX_AGE` exists to
+  clamp the lifetime against), and `PASSWORD_MIN_LENGTH=8` to match the app
+  schema.
+- `SECURE_PASSWORD_CHANGE=true` and `MAILER_SECURE_EMAIL_CHANGE=true`, the
+  self-hosted equivalents of `secure_password_change` and
+  `double_confirm_changes` in the local `config.toml`.
+- Rate limits: `RATE_LIMIT_EMAIL_SENT` (outbound mail) and `RATE_LIMIT_OTP` (the
+  send endpoints). Code verification is a separate per-IP limiter,
+  `GOTRUE_RATE_LIMIT_VERIFY`, which the overlay deliberately does not set.
+- `SITE_URL` and `ADDITIONAL_REDIRECT_URLS`, which must include every per-target
+  System CLOIE origin serving `/verify-email` and `/reset-password`.
 
-Code lifetime, attempt limits, and resend cooldown are therefore properties of
-the instance configuration, not of the application. Do not infer production
+ACD Google sign-in is configured on the base Compose file, not by the overlay,
+which touches no `GOTRUE_EXTERNAL_GOOGLE_*` key; a target that already serves
+Google keeps serving it.
+
+Code lifetime, attempt limits, and resend cooldown are properties of the
+instance configuration, not of the application. Do not infer production
 readiness from this file or from local settings.
 
 ## Environment

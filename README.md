@@ -21,16 +21,17 @@ git clone <repository-url>
 cd project-cloie
 pnpm install
 
-# 2. Start the local Supabase CLI Docker stack (canonical development backend)
-pnpm supabase:start
-
-# 3. Environment variables
+# 2. Environment variables
 cp .env.example .env.local
-# Edit .env.local with your credentials.
-# See .env.example for the full variable reference.
-# The essentials: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-# (from `pnpm supabase:status`), `DATABASE_URL`, `DIRECT_URL`, and the local
-# OAuth values `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+# Fill GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET before starting Supabase.
+# Set DATABASE_URL and DIRECT_URL to the local values in .env.example.
+# Generate CLOIE_LEGAL_TICKET_SECRET and CONFIRMATION_SECRET separately with:
+#   openssl rand -hex 32
+
+# 3. Start the local Supabase CLI Docker stack (canonical development backend)
+pnpm supabase:start
+# Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY using
+# `pnpm supabase:status`. Never copy the service-role key into a public variable.
 
 # 4. Reset the local database from committed migrations and seed data
 pnpm supabase:reset
@@ -46,26 +47,28 @@ For deployed self-hosted targets, set the server-only `CLOIE_BACKEND_ID` and the
 
 See `supabase/README.md` for the full local and remote self-hosted Supabase workflow and `AGENTS.md` for the Prisma + Supabase migration cycle. Supabase Cloud is not supported; see ADR 0020 for the target-neutral self-hosted contract.
 
+Email/password sign-in is available to Alumni and Industry Partner alongside Google. Internal roles remain Google-only. Local verification and recovery mail stays in the catcher at http://127.0.0.1:54324; no SMTP account is needed for development. For real inbox delivery, configure the Supabase service using [the mail environment template](supabase/mail.env.example), [the Compose override](supabase/docker-compose.auth-mail.yml), and [the mail setup runbook](docs/runbooks/external-entry-mail.md). Do not add SMTP credentials to the application environment.
+
 ## Tech Stack
 
-| Category        | Technology                                                 |
-| --------------- | ---------------------------------------------------------- |
-| Framework       | Next.js 16 (App Router, Turbopack)                         |
-| Language        | TypeScript 5                                               |
-| Styling         | Tailwind CSS v4, class-variance-authority                  |
-| Components      | shadcn/ui (base-nova style, Base UI primitives)            |
-| Icons           | lucide-react                                               |
-| Forms           | react-hook-form, customZodResolver, Zod 4                  |
-| Charts          | Recharts (through shadcn/ui chart primitives)              |
-| Drag and Drop   | @dnd-kit (core, sortable)                                  |
-| Qualitative NLP | winkNLP, stopword                                          |
-| Word Cloud      | @isoterik/react-word-cloud                                 |
-| AI Insights     | OpenAI-compatible API (server-only, bounded; see ADR 0016) |
-| Database        | PostgreSQL 15+ (Supabase)                                  |
-| ORM             | Prisma 6                                                   |
-| Auth            | Supabase Auth (Google OAuth)                               |
-| Testing         | Vitest, Testing Library, Playwright                        |
-| Package Manager | pnpm 10                                                    |
+| Category        | Technology                                                   |
+| --------------- | ------------------------------------------------------------ |
+| Framework       | Next.js 16 (App Router, Turbopack)                           |
+| Language        | TypeScript 5                                                 |
+| Styling         | Tailwind CSS v4, class-variance-authority                    |
+| Components      | shadcn/ui (base-nova style, Base UI primitives)              |
+| Icons           | lucide-react                                                 |
+| Forms           | react-hook-form, customZodResolver, Zod 4                    |
+| Charts          | Recharts (through shadcn/ui chart primitives)                |
+| Drag and Drop   | @dnd-kit (core, sortable)                                    |
+| Qualitative NLP | winkNLP, stopword                                            |
+| Word Cloud      | @isoterik/react-word-cloud                                   |
+| AI Insights     | OpenAI-compatible API (server-only, bounded; see ADR 0016)   |
+| Database        | PostgreSQL 15+ (Supabase)                                    |
+| ORM             | Prisma 6                                                     |
+| Auth            | Supabase Auth, Google OAuth and external-role email/password |
+| Testing         | Vitest, Testing Library, Playwright                          |
+| Package Manager | pnpm 10                                                      |
 
 ## How We Build
 
@@ -83,7 +86,7 @@ System CLOIE operates with four intentionally separated authentication modes, ne
 
 | Mode                   | Mechanism                                                                                                                        | Where                       |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| **Primary Production** | Supabase Auth with Google OAuth, domain-restricted to `@acd.edu.ph` and `@acdeducation.com`                                      | Primary public deployment   |
+| **Primary Production** | Supabase Auth, institutional Google OAuth for internal roles; Google or verified email/password for Alumni and Industry Partner  | Primary public deployment   |
 | **Local Development**  | `cloie_dev_auth` cookie + `POST /api/auth/dev-login`, demo users with `@cloie.test` emails                                       | `NODE_ENV=development` only |
 | **Dedicated Demo**     | Short-lived signed demo session against isolated resettable database; server-only `CLOIE_DEMO_*` configuration                   | Separate demo deployment    |
 | **Isolated CI Test**   | Short-lived signed session against the disposable seeded database; `CLOIE_CI_TEST_ENABLED=true`, `CLOIE_DEPLOYMENT_KIND=ci-test` | Disposable CI only          |
@@ -93,7 +96,7 @@ The demo deployment is used for production-build route/rendering evidence, cross
 Key demo scripts:
 
 - `pnpm demo:reset` — destructive reset of the isolated demo database (validates target identity first)
-- `pnpm verify:production-auth-boundary` — confirms primary Production remains OAuth-only
+- `pnpm verify:production-auth-boundary` — confirms primary Production refuses demo and CI-test authentication
 - `pnpm verify:dedicated-demo-auth-boundary` — confirms demo deployment has signed-session auth active
 
 ## Available Scripts
@@ -263,7 +266,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/health(?:/|$)|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api/health(?:/|$)|auth-email/(?:confirm_signup|recovery)\\.html$|_next|favicon.ico|logos/|assets/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
 ```

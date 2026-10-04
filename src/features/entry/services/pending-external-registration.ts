@@ -25,10 +25,10 @@ const PENDING_VERIFICATION_EMAIL_COOKIE = "cloie_pending_verify_email";
 const PENDING_VERIFICATION_ROLE_COOKIE = "cloie_pending_external_role";
 
 /**
- * Matches the configured signup-code lifetime. Expiry drops the convenience
+ * Mirrors the ten-minute signup-code lifetime. Expiry drops the convenience
  * pin; verification still depends on the provider accepting the code.
  */
-const PENDING_VERIFICATION_MAX_AGE_SECONDS = 60 * 60;
+const PENDING_VERIFICATION_MAX_AGE_SECONDS = 60 * 10;
 
 export const VERIFY_EMAIL_PATH = "/verify-email";
 
