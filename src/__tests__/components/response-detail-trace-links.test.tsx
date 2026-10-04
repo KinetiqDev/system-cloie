@@ -1,11 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
-import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-review/types";
+import type { IdentifiedSubmittedResponseDetail } from "@/features/response-review/types";
 
 function responseDTO(
-  overrides: Partial<ProgramHeadSubmittedResponseDetail> = {}
-): ProgramHeadSubmittedResponseDetail {
+  overrides: Partial<IdentifiedSubmittedResponseDetail> = {}
+): IdentifiedSubmittedResponseDetail {
   return {
     responseId: "response-1",
     submittedAt: new Date("2026-08-24T00:00:00Z"),

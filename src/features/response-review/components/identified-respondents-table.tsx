@@ -28,7 +28,10 @@ import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { formatDate, formatDateTime } from "@/lib/utils/date-format";
 import { cn } from "@/lib/utils";
 import { formatMean } from "./format";
-import type { ProgramHeadAssignmentRespondentRow, ProgramHeadRespondentRow } from "../types";
+import type {
+  ProgramHeadAssignmentRespondentRow,
+  IdentifiedSubmittedRespondentRow,
+} from "../types";
 
 type StatusFilter = "ALL" | ProgramHeadAssignmentRespondentRow["status"];
 
@@ -57,7 +60,7 @@ function respondentContext(row: ProgramHeadAssignmentRespondentRow): string {
 }
 
 type IdentifiedRespondentsTableProps = {
-  respondents: ProgramHeadAssignmentRespondentRow[] | ProgramHeadRespondentRow[];
+  respondents: ProgramHeadAssignmentRespondentRow[] | IdentifiedSubmittedRespondentRow[];
   responseHrefs: Record<string, string>;
 };
 

@@ -8,12 +8,12 @@ import {
   STAKEHOLDER_EVIDENCE_SOURCE,
   buildAnalyticsUrl,
 } from "@/features/analytics/services/program-head-analytics-state";
-import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+import type { IdentifiedSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { formatDateTime } from "@/lib/utils/date-format";
 
 type ResponseDetailProps = {
-  response: ProgramHeadSubmittedResponseDetail;
+  response: IdentifiedSubmittedResponseDetail;
   /** Link back to the evaluation detail page this response belongs to. */
   evaluationHref: string;
   /** Link to the Analytics tab for upward trace (§27.6). */
@@ -292,7 +292,7 @@ function ProgramWideContext({
 }
 
 function respondentContextLabel(
-  respondent: ProgramHeadSubmittedResponseDetail["respondent"]
+  respondent: IdentifiedSubmittedResponseDetail["respondent"]
 ): string | null {
   if (respondent.studentContext) {
     const { programLabel, majorLabel, yearLevel, section } = respondent.studentContext;

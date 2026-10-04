@@ -19,10 +19,10 @@ import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import { formatDate } from "@/lib/utils/date-format";
-import type { ProgramHeadCourseEvaluationDetail } from "../types";
+import type { IdentifiedCourseEvaluationDetail } from "../types";
 
 type CourseEvaluationDetailProps = {
-  detail: ProgramHeadCourseEvaluationDetail;
+  detail: IdentifiedCourseEvaluationDetail;
   responseHref: (responseId: string) => string;
   /** Link to the qualitative Analytics tab (§25.3). */
   analyticsHref: string;

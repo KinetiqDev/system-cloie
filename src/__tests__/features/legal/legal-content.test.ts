@@ -7,7 +7,8 @@ describe("native legal content", () => {
     expect(legalDocuments.terms.title).toBe("System CLOIE Terms of Use");
     expect(legalDocuments.privacy.sections.length).toBeGreaterThan(10);
     expect(legalDocuments.terms.sections.length).toBeGreaterThan(10);
-    expect(LEGAL_VERSIONS).toEqual({ privacy: "1.1", terms: "1.1" });
+    expect(legalDocuments.privacy.version).toBe(LEGAL_VERSIONS.privacy);
+    expect(legalDocuments.terms.version).toBe(LEGAL_VERSIONS.terms);
   });
 
   it("keeps unresolved publication values visible", () => {
@@ -16,6 +17,28 @@ describe("native legal content", () => {
       expect(document.effectiveDate).toContain("Pending");
       expect(document.lastUpdated).toContain("Pending");
     }
+  });
+
+  it("names every authorized reader of identified submitted responses", () => {
+    const confidentiality = legalDocuments.privacy.sections.find(
+      (section) => section.id === "confidentiality"
+    );
+    const text = confidentiality?.blocks
+      .map((block) => (block.type === "paragraph" ? block.text : ""))
+      .join(" ");
+
+    expect(text).toContain(
+      "Authorized Program Heads may review identified submitted responses from Program-specific courses and Central deployments within their assigned programs."
+    );
+    expect(text).toContain(
+      "Authorized General Education Coordinators may review identified submitted responses from General Education courses across programs."
+    );
+    expect(text).toContain(
+      "This access is for quality assurance, accreditation, and continuous-improvement purposes."
+    );
+    expect(text).not.toContain(
+      "Authorized Program Heads may review identified submitted responses within their assigned programs"
+    );
   });
 
   it("has unique stable section anchors", () => {

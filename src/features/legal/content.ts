@@ -215,7 +215,7 @@ export const privacyNotice: LegalDocument = {
         },
         {
           type: "paragraph",
-          text: "Responses are not completely anonymous at the database level. They should instead be described as confidential or pseudonymized. Authorized Program Heads may review identified submitted responses within their assigned programs for quality assurance, accreditation, and continuous-improvement purposes. Ordinary reports should not display respondent identities, and access to identifiable response records or raw qualitative comments must be restricted to specially authorized personnel and approved purposes.",
+          text: "Responses are not completely anonymous at the database level. They should instead be described as confidential or pseudonymized. Authorized Program Heads may review identified submitted responses from Program-specific courses and Central deployments within their assigned programs. Authorized General Education Coordinators may review identified submitted responses from General Education courses across programs. This access is for quality assurance, accreditation, and continuous-improvement purposes. Ordinary reports should not display respondent identities, and access to identifiable response records or raw qualitative comments must be restricted to specially authorized personnel and approved purposes.",
         },
         {
           type: "bullets",

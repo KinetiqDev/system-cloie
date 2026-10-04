@@ -97,7 +97,10 @@ function courseEvaluationWhere(
     program_id: programId,
     ...(filters.courseId ? { course_id: filters.courseId } : {}),
     ...(filters.facultyId ? { faculty_id: filters.facultyId } : {}),
-    ...(filters.majorId ? { course: { major_id: filters.majorId } } : {}),
+    course: {
+      course_scope: "PROGRAM_SPECIFIC",
+      ...(filters.majorId ? { major_id: filters.majorId } : {}),
+    },
     ...(filters.yearLevel ? { year_level: filters.yearLevel } : {}),
     ...(filters.section ? { section: filters.section } : {}),
   };
@@ -190,7 +193,16 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
       where: {
         OR: [
           { central_deployments: { some: { program_id: programId } } },
-          { course_bound_evaluations: { some: { course_assignment: { program_id: programId } } } },
+          {
+            course_bound_evaluations: {
+              some: {
+                course_assignment: {
+                  program_id: programId,
+                  course: { course_scope: "PROGRAM_SPECIFIC" },
+                },
+              },
+            },
+          },
         ],
       },
       select: {
@@ -203,6 +215,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     }),
     prisma.course.findMany({
       where: {
+        course_scope: "PROGRAM_SPECIFIC",
         course_assignments: {
           some: { program_id: programId, course_bound_evaluations: { some: {} } },
         },
@@ -213,7 +226,11 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     prisma.user.findMany({
       where: {
         course_assignments: {
-          some: { program_id: programId, course_bound_evaluations: { some: {} } },
+          some: {
+            program_id: programId,
+            course: { course_scope: "PROGRAM_SPECIFIC" },
+            course_bound_evaluations: { some: {} },
+          },
         },
       },
       select: { id: true, name: true },

@@ -17,7 +17,7 @@ import {
 import { buildPeriodLabel } from "./period-label";
 import type {
   CourseBoundResponseContext,
-  ProgramHeadSubmittedResponseDetail,
+  IdentifiedSubmittedResponseDetail,
   ProgramWideResponseContext,
   SubmittedAnswerBinding,
 } from "../types";
@@ -113,7 +113,7 @@ type EvaluationProjection =
 export async function getProgramHeadResponseDetail(
   programId: string,
   responseId: string
-): Promise<ProgramHeadSubmittedResponseDetail | null> {
+): Promise<IdentifiedSubmittedResponseDetail | null> {
   const authSession = await resolveAuthSession();
 
   if (!authSession || authSession.activeRole !== ROLES.PROGRAM_HEAD) {
@@ -131,7 +131,14 @@ export async function getProgramHeadResponseDetail(
       status: "SUBMITTED",
       assignment: {
         OR: [
-          { course_bound: { course_assignment: { program_id: programId } } },
+          {
+            course_bound: {
+              course_assignment: {
+                program_id: programId,
+                course: { course_scope: "PROGRAM_SPECIFIC" },
+              },
+            },
+          },
           { central_deployment: { program_id: programId } },
         ],
       },
@@ -303,7 +310,7 @@ function identityFragment(
   context: RespondentIdentityContext | undefined,
   stakeholder: TargetStakeholder
 ): Pick<
-  ProgramHeadSubmittedResponseDetail["respondent"],
+  IdentifiedSubmittedResponseDetail["respondent"],
   "studentContext" | "alumniContext" | "industryContext"
 > {
   if (!context) {
@@ -387,7 +394,7 @@ function buildResponseSections(
   },
   evaluation: EvaluationProjection,
   ciloMappings: Map<string, CiloGoMapping[]>
-): ProgramHeadSubmittedResponseDetail["sections"][number][] {
+): IdentifiedSubmittedResponseDetail["sections"][number][] {
   return (Array.isArray(evaluation.snapshot) ? evaluation.snapshot : [])
     .filter(isSnapshotSection)
     .map((section) => {
@@ -435,7 +442,7 @@ function buildResponseSections(
 }
 
 function responseMeanOf(
-  sections: ProgramHeadSubmittedResponseDetail["sections"],
+  sections: IdentifiedSubmittedResponseDetail["sections"],
   snapshot: unknown
 ): number | null {
   const validRatings: number[] = [];

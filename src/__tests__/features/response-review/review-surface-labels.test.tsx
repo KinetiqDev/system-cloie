@@ -6,8 +6,8 @@ import { CourseEvaluationDetail } from "@/features/response-review/components/co
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
 import type {
   ProgramHeadCentralEvaluationDetail,
-  ProgramHeadCourseEvaluationDetail,
-  ProgramHeadSubmittedResponseDetail,
+  IdentifiedCourseEvaluationDetail,
+  IdentifiedSubmittedResponseDetail,
 } from "@/features/response-review/types";
 
 // Review surfaces must present academic-context values with the same friendly
@@ -17,7 +17,7 @@ import type {
 const activatedAt = new Date("2026-08-23T00:00:00.000Z");
 const deadlineAt = new Date("2026-11-28T00:00:00.000Z");
 
-function courseDetail(): ProgramHeadCourseEvaluationDetail {
+function courseDetail(): IdentifiedCourseEvaluationDetail {
   return {
     evaluation: {
       id: "eval-1",
@@ -98,7 +98,7 @@ function centralDetail(): ProgramHeadCentralEvaluationDetail {
     respondents: [],
   };
 }
-function responseDetail(): ProgramHeadSubmittedResponseDetail {
+function responseDetail(): IdentifiedSubmittedResponseDetail {
   return {
     responseId: "response-1",
     submittedAt: new Date("2026-08-24T00:00:00Z"),

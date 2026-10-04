@@ -864,7 +864,7 @@ async function listActiveEvaluations(
     }),
     prisma.courseBoundEvaluation.findMany({
       where: {
-        course_assignment: { program_id: programId },
+        course_assignment: { program_id: programId, course: { course_scope: "PROGRAM_SPECIFIC" } },
         status: DeploymentStatus.ACTIVE,
         term_instance_id: termInstanceId,
       },
