@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getYearLevelDisplay } from "@/lib/constants/academic";
@@ -26,6 +27,8 @@ type CentralEvaluationDetailProps = {
   responseHref: (responseId: string) => string;
   /** Link to the qualitative Analytics tab (§26). */
   analyticsHref: string;
+  /** Trail rendered directly below the page title (§12). */
+  breadcrumbs?: ReactNode;
 };
 
 function statusLabel(status: string): string {
@@ -38,6 +41,7 @@ export function CentralEvaluationDetail({
   detail,
   responseHref,
   analyticsHref,
+  breadcrumbs,
 }: CentralEvaluationDetailProps) {
   const {
     evaluation,
@@ -56,7 +60,8 @@ export function CentralEvaluationDetail({
           <Badge variant="outline">Program-wide evaluation</Badge>
           <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>
         </div>
-        <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
+        <h1 className="text-heading-xl text-balance wrap-anywhere">{evaluation.title}</h1>
+        {breadcrumbs ? <div className="pt-1">{breadcrumbs}</div> : null}
         <p className="text-body-md text-text-secondary text-pretty">
           <span className="text-foreground font-semibold">
             {STAKEHOLDER_LABELS[evaluation.stakeholder] ?? evaluation.stakeholder}

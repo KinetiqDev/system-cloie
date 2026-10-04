@@ -31,7 +31,15 @@ describe("EvaluationListCard", () => {
   test("shows progress bar when in progress", () => {
     render(<EvaluationListCard {...mockProps} status="IN_PROGRESS" progress={45} />);
 
-    expect(screen.getByText(/45% Complete/i)).toBeDefined();
-    expect(screen.getByRole("progressbar")).toBeDefined();
+    expect(screen.getByText(/45%/)).toBeDefined();
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "45");
+  });
+
+  test("a fully answered draft remains explicitly unsubmitted", () => {
+    render(<EvaluationListCard {...mockProps} status="IN_PROGRESS" progress={100} />);
+
+    expect(screen.getByText(/100% answered.*not submitted/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    expect(screen.queryByText(/complete/i)).not.toBeInTheDocument();
   });
 });

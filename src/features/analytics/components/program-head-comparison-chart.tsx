@@ -135,9 +135,9 @@ export function ProgramHeadComparisonChart({
   if (ranked.length === 0) {
     return (
       <div className="space-y-3">
-        <h3 id={titleId} className="text-title-sm text-foreground">
+        <h2 id={titleId} className="text-heading-lg text-foreground">
           {title}
-        </h3>
+        </h2>
         {description ? <p className="text-body-sm text-text-secondary">{description}</p> : null}
         <Empty className="h-64">
           <EmptyTitle>No comparable means yet</EmptyTitle>
@@ -163,9 +163,9 @@ export function ProgramHeadComparisonChart({
   return (
     <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
       <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+        <h2 id={titleId} className="text-heading-lg text-foreground">
           {title}
-        </h3>
+        </h2>
         <span className="text-muted-foreground text-xs font-medium">Ranked Comparison</span>
       </div>
       {description ? <p className="text-body-sm text-text-secondary">{description}</p> : null}

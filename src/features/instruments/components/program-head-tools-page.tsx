@@ -156,8 +156,7 @@ export function ProgramHeadToolsPage({
       <div className="space-y-2">
         <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
         <p className="text-muted-foreground text-sm">
-          Manage templates and published deployments for{" "}
-          <span className="font-semibold">{program.name}</span>.
+          Manage this Program&apos;s templates and published deployments.
         </p>
       </div>
 

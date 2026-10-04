@@ -57,7 +57,7 @@ const FACULTY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/faculty/dashboard", icon: LayoutDashboard },
   { name: "My Course Rosters", href: "/faculty/course-rosters", icon: UsersRound },
   { name: "Manage CILOs", href: "/faculty/cilos", icon: BookOpen },
-  { name: "Tools", href: "/faculty/tools", icon: ClipboardList },
+  { name: "Evaluation Tools", href: "/faculty/tools", icon: ClipboardList },
   { name: "Analytics", href: "/faculty/analytics", icon: BarChart3 },
   { name: "Profile", href: "/faculty/profile", icon: UserCircle },
 ];
@@ -70,7 +70,7 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
   { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
-  { name: "Tools", href: "/secretary/instruments", icon: ClipboardList },
+  { name: "Evaluation Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
 
 const PROGRAM_HEAD_NAV: NavItem[] = [
@@ -98,7 +98,12 @@ const PROGRAM_HEAD_NAV: NavItem[] = [
     icon: Layers3,
     programHeadChildPath: "outcomes",
   },
-  { name: "Tools", href: "/program-head/tools", icon: FileText, programHeadChildPath: "tools" },
+  {
+    name: "Evaluation Tools",
+    href: "/program-head/tools",
+    icon: FileText,
+    programHeadChildPath: "tools",
+  },
   {
     name: "Responses",
     href: "/program-head/responses",
@@ -173,7 +178,7 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
         href: "/dean/academic-structure/course-assignments",
         icon: UsersRound,
       },
-      { name: "Tools", href: "/dean/academic-structure/instruments", icon: Layers3 },
+      { name: "Evaluation Tools", href: "/dean/academic-structure/instruments", icon: Layers3 },
     ],
   },
   {

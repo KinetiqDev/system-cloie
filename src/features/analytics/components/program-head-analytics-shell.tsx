@@ -56,16 +56,13 @@ export function ProgramHeadAnalyticsShell({
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <Breadcrumbs items={breadcrumbItems} />
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
         <div className="flex flex-col gap-1">
-          <h1 className="text-heading-lg text-foreground tracking-tight text-balance">Analytics</h1>
-          <p className="text-body-md text-text-secondary max-w-3xl text-pretty">
-            <span className="text-foreground font-semibold">
-              {scope.programCode} — {scope.programName}
-            </span>
-            {scope.periodLabel ? <span> · {scope.periodLabel}</span> : null}
-          </p>
+          <h1 className="text-heading-xl text-balance">Analytics</h1>
+          <Breadcrumbs items={breadcrumbItems} className="text-body-sm" />
+          {scope.periodLabel ? (
+            <p className="text-body-sm text-text-secondary text-pretty">{scope.periodLabel}</p>
+          ) : null}
         </div>
       </header>
 

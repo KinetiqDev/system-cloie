@@ -362,7 +362,7 @@ export function PublishCourseBoundEvaluationFormV2({
       <div className="space-y-3">
         {backNavigation && <BackLink href={backNavigation.href}>{backNavigation.label}</BackLink>}
         <div className="space-y-2">
-          <h1 className="text-heading-lg">Publish CILO Evaluation</h1>
+          <h1 className="text-heading-xl">Publish CILO Evaluation</h1>
           <p className="text-muted-foreground text-sm">
             Select a class assignment to target the right students. The course context and
             CILO-to-question bindings come from the saved faculty template.

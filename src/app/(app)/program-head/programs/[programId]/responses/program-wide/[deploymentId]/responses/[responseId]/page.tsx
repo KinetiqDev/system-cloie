@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
@@ -69,12 +68,19 @@ export default async function CentralResponseDetailPage({
       : evaluationPath;
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex min-w-0 flex-col gap-3">
-        <div>
-          <BackLink href={evaluationHref}>Back to Evaluation</BackLink>
-        </div>
+    <ResponseDetail
+      response={response}
+      evaluationHref={evaluationHref}
+      analyticsHref={buildAnalyticsUrl(programId, {
+        tab: "outcomes",
+        evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],
+        stakeholder,
+        termInstanceId: response.evaluation.context.termInstanceId,
+      })}
+      programId={programId}
+      breadcrumbs={
         <Breadcrumbs
+          className="text-body-sm"
           items={
             openedFromTools
               ? [
@@ -90,18 +96,7 @@ export default async function CentralResponseDetailPage({
                 ]
           }
         />
-      </div>
-      <ResponseDetail
-        response={response}
-        evaluationHref={evaluationHref}
-        analyticsHref={buildAnalyticsUrl(programId, {
-          tab: "outcomes",
-          evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],
-          stakeholder,
-          termInstanceId: response.evaluation.context.termInstanceId,
-        })}
-        programId={programId}
-      />
-    </div>
+      }
+    />
   );
 }

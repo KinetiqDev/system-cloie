@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,8 @@ type CourseEvaluationDetailProps = {
   responseHref: (responseId: string) => string;
   /** Link to the qualitative Analytics tab (§25.3). */
   analyticsHref: string;
+  /** Trail rendered directly below the page title (§12). */
+  breadcrumbs?: ReactNode;
 };
 
 function statusLabel(status: string): string {
@@ -37,6 +40,7 @@ export function CourseEvaluationDetail({
   detail,
   responseHref,
   analyticsHref,
+  breadcrumbs,
 }: CourseEvaluationDetailProps) {
   const {
     evaluation,
@@ -55,7 +59,8 @@ export function CourseEvaluationDetail({
           <Badge variant="outline">Course evaluation</Badge>
           <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>
         </div>
-        <h1 className="text-heading-lg text-balance">{evaluation.title}</h1>
+        <h1 className="text-heading-xl text-balance wrap-anywhere">{evaluation.title}</h1>
+        {breadcrumbs ? <div className="pt-1">{breadcrumbs}</div> : null}
         <p className="text-body-md text-text-secondary text-pretty">
           <span className="text-foreground font-semibold">
             {evaluation.courseCode} — {evaluation.courseTitle}

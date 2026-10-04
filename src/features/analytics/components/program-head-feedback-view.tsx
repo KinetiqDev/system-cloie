@@ -179,7 +179,7 @@ function FeedbackCountTable({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 className="text-title-sm text-foreground">{title}</h3>
+        <h2 className="text-heading-lg text-foreground">{title}</h2>
         <p className="text-body-sm text-text-secondary">{caption}</p>
       </div>
       <div className="border-border overflow-x-auto rounded-lg border">
@@ -215,7 +215,7 @@ function FeedbackPromptTable({ prompts }: { prompts: ProgramHeadFeedbackPromptCo
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 className="text-title-sm text-foreground">Prompt structure</h3>
+        <h2 className="text-heading-lg text-foreground">Prompt structure</h2>
         <p className="text-body-sm text-text-secondary">
           Non-empty submitted comments by evidence source, instrument prompt, and instrument
           version, with the highest-mention identifier-redacted terms and the tone counts for that
@@ -270,7 +270,7 @@ function FeedbackEvidenceLinks({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-title-sm text-foreground">Review evidence</h3>
+      <h2 className="text-heading-lg text-foreground">Review evidence</h2>
       {evaluations.length === 0 ? (
         <p className="text-body-sm text-text-secondary">
           No course-bound review pages are available for this qualitative scope.

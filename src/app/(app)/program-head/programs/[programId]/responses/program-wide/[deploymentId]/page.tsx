@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CentralEvaluationDetail } from "@/features/response-review/components/central-evaluation-detail";
@@ -51,14 +50,12 @@ export default async function CentralEvaluationDetailPage({
   const upwardQuery = programHeadResponsesQuery(upwardState);
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex min-w-0 flex-col gap-3">
-        <div>
-          <BackLink href={openedFromTools ? toolsHref : responsesHref}>
-            {openedFromTools ? "Back to Evaluation Tools" : "Back to Program-Wide Evaluations"}
-          </BackLink>
-        </div>
+    <CentralEvaluationDetail
+      detail={detail}
+      analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
+      breadcrumbs={
         <Breadcrumbs
+          className="text-body-sm"
           items={
             openedFromTools
               ? [
@@ -73,20 +70,16 @@ export default async function CentralEvaluationDetailPage({
                 ]
           }
         />
-      </div>
-      <CentralEvaluationDetail
-        detail={detail}
-        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
-        responseHref={(responseId: string) => {
-          const path = buildProgramHeadResponsesProgramWideResponsePath(
-            programId,
-            deploymentId,
-            responseId
-          );
-          if (openedFromTools) return `${path}?from=tools`;
-          return upwardQuery ? `${path}?${upwardQuery}` : path;
-        }}
-      />
-    </div>
+      }
+      responseHref={(responseId: string) => {
+        const path = buildProgramHeadResponsesProgramWideResponsePath(
+          programId,
+          deploymentId,
+          responseId
+        );
+        if (openedFromTools) return `${path}?from=tools`;
+        return upwardQuery ? `${path}?${upwardQuery}` : path;
+      }}
+    />
   );
 }

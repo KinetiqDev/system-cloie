@@ -33,18 +33,13 @@ export default async function SelectedProgramReportsPage({
     notFound();
   }
 
-  const { code, name } = contextResult.data.selectedProgram;
+  const { code } = contextResult.data.selectedProgram;
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-heading-lg">Reports</h1>
-        <p className="text-body-md text-text-secondary">
-          <span className="text-link font-semibold">
-            {code} — {name}
-          </span>{" "}
-          · Program-scoped report exports
-        </p>
+        <h1 className="text-heading-xl text-foreground text-pretty">Reports</h1>
+        <p className="text-body-sm text-muted-foreground">Program-scoped report exports.</p>
       </div>
 
       <div className="grid gap-4">

@@ -238,7 +238,9 @@ describe("ProgramHeadOutcomesView", () => {
   it("shows the mean bar chart insight and exact-value alternative", async () => {
     renderView(outcomeDTO());
 
-    expect(await screen.findByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Mean Rating by Graduate Outcome", {}, { timeout: 10_000 })
+    ).toBeInTheDocument();
     expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });

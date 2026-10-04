@@ -537,6 +537,8 @@ describe("course roster pages", () => {
         /Computer Science · 2nd Year · Morning · 2026-2027 - 1st Semester - 1st Term/
       )
     ).toBeInTheDocument();
+    const summary = screen.getByRole("region", { name: "Roster evaluation-readiness summary" });
+    expect(summary.querySelectorAll('[data-slot="card"]')).toHaveLength(3);
     for (const label of ["On roster", "Ready for evaluation", "Need attention"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }

@@ -32,13 +32,11 @@ export function EvaluationListCard({
             </Badge>
           </div>
 
-          <h4 className="group-hover:text-primary text-title-lg mb-1 line-clamp-2 font-semibold transition-colors">
-            {evaluationTitle}
-          </h4>
+          <h3 className="text-title-lg mb-1 font-semibold break-words">{evaluationTitle}</h3>
 
           {deploymentType === "COURSE_BOUND" && courseTitle ? (
             <>
-              <p className="text-body-sm text-muted-foreground truncate font-medium">
+              <p className="text-body-sm text-muted-foreground font-medium break-words">
                 {courseTitle}
               </p>
               {facultyName && (
@@ -46,7 +44,7 @@ export function EvaluationListCard({
               )}
             </>
           ) : (
-            <p className="text-body-sm text-muted-foreground truncate font-medium">
+            <p className="text-body-sm text-muted-foreground font-medium break-words">
               {programLabel}
             </p>
           )}
@@ -59,12 +57,14 @@ export function EvaluationListCard({
           {isResuming && (
             <div className="w-full space-y-1.5 md:w-48">
               <div className="text-muted-foreground text-label-sm flex items-center justify-between font-bold">
-                <span className="text-body-sm text-muted-foreground">{progress}% Complete</span>
+                <span className="text-body-sm text-muted-foreground">
+                  {progress}% answered · not submitted
+                </span>
               </div>
               <Progress
                 value={progress}
                 className="h-1.5"
-                aria-label={`Evaluation progress: ${progress}%`}
+                aria-label={`Answers saved: ${progress}% · not submitted`}
               />
             </div>
           )}

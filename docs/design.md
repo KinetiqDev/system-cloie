@@ -209,11 +209,21 @@ Exact sizes live in `globals.css`.
 - Headings use primary foreground, not cyan decoration.
 - Legal content uses `.legal-prose`.
 
+#### Program Head page hierarchy
+
+- Page titles use one semantic `h1` with `.text-heading-xl`, Manrope 700 at 28 px with a 36 px line height. Use the same token on desktop and mobile; long titles wrap rather than shrink or truncate. Response-review titles and respondent names also wrap unbroken tokens within the content width.
+- Major sections use `h2` with `.text-heading-lg`, 20 px with a 26 px line height. Subsections use `h3` with `.text-heading-md`; compact card titles use `.text-title-md`.
+- Supporting page descriptions use `.text-body-sm`; paragraphs and evidence retain the appropriate body token. Do not rely on heading-like `div` elements to convey section structure.
+- Useful breadcrumbs sit directly below the H1, before descriptive copy. Omit single-item trails that only repeat the page title.
+- The selected-program control owns persistent program scope. Do not repeat a program-scope banner or full program name in each page description. The Dashboard uses the title "Dashboard" and a wrapping neutral badge for the program name, keeping program identity separate from the page title.
+- Single-program accounts retain a compact scope control. Its accessible name includes the full program identity, and keyboard or touch activation reveals the wrapping code and name without offering a switch action.
+
 ### 6.2 Spacing, Layout, and Density
 
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
+- Dashboard stakeholder progress rows share column tracks across labels, bars, and counts. Every bar has the same available width so differing assignment-count lengths cannot distort visual comparisons.
 - Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
 - Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Landing and public entry actions use the standard `default` button size: 40 px on desktop, 44 px on touch-capable devices, and 14 px labels. Public entry inputs, selects, and grouped controls match those heights through `entry-controls`; input text stays 16 px to avoid mobile browser zoom.
 - `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.
@@ -258,6 +268,17 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 | Settings              | medium      | grouped forms                  | clear persistent preferences | analytics density      |
 
 Theme selection must not change the page pattern.
+
+### Respondent dashboards
+
+- Student, Alumni, and Industry Partner dashboards lead with the available task: a saved draft's Resume action, or pending evaluations when no draft exists. Do not add a welcome hero above the task.
+- Keep useful student academic context beneath the page title. Account identity and role remain in application navigation; do not repeat a greeting or portal description.
+- Status summaries use three compact tiles in one responsive row. Pending excludes saved drafts; In Progress counts saved, unsubmitted drafts; Completed counts submitted responses.
+- Available status tiles are real links to the role's evaluations route with `tab=pending`, `tab=in-progress`, or `tab=submitted`. Show a navigation arrow, hover treatment, and keyboard focus. During deferred student enrollment, render noninteractive counts because evaluations redirect to the dashboard.
+- Evaluation tabs honor valid URL selections, default unknown values to Pending, preserve unrelated query parameters, and support browser Back and Forward. Narrow tab rows scroll within their own container rather than widening the page.
+- Resume progress on dashboards and evaluation lists describes answers saved, not submission completion. A fully answered draft remains explicitly unsubmitted until the respondent submits it.
+- Pending evaluations are ordered by earliest deadline, with undated evaluations last. Long evaluation titles and academic context wrap; mobile actions span the available width and retain a 44 px minimum target.
+- Loading placeholders follow the compact title, task, and summary structure. Empty states distinguish work waiting to be started from drafts that remain available to resume.
 
 ### Document Titles (browser tab)
 
@@ -373,6 +394,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - Use semantic header, hover, selected, and expanded states.
 - Contain wide tables in `overflow-x-auto`.
 - Cells that carry free text wrap (`whitespace-normal`) rather than forcing the table wider than its container; a required row control (for example a "View Response" link) must stay fully visible inside the container at every supported width, never clipped behind the table's own scroll.
+- Course catalogs use the shared `TableCell` vertical-centering default for desktop course codes. Only mobile stacked code and course details override it with `max-md:align-top`.
 - Use `aria-sort`; keyboard-enable clickable rows.
 - Status badges require text.
 - Avoid zebra striping unless clearly needed.

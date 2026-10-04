@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, GraduationCap, Plus, Users } from "lucide-react";
+import { CalendarDays, Plus, Users } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { AssignmentFilters } from "./shared/assignment-filters";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
@@ -118,15 +118,11 @@ function AssignmentSummaryStrip({
 }
 
 function CourseAssignmentsHeader({
-  mode,
-  selectedProgram,
   pageTitle,
   pageDescription,
   canManageAssignments,
   onCreate,
 }: {
-  mode: CourseAssignmentsPageMode;
-  selectedProgram: ProgramOption | null;
   pageTitle: string;
   pageDescription: string;
   canManageAssignments: boolean;
@@ -135,33 +131,10 @@ function CourseAssignmentsHeader({
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 flex-col gap-2">
-        {mode === "program-head" && selectedProgram && (
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span
-              className="bg-primary-soft text-selected-fg ring-primary/15 inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide ring-1"
-              title={`${selectedProgram.code} — ${selectedProgram.name}`}
-            >
-              <GraduationCap aria-hidden="true" />
-              <span className="min-w-0 truncate">
-                {selectedProgram.code} · {selectedProgram.name}
-              </span>
-            </span>
-            <span className="bg-border hidden size-1 rounded-full sm:block" aria-hidden="true" />
-            <span className="text-label-sm text-muted-foreground hidden sm:inline">
-              Program scope
-            </span>
-          </div>
-        )}
-        <h1 className="text-heading-lg tracking-tight text-balance">{pageTitle}</h1>
+        <h1 className="text-heading-xl text-balance">{pageTitle}</h1>
         <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
           {pageDescription}
         </p>
-        {mode === "program-head" && (
-          <p className="text-muted-foreground hidden max-w-2xl text-sm leading-relaxed text-pretty sm:block">
-            Each assignment links a faculty member to a course, class section, and Academic Term.
-            Opening its roster enables evaluation and attainment evidence workflows.
-          </p>
-        )}
       </div>
       {canManageAssignments && (
         <Button onClick={onCreate} className="w-full shrink-0 shadow-sm sm:w-auto" size="default">
@@ -257,15 +230,10 @@ export function CourseAssignmentsPageShell({
   const periodLabel = selectedTerm
     ? formatTermInstanceLabel(selectedTerm.schoolYearCode, selectedTerm.semester, selectedTerm.term)
     : "All Academic Periods";
-  const selectedProgram = selectedProgramId
-    ? (availablePrograms.find((p) => p.id === selectedProgramId) ?? null)
-    : null;
 
   return (
     <div className="flex min-w-0 flex-col gap-5 overflow-x-clip sm:gap-6">
       <CourseAssignmentsHeader
-        mode={mode}
-        selectedProgram={selectedProgram}
         pageTitle={pageTitle}
         pageDescription={pageDescription}
         canManageAssignments={canManageAssignments}

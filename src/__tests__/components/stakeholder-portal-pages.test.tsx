@@ -3,22 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { StudentEvaluationListItem } from "@/features/responses/types";
 
-const { sessionMock, listEvaluationsMock, userFindMock } = vi.hoisted(() => ({
-  sessionMock: vi.fn(),
+const { listEvaluationsMock } = vi.hoisted(() => ({
   listEvaluationsMock: vi.fn(),
-  userFindMock: vi.fn(),
-}));
-
-vi.mock("@/features/auth/services/resolve-auth-session", () => ({
-  resolveAuthSession: sessionMock,
 }));
 
 vi.mock("@/features/responses/services/list-stakeholder-evaluations", () => ({
   listStakeholderEvaluations: listEvaluationsMock,
-}));
-
-vi.mock("@/lib/db/prisma", () => ({
-  prisma: { user: { findUnique: userFindMock } },
 }));
 
 import {
@@ -36,10 +26,15 @@ function item(overrides: Partial<StudentEvaluationListItem>): StudentEvaluationL
     deadlineAt: null,
     deploymentType: "CENTRAL",
     status: "NOT_STARTED",
-    href: "/student/evaluations/1",
+    href: "/alumni/evaluations/1",
     progress: 0,
     ...overrides,
   } as StudentEvaluationListItem;
+}
+
+function precedes(first: Element, second: Element): boolean {
+  const relation: number = first.compareDocumentPosition(second);
+  return (relation & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
 async function renderDashboard() {
@@ -49,43 +44,34 @@ async function renderDashboard() {
 describe("Stakeholder dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionMock.mockResolvedValue({ userId: "user-1" });
-    userFindMock.mockResolvedValue({ name: "Amara Reyes" });
   });
 
-  it("greets the account's canonical name, never an email-derived one", async () => {
+  it("heads the dashboard with the portal's own title and no greeting", async () => {
     listEvaluationsMock.mockResolvedValue({ active: [], submitted: [] });
 
     await renderDashboard();
 
-    expect(screen.getByRole("heading", { name: /Welcome, Amara Reyes/i })).toBeInTheDocument();
-    expect(screen.getByText("Alumni Portal")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Alumni Dashboard" })).toBeInTheDocument();
+    expect(screen.queryByText(/Welcome/i)).not.toBeInTheDocument();
   });
 
-  it("falls back to the portal's own label when the account has no stored name", async () => {
-    userFindMock.mockResolvedValue(null);
-    listEvaluationsMock.mockResolvedValue({ active: [], submitted: [] });
-
-    await renderDashboard();
-
-    expect(screen.getByRole("heading", { name: /Welcome, Alumni/i })).toBeInTheDocument();
-  });
-
-  it("offers the resume card with progress for an evaluation in progress", async () => {
+  it("offers the resume card with answers given for an evaluation in progress", async () => {
     listEvaluationsMock.mockResolvedValue({
-      active: [item({ status: "IN_PROGRESS", progress: 40, href: "/student/evaluations/9" })],
+      active: [item({ status: "IN_PROGRESS", progress: 40, href: "/alumni/evaluations/9" })],
       submitted: [],
     });
 
     await renderDashboard();
 
-    expect(screen.getByRole("heading", { name: "Continue" })).toBeInTheDocument();
-    expect(screen.getByText("40% complete")).toBeInTheDocument();
-    const resume = screen.getByText("Resume").closest("a");
-    expect(resume).toHaveAttribute("href", "/student/evaluations/9");
+    expect(screen.getByRole("heading", { level: 2, name: "Continue" })).toBeInTheDocument();
+    expect(screen.getByText("40% answered · not submitted")).toBeInTheDocument();
+    expect(screen.getByText("Resume").closest("a")).toHaveAttribute(
+      "href",
+      "/alumni/evaluations/9"
+    );
   });
 
-  it("starts an evaluation that is not yet in progress", async () => {
+  it("puts the startable list above the status summary when no draft exists", async () => {
     listEvaluationsMock.mockResolvedValue({
       active: [item({ status: "DUE_SOON" })],
       submitted: [],
@@ -93,22 +79,72 @@ describe("Stakeholder dashboard", () => {
 
     await renderDashboard();
 
+    const pendingSection = screen.getByRole("heading", {
+      level: 2,
+      name: "Pending Evaluations",
+    });
+    const summary = screen.getByRole("region", { name: "Evaluation status summary" });
+    expect(precedes(pendingSection, summary)).toBe(true);
     expect(screen.getByText("Start Evaluation").closest("a")).toHaveAttribute(
       "href",
-      "/student/evaluations/1"
+      "/alumni/evaluations/1"
     );
-    expect(screen.queryByText(/% complete/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/% answered/)).not.toBeInTheDocument();
   });
 
-  it("hides the resume card when nothing is in progress", async () => {
+  it("leads with Resume and names the trailing backlog once a draft exists", async () => {
     listEvaluationsMock.mockResolvedValue({
-      active: [item({ status: "NOT_STARTED" })],
+      active: [
+        item({ status: "IN_PROGRESS", progress: 10 }),
+        item({ assignmentId: "assignment-2", status: "NOT_STARTED" }),
+      ],
       submitted: [],
     });
 
     await renderDashboard();
 
-    expect(screen.queryByRole("heading", { name: "Continue" })).not.toBeInTheDocument();
+    const resume = screen.getByRole("heading", { level: 2, name: "Continue" });
+    const summary = screen.getByRole("region", { name: "Evaluation status summary" });
+    expect(precedes(resume, summary)).toBe(true);
+    expect(screen.getByRole("heading", { level: 2, name: "Waiting to Start" })).toBeInTheDocument();
+  });
+
+  it("counts a draft as in progress, never as pending", async () => {
+    listEvaluationsMock.mockResolvedValue({
+      active: [
+        item({ assignmentId: "draft", status: "IN_PROGRESS", progress: 10 }),
+        item({ assignmentId: "a", status: "NOT_STARTED" }),
+        item({ assignmentId: "b", status: "DUE_SOON" }),
+      ],
+      submitted: [item({ assignmentId: "done", status: "SUBMITTED" })],
+    });
+
+    await renderDashboard();
+
+    expect(screen.getByRole("link", { name: "Pending: 2" })).toHaveAttribute(
+      "href",
+      "/alumni/evaluations?tab=pending"
+    );
+    expect(screen.getByRole("link", { name: "In Progress: 1" })).toHaveAttribute(
+      "href",
+      "/alumni/evaluations?tab=in-progress"
+    );
+    expect(screen.getByRole("link", { name: "Completed: 1" })).toHaveAttribute(
+      "href",
+      "/alumni/evaluations?tab=submitted"
+    );
+  });
+
+  it("tells a respondent with only a draft that nothing is waiting to be started", async () => {
+    listEvaluationsMock.mockResolvedValue({
+      active: [item({ status: "IN_PROGRESS", progress: 10 })],
+      submitted: [],
+    });
+
+    await renderDashboard();
+
+    expect(screen.getByText("Nothing waiting to be started")).toBeInTheDocument();
+    expect(screen.queryByText(/no active evaluations/i)).not.toBeInTheDocument();
   });
 
   it("explains an empty pending list rather than rendering a blank grid", async () => {
@@ -117,17 +153,20 @@ describe("Stakeholder dashboard", () => {
     await renderDashboard();
 
     expect(screen.getByText("No pending evaluations")).toBeInTheDocument();
+    expect(screen.queryByText(/&(?:apos|quot|amp);/)).not.toBeInTheDocument();
   });
 
-  it("links each portal's pending list to that portal's own evaluations route", async () => {
+  it("links each portal's pending list to that portal's own pending tab", async () => {
     listEvaluationsMock.mockResolvedValue({ active: [item({})], submitted: [] });
 
     render(await StakeholderDashboardPage({ portal: INDUSTRY_PARTNER_PORTAL }));
 
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Industry Partner Dashboard" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View All" })).toHaveAttribute(
       "href",
-      "/industry-partner/evaluations"
+      "/industry-partner/evaluations?tab=pending"
     );
-    expect(screen.getByText("Industry Partner Portal")).toBeInTheDocument();
   });
 });

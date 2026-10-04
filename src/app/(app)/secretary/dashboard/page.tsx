@@ -19,8 +19,8 @@ export default function SecretaryDashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-heading-lg text-pretty">Secretary Dashboard</h1>
-          <p className="text-body-md text-text-secondary max-w-3xl text-pretty">
+          <h1 className="text-heading-xl text-pretty">Secretary Dashboard</h1>
+          <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
             Manage the Academic Calendar, accounts, and institutional catalogs.
           </p>
         </div>

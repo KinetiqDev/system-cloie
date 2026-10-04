@@ -24,10 +24,7 @@ export function DashboardQuickActions({
     <section aria-labelledby={headingId}>
       <Card>
         <CardHeader>
-          <h2
-            id={headingId}
-            className="font-heading text-base leading-snug font-medium text-balance"
-          >
+          <h2 id={headingId} className="text-heading-lg text-balance">
             {title}
           </h2>
           <CardDescription>{description}</CardDescription>

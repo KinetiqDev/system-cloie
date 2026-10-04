@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import type {
@@ -25,7 +25,7 @@ export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-bold">Needs attention</CardTitle>
+        <h2 className="text-heading-lg">Needs attention</h2>
         <CardDescription>Operational facts only; no performance thresholds.</CardDescription>
       </CardHeader>
       <CardContent>

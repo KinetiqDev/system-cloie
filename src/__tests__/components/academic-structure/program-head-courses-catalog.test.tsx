@@ -57,7 +57,6 @@ describe("Program Head Courses catalog", () => {
     const formData = createActionMock.mock.calls[0]?.[0] as FormData;
     expect(formData.get("programId")).toBe(programId);
     expect(formData.get("course_type")).toBe("program-wide");
-    expect(screen.getByText("Secondary Education")).toBeInTheDocument();
   });
 
   it("submits a Major-Specific Course with the selected major", async () => {

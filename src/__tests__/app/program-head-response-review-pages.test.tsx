@@ -46,12 +46,17 @@ vi.mock("@/features/response-review/components/course-evaluation-detail", () => 
   CourseEvaluationDetail: ({
     detail,
     responseHref,
+    breadcrumbs,
   }: {
     detail: { evaluation: { title: string } };
     responseHref: (id: string) => string;
+    breadcrumbs?: ReactNode;
   }) => (
     <div>
-      Course detail: {detail.evaluation.title} | response href: {responseHref("response-1")}
+      {breadcrumbs}
+      <p>
+        Course detail: {detail.evaluation.title} | response href: {responseHref("response-1")}
+      </p>
     </div>
   ),
 }));
@@ -60,12 +65,17 @@ vi.mock("@/features/response-review/components/central-evaluation-detail", () =>
   CentralEvaluationDetail: ({
     detail,
     responseHref,
+    breadcrumbs,
   }: {
     detail: { evaluation: { title: string } };
     responseHref: (id: string) => string;
+    breadcrumbs?: ReactNode;
   }) => (
     <div>
-      Central detail: {detail.evaluation.title} | response href: {responseHref("response-1")}
+      {breadcrumbs}
+      <p>
+        Central detail: {detail.evaluation.title} | response href: {responseHref("response-1")}
+      </p>
     </div>
   ),
 }));
@@ -74,13 +84,18 @@ vi.mock("@/features/response-review/components/response-detail", () => ({
   ResponseDetail: ({
     response,
     evaluationHref,
+    breadcrumbs,
   }: {
     response: { respondent: { name: string }; evaluation: { id: string; title: string } };
     evaluationHref: string;
+    breadcrumbs?: ReactNode;
   }) => (
     <div>
-      Response detail: {response.respondent.name} ({response.evaluation.title}) | back:{" "}
-      {evaluationHref}
+      {breadcrumbs}
+      <p>
+        Response detail: {response.respondent.name} ({response.evaluation.title}) | back:{" "}
+        {evaluationHref}
+      </p>
     </div>
   ),
 }));
@@ -117,7 +132,8 @@ describe("program head identified response-review pages", () => {
         "Course detail: Post-Term CILO Evaluation | response href: /program-head/programs/program-1/responses/course/eval-1/responses/response-1"
       )
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Back to Course Evaluations/ })).toHaveAttribute(
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    expect(within(breadcrumb).getByRole("link", { name: "Course evaluations" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/responses"
     );
@@ -188,7 +204,7 @@ describe("program head identified response-review pages", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows a clear back button when evaluation detail opens from tools", async () => {
+  it("keeps the Tools breadcrumb when evaluation detail opens from tools", async () => {
     getProgramHeadCentralEvaluationDetailMock.mockResolvedValue({
       evaluation: { title: "Exit Survey" },
     });
@@ -202,7 +218,8 @@ describe("program head identified response-review pages", () => {
     });
     render(page);
 
-    expect(screen.getByRole("link", { name: "Back to Evaluation Tools" })).toHaveAttribute(
+    const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
+    expect(within(breadcrumb).getByRole("link", { name: "Evaluation Tools" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/tools?tab=published"
     );
@@ -292,11 +309,6 @@ describe("program head identified response-review pages", () => {
     });
     expect(evaluationStep.getAttribute("href")).toContain(
       "termInstanceId=11111111-1111-4111-8111-111111111111"
-    );
-    // Alternate back links keep the scope too.
-    expect(screen.getByRole("link", { name: /Back to Evaluation/ })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-1/responses/course/eval-1?termInstanceId=11111111-1111-4111-8111-111111111111"
     );
   });
 

@@ -12,6 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   buildProgramHeadDashboardPath,
   buildProgramHeadProgramPath,
 } from "@/lib/constants/program-head-routes";
@@ -20,8 +27,8 @@ import type { ProgramHeadProgram } from "@/features/auth/services/resolve-progra
 
 /**
  * Topbar dropdown that switches the active Program context while staying on
- * the same page. Renders nothing when the Program Head manages at most one
- * Program or when no Program context is selected in the pathname.
+ * the same page. Single-program accounts can reveal their full scope identity.
+ * Renders nothing when no Program context is selected in the pathname.
  */
 export function ProgramHeadSwitcher({
   programs,
@@ -34,12 +41,33 @@ export function ProgramHeadSwitcher({
   const activeProgramId =
     getProgramHeadProgramIdFromPathname(pathname) ?? explicitActiveProgramId ?? null;
 
-  if (!activeProgramId || programs.length <= 1) {
+  if (!activeProgramId) {
     return null;
   }
   const activeProgram = programs.find((program) => program.id === activeProgramId);
   if (!activeProgram) {
     return null;
+  }
+  if (programs.length === 1) {
+    return (
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Current Program: ${activeProgram.code} — ${activeProgram.name}`}
+            >
+              <span className="max-w-44 truncate">{activeProgram.code}</span>
+            </Button>
+          }
+        />
+        <PopoverContent align="end" className="max-w-[calc(100vw-2rem)]">
+          <PopoverTitle className="wrap-anywhere">{activeProgram.code}</PopoverTitle>
+          <PopoverDescription className="wrap-anywhere">{activeProgram.name}</PopoverDescription>
+        </PopoverContent>
+      </Popover>
+    );
   }
 
   // Preserve the current child page so switching context does not drop the

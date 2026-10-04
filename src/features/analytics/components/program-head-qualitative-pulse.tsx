@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { CardDescription, CardTitle } from "@/components/ui/card";
+import { CardDescription } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import type { QualitativePulse } from "@/features/analytics/services/get-program-head-dashboard";
@@ -23,9 +23,9 @@ export function ProgramHeadQualitativePulse({
   return (
     <section aria-labelledby="qualitative-pulse-heading" className="min-w-0">
       <header className="mb-4 min-w-0">
-        <CardTitle id="qualitative-pulse-heading" className="text-title-md font-bold">
+        <h2 id="qualitative-pulse-heading" className="text-heading-lg">
           Qualitative pulse
-        </CardTitle>
+        </h2>
         <CardDescription>
           Aggregated comments with source context; raw answers stay in Responses.
         </CardDescription>

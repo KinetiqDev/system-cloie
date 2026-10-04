@@ -1,4 +1,4 @@
-import { BarChart3, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RouteProgress } from "@/components/ui/route-progress";
@@ -98,19 +98,9 @@ export function ProgramHeadAnalyticsRouteFallback() {
       className="flex min-w-0 flex-col gap-6"
     >
       <RouteProgress />
-      <Skeleton className="h-4 w-40" />
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
-        <div className="flex items-center gap-2">
-          <div className="bg-primary-soft text-selected-fg flex size-7 items-center justify-center rounded-lg">
-            <BarChart3 aria-hidden="true" className="size-4" />
-          </div>
-          <Skeleton className="h-3 w-52" />
-        </div>
-        <Skeleton className="h-7 w-40" />
-        <div className="flex max-w-2xl flex-col gap-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-1/2 sm:hidden" />
-        </div>
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-11 w-56" />
       </header>
       <nav aria-label="Loading analytics views" className={tabsListVariants({ variant: "line" })}>
         {ANALYTICS_TABS.map((tab) => (

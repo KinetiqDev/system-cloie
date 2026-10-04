@@ -1629,7 +1629,9 @@ export function TemplateBuilder({
           <p className="text-muted-foreground mt-1 truncate text-xs font-semibold tracking-wide uppercase">
             {programLabel}
           </p>
-          <h1 className="text-heading-lg">{initialData?.id ? "Edit Template" : "New Template"}</h1>
+          <h1 className="text-heading-xl text-foreground text-pretty">
+            {initialData?.id ? "Edit Template" : "New Template"}
+          </h1>
         </div>
       </div>
 

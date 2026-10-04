@@ -96,7 +96,7 @@ export function ProgramHeadContributorMatrix({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <h3 className="text-title-sm text-foreground">Outcome contributor matrix</h3>
+        <h2 className="text-heading-lg text-foreground">Outcome contributor matrix</h2>
         <p className="text-body-sm text-text-secondary">
           Graduate Outcome means may include CILO-derived evidence and questions bound directly at
           publication. Means and counts pool valid in-scale ratings only.

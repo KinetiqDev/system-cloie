@@ -62,9 +62,9 @@ export function ProgramHeadGoMeanBarChart({ title, outcomes }: ProgramHeadGoMean
   if (ranked.length === 0) {
     return (
       <div className="space-y-3">
-        <h3 id={titleId} className="text-title-sm text-foreground">
+        <h2 id={titleId} className="text-heading-lg text-foreground">
           {title}
-        </h3>
+        </h2>
         <Empty className="h-64">
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
           <EmptyDescription>No valid ratings are available for these outcomes.</EmptyDescription>
@@ -81,9 +81,9 @@ export function ProgramHeadGoMeanBarChart({ title, outcomes }: ProgramHeadGoMean
   return (
     <div className="border-border/80 bg-card space-y-4 rounded-xl border p-4 shadow-xs sm:p-5">
       <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-        <h3 id={titleId} className="text-title-md text-foreground font-semibold tracking-tight">
+        <h2 id={titleId} className="text-heading-lg text-foreground">
           {title}
-        </h3>
+        </h2>
         <span className="text-muted-foreground text-xs font-medium">Fixed 1–5 scale</span>
       </div>
       <div className="border-border/60 bg-background/50 w-full rounded-xl border p-3">

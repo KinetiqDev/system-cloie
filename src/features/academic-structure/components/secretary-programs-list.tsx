@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -295,7 +295,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
       {/* Header */}
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-heading-lg text-balance">Academic Programs</h1>
+          <h1 className="text-heading-xl text-balance">Academic Programs</h1>
           <p className="text-body-sm text-text-secondary hidden max-w-2xl text-pretty sm:block">
             Manage academic programs, their majors, and program metadata across the college.
           </p>
@@ -748,19 +748,19 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
 function KPICard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
     <Card className="min-w-0 overflow-hidden">
-      <CardHeader className="min-w-0 gap-2 p-3 sm:p-5">
+      <CardHeader className="flex-1">
         <div className="flex min-w-0 items-start justify-between gap-2">
-          <CardDescription className="text-label-sm text-muted-foreground min-w-0 leading-snug tracking-wide uppercase">
-            {label}
-          </CardDescription>
+          <CardTitle className="text-title-sm min-w-0">{label}</CardTitle>
           <div className="shrink-0" aria-hidden="true">
             {icon}
           </div>
         </div>
-        <CardTitle className="font-heading text-heading-xl text-foreground tabular-nums">
-          {value.toLocaleString()}
-        </CardTitle>
       </CardHeader>
+      <CardContent>
+        <span className="text-heading-xl text-foreground tabular-nums">
+          {value.toLocaleString()}
+        </span>
+      </CardContent>
     </Card>
   );
 }

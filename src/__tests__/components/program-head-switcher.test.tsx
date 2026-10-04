@@ -26,12 +26,18 @@ describe("ProgramHeadSwitcher", () => {
     pathnameMock.mockReset();
   });
 
-  it("renders nothing for a single assigned Program", () => {
+  it("reveals the full single-program identity without offering a switch action", async () => {
     pathnameMock.mockReturnValue("/program-head/programs/program-1/dashboard");
     render(<ProgramHeadSwitcher programs={[programs[0]]} />);
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    const trigger = screen.getByRole("button", {
+      name: `Current Program: ${programs[0].code} — ${programs[0].name}`,
+    });
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeVisible());
+    expect(screen.getByText(programs[0].name)).toBeVisible();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Switch Program/ })).not.toBeInTheDocument();
   });
 
   it("renders nothing when no Program context is present in the pathname and no fallback is passed", () => {

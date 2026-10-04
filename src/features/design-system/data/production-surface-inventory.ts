@@ -3142,12 +3142,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/portals/components/hero-card.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
     path: "src/features/portals/components/install-app-button.tsx",
     disposition: "task",
     taskId: 23,

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useCallback, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -115,33 +115,14 @@ function RosterEvidenceStrip({
   evaluationEligibleCount: number;
   attentionCount: number;
 }) {
-  const cells = [
+  const counts = [
+    { label: "On roster", value: activeRosterCount, detail: "active members" },
     {
-      key: "roster",
-      icon: <UsersRound aria-hidden="true" className="size-4" />,
-      iconClass: "bg-selected-bg text-selected-fg",
-      label: "On roster",
-      value: activeRosterCount,
-      detail: "active members",
-    },
-    {
-      key: "ready",
-      icon: <CheckCircle2 aria-hidden="true" className="size-4" />,
-      iconClass: "bg-success-soft text-success",
       label: "Ready for evaluation",
       value: evaluationEligibleCount,
       detail: "eligible this period",
     },
     {
-      key: "attention",
-      icon:
-        attentionCount > 0 ? (
-          <TriangleAlert aria-hidden="true" className="size-4" />
-        ) : (
-          <CheckCircle2 aria-hidden="true" className="size-4" />
-        ),
-      iconClass:
-        attentionCount > 0 ? "bg-warning-soft text-warning" : "bg-success-soft text-success",
       label: "Need attention",
       value: attentionCount,
       detail: attentionCount > 0 ? "active but not eligible" : "every active member is eligible",
@@ -151,31 +132,18 @@ function RosterEvidenceStrip({
   return (
     <section
       aria-label="Roster evaluation-readiness summary"
-      className="bg-card flex flex-wrap items-stretch gap-4 rounded-xl border p-4"
+      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
     >
-      {cells.map((cell, index) => (
-        <Fragment key={cell.key}>
-          {index > 0 && (
-            <div aria-hidden="true" className="bg-border hidden w-px self-stretch sm:block" />
-          )}
-          <div className="flex min-w-[10rem] flex-1 flex-col gap-2">
-            <p className="text-label-md text-muted-foreground flex items-center gap-2 font-medium">
-              <span
-                className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-full",
-                  cell.iconClass
-                )}
-              >
-                {cell.icon}
-              </span>
-              {cell.label}
-            </p>
-            <p>
-              <span className="text-heading-lg tabular-nums">{cell.value}</span>{" "}
-              <span className="text-body-sm text-muted-foreground">{cell.detail}</span>
-            </p>
-          </div>
-        </Fragment>
+      {counts.map(({ label, value, detail }) => (
+        <Card key={label} className="min-w-0">
+          <CardHeader>
+            <CardTitle className="text-title-sm">{label}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            <p className="font-heading text-heading-xl text-foreground tabular-nums">{value}</p>
+            <CardDescription>{detail}</CardDescription>
+          </CardContent>
+        </Card>
       ))}
     </section>
   );

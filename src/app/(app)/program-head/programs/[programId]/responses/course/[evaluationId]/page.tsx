@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/ui/back-link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CourseEvaluationDetail } from "@/features/response-review/components/course-evaluation-detail";
@@ -48,31 +47,27 @@ export default async function CourseEvaluationDetailPage({
   const upwardQuery = programHeadResponsesQuery(upwardState);
 
   return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <div className="flex min-w-0 flex-col gap-3">
-        <div>
-          <BackLink href={responsesHref}>Back to Course Evaluations</BackLink>
-        </div>
+    <CourseEvaluationDetail
+      detail={detail}
+      analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
+      breadcrumbs={
         <Breadcrumbs
+          className="text-body-sm"
           items={[
             { label: "Responses", href: responsesHref },
             { label: "Course evaluations", href: responsesHref },
             { label: detail.evaluation.title },
           ]}
         />
-      </div>
-      <CourseEvaluationDetail
-        detail={detail}
-        analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
-        responseHref={(responseId: string) => {
-          const path = buildProgramHeadResponsesCourseResponsePath(
-            programId,
-            evaluationId,
-            responseId
-          );
-          return upwardQuery ? `${path}?${upwardQuery}` : path;
-        }}
-      />
-    </div>
+      }
+      responseHref={(responseId: string) => {
+        const path = buildProgramHeadResponsesCourseResponsePath(
+          programId,
+          evaluationId,
+          responseId
+        );
+        return upwardQuery ? `${path}?${upwardQuery}` : path;
+      }}
+    />
   );
 }

@@ -120,6 +120,8 @@ export const E2E_CONTRACT = {
   /** Student identities for the lifecycle journey (issue #544). */
   demoStudent: { id: U.STU_BSIT, email: "demo-student@cloie.test", name: "Demo Student" },
   mobileStudent: { id: U.GRAD_BSIT, email: "demo-grad@cloie.test", name: "Demo Graduate" },
+  demoAlumni: { id: U.ALU_BSIT, email: "demo-alumni@cloie.test", name: "Demo Alumni" },
+  demoIndustry: { id: U.IND_BSIT, email: "demo-industry@cloie.test", name: "Demo Industry" },
 
   /**
    * Relaxed GO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
@@ -232,6 +234,8 @@ export type FixtureData = {
   };
   demoStudent: { id: string; email: string; name: string };
   mobileStudent: { id: string; email: string; name: string };
+  demoAlumni: { id: string; email: string; name: string };
+  demoIndustry: { id: string; email: string; name: string };
   bsit: { id: string; code: string };
   beed: { id: string; code: string };
   courseEvaluation: { id: string; title: string };

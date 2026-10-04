@@ -19,6 +19,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import { buildStudentEvaluationAnswerKey } from "@/features/responses/answer-keys";
 import type { StudentEvaluationSection } from "@/features/responses/types";
@@ -46,18 +47,18 @@ export function ReviewModal({
 
   const reviewBody = (
     <div
-      className="flex-1 overflow-y-auto p-6"
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-0 py-5 md:px-6 md:py-6"
       role="region"
       aria-label="Review answers"
       tabIndex={0}
     >
-      <div className="space-y-8">
+      <div className="flex flex-col gap-8">
         {sections.map((s) => (
           <div key={s.id} className="w-full max-w-full min-w-0">
             <h3 className="text-text-muted text-label-sm mb-4 max-w-full min-w-0 font-bold tracking-wider [overflow-wrap:anywhere] break-words uppercase">
               {s.name}
             </h3>
-            <div className="space-y-4">
+            <div className="flex flex-col gap-4">
               {s.items.map((item) => {
                 const answerKey =
                   item.kind === "quantitative"
@@ -68,14 +69,23 @@ export function ReviewModal({
                 return (
                   <div
                     key={item.kind === "quantitative" ? item.itemKey : item.promptKey}
-                    className="border-border flex w-full max-w-full min-w-0 items-start justify-between gap-4 border-b py-3"
+                    className={cn(
+                      "border-border flex w-full min-w-0 gap-3 border-b py-3",
+                      item.kind === "qualitative" ? "flex-col" : "items-start justify-between"
+                    )}
                   >
                     <span className="text-text-secondary min-w-0 flex-1 text-sm [overflow-wrap:anywhere] break-words">
                       {item.prompt}
                     </span>
-                    <span className="text-selected-fg bg-primary-soft max-w-[40%] shrink-0 rounded-md px-3 py-1 font-black [overflow-wrap:anywhere] break-words">
-                      {answer ?? "—"}
-                    </span>
+                    {item.kind === "qualitative" ? (
+                      <p className="bg-surface-muted text-text-primary text-body-sm w-full min-w-0 rounded-lg p-4 leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">
+                        {answer ?? "—"}
+                      </p>
+                    ) : (
+                      <span className="text-selected-fg bg-primary-soft shrink-0 rounded-md px-3 py-1 font-bold tabular-nums">
+                        {answer ?? "—"}
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -97,10 +107,10 @@ export function ReviewModal({
 
   const footer = (
     <>
-      <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="font-bold">
+      <Button variant="outline" size="lg" onClick={onClose} disabled={isSubmitting}>
         Go Back
       </Button>
-      <Button onClick={onSubmit} loading={isSubmitting} className="min-w-[140px] px-8 font-bold">
+      <Button size="lg" onClick={onSubmit} loading={isSubmitting}>
         {isSubmitting ? "Submitting..." : "Confirm & Submit"}
       </Button>
     </>
@@ -142,7 +152,7 @@ export function ReviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="flex h-[80vh] max-w-2xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex max-h-[calc(100dvh-4rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="shrink-0 border-b p-6">
           <DialogTitle className="font-heading flex items-center gap-2 text-xl font-black">
             <CheckCircle2 className="text-success size-5" />
@@ -165,9 +175,7 @@ export function ReviewModal({
           </div>
         )}
 
-        <DialogFooter className="bg-surface shrink-0 gap-3 border-t p-6 sm:gap-0">
-          {footer}
-        </DialogFooter>
+        <DialogFooter className="bg-surface m-0 shrink-0 gap-3 border-t p-6">{footer}</DialogFooter>
       </DialogContent>
     </Dialog>
   );

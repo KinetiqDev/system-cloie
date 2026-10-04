@@ -334,6 +334,8 @@ async function verifyIdentities(): Promise<void> {
   await verifySeededIdentity(E2E_CONTRACT.demoGenEd, "GEN_ED_COORDINATOR");
   await verifySeededIdentity(E2E_CONTRACT.demoStudent, "STUDENT");
   await verifySeededIdentity(E2E_CONTRACT.mobileStudent, "STUDENT");
+  await verifySeededIdentity(E2E_CONTRACT.demoAlumni, "ALUMNI");
+  await verifySeededIdentity(E2E_CONTRACT.demoIndustry, "INDUSTRY_PARTNER");
   // Coordinator has no Program assignment: the GE scope is college-wide via Course.course_scope, not a portfolio table or nullable program_id.
   const genEdAssignments = await prisma.programHeadAssignment.findMany({
     where: { program_head_id: E2E_CONTRACT.demoGenEd.id, is_active: true },
@@ -772,6 +774,8 @@ export default async function globalSetup(): Promise<void> {
       email: contract.mobileStudent.email,
       name: contract.mobileStudent.name,
     },
+    demoAlumni: { ...contract.demoAlumni },
+    demoIndustry: { ...contract.demoIndustry },
     bsit,
     beed,
     courseEvaluation: {

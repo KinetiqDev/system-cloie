@@ -350,7 +350,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await loginAs(page, "demo-alumni@cloie.test");
 
   await page.goto("/alumni/dashboard");
-  await expect(page.getByText("Alumni Portal")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Alumni Dashboard", level: 1 })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await expectNoAxeViolations(page);
   // The seeded mobile deployment must be visible on the dashboard.
