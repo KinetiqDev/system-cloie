@@ -24,12 +24,9 @@ export function OperationalRouteError({ error, reset, returnHref }: OperationalR
           <Button onClick={reset} variant="outline">
             Try Again
           </Button>
-          <Link
-            href={returnHref}
-            className="border-border bg-background hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 items-center justify-center rounded-lg border px-2.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3"
-          >
+          <Button variant="outline" render={<Link href={returnHref} />}>
             Return to Dashboard
-          </Link>
+          </Button>
         </div>
       </Alert>
     </div>

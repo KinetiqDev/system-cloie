@@ -39,7 +39,9 @@ test.describe("Faculty Course roster mutation", () => {
     await expect(
       page.getByRole("heading", { name: new RegExp(fx.gestechBsba.courseCode), level: 1 })
     ).toBeVisible();
-    await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
+    // A writable roster raises no lifecycle lock banner. Scoped to the banner's
+    // own text so it cannot be satisfied by unrelated alert regions.
+    await expect(page.getByRole("alert").filter({ hasText: "Inactive" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
     const seededMember = page.getByRole("row", {
       name: new RegExp(fx.rosterStudents.alreadyActive.name),
@@ -117,7 +119,9 @@ test.describe("Faculty Course roster mutation", () => {
 
     await page.goto(`/course-rosters/${fx.gestechBsit.id}`);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
+    // A writable roster raises no lifecycle lock banner. Scoped to the banner's
+    // own text so it cannot be satisfied by unrelated alert regions.
+    await expect(page.getByRole("alert").filter({ hasText: "Inactive" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
     await expect(
       page.getByText(

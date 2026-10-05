@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
+import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 import { getStatusVariant } from "./evaluation-status";
 import { formatDate } from "@/lib/utils/date-format";
 

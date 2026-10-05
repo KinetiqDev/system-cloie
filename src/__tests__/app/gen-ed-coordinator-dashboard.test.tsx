@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { GenEdDashboardContent } from "@/app/(app)/gen-ed-coordinator/dashboard/page";
+import { GenEdDashboardContent } from "@/features/course-assignments/components/gen-ed-dashboard-page";
 import type { GenEdDashboardData } from "@/features/course-assignments/services/read-gen-ed-dashboard";
 
 vi.mock("next/link", () => ({

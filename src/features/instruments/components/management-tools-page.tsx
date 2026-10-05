@@ -24,7 +24,10 @@ import {
   deleteAdminTemplateAction,
 } from "@/lib/actions/admin-template-actions";
 import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
-import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
+import {
+  ViewSelector as ToolsViewSelector,
+  type ListCardViewMode as ToolsViewMode,
+} from "@/components/layout/view-selector";
 import { updateToolsUrl } from "./evaluation-tools-tabs";
 
 type TemplateActions = {

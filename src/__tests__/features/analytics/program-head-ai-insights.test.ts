@@ -266,6 +266,7 @@ describe("generateProgramHeadAnalyticsInsight", () => {
   });
 
   it("returns a disabled state without reading evidence or calling the provider when the flag is absent", async () => {
+    vi.stubEnv("CLOIE_AI_ENABLED", undefined);
     const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
     const result = await service.generateProgramHeadAnalyticsInsight(
       "program-bsed",

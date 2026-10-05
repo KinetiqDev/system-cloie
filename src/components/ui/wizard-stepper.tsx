@@ -46,8 +46,8 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
 
       <div className="hidden min-w-0 items-start md:flex">
         {steps.map((step, index) => {
-          const isCompleted = index < currentIndex;
-          const isActive = index === currentIndex;
+          const state =
+            index < currentIndex ? "completed" : index === currentIndex ? "active" : "upcoming";
           const isLast = index === steps.length - 1;
 
           return (
@@ -56,21 +56,29 @@ export function WizardStepper({ steps, currentStep, className }: WizardStepperPr
                 <div
                   className={cn(
                     "flex size-7 items-center justify-center rounded-full text-xs font-semibold transition-colors motion-reduce:transition-none",
-                    isCompleted && "bg-primary text-primary-foreground",
-                    isActive &&
-                      "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
-                    !isCompleted && !isActive && "bg-muted text-muted-foreground"
+                    {
+                      completed: "bg-primary text-primary-foreground",
+                      active:
+                        "bg-primary text-primary-foreground ring-primary ring-2 ring-offset-2",
+                      upcoming: "bg-muted text-muted-foreground",
+                    }[state]
                   )}
-                  aria-current={isActive ? "step" : undefined}
+                  aria-current={state === "active" ? "step" : undefined}
                 >
-                  {isCompleted ? <CheckIcon aria-hidden="true" /> : <span>{index + 1}</span>}
+                  {state === "completed" ? (
+                    <CheckIcon aria-hidden="true" />
+                  ) : (
+                    <span>{index + 1}</span>
+                  )}
                 </div>
                 <span
                   className={cn(
                     "text-xs leading-none font-medium",
-                    isActive && "text-link",
-                    isCompleted && "text-foreground",
-                    !isActive && !isCompleted && "text-muted-foreground"
+                    {
+                      active: "text-link",
+                      completed: "text-foreground",
+                      upcoming: "text-muted-foreground",
+                    }[state]
                   )}
                 >
                   {step.label}

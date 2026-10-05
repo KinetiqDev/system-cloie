@@ -333,9 +333,9 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
         />
       </div>
 
-      {/* Filter bar — stacks on mobile, inline on sm+ */}
-      <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,20rem)] sm:items-end">
-        <div className="flex min-w-0 flex-col gap-2">
+      {/* Filter bar — stacks on mobile, status left and search right on sm+ */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex min-w-0 flex-col gap-2 sm:w-40">
           <Label htmlFor="program-status-filter">Status</Label>
           <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger id="program-status-filter" className="w-full">
@@ -357,7 +357,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
           </Select>
         </div>
 
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:ml-auto sm:w-80">
           <Label htmlFor="program-search">Search Programs</Label>
           <div className="relative">
             <Search

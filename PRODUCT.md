@@ -12,7 +12,7 @@ web
 
 **Respondent audience**: `STUDENT`, `ALUMNI`, `INDUSTRY_PARTNER`. Transient users who complete deployed evaluations; their submissions are the raw evidence that becomes attainment analytics. Alumni and industry partners are external stakeholders without institutional email accounts.
 
-Every account holds exactly one active role. Production authentication is Google OAuth restricted to `@acd.edu.ph` / `@acdeducation.com`.
+An account may hold several assigned roles, with exactly one active role at a time. Internal roles require a proved Google session and an `@acd.edu.ph` / `@acdeducation.com` address. Alumni and Industry Partner may use Google or email-password authentication.
 
 **Confirmed user characteristic:** users span all levels of technical literacy; many are not tech-savvy. The incumbent UX is experienced as confusing — usability across literacy levels is a standing product requirement, not a nicety.
 
@@ -36,17 +36,16 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 - **Outcome catalogs:** ILO (college-wide, `GEN_ED_COORDINATOR`-owned), GO (program-owned), CILO (course-level); typed alignment relations; readiness semantics per academic period.
 - **Evaluation lifecycle:** instrument templates with immutable frozen versions; Course-bound and Central deployments; server-side publication alignment gate; roster exclusions and reversals; availability windows.
 - **Responses:** one-response invariant per deployment; eligibility gating; section-scoped drafts; atomic submission completeness.
-- **Review:** identified vs anonymized review flows over SUBMITTED responses only; identified respondent detail is Program-Head-only.
+- **Review:** identified vs anonymized review flows over SUBMITTED responses only. Program Heads own identified Program-specific Course-bound and Central evidence within authorized Programs; the General Education Coordinator owns identified General Education Course-bound evidence college-wide.
 - **Analytics:** deterministic aggregates are the authoritative evidence surface; AI-assisted interpretation is supplementary, server-side, de-identified, bounded, never persisted (ADR 0016).
 - **Reports:** formal institutional evidence output for QA/accreditation.
-- **Environments (separate security boundaries):** Primary Production (OAuth-only), dedicated resettable demo deployment, local dev auth. Never cross them.
+- **Environments (separate security boundaries):** Primary Production, dedicated resettable demo deployment, local dev auth, and disposable CI test sessions. Never cross them.
 - **PWA:** installable app shell on desktop and mobile; offline data caching deferred by ADR 0006.
 
 ## Capabilities and Constraints
 
 - Eight SystemRole values; single-active-role invariant; all authorization enforced server-side with role, program, course, and academic-context scoping.
-- Auth today is Supabase Auth Google OAuth with SSR cookies only.
-- **Explicitly undecided (future consideration, confirmed by stakeholder):** adding email/password or other-provider auth to serve external stakeholders (`ALUMNI`, `INDUSTRY_PARTNER`) who lack ACD accounts; internal roles (`SECRETARY`, `GEN_ED_COORDINATOR`, `PROGRAM_HEAD`, `FACULTY`, `STUDENT`) would keep the institutional Gmail flow. No approved change yet — do not build or assume.
+- Authentication uses Supabase Auth with SSR cookies. Internal roles require a proved Google session; Alumni and Industry Partner also support email-password. Recovery sessions cannot enter workspaces. These rules follow the current [Identity and Access contract](src/features/auth/CONTEXT.md) and [ADR 0031](docs/adr/0031-prove-the-current-sign-in-method-before-internal-authorization.md).
 - Canonical terminology: Institutional Learning Outcome (ILO), Graduate Outcome (GO), Course Intended Learning Outcome (CILO). The earlier Program Learning Outcome (PLO) name is retained only in historical records and compatibility aliases.
 - **PWA surface expectation (confirmed):** web platform, but on mobile the app must feel almost mobile-native — touch-friendly controls, natural scrolling, native-like navigation and ergonomics. Mobile is a first-class product surface, never a scaled-down desktop.
 - No offline data caching, mutation queues, Serwist/Workbox/next-pwa unless ADR 0006 is reopened.

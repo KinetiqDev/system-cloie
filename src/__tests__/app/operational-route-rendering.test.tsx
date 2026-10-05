@@ -201,7 +201,7 @@ describe("operational role error boundaries", () => {
         screen.getByRole("heading", { name: "We couldn't load this page" })
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "Return to Dashboard" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "Return to Dashboard" })).toHaveAttribute(
         "href",
         returnHref
       );

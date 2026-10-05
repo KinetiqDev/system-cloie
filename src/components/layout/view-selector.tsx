@@ -4,21 +4,21 @@ import { LayoutGrid, List } from "lucide-react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export type CourseRosterViewMode = "list" | "card";
+export type ListCardViewMode = "list" | "card";
 
-type CourseRosterViewSelectorProps = {
-  value: CourseRosterViewMode;
-  onValueChange: (value: CourseRosterViewMode) => void;
+type ViewSelectorProps = {
+  /** Accessible label for the toolbar, e.g. "Rosters view". */
+  label: string;
+  value: ListCardViewMode;
+  onValueChange: (value: ListCardViewMode) => void;
 };
 
 /**
- * Presentational view toggle. The switch itself is a local state change in
- * the parent; no server round trip is involved.
+ * Presentational List/Card toggle shared by every collection that offers both
+ * presentations. The switch itself is a local state change in the parent; the
+ * parent decides whether to persist it and to what.
  */
-export function CourseRosterViewSelector({
-  value,
-  onValueChange,
-}: CourseRosterViewSelectorProps) {
+export function ViewSelector({ label, value, onValueChange }: ViewSelectorProps) {
   function selectView(nextValues: string[]) {
     const nextView = nextValues[0];
     if ((nextView !== "list" && nextView !== "card") || nextView === value) return;
@@ -27,7 +27,7 @@ export function CourseRosterViewSelector({
 
   return (
     <ToggleGroup
-      aria-label="Course roster view"
+      aria-label={`${label} view`}
       onValueChange={selectView}
       role="toolbar"
       spacing={0}

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   StudentEvaluationsContent,
   type StudentEvaluationsContentProps,
-} from "@/app/(app)/student/dashboard/page";
+} from "@/features/portals/components/student-dashboard-page";
 import type { StudentEvaluationListItem } from "@/features/responses/types";
 
 vi.mock("next/link", () => ({

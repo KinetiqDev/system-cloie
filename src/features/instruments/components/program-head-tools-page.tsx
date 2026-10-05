@@ -65,7 +65,10 @@ import {
   type EvaluationToolsTab,
 } from "./evaluation-tools-tabs";
 import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
-import { ToolsViewSelector, type ToolsViewMode } from "./tools-view-selector";
+import {
+  ViewSelector as ToolsViewSelector,
+  type ListCardViewMode as ToolsViewMode,
+} from "@/components/layout/view-selector";
 
 type ProgramHeadToolsPageProps = {
   templates: ProgramHeadTemplateItem[];

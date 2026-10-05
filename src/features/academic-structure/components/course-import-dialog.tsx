@@ -390,7 +390,7 @@ function FileStep({
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           disabled={pending}
           onClick={() =>
             downloadText(templateFilename(config.mode), COURSE_IMPORT_TEMPLATES[config.mode])
@@ -430,6 +430,19 @@ function FileStep({
           <span className="text-body-sm text-muted-foreground">
             One Course per row. See the column guide below for accepted values.
           </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            tabIndex={-1}
+            disabled={pending}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (!pending) inputRef.current?.click();
+            }}
+          >
+            Choose CSV file
+          </Button>
         </div>
         <input
           ref={inputRef}

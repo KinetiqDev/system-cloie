@@ -111,7 +111,9 @@ test("Faculty publishes an owned Course-bound evaluation; roster stays open; Stu
   // ── Fresh read: publication preserves roster management ─────────────────
   await page.goto(`/course-rosters/${fx.publicationTarget.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByText("Open roster", { exact: true }).first()).toBeVisible();
+  // A writable roster raises no lifecycle lock banner. Scoped to the banner's
+  // own text so it cannot be satisfied by unrelated alert regions.
+  await expect(page.getByRole("alert").filter({ hasText: "Inactive" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Manage roster" })).toBeVisible();
   await expect(
     page.getByText(/eligible students added while the evaluation is open receive it automatically/i)

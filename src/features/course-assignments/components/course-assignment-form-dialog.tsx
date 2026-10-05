@@ -33,7 +33,7 @@ import { UserIcon } from "lucide-react";
 import { TermInstancePicker } from "@/features/academic-calendar/components/term-instance-picker";
 import { ClassIdentityFields } from "./shared/class-identity-fields";
 import { FacultySearchPopover } from "./shared/faculty-search-popover";
-import { WizardStepper } from "./shared/wizard-stepper";
+import { WizardStepper } from "@/components/ui/wizard-stepper";
 import { AssignmentSummaryBlock } from "./shared/assignment-summary-block";
 import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { AssignableCourse, FacultySearchResult } from "@/features/course-assignments/types";

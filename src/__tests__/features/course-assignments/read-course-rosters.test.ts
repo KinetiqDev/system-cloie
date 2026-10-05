@@ -7,6 +7,7 @@ import { ROLES } from "@/lib/constants/roles";
 import {
   getCourseRosterDetail,
   listAuthorizedCourseRosterAssignments,
+  listFacultyRosterFacets,
 } from "@/features/course-assignments/services/read-course-rosters";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
@@ -17,6 +18,7 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     academicTermInstance: { findFirst: vi.fn() },
     courseAssignment: { findMany: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
+    program: { findMany: vi.fn() },
     courseAssignmentMembership: {
       findMany: vi.fn(),
       count: vi.fn(),
@@ -81,7 +83,10 @@ describe("read course rosters", () => {
 
     const result = await listAuthorizedCourseRosterAssignments({ facultyOnly: true });
 
-    expect(result).toMatchObject({ success: true, data: { total: 1, includeHistory: false } });
+    expect(result).toMatchObject({
+      success: true,
+      data: { total: 1, period: { mode: "current" } },
+    });
     expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -127,9 +132,9 @@ describe("read course rosters", () => {
       },
     ] as never);
 
-    const result = await listAuthorizedCourseRosterAssignments({ includeHistory: true });
+    const result = await listAuthorizedCourseRosterAssignments({ period: { mode: "all" } });
 
-    expect(result).toMatchObject({ success: true, data: { includeHistory: true } });
+    expect(result).toMatchObject({ success: true, data: { period: { mode: "all" } } });
     expect(result.success && result.data.items[0]).toMatchObject({
       activeRosterCount: 2,
       evaluationEligibleCount: 1,
@@ -298,7 +303,7 @@ describe("read course rosters", () => {
     });
 
     await expect(
-      listAuthorizedCourseRosterAssignments({ programId: "program-2" })
+      listAuthorizedCourseRosterAssignments({ scopedProgramId: "program-2" })
     ).resolves.toEqual({ success: false, error: "Course assignment not found." });
     const { prisma } = await import("@/lib/db/prisma");
     expect(prisma.courseAssignment.findMany).not.toHaveBeenCalled();
@@ -315,5 +320,313 @@ describe("read course rosters", () => {
     });
     const { prisma } = await import("@/lib/db/prisma");
     expect(prisma.courseAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("cannot replace Program Head authorization with a Program filter", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
+    );
+    const { resolveProgramHeadContext } =
+      await import("@/features/auth/services/resolve-program-head-context");
+    vi.mocked(resolveProgramHeadContext).mockResolvedValue({
+      success: true,
+      data: {
+        userId: "head-1",
+        authorizedPrograms: [],
+        selectedProgram: { id: "program-1", code: "BSED", name: "Education" },
+      },
+    });
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
+
+    await listAuthorizedCourseRosterAssignments({
+      scopedProgramId: "program-1",
+      programId: "program-2",
+    });
+
+    const [{ where }] = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0] as [
+      { where: { AND: Record<string, unknown>[] } },
+    ];
+    expect(where.AND).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ program_id: { in: ["program-1"] } }),
+        expect.objectContaining({ program_id: "program-2" }),
+      ])
+    );
+    expect(prisma.courseAssignment.count).toHaveBeenCalledWith({ where });
+  });
+
+  it("reads a selected Academic Period whatever its lifecycle", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
+
+    await listAuthorizedCourseRosterAssignments({
+      period: { mode: "term", termInstanceId: "term-9" },
+    });
+
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              faculty_id: "faculty-1",
+              term_instance_id: "term-9",
+            }),
+          ]),
+        }),
+      })
+    );
+    // A specific period is not restricted to active assignments.
+    const [{ where }] = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0] as [
+      { where: { AND: Record<string, unknown>[] } },
+    ];
+    expect(where.AND[0]).not.toHaveProperty("is_active");
+  });
+
+  it("returns nothing for the active scope when no Academic Period is active", async () => {
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue(null as never);
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
+
+    const result = await listAuthorizedCourseRosterAssignments();
+
+    expect(result).toMatchObject({ success: true, data: { activePeriodId: null } });
+    const [{ where }] = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0] as [
+      { where: { AND: Record<string, unknown>[] } },
+    ];
+    expect(where.AND[0]).toMatchObject({ is_active: true, id: { in: [] } });
+  });
+
+  it("applies every narrowing facet alongside the Faculty scope", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
+
+    await listAuthorizedCourseRosterAssignments({
+      courseId: "course-2",
+      programId: "program-2",
+      yearLevel: YearLevel.THIRD_YEAR,
+      section: StudentSection.EVENING,
+      courseScope: CourseScope.GENERAL_EDUCATION,
+    });
+
+    const [{ where }] = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0] as [
+      { where: { AND: Record<string, unknown>[] } },
+    ];
+    expect(where.AND[0]).toMatchObject({ faculty_id: "faculty-1" });
+    expect(where.AND[1]).toMatchObject({
+      course_id: "course-2",
+      program_id: "program-2",
+      year_level: YearLevel.THIRD_YEAR,
+      section: StudentSection.EVENING,
+      course: { course_scope: CourseScope.GENERAL_EDUCATION },
+    });
+  });
+
+  it("keeps a search term set as its own AND clause", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
+
+    await listAuthorizedCourseRosterAssignments({ search: "ges tech" });
+
+    const [{ where }] = vi.mocked(prisma.courseAssignment.findMany).mock.calls[0] as [
+      { where: { AND: unknown[] } },
+    ];
+    expect(where.AND).toHaveLength(4);
+  });
+});
+
+describe("Faculty roster facets", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "term-1" } as never);
+  });
+
+  it("offers only the Courses and Programs the Faculty member is assigned in", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      {
+        course: {
+          id: "course-2",
+          code: "IT201",
+          title: "Data Structures",
+          course_scope: CourseScope.PROGRAM_SPECIFIC,
+        },
+        program: { id: "program-2", code: "BSIT", name: "Information Technology" },
+      },
+      {
+        course: {
+          id: "course-1",
+          code: "GESTECH",
+          title: "Society",
+          course_scope: CourseScope.GENERAL_EDUCATION,
+        },
+        program: { id: "program-1", code: "BSBA", name: "Business Administration" },
+      },
+    ] as never);
+
+    const result = await listFacultyRosterFacets();
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        courses: [
+          {
+            id: "course-1",
+            code: "GESTECH",
+            title: "Society",
+            courseScope: CourseScope.GENERAL_EDUCATION,
+          },
+          {
+            id: "course-2",
+            code: "IT201",
+            title: "Data Structures",
+            courseScope: CourseScope.PROGRAM_SPECIFIC,
+          },
+        ],
+        programs: [
+          { id: "program-1", code: "BSBA", name: "Business Administration" },
+          { id: "program-2", code: "BSIT", name: "Information Technology" },
+        ],
+      },
+    });
+    expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { faculty_id: "faculty-1" },
+        distinct: ["course_id", "program_id"],
+      })
+    );
+  });
+
+  it("offers a Course once when it spans several of the Faculty member's Programs", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    // distinct is on the (course, program) pair, so one shared Course across
+    // two Programs arrives as two rows carrying the same Course.
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      {
+        course: {
+          id: "course-1",
+          code: "GESTECH",
+          title: "Society",
+          course_scope: CourseScope.GENERAL_EDUCATION,
+        },
+        program: { id: "program-1", code: "BSBA", name: "Business Administration" },
+      },
+      {
+        course: {
+          id: "course-1",
+          code: "GESTECH",
+          title: "Society",
+          course_scope: CourseScope.GENERAL_EDUCATION,
+        },
+        program: { id: "program-2", code: "BSIT", name: "Information Technology" },
+      },
+    ] as never);
+
+    const result = await listFacultyRosterFacets();
+
+    expect(result.success && result.data.courses.map((course) => course.id)).toEqual(["course-1"]);
+    expect(result.success && result.data.programs.map((program) => program.id)).toEqual([
+      "program-1",
+      "program-2",
+    ]);
+  });
+
+  it("offers a Program once when it holds several of the Faculty member's Courses", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([
+      {
+        course: {
+          id: "course-1",
+          code: "GESTECH",
+          title: "Society",
+          course_scope: CourseScope.GENERAL_EDUCATION,
+        },
+        program: { id: "program-1", code: "BSBA", name: "Business Administration" },
+      },
+      {
+        course: {
+          id: "course-2",
+          code: "IT201",
+          title: "Data Structures",
+          course_scope: CourseScope.PROGRAM_SPECIFIC,
+        },
+        program: { id: "program-1", code: "BSBA", name: "Business Administration" },
+      },
+    ] as never);
+
+    const result = await listFacultyRosterFacets();
+
+    expect(result.success && result.data.programs.map((program) => program.id)).toEqual([
+      "program-1",
+    ]);
+    expect(result.success && result.data.courses.map((course) => course.id)).toEqual([
+      "course-1",
+      "course-2",
+    ]);
+  });
+
+  it("refuses facets for a session that is not a Faculty member", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "dean-1", roles: [ROLES.DEAN] })
+    );
+
+    await expect(listFacultyRosterFacets()).resolves.toEqual({
+      success: false,
+      error: "Course assignment not found.",
+    });
+    const { prisma } = await import("@/lib/db/prisma");
+    expect(prisma.courseAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("requires a resolved session", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(null);
+
+    await expect(listFacultyRosterFacets()).resolves.toEqual({
+      success: false,
+      error: "Authentication required.",
+    });
+  });
+
+  it("keeps an unexpected facet failure opaque", async () => {
+    vi.mocked(authModule.resolveAuthSession).mockResolvedValue(
+      createAuthSessionSnapshot({ userId: "faculty-1", roles: [ROLES.FACULTY] })
+    );
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.courseAssignment.findMany).mockRejectedValue(new Error("connection reset"));
+
+    const result = await listFacultyRosterFacets();
+
+    expect(result).toMatchObject({
+      success: false,
+      error: "The roster request could not be completed.",
+    });
+    expect(result.success === false && result.referenceId).toEqual(expect.any(String));
   });
 });

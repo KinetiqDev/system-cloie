@@ -98,6 +98,93 @@ describe("Program Head desktop navigation", () => {
     expect(screen.getByRole("button", { name: "Collapse navigation sidebar" })).toBeInTheDocument();
   });
 
+  it("keeps a Dean section's destinations inside the rail instead of indenting them", () => {
+    render(<Sidebar roles={[ROLES.DEAN]} />);
+
+    const destinations = screen.getByRole("link", { name: "Programs" }).parentElement;
+
+    // A 64px rail has no room for an indent, so the connector is lg-only.
+    expect(destinations?.className).toContain("lg:group-data-[collapsed=false]/sidebar:pl-2");
+    expect(destinations?.className).not.toMatch(/(^|\s)pl-2(\s|$)/);
+  });
+
+  it("marks the Dean's rail sections with a rule and leaves the expanded sidebar to its indent", () => {
+    const { container } = render(<Sidebar roles={[ROLES.DEAN]} />);
+
+    const rules = [...container.querySelectorAll("div[aria-hidden='true']")].filter((rule) =>
+      rule.className.includes("h-px")
+    );
+
+    // One per section, plus the rule that sets Profile apart from them.
+    expect(rules).toHaveLength(3);
+    expect(rules[0].className).toContain("max-lg:block");
+  });
+
+  it.each([
+    [0, false, true],
+    [260, true, false],
+  ])(
+    "fades only the rail edge still holding destinations at scrollTop %i",
+    (scrollTop, startFaded, endFaded) => {
+      const { container } = render(<Sidebar roles={[ROLES.DEAN]} />);
+      const nav = screen.getByRole("navigation", { name: "Dean navigation" });
+      Object.defineProperty(nav, "clientHeight", { configurable: true, value: 200 });
+      Object.defineProperty(nav, "scrollHeight", { configurable: true, value: 460 });
+      Object.defineProperty(nav, "scrollTop", { configurable: true, writable: true, value: 0 });
+
+      act(() => {
+        nav.scrollTop = scrollTop;
+        nav.dispatchEvent(new Event("scroll"));
+      });
+
+      expect(container.querySelectorAll(".bg-gradient-to-b")).toHaveLength(startFaded ? 1 : 0);
+      expect(container.querySelectorAll(".bg-gradient-to-t")).toHaveLength(endFaded ? 1 : 0);
+    }
+  );
+
+  it("leaves the rail uncut when every destination already fits", () => {
+    const { container } = render(<Sidebar roles={[ROLES.DEAN]} />);
+    const nav = screen.getByRole("navigation", { name: "Dean navigation" });
+    Object.defineProperty(nav, "clientHeight", { configurable: true, value: 900 });
+    Object.defineProperty(nav, "scrollHeight", { configurable: true, value: 460 });
+
+    act(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
+
+    expect(container.querySelector(".bg-gradient-to-b")).toBeNull();
+    expect(container.querySelector(".bg-gradient-to-t")).toBeNull();
+  });
+
+  it("remeasures fades when folding changes the navigation dimensions", () => {
+    let onResize: ResizeObserverCallback | undefined;
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          onResize = callback;
+        }
+        observe = observe;
+        disconnect = disconnect;
+      }
+    );
+    const { container, unmount } = render(<Sidebar roles={[ROLES.DEAN]} />);
+    const nav = screen.getByRole("navigation", { name: "Dean navigation" });
+    Object.defineProperty(nav, "clientHeight", { configurable: true, value: 200 });
+    Object.defineProperty(nav, "scrollHeight", { configurable: true, value: 460 });
+    expect(observe).toHaveBeenCalledWith(nav);
+
+    act(() => onResize?.([], {} as ResizeObserver));
+    expect(container.querySelector(".bg-gradient-to-t")).not.toBeNull();
+    Object.defineProperty(nav, "clientHeight", { configurable: true, value: 900 });
+    act(() => onResize?.([], {} as ResizeObserver));
+    expect(container.querySelector(".bg-gradient-to-t")).toBeNull();
+    unmount();
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
+
   it("names the collapse control and the navigation it controls", () => {
     render(<Sidebar roles={[ROLES.SECRETARY]} />);
 

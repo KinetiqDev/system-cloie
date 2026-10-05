@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { Prisma, type SystemRole } from "@prisma/client";
+import {
+  Prisma,
+  type CourseScope,
+  type StudentSection,
+  type SystemRole,
+  type YearLevel,
+} from "@prisma/client";
 
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import type { AuthSessionSnapshot } from "@/features/auth/services/build-auth-session-snapshot";
@@ -20,10 +26,13 @@ import type {
   CourseRosterDetail,
   CourseRosterDiscoveryResult,
   CourseRosterMember,
+  FacultyRosterCourseOption,
+  FacultyRosterProgramOption,
   RosterEligibilityProjection,
   RosterServiceResult,
   RosterState,
 } from "../types";
+import type { CourseRosterPeriodScope } from "../course-roster-list-state";
 
 const COURSE_ROSTER_DETAIL_PAGE_SIZE = 25;
 
@@ -214,9 +223,57 @@ async function getActivePeriodId() {
   return activePeriod?.id ?? null;
 }
 
+/**
+ * The lifecycle constraint for one period scope. `current` is the default and
+ * means active assignments in the active Academic Period; `term` reads one
+ * period whatever its lifecycle; `all` drops the constraint entirely.
+ */
+function periodScopeWhere(
+  period: CourseRosterPeriodScope,
+  activePeriodId: string | null
+): Prisma.CourseAssignmentWhereInput {
+  if (period.mode === "all") return {};
+  if (period.mode === "term") return { term_instance_id: period.termInstanceId };
+  return {
+    is_active: true,
+    ...(activePeriodId ? { term_instance_id: activePeriodId } : { id: { in: [] } }),
+  };
+}
+
+type CourseRosterListOptions = {
+  period?: CourseRosterPeriodScope;
+  search?: string;
+  courseId?: string | null;
+  programId?: string | null;
+  yearLevel?: YearLevel | null;
+  section?: StudentSection | null;
+  courseScope?: CourseScope | null;
+  page?: number;
+  pageSize?: number;
+  facultyOnly?: boolean;
+  /** Program Head scope; ignored by other roles. */
+  scopedProgramId?: string;
+};
+
+function facetWhere(
+  filters: Pick<
+    CourseRosterListOptions,
+    "courseId" | "programId" | "yearLevel" | "section" | "courseScope"
+  >
+): Prisma.CourseAssignmentWhereInput {
+  return {
+    ...(filters.courseId && { course_id: filters.courseId }),
+    ...(filters.programId && { program_id: filters.programId }),
+    ...(filters.yearLevel && { year_level: filters.yearLevel }),
+    ...(filters.section && { section: filters.section }),
+    ...(filters.courseScope && { course: { course_scope: filters.courseScope } }),
+  };
+}
+
 function assignmentWhere(
   session: AuthSessionSnapshot,
-  options: { includeHistory: boolean; activePeriodId: string | null; search: string },
+  options: CourseRosterListOptions,
+  activePeriodId: string | null,
   programHeadProgramIds: string[]
 ): Prisma.CourseAssignmentWhereInput {
   const base: Prisma.CourseAssignmentWhereInput = {
@@ -224,18 +281,14 @@ function assignmentWhere(
     ...(session.activeRole === ROLES.PROGRAM_HEAD && {
       program_id: { in: programHeadProgramIds },
     }),
-    ...(!options.includeHistory && {
-      is_active: true,
-      ...(options.activePeriodId
-        ? { term_instance_id: options.activePeriodId }
-        : { id: { in: [] } }),
-    }),
+    ...periodScopeWhere(options.period ?? { mode: "current" }, activePeriodId),
   };
-  const terms = options.search.trim().split(/\s+/).filter(Boolean);
+  const terms = options.search?.trim().split(/\s+/).filter(Boolean) ?? [];
 
   return {
     AND: [
       base,
+      facetWhere(options),
       ...terms.map((term) => ({
         OR: [
           { course: { code: { contains: term, mode: "insensitive" as const } } },
@@ -323,14 +376,7 @@ async function addAssignmentCounts(assignments: AssignmentReadRow[]) {
 }
 
 export async function listAuthorizedCourseRosterAssignments(
-  options: {
-    includeHistory?: boolean;
-    search?: string;
-    page?: number;
-    pageSize?: number;
-    facultyOnly?: boolean;
-    programId?: string;
-  } = {}
+  options: CourseRosterListOptions = {}
 ): Promise<RosterServiceResult<CourseRosterDiscoveryResult>> {
   let actorId: string | undefined;
   try {
@@ -351,23 +397,21 @@ export async function listAuthorizedCourseRosterAssignments(
       return { success: false, error: "Course assignment not found." };
     }
 
-    const includeHistory = options.includeHistory ?? false;
+    const period = options.period ?? { mode: "current" as const };
     const search = options.search?.trim() ?? "";
     const page = Math.max(0, options.page ?? 0);
     const pageSize = options.pageSize ?? DEFAULT_TABLE_PAGE_SIZE;
     const activePeriodId = await getActivePeriodId();
     let programHeadProgramIds: string[] = [];
     if (session.activeRole === ROLES.PROGRAM_HEAD) {
-      if (!options.programId) return { success: false, error: "Course assignment not found." };
-      const context = await resolveProgramHeadContext(options.programId);
+      if (!options.scopedProgramId) {
+        return { success: false, error: "Course assignment not found." };
+      }
+      const context = await resolveProgramHeadContext(options.scopedProgramId);
       if (!context.success) return { success: false, error: "Course assignment not found." };
       programHeadProgramIds = [context.data.selectedProgram.id];
     }
-    const where = assignmentWhere(
-      session,
-      { includeHistory, activePeriodId, search },
-      programHeadProgramIds
-    );
+    const where = assignmentWhere(session, options, activePeriodId, programHeadProgramIds);
     let [assignments, total] = await loadAssignmentRows(where, page, pageSize);
     const canonicalPage = total === 0 ? 0 : Math.min(page, Math.ceil(total / pageSize) - 1);
     if (canonicalPage !== page) {
@@ -377,10 +421,80 @@ export async function listAuthorizedCourseRosterAssignments(
 
     return {
       success: true,
-      data: { items, total, page: canonicalPage, pageSize, includeHistory, search, activePeriodId },
+      data: { items, total, page: canonicalPage, pageSize, period, search, activePeriodId },
     };
   } catch (error) {
     return unexpectedRosterReadFailure("list_authorized_assignments", actorId, undefined, error);
+  }
+}
+
+type FacultyRosterFacets = {
+  courses: FacultyRosterCourseOption[];
+  programs: FacultyRosterProgramOption[];
+};
+
+/**
+ * Collapse a projected facet list to one entry per id, ordered by code.
+ *
+ * The facets come from a `distinct` on the (course, program) *pair*, so one
+ * Course taught across several Programs — or one Program holding several of
+ * that Faculty member's Courses — arrives as repeated rows. Each row projects
+ * the same record, so keeping one per id preserves the projected values.
+ */
+function dedupeById<T extends { id: string; code: string }>(options: T[]): T[] {
+  const byId = new Map(options.map((option) => [option.id, option]));
+  return [...byId.values()].sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/**
+ * The Course and Program options a Faculty member can actually filter by.
+ * Offering the whole catalog would present filters that can only ever return
+ * zero rows, so both lists come from that Faculty member's own assignments.
+ */
+export async function listFacultyRosterFacets(): Promise<RosterServiceResult<FacultyRosterFacets>> {
+  let actorId: string | undefined;
+  try {
+    const session = await resolveAuthSession();
+    if (!session) return { success: false, error: "Authentication required." };
+    actorId = session.userId;
+    if (session.activeRole !== ROLES.FACULTY) {
+      return { success: false, error: "Course assignment not found." };
+    }
+    if (session.profileGate.status !== "COMPLETE") {
+      return { success: false, error: "Course assignment not found." };
+    }
+
+    const rows = await prisma.courseAssignment.findMany({
+      where: { faculty_id: session.userId },
+      distinct: ["course_id", "program_id"],
+      select: {
+        course: { select: { id: true, code: true, title: true, course_scope: true } },
+        program: { select: { id: true, code: true, name: true } },
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        courses: dedupeById(
+          rows.map((row) => ({
+            id: row.course.id,
+            code: row.course.code,
+            title: row.course.title,
+            courseScope: row.course.course_scope,
+          }))
+        ),
+        programs: dedupeById(
+          rows.map((row) => ({
+            id: row.program.id,
+            code: row.program.code,
+            name: row.program.name,
+          }))
+        ),
+      },
+    };
+  } catch (error) {
+    return unexpectedRosterReadFailure("list_faculty_roster_facets", actorId, undefined, error);
   }
 }
 
