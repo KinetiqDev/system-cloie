@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 
 import { ClassIdentityFields } from "@/features/course-assignments/components/shared/class-identity-fields";
 import { CourseAssignmentFormDialog } from "@/features/course-assignments/components/course-assignment-form-dialog";
-import { WizardStepper } from "@/features/course-assignments/components/shared/wizard-stepper";
+import { WizardStepper } from "@/components/ui/wizard-stepper";
 import { createCourseAssignmentAction } from "@/lib/actions/course-assignment-actions";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { FacultySearchResult } from "@/features/course-assignments/types";

@@ -172,19 +172,22 @@ export function SecretaryUsersList({
 
       <UsersKPI kpi={kpi} />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="text-heading-lg text-text-primary">Users</h2>
           <p className="text-body-sm text-text-secondary">
             {total} total user{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <Link href="/secretary/users/new">
-          <Button className="motion-safe:transition-colors motion-safe:duration-150">
-            <Plus className="size-4" data-icon="inline-start" />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/secretary/users/import" />}>
+            Import students
+          </Button>
+          <Button render={<Link href="/secretary/users/new" />}>
+            <Plus data-icon="inline-start" />
             Add User
           </Button>
-        </Link>
+        </div>
       </div>
 
       <UsersFilterBar

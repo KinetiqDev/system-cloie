@@ -2921,7 +2921,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/shared/wizard-stepper.tsx",
+    path: "src/components/ui/wizard-stepper.tsx",
     disposition: "task",
     taskId: 15,
     category: "feature_component",

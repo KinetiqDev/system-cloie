@@ -91,7 +91,7 @@ import {
   parseCourseRosterCsv,
   exportFailedCourseRosterRows,
 } from "../services/course-roster-csv";
-import { WizardStepper } from "./shared/wizard-stepper";
+import { WizardStepper } from "@/components/ui/wizard-stepper";
 import { ScopedRosterStudentSearch } from "./scoped-roster-student-search";
 
 function MutationMessage({ message, error }: { message: string | null; error?: boolean }) {
