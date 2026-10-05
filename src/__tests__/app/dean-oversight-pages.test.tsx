@@ -4,11 +4,11 @@ import { Suspense } from "react";
 import React from "react";
 import { renderToReadableStream } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import DeanDashboardPage, { DeanDashboardContent } from "@/app/(app)/dean/dashboard/page";
+import DeanDashboardPage, { DeanDashboardContent } from "@/features/dean/components/dashboard-page";
 import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
 import DeanLearningOutcomesPage, {
   LearningOutcomesContent,
-} from "@/app/(app)/dean/college-oversight/learning-outcomes/page";
+} from "@/features/dean/components/learning-outcomes-page";
 
 const { listDeanEligiblePeriodsMock, getDeanLearningOutcomesMock, getDeanDashboardMock } =
   vi.hoisted(() => ({
