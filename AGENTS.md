@@ -233,8 +233,11 @@ Common commands:
     pnpm test:e2e
     pnpm lint
     pnpm build
+    pnpm test:auth-integration   # real GoTrue + mail catcher; auth-flow changes
 
 For UI changes, also verify the affected workflow in a running application when practical, including both **desktop and mobile** behavior. Browser journeys live in `e2e/` (Playwright, `pnpm test:e2e`). The `mobile` project runs `e2e/mobile.spec.ts` on a Pixel 7 viewport. When you add or change a journey, pin its fixture expectations in `e2e/support/contract.ts`; `e2e/support/global-setup.ts` verifies them before any journey starts. For accepted production evidence, follow `docs/testing/production-browser-evidence.md`.
+
+Local backend work runs against the Supabase CLI Docker stack, whose workstation-specific properties — port map, health checks, the fact that every git worktree shares one stack and one database through a single `project_id`, the manually provisioned disposable database the gated DB suites need, and the real Auth gate — are owned by `docs/runbooks/local-development-environment.md`.
 
 Do not consider a change complete while failures caused by the change remain unresolved.
 

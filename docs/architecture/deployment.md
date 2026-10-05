@@ -13,6 +13,8 @@ How System CLOIE reaches its runtime targets. Step-by-step procedures are **not*
 
 All backends are **self-hosted Supabase** ([ADR 0020](../adr/0020-self-hosted-supabase-target-neutral-backends.md)): the local Supabase CLI Docker stack for development and independently operated Supabase Docker instances for every non-local target (staging, dedicated demo, disposable CI, primary production). Supabase Cloud is not part of any workflow — no Platform login, linking, project references, or access tokens. The application keeps one runtime path and one environment contract; selecting a different backend is an operator-controlled restart boundary, never a live switch.
 
+The local CLI Docker stack has its own runbook — [local-development-environment.md](../runbooks/local-development-environment.md) — covering the workstation-specific properties (port map, worktree sharing, disposable test database, real Auth gate) that the deployed-target procedures below do not cover.
+
 ## Production target: Coolify on the home-lab host
 
 Primary production runs as two Coolify resources on the `home-lab` Ubuntu host behind Cloudflare Tunnel:

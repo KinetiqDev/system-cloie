@@ -47,6 +47,8 @@ For deployed self-hosted targets, set the server-only `CLOIE_BACKEND_ID` and the
 
 See `supabase/README.md` for the full local and remote self-hosted Supabase workflow and `AGENTS.md` for the Prisma + Supabase migration cycle. Supabase Cloud is not supported; see ADR 0020 for the target-neutral self-hosted contract.
 
+For the workstation-specific details of that local stack — port map, health checks, the fact that it is shared across every git worktree, how to provision a disposable database for `pnpm test:db`, and the real Auth gate — see [`docs/runbooks/local-development-environment.md`](docs/runbooks/local-development-environment.md).
+
 Email/password sign-in is available to Alumni and Industry Partner alongside Google. Internal roles remain Google-only. Local verification and recovery mail stays in the catcher at http://127.0.0.1:54324; no SMTP account is needed for development. For real inbox delivery, configure the Supabase service using [the mail environment template](supabase/mail.env.example), [the Compose override](supabase/docker-compose.auth-mail.yml), and [the mail setup runbook](docs/runbooks/external-entry-mail.md). Do not add SMTP credentials to the application environment.
 
 ## Tech Stack
@@ -116,6 +118,10 @@ Key demo scripts:
 | `pnpm test:db`                             | Run opt-in DB invariant suites (requires `RUN_DATABASE_INTEGRATION_TESTS=1`) |
 | `pnpm verify:database-target`              | Verify `DATABASE_URL` points at a disposable target                          |
 | `pnpm verify:database-suites`              | Verify DB suite discovery completeness                                       |
+| `pnpm test:auth-integration`               | Real GoTrue + bundled mail catcher suite (starts the local stack if absent)  |
+| `pnpm verify:table-dispositions`           | Verify the server-only table access dispositions                             |
+| `pnpm test:related`                        | Run tests related to changed files                                           |
+| `pnpm test:tooling-integration`            | Run the CI tooling integration suite                                         |
 | `pnpm vitest run src/__tests__/...`        | Run a single test file                                                       |
 | `pnpm db:push`                             | Push Prisma schema to dev database                                           |
 | `pnpm db:seed`                             | Seed database with demo data (run `pnpm install` or `prisma generate` first) |
@@ -211,7 +217,7 @@ The domain model is documented through a multi-context layout:
 
 - **`CONTEXT-MAP.md`** — index of domain contexts and their relationships
 - **`src/features/<domain>/CONTEXT.md`** — per-domain glossary, rules, and invariants
-- **`docs/adr/`**: 31 architectural decision records (see list below)
+- **`docs/adr/`**: architectural decision records, currently 0034 (the list below carries the titles; `ls docs/adr` is authoritative for the file count)
 
 Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 
@@ -250,6 +256,10 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0028 | Secretary Term Placement for an Unplaced Student                          |
 | 0029 | Multi-Program Program Head Provisioning at Creation                       |
 | 0030 | Graduate Outcome canonical terminology                                    |
+| 0031 | Prove the current sign-in method before internal authorization            |
+| 0032 | Entry flow address handoff and server-resolved legal gate                 |
+| 0033 | External registration carries the chosen role into onboarding             |
+| 0034 | Transfer General Education response evidence to the Coordinator           |
 
 #### Request Flow
 
