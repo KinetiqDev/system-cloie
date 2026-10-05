@@ -149,6 +149,44 @@ describe("Program Head desktop navigation", () => {
     );
   });
 
+  it.each([
+    ROLES.SECRETARY,
+    ROLES.DEAN,
+    ROLES.FACULTY,
+    ROLES.PROGRAM_HEAD,
+    ROLES.GEN_ED_COORDINATOR,
+  ])("names the %s rail on hover with no delay at all", (role) => {
+    render(<Sidebar roles={[role]} collapsed />);
+
+    fireEvent.mouseEnter(screen.getByRole("link", { name: "Dashboard" }));
+
+    // No timers run between the pointer arriving and the label existing.
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent("Dashboard");
+  });
+
+  it("hands the rail label straight over when the pointer moves between rows", () => {
+    render(<Sidebar roles={[ROLES.SECRETARY]} collapsed />);
+
+    fireEvent.mouseEnter(screen.getByRole("link", { name: "Dashboard" }));
+    fireEvent.mouseLeave(screen.getByRole("link", { name: "Dashboard" }));
+    fireEvent.mouseEnter(screen.getByRole("link", { name: "Users" }));
+
+    const tooltips = document.querySelectorAll('[data-slot="tooltip-content"]');
+    expect(tooltips).toHaveLength(1);
+    expect(tooltips[0]).toHaveTextContent("Users");
+  });
+
+  it("lands the rail label at full contrast instead of fading it in", () => {
+    render(<Sidebar roles={[ROLES.SECRETARY]} collapsed />);
+
+    fireEvent.mouseEnter(screen.getByRole("link", { name: "Users" }));
+
+    const tooltip = document.querySelector('[data-slot="tooltip-content"]');
+    expect(tooltip?.className).not.toMatch(/animate-in|fade-in|zoom-in/);
+    // Leaving is still a release, not a snap.
+    expect(tooltip?.className).toMatch(/data-closed:animate-out/);
+  });
+
   it("shows Dean destination tooltips in the width-driven tablet rail", async () => {
     pathnameMock.mockReturnValue("/dean/dashboard");
     render(<Sidebar roles={[ROLES.DEAN]} />);

@@ -29,8 +29,14 @@ import { useMediaQuery } from "@/components/ui/use-media-query";
 // The plate keeps the navy artwork legible against the dark sidebar.
 const LOGO_CLASS_NAME = "h-10";
 const NAV_ID = "app-sidebar-nav";
-/** A rail delay keeps labels from flickering as the pointer crosses the rail. */
-const TOOLTIP_DELAY = 300;
+/**
+ * A rail destination carries no visible name, so its tooltip opens with the
+ * pointer instead of making the operator wait. One provider owns this for the
+ * whole sidebar, which also puts every rail tooltip in one delay group: moving
+ * between rows hands the label over instantly and without animation, so the
+ * rail reads as a single surface instead of a row that flickers.
+ */
+const SIDEBAR_TOOLTIP_DELAY = 0;
 /** Clears the rail edge so a rail tooltip never covers the icons beside it. */
 const RAIL_TOOLTIP_OFFSET = 12;
 
@@ -67,7 +73,7 @@ function RailRow({ collapsed, label, children }: RailRowProps) {
   return (
     <Tooltip>
       <TooltipTrigger render={children} />
-      <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
+      <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET} instant>
         {label}
       </TooltipContent>
     </Tooltip>
@@ -112,6 +118,12 @@ interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
 }
+/**
+ * The one entry point for every role's sidebar.
+ *
+ * Owning the tooltip delay group here keeps the whole sidebar on a single
+ * timing, whichever rail shape the role gets and whatever state it is in.
+ */
 export function Sidebar({
   user,
   roles = [],
@@ -119,14 +131,44 @@ export function Sidebar({
   collapsed = false,
   onToggleCollapsed,
 }: SidebarProps) {
+  return (
+    <TooltipProvider delay={SIDEBAR_TOOLTIP_DELAY}>
+      {getHighestNavRole(roles) === ROLES.DEAN ? (
+        <DeanSidebar user={user} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
+      ) : (
+        <RoleSidebar
+          user={user}
+          roles={roles}
+          activeProgramId={activeProgramId}
+          collapsed={collapsed}
+          onToggleCollapsed={onToggleCollapsed}
+        />
+      )}
+    </TooltipProvider>
+  );
+}
+
+interface RoleSidebarProps {
+  user?: SidebarProps["user"];
+  roles: Role[];
+  activeProgramId: string | null;
+  collapsed: boolean;
+  onToggleCollapsed?: () => void;
+}
+
+/** The shared sidebar: one rail for every administrative role. */
+function RoleSidebar({
+  user,
+  roles,
+  activeProgramId,
+  collapsed,
+  onToggleCollapsed,
+}: RoleSidebarProps) {
   const pathname = usePathname();
 
   const mainNav = getMainNavByRoles(roles, pathname, activeProgramId);
   const secondaryNav = getSecondaryNavByRoles(roles);
   const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
-  if (getHighestNavRole(roles) === ROLES.DEAN) {
-    return <DeanSidebar user={user} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />;
-  }
 
   return (
     <aside
@@ -433,31 +475,29 @@ function SidebarHeader({ collapsed, onToggle, href, railBelowLg = false }: Sideb
   if (collapsed) {
     return (
       <div className="border-sidebar-border flex h-16 shrink-0 items-center justify-center border-b px-2">
-        <TooltipProvider delay={TOOLTIP_DELAY}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onToggle}
-                  aria-label="Expand navigation sidebar"
-                  aria-expanded={false}
-                  aria-controls={NAV_ID}
-                  className={cn(
-                    "text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
-                    "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150"
-                  )}
-                >
-                  <CloieLogoMark className="h-8" />
-                </Button>
-              }
-            />
-            <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET}>
-              Expand sidebar
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggle}
+                aria-label="Expand navigation sidebar"
+                aria-expanded={false}
+                aria-controls={NAV_ID}
+                className={cn(
+                  "text-sidebar-foreground hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+                  "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150"
+                )}
+              >
+                <CloieLogoMark className="h-8" />
+              </Button>
+            }
+          />
+          <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_OFFSET} instant>
+            Expand sidebar
+          </TooltipContent>
+        </Tooltip>
       </div>
     );
   }
@@ -485,32 +525,30 @@ function SidebarHeader({ collapsed, onToggle, href, railBelowLg = false }: Sideb
           System CLOIE
         </span>
       </Link>
-      <TooltipProvider delay={TOOLTIP_DELAY}>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={onToggle}
-                aria-label="Collapse navigation sidebar"
-                aria-controls={NAV_ID}
-                aria-expanded
-                className={cn(
-                  "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground ml-auto",
-                  railBelowLg ? "hidden lg:flex" : "flex",
-                  ARRIVAL
-                )}
-              >
-                <PanelLeftClose aria-hidden="true" />
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom" sideOffset={8}>
-            Collapse sidebar
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onToggle}
+              aria-label="Collapse navigation sidebar"
+              aria-controls={NAV_ID}
+              aria-expanded
+              className={cn(
+                "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground ml-auto",
+                railBelowLg ? "hidden lg:flex" : "flex",
+                ARRIVAL
+              )}
+            >
+              <PanelLeftClose aria-hidden="true" />
+            </Button>
+          }
+        />
+        <TooltipContent side="bottom" sideOffset={8} instant>
+          Collapse sidebar
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

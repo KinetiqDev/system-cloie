@@ -16,16 +16,39 @@ function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
+const TOOLTIP_SURFACE =
+  "bg-foreground text-background z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:bg-background/20 **:data-[slot=kbd]:text-background **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50";
+
+/** Slides in from the side the popup faces, once the trigger settles. */
+const TOOLTIP_ARRIVAL =
+  "data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 motion-reduce:data-[state=delayed-open]:animate-none motion-reduce:data-open:animate-none";
+
+/** Fades out in place, so releasing the trigger reads as a release. */
+const TOOLTIP_DEPARTURE =
+  "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 motion-reduce:data-closed:animate-none";
+
 function TooltipContent({
   className,
   side = "top",
   sideOffset = 4,
   align = "center",
   alignOffset = 0,
+  instant = false,
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
-  Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+  Pick<TooltipPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
+    /**
+     * Land at full contrast on the frame the popup appears.
+     *
+     * A tooltip whose subject is already on screen — a label a collapsed rail
+     * hid, an icon button's name — is something the operator asked for by
+     * arriving. Fading it in spends its first frames unreadable, which reads as
+     * lag. Departure still eases, because leaving the trigger is not the moment
+     * anyone asked to be interrupted.
+     */
+    instant?: boolean;
+  }) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -38,7 +61,8 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "bg-foreground text-background data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 **:data-[slot=kbd]:bg-background/20 **:data-[slot=kbd]:text-background z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 motion-reduce:data-closed:animate-none motion-reduce:data-open:animate-none motion-reduce:data-[state=delayed-open]:animate-none",
+            TOOLTIP_SURFACE,
+            instant ? TOOLTIP_DEPARTURE : `${TOOLTIP_ARRIVAL} ${TOOLTIP_DEPARTURE}`,
             className
           )}
           {...props}

@@ -367,7 +367,18 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   single shared timing from `FOLD_MOTION` (`src/components/layout/sidebar-fold.ts`) so the page can
   never tear away from the rail mid-fold; honor reduced motion by removing the transition. Rail
   destinations, including the Dean's width-driven md–lg rail and the footer identity, name
-  themselves with the design-system `Tooltip` at the rail delay and offset — never a native `title`.
+  themselves with the design-system `Tooltip` — never a native `title`.
+- One provider at the root of `src/components/layout/sidebar.tsx` owns the delay for every sidebar
+  tooltip, at every rail width and for every role. The delay is zero: a rail destination has no
+  visible name, so its label appears on the same frame as the pointer instead of making the operator
+  wait. Sharing the provider also puts every rail tooltip in one delay group, so moving between rows
+  hands the label straight over, without animation and without a tooltip that outlives the row the
+  pointer has already left. Where there is no hover — the Dean's md–lg tablet rail, and keyboard
+  navigation — the label arrives on focus instead.
+- Sidebar tooltips pass `instant`, which keeps the arrival off the shared `Tooltip` entrance
+  animation and leaves only the departure. A rail label is something the operator asked for by
+  arriving; fading it in spends the first frames unreadable, which reads as lag rather than as
+  polish. Zero delay with a fade is still a delay.
 - The Dean tablet rail uses the compact footer too: hide the expanded name/email block and make the avatar keyboard-focusable so its identity tooltip is available without hover.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
