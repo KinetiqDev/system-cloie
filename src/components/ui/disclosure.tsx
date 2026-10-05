@@ -39,7 +39,7 @@ function DisclosureTrigger({
   const chevron = (
     <ChevronDown
       aria-hidden="true"
-      className="text-muted-foreground size-4 shrink-0 transition-transform duration-200 group-open:rotate-180"
+      className="text-foreground size-5 shrink-0 transition-transform duration-200 group-open:rotate-180"
     />
   );
 

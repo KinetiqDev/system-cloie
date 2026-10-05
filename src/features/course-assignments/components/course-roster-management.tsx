@@ -1723,7 +1723,7 @@ function CsvImportMethod({
       <div className="flex flex-wrap justify-start gap-2">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => downloadCsv("course-roster-template.csv", COURSE_ROSTER_TEMPLATE)}
           disabled={isPending}
         >
@@ -1755,6 +1755,19 @@ function CsvImportMethod({
           One <code>name</code> or <code>Student Name</code> column, up to {COURSE_ROSTER_MAX_ROWS}{" "}
           rows.
         </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          tabIndex={-1}
+          disabled={isPending}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (!isPending) inputRef.current?.click();
+          }}
+        >
+          Choose CSV file
+        </Button>
       </div>
       <input
         ref={inputRef}

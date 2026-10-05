@@ -148,10 +148,12 @@ function FileStep({
   program,
   file,
   onSelect,
+  pending,
 }: {
   program: Program;
   file: File | null;
   onSelect: (file: File | null) => void;
+  pending: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   return (
@@ -169,7 +171,7 @@ function FileStep({
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() =>
             downloadCsv(
               `system-cloie-${program.code.toLowerCase()}-go-import.csv`,
@@ -199,12 +201,24 @@ function FileStep({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="go-import-file">GO CSV file</Label>
-        <button
-          type="button"
-          className="border-border focus-visible:ring-ring flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 focus-visible:ring-2 focus-visible:outline-none"
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(event) => event.preventDefault()}
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Choose a GO CSV file"
+          aria-disabled={pending}
+          className="border-border focus-visible:ring-ring flex min-h-28 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-4 text-center outline-none focus-visible:ring-2 focus-visible:outline-none aria-disabled:pointer-events-none aria-disabled:opacity-60"
+          onClick={() => !pending && inputRef.current?.click()}
+          onKeyDown={(event) => {
+            if (!pending && (event.key === "Enter" || event.key === " ")) {
+              event.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onDragOver={(event) => {
+            if (!pending) event.preventDefault();
+          }}
           onDrop={(event) => {
+            if (pending) return;
             event.preventDefault();
             onSelect(event.dataTransfer.files?.[0] ?? null);
           }}
@@ -214,7 +228,20 @@ function FileStep({
           {file && (
             <span className="text-body-sm text-muted-foreground break-all">{file.name}</span>
           )}
-        </button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            tabIndex={-1}
+            disabled={pending}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (!pending) inputRef.current?.click();
+            }}
+          >
+            Choose CSV file
+          </Button>
+        </div>
         <input
           ref={inputRef}
           id="go-import-file"
@@ -353,7 +380,9 @@ export function GOImportDialog({ open, onOpenChange, program }: Props) {
 
   const content = (
     <div className="flex flex-col gap-5">
-      {step === "file" && <FileStep program={program} file={file} onSelect={selectFile} />}
+      {step === "file" && (
+        <FileStep program={program} file={file} onSelect={selectFile} pending={pending} />
+      )}
       {step === "review" && preview && <ReviewStep preview={preview} />}
       {step === "results" && result && <ResultsStep result={result} />}
       {error && (

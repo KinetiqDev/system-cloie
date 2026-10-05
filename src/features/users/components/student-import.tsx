@@ -166,7 +166,7 @@ export function StudentImport({ programs }: { programs: StudentImportCatalog }) 
               six column names. Upload up to 100 students per file, no larger than 256 KiB.
             </p>
             <Button
-              variant="outline"
+              variant="secondary"
               className="self-start"
               onClick={() =>
                 download(STUDENT_IMPORT_TEMPLATE, "system-cloie-students-template.csv")
@@ -204,11 +204,14 @@ export function StudentImport({ programs }: { programs: StudentImportCatalog }) 
               matching. Put names containing commas in quotes; spreadsheet CSV export does this for
               you.
             </p>
-            <Disclosure className="rounded-lg border p-4">
-              <DisclosureTrigger variant="card" className="text-body-sm font-medium">
+            <Disclosure open className="rounded-lg border">
+              <DisclosureTrigger
+                variant="card"
+                className="text-body-sm bg-muted/40 hover:bg-muted/60 rounded-t-lg px-4 py-3 font-medium"
+              >
                 Program and major reference
               </DisclosureTrigger>
-              <DisclosureContent>
+              <DisclosureContent className="px-4 pb-4">
                 <ul className="text-body-sm flex flex-col gap-3">
                   {programs.map((p) => (
                     <li key={p.id}>
@@ -256,6 +259,19 @@ export function StudentImport({ programs }: { programs: StudentImportCatalog }) 
                   <span className="text-body-sm text-muted-foreground">
                     CSV UTF-8, up to 100 students and 256 KiB.
                   </span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    tabIndex={-1}
+                    disabled={pending}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!pending) input.current?.click();
+                    }}
+                  >
+                    Choose CSV file
+                  </Button>
                 </div>
                 <input
                   ref={input}
