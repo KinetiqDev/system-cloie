@@ -1,21 +1,6 @@
-import { AcademicPeriodStatus, AcademicSemester, AcademicTerm } from "@prisma/client";
-import { CANONICAL_TERMS } from "@/lib/constants/academic-period";
+import { AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
 
 export type LifecycleTransitionDecision = { allowed: true } | { allowed: false; reason: string };
-
-/**
- * Whether a term instance is one of the 5 structural (canonical) terms of a
- * School Year. Structural terms are created with the School Year and must
- * never be deleted.
- */
-export function isStructuralTerm(term: {
-  semester: AcademicSemester;
-  term: AcademicTerm | null | undefined;
-}): boolean {
-  return CANONICAL_TERMS.some(
-    (canonical) => canonical.semester === term.semester && canonical.term === (term.term ?? null)
-  );
-}
 
 /**
  * Decide whether an Academic Period may move from its current status to a target.
@@ -144,31 +129,6 @@ export function canArchiveSchoolYear(
 
   if (activeTermInstanceId && schoolYearTermInstanceIds.includes(activeTermInstanceId)) {
     return { allowed: false, reason: "Cannot archive a school year that contains the active term" };
-  }
-
-  return { allowed: true };
-}
-
-/**
- * Check if a term instance can be deleted.
- * Requirements:
- * - Must not be the active term.
- * - Should ideally have no dependent records (enrollments, assignments, deployments).
- */
-export function canDeleteTermInstance(
-  termInstanceId: string,
-  activeTermInstanceId: string | null,
-  hasDependentRecords: boolean
-): { allowed: true } | { allowed: false; reason: string } {
-  if (activeTermInstanceId === termInstanceId) {
-    return { allowed: false, reason: "Cannot delete the active term instance" };
-  }
-
-  if (hasDependentRecords) {
-    return {
-      allowed: false,
-      reason: "Cannot delete a term that has existing enrollments or deployments",
-    };
   }
 
   return { allowed: true };

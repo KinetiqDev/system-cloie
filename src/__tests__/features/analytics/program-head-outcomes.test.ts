@@ -227,6 +227,41 @@ describe("getProgramHeadOutcomes", () => {
     );
   });
 
+  it("excludes General Education course-bound evidence from every outcome read", async () => {
+    // GE ratings would otherwise reach the Outcomes view through GO/CILO
+    // bindings, since a GE course can hold an assignment in this same Program.
+    await getProgramHeadOutcomes("program-bsed", outcomesFilters);
+
+    const ratingWhere =
+      prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where.response;
+    expect(ratingWhere.assignment.course_bound.course_assignment).toEqual({
+      program_id: "program-bsed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+
+    const opportunityWhere = prismaMock.evaluationAssignment.count.mock.calls[0][0].where;
+    expect(opportunityWhere.course_bound.course_assignment).toEqual({
+      program_id: "program-bsed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+
+    const submittedWhere = prismaMock.response.count.mock.calls[0][0].where;
+    expect(submittedWhere.assignment.course_bound.course_assignment).toEqual({
+      program_id: "program-bsed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+  });
+
+  it("does not offer periods that exist only for General Education evidence", async () => {
+    await getProgramHeadOutcomes("program-bsed", outcomesFilters);
+
+    const periodWhere = prismaMock.academicTermInstance.findMany.mock.calls[0][0].where;
+    expect(periodWhere.OR[1].course_bound_evaluations.some.course_assignment).toEqual({
+      program_id: "program-bsed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+  });
+
   it("returns the no-program-wide-evidence empty state when a central source has no snapshot-bound ratings", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);

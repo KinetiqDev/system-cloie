@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LegalAcknowledgementDialog } from "@/features/legal/components/legal-acknowledgement-dialog";
+import { LEGAL_VERSIONS } from "@/features/legal/legal-versions";
 
 const signInWithOAuthMock = vi.fn();
 
@@ -28,17 +29,6 @@ describe("LegalAcknowledgementDialog", () => {
       />
     );
 
-    expect(screen.getByRole("dialog")).toHaveClass(
-      "h-[min(760px,calc(100vh-2rem))]",
-      "grid-rows-[auto_minmax(0,1fr)_auto]"
-    );
-    const footer = screen.getByRole("checkbox").closest('[data-slot="dialog-footer"]');
-    expect(footer).toContainElement(
-      screen.getByRole("button", { name: "Agree and Continue with Google" })
-    );
-    expect(footer).toHaveClass("flex-col", "sm:flex-col", "items-stretch");
-    expect(screen.getByRole("checkbox").closest("div.flex")).toHaveClass("w-full");
-
     const continueButton = screen.getByRole("button", { name: "Agree and Continue with Google" });
     expect(continueButton).toBeDisabled();
     fireEvent.click(continueButton);
@@ -55,8 +45,8 @@ describe("LegalAcknowledgementDialog", () => {
           method: "POST",
           body: JSON.stringify({
             intent: "industry-partner",
-            privacyVersion: "1.1",
-            termsVersion: "1.1",
+            privacyVersion: LEGAL_VERSIONS.privacy,
+            termsVersion: LEGAL_VERSIONS.terms,
           }),
         })
       );

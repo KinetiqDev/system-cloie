@@ -35,13 +35,13 @@ The primary end-to-end workflows, each traced to the domain contexts that own it
 5. The **one-response invariant**: exactly one response row per evaluation assignment (unique `assignment_id` at the database level); a `SUBMITTED` response rejects further draft saves and submissions, and a later eligibility change never uncounts a submitted response ([responses](../../src/features/responses/CONTEXT.md), [course-assignments](../../src/features/course-assignments/CONTEXT.md)).
 6. Draft/final response concurrency hardening remains tracked work (journeys doc §6.3, issue #168).
 
-## 4. From submitted responses to Program Head evidence
+## 4. From submitted responses to authorized evidence review
 
 1. Review bodies serve only after the **SUBMITTED gate**; `IN_PROGRESS` bodies are never fetched ([response-review](../../src/features/response-review/CONTEXT.md)).
 2. Each submitted quantitative answer carries an **outcome binding** — CILO (with the Program's current CILO-to-GO manifestation mappings), publication-time GO binding (program-wide deployments), or GENERAL ([response-review](../../src/features/response-review/CONTEXT.md)).
-3. The **Program Head** receives the identified review flow (respondent identity lives only in Program Head DTOs); Faculty and Dean receive the anonymized flow only ([response-review](../../src/features/response-review/CONTEXT.md)).
+3. The evidence owner receives identified submitted-response review: **Program Head** for Program-specific Course-bound and Central evidence within authorized Programs, **General Education Coordinator** for General Education Course-bound evidence college-wide. Student Program membership does not grant Program Head access to General Education evidence; Faculty and Dean aggregate contracts remain unchanged ([response-review](../../src/features/response-review/CONTEXT.md), [ADR 0034](../adr/0034-general-education-response-evidence-ownership.md)).
 4. Analytics turn submitted responses into **source-aware evidence** (four canonical source buckets, never pooled): Program GO evidence flows through CILO question bindings and typed mappings, with explicit disclosures for current-mapping interpretation and many-to-many mappings ([analytics](../../src/features/analytics/CONTEXT.md)).
-5. The Program Head consumes program-scoped analytics tabs (outcomes, courses, stakeholders, trends, qualitative, ai); the Gen Ed Coordinator has a separate cross-Program General Education evidence path (first release: Course-bound GE evidence only) ([analytics](../../src/features/analytics/CONTEXT.md)).
+5. The Program Head consumes program-scoped analytics over Program-specific and Central evidence only. The General Education Coordinator dashboard links to cross-Program General Education analytics and submitted-response review ([analytics](../../src/features/analytics/CONTEXT.md)).
 6. AI-assisted interpretation is a bounded, non-persisted supplement over aggregate packets — no raw comments or respondent identifiers cross the boundary, and it never replaces human CQI judgment ([analytics](../../src/features/analytics/CONTEXT.md)). Formal report exports remain stubbed/deferred (journeys doc §10.2).
 
 ## 5. Dean oversight

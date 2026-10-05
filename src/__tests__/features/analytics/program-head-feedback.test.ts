@@ -4,6 +4,7 @@ import {
   buildRedactedWordCloudTokens,
   redactPotentialIdentifiers,
 } from "@/features/analytics/services/qualitative-analytics";
+import { selectRows } from "@/__tests__/helpers/where-clause";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
   resolveProgramHeadContextMock: vi.fn(),
@@ -212,6 +213,44 @@ describe("getProgramHeadFeedback", () => {
     expect(result?.tokens).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ text: "draft" })])
     );
+  });
+
+  it("excludes General Education qualitative evidence from the aggregate corpus", async () => {
+    // GE students answering a course bound to this Program Head's own Program
+    // must not reach word-cloud tokens, tone bands, prompt counts, or the
+    // AI-facing qualitative packet. The captured clause is evaluated against
+    // the GE row so a weakened gate fails here.
+    const geRow = qualitativeRow({
+      text: "GE respondent comment that must stay with the Coordinator",
+      responseId: "response-ge",
+    });
+    // The captured clause is evaluated against the seeded GE shape: a
+    // GENERAL_EDUCATION course whose assignment carries this same Program.
+    const geCandidate = {
+      status: "SUBMITTED",
+      deployment_type: "COURSE_BOUND",
+      assignment: {
+        course_bound: {
+          course_assignment: {
+            program_id: "program-bsed",
+            course: { course_scope: "GENERAL_EDUCATION" },
+          },
+        },
+        central_deployment: null,
+      },
+    };
+    prismaMock.qualitativeResponseItem.findMany.mockImplementation(async ({ where }) =>
+      selectRows(where, [geCandidate]).length > 0 ? [geRow] : []
+    );
+
+    const result = await getProgramHeadFeedback("program-bsed", feedbackFilters);
+
+    expect(JSON.stringify(result)).not.toContain("GE respondent comment");
+    expect(result?.qualitativeItemCount).toBe(0);
+    expect(
+      prismaMock.qualitativeResponseItem.findMany.mock.calls[0][0].where.response.OR[1].assignment
+        .course_bound.course_assignment.course.course_scope
+    ).toBe("PROGRAM_SPECIFIC");
   });
 
   it("excludes empty qualitative items from tokens, counts, and links", async () => {

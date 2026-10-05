@@ -7,7 +7,8 @@ describe("native legal content", () => {
     expect(legalDocuments.terms.title).toBe("System CLOIE Terms of Use");
     expect(legalDocuments.privacy.sections.length).toBeGreaterThan(10);
     expect(legalDocuments.terms.sections.length).toBeGreaterThan(10);
-    expect(LEGAL_VERSIONS).toEqual({ privacy: "1.1", terms: "1.1" });
+    expect(legalDocuments.privacy.version).toBe(LEGAL_VERSIONS.privacy);
+    expect(legalDocuments.terms.version).toBe(LEGAL_VERSIONS.terms);
   });
 
   it("keeps unresolved publication values visible", () => {

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Empty,
@@ -22,7 +21,6 @@ import type { RolloverException, RolloverExceptionType } from "../services/run-t
 
 interface RolloverExceptionsTableProps {
   exceptions: RolloverException[];
-  onEditStudent?: (studentUserId: string) => void;
 }
 
 const EXCEPTION_TYPE_CONFIG: Record<
@@ -34,10 +32,7 @@ const EXCEPTION_TYPE_CONFIG: Record<
   DUPLICATE: { label: "Duplicate", variant: "warning" },
 };
 
-export function RolloverExceptionsTable({
-  exceptions,
-  onEditStudent,
-}: RolloverExceptionsTableProps) {
+export function RolloverExceptionsTable({ exceptions }: RolloverExceptionsTableProps) {
   if (exceptions.length === 0) {
     return (
       <Empty>
@@ -46,9 +41,7 @@ export function RolloverExceptionsTable({
             <CheckCircle2 />
           </EmptyMedia>
           <EmptyTitle>No exceptions</EmptyTitle>
-          <EmptyDescription>
-            No exceptions — all students processed successfully.
-          </EmptyDescription>
+          <EmptyDescription>No exceptions — all students processed successfully.</EmptyDescription>
         </EmptyHeader>
       </Empty>
     );
@@ -63,7 +56,6 @@ export function RolloverExceptionsTable({
             <TableHead>Type</TableHead>
             <TableHead>Current Year</TableHead>
             <TableHead>Reason</TableHead>
-            {onEditStudent && <TableHead>Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,32 +67,14 @@ export function RolloverExceptionsTable({
                 <TableCell>
                   <div>
                     <p className="font-medium">{exception.studentName}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {exception.studentEmail}
-                    </p>
+                    <p className="text-muted-foreground text-xs">{exception.studentEmail}</p>
                   </div>
                 </TableCell>
                 <TableCell>
                   <Badge variant={typeConfig.variant}>{typeConfig.label}</Badge>
                 </TableCell>
-                <TableCell>
-                  {exception.currentYearLevel.replace("_", " ")}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {exception.message}
-                </TableCell>
-                {onEditStudent && (
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onEditStudent(exception.studentUserId)}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
-                )}
+                <TableCell>{exception.currentYearLevel.replace("_", " ")}</TableCell>
+                <TableCell className="text-muted-foreground">{exception.message}</TableCell>
               </TableRow>
             );
           })}

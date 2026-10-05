@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { FacultyRegisterForm } from "@/features/entry/components/faculty-register-form";
+import { LEGAL_VERSIONS } from "@/features/legal/legal-versions";
 
 const { requestFacultyAccessMock } = vi.hoisted(() => ({
   requestFacultyAccessMock: vi.fn(),
@@ -72,8 +73,8 @@ describe("FacultyRegisterForm", () => {
     const [, init] = fetchMock.mock.calls[0] as [string, { body: string }];
     expect(JSON.parse(init.body)).toEqual({
       intent: "faculty",
-      privacyVersion: "1.1",
-      termsVersion: "1.1",
+      privacyVersion: LEGAL_VERSIONS.privacy,
+      termsVersion: LEGAL_VERSIONS.terms,
     });
   });
 

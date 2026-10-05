@@ -1,11 +1,26 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { ResponseDetail } from "@/features/response-review/components/response-detail";
-import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-review/types";
+import type { IdentifiedSubmittedResponseDetail } from "@/features/response-review/types";
+import {
+  STAKEHOLDER_EVIDENCE_SOURCE,
+  buildAnalyticsUrl,
+} from "@/features/analytics/services/program-head-analytics-state";
+
+function programHeadOutcomeScope(response: IdentifiedSubmittedResponseDetail) {
+  const { evaluation } = response;
+  return evaluation.type === "COURSE_BOUND"
+    ? { evidenceSource: "COURSE" as const, termInstanceId: evaluation.context.termInstanceId }
+    : {
+        evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[evaluation.context.stakeholder],
+        stakeholder: evaluation.context.stakeholder,
+        termInstanceId: evaluation.context.termInstanceId,
+      };
+}
 
 function responseDTO(
-  overrides: Partial<ProgramHeadSubmittedResponseDetail> = {}
-): ProgramHeadSubmittedResponseDetail {
+  overrides: Partial<IdentifiedSubmittedResponseDetail> = {}
+): IdentifiedSubmittedResponseDetail {
   return {
     responseId: "response-1",
     submittedAt: new Date("2026-08-24T00:00:00Z"),
@@ -67,7 +82,13 @@ describe("ResponseDetail reverse trace links", () => {
         response={responseDTO()}
         evaluationHref="/responses/program-wide/d-1"
         analyticsHref="/analytics"
-        programId="program-1"
+        outcomeHref={(goId, response) =>
+          buildAnalyticsUrl("program-1", {
+            tab: "outcomes",
+            goId,
+            ...programHeadOutcomeScope(response),
+          })
+        }
       />
     );
 
@@ -86,7 +107,13 @@ describe("ResponseDetail reverse trace links", () => {
         response={responseDTO()}
         evaluationHref="/responses/program-wide/d-1"
         analyticsHref="/analytics"
-        programId="program-1"
+        outcomeHref={(goId, response) =>
+          buildAnalyticsUrl("program-1", {
+            tab: "outcomes",
+            goId,
+            ...programHeadOutcomeScope(response),
+          })
+        }
       />
     );
 
@@ -150,7 +177,13 @@ describe("ResponseDetail reverse trace links", () => {
         response={courseResponse}
         evaluationHref="/responses/course/eval-1"
         analyticsHref="/analytics"
-        programId="program-1"
+        outcomeHref={(goId, response) =>
+          buildAnalyticsUrl("program-1", {
+            tab: "outcomes",
+            goId,
+            ...programHeadOutcomeScope(response),
+          })
+        }
       />
     );
 

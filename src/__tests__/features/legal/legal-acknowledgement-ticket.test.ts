@@ -1,10 +1,25 @@
+import { createHmac } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LEGAL_VERSIONS } from "@/features/legal/legal-versions";
 import {
   createLegalAcknowledgementTicket,
   LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
   readCookieValue,
   verifyLegalAcknowledgementTicket,
 } from "@/features/legal/services/legal-acknowledgement-ticket";
+
+/**
+ * Mints a correctly signed ticket for an arbitrary payload, standing in for a
+ * ticket issued before a version bump: the signature must not be what rejects
+ * it.
+ */
+function signTicket(payload: Record<string, unknown>): string {
+  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  const signature = createHmac("sha256", process.env.CLOIE_LEGAL_TICKET_SECRET!)
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
 
 describe("legal acknowledgement ticket", () => {
   beforeEach(() => {
@@ -19,8 +34,8 @@ describe("legal acknowledgement ticket", () => {
     if (result.valid) {
       expect(result.payload).toEqual({
         intent: "industry-partner",
-        privacyVersion: "1.1",
-        termsVersion: "1.1",
+        privacyVersion: LEGAL_VERSIONS.privacy,
+        termsVersion: LEGAL_VERSIONS.terms,
         issuedAt: 1000,
         expiresAt: 1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
       });
@@ -49,6 +64,29 @@ describe("legal acknowledgement ticket", () => {
         1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS
       ).valid
     ).toBe(false);
+  });
+
+  it("rejects a correctly signed ticket issued against a superseded privacy version", () => {
+    const stalePrivacyTicket = signTicket({
+      intent: "industry-partner",
+      privacyVersion: "1.1",
+      termsVersion: LEGAL_VERSIONS.terms,
+      issuedAt: 1000,
+      expiresAt: 1000 + LEGAL_ACKNOWLEDGEMENT_MAX_AGE_SECONDS,
+    });
+
+    expect(verifyLegalAcknowledgementTicket(stalePrivacyTicket, "industry-partner", 1001)).toEqual({
+      valid: false,
+      reason: "intent-or-version-mismatch",
+    });
+    expect(createLegalAcknowledgementTicket("industry-partner", 1000)).not.toBe(stalePrivacyTicket);
+    expect(
+      verifyLegalAcknowledgementTicket(
+        createLegalAcknowledgementTicket("industry-partner", 1000),
+        "industry-partner",
+        1001
+      ).valid
+    ).toBe(true);
   });
 
   it("fails closed when the signing secret is absent or too short", () => {

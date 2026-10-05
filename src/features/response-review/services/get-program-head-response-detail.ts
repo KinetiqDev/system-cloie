@@ -2,24 +2,22 @@ import { StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
-import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
 import { ROLES } from "@/lib/constants/roles";
-import {
-  getSnapshotSectionItems,
-  isSnapshotSection,
-} from "@/features/analytics/services/snapshot-structure";
 import { loadCiloMappings } from "./cilo-mappings";
-import {
-  loadRespondentIdentityContexts,
-  type RespondentIdentityContext,
-} from "./respondent-context";
+import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
+import {
+  buildSubmittedResponseSections,
+  respondentIdentityFragment,
+  submittedResponseMean,
+  type CourseBoundCiloBinding,
+  type GoQuestionBindingSnapshot,
+} from "./submitted-response-projection";
 import type {
   CourseBoundResponseContext,
-  ProgramHeadSubmittedResponseDetail,
+  IdentifiedSubmittedResponseDetail,
   ProgramWideResponseContext,
-  SubmittedAnswerBinding,
 } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -30,15 +28,7 @@ import type {
 // answer body is returned. Faculty/Dean keep the anonymized flow.
 // ---------------------------------------------------------------------------
 
-type CourseBoundCiloBinding = {
-  id: string;
-  cilo_id: string | null;
-  cilo_description_snapshot: string;
-  section_key: string;
-  item_key: string;
-};
-
-type CourseBoundGoBinding = GoSnapshotShape;
+type CourseBoundGoBinding = GoQuestionBindingSnapshot;
 
 type CourseBoundEvalShape = {
   id: string;
@@ -61,13 +51,7 @@ type CourseBoundEvalShape = {
   go_question_bindings: CourseBoundGoBinding[];
 };
 
-type GoSnapshotShape = {
-  go_id: string | null;
-  go_code_snapshot: string;
-  go_description_snapshot: string;
-  section_key: string;
-  item_key: string;
-};
+type GoSnapshotShape = GoQuestionBindingSnapshot;
 
 type CentralEvalShape = {
   id: string;
@@ -86,34 +70,26 @@ type CentralEvalShape = {
   go_snapshots: GoSnapshotShape[];
 };
 
-type EvaluationProjection =
-  | {
-      type: "COURSE_BOUND";
-      id: string;
-      title: string;
-      context: CourseBoundResponseContext;
-      snapshot: unknown;
-      bindings: CourseBoundCiloBinding[];
-      stakeholder: TargetStakeholder;
-      termInstanceId: string;
-      goSnapshots: GoSnapshotShape[];
-    }
-  | {
-      type: "PROGRAM_WIDE";
-      id: string;
-      title: string;
-      context: ProgramWideResponseContext;
-      snapshot: unknown;
-      bindings: CourseBoundCiloBinding[];
-      stakeholder: TargetStakeholder;
-      termInstanceId: string;
-      goSnapshots: GoSnapshotShape[];
-    };
+type EvaluationProjectionBase = {
+  id: string;
+  title: string;
+  snapshot: unknown;
+  bindings: CourseBoundCiloBinding[];
+  stakeholder: TargetStakeholder;
+  termInstanceId: string;
+  goSnapshots: GoSnapshotShape[];
+};
+
+type EvaluationProjection = EvaluationProjectionBase &
+  (
+    | { type: "COURSE_BOUND"; context: CourseBoundResponseContext }
+    | { type: "PROGRAM_WIDE"; context: ProgramWideResponseContext }
+  );
 
 export async function getProgramHeadResponseDetail(
   programId: string,
   responseId: string
-): Promise<ProgramHeadSubmittedResponseDetail | null> {
+): Promise<IdentifiedSubmittedResponseDetail | null> {
   const authSession = await resolveAuthSession();
 
   if (!authSession || authSession.activeRole !== ROLES.PROGRAM_HEAD) {
@@ -131,7 +107,14 @@ export async function getProgramHeadResponseDetail(
       status: "SUBMITTED",
       assignment: {
         OR: [
-          { course_bound: { course_assignment: { program_id: programId } } },
+          {
+            course_bound: {
+              course_assignment: {
+                program_id: programId,
+                course: { course_scope: "PROGRAM_SPECIFIC" },
+              },
+            },
+          },
           { central_deployment: { program_id: programId } },
         ],
       },
@@ -192,8 +175,16 @@ export async function getProgramHeadResponseDetail(
       : Promise.resolve(new Map<string, CiloGoMapping[]>()),
   ]);
 
-  const sections = buildResponseSections(response, evaluation, ciloMappings);
-  const quantitativeMean = responseMeanOf(sections, evaluation.snapshot);
+  const sections = buildSubmittedResponseSections(
+    response,
+    {
+      snapshot: evaluation.snapshot,
+      ciloBindings: evaluation.bindings,
+      goSnapshots: evaluation.goSnapshots,
+    },
+    ciloMappings
+  );
+  const quantitativeMean = submittedResponseMean(sections, evaluation.snapshot);
 
   return {
     responseId: response.id,
@@ -202,7 +193,10 @@ export async function getProgramHeadResponseDetail(
       id: response.respondent.id,
       name: response.respondent.name,
       stakeholder: evaluation.stakeholder,
-      ...identityFragment(identityContexts.get(response.respondent.id), evaluation.stakeholder),
+      ...respondentIdentityFragment(
+        identityContexts.get(response.respondent.id),
+        evaluation.stakeholder
+      ),
     },
     evaluation:
       evaluation.type === "COURSE_BOUND"
@@ -255,92 +249,6 @@ function boundCiloIds(bindings: CourseBoundCiloBinding[]): string[] {
     .filter((ciloId): ciloId is string => ciloId !== null);
 }
 
-function resolveCourseBoundBinding(
-  evaluation: EvaluationProjection,
-  entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
-  ciloMappings: Map<string, CiloGoMapping[]>
-): SubmittedAnswerBinding {
-  const directBindings = evaluation.goSnapshots
-    .filter(
-      (snapshot) =>
-        snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
-    )
-    .map((snapshot) => ({
-      key:
-        snapshot.go_id ??
-        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
-      code: snapshot.go_code_snapshot,
-      description: snapshot.go_description_snapshot,
-    }));
-  if (evaluation.type === "PROGRAM_WIDE") {
-    return directBindings.length > 0
-      ? { type: "GO", goBindings: directBindings }
-      : { type: "GENERAL" };
-  }
-
-  const binding = evaluation.bindings.find(
-    (candidate) =>
-      candidate.id === entry.cilo_question_binding_id ||
-      (!entry.cilo_question_binding_id &&
-        candidate.section_key === entry.section_key &&
-        candidate.item_key === entry.item_key)
-  );
-  if (!binding) {
-    return directBindings.length > 0
-      ? { type: "GO", goBindings: directBindings }
-      : { type: "GENERAL" };
-  }
-  return {
-    type: "CILO",
-    ciloId: binding.cilo_id,
-    ciloLabel: binding.cilo_description_snapshot,
-    goMappings: ciloMappings.get(binding.cilo_id ?? "") ?? [],
-    directGoBindings: directBindings,
-  };
-}
-
-function identityFragment(
-  context: RespondentIdentityContext | undefined,
-  stakeholder: TargetStakeholder
-): Pick<
-  ProgramHeadSubmittedResponseDetail["respondent"],
-  "studentContext" | "alumniContext" | "industryContext"
-> {
-  if (!context) {
-    return {};
-  }
-  if (context.kind === "STUDENT" && stakeholder === TargetStakeholder.STUDENT) {
-    return {
-      studentContext: {
-        programId: context.programId,
-        programLabel: context.programLabel,
-        majorId: context.majorId,
-        majorLabel: context.majorLabel,
-        yearLevel: context.yearLevel,
-        section: context.section,
-      },
-    };
-  }
-  if (context.kind === "ALUMNI" && stakeholder === TargetStakeholder.ALUMNI) {
-    return {
-      alumniContext: {
-        programLabel: context.programLabel,
-        majorLabel: context.majorLabel,
-        graduationYear: context.graduationYear,
-      },
-    };
-  }
-  if (context.kind === "INDUSTRY_PARTNER" && stakeholder === TargetStakeholder.INDUSTRY_PARTNER) {
-    return {
-      industryContext: {
-        companyName: context.companyName,
-        position: context.position,
-      },
-    };
-  }
-  return {};
-}
-
 function projectEvaluation(response: {
   assignment: {
     course_bound: CourseBoundEvalShape | null;
@@ -373,87 +281,4 @@ function projectEvaluation(response: {
     termInstanceId: deployment.term_instance.id,
     goSnapshots: deployment.go_snapshots,
   };
-}
-
-function buildResponseSections(
-  response: {
-    quant_items: Array<{
-      cilo_question_binding_id: string | null;
-      section_key: string;
-      item_key: string;
-      rating_value: number;
-    }>;
-    qual_items: Array<{ section_key: string; prompt_key: string; text_content: string }>;
-  },
-  evaluation: EvaluationProjection,
-  ciloMappings: Map<string, CiloGoMapping[]>
-): ProgramHeadSubmittedResponseDetail["sections"][number][] {
-  return (Array.isArray(evaluation.snapshot) ? evaluation.snapshot : [])
-    .filter(isSnapshotSection)
-    .map((section) => {
-      const items = getSnapshotSectionItems(section);
-      const entries = items.map((item) => {
-        if (item.kind === "quantitative") {
-          const entry = response.quant_items.find(
-            (candidate) => candidate.section_key === section.key && candidate.item_key === item.key
-          );
-          if (!entry) {
-            return null;
-          }
-          const scale = resolveItemScaleIdentity(evaluation.snapshot, section.key, item.key);
-          return {
-            kind: "quantitative" as const,
-            itemKey: item.key,
-            prompt: item.prompt,
-            rating: entry.rating_value,
-            scale: scale?.descriptors.map((descriptor) => descriptor.value) ?? [],
-            descriptorLabels: scale?.descriptors.map((descriptor) => descriptor.label) ?? [],
-            binding: resolveCourseBoundBinding(evaluation, entry, ciloMappings),
-          };
-        }
-        const entry = response.qual_items.find(
-          (candidate) => candidate.section_key === section.key && candidate.prompt_key === item.key
-        );
-        if (!entry || entry.text_content.trim().length === 0) {
-          return null;
-        }
-        return {
-          kind: "qualitative" as const,
-          promptKey: item.key,
-          prompt: item.prompt,
-          text: entry.text_content,
-        };
-      });
-
-      return {
-        key: section.key,
-        title: section.title,
-        items: entries.filter((entry): entry is NonNullable<typeof entry> => entry !== null),
-      };
-    })
-    .filter((section) => section.items.length > 0);
-}
-
-function responseMeanOf(
-  sections: ProgramHeadSubmittedResponseDetail["sections"],
-  snapshot: unknown
-): number | null {
-  const validRatings: number[] = [];
-  const scaleKeys = new Set<string>();
-  for (const section of sections) {
-    for (const item of section.items) {
-      if (item.kind !== "quantitative") {
-        continue;
-      }
-      const scale = resolveItemScaleIdentity(snapshot, section.key, item.itemKey);
-      if (scale && scale.descriptors.some((descriptor) => descriptor.value === item.rating)) {
-        scaleKeys.add(scale.key);
-        validRatings.push(item.rating);
-      }
-    }
-  }
-  if (validRatings.length === 0 || scaleKeys.size > 1) {
-    return null;
-  }
-  return validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
 }

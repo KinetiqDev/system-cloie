@@ -5,6 +5,7 @@ import {
   getFacultyDashboardVisualizations,
 } from "@/features/analytics/services/get-faculty-dashboard";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
+import { matchesWhere } from "@/__tests__/helpers/where-clause";
 import { ROLES } from "@/lib/constants/roles";
 
 const {
@@ -318,6 +319,89 @@ describe("analytics dashboard access", () => {
       expect(serialized).toContain("program-bsed");
       expect(serialized).not.toContain("program-beed");
     }
+  });
+
+  it("excludes General Education course-bound evidence from every dashboard query", async () => {
+    // The dashboard counts, denominators, active-evaluation KPI, GO provenance,
+    // and qualitative pulse all read course-bound evidence. A GE course can hold
+    // an assignment in this same Program, so Program equality alone would leak
+    // it; each course-bound predicate must pin the course scope as well.
+    mockAuthorizedProgramHead("program-bsit", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+
+    await getProgramHeadDashboard("program-bsit");
+
+    const courseScoped = [
+      prismaMock.evaluationAssignment.findMany,
+      prismaMock.quantitativeResponseItem.findMany,
+      prismaMock.qualitativeResponseItem.findMany,
+      prismaMock.courseBoundEvaluation.findMany,
+    ];
+    for (const queryMock of courseScoped) {
+      expect(queryMock.mock.calls.length).toBeGreaterThan(0);
+      expect(JSON.stringify(queryMock.mock.calls)).toContain("PROGRAM_SPECIFIC");
+    }
+
+    // The active-evaluation KPI is the one place the dashboard queries
+    // course-bound deployments directly; pin its exact predicate.
+    expect(prismaMock.courseBoundEvaluation.findMany.mock.calls[0][0].where).toMatchObject({
+      course_assignment: {
+        program_id: "program-bsit",
+        course: { course_scope: "PROGRAM_SPECIFIC" },
+      },
+    });
+  });
+
+  it("keeps Central Deployment queries free of a course-scope gate", async () => {
+    // Ownership moved course-bound GE evidence only. Program-owned Central
+    // Deployments remain Program Head evidence and carry no course scope.
+    mockAuthorizedProgramHead("program-bsit", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+
+    await getProgramHeadDashboard("program-bsit");
+
+    expect(prismaMock.centralDeployment.findMany.mock.calls[0][0].where).toMatchObject({
+      program_id: "program-bsit",
+    });
+    expect(JSON.stringify(prismaMock.centralDeployment.findMany.mock.calls)).not.toContain(
+      "course_scope"
+    );
+  });
+
+  it("keeps a General Education evaluation out of the active-evaluation KPI", async () => {
+    // Behavioral boundary: the captured predicate is evaluated against the
+    // seeded GEETHICS shape — a GENERAL_EDUCATION course bound to this same
+    // Program — so a weakened filter fails instead of passing on shape alone.
+    mockAuthorizedProgramHead("program-bsit", "BSIT", "Information Technology");
+    mockEmptyDashboardReads();
+    getActiveTermIdMock.mockResolvedValue(null);
+
+    prismaMock.courseBoundEvaluation.findMany.mockImplementation((args) =>
+      matchesWhere(args.where, {
+        id: "eval-geethics",
+        status: "ACTIVE",
+        course_assignment: {
+          program_id: "program-bsit",
+          course: { course_scope: "GENERAL_EDUCATION" },
+        },
+      })
+        ? Promise.resolve([
+            {
+              id: "eval-geethics",
+              deployment_name: "GEETHICS Post-Term CILO Evaluation",
+              status: "ACTIVE",
+              deadline_at: new Date("2026-12-01T00:00:00.000Z"),
+            },
+          ])
+        : Promise.resolve([])
+    );
+
+    const result = await getProgramHeadDashboard("program-bsit");
+
+    expect(result?.activeEvaluations.total).toBe(0);
+    expect(JSON.stringify(result)).not.toContain("GEETHICS");
   });
 
   it("keeps source quantitative means at full precision and separated per evidence source", async () => {

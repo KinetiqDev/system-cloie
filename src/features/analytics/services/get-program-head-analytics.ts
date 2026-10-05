@@ -103,7 +103,16 @@ function buildTermInstanceWhere(
   const where: Record<string, unknown> = {
     OR: [
       { central_deployments: { some: { program_id: programId } } },
-      { course_bound_evaluations: { some: { course_assignment: { program_id: programId } } } },
+      {
+        course_bound_evaluations: {
+          some: {
+            course_assignment: {
+              program_id: programId,
+              course: { course_scope: "PROGRAM_SPECIFIC" },
+            },
+          },
+        },
+      },
     ],
   };
   if (filters.termInstanceId) where.id = filters.termInstanceId;
@@ -183,7 +192,10 @@ export function buildProgramResponseScope(
       deployment_type: "COURSE_BOUND" as const,
       assignment: {
         course_bound: {
-          course_assignment: { program_id: programId },
+          course_assignment: {
+            program_id: programId,
+            course: { course_scope: "PROGRAM_SPECIFIC" as const },
+          },
           ...termInstanceWhere,
         },
       },
@@ -207,7 +219,10 @@ export function buildProgramResponseScope(
         deployment_type: "COURSE_BOUND" as const,
         assignment: {
           course_bound: {
-            course_assignment: { program_id: programId },
+            course_assignment: {
+              program_id: programId,
+              course: { course_scope: "PROGRAM_SPECIFIC" as const },
+            },
             ...termInstanceWhere,
           },
         },
@@ -232,7 +247,10 @@ export function buildProgramOpportunityScope(
     };
     const courseBound = {
       course_bound: {
-        course_assignment: { program_id: programId },
+        course_assignment: {
+          program_id: programId,
+          course: { course_scope: "PROGRAM_SPECIFIC" as const },
+        },
         ...termInstanceWhere,
       },
     };
@@ -250,7 +268,10 @@ export function buildProgramOpportunityScope(
       },
       {
         course_bound: {
-          course_assignment: { program_id: programId },
+          course_assignment: {
+            program_id: programId,
+            course: { course_scope: "PROGRAM_SPECIFIC" as const },
+          },
           ...termInstanceWhere,
         },
       },
@@ -708,7 +729,10 @@ function buildCourseBoundResponseScope(
     deployment_type: "COURSE_BOUND" as const,
     assignment: {
       course_bound: {
-        course_assignment: { program_id: programId },
+        course_assignment: {
+          program_id: programId,
+          course: { course_scope: "PROGRAM_SPECIFIC" as const },
+        },
         ...termInstanceWhere,
       },
     },
@@ -1055,7 +1079,13 @@ async function readOutcomeScopedEvidence(
       wantsCourse
         ? prisma.evaluationAssignment.count({
             where: {
-              course_bound: { course_assignment: { program_id: programId }, ...termInstanceWhere },
+              course_bound: {
+                course_assignment: {
+                  program_id: programId,
+                  course: { course_scope: "PROGRAM_SPECIFIC" },
+                },
+                ...termInstanceWhere,
+              },
             },
           })
         : Promise.resolve(0),

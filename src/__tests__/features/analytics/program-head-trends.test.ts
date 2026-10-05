@@ -281,6 +281,48 @@ describe("getProgramHeadTrends", () => {
     expect(responseOr[1].assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
   });
 
+  it("excludes General Education course-bound evidence from every period read", async () => {
+    // A GE course can hold an assignment in this same Program, so the Program
+    // equality above is not sufficient; each course-bound branch must also pin
+    // the course scope or GE ratings would enter the trend series.
+    await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    const ratingOr =
+      prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where.response.OR;
+    expect(ratingOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
+      "PROGRAM_SPECIFIC"
+    );
+
+    const responseOr = prismaMock.response.findMany.mock.calls[0][0].where.OR;
+    expect(responseOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
+      "PROGRAM_SPECIFIC"
+    );
+
+    // Central branches carry no course scope: Central Deployments stay PH-owned.
+    expect(ratingOr[0].assignment.central_deployment).not.toHaveProperty("course");
+  });
+
+  it("does not offer periods that exist only for General Education evidence", async () => {
+    // Period options drive the filter set. A period whose only evidence is GE
+    // must not appear, or the UI would offer a scope that reads empty.
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([
+      {
+        id: "term-2025-1st",
+        semester: "FIRST",
+        term: "FIRST_TERM",
+        school_year: { id: "sy-2025", code: "2025-2026" },
+      },
+    ]);
+
+    await getProgramHeadTrends("program-bsed", trendsFilters);
+
+    const periodWhere = prismaMock.academicTermInstance.findMany.mock.calls[0][0].where;
+    expect(periodWhere.OR[1].course_bound_evaluations.some.course_assignment).toEqual({
+      program_id: "program-bsed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+  });
+
   // ── Submitted-only semantics ─────────────────────────────────────────────
 
   it("includes only SUBMITTED responses in every period read", async () => {

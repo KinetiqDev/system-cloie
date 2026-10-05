@@ -8,7 +8,7 @@ import type {
 import { prisma } from "@/lib/db/prisma";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import type { ProgramHeadAnalyticsPeriodOptions } from "../program-head-analytics-types";
-import { mean } from "./shared";
+import { comparableRatingMean } from "./comparable-rating-mean";
 import { describeScales, extractDistinctScales } from "../aggregators/scale-identity";
 import { formatResponseYearLevel } from "../program-head-responses-labels";
 import type { ProgramHeadResponsesFilterState } from "./program-head-responses-state";
@@ -17,6 +17,11 @@ import { buildInstancePeriodLabel, toPeriodOption } from "./academic-periods";
 
 type ResponseStats = { assigned: number; submitted: number; mean: number | null };
 const EMPTY_RESPONSE_STATS: ResponseStats = { assigned: 0, submitted: 0, mean: null };
+type ScopedRatingRow = {
+  rating_value: number;
+  section_key: string;
+  item_key: string;
+};
 
 function deploymentTitle(deploymentName: string | null, templateName: string): string {
   return deploymentName ?? templateName;
@@ -97,7 +102,10 @@ function courseEvaluationWhere(
     program_id: programId,
     ...(filters.courseId ? { course_id: filters.courseId } : {}),
     ...(filters.facultyId ? { faculty_id: filters.facultyId } : {}),
-    ...(filters.majorId ? { course: { major_id: filters.majorId } } : {}),
+    course: {
+      course_scope: "PROGRAM_SPECIFIC",
+      ...(filters.majorId ? { major_id: filters.majorId } : {}),
+    },
     ...(filters.yearLevel ? { year_level: filters.yearLevel } : {}),
     ...(filters.section ? { section: filters.section } : {}),
   };
@@ -146,40 +154,114 @@ function centralDeploymentWhere(
     ...(completion ?? {}),
   };
 }
-async function getResponseStats(
-  ids: string[],
-  kind: "course_bound_id" | "central_deployment_id"
-): Promise<Map<string, ResponseStats>> {
-  const rows =
-    ids.length === 0
-      ? []
-      : await prisma.evaluationAssignment.findMany({
-          where:
-            kind === "course_bound_id"
-              ? { course_bound_id: { in: ids } }
-              : { central_deployment_id: { in: ids } },
-          select: {
-            course_bound_id: true,
-            central_deployment_id: true,
-            response: { select: { status: true, quant_items: { select: { rating_value: true } } } },
-          },
-        });
-  const collected = new Map<string, { assigned: number; submitted: number; ratings: number[] }>();
+type ParticipationCounts = { assigned: number; submitted: number };
+
+function participationScope(ids: string[], kind: "course_bound_id" | "central_deployment_id") {
+  return kind === "course_bound_id"
+    ? { course_bound_id: { in: ids } }
+    : { central_deployment_id: { in: ids } };
+}
+
+function countParticipation(
+  rows: Array<{
+    course_bound_id: string | null;
+    central_deployment_id: string | null;
+    response: { status: string } | null;
+  }>,
+  kind: "course_bound_id" | "central_deployment_id",
+  collected: Map<string, ParticipationCounts>
+): void {
   for (const row of rows) {
     const id = kind === "course_bound_id" ? row.course_bound_id : row.central_deployment_id;
     if (!id) continue;
-    const current = collected.get(id) ?? { assigned: 0, submitted: 0, ratings: [] };
+    const current = collected.get(id);
+    if (!current) continue;
     current.assigned += 1;
-    if (row.response?.status === "SUBMITTED") {
-      current.submitted += 1;
-      current.ratings.push(...row.response.quant_items.map((item) => item.rating_value));
-    }
-    collected.set(id, current);
+    if (row.response?.status === "SUBMITTED") current.submitted += 1;
   }
+}
+
+function collectSubmittedRatings(
+  rows: Array<{
+    rating_value: number;
+    section_key: string;
+    item_key: string;
+    response: {
+      assignment: { course_bound_id: string | null; central_deployment_id: string | null };
+    };
+  }>,
+  kind: "course_bound_id" | "central_deployment_id",
+  collected: Map<string, ScopedRatingRow[]>
+): void {
+  for (const row of rows) {
+    const id =
+      kind === "course_bound_id"
+        ? row.response.assignment.course_bound_id
+        : row.response.assignment.central_deployment_id;
+    if (!id) continue;
+    collected.get(id)?.push(row);
+  }
+}
+
+async function getResponseStats(
+  ids: string[],
+  kind: "course_bound_id" | "central_deployment_id",
+  snapshotsByDeployment: Map<string, unknown>
+): Promise<Map<string, ResponseStats>> {
+  if (ids.length === 0) {
+    return new Map();
+  }
+
+  const counts = new Map<string, ParticipationCounts>(
+    ids.map((id) => [id, { assigned: 0, submitted: 0 }])
+  );
+  const ratings = new Map<string, ScopedRatingRow[]>(ids.map((id) => [id, []]));
+
+  // Every assignment row is a participation opportunity; only a SUBMITTED
+  // response contributes ratings, so answer bodies come from their own
+  // submitted-only query and draft ratings are never read.
+  const [participationRows, submittedRatingRows] = await Promise.all([
+    prisma.evaluationAssignment.findMany({
+      where: participationScope(ids, kind),
+      select: {
+        course_bound_id: true,
+        central_deployment_id: true,
+        response: { select: { status: true } },
+      },
+    }),
+    prisma.quantitativeResponseItem.findMany({
+      where: {
+        response: {
+          status: "SUBMITTED",
+          deployment_type: kind === "course_bound_id" ? "COURSE_BOUND" : "CENTRAL",
+          assignment: participationScope(ids, kind),
+        },
+      },
+      select: {
+        rating_value: true,
+        section_key: true,
+        item_key: true,
+        response: {
+          select: {
+            assignment: {
+              select: { course_bound_id: true, central_deployment_id: true },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  countParticipation(participationRows, kind, counts);
+  collectSubmittedRatings(submittedRatingRows, kind, ratings);
+
   return new Map(
-    [...collected].map(([id, value]) => [
+    ids.map((id) => [
       id,
-      { assigned: value.assigned, submitted: value.submitted, mean: mean(value.ratings) },
+      {
+        ...counts.get(id)!,
+        mean: comparableRatingMean(ratings.get(id)!, snapshotsByDeployment.get(id)),
+      },
     ])
   );
 }
@@ -190,7 +272,16 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
       where: {
         OR: [
           { central_deployments: { some: { program_id: programId } } },
-          { course_bound_evaluations: { some: { course_assignment: { program_id: programId } } } },
+          {
+            course_bound_evaluations: {
+              some: {
+                course_assignment: {
+                  program_id: programId,
+                  course: { course_scope: "PROGRAM_SPECIFIC" },
+                },
+              },
+            },
+          },
         ],
       },
       select: {
@@ -203,6 +294,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     }),
     prisma.course.findMany({
       where: {
+        course_scope: "PROGRAM_SPECIFIC",
         course_assignments: {
           some: { program_id: programId, course_bound_evaluations: { some: {} } },
         },
@@ -213,7 +305,11 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     prisma.user.findMany({
       where: {
         course_assignments: {
-          some: { program_id: programId, course_bound_evaluations: { some: {} } },
+          some: {
+            program_id: programId,
+            course: { course_scope: "PROGRAM_SPECIFIC" },
+            course_bound_evaluations: { some: {} },
+          },
         },
       },
       select: { id: true, name: true },
@@ -285,7 +381,8 @@ export async function listProgramHeadResponseDeployments(
     ]);
     const stats = await getResponseStats(
       rows.map((row) => row.id),
-      "course_bound_id"
+      "course_bound_id",
+      new Map(rows.map((row) => [row.id, row.instrument.structure_snapshot]))
     );
     // fallow-ignore-next-line complexity -- row projection preserves class and response metrics.
     return {
@@ -341,7 +438,8 @@ export async function listProgramHeadResponseDeployments(
   ]);
   const stats = await getResponseStats(
     rows.map((row) => row.id),
-    "central_deployment_id"
+    "central_deployment_id",
+    new Map(rows.map((row) => [row.id, row.instrument.structure_snapshot]))
   );
   return {
     total,

@@ -572,6 +572,8 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
       // Scale identity
       "resolveItemScaleIdentity",
       "describeScale",
+      "describeScales",
+      "extractDistinctScales",
       // Question identity: review keys its snapshot and binding lookups the
       // same canonical way, so separator-bearing keys stay distinct questions
       "encodeQuestionKey",

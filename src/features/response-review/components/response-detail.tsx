@@ -4,22 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
 import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
-import {
-  STAKEHOLDER_EVIDENCE_SOURCE,
-  buildAnalyticsUrl,
-} from "@/features/analytics/services/program-head-analytics-state";
-import type { ProgramHeadSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+import type { IdentifiedSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { formatDateTime } from "@/lib/utils/date-format";
 
 type ResponseDetailProps = {
-  response: ProgramHeadSubmittedResponseDetail;
+  response: IdentifiedSubmittedResponseDetail;
   /** Link back to the evaluation detail page this response belongs to. */
   evaluationHref: string;
   /** Link to the Analytics tab for upward trace (§27.6). */
   analyticsHref: string;
-  /** Selected-Program id for outcome deep links (§27.6 reverse trace). */
-  programId: string;
+  /**
+   * Outcome deep links (§27.6 reverse trace). Program Heads pass their
+   * selected Program id so GO links resolve into their Analytics workspace; the
+   * Coordinator passes a General Education outcome resolver instead, so no
+   * Program-scoped href is ever built for college-wide evidence.
+   */
+  outcomeHref: (goId: string, response: IdentifiedSubmittedResponseDetail) => string;
   /** Trail rendered directly below the page title (§12). */
   breadcrumbs?: ReactNode;
 };
@@ -28,25 +29,10 @@ export function ResponseDetail({
   response,
   evaluationHref,
   analyticsHref,
-  programId,
+  outcomeHref,
   breadcrumbs,
 }: ResponseDetailProps) {
   const { respondent, evaluation } = response;
-
-  const outcomeScope =
-    evaluation.type === "COURSE_BOUND"
-      ? {
-          evidenceSource: "COURSE" as const,
-          termInstanceId: evaluation.context.termInstanceId,
-        }
-      : {
-          evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[evaluation.context.stakeholder],
-          stakeholder: evaluation.context.stakeholder,
-          termInstanceId: evaluation.context.termInstanceId,
-        };
-
-  const outcomeHref = (goId: string): string =>
-    buildAnalyticsUrl(programId, { tab: "outcomes", goId, ...outcomeScope });
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -111,7 +97,7 @@ export function ResponseDetail({
                   <QuantitativeAnswerCard
                     key={item.itemKey}
                     item={item}
-                    outcomeHref={outcomeHref}
+                    outcomeHref={(goId) => outcomeHref(goId, response)}
                   />
                 ) : (
                   <QualitativeAnswerCard key={item.promptKey} item={item} />
@@ -292,7 +278,7 @@ function ProgramWideContext({
 }
 
 function respondentContextLabel(
-  respondent: ProgramHeadSubmittedResponseDetail["respondent"]
+  respondent: IdentifiedSubmittedResponseDetail["respondent"]
 ): string | null {
   if (respondent.studentContext) {
     const { programLabel, majorLabel, yearLevel, section } = respondent.studentContext;

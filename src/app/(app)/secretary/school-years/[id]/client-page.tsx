@@ -13,7 +13,7 @@ export function SchoolYearDetailClientPage({ schoolYear }: SchoolYearDetailClien
     <div className="container mx-auto py-6">
       <BackLink href="/secretary/school-years">Back to School Years</BackLink>
 
-      <CalendarStructureView schoolYears={[schoolYear]} />
+      <CalendarStructureView schoolYears={[schoolYear]} linkCode={false} />
     </div>
   );
 }

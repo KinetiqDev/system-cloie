@@ -13,7 +13,7 @@ import type {
   ProgramHeadStakeholdersDTO,
   ProgramHeadBreakdownsDTO,
 } from "@/features/analytics/program-head-analytics-types";
-import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-review/types";
+import type { IdentifiedSubmittedResponseDetail } from "@/features/response-review/types";
 
 // §31/§36/§40 cross-role response privacy: identified Program Head shapes are
 // pinned separately from aggregate analytics payloads, and aggregate
@@ -23,11 +23,11 @@ import type { ProgramHeadSubmittedResponseDetail } from "@/features/response-rev
 // into a browser payload consumed by the wrong role.
 describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
   it("Program Head identified DTO carries respondent identity and program context", () => {
-    expectTypeOf<ProgramHeadSubmittedResponseDetail["respondent"]>().toHaveProperty("name");
-    expectTypeOf<ProgramHeadSubmittedResponseDetail["respondent"]>().toHaveProperty("id");
-    expectTypeOf<ProgramHeadSubmittedResponseDetail["respondent"]>().toHaveProperty("stakeholder");
-    expectTypeOf<ProgramHeadSubmittedResponseDetail>().toHaveProperty("evaluation");
-    expectTypeOf<ProgramHeadSubmittedResponseDetail>().toHaveProperty("sections");
+    expectTypeOf<IdentifiedSubmittedResponseDetail["respondent"]>().toHaveProperty("name");
+    expectTypeOf<IdentifiedSubmittedResponseDetail["respondent"]>().toHaveProperty("id");
+    expectTypeOf<IdentifiedSubmittedResponseDetail["respondent"]>().toHaveProperty("stakeholder");
+    expectTypeOf<IdentifiedSubmittedResponseDetail>().toHaveProperty("evaluation");
+    expectTypeOf<IdentifiedSubmittedResponseDetail>().toHaveProperty("sections");
   });
 
   it("aggregate-only analytics DTOs remain de-identified: no raw text, no respondent IDs", () => {

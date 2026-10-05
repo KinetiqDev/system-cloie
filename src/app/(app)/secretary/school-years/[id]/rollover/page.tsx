@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { BackLink } from "@/components/ui/back-link";
 import { TriangleAlert } from "lucide-react";
 import { RolloverRunner } from "@/features/academic-calendar/components/rollover-runner";
 import {
@@ -76,6 +77,8 @@ export default async function TermRolloverPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <BackLink href="/secretary/school-years">Back to School Years</BackLink>
+
       {/* Breadcrumb */}
       <nav className="text-muted-foreground flex items-center gap-2 text-sm">
         <Link href="/secretary/school-years" className="hover:text-foreground">

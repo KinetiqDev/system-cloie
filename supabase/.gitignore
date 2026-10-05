@@ -8,5 +8,5 @@
 .env.local
 .env.*.local
 
-# Filled copy of mail.env.example. The template is tracked; its secrets are not.
+# Brevo fill-in worksheet / filled copy. Only mail.env.example is tracked.
 mail.env

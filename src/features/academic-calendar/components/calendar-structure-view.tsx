@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AcademicPeriodStatus, AcademicSemester } from "@prisma/client";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
@@ -35,6 +37,7 @@ import {
 import {
   AlertCircle,
   Archive,
+  ArrowRightLeft,
   CalendarClock,
   CheckCircle2,
   ChevronDown,
@@ -82,6 +85,11 @@ type PendingDestructiveAction =
 
 interface CalendarStructureViewProps {
   schoolYears: SchoolYearWithTerms[];
+  /**
+   * Whether the School Year code links to the year's detail page. The list
+   * surface links through; the detail page already is that page.
+   */
+  linkCode?: boolean;
 }
 
 /**
@@ -91,7 +99,10 @@ interface CalendarStructureViewProps {
  * server actions and refreshes the read model via router.refresh(). Archive
  * and Cancel are terminal and require explicit destructive confirmation.
  */
-export function CalendarStructureView({ schoolYears }: CalendarStructureViewProps) {
+export function CalendarStructureView({
+  schoolYears,
+  linkCode = true,
+}: CalendarStructureViewProps) {
   const router = useRouter();
   const [settingActiveTerm, setSettingActiveTerm] = useState<TermInstanceItem | null>(null);
   const [pendingDestructive, setPendingDestructive] = useState<PendingDestructiveAction | null>(
@@ -183,6 +194,7 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
           <SchoolYearCard
             key={year.id}
             year={year}
+            linkCode={linkCode}
             pendingAction={pendingAction}
             actionError={errorFor}
             onActivate={() =>
@@ -298,6 +310,7 @@ export function CalendarStructureView({ schoolYears }: CalendarStructureViewProp
 
 interface SchoolYearCardProps {
   year: SchoolYearWithTerms;
+  linkCode: boolean;
   pendingAction: string | null;
   actionError: string | null;
   onActivate: () => void;
@@ -312,6 +325,7 @@ interface SchoolYearCardProps {
 // fallow-ignore-next-line complexity
 function SchoolYearCard({
   year,
+  linkCode,
   pendingAction,
   actionError,
   onActivate,
@@ -333,7 +347,16 @@ function SchoolYearCard({
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="flex min-w-0 flex-col gap-1.5">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="text-title-lg tabular-nums">{year.code}</span>
+            {linkCode ? (
+              <Link
+                href={`/secretary/school-years/${year.id}`}
+                className="text-title-lg focus-visible:ring-ring rounded-sm tabular-nums underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+              >
+                {year.code}
+              </Link>
+            ) : (
+              <span className="text-title-lg tabular-nums">{year.code}</span>
+            )}
             {year.isActive && !archived && <Badge variant="success">Active</Badge>}
             {!year.isActive && !archived && <Badge variant="outline">Inactive</Badge>}
             {archived && <Badge variant="secondary">Archived</Badge>}
@@ -607,6 +630,13 @@ function TermActions({
         <XCircle data-icon="inline-start" aria-hidden="true" />
         Cancel
       </Button>
+      <Link
+        href={`/secretary/school-years/${term.schoolYearId}/rollover`}
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "max-sm:col-span-2")}
+      >
+        <ArrowRightLeft data-icon="inline-start" aria-hidden="true" />
+        Term Rollover
+      </Link>
     </div>
   );
 }

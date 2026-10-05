@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
 import { getProgramHeadCourseEvaluationDetail } from "@/features/response-review/services/get-program-head-course-evaluation-detail";
+import { matchesWhere } from "@/__tests__/helpers/where-clause";
 
 const {
   courseBoundEvaluationFindFirstMock,
@@ -129,7 +130,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(courseBoundEvaluationFindFirstMock).not.toHaveBeenCalled();
   });
 
-  it("scopes the evaluation query to the selected Program", async () => {
+  it("scopes the evaluation query to the selected Program and Program-specific courses", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
     evaluationAssignmentFindManyMock.mockResolvedValue([]);
     responseFindManyMock.mockResolvedValue([]);
@@ -140,10 +141,60 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
       expect.objectContaining({
         where: {
           id: "eval-1",
-          course_assignment: { program_id: "prog-beed" },
+          course_assignment: {
+            program_id: "prog-beed",
+            course: { course_scope: "PROGRAM_SPECIFIC" },
+          },
         },
       })
     );
+  });
+
+  it("denies a General Education evaluation whose assignment is in the selected Program", async () => {
+    // GEETHICS shape: a GENERAL_EDUCATION course whose CourseAssignment carries
+    // the Program Head's own Program. Program equality alone would admit it, so
+    // the gate must exclude the row on course scope. The captured clause is
+    // evaluated against that row rather than only asserted structurally.
+    courseBoundEvaluationFindFirstMock.mockImplementation((args) =>
+      matchesWhere(args.where, {
+        id: "eval-geethics",
+        course_assignment: {
+          program_id: "prog-beed",
+          course: { course_scope: "GENERAL_EDUCATION" },
+        },
+      })
+        ? Promise.resolve(MOCK_EVALUATION)
+        : Promise.resolve(null)
+    );
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([]);
+
+    await expect(
+      getProgramHeadCourseEvaluationDetail("prog-beed", "eval-geethics")
+    ).resolves.toBeNull();
+    // No evidence rows are read for a denied evaluation.
+    expect(responseFindManyMock).not.toHaveBeenCalled();
+  });
+
+  it("still resolves a Program-specific evaluation in the selected Program", async () => {
+    // Boundary: the GE gate must not exclude the Program Head's own evidence.
+    courseBoundEvaluationFindFirstMock.mockImplementation((args) =>
+      matchesWhere(args.where, {
+        id: "eval-1",
+        course_assignment: {
+          program_id: "prog-beed",
+          course: { course_scope: "PROGRAM_SPECIFIC" },
+        },
+      })
+        ? Promise.resolve(MOCK_EVALUATION)
+        : Promise.resolve(null)
+    );
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([]);
+
+    const result = await getProgramHeadCourseEvaluationDetail("prog-beed", "eval-1");
+
+    expect(result).not.toBeNull();
   });
 
   it("returns null when the evaluation does not belong to the Program", async () => {

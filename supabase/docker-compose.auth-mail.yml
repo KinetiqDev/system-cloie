@@ -1,0 +1,90 @@
+# System CLOIE — Auth email/password and mail overlay for a self-hosted Supabase
+# deployment.
+#
+# An add-on to the upstream `docker-compose.yml` in the infrastructure
+# repository (system-cloie-infra/supabase/), never a stack on its own. It maps
+# only Auth environment variables; database, JWT keys, dashboard credentials,
+# phone auth and OAuth providers are inherited from the base file untouched.
+#
+# Upstream Compose ships no mapping for the OTP lifetime, OTP length, mail
+# cooldown, password minimum, secure password/email change, custom templates or
+# subjects, or any rate limit. Without this file an instance runs on GoTrue's
+# own defaults, including a 86400-second OTP lifetime.
+#
+# Apply from the directory holding the upstream `docker-compose.yml`:
+#
+#   docker compose --env-file .env --env-file mail.env \
+#     -f docker-compose.yml \
+#     -f <path-to>/supabase/docker-compose.auth-mail.yml \
+#     up -d --force-recreate auth
+#
+# Both env files matter. `--env-file .env` supplies the base stack's own values
+# (POSTGRES_PASSWORD, JWT_SECRET, JWT_EXPIRY, API_EXTERNAL_URL, POSTGRES_HOST,
+# POSTGRES_PORT, and so on); `--env-file mail.env` supplies the values this
+# overlay maps. Compose reads them in order, so overlapping mail and origin
+# settings intentionally resolve to `mail.env`. Keep database/JWT secrets in
+# the base file. Passing only `mail.env` leaves base variables unset.
+# `--force-recreate` is required, not cosmetic: these are container environment
+# variables, so `docker compose restart auth` re-runs the container with its
+# original environment and silently keeps the old values.
+# The short names below are the ones upstream `.env.example` and
+# supabase/mail.env.example already use; this file is the only place where one
+# becomes a GOTRUE_* container variable.
+#
+# Operator-provided values use ${VAR:?…}, so a missing secret or origin aborts
+# `up` instead of booting an instance that accepts a registration and silently
+# swallows the mail. Code lifetime is also required explicitly; the remaining
+# policy values carry platform defaults. See docs/runbooks/external-entry-mail.md.
+
+services:
+  auth:
+    environment:
+      # Origins. The application sends <site>/verify-email and
+      # <site>/reset-password as redirect_to; GoTrue drops any redirect that is
+      # neither GOTRUE_SITE_URL nor in the allowlist.
+      GOTRUE_SITE_URL: "${SITE_URL:?set SITE_URL to this target's System CLOIE origin}"
+      GOTRUE_URI_ALLOW_LIST: "${ADDITIONAL_REDIRECT_URLS:?set ADDITIONAL_REDIRECT_URLS to this target's redirect origins, comma-separated}"
+
+      # Email/password. Autoconfirm must stay false: it suppresses the
+      # verification mail and lets an unverified address reach domain linkage.
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "${ENABLE_EMAIL_SIGNUP:-true}"
+      GOTRUE_MAILER_AUTOCONFIRM: "${ENABLE_EMAIL_AUTOCONFIRM:-false}"
+
+      # GoTrue v2.196.0 checks sentAt + MAILER_OTP_EXP for emailed codes.
+      # Lowering the window affects outstanding codes; a code sent nine
+      # minutes before recreation with 600 seconds has one minute left.
+      GOTRUE_MAILER_OTP_EXP: "${MAILER_OTP_EXP:?set MAILER_OTP_EXP to the ten-minute code lifetime, 600 seconds}"
+      GOTRUE_MAILER_OTP_LENGTH: "${MAILER_OTP_LENGTH:-6}"
+      # The container key is SMTP_MAX_FREQUENCY, not MAILER_MAX_FREQUENCY.
+      GOTRUE_SMTP_MAX_FREQUENCY: "${SMTP_MAX_FREQUENCY:-1m}"
+
+      # Credential policy. PASSWORD_MIN_LENGTH matches the application schema
+      # (GoTrue's floor is 6). REAUTHENTICATION is config.toml's
+      # secure_password_change; SECURE_EMAIL_CHANGE is double_confirm_changes.
+      GOTRUE_PASSWORD_MIN_LENGTH: "${PASSWORD_MIN_LENGTH:-8}"
+      GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION: "${SECURE_PASSWORD_CHANGE:-true}"
+      GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: "${MAILER_SECURE_EMAIL_CHANGE:-true}"
+
+      # Relay. All required: upstream's own defaults are SMTP_HOST=supabase-mail
+      # with fake_mail_* credentials, which sends into the bundled catcher and
+      # leaves every real inbox empty.
+      GOTRUE_SMTP_HOST: "${SMTP_HOST:?set SMTP_HOST to the real relay, never supabase-mail}"
+      GOTRUE_SMTP_PORT: "${SMTP_PORT:?set SMTP_PORT, 587 for STARTTLS}"
+      GOTRUE_SMTP_USER: "${SMTP_USER:?set SMTP_USER to the relay SMTP login}"
+      GOTRUE_SMTP_PASS: "${SMTP_PASS:?set SMTP_PASS to the relay SMTP key}"
+      GOTRUE_SMTP_ADMIN_EMAIL: "${SMTP_ADMIN_EMAIL:?set SMTP_ADMIN_EMAIL to the From address on a domain you control}"
+      GOTRUE_SMTP_SENDER_NAME: "${SMTP_SENDER_NAME:-System CLOIE}"
+
+      # Templates, fetched over HTTP at send time; a non-200 or timeout is a send
+      # failure logged as template_body_http_error. Must serve
+      # public/auth-email/confirm_signup.html and recovery.html, which render
+      # {{ .Token }}; GoTrue's built-in defaults render only a link.
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: "${MAILER_TEMPLATES_CONFIRMATION:?set MAILER_TEMPLATES_CONFIRMATION to the application /auth-email/confirm_signup.html URL}"
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: "${MAILER_TEMPLATES_RECOVERY:?set MAILER_TEMPLATES_RECOVERY to the application /auth-email/recovery.html URL}"
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "${MAILER_SUBJECTS_CONFIRMATION:-Your System CLOIE verification code}"
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: "${MAILER_SUBJECTS_RECOVERY:-Your System CLOIE password recovery code}"
+
+      # Limits. EMAIL_SENT gates outbound mail before the relay is contacted;
+      # OTP gates the send endpoints per client IP, not code verification.
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: "${RATE_LIMIT_EMAIL_SENT:-20}"
+      GOTRUE_RATE_LIMIT_OTP: "${RATE_LIMIT_OTP:-30}"

@@ -33,7 +33,7 @@ One of the 5 fixed AcademicTermInstance definitions every School Year SHALL cont
 _Avoid_: Optional term, ad-hoc term
 
 **Legacy non-canonical term**:
-An AcademicTermInstance outside the canonical 5-term set, created by pre-canonical manual CRUD. Remains queryable and date-mutable but cannot be recreated once deleted.
+An AcademicTermInstance outside the canonical 5-term set, created by pre-canonical manual CRUD. Remains queryable; the current product has no term delete or term date-edit capability, so no code path removes or re-dates one.
 _Avoid_: Structural term
 
 **Canonical term backfill**:
@@ -66,7 +66,7 @@ Secretary-gated operation copying the source term's active student enrollments i
 Immutable per-period record of outcome readiness, persisted atomically inside the transaction promoting a period ACTIVE→COMPLETED. A DB trigger forbids UPDATE/DELETE; reads branch on its schema version — version 1 keeps the legacy at-least-one-target semantics, version 2 carries typed payloads under the exhaustive manifestation rule.
 
 **Structural calendar view**:
-The fixed Secretary UI rendering School Year → Semester → Term with per-state lifecycle buttons. There are no Add/Delete Term affordances; the 5 canonical terms are enforced by construction.
+The fixed Secretary UI rendering School Year → Semester → Term with per-state lifecycle buttons. The School Year code links to the year's detail page, and the ACTIVE term offers the Term Rollover workspace; there are no Add/Delete/Edit Term affordances — the 5 canonical terms are enforced by construction.
 _Avoid_: Expandable term list, term CRUD screen
 
 **Active state backfill**:

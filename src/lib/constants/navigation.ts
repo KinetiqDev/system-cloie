@@ -228,6 +228,7 @@ const GEN_ED_COORDINATOR_NAV: NavItem[] = [
   { name: "Outcomes", href: "/gen-ed-coordinator/outcomes", icon: Layers3 },
   { name: "Courses", href: "/gen-ed-coordinator/courses", icon: BookOpen },
   { name: "Course Assignments", href: "/gen-ed-coordinator/course-assignments", icon: UsersRound },
+  { name: "Responses", href: "/gen-ed-coordinator/responses", icon: ClipboardList },
   { name: "Analytics", href: "/gen-ed-coordinator/analytics", icon: BarChart3 },
   { name: "Profile", href: "/gen-ed-coordinator/profile", icon: UserCircle },
 ];

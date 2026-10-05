@@ -14,12 +14,9 @@ import type { GoMetric } from "@/features/analytics/aggregators/go";
 import type { WordCloudToken } from "@/features/analytics/types";
 
 // ---------------------------------------------------------------------------
-// Program Head identified response review (spec §25–§27, §31, §40)
-//
-// These DTOs are Program Head-only shapes and live in a distinct feature
-// boundary so identity fields can never join the Faculty/anonymized DTOs in
-// src/features/analytics/types.ts (§31: "Never add respondent identity fields
-// to a shared DTO consumed by Faculty").
+// Identified review belongs to Program Heads for Program-specific/Central
+// evidence and to General Education Coordinators for General Education.
+// These shapes never join Faculty/Dean aggregate DTOs.
 // ---------------------------------------------------------------------------
 
 /** One publication-time GO binding from `CentralDeploymentGoSnapshot`. */
@@ -120,11 +117,10 @@ export type ProgramWideResponseContext = {
 };
 
 /**
- * Program Head identified submitted-response detail (spec §40). No other role
- * receives this shape; Faculty and Dean read aggregate Analytics evidence
- * instead of individual responses.
+ * Identified submitted-response detail. Only the authorized evidence owner
+ * receives this shape; aggregate analytics excludes identities and raw answers.
  */
-export type ProgramHeadSubmittedResponseDetail = {
+export type IdentifiedSubmittedResponseDetail = {
   responseId: string;
   submittedAt: Date;
   respondent: {
@@ -163,7 +159,7 @@ export type QualitativeSummary = {
 };
 
 /** One identified submitted respondent row (§25.5). */
-export type ProgramHeadRespondentRow = {
+export type IdentifiedSubmittedRespondentRow = {
   responseId: string;
   name: string;
   stakeholder: TargetStakeholder;
@@ -190,7 +186,7 @@ export type ProgramHeadAssignmentRespondentRow = {
 };
 
 /** Course-bound evaluation detail (spec §25). */
-export type ProgramHeadCourseEvaluationDetail = {
+export type IdentifiedCourseEvaluationDetail = {
   evaluation: {
     id: string;
     title: string;
@@ -221,7 +217,7 @@ export type ProgramHeadCourseEvaluationDetail = {
   ciloResults: CiloMetric[];
   questionResults: QuestionMetric[];
   qualitative: QualitativeSummary;
-  respondents: ProgramHeadRespondentRow[];
+  respondents: IdentifiedSubmittedRespondentRow[];
 };
 
 /** Program-wide question result with its publication-time GO bindings. */

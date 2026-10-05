@@ -8,8 +8,6 @@ const {
   activateSchoolYearMock,
   deactivateSchoolYearMock,
   setActiveSemesterMock,
-  updateTermInstanceMock,
-  deleteTermInstanceMock,
   transitionPeriodStatusMock,
   revalidateAcademicPeriodReadModelRoutesMock,
 } = vi.hoisted(() => ({
@@ -19,8 +17,6 @@ const {
   archiveSchoolYearMock: vi.fn(),
   activateSchoolYearMock: vi.fn(),
   deactivateSchoolYearMock: vi.fn(),
-  updateTermInstanceMock: vi.fn(),
-  deleteTermInstanceMock: vi.fn(),
   setActiveSemesterMock: vi.fn(),
   transitionPeriodStatusMock: vi.fn(),
   revalidateAcademicPeriodReadModelRoutesMock: vi.fn(),
@@ -37,10 +33,6 @@ vi.mock("@/features/academic-calendar/services/manage-school-years", () => ({
   deactivateSchoolYear: deactivateSchoolYearMock,
   setActiveSemester: setActiveSemesterMock,
 }));
-vi.mock("@/features/academic-calendar/services/manage-term-instances", () => ({
-  updateTermInstance: updateTermInstanceMock,
-  deleteTermInstance: deleteTermInstanceMock,
-}));
 vi.mock("@/features/academic-calendar/services/manage-academic-period-lifecycle", () => ({
   transitionPeriodStatus: transitionPeriodStatusMock,
 }));
@@ -53,10 +45,8 @@ import {
   archiveSchoolYearAction,
   createSchoolYearAction,
   deactivateSchoolYearAction,
-  deleteTermInstanceAction,
   setActiveSemesterAction,
   transitionPeriodStatusAction,
-  updateTermInstanceAction,
 } from "@/lib/actions/secretary-school-year-actions";
 
 const secretarySession = { roles: ["SECRETARY"], activeRole: "SECRETARY", userId: "secretary-1" };
@@ -87,18 +77,6 @@ describe("Secretary academic-period actions", () => {
       archiveSchoolYearAction,
       archiveSchoolYearMock,
       form({ id: "school-year-1" }),
-    ],
-    [
-      "update term instance",
-      updateTermInstanceAction,
-      updateTermInstanceMock,
-      form({ id: PERIOD_ID, startDate: "2026-08-01", endDate: "2026-12-31" }),
-    ],
-    [
-      "delete term instance",
-      deleteTermInstanceAction,
-      deleteTermInstanceMock,
-      form({ id: PERIOD_ID }),
     ],
   ])(
     "revalidates the period routes after a successful %s mutation",

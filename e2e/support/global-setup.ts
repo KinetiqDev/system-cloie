@@ -703,6 +703,34 @@ export default async function globalSetup(): Promise<void> {
   const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
   const { publicationTemplate, publicationTarget } = await verifyPublicationFixture();
   await verifyGoBindingGateFixtures();
+  const geContract = E2E_CONTRACT.generalEducationReview;
+  const geEvaluation = await prisma.courseBoundEvaluation.findUnique({
+    where: { id: geContract.evaluationId },
+    select: {
+      deployment_name: true,
+      course_assignment: { select: { course: { select: { course_scope: true } } } },
+      assignments: {
+        where: { response: { is: { status: "SUBMITTED" } } },
+        select: {
+          response: { select: { id: true } },
+          respondent: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
+  assertContract(
+    geEvaluation?.deployment_name === geContract.title &&
+      geEvaluation.course_assignment.course.course_scope === geContract.courseScope &&
+      geEvaluation.assignments.length === geContract.submittedCount,
+    "General Education review fixture must retain its scope, title and submitted population"
+  );
+  const geResponse = geEvaluation.assignments.find(
+    (assignment) => assignment.respondent.id === geContract.respondentId
+  );
+  assertContract(
+    geResponse?.response && geResponse.respondent.name === geContract.respondentName,
+    "General Education identified review fixture must retain its reviewed respondent"
+  );
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -811,6 +839,12 @@ export default async function globalSetup(): Promise<void> {
     gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
     gestechAssignment,
     gestechMobileAssignment,
+    generalEducationReview: {
+      evaluationId: geContract.evaluationId,
+      title: geContract.title,
+      responseId: geResponse.response.id,
+      respondentName: geContract.respondentName,
+    },
     publicationTemplate,
     publicationTarget,
     publicationDeploymentName: contract.publicationDeploymentName,

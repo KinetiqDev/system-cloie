@@ -4,38 +4,10 @@ import {
   canActivateSchoolYear,
   canDeactivateSchoolYear,
   canSetActiveSemester,
-  canDeleteTermInstance,
-  isStructuralTerm,
 } from "@/features/academic-calendar/policies";
-import { AcademicSemester, AcademicTerm } from "@prisma/client";
+import { AcademicSemester } from "@prisma/client";
 
 describe("academic-calendar/policies", () => {
-  describe("isStructuralTerm", () => {
-    it("returns true for all 5 canonical terms", () => {
-      expect(
-        isStructuralTerm({ semester: AcademicSemester.FIRST, term: AcademicTerm.FIRST_TERM })
-      ).toBe(true);
-      expect(
-        isStructuralTerm({ semester: AcademicSemester.FIRST, term: AcademicTerm.SECOND_TERM })
-      ).toBe(true);
-      expect(
-        isStructuralTerm({ semester: AcademicSemester.SECOND, term: AcademicTerm.FIRST_TERM })
-      ).toBe(true);
-      expect(
-        isStructuralTerm({ semester: AcademicSemester.SECOND, term: AcademicTerm.SECOND_TERM })
-      ).toBe(true);
-      expect(isStructuralTerm({ semester: AcademicSemester.SUMMER, term: null })).toBe(true);
-    });
-
-    it("returns false for legacy non-canonical terms", () => {
-      expect(isStructuralTerm({ semester: AcademicSemester.FIRST, term: null })).toBe(false);
-      expect(
-        isStructuralTerm({ semester: AcademicSemester.SUMMER, term: AcademicTerm.FIRST_TERM })
-      ).toBe(false);
-      expect(isStructuralTerm({ semester: "SECOND", term: "THIRD_TERM" } as never)).toBe(false);
-    });
-  });
-
   describe("canArchiveSchoolYear", () => {
     it("allows archiving when no active term in school year", () => {
       const result = canArchiveSchoolYear("sy-1", "ti-other", false, ["ti-1", "ti-2"]);
@@ -54,27 +26,6 @@ describe("academic-calendar/policies", () => {
       const result = canArchiveSchoolYear("sy-1", "ti-active", false, ["ti-1", "ti-active"]);
       expect(result.allowed).toBe(false);
       expect((result as { allowed: false; reason: string }).reason).toContain("active term");
-    });
-  });
-
-  describe("canDeleteTermInstance", () => {
-    it("allows deletion when not active and no dependents", () => {
-      const result = canDeleteTermInstance("ti-1", "ti-other", false);
-      expect(result.allowed).toBe(true);
-    });
-
-    it("prevents deletion of active term", () => {
-      const result = canDeleteTermInstance("ti-active", "ti-active", false);
-      expect(result.allowed).toBe(false);
-      expect((result as { allowed: false; reason: string }).reason).toContain("active term");
-    });
-
-    it("prevents deletion when has dependent records", () => {
-      const result = canDeleteTermInstance("ti-1", "ti-other", true);
-      expect(result.allowed).toBe(false);
-      expect((result as { allowed: false; reason: string }).reason).toContain(
-        "enrollments or deployments"
-      );
     });
   });
 

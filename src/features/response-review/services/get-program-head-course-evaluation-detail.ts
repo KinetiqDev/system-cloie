@@ -24,7 +24,7 @@ import { loadCiloMappings } from "./cilo-mappings";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
-import type { ProgramHeadCourseEvaluationDetail, ProgramHeadRespondentRow } from "../types";
+import type { IdentifiedCourseEvaluationDetail, IdentifiedSubmittedRespondentRow } from "../types";
 import {
   parseCourseInfoSnapshot,
   resolveSnapshotNullableText,
@@ -43,7 +43,7 @@ import {
 export async function getProgramHeadCourseEvaluationDetail(
   programId: string,
   evaluationId: string
-): Promise<ProgramHeadCourseEvaluationDetail | null> {
+): Promise<IdentifiedCourseEvaluationDetail | null> {
   const authSession = await resolveAuthSession();
 
   if (!authSession || authSession.activeRole !== ROLES.PROGRAM_HEAD) {
@@ -58,7 +58,10 @@ export async function getProgramHeadCourseEvaluationDetail(
   const evaluation = await prisma.courseBoundEvaluation.findFirst({
     where: {
       id: evaluationId,
-      course_assignment: { program_id: programId },
+      course_assignment: {
+        program_id: programId,
+        course: { course_scope: "PROGRAM_SPECIFIC" },
+      },
     },
     include: {
       instrument: { select: { structure_snapshot: true } },
@@ -150,7 +153,7 @@ export async function getProgramHeadCourseEvaluationDetail(
     evaluation.course_assignment.term_instance.id
   );
 
-  const respondents: ProgramHeadRespondentRow[] = submittedResponses
+  const respondents: IdentifiedSubmittedRespondentRow[] = submittedResponses
     .map((response) => {
       const identity = identityContexts.get(response.respondent_id);
       return {

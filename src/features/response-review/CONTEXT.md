@@ -1,12 +1,12 @@
 # Response Review
 
-Response Review defines how System CLOIE surfaces submitted evaluation responses for authorized review: identified Program Head detail, anonymized Dean review, and aggregate-only Faculty analytics. It also owns the outcome binding of each submitted quantitative answer and aggregate qualitative summarization.
+Response Review defines how System CLOIE surfaces submitted evaluation responses for authorized evidence owners: identified Program Head review for Program-specific courses and Central deployments, identified General Education Coordinator review for General Education courses across Programs, and aggregate-only Faculty analytics. It also owns submitted-answer outcome bindings and aggregate qualitative summarization.
 
 ## Review flows
 
 **Identified review**:
-The Program Head review flow serving submitted-response detail with respondent identity and academic context (student, alumni, or industry context). Identity fields live only in Program Head DTOs, which sit in a distinct feature boundary so respondent identity can never join a Faculty-facing DTO.
-_Avoid_: Faculty review with identity, de-anonymized Faculty flow
+Submitted-response detail with respondent identity and academic context, available to the active evidence-owning role. Program Heads review Program-specific Course-bound and Central evidence within their Authorized Program set; General Education Coordinators review General Education Course-bound evidence college-wide. A Student's Program membership does not grant the Program Head access to that Student's General Education responses. Identified DTOs remain separate from Faculty and Dean aggregate DTOs.
+_Avoid_: General Education evidence in Program Head review, Program-specific or Central evidence in Coordinator review, identified Faculty or Dean review
 
 **Anonymized Dean review**:
 The Dean review flow over submitted responses without respondent identity; it keeps an anonymized respondent label rather than the identified shape. Dean never receives the identified detail DTO.
@@ -17,7 +17,7 @@ Faculty review submitted evidence only through the Faculty Analytics aggregate c
 _Avoid_: Faculty response detail, anonymized Faculty respondent, raw Faculty comment
 
 **SUBMITTED gate**:
-Identified response bodies are served only after status SUBMITTED, with PROGRAM_HEAD role, a resolved selected-Program context, and membership of the response in that Program (course-bound or program-wide). IN_PROGRESS bodies are never fetched.
+Identified response bodies are served only after status SUBMITTED, with an active evidence-owning role and membership of the response in that role's authorized Course/deployment scope. Program Head review also requires a resolved selected-Program context. IN_PROGRESS bodies are never fetched.
 _Avoid_: Draft response review
 
 ## Outcome binding
