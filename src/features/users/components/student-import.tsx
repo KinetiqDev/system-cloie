@@ -289,11 +289,7 @@ export function StudentImport({ programs }: { programs: StudentImportCatalog }) 
                 </FieldDescription>
               </Field>
             </FieldGroup>
-            <Button
-              className="self-start"
-              disabled={!file || pending}
-              onClick={() => submit(false)}
-            >
+            <Button className="self-end" disabled={!file || pending} onClick={() => submit(false)}>
               {pending ? "Reviewing file…" : "Review file"}
             </Button>
           </>
