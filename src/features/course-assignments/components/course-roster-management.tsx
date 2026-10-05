@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Fragment,
-  type DragEvent,
-  type FormEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { Fragment, type DragEvent, type FormEvent } from "react";
 import { YearLevel, StudentSection } from "@prisma/client";
 import { useRef, useState, useTransition } from "react";
 import {
@@ -31,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -1698,18 +1693,10 @@ function CsvImportMethod({
     onFileSelected(candidate);
   }
 
-  function onDrop(event: DragEvent<HTMLDivElement>) {
+  function onDrop(event: DragEvent<HTMLButtonElement>) {
     if (isPending) return;
     event.preventDefault();
     acceptFile(event.dataTransfer.files?.[0]);
-  }
-
-  function onKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (isPending) return;
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      inputRef.current?.click();
-    }
   }
 
   return (
@@ -1734,15 +1721,14 @@ function CsvImportMethod({
       <label htmlFor="course-roster-csv" className="text-label-md">
         Roster CSV file
       </label>
-      <div
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         aria-label="Upload a CSV roster file"
         aria-disabled={isPending}
+        disabled={isPending}
         onClick={() => {
           if (!isPending) inputRef.current?.click();
         }}
-        onKeyDown={onKeyDown}
         onDragOver={(event) => {
           if (!isPending) event.preventDefault();
         }}
@@ -1750,25 +1736,15 @@ function CsvImportMethod({
         className="focus-visible:ring-ring flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center transition-colors outline-none focus-visible:ring-3 aria-disabled:pointer-events-none aria-disabled:opacity-60"
       >
         <FileSpreadsheet aria-hidden="true" className="shrink-0" />
-        <p className="text-body-sm font-medium">Drop CSV here or click to browse</p>
-        <p className="text-body-sm text-muted-foreground">
+        <span className="text-body-sm font-medium">Drop CSV here or click to browse</span>
+        <span className="text-body-sm text-muted-foreground">
           One <code>name</code> or <code>Student Name</code> column, up to {COURSE_ROSTER_MAX_ROWS}{" "}
           rows.
-        </p>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          tabIndex={-1}
-          disabled={isPending}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (!isPending) inputRef.current?.click();
-          }}
-        >
+        </span>
+        <span className={buttonVariants({ variant: "secondary", size: "sm" })}>
           Choose CSV file
-        </Button>
-      </div>
+        </span>
+      </button>
       <input
         ref={inputRef}
         id="course-roster-csv"

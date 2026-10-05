@@ -2907,11 +2907,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/course-roster-view-selector.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-  },
-  {
     path: "src/features/course-assignments/components/edit-course-assignment-dialog.tsx",
     disposition: "task",
     taskId: 15,

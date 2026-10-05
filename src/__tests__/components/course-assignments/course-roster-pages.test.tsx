@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
@@ -12,6 +12,8 @@ import {
   effectiveCandidateByIndexFor,
   RosterManagementDialog,
 } from "@/features/course-assignments/components/course-roster-management";
+import { DEFAULT_COURSE_ROSTER_FILTERS } from "@/features/course-assignments/course-roster-list-state";
+import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import * as rosterActions from "@/lib/actions/course-roster-actions";
 import type {
   CourseRosterDetail,
@@ -80,15 +82,79 @@ const assignment = {
   evaluationEligibleCount: 1,
 };
 
+const termInstances = [
+  {
+    id: "term-1",
+    schoolYearId: "year-1",
+    schoolYearCode: "2026-2027",
+    semester: "FIRST",
+    term: "FIRST_TERM",
+    status: "ACTIVE",
+    startDate: new Date("2026-06-01"),
+    endDate: new Date("2026-10-01"),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "term-0",
+    schoolYearId: "year-0",
+    schoolYearCode: "2025-2026",
+    semester: "SECOND",
+    term: "SECOND_TERM",
+    status: "COMPLETED",
+    startDate: new Date("2026-01-01"),
+    endDate: new Date("2026-05-01"),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+] as unknown as TermInstanceItem[];
+
+const courses = [
+  { id: "course-1", code: "CS101", title: "Computing", courseScope: CourseScope.PROGRAM_SPECIFIC },
+];
+
+const programs = [{ id: "program-1", code: "BSCS", name: "Computer Science" }];
+
 const discovery: CourseRosterDiscoveryResult = {
   items: [assignment],
   total: 1,
   page: 0,
   pageSize: 20,
-  includeHistory: false,
+  period: { mode: "current" },
   search: "",
   activePeriodId: "term-1",
 };
+
+/**
+ * The route hands the component one coherent filter set, so the helper derives
+ * the filters from the same data overrides rather than letting the two drift.
+ */
+function renderDiscovery(
+  overrides: Partial<React.ComponentProps<typeof CourseRosterDiscoveryPage>> = {},
+  dataOverrides: Partial<CourseRosterDiscoveryResult> = {}
+) {
+  const data = { ...discovery, ...dataOverrides };
+  return render(
+    <CourseRosterDiscoveryPage
+      {...overrides}
+      data={data}
+      view={overrides.view ?? "list"}
+      filters={{
+        ...DEFAULT_COURSE_ROSTER_FILTERS,
+        period: data.period,
+        search: data.search,
+        ...overrides.filters,
+      }}
+      termInstances={termInstances}
+      courses={courses}
+      programs={programs}
+    />
+  );
+}
+
+function filterBar() {
+  return within(screen.getByRole("region", { name: "Filter rosters" }));
+}
 
 const detail: CourseRosterDetail = {
   assignment,
@@ -123,64 +189,85 @@ const detail: CourseRosterDetail = {
 };
 
 describe("course roster pages", () => {
-  it("renders the complete default List presentation with one action and no Faculty identity", () => {
-    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+  it("renders the default list with one action, no filled state chip, and no Faculty identity", () => {
+    renderDiscovery();
 
-    expect(screen.getByRole("heading", { name: "My Course Rosters" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "My Course Rosters", level: 1 })
+    ).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search assignments" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /include inactive/i })).toBeInTheDocument();
-    expect(screen.getByRole("toolbar", { name: "Course roster view" })).toBeInTheDocument();
+
     const selectedList = screen.getByRole("button", { name: "List view" });
     expect(selectedList).toHaveAttribute("aria-pressed", "true");
-    expect(selectedList).toHaveClass("aria-pressed:font-semibold");
-    expect(selectedList).toHaveClass("aria-pressed:shadow-sm");
-    expect(screen.getByRole("table", { name: "Course assignments" })).toBeInTheDocument();
-    for (const column of [
-      "Course",
-      "Program",
-      "Class",
-      "Academic Period",
-      "Active roster",
-      "Evaluation-eligible",
-      "State",
-      "Action",
-    ]) {
-      expect(screen.getByRole("columnheader", { name: column })).toBeInTheDocument();
+    expect(screen.getByRole("toolbar", { name: "Rosters view" })).toBeInTheDocument();
+
+    const table = screen.getByRole("table", { name: "Course assignments" });
+    for (const column of ["Course", "Program", "Class", "Academic Period", "Roster"]) {
+      expect(within(table).getByRole("columnheader", { name: column })).toBeInTheDocument();
     }
+    // The lifecycle column and the two separate count columns are one cell now.
+    expect(within(table).queryByRole("columnheader", { name: "State" })).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole("columnheader", { name: "Active roster" })
+    ).not.toBeInTheDocument();
+    expect(
+      within(table).queryByRole("columnheader", { name: "Evaluation-eligible" })
+    ).not.toBeInTheDocument();
+
     expect(screen.getByText("CS101")).toBeInTheDocument();
     expect(screen.getByText("Computer Science")).toBeInTheDocument();
-    expect(screen.getByText("2nd Year | Morning")).toBeInTheDocument();
+    // The shared placement separator, not a pipe.
+    expect(screen.getByText("2nd Year · Morning")).toBeInTheDocument();
+    expect(screen.queryByText("Computer Science — Computer Science")).not.toBeInTheDocument();
     expect(screen.getByText(discovery.items[0].termLabel)).toBeInTheDocument();
+    // An active roster earns no chip at all.
     expect(
-      screen.getByText("Open roster", { selector: '[data-slot="badge"]' })
-    ).toBeInTheDocument();
+      screen.queryByText("Open roster", { selector: '[data-slot="badge"]' })
+    ).not.toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Open roster" })).toHaveLength(1);
     expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument();
     expect(screen.queryByText("ada@example.com")).not.toBeInTheDocument();
   });
 
   it("keeps list mode a horizontally scrollable table on mobile instead of cards", () => {
-    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+    const { container } = renderDiscovery();
 
-    const container = document.querySelector('[data-view="list"]');
-    expect(container).not.toHaveClass("overflow-hidden");
-    expect(container).toHaveClass("overflow-x-auto");
-    const table = container!.querySelector("table");
-    expect(table).toHaveClass("min-w-[72rem]");
-    // No mobile card-style row labels or stacked grid rows.
-    expect(container!.querySelectorAll(".md\\:hidden")).toHaveLength(0);
-    expect(container!.querySelector('[data-slot="table-row"]')).not.toHaveClass("grid");
+    const scrollRegion = container.querySelector('[data-slot="table-container"]');
+    // The shared Table supplies the focusable region a wide table needs.
+    expect(scrollRegion).toHaveAttribute("role", "region");
+    expect(scrollRegion).toHaveAttribute("tabindex", "0");
+    expect(scrollRegion).toHaveClass("overflow-x-auto");
+    expect(scrollRegion).not.toHaveClass("overflow-hidden");
+    const table = container.querySelector('[data-view="list"]');
+    expect(table).toHaveClass("min-w-[60rem]");
+    // No mobile card-style row labels or stacked grid rows inside the table.
+    expect(scrollRegion!.querySelectorAll(".md\\:hidden")).toHaveLength(0);
+    expect(container.querySelector('[data-slot="table-row"]')).not.toHaveClass("grid");
   });
 
-  it("renders complete Card facts, separate counts, one action, and no Faculty identity", () => {
-    render(
-      <CourseRosterDiscoveryPage
-        data={{
-          ...discovery,
-          items: [{ ...assignment, activeRosterCount: 3, evaluationEligibleCount: 2 }],
-        }}
-        view="card"
-      />
+  it("states roster size and eligibility together and only flags a shortfall", () => {
+    renderDiscovery(
+      {},
+      { items: [{ ...assignment, activeRosterCount: 3, evaluationEligibleCount: 2 }] }
+    );
+
+    expect(screen.getByText("on roster")).toBeInTheDocument();
+    expect(screen.getByText("3", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("2 eligible for evaluation")).toBeInTheDocument();
+    expect(screen.getByText("1 needs attention")).toBeInTheDocument();
+  });
+
+  it("stays quiet when every active member is eligible", () => {
+    renderDiscovery();
+
+    expect(screen.getByText("1 eligible for evaluation")).toBeInTheDocument();
+    expect(screen.queryByText(/needs attention/)).not.toBeInTheDocument();
+  });
+
+  it("renders complete Card facts, one action, and no Faculty identity", () => {
+    renderDiscovery(
+      { view: "card" },
+      { items: [{ ...assignment, activeRosterCount: 3, evaluationEligibleCount: 2 }] }
     );
 
     const selectedCard = screen.getByRole("button", { name: "Card view" });
@@ -189,22 +276,116 @@ describe("course roster pages", () => {
     expect(selectedCard).toHaveClass("aria-pressed:shadow-sm");
     expect(screen.queryByRole("table", { name: "Course assignments" })).not.toBeInTheDocument();
     expect(screen.getByText("CS101", { selector: '[data-slot="card-title"]' })).toBeInTheDocument();
-    for (const label of ["Program", "Year level", "Class section", "Academic Period"]) {
+    for (const label of ["Program", "Class", "Academic Period"]) {
       expect(screen.getByText(label, { selector: "dt" })).toBeInTheDocument();
     }
-    expect(screen.getByText("3", { selector: "dd" })).toBeInTheDocument();
-    expect(screen.getByText("2", { selector: "dd" })).toBeInTheDocument();
+    expect(screen.getByText("2 eligible for evaluation")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Open roster" })).toHaveLength(1);
     expect(screen.queryByText(/Ada Lovelace|ada@example.com/)).not.toBeInTheDocument();
   });
 
+  it("gives every filter control an accessible name and a reset that starts disabled", () => {
+    renderDiscovery();
+
+    for (const name of [
+      "Academic Period",
+      "Course",
+      "Program",
+      "Year level",
+      "Section",
+      "Course scope",
+    ]) {
+      expect(screen.getByRole("combobox", { name })).toBeInTheDocument();
+    }
+    expect(filterBar().getByRole("button", { name: "Reset" })).toBeDisabled();
+  });
+
+  it("offers the active-only scope alongside every period", async () => {
+    renderDiscovery();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Academic Period" }));
+    expect(await screen.findByRole("option", { name: "Active assignments" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "All Academic Periods" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /2025-2026 — 2nd Semester — 2nd Term/ })
+    ).toBeInTheDocument();
+  });
+
+  it("applies a facet immediately, returns to page one, and reports it in the URL", async () => {
+    renderDiscovery();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Program" }));
+    const program = await screen.findByRole("option", { name: /BSCS/ });
+    fireEvent.mouseMove(program);
+    fireEvent.click(program);
+
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?programId=program-1");
+  });
+
+  it("applies the widened period scope as the retired history param did", async () => {
+    renderDiscovery();
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Academic Period" }));
+    const all = await screen.findByRole("option", { name: "All Academic Periods" });
+    fireEvent.mouseMove(all);
+    fireEvent.click(all);
+
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?period=all");
+  });
+
+  it("counts applied facets and enables reset", () => {
+    renderDiscovery({
+      filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, programId: "program-1", search: "CS" },
+    });
+
+    expect(
+      filterBar().getByText("2 active", { selector: '[data-slot="badge"]' })
+    ).toBeInTheDocument();
+    expect(filterBar().getByRole("button", { name: "Reset" })).toBeEnabled();
+  });
+
+  it("keeps unapplied mobile filters out of the applied-filter count", async () => {
+    mockMatchMedia(false);
+    renderDiscovery();
+    const trigger = screen.getByRole("button", { name: /More filters\s*Optional/ });
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole("dialog", { name: "More roster filters" });
+    fireEvent.click(within(dialog).getByRole("combobox", { name: "Year level" }));
+    const option = await screen.findByRole("option", { name: "2nd Year" });
+    fireEvent.mouseMove(option);
+    fireEvent.click(option);
+
+    expect(within(dialog).getByRole("button", { name: "Show results · 1 filter" })).toBeVisible();
+    expect(trigger).toHaveTextContent("Optional");
+    expect(replaceMock).not.toHaveBeenCalled();
+  });
+
+  it("counts a widened period scope as an applied filter", () => {
+    renderDiscovery({ filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, period: { mode: "all" } } });
+
+    expect(
+      filterBar().getByText("1 active", { selector: '[data-slot="badge"]' })
+    ).toBeInTheDocument();
+  });
+
+  it("resets every facet and returns to the active-period scope", () => {
+    renderDiscovery({
+      filters: {
+        ...DEFAULT_COURSE_ROSTER_FILTERS,
+        period: { mode: "all" },
+        programId: "program-1",
+      },
+    });
+
+    fireEvent.click(filterBar().getByRole("button", { name: "Reset" }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters");
+  });
+
   it("switches views instantly without a server round trip, preserves scope, and syncs the URL", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage
-        data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
-        view="list"
-      />
-    );
+    const { rerender } = renderDiscovery({
+      filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, search: "CS", period: { mode: "all" } },
+    });
 
     // Same-view click is a no-op.
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
@@ -214,7 +395,7 @@ describe("course roster pages", () => {
     // Card switch is instant: no router navigation, URL synced via history.
     fireEvent.click(screen.getByRole("button", { name: "Card view" }));
     expect(replaceMock).not.toHaveBeenCalled();
-    expect(window.location.search).toBe("?search=CS&history=1&view=card");
+    expect(window.location.search).toBe("?period=all&search=CS&view=card");
     expect(screen.getByRole("button", { name: "Card view" })).toHaveAttribute(
       "aria-pressed",
       "true"
@@ -224,17 +405,30 @@ describe("course roster pages", () => {
     replaceMock.mockClear();
     rerender(
       <CourseRosterDiscoveryPage
-        data={{ ...discovery, search: "CS", includeHistory: true, page: 4 }}
+        data={{ ...discovery, search: "CS" }}
         view="card"
+        filters={{ ...DEFAULT_COURSE_ROSTER_FILTERS, search: "CS", period: { mode: "all" } }}
+        termInstances={termInstances}
+        courses={courses}
+        programs={programs}
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "List view" }));
     expect(replaceMock).not.toHaveBeenCalled();
-    expect(window.location.search).toBe("?search=CS&history=1");
+    expect(window.location.search).toBe("?period=all&search=CS");
   });
 
   it("adopts server-driven view changes from navigation (sidebar links, deep links)", () => {
-    const { rerender } = render(<CourseRosterDiscoveryPage data={discovery} view="card" />);
+    const { rerender } = render(
+      <CourseRosterDiscoveryPage
+        data={discovery}
+        view="card"
+        filters={DEFAULT_COURSE_ROSTER_FILTERS}
+        termInstances={termInstances}
+        courses={courses}
+        programs={programs}
+      />
+    );
 
     expect(screen.getByRole("button", { name: "Card view" })).toHaveAttribute(
       "aria-pressed",
@@ -242,72 +436,42 @@ describe("course roster pages", () => {
     );
 
     // The default /faculty/course-rosters URL carries no view param.
-    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />);
+    rerender(
+      <CourseRosterDiscoveryPage
+        data={{ ...discovery, search: "CS" }}
+        view="list"
+        filters={DEFAULT_COURSE_ROSTER_FILTERS}
+        termInstances={termInstances}
+        courses={courses}
+        programs={programs}
+      />
+    );
     expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
   });
 
-  it("clears a stale search draft when the server search changes (Clear filters)", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
-    );
+  it("debounces search navigation, uses route replacement, and returns to page one", () => {
+    renderDiscovery({}, { page: 3 });
+
     const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
-    expect(searchbox).toHaveValue("CS");
+    vi.useFakeTimers();
+    try {
+      searchbox.focus();
+      fireEvent.change(searchbox, { target: { value: "CS1" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
 
-    // Typing updates the draft; leaving the field discards the pending edit
-    // and re-adopts the server value.
-    searchbox.focus();
-    fireEvent.change(searchbox, { target: { value: "CS1" } });
-    expect(searchbox).toHaveValue("CS1");
-    act(() => {
-      searchbox.blur();
-    });
-    expect(searchbox).toHaveValue("CS");
-
-    // The clear-filters navigation returns the server to an empty search.
-    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
-    expect(screen.getByRole("searchbox", { name: "Search assignments" })).toHaveValue("");
-  });
-
-  it("syncs the history checkbox from server-driven navigation (Clear filters)", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage data={{ ...discovery, includeHistory: true }} view="list" />
-    );
-    const historyCheckbox = screen.getByRole("checkbox", { name: /include inactive/i });
-    expect(historyCheckbox).toBeChecked();
-
-    // The clear-filters navigation returns the server to history-less results.
-    rerender(<CourseRosterDiscoveryPage data={discovery} view="list" />);
-    expect(screen.getByRole("checkbox", { name: /include inactive/i })).not.toBeChecked();
-  });
-
-  it("adopts a server-driven search change once the focused input blurs", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
-    );
-    const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
-    searchbox.focus();
-    fireEvent.change(searchbox, { target: { value: "CS1" } });
-    expect(searchbox).toHaveValue("CS1");
-
-    // A server-driven change lands while the input is still focused (e.g.
-    // browser back/forward): the in-progress keystroke is preserved.
-    rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
-    expect(searchbox).toHaveValue("CS1");
-
-    // Blurring adopts the server value; the stale draft is never re-navigated.
-    act(() => {
-      searchbox.blur();
-    });
-    expect(searchbox).toHaveValue("");
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?search=CS1");
   });
 
   it("cancels a pending debounce when a server-driven search change lands mid-typing", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
-    );
+    const { rerender } = renderDiscovery({}, { search: "CS" });
     const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
     vi.useFakeTimers();
     try {
@@ -316,7 +480,16 @@ describe("course roster pages", () => {
 
       // A server-driven change lands inside the debounce window; the stale
       // draft must not be re-navigated.
-      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "" }} view="list" />);
+      rerender(
+        <CourseRosterDiscoveryPage
+          data={{ ...discovery, search: "" }}
+          view="list"
+          filters={DEFAULT_COURSE_ROSTER_FILTERS}
+          termInstances={termInstances}
+          courses={courses}
+          programs={programs}
+        />
+      );
       act(() => {
         vi.advanceTimersByTime(300);
       });
@@ -326,115 +499,109 @@ describe("course roster pages", () => {
     }
   });
 
-  it("keeps a live draft when the server echoes the navigated search", () => {
-    const { rerender } = render(
-      <CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="list" />
-    );
+  it("adopts a server-driven search change once the focused input blurs", () => {
+    const { rerender } = renderDiscovery({}, { search: "CS" });
     const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
-    vi.useFakeTimers();
-    try {
-      searchbox.focus();
-      fireEvent.change(searchbox, { target: { value: "CS1" } });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-      expect(replaceMock).toHaveBeenCalledTimes(1);
+    expect(searchbox).toHaveValue("CS");
 
-      // The response echoes the search we just navigated; typing more keeps
-      // the draft live and the next debounce still fires.
-      rerender(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS1" }} view="list" />);
-      fireEvent.change(searchbox, { target: { value: "CS1x" } });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-      expect(replaceMock).toHaveBeenCalledTimes(2);
-      expect(replaceMock).toHaveBeenLastCalledWith("/faculty/course-rosters?search=CS1x");
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+    searchbox.focus();
+    fireEvent.change(searchbox, { target: { value: "CS1" } });
+    expect(searchbox).toHaveValue("CS1");
 
-  it("preserves Card in paginated links and instant filter navigation", () => {
-    render(
+    rerender(
       <CourseRosterDiscoveryPage
-        data={{ ...discovery, total: 40, search: "CS", includeHistory: true }}
-        view="card"
+        data={{ ...discovery, search: "" }}
+        view="list"
+        filters={DEFAULT_COURSE_ROSTER_FILTERS}
+        termInstances={termInstances}
+        courses={courses}
+        programs={programs}
       />
     );
+    // The in-progress keystroke survives the server-driven change until blur.
+    expect(searchbox).toHaveValue("CS1");
 
-    expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
-      "href",
-      "/faculty/course-rosters?page=2&search=CS&history=1&view=card"
-    );
-
-    vi.useFakeTimers();
-    try {
-      const searchbox = screen.getByRole("searchbox", { name: "Search assignments" });
-      searchbox.focus();
-      fireEvent.change(searchbox, { target: { value: "CS1" } });
-      act(() => {
-        vi.advanceTimersByTime(300);
-      });
-    } finally {
-      vi.useRealTimers();
-    }
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/faculty/course-rosters?search=CS1&history=1&view=card"
-    );
+    act(() => {
+      searchbox.blur();
+    });
+    expect(searchbox).toHaveValue("");
   });
 
-  it("applies the history filter immediately and preserves search and view", () => {
-    render(<CourseRosterDiscoveryPage data={{ ...discovery, search: "CS" }} view="card" />);
+  it("names the Academic Period in force beside the result count", () => {
+    renderDiscovery({}, { total: 40 });
 
-    fireEvent.click(screen.getByRole("checkbox", { name: /include inactive/i }));
-
-    expect(replaceMock).toHaveBeenCalledWith(
-      "/faculty/course-rosters?search=CS&history=1&view=card"
-    );
+    expect(screen.getByText("40 rosters")).toBeInTheDocument();
+    expect(screen.getAllByText("Active assignments").length).toBeGreaterThan(0);
   });
 
-  it("distinguishes search-empty results and clears search while preserving history and Card", () => {
-    render(
-      <CourseRosterDiscoveryPage
-        data={{ ...discovery, items: [], total: 0, search: "missing", includeHistory: true }}
-        view="card"
-      />
+  it("names a selected period on the result count", () => {
+    renderDiscovery(
+      {
+        filters: {
+          ...DEFAULT_COURSE_ROSTER_FILTERS,
+          period: { mode: "term", termInstanceId: "term-0" },
+        },
+      },
+      { total: 40 }
+    );
+
+    expect(screen.getAllByText("2025-2026 — 2nd Semester — 2nd Term").length).toBeGreaterThan(0);
+  });
+
+  it("paginates through the shared control while preserving view and scope", () => {
+    renderDiscovery(
+      { view: "card", filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, period: { mode: "all" } } },
+      { total: 60, page: 1 }
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?page=3&period=all&view=card");
+  });
+
+  it("distinguishes search-empty results and clears search while preserving Card", () => {
+    renderDiscovery(
+      { view: "card" },
+      { items: [], total: 0, search: "missing", period: { mode: "all" } }
     );
 
     expect(screen.getByText("No Course rosters match your search")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Clear search" })).toHaveAttribute(
       "href",
-      "/faculty/course-rosters?history=1&view=card"
+      "/faculty/course-rosters?period=all&view=card"
     );
   });
 
-  it("offers history when no current assignments exist and preserves Card", () => {
-    render(
-      <CourseRosterDiscoveryPage
-        data={{ ...discovery, items: [], total: 0, activePeriodId: null }}
-        view="card"
-      />
-    );
+  it("offers the all-periods scope when no active assignment exists and preserves Card", () => {
+    renderDiscovery({ view: "card" }, { items: [], total: 0, period: { mode: "current" } });
 
-    expect(screen.getByText("No current Course rosters")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Include assignment history" })).toHaveAttribute(
+    expect(screen.getByText("No active course rosters")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /show all academic periods/i })).toHaveAttribute(
       "href",
-      "/faculty/course-rosters?history=1&view=card"
+      "/faculty/course-rosters?period=all&view=card"
     );
   });
 
-  it("distinguishes a history-inclusive zero state", () => {
-    render(
-      <CourseRosterDiscoveryPage
-        data={{ ...discovery, items: [], total: 0, includeHistory: true }}
-        view="list"
-      />
-    );
+  it("explains a missing active Academic Period instead of offering a dead filter", () => {
+    renderDiscovery({}, { items: [], total: 0, activePeriodId: null });
 
-    expect(screen.getByText("No Course rosters available")).toBeInTheDocument();
+    expect(screen.getByText("No active Academic Period")).toBeInTheDocument();
     expect(
-      screen.getByText("No current or historical Course assignments are assigned to you.")
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: /show all academic periods/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("distinguishes an empty widened scope and offers a reset", () => {
+    renderDiscovery(
+      { filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, period: { mode: "all" } } },
+      { items: [], total: 0, period: { mode: "all" } }
+    );
+
+    expect(screen.getByText("No course rosters in this scope")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reset filters" })).toHaveAttribute(
+      "href",
+      "/faculty/course-rosters"
+    );
   });
 
   it("keeps discovery errors opaque and provides an accessible current-URL retry", () => {
@@ -443,6 +610,10 @@ describe("course roster pages", () => {
         data={null}
         error="The roster request could not be completed. Support reference: safe-123."
         view="list"
+        filters={DEFAULT_COURSE_ROSTER_FILTERS}
+        termInstances={termInstances}
+        courses={courses}
+        programs={programs}
       />
     );
 
@@ -453,10 +624,10 @@ describe("course roster pages", () => {
   });
 
   it("states active-roster management and lifecycle read-only scope in discovery copy", () => {
-    render(<CourseRosterDiscoveryPage data={discovery} view="list" />);
+    renderDiscovery();
 
     expect(
-      screen.getByText(/review and manage active Course assignments you own/i)
+      screen.getByText(/review and manage the active Course assignments you own/i)
     ).toBeInTheDocument();
     expect(
       screen.getByText(/inactive assignments and completed Academic Periods remain review-only/i)
@@ -477,7 +648,10 @@ describe("course roster pages", () => {
       />
     );
 
-    expect(screen.getByText("Open roster", { exact: true })).toBeInTheDocument();
+    // An active roster earns no state chip; the write controls are the signal.
+    expect(
+      screen.queryByText("Open roster", { selector: '[data-slot="badge"]' })
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /manage roster/i })).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -515,6 +689,21 @@ describe("course roster pages", () => {
 
     expect(screen.getByText("Removed", { selector: '[data-slot="badge"]' })).toBeInTheDocument();
     expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+  });
+
+  it("clears an empty member search and removed scope without leaving the role-owned route", () => {
+    render(
+      <CourseRosterDetailPage
+        data={{ ...detail, members: [], totalMembers: 0, search: "missing", includeRemoved: true }}
+        programId="program-1"
+        rosterBasePath="/program-head/programs/program-1/course-rosters"
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
+      "href",
+      "/program-head/programs/program-1/course-rosters/assignment-1?sort=asc"
+    );
   });
 
   it("presents the course identity header, context strip, and readiness counts", () => {
@@ -1227,6 +1416,18 @@ describe("course roster pages", () => {
     expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeDisabled();
     fireEvent.click(screen.getAllByRole("button", { name: "Skip" })[1]);
     expect(screen.getByRole("button", { name: /add \d+ students?/i })).toBeEnabled();
+  });
+
+  it("uses one native upload button without nested interactive controls", () => {
+    render(<RosterManagementDialog assignmentId="assignment-1" />);
+    fireEvent.click(screen.getByRole("button", { name: /manage roster/i }));
+    const upload = screen.getByRole("button", { name: "Upload a CSV roster file" });
+    expect(upload.tagName).toBe("BUTTON");
+    expect(upload.querySelector("button, [role='button'], input, a")).toBeNull();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const browse = vi.spyOn(input, "click").mockImplementation(() => undefined);
+    fireEvent.click(upload);
+    expect(browse).toHaveBeenCalledOnce();
   });
 
   it("blocks closing while a preview is pending", async () => {

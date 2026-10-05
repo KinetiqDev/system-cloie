@@ -1,5 +1,7 @@
 import type { AcademicPeriodStatus, CourseScope, StudentSection, YearLevel } from "@prisma/client";
 
+import type { CourseRosterPeriodScope } from "./course-roster-list-state";
+
 /**
  * Course option surfaced by the course assignment route and dialogs.
  * Includes catalog defaults and scope so the UI can pre-fill and distinguish GE courses.
@@ -101,9 +103,24 @@ export type CourseRosterDiscoveryResult = {
   total: number;
   page: number;
   pageSize: number;
-  includeHistory: boolean;
+  period: CourseRosterPeriodScope;
   search: string;
   activePeriodId: string | null;
+};
+
+/** A Course the signed-in Faculty member actually holds an assignment in. */
+export type FacultyRosterCourseOption = {
+  id: string;
+  code: string;
+  title: string;
+  courseScope: CourseScope;
+};
+
+/** A Program the signed-in Faculty member actually holds an assignment in. */
+export type FacultyRosterProgramOption = {
+  id: string;
+  code: string;
+  name: string;
 };
 
 export type CourseRosterMember = {

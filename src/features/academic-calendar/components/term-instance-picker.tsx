@@ -26,13 +26,39 @@ interface TermInstancePickerProps {
   showOnlyActive?: boolean;
   allowClear?: boolean;
   allowAll?: boolean;
+  /** Sentinel selecting only the active period. Defaults to `"current"`. */
+  currentValue?: string;
+  allowActiveOnly?: boolean;
+  activeOnlyLabel?: string;
   id?: string;
 }
 
-/**
- * A reusable picker for selecting an academic term instance.
- * Displays term instances with formatted labels (e.g., "2025-2026 — 1st Semester — 1st Term").
- */
+function compareTermInstances(a: TermInstanceItem, b: TermInstanceItem): number {
+  if (a.schoolYearCode !== b.schoolYearCode) {
+    return b.schoolYearCode.localeCompare(a.schoolYearCode);
+  }
+  const semesterOrder = { FIRST: 0, SECOND: 1, SUMMER: 2 };
+  const semesterDifference = semesterOrder[a.semester] - semesterOrder[b.semester];
+  if (semesterDifference) return semesterDifference;
+  if (!a.term || !b.term) return 0;
+  const termOrder = { FIRST_TERM: 0, SECOND_TERM: 1 };
+  return termOrder[a.term] - termOrder[b.term];
+}
+
+function termInstanceTriggerLabel(
+  value: string | undefined,
+  instances: TermInstanceItem[],
+  isActiveOnly: boolean,
+  activeOnlyLabel: string
+): string | null {
+  if (isActiveOnly) return activeOnlyLabel;
+  if (value === "all") return "All Academic Periods";
+  const instance = instances.find((item) => item.id === value);
+  if (!instance) return null;
+  const label = formatTermInstanceLabel(instance.schoolYearCode, instance.semester, instance.term);
+  return instance.status === "ACTIVE" ? `${label} — Current` : label;
+}
+
 export function TermInstancePicker({
   termInstances,
   value,
@@ -43,6 +69,9 @@ export function TermInstancePicker({
   showOnlyActive = false,
   allowClear = false,
   allowAll = false,
+  currentValue = "current",
+  allowActiveOnly = false,
+  activeOnlyLabel = "Active Academic Period",
   id,
 }: TermInstancePickerProps) {
   const generatedId = useId();
@@ -51,24 +80,15 @@ export function TermInstancePicker({
     ? termInstances.filter((t) => t.status === "ACTIVE")
     : termInstances;
 
-  // Sort by school year code desc, then semester order, then term order
-  const sortedInstances = [...filteredInstances].sort((a, b) => {
-    // School year desc (newest first)
-    if (a.schoolYearCode !== b.schoolYearCode) {
-      return b.schoolYearCode.localeCompare(a.schoolYearCode);
-    }
-    // Semester order: FIRST, SECOND, SUMMER
-    const semOrder = { FIRST: 0, SECOND: 1, SUMMER: 2 };
-    if (semOrder[a.semester] !== semOrder[b.semester]) {
-      return semOrder[a.semester] - semOrder[b.semester];
-    }
-    // Term order: FIRST_TERM, SECOND_TERM
-    if (a.term && b.term) {
-      const termOrder = { FIRST_TERM: 0, SECOND_TERM: 1 };
-      return termOrder[a.term] - termOrder[b.term];
-    }
-    return 0;
-  });
+  const sortedInstances = [...filteredInstances].sort(compareTermInstances);
+
+  const isActiveOnly = allowActiveOnly && value === currentValue;
+  const triggerLabel = termInstanceTriggerLabel(
+    value,
+    sortedInstances,
+    isActiveOnly,
+    activeOnlyLabel
+  );
 
   return (
     <Field className="min-w-0">
@@ -78,35 +98,14 @@ export function TermInstancePicker({
           <SelectTrigger
             id={pickerId}
             className="w-full min-w-0 truncate pointer-coarse:h-11"
-            title={
-              value === "all"
-                ? "All Academic Periods"
-                : (() => {
-                    const selected = sortedInstances.find((i) => i.id === value);
-                    return selected
-                      ? `${formatTermInstanceLabel(selected.schoolYearCode, selected.semester, selected.term)}${selected.status === "ACTIVE" ? " — Current" : ""}`
-                      : undefined;
-                  })()
-            }
+            title={triggerLabel ?? undefined}
           >
             <SelectValue placeholder={placeholder} className="block min-w-0 truncate text-left">
-              {value === "all"
-                ? "All Academic Periods"
-                : value
-                  ? (() => {
-                      const selected = sortedInstances.find((i) => i.id === value);
-                      return selected
-                        ? `${formatTermInstanceLabel(
-                            selected.schoolYearCode,
-                            selected.semester,
-                            selected.term
-                          )}${selected.status === "ACTIVE" ? " — Current" : ""}`
-                        : null;
-                    })()
-                  : null}
+              {triggerLabel}
             </SelectValue>
           </SelectTrigger>
           <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
+            {allowActiveOnly && <SelectItem value={currentValue}>{activeOnlyLabel}</SelectItem>}
             {allowAll && <SelectItem value="all">All Academic Periods</SelectItem>}
             {allowClear && <SelectItem value="">Clear selection</SelectItem>}
             {sortedInstances.map((instance) => (
