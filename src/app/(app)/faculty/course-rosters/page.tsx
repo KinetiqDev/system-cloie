@@ -40,7 +40,7 @@ export default async function FacultyCourseRostersPage({
       page: state.page - 1,
     }),
     listFacultyRosterFacets(),
-    listSchoolYears(),
+    listSchoolYears({ includeArchived: true }).catch(() => ({ items: [] })),
   ]);
 
   // Facet options come from the Faculty member's own assignments. If that read

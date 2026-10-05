@@ -187,8 +187,17 @@ describe("Faculty course roster route", () => {
     const rendered = await Page({ searchParams: Promise.resolve({}) });
 
     expect(facetsMock).toHaveBeenCalledOnce();
+    expect(schoolYearsMock).toHaveBeenCalledWith({ includeArchived: true });
     expect(rendered.props.courses).toEqual(facets.data.courses);
     expect(rendered.props.programs).toEqual(facets.data.programs);
+    expect(rendered.props.termInstances).toEqual([]);
+  });
+
+  it("still renders authorized rosters when the period picker read fails", async () => {
+    schoolYearsMock.mockRejectedValueOnce(new Error("Picker unavailable"));
+    const Page = await facultyPage();
+    const rendered = await Page({ searchParams: Promise.resolve({}) });
+    expect(rendered.props.data).toEqual(discoveryResult().data);
     expect(rendered.props.termInstances).toEqual([]);
   });
 

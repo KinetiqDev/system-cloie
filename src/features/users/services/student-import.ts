@@ -92,27 +92,12 @@ export async function previewStudentImport(bytes: Uint8Array, actor: string) {
 
 export async function commitStudentImport(bytes: Uint8Array, actor: string, token: string) {
   const context = await readStudentImportContext();
-  try {
-    const [encoded, signature] = token.split(".");
-    const payload = Buffer.from(encoded ?? "", "base64url").toString();
-    const expected = Buffer.from(sign(payload));
-    const actual = Buffer.from(signature ?? "");
-    const decoded = JSON.parse(payload) as { actor: string; hash: string; expires: number };
-    if (
-      actual.length !== expected.length ||
-      !timingSafeEqual(actual, expected) ||
-      decoded.actor !== actor ||
-      decoded.hash !== digest(bytes, context) ||
-      !(decoded.expires > Date.now())
-    )
-      throw new Error("stale");
-  } catch {
+  if (!isCurrentReview(bytes, actor, token, context))
     return {
       success: false as const,
       error:
         "The file or academic context changed, or the review expired. Review the file again before importing.",
     };
-  }
   const parsed = parseStudentImport(bytes, context.programs);
   if (!parsed.success) return parsed;
   const existing = await prisma.user.findMany({
@@ -138,54 +123,7 @@ export async function commitStudentImport(bytes: Uint8Array, actor: string, toke
     }
     try {
       const data = row.data!;
-      await prisma.$transaction(
-        async (tx) => {
-          const [program, term] = await Promise.all([
-            tx.program.findUnique({
-              where: { id: data.program_id! },
-              select: {
-                is_active: true,
-                majors: { where: { is_active: true }, select: { id: true } },
-              },
-            }),
-            tx.academicTermInstance.findFirst({
-              where: { status: "ACTIVE" },
-              select: { id: true },
-            }),
-          ]);
-          if ((term?.id ?? null) !== context.termId) throw new Error("CONTEXT_CHANGED");
-          if (
-            !program?.is_active ||
-            (program.majors.length > 0 && !data.major_id) ||
-            (data.major_id && !program.majors.some((m) => m.id === data.major_id))
-          )
-            throw new Error("CONTEXT_CHANGED");
-          const user = await tx.user.create({
-            data: { name: data.name, email: data.email, is_active: true },
-          });
-          await tx.userRole.create({ data: { user_id: user.id, role: SystemRole.STUDENT } });
-          await tx.studentAcademicProfile.create({
-            data: {
-              user_id: user.id,
-              program_id: data.program_id!,
-              major_id: data.major_id ?? null,
-            },
-          });
-          if (term)
-            await tx.studentEnrollment.create({
-              data: {
-                student_user_id: user.id,
-                term_instance_id: term.id,
-                program_id: data.program_id!,
-                major_id: data.major_id ?? null,
-                year_level: data.year_level!,
-                section: data.section!,
-                source: EnrollmentSource.SECRETARY,
-              },
-            });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-      );
+      await createImportedStudent(data, context);
       rows.push({
         ...row,
         status: "Created",
@@ -195,18 +133,104 @@ export async function commitStudentImport(bytes: Uint8Array, actor: string, toke
         data: undefined,
       });
     } catch (error) {
-      const raced = isUniqueConstraintError(error)
-        ? await prisma.user.findUnique({ where: { email: row.data!.email }, select: { id: true } })
-        : null;
-      rows.push({
-        ...row,
-        data: undefined,
-        status: raced ? "Skipped" : "Failed",
-        message: raced
-          ? "An account with this email was created during import. Nothing was changed."
-          : "This row was not created. Review the file again and retry; successful rows will be skipped.",
-      });
+      rows.push(await failedImportRow(row, error));
     }
   }
   return { success: true as const, rows };
+}
+
+function isCurrentReview(bytes: Uint8Array, actor: string, token: string, context: ImportContext) {
+  try {
+    const [encoded, signature] = token.split(".");
+    const payload = Buffer.from(encoded ?? "", "base64url").toString();
+    const expected = Buffer.from(sign(payload));
+    const actual = Buffer.from(signature ?? "");
+    const decoded = JSON.parse(payload) as { actor: string; hash: string; expires: number };
+    if (
+      actual.length !== expected.length ||
+      !timingSafeEqual(actual, expected) ||
+      decoded.actor !== actor ||
+      decoded.hash !== digest(bytes, context) ||
+      !(decoded.expires > Date.now())
+    )
+      throw new Error("stale");
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+async function createImportedStudent(
+  data: NonNullable<StudentImportRow["data"]>,
+  context: ImportContext
+) {
+  await prisma.$transaction(
+    async (tx) => {
+      const [program, term] = await Promise.all([
+        tx.program.findUnique({
+          where: { id: data.program_id! },
+          select: {
+            is_active: true,
+            majors: { where: { is_active: true }, select: { id: true } },
+          },
+        }),
+        tx.academicTermInstance.findFirst({
+          where: { status: "ACTIVE" },
+          select: { id: true },
+        }),
+      ]);
+      if ((term?.id ?? null) !== context.termId) throw new Error("PERIOD_CHANGED");
+      validateImportPlacement(program, data);
+      const user = await tx.user.create({
+        data: { name: data.name, email: data.email, is_active: true },
+      });
+      await tx.userRole.create({ data: { user_id: user.id, role: SystemRole.STUDENT } });
+      await tx.studentAcademicProfile.create({
+        data: {
+          user_id: user.id,
+          program_id: data.program_id!,
+          major_id: data.major_id ?? null,
+        },
+      });
+      if (term)
+        await tx.studentEnrollment.create({
+          data: {
+            student_user_id: user.id,
+            term_instance_id: term.id,
+            program_id: data.program_id!,
+            major_id: data.major_id ?? null,
+            year_level: data.year_level!,
+            section: data.section!,
+            source: EnrollmentSource.SECRETARY,
+          },
+        });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
+}
+
+async function failedImportRow(row: StudentImportRow, error: unknown): Promise<StudentImportRow> {
+  const raced = isUniqueConstraintError(error)
+    ? await prisma.user.findUnique({ where: { email: row.data!.email }, select: { id: true } })
+    : null;
+  return {
+    ...row,
+    data: undefined,
+    status: raced ? "Skipped" : "Failed",
+    message: raced
+      ? "An account with this email was created during import. Nothing was changed."
+      : error instanceof Error && error.message === "PERIOD_CHANGED"
+        ? "The active academic period changed during import. Earlier successful rows remain created in the reviewed period. Review the file again before retrying the remaining rows."
+        : "This row was not created. Review the file again and retry; successful rows will be skipped.",
+  };
+}
+
+function validateImportPlacement(
+  program: { is_active: boolean; majors: { id: string }[] } | null,
+  data: NonNullable<StudentImportRow["data"]>
+) {
+  if (!program?.is_active) throw new Error("CONTEXT_CHANGED");
+  if (program.majors.length === 0 && !data.major_id) return;
+  if (!program.majors.some((major) => major.id === data.major_id))
+    throw new Error("CONTEXT_CHANGED");
 }

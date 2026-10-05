@@ -131,6 +131,19 @@ describe("Student import preview and commit", () => {
     });
     expect(tx.user.create).not.toHaveBeenCalled();
   });
+  it("explains a period change after an earlier row succeeds", async () => {
+    const review = await token();
+    tx.academicTermInstance.findFirst
+      .mockResolvedValueOnce({ id: "term" })
+      .mockResolvedValueOnce({ id: "changed" });
+    expect(await commitStudentImport(bytes, "secretary", review)).toMatchObject({
+      rows: [
+        { status: "Created" },
+        { status: "Failed", message: expect.stringContaining("active academic period changed") },
+      ],
+    });
+    expect(tx.user.create).toHaveBeenCalledTimes(1);
+  });
   it("skips successful rows on retry and never changes them", async () => {
     const review = await token();
     vi.mocked(prisma.user.findMany).mockResolvedValue([

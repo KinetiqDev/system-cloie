@@ -85,29 +85,10 @@ export function parseStudentImport(
         message: "Program code must match one active program. Check the program reference.",
       };
     const program = programs[0]!;
-    const majors = program.majors.filter(
-      (m) => matchImportValue(m.name) === matchImportValue(values.major_name)
-    );
-    if (
-      (program.majors.length > 0 && majors.length !== 1) ||
-      (values.major_name && majors.length !== 1)
-    )
-      return {
-        ...row,
-        message:
-          "Enter one active major for this program, or leave it blank if the program has no majors.",
-      };
-    const years = [
-      YearLevel.FIRST_YEAR,
-      YearLevel.SECOND_YEAR,
-      YearLevel.THIRD_YEAR,
-      YearLevel.FOURTH_YEAR,
-    ];
-    const year = /^[1-4]$/u.test(values.year_level)
-      ? years[Number(values.year_level) - 1]
-      : values.year_level.toUpperCase();
-    if (!years.includes(year as YearLevel))
-      return { ...row, message: "year_level must be 1, 2, 3, or 4." };
+    const major = resolveImportMajor(program, values.major_name);
+    if (!major.success) return { ...row, message: major.error };
+    const year = parseYearLevel(values.year_level);
+    if (!year) return { ...row, message: "year_level must be 1, 2, 3, or 4." };
     if (!Object.values(StudentSection).includes(values.section.toUpperCase() as StudentSection))
       return { ...row, message: "section must be Morning, Afternoon, or Evening." };
     const validated = createUserBySecretarySchema.safeParse({
@@ -115,7 +96,7 @@ export function parseStudentImport(
       email,
       role: SystemRole.STUDENT,
       program_id: program.id,
-      major_id: majors[0]?.id,
+      major_id: major.id,
       year_level: year,
       section: values.section.toUpperCase() as StudentSection,
     });
@@ -142,4 +123,28 @@ export function exportStudentImportRows(rows: StudentImportRow[]): string {
   const cell = (value: string) =>
     `"${(/^[\s]*[=+\-@]/u.test(value) ? "'" : "") + value.replaceAll('"', '""')}"`;
   return `${STUDENT_IMPORT_TEMPLATE}${rows.map((row) => STUDENT_IMPORT_HEADERS.map((h) => cell(row.input[h])).join(",")).join("\n")}\n`;
+}
+
+function parseYearLevel(value: string): YearLevel | undefined {
+  const years = [
+    YearLevel.FIRST_YEAR,
+    YearLevel.SECOND_YEAR,
+    YearLevel.THIRD_YEAR,
+    YearLevel.FOURTH_YEAR,
+  ];
+  const year = /^[1-4]$/u.test(value) ? years[Number(value) - 1] : value.toUpperCase();
+  return years.find((candidate) => candidate === year);
+}
+
+function resolveImportMajor(program: StudentImportCatalog[number], name: string) {
+  const majors = program.majors.filter(
+    (major) => matchImportValue(major.name) === matchImportValue(name)
+  );
+  if (program.majors.length === 0 && !name) return { success: true as const, id: undefined };
+  if (majors.length === 1) return { success: true as const, id: majors[0]!.id };
+  return {
+    success: false as const,
+    error:
+      "Enter one active major for this program, or leave it blank if the program has no majors.",
+  };
 }
