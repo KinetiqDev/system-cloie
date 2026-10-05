@@ -19,7 +19,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — 29 files numbered 0001–0028 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0006 is amended by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) — decision records numbered 0001–0034 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0017 is superseded by 0030; the 0006 Enrollments scope is removed by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
 
 ## Product
 
@@ -45,7 +45,8 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 - [operations/deployment-inventory.md](operations/deployment-inventory.md)
 - [operations/institutional-handover.md](operations/institutional-handover.md) — ISDRT policy interpreted for System CLOIE.
-- [runbooks/](runbooks/) — dedicated demo deployment, appearance production activation, external entry mail.
+- [runbooks/](runbooks/) — local development environment, dedicated demo deployment, appearance production activation, external entry mail.
+- [runbooks/local-development-environment.md](runbooks/local-development-environment.md) — workstation Supabase CLI Docker stack: target matrix, ports, lifecycle, worktree sharing hazard, disposable test database, real Auth gate.
 - [deployment-coolify.md](deployment-coolify.md)
 - [testing/production-browser-evidence.md](testing/production-browser-evidence.md)
 

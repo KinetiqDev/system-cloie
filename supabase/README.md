@@ -140,6 +140,8 @@ pnpm supabase:types:local        # Generate TypeScript types from the local stac
 pnpm supabase:stop               # Stop the local stack
 ```
 
+The local stack has properties that only exist on a workstation and are not visible from the commands above — it is shared across every git worktree through a single `project_id`, `verify:database-target` accepts its address as a disposable target, and a disposable database for the gated DB suites has to be provisioned by hand. Those, the port map, the health checks, and the real Auth gate are owned by [`docs/runbooks/local-development-environment.md`](../docs/runbooks/local-development-environment.md).
+
 `pnpm supabase:reset` always names the local CLI target explicitly (`--local`) and never consumes a remote database URL.
 
 ### Local Google OAuth
