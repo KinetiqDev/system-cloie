@@ -33,8 +33,8 @@
 #
 # Operator-provided values use ${VAR:?…}, so a missing secret or origin aborts
 # `up` instead of booting an instance that accepts a registration and silently
-# swallows the mail. Platform-fixed values carry the platform's contract as
-# their default. See docs/runbooks/external-entry-mail.md.
+# swallows the mail. Code lifetime is also required explicitly; the remaining
+# policy values carry platform defaults. See docs/runbooks/external-entry-mail.md.
 
 services:
   auth:
@@ -53,7 +53,7 @@ services:
       # GoTrue v2.196.0 checks sentAt + MAILER_OTP_EXP for emailed codes.
       # Lowering the window affects outstanding codes; a code sent nine
       # minutes before recreation with 600 seconds has one minute left.
-      GOTRUE_MAILER_OTP_EXP: "${MAILER_OTP_EXP:-600}"
+      GOTRUE_MAILER_OTP_EXP: "${MAILER_OTP_EXP:?set MAILER_OTP_EXP to the ten-minute code lifetime, 600 seconds}"
       GOTRUE_MAILER_OTP_LENGTH: "${MAILER_OTP_LENGTH:-6}"
       # The container key is SMTP_MAX_FREQUENCY, not MAILER_MAX_FREQUENCY.
       GOTRUE_SMTP_MAX_FREQUENCY: "${SMTP_MAX_FREQUENCY:-1m}"

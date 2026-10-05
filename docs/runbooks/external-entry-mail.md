@@ -309,7 +309,7 @@ On GoTrue v2.196.0, shortening the lifetime has no grace period: verification co
 
 ## Rollback
 
-1. Unset `GOTRUE_MAILER_TEMPLATES_CONFIRMATION` and `GOTRUE_MAILER_TEMPLATES_RECOVERY` if the templates are the problem, and recreate Auth. GoTrue falls back to its built-in templates, which deliver a link the entry form cannot use — usable only as a deliberate outage, not as a working state.
+1. If templates are the problem, restore the last working token-based bodies at the configured application URLs and recreate Auth to clear its template cache. Do not unset `MAILER_TEMPLATES_CONFIRMATION` or `MAILER_TEMPLATES_RECOVERY`: this overlay requires both values and aborts configuration when either is absent. Built-in link-only templates are not a working fallback for the code-entry flow.
 2. To stop real delivery, explicitly point the Auth SMTP settings at an isolated mail catcher and recreate Auth, or suspend external registration while repairing delivery. Removing this overlay alone does not restore a catcher: the base `.env` may still contain real relay credentials.
 3. Never roll back by enabling `ENABLE_EMAIL_AUTOCONFIRM` to make a screen look successful. That lets an unverified address reach domain linkage and breaks the entry invariant.
 
