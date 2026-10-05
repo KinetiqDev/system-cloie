@@ -18,7 +18,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Combobox,
@@ -136,59 +136,62 @@ function AssignmentStepContent({
   showCrossProgramWarning,
   selectedCourse,
 }: AssignmentStepContentProps) {
-  switch (step) {
-    case "term":
-      return (
-        <TermInstancePicker
-          id="course-assignment-term-instance"
-          termInstances={termInstances}
-          value={termInstanceId ?? ""}
-          onChange={(value) => onTermChange(value || null)}
-          label="Academic Term"
-        />
-      );
-    case "course":
-      return (
-        <CourseStep courseId={courseId} courses={assignableCourses} onChange={onCourseChange} />
-      );
-    case "class":
-      return (
-        <ClassIdentityFields
-          programId={programId ?? ""}
-          yearLevel={yearLevel}
-          section={section}
-          availablePrograms={availablePrograms}
-          onProgramChange={onProgramChange}
-          onYearLevelChange={onYearLevelChange}
-          onSectionChange={onSectionChange}
-          programDisabled={programLocked}
-          suggestedYearLevel={suggestedYearLevel}
-        />
-      );
-    case "faculty":
-      return (
-        <FacultyStep
-          programId={programId}
-          selectedProgramName={selectedProgramName}
-          selectedFaculty={selectedFaculty}
-          onFacultySelect={onFacultySelect}
-        />
-      );
-    case "confirm":
-      return (
-        <ConfirmStep
-          selectedCourse={selectedCourse}
-          selectedProgramCode={selectedProgramCode}
-          selectedProgramName={selectedProgramName}
-          selectedFaculty={selectedFaculty}
-          yearLevel={yearLevel}
-          section={section}
-          termInstances={termInstances}
-          termInstanceId={termInstanceId}
-          showCrossProgramWarning={showCrossProgramWarning}
-        />
-      );
+  function renderStep(current: Step) {
+    switch (current) {
+      case "term":
+        return (
+          <TermInstancePicker
+            id="course-assignment-term-instance"
+            termInstances={termInstances}
+            value={termInstanceId ?? ""}
+            onChange={(value) => onTermChange(value || null)}
+            label="Academic Term"
+          />
+        );
+      case "course":
+        return (
+          <CourseStep courseId={courseId} courses={assignableCourses} onChange={onCourseChange} />
+        );
+      case "class":
+        return (
+          <ClassIdentityFields
+            programId={programId ?? ""}
+            yearLevel={yearLevel}
+            section={section}
+            availablePrograms={availablePrograms}
+            onProgramChange={onProgramChange}
+            onYearLevelChange={onYearLevelChange}
+            onSectionChange={onSectionChange}
+            programDisabled={programLocked}
+            suggestedYearLevel={suggestedYearLevel}
+          />
+        );
+      case "faculty":
+        return (
+          <FacultyStep
+            programId={programId}
+            selectedProgramName={selectedProgramName}
+            selectedFaculty={selectedFaculty}
+            onFacultySelect={onFacultySelect}
+          />
+        );
+      case "confirm":
+        return (
+          <ConfirmStep
+            selectedCourse={selectedCourse}
+            selectedProgramCode={selectedProgramCode}
+            selectedProgramName={selectedProgramName}
+            selectedFaculty={selectedFaculty}
+            yearLevel={yearLevel}
+            section={section}
+            termInstances={termInstances}
+            termInstanceId={termInstanceId}
+            showCrossProgramWarning={showCrossProgramWarning}
+          />
+        );
+    }
   }
+  return <FieldGroup className="gap-4">{renderStep(step)}</FieldGroup>;
 }
 
 function CourseStep({
@@ -643,7 +646,7 @@ export function CourseAssignmentFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Assign Faculty to Course</DialogTitle>
         </DialogHeader>

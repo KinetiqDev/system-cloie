@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
 import { SEMESTER_OPTIONS, TERM_OPTIONS } from "@/lib/constants/academic";
 import type { TermInstanceItem } from "../types";
@@ -70,59 +71,65 @@ export function TermInstancePicker({
   });
 
   return (
-    <div className="min-w-0 space-y-2">
-      {label && <Label htmlFor={pickerId}>{label}</Label>}
-      <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
-        <SelectTrigger
-          id={pickerId}
-          className="w-full min-w-0 truncate pointer-coarse:h-11"
-          title={
-            value === "all"
-              ? "All Academic Periods"
-              : (() => {
-                  const selected = sortedInstances.find((i) => i.id === value);
-                  return selected
-                    ? `${formatTermInstanceLabel(selected.schoolYearCode, selected.semester, selected.term)}${selected.status === "ACTIVE" ? " — Current" : ""}`
-                    : undefined;
-                })()
-          }
-        >
-          <SelectValue placeholder={placeholder} className="block min-w-0 truncate text-left">
-            {value === "all"
-              ? "All Academic Periods"
-              : value
-                ? (() => {
+    <Field className="min-w-0">
+      {label && <FieldLabel htmlFor={pickerId}>{label}</FieldLabel>}
+      <FieldContent className="min-w-0">
+        <Select value={value} onValueChange={(val) => onChange(val ?? "")} disabled={disabled}>
+          <SelectTrigger
+            id={pickerId}
+            className="w-full min-w-0 truncate pointer-coarse:h-11"
+            title={
+              value === "all"
+                ? "All Academic Periods"
+                : (() => {
                     const selected = sortedInstances.find((i) => i.id === value);
                     return selected
-                      ? `${formatTermInstanceLabel(
-                          selected.schoolYearCode,
-                          selected.semester,
-                          selected.term
-                        )}${selected.status === "ACTIVE" ? " — Current" : ""}`
-                      : null;
+                      ? `${formatTermInstanceLabel(selected.schoolYearCode, selected.semester, selected.term)}${selected.status === "ACTIVE" ? " — Current" : ""}`
+                      : undefined;
                   })()
-                : null}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
-          {allowAll && <SelectItem value="all">All Academic Periods</SelectItem>}
-          {allowClear && <SelectItem value="">Clear selection</SelectItem>}
-          {sortedInstances.map((instance) => (
-            <SelectItem key={instance.id} value={instance.id}>
-              <span className="flex items-center gap-2">
-                {instance.status === "ACTIVE" && (
-                  <span className="flex items-center gap-1.5">
-                    <span className="bg-primary h-2 w-2 rounded-full" aria-hidden="true" />
-                    <span className="sr-only">Active</span>
-                  </span>
-                )}
-                {formatTermInstanceLabel(instance.schoolYearCode, instance.semester, instance.term)}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+            }
+          >
+            <SelectValue placeholder={placeholder} className="block min-w-0 truncate text-left">
+              {value === "all"
+                ? "All Academic Periods"
+                : value
+                  ? (() => {
+                      const selected = sortedInstances.find((i) => i.id === value);
+                      return selected
+                        ? `${formatTermInstanceLabel(
+                            selected.schoolYearCode,
+                            selected.semester,
+                            selected.term
+                          )}${selected.status === "ACTIVE" ? " — Current" : ""}`
+                        : null;
+                    })()
+                  : null}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
+            {allowAll && <SelectItem value="all">All Academic Periods</SelectItem>}
+            {allowClear && <SelectItem value="">Clear selection</SelectItem>}
+            {sortedInstances.map((instance) => (
+              <SelectItem key={instance.id} value={instance.id}>
+                <span className="flex items-center gap-2">
+                  {instance.status === "ACTIVE" && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="bg-primary h-2 w-2 rounded-full" aria-hidden="true" />
+                      <span className="sr-only">Active</span>
+                    </span>
+                  )}
+                  {formatTermInstanceLabel(
+                    instance.schoolYearCode,
+                    instance.semester,
+                    instance.term
+                  )}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FieldContent>
+    </Field>
   );
 }
 
