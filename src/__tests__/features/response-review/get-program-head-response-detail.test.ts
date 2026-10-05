@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
+import { matchesWhere } from "@/__tests__/helpers/where-clause";
 
 const {
   responseFindFirstMock,
@@ -180,7 +181,14 @@ describe("getProgramHeadResponseDetail", () => {
           status: "SUBMITTED",
           assignment: {
             OR: [
-              { course_bound: { course_assignment: { program_id: "prog-beed" } } },
+              {
+                course_bound: {
+                  course_assignment: {
+                    program_id: "prog-beed",
+                    course: { course_scope: "PROGRAM_SPECIFIC" },
+                  },
+                },
+              },
               { central_deployment: { program_id: "prog-beed" } },
             ],
           },
@@ -200,6 +208,70 @@ describe("getProgramHeadResponseDetail", () => {
         where: expect.objectContaining({ status: "SUBMITTED" }),
       })
     );
+  });
+
+  it("excludes a General Education response whose assignment is in the same Program", async () => {
+    // The seeded GE shape (GEETHICS) is a GENERAL_EDUCATION course whose
+    // CourseAssignment carries the PH's own Program. Program equality alone
+    // would admit it, so the predicate must also pin the course scope. The
+    // captured clause is evaluated against that row rather than only asserted
+    // structurally, so a weakened filter fails here.
+    responseFindFirstMock.mockImplementation((args) =>
+      matchesWhere(args.where, {
+        id: "response-ge",
+        status: "SUBMITTED",
+        assignment: {
+          course_bound: {
+            id: "eval-geethics",
+            course_assignment: {
+              program_id: "prog-beed",
+              course: { course_scope: "GENERAL_EDUCATION" },
+            },
+          },
+          central_deployment: null,
+        },
+      })
+        ? Promise.resolve(null)
+        : Promise.resolve(undefined)
+    );
+
+    await expect(getProgramHeadResponseDetail("prog-beed", "response-ge")).resolves.toBeNull();
+
+    // Pin the shape too: the exclusion must come from the course-scope gate,
+    // not from the Program equality that already matched this row.
+    const capturedWhere = responseFindFirstMock.mock.calls[0][0].where;
+    expect(capturedWhere.assignment.OR[0].course_bound.course_assignment).toEqual({
+      program_id: "prog-beed",
+      course: { course_scope: "PROGRAM_SPECIFIC" },
+    });
+  });
+
+  it("still resolves a Program-specific response in the same Program", async () => {
+    // Boundary: the gate must exclude GE without also excluding the PH's own
+    // evidence. Same Program, same course, PROGRAM_SPECIFIC scope.
+    responseFindFirstMock.mockImplementation((args) =>
+      matchesWhere(args.where, {
+        id: "response-1",
+        status: "SUBMITTED",
+        assignment: {
+          course_bound: {
+            id: "eval-1",
+            course_assignment: {
+              program_id: "prog-beed",
+              course: { course_scope: "PROGRAM_SPECIFIC" },
+            },
+          },
+          central_deployment: null,
+        },
+      })
+        ? Promise.resolve(MOCK_RESPONSE_DATA)
+        : Promise.resolve(null)
+    );
+
+    const result = await getProgramHeadResponseDetail("prog-beed", "response-1");
+
+    expect(result).not.toBeNull();
+    expect(result!.respondent.name).toBe("Juan dela Cruz");
   });
 
   it("returns the full identified response detail for a course-bound response", async () => {

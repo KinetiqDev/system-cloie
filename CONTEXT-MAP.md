@@ -46,7 +46,7 @@ Presentation or read-model code that owns no domain invariants. Rules stay in th
 - **Evaluations -> Outcomes**: the publication alignment gate enforces typed alignment manifestations for every active CILO before a Course-bound evaluation publishes.
 - **Evaluations -> Course Catalog and Assignments**: Course-bound evaluations bind a CourseAssignment and target its authoritative roster; exclusions and reversals operate on roster memberships.
 - **Responses -> Evaluations**: answering is gated by the deployment availability window and, for Course-bound evaluations, active roster membership.
-- **Response Review -> Responses**: review bodies serve only after SUBMITTED; identified respondent detail is a Program-Head-only flow.
+- **Response Review -> Responses**: review bodies serve only after SUBMITTED; identified detail follows Course evidence ownership, Program Heads for Program-specific/Central evidence and General Education Coordinators for General Education Course-bound evidence.
 - **Enrollments -> Academic Calendar**: ledger rows scope to AcademicTermInstances; Term rollover creates ROLLOVER-source enrollments in the target term.
 - **Legal -> Identity and Access**: the signed acknowledgement ticket gates the OAuth callback before Google code exchange and role selection.
 - **Dean Oversight -> Outcomes**: the oversight read model consumes period readiness snapshots and typed mapping-gap vocabulary defined by Outcomes.

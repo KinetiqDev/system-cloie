@@ -23,19 +23,9 @@ test("empty states differentiate the reason", async ({ page }) => {
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page.getByText("No matching evaluations", { exact: true })).toBeVisible();
 
-  // Zero-response evaluation (§61): GESTECH has an eligible roster but no
-  // submissions — the landing row says "No responses yet" and the detail
-  // page renders the §50 zero-response empty state.
-  await page.getByPlaceholder(/Evaluation, course, or faculty/).fill("");
-  await page.getByRole("combobox", { name: "Response progress" }).click();
-  await page.getByRole("option", { name: "No responses" }).click();
-  await page.getByRole("button", { name: "Apply filters" }).click();
-  const emptyEvaluationRow = page.getByRole("row", {
-    name: /GESTECH Post-Term CILO Evaluation.*1st Year.*Morning/i,
-  });
-  await expect(emptyEvaluationRow).toBeVisible();
-  await expect(emptyEvaluationRow.getByText("None", { exact: true })).toBeVisible();
-  await emptyEvaluationRow.getByRole("link", { name: "GESTECH Post-Term CILO Evaluation" }).click();
+  // General Education zero-response evidence belongs to the Coordinator.
+  await loginAs(page, fx.demoGenEd.email);
+  await page.goto(`/gen-ed-coordinator/responses/course/${fx.gestechEval.id}`);
   await expect(
     page.getByText("Evaluations exist, but no responses have been submitted.")
   ).toBeVisible();
@@ -43,7 +33,8 @@ test("empty states differentiate the reason", async ({ page }) => {
   // Analytics Outcomes: central evidence exists but no central deployment
   // publishes a GO snapshot, so the program-wide section shows its
   // differentiated empty state.
-  await page.getByRole("link", { name: "Analytics", exact: true }).click();
+  await loginAs(page, fx.demoPh.email);
+  await page.goto(`/program-head/programs/${fx.bsit.id}/analytics`);
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
   await page.getByRole("combobox", { name: "Evidence source" }).click();
   await page.getByRole("option", { name: "Alumni" }).click();

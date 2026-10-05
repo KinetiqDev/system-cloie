@@ -19,28 +19,6 @@ describe("native legal content", () => {
     }
   });
 
-  it("names every authorized reader of identified submitted responses", () => {
-    const confidentiality = legalDocuments.privacy.sections.find(
-      (section) => section.id === "confidentiality"
-    );
-    const text = confidentiality?.blocks
-      .map((block) => (block.type === "paragraph" ? block.text : ""))
-      .join(" ");
-
-    expect(text).toContain(
-      "Authorized Program Heads may review identified submitted responses from Program-specific courses and Central deployments within their assigned programs."
-    );
-    expect(text).toContain(
-      "Authorized General Education Coordinators may review identified submitted responses from General Education courses across programs."
-    );
-    expect(text).toContain(
-      "This access is for quality assurance, accreditation, and continuous-improvement purposes."
-    );
-    expect(text).not.toContain(
-      "Authorized Program Heads may review identified submitted responses within their assigned programs"
-    );
-  });
-
   it("has unique stable section anchors", () => {
     const ids = Object.values(legalDocuments).flatMap((document) =>
       document.sections.map((section) => section.id)

@@ -1,0 +1,7 @@
+# Transfer General Education response evidence to the Coordinator
+
+Accepted from beta-testing feedback and the user's explicit ownership decision on 2026-10-05. **BREAKING:** General Education Course-bound responses and analytics belong to the active General Education Coordinator college-wide, including identified submitted-response review. Program Heads receive only Program-specific Course-bound and Central evidence within their authorized Programs, even when General Education respondents are Students in those Programs.
+
+Course scope determines evidence ownership, not respondent Program membership or the evaluation publisher. This replaces the Program-Head-only identified-review restriction for General Education and resolves the access decision left open by issue #604. Coordinator aggregate analytics remain de-identified; identities and raw submitted answers are available only through separately authorized review. Draft response bodies remain inaccessible. Faculty and Dean permissions, Central deployment ownership, and assignment mutation authority do not change.
+
+No response records move and no schema migration is required. The transfer changes server read predicates, role-owned navigation and review routes, and privacy disclosure version 1.2. Privacy and terms remain subject to institutional approval. Old Program Head General Education deep links must deny access rather than redirect into another role's workspace.

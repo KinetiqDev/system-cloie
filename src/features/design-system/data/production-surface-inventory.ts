@@ -1445,6 +1445,36 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/gen-ed-coordinator/responses/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/responses/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/responses/course/[evaluationId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/responses/course/[evaluationId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/responses/course/[evaluationId]/responses/[responseId]/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/gen-ed-coordinator/responses/course/[evaluationId]/responses/[responseId]/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
     path: "src/app/(app)/gen-ed-coordinator/course-assignments/page.tsx",
     disposition: "task",
     taskId: 12,
@@ -2971,6 +3001,26 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/evaluations/components/reopen-evaluation-dialog.tsx",
     disposition: "task",
     taskId: 22,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/general-education-responses-filters.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/general-education-responses-landing.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/general-education-responses-pagination.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/general-education-responses-workspace.tsx",
+    disposition: "already_compliant",
     category: "feature_component",
   },
   {

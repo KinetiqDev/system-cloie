@@ -1,10 +1,6 @@
-// 1.2 names the General Education Coordinator alongside Program Heads as an
-// authorized reader of identified submitted responses, so acknowledgement
-// tickets issued against the earlier privacy version must fail the gate
-// (issue: General Education evidence ownership). 1.1 replaced the Google-only
-// account and credential language with the method-neutral account, code, and
-// recovery wording introduced by the scoped entry work (issue #649). Both
-// documents stay pending institutional approval.
+// Privacy 1.2 records the Course-scope evidence ownership transfer in ADR 0034;
+// acknowledgement tickets for the earlier privacy version must fail the gate.
+// Terms 1.1 retain the method-neutral entry contract. Both await approval.
 export const LEGAL_VERSIONS = {
   privacy: "1.2",
   terms: "1.1",

@@ -164,7 +164,19 @@ async function getResponseStats(
           select: {
             course_bound_id: true,
             central_deployment_id: true,
-            response: { select: { status: true, quant_items: { select: { rating_value: true } } } },
+            // Every assignment row is a participation opportunity, but only a
+            // SUBMITTED response may contribute ratings. The status filter is
+            // pushed into the sub-select so IN_PROGRESS answer bodies are never
+            // read from the database at all.
+            response: {
+              select: {
+                status: true,
+                quant_items: {
+                  where: { response: { status: "SUBMITTED" } },
+                  select: { rating_value: true },
+                },
+              },
+            },
           },
         });
   const collected = new Map<string, { assigned: number; submitted: number; ratings: number[] }>();

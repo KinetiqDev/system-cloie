@@ -177,6 +177,14 @@ export const E2E_CONTRACT = {
   /** The GESTECH zero-response evaluation used for the Student lifecycle journey (issue #544). */
   gestechEval: { id: D.CB_BSIT_GESTECH, title: "GESTECH Post-Term CILO Evaluation" },
   gestechMobileEval: { id: D.CB_BSIT_GESTECH_MOBILE },
+  generalEducationReview: {
+    evaluationId: D.CB_BSIT_GEETHICS,
+    title: "GEETHICS Post-Term CILO Evaluation",
+    courseScope: "GENERAL_EDUCATION" as const,
+    respondentId: U.STU_BEED,
+    respondentName: "Patricia Luna",
+    submittedCount: 2,
+  },
 
   /** Reviewed expectations for the IT201 course-bound SUBMITTED response (journey A). */
   courseResponse: {
@@ -253,6 +261,12 @@ export type FixtureData = {
     goLinks: Array<{ goId: string; goCode: string; ciloLabel: string }>;
   };
   gestechEval: { id: string; title: string };
+  generalEducationReview: {
+    evaluationId: string;
+    title: string;
+    responseId: string;
+    respondentName: string;
+  };
   gestechAssignment: { id: string };
   gestechMobileAssignment: { id: string };
   /** Issue #546 publication fixtures. */

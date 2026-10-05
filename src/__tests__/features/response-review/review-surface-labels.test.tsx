@@ -187,7 +187,7 @@ describe("review surface academic-context labels", () => {
         response={responseDetail()}
         evaluationHref="/e"
         analyticsHref="/a"
-        programId="prog-1"
+        outcomeHref={() => "/a"}
       />
     );
 

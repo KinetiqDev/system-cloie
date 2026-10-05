@@ -59,7 +59,14 @@ export default async function CourseResponseDetailPage({
         evidenceSource: "COURSE",
         termInstanceId: response.evaluation.context.termInstanceId,
       })}
-      programId={programId}
+      outcomeHref={(goId) =>
+        buildAnalyticsUrl(programId, {
+          tab: "outcomes",
+          goId,
+          evidenceSource: "COURSE",
+          termInstanceId: response.evaluation.context.termInstanceId,
+        })
+      }
       breadcrumbs={
         <Breadcrumbs
           className="text-body-sm"

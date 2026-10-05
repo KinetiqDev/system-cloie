@@ -61,9 +61,7 @@ const SCALE_SNAPSHOT = [
   {
     key: "sec-1",
     title: "Ratings",
-    items: [
-      { key: "item-1", kind: "quantitative", prompt: "Rate.", scale: [1, 2, 3, 4, 5] },
-    ],
+    items: [{ key: "item-1", kind: "quantitative", prompt: "Rate.", scale: [1, 2, 3, 4, 5] }],
   },
 ];
 
@@ -72,14 +70,15 @@ const NARROW_SNAPSHOT = [
   {
     key: "sec-1",
     title: "Ratings",
-    items: [
-      { key: "item-1", kind: "quantitative", prompt: "Rate.", scale: [1, 2, 3] },
-    ],
+    items: [{ key: "item-1", kind: "quantitative", prompt: "Rate.", scale: [1, 2, 3] }],
   },
 ];
 
 /** Snapshot map covering every instrument version referenced by the rows. */
-function snapshotsFor(rows: Array<Pick<BreakdownRatingRow, "response">>, snapshot = SCALE_SNAPSHOT): Map<string, unknown> {
+function snapshotsFor(
+  rows: Array<Pick<BreakdownRatingRow, "response">>,
+  snapshot = SCALE_SNAPSHOT
+): Map<string, unknown> {
   const ids = [
     ...new Set(
       rows.flatMap((row) => {
@@ -208,6 +207,13 @@ function expectProgramScopedPredicates() {
     expect.objectContaining({ not: expect.anything() })
   );
   expect(ratingOr[1].assignment.course_bound.course_assignment.program_id).toBe("program-bsed");
+  // Program equality alone would admit a General Education course holding an
+  // assignment in this same Program, so the course scope is part of the gate.
+  expect(ratingOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
+    "PROGRAM_SPECIFIC"
+  );
+  // Central deployments carry no course scope: they stay Program-owned.
+  expect(ratingOr[0].assignment.central_deployment).not.toHaveProperty("course");
   return ratingCall;
 }
 
@@ -216,8 +222,9 @@ const stakeholdersFilters = { tab: "stakeholders" as const };
 
 /** Default snapshot resolution: every requested version id maps to the 1–5 scale. */
 function defaultSnapshotResolution() {
-  prismaMock.instrumentVersion.findMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
-    Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: SCALE_SNAPSHOT })))
+  prismaMock.instrumentVersion.findMany.mockImplementation(
+    ({ where }: { where: { id: { in: string[] } } }) =>
+      Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: SCALE_SNAPSHOT })))
   );
 }
 
@@ -348,18 +355,32 @@ describe("getProgramHeadStakeholders", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-rated", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-rated",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
       // Submitted response with no quantitative items: still evidence.
-      responseRow({ id: "resp-unrated", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-unrated",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
 
     const result = await getProgramHeadStakeholders("program-bsed", stakeholdersFilters);
 
-    const courseBucket = result!.buckets.find(
-      (bucket) => bucket.sourceKey === "COURSE_STUDENT"
-    )!;
+    const courseBucket = result!.buckets.find((bucket) => bucket.sourceKey === "COURSE_STUDENT")!;
     expect(courseBucket.ratingCount).toBe(1);
     expect(courseBucket.submittedResponseCount).toBe(2);
     // Instrument disclosure survives even though one response is unrated.
@@ -367,8 +388,9 @@ describe("getProgramHeadStakeholders", () => {
   });
 
   it("excludes out-of-scale ratings from means and rating counts", async () => {
-    prismaMock.instrumentVersion.findMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
-      Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: NARROW_SNAPSHOT })))
+    prismaMock.instrumentVersion.findMany.mockImplementation(
+      ({ where }: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: NARROW_SNAPSHOT })))
     );
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       centralRatingRow({
@@ -385,8 +407,20 @@ describe("getProgramHeadStakeholders", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-in-scale", central: { targetStakeholder: "ALUMNI", instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1) } }),
-      responseRow({ id: "resp-out-of-scale", central: { targetStakeholder: "ALUMNI", instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1) } }),
+      responseRow({
+        id: "resp-in-scale",
+        central: {
+          targetStakeholder: "ALUMNI",
+          instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-out-of-scale",
+        central: {
+          targetStakeholder: "ALUMNI",
+          instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -410,7 +444,13 @@ describe("getProgramHeadStakeholders", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-alumni", central: { targetStakeholder: "ALUMNI", instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1) } }),
+      responseRow({
+        id: "resp-alumni",
+        central: {
+          targetStakeholder: "ALUMNI",
+          instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(1);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -532,8 +572,24 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-rated", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
-      responseRow({ id: "resp-unrated", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-rated",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-unrated",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -558,7 +614,13 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-central", central: { targetStakeholder: "STUDENT", instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
+      responseRow({
+        id: "resp-central",
+        central: {
+          targetStakeholder: "STUDENT",
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(1);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -589,8 +651,22 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-course", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-shared-v1", "Shared Survey", 1) } }),
-      responseRow({ id: "resp-alumni", central: { targetStakeholder: "ALUMNI", instrument: instrument("instrument-shared-v1", "Shared Survey", 1) } }),
+      responseRow({
+        id: "resp-course",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-shared-v1", "Shared Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-alumni",
+        central: {
+          targetStakeholder: "ALUMNI",
+          instrument: instrument("instrument-shared-v1", "Shared Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -642,10 +718,38 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-major-a", central: { targetStakeholder: "STUDENT", major: { id: "major-1", name: "Mathematics" }, instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
-      responseRow({ id: "resp-major-a-2", central: { targetStakeholder: "STUDENT", major: { id: "major-1", name: "Mathematics" }, instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
-      responseRow({ id: "resp-no-major", central: { targetStakeholder: "STUDENT", instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
-      responseRow({ id: "resp-course", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-major-a",
+        central: {
+          targetStakeholder: "STUDENT",
+          major: { id: "major-1", name: "Mathematics" },
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-major-a-2",
+        central: {
+          targetStakeholder: "STUDENT",
+          major: { id: "major-1", name: "Mathematics" },
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-no-major",
+        central: {
+          targetStakeholder: "STUDENT",
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-course",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(4);
     prismaMock.evaluationAssignment.count.mockResolvedValue(4);
@@ -688,8 +792,22 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-student", central: { targetStakeholder: "STUDENT", major: { id: "major-1", name: "Mathematics" }, instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
-      responseRow({ id: "resp-alumni", central: { targetStakeholder: "ALUMNI", major: { id: "major-1", name: "Mathematics" }, instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1) } }),
+      responseRow({
+        id: "resp-student",
+        central: {
+          targetStakeholder: "STUDENT",
+          major: { id: "major-1", name: "Mathematics" },
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-alumni",
+        central: {
+          targetStakeholder: "ALUMNI",
+          major: { id: "major-1", name: "Mathematics" },
+          instrument: instrument("instrument-alumni-v1", "Alumni Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -718,7 +836,15 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-course", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-course",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(1);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -758,8 +884,24 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-central-year", central: { targetStakeholder: "STUDENT", yearLevel: "THIRD_YEAR", instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
-      responseRow({ id: "resp-course-year", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1), targets: [{ year_level: "FIRST_YEAR" }] } }),
+      responseRow({
+        id: "resp-central-year",
+        central: {
+          targetStakeholder: "STUDENT",
+          yearLevel: "THIRD_YEAR",
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-course-year",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+          targets: [{ year_level: "FIRST_YEAR" }],
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -784,10 +926,7 @@ describe("getProgramHeadBreakdowns", () => {
         deploymentName: "CILO Deployment",
         course: { id: "course-1", code: "CS101", title: "Intro" },
         instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
-        targets: [
-          { year_level: "FIRST_YEAR" },
-          { year_level: "SECOND_YEAR" },
-        ],
+        targets: [{ year_level: "FIRST_YEAR" }, { year_level: "SECOND_YEAR" }],
       }),
       centralRatingRow({
         value: 4,
@@ -797,8 +936,22 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-multi-year", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
-      responseRow({ id: "resp-no-year", central: { targetStakeholder: "STUDENT", instrument: instrument("instrument-exit-v1", "Exit Survey", 1) } }),
+      responseRow({
+        id: "resp-multi-year",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-no-year",
+        central: {
+          targetStakeholder: "STUDENT",
+          instrument: instrument("instrument-exit-v1", "Exit Survey", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -817,8 +970,9 @@ describe("getProgramHeadBreakdowns", () => {
   });
 
   it("excludes out-of-scale ratings from breakdown rows", async () => {
-    prismaMock.instrumentVersion.findMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
-      Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: NARROW_SNAPSHOT })))
+    prismaMock.instrumentVersion.findMany.mockImplementation(
+      ({ where }: { where: { id: { in: string[] } } }) =>
+        Promise.resolve(where.id.in.map((id) => ({ id, structure_snapshot: NARROW_SNAPSHOT })))
     );
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       courseBoundRatingRow({
@@ -839,8 +993,24 @@ describe("getProgramHeadBreakdowns", () => {
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
-      responseRow({ id: "resp-out-of-scale", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
-      responseRow({ id: "resp-in-scale", courseBound: { id: "eval-1", deploymentName: "CILO Deployment", course: { id: "course-1", code: "CS101", title: "Intro" }, instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1) } }),
+      responseRow({
+        id: "resp-out-of-scale",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
+      responseRow({
+        id: "resp-in-scale",
+        courseBound: {
+          id: "eval-1",
+          deploymentName: "CILO Deployment",
+          course: { id: "course-1", code: "CS101", title: "Intro" },
+          instrument: instrument("instrument-cilo-v1", "CILO Evaluation", 1),
+        },
+      }),
     ]);
     prismaMock.response.count.mockResolvedValue(2);
     prismaMock.evaluationAssignment.count.mockResolvedValue(2);
@@ -1011,10 +1181,7 @@ describe("buildAttributionBreakdown (pure)", () => {
       deploymentName: "D",
       course: { id: "c1", code: "X", title: "T" },
       instrument: instrument("iv-1", "Instrument", 1),
-      targets: [
-        { year_level: "FIRST_YEAR" },
-        { year_level: "SECOND_YEAR" },
-      ],
+      targets: [{ year_level: "FIRST_YEAR" }, { year_level: "SECOND_YEAR" }],
     });
     const singleTarget = courseBoundRatingRow({
       value: 5,

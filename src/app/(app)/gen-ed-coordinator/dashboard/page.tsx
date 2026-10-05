@@ -10,6 +10,7 @@ import {
   Gauge,
   Layers3,
   Library,
+  MessageSquareText,
   UsersRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -417,6 +418,12 @@ function QuickActions() {
       detail: "Search and manage current or historical assignments.",
       href: "/gen-ed-coordinator/course-assignments",
       icon: ClipboardList,
+    },
+    {
+      label: "Review General Education responses",
+      detail: "Open identified submitted responses across every Program.",
+      href: "/gen-ed-coordinator/responses",
+      icon: MessageSquareText,
     },
   ];
 

@@ -130,6 +130,12 @@ describe("getProgramHeadAnalytics", () => {
     expect(assignmentOr).toHaveLength(2);
     expect(assignmentOr[0].central_deployment.program_id).toBe("program-bsed");
     expect(assignmentOr[1].course_bound.course_assignment.program_id).toBe("program-bsed");
+    // Course-bound evidence is Program-specific only. A General Education
+    // course can carry an assignment inside this same Program, so Program
+    // equality alone would not exclude it.
+    expect(assignmentOr[1].course_bound.course_assignment.course.course_scope).toBe(
+      "PROGRAM_SPECIFIC"
+    );
 
     // Rating aggregate scopes to program-bsed
     const aggregateCall = prismaMock.quantitativeResponseItem.aggregate.mock.calls[0][0];
@@ -138,6 +144,9 @@ describe("getProgramHeadAnalytics", () => {
     expect(aggregateOr[0].assignment.central_deployment.program_id).toBe("program-bsed");
     expect(aggregateOr[1].assignment.course_bound.course_assignment.program_id).toBe(
       "program-bsed"
+    );
+    expect(aggregateOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
+      "PROGRAM_SPECIFIC"
     );
   });
 
@@ -508,5 +517,88 @@ describe("evidence-source scope predicates", () => {
       { deployment_type: "ANY", target_stakeholder: "STUDENT" }
     ) as { OR: unknown[] };
     expect(opportunity.OR).toHaveLength(2);
+  });
+
+  it("excludes General Education course-bound evidence from every Program scope branch", () => {
+    // The seeded GE shape is a GENERAL_EDUCATION course whose CourseAssignment
+    // carries this same Program. Program equality alone would admit it, so each
+    // course-bound branch must also pin the course scope.
+    const response = buildProgramResponseScope("program-bsit", {
+      term_instance_id: { in: ["term-1"] },
+    }) as {
+      OR: Array<{
+        assignment: {
+          course_bound?: {
+            course_assignment: { program_id: string; course: { course_scope: string } };
+            term_instance_id?: unknown;
+          };
+        };
+      }>;
+    };
+    const opportunity = buildProgramOpportunityScope("program-bsit", {
+      term_instance_id: { in: ["term-1"] },
+    }) as {
+      OR: Array<{
+        course_bound?: {
+          course_assignment: { program_id: string; course: { course_scope: string } };
+          term_instance_id?: unknown;
+        };
+      }>;
+    };
+
+    const responseCourseBranch = response.OR[1].assignment.course_bound!;
+    expect(responseCourseBranch.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
+    expect(responseCourseBranch.course_assignment.program_id).toBe("program-bsit");
+    // The selected period still narrows the branch; scope exclusion must not
+    // drop the period predicate.
+    expect(responseCourseBranch.term_instance_id).toEqual({ in: ["term-1"] });
+
+    const opportunityCourseBranch = opportunity.OR[1].course_bound!;
+    expect(opportunityCourseBranch.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
+    expect(opportunityCourseBranch.course_assignment.program_id).toBe("program-bsit");
+    expect(opportunityCourseBranch.term_instance_id).toEqual({ in: ["term-1"] });
+  });
+
+  it("keeps Central deployments in scope without a course-scope predicate", () => {
+    // Central Deployments are Program-owned and stay PH evidence under the new
+    // ownership transfer; only course-bound branches gain the scope gate.
+    const response = buildProgramResponseScope("program-bsit", {}) as {
+      OR: Array<{ assignment: { central_deployment?: { program_id: string } } }>;
+    };
+    const opportunity = buildProgramOpportunityScope("program-bsit", {}) as {
+      OR: Array<{ central_deployment?: { program_id: string } }>;
+    };
+
+    expect(response.OR[0].assignment.central_deployment!.program_id).toBe("program-bsit");
+    expect(opportunity.OR[0].central_deployment!.program_id).toBe("program-bsit");
+  });
+
+  it("applies the course-scope gate to the COURSE evidence-source narrowing", () => {
+    const response = buildProgramResponseScope(
+      "program-bsit",
+      {},
+      { deployment_type: "COURSE_BOUND" }
+    ) as {
+      deployment_type: string;
+      assignment: {
+        course_bound: {
+          course_assignment: { program_id: string; course: { course_scope: string } };
+        };
+      };
+    };
+    expect(response.assignment.course_bound.course_assignment.course.course_scope).toBe(
+      "PROGRAM_SPECIFIC"
+    );
+
+    const opportunity = buildProgramOpportunityScope(
+      "program-bsit",
+      {},
+      { deployment_type: "COURSE_BOUND" }
+    ) as {
+      course_bound: {
+        course_assignment: { program_id: string; course: { course_scope: string } };
+      };
+    };
+    expect(opportunity.course_bound.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
   });
 });

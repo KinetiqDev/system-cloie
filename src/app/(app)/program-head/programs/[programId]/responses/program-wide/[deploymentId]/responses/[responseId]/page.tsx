@@ -77,7 +77,15 @@ export default async function CentralResponseDetailPage({
         stakeholder,
         termInstanceId: response.evaluation.context.termInstanceId,
       })}
-      programId={programId}
+      outcomeHref={(goId) =>
+        buildAnalyticsUrl(programId, {
+          tab: "outcomes",
+          goId,
+          evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],
+          stakeholder,
+          termInstanceId: response.evaluation.context.termInstanceId,
+        })
+      }
       breadcrumbs={
         <Breadcrumbs
           className="text-body-sm"

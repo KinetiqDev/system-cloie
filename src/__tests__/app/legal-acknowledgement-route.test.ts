@@ -55,9 +55,9 @@ describe("legal acknowledgement route", () => {
     }
   });
   it.each([
-    { intent: "unknown", privacyVersion: "1.1", termsVersion: "1.1" },
-    { intent: "student", privacyVersion: "0.9", termsVersion: "1.1" },
-    { intent: "student", privacyVersion: "1.1", termsVersion: "0.9" },
+    acknowledgementBody("unknown"),
+    acknowledgementBody("student", { privacyVersion: "1.1" }),
+    acknowledgementBody("student", { termsVersion: "0.9" }),
   ])("rejects stale or unknown acknowledgement input", async (body) => {
     const response = await POST(
       acknowledgementRequest("https://cloie.test/api/auth/legal-acknowledgement", {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
 import { getProgramHeadResponseDetail } from "@/features/response-review/services/get-program-head-response-detail";
+import { matchesWhere } from "@/__tests__/helpers/where-clause";
 import { getProgramHeadFeedback } from "@/features/analytics/services/get-program-head-analytics";
 
 const {
@@ -14,6 +15,7 @@ const {
   studentEnrollmentFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
+  alumniProfileFindManyMock,
   courseBoundEvaluationFindManyMock,
   academicTermInstanceFindManyMock,
 } = vi.hoisted(() => ({
@@ -27,6 +29,7 @@ const {
   resolveProgramHeadContextMock: vi.fn(),
   courseBoundEvaluationFindManyMock: vi.fn(),
   academicTermInstanceFindManyMock: vi.fn(),
+  alumniProfileFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -49,6 +52,9 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     courseBoundEvaluation: {
       findMany: courseBoundEvaluationFindManyMock,
+    },
+    alumniProfile: {
+      findMany: alumniProfileFindManyMock,
     },
     academicTermInstance: {
       findMany: academicTermInstanceFindManyMock,
@@ -165,7 +171,14 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
             status: "SUBMITTED",
             assignment: {
               OR: [
-                { course_bound: { course_assignment: { program_id: "prog-bsit" } } },
+                {
+                  course_bound: {
+                    course_assignment: {
+                      program_id: "prog-bsit",
+                      course: { course_scope: "PROGRAM_SPECIFIC" },
+                    },
+                  },
+                },
                 { central_deployment: { program_id: "prog-bsit" } },
               ],
             },
@@ -219,7 +232,14 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
             status: "SUBMITTED",
             assignment: {
               OR: [
-                { course_bound: { course_assignment: { program_id: "prog-beed" } } },
+                {
+                  course_bound: {
+                    course_assignment: {
+                      program_id: "prog-beed",
+                      course: { course_scope: "PROGRAM_SPECIFIC" },
+                    },
+                  },
+                },
                 { central_deployment: { program_id: "prog-beed" } },
               ],
             },
@@ -239,6 +259,110 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
 
       expect(detail).toBeNull();
       expect(responseFindFirstMock).not.toHaveBeenCalled();
+    });
+
+    it("denies a General Education response whose assignment is in the authorized Program", async () => {
+      // The seeded GE shape is a GENERAL_EDUCATION course whose CourseAssignment
+      // carries this Program Head's own Program, so Program equality alone
+      // would admit it. The captured clause is evaluated against that row, so a
+      // weakened filter fails here rather than passing a shape-only assertion.
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        roles: [ROLES.PROGRAM_HEAD],
+        userId: "ph-bsit-id",
+      });
+      resolveProgramHeadContextMock.mockResolvedValue({
+        success: true,
+        data: {
+          userId: "ph-bsit-id",
+          selectedProgram: { id: "prog-bsit", code: "BSIT", name: "Information Technology" },
+          authorizedPrograms: [],
+        },
+      });
+      responseFindFirstMock.mockImplementation((args) =>
+        matchesWhere(args.where, {
+          id: "response-ge",
+          status: "SUBMITTED",
+          assignment: {
+            course_bound: {
+              id: "eval-geethics",
+              course_assignment: {
+                program_id: "prog-bsit",
+                course: { course_scope: "GENERAL_EDUCATION" },
+              },
+            },
+            central_deployment: null,
+          },
+        })
+          ? Promise.resolve(MOCK_COURSE_BOUND_RESPONSE)
+          : Promise.resolve(null)
+      );
+
+      const detail = await getProgramHeadResponseDetail("prog-bsit", "response-ge");
+
+      expect(detail).toBeNull();
+    });
+
+    it("keeps Central Deployment responses in the authorized Program scope", async () => {
+      // Ownership moved only course-bound GE evidence. Program-owned Central
+      // Deployments stay Program Head evidence and must not be gated on course
+      // scope, which Central rows never carry.
+      resolveAuthSessionMock.mockResolvedValue({
+        activeRole: ROLES.PROGRAM_HEAD,
+        roles: [ROLES.PROGRAM_HEAD],
+        userId: "ph-bsit-id",
+      });
+      resolveProgramHeadContextMock.mockResolvedValue({
+        success: true,
+        data: {
+          userId: "ph-bsit-id",
+          selectedProgram: { id: "prog-bsit", code: "BSIT", name: "Information Technology" },
+          authorizedPrograms: [],
+        },
+      });
+      responseFindFirstMock.mockImplementation((args) =>
+        matchesWhere(args.where, {
+          id: "response-central",
+          status: "SUBMITTED",
+          assignment: {
+            course_bound: null,
+            central_deployment: { id: "central-1", program_id: "prog-bsit" },
+          },
+        })
+          ? Promise.resolve({
+              id: "response-central",
+              submitted_at: new Date("2026-01-04T08:00:00.000Z"),
+              respondent: { id: "alum-1", name: "Demo Alumni" },
+              assignment: {
+                course_bound: null,
+                central_deployment: {
+                  id: "central-1",
+                  deployment_name: "Alumni Survey 2026",
+                  target_stakeholder: "ALUMNI",
+                  year_level: null,
+                  instrument: { version_number: 1, structure_snapshot: [] },
+                  program: { name: "BSIT" },
+                  major: { name: null },
+                  term_instance: {
+                    id: "term-1",
+                    school_year: { code: "2025-2026" },
+                    semester: "FIRST",
+                    term: null,
+                  },
+                  go_snapshots: [],
+                },
+              },
+              quant_items: [],
+              qual_items: [],
+            })
+          : Promise.resolve(null)
+      );
+      alumniProfileFindManyMock.mockResolvedValue([]);
+
+      const detail = await getProgramHeadResponseDetail("prog-bsit", "response-central");
+
+      expect(detail).not.toBeNull();
+      expect(detail!.evaluation.type).toBe("PROGRAM_WIDE");
     });
   });
 

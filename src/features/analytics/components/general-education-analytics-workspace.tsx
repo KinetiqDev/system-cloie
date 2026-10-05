@@ -69,9 +69,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { buildGenEdResponsesCourseEvaluationPath } from "@/lib/constants/gen-ed-routes";
 import type { GeneralEducationAnalyticsDTO } from "@/features/analytics/general-education-analytics-types";
 import { QualitativeWordCloud } from "@/features/analytics/components/qualitative-word-cloud";
 import { splitComparableRuns } from "@/features/analytics/services/program-head-analytics-aggregators";
+import { buildGeneralEducationAnalyticsQueryString } from "@/features/analytics/services/general-education-analytics-state";
 
 type Props = {
   data: GeneralEducationAnalyticsDTO;
@@ -293,7 +295,10 @@ export function GeneralEducationAnalyticsWorkspace({ data, filters }: Props) {
       ) : null}
 
       {/* Qualitative feedback — aggregate only */}
-      <FeedbackSection feedback={feedback} />
+      <FeedbackSection
+        feedback={feedback}
+        periodQuery={buildGeneralEducationAnalyticsQueryString(filters)}
+      />
     </div>
   );
 }
@@ -681,7 +686,13 @@ function TrendsTable({
 }
 
 // fallow-ignore-next-line complexity
-function FeedbackSection({ feedback }: { feedback: GeneralEducationAnalyticsDTO["feedback"] }) {
+function FeedbackSection({
+  feedback,
+  periodQuery,
+}: {
+  feedback: GeneralEducationAnalyticsDTO["feedback"];
+  periodQuery: string;
+}) {
   const {
     emptyReason,
     tokens,
@@ -791,11 +802,22 @@ function FeedbackSection({ feedback }: { feedback: GeneralEducationAnalyticsDTO[
       </div>
       {evidenceEvaluations.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <h3 className="text-title-sm text-foreground">Evidence links</h3>
-          <ul className="flex flex-col gap-1">
-            {evidenceEvaluations.map((ev) => (
-              <li key={ev.evaluationId} className="text-muted-foreground text-sm">
-                {ev.deploymentName}
+          <h3 className="text-title-sm text-foreground">Review evidence</h3>
+          <p className="text-body-sm text-text-secondary">
+            Open the identified submitted responses behind this evidence.
+          </p>
+          <ul className="flex flex-col gap-2">
+            {evidenceEvaluations.map((evaluation) => (
+              <li key={evaluation.evaluationId}>
+                <Link
+                  href={`${buildGenEdResponsesCourseEvaluationPath(evaluation.evaluationId)}${periodQuery ? `?${periodQuery}` : ""}`}
+                  className={cn(
+                    "text-link hover:text-foreground underline underline-offset-3",
+                    "pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+                  )}
+                >
+                  {evaluation.deploymentName}
+                </Link>
               </li>
             ))}
           </ul>
