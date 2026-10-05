@@ -34,7 +34,7 @@ test("empty states differentiate the reason", async ({ page }) => {
   // publishes a GO snapshot, so the program-wide section shows its
   // differentiated empty state.
   await loginAs(page, fx.demoPh.email);
-  await page.goto(`/program-head/programs/${fx.bsit.id}/analytics`);
+  await page.goto(`/program-head/programs/${fx.bsit.id}/analytics?tab=outcomes`);
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
   await page.getByRole("combobox", { name: "Evidence source" }).click();
   await page.getByRole("option", { name: "Alumni" }).click();
