@@ -325,8 +325,8 @@ The Faculty Member owns the authoring and operational work for the Course contex
 ### 5.2 Course roster journey
 
 1. The Faculty Member opens `/faculty/course-rosters` (`My Course Rosters`).
-2. System CLOIE lists current active Course assignments owned by that Faculty Member and separately shows active-roster and evaluation-eligible counts.
-3. The Faculty Member searches or includes historical assignments.
+2. System CLOIE lists active Course assignments owned by that Faculty Member in the active Academic Period. Each assignment shows roster membership and current evaluation-eligible counts together, with a warning for the shortfall.
+3. The Faculty Member selects the current scope, one Academic Period, or all Academic Periods, then narrows the list by search, Course, Program, year level, section, or Course scope. Course and Program choices come from that Faculty Member's own assignments. List and Card views show the same assignments without another server read.
 4. The Faculty Member opens `/course-rosters/[assignmentId]` for one authorized Course assignment.
 5. The Faculty Member reviews Student name, email, program, major, year level, section, membership-added date, and safe eligibility state.
 6. The Faculty Member adds one existing Student through scoped name search, selects the intended account using canonical name, ACD email, and academic context, then adds that selected account directly; or downloads the browser-generated name-column template.
@@ -355,10 +355,10 @@ Roster operations are locked only when the assignment is inactive or its Academi
 2. The Faculty Member selects an institutional or Program Head Course-bound template explicitly marked faculty-accessible, or a Faculty-owned copy.
 3. System CLOIE creates a derived Faculty-owned copy when the source is not already owned by the Faculty Member; editing the copy does not overwrite the source.
 4. The Faculty Member binds the derived template to an authorized Course, program, and optional major context.
-5. The Faculty Member binds each active CILO exactly once to a Likert question. A CILO cannot bind to an open-ended question, and a Likert question cannot receive two CILOs.
+5. The Faculty Member binds each active CILO to at least one Likert question. One CILO may have several questions, but a Likert question cannot receive two CILOs. A CILO cannot bind to an open-ended question ([ADR 0027](adr/0027-one-cilo-many-likert-questions.md)).
 6. The Faculty Member previews the Student-facing evaluation and sets the activation/deadline values.
 7. The Faculty Member publishes the evaluation once for the Course assignment.
-8. System CLOIE snapshots the CILOs, Course information, question bindings, and instrument version; creates assignments for active roster members except documented exclusions; and locks ordinary roster changes.
+8. System CLOIE snapshots the CILOs, Course information, question bindings, and instrument version, then creates assignments for eligible roster members except documented exclusions. Publication does not lock the roster. Eligible Students added or restored during an open evaluation receive it automatically while the Course assignment and Academic Period remain active ([ADR 0007](adr/0007-course-assignment-roster-membership.md)).
 9. The Faculty Member may close the evaluation, review anonymized responses, and use late inclusion for an excluded eligible Student before closure when authorized.
 
 On-behalf Course-bound publication by Program Head, Dean, or Secretary uses the Faculty's bound Course template and disables question customization. The Secretary-specific on-behalf deployment policy remains open under issue #131.
