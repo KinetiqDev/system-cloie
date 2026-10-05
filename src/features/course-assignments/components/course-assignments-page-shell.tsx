@@ -4,10 +4,10 @@ import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Plus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { AssignmentFilters } from "./shared/assignment-filters";
+import { ResultSummaryStrip } from "./shared/result-summary-strip";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { AssignmentFiltersState } from "./shared/assignment-filters";
 import type {
@@ -54,67 +54,6 @@ export interface CourseAssignmentsPageShellProps {
   selectedProgramId?: string;
   /** False renders a read-only list: no create entry points or form dialog. */
   canManageAssignments?: boolean;
-}
-
-function AssignmentSummaryStrip({
-  total,
-  assignments,
-  page,
-  pageSize,
-  periodLabel,
-}: {
-  total: number;
-  assignments: Array<{ isActive: boolean }>;
-  page: number;
-  pageSize: number;
-  periodLabel: string;
-}) {
-  const activeCount = assignments.filter((a) => a.isActive).length;
-  const inactiveCount = total > 0 ? total - activeCount : 0;
-  const isSinglePage = total <= pageSize;
-  const showStatusBreakdown = isSinglePage && total > 0;
-
-  return (
-    <div className="bg-card flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 shadow-xs sm:justify-between sm:px-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="bg-muted text-muted-foreground ring-border flex size-9 shrink-0 items-center justify-center rounded-lg ring-1">
-          <Users aria-hidden="true" />
-        </div>
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="truncate text-sm leading-none font-semibold tabular-nums">
-            {total} {total === 1 ? "assignment" : "assignments"}
-          </p>
-          <p className="text-muted-foreground truncate text-xs tabular-nums">
-            {total === 0 ? (
-              "No records in current view"
-            ) : showStatusBreakdown ? (
-              <>
-                <span className="text-foreground font-medium">{activeCount} active</span>
-                {inactiveCount > 0 && (
-                  <>
-                    <span className="text-border-strong mx-1.5">·</span>
-                    <span>{inactiveCount} inactive</span>
-                  </>
-                )}
-                <span className="text-border-strong mx-1.5 hidden sm:inline">·</span>
-                <span className="hidden sm:inline">page {page + 1}</span>
-              </>
-            ) : (
-              <span>page {page + 1}</span>
-            )}
-          </p>
-        </div>
-      </div>
-      <Badge
-        variant="outline"
-        className="bg-background ml-auto hidden max-w-[55%] min-w-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium sm:inline-flex"
-        title={periodLabel}
-      >
-        <CalendarDays aria-hidden="true" />
-        <span className="min-w-0 truncate">{periodLabel}</span>
-      </Badge>
-    </div>
-  );
 }
 
 function CourseAssignmentsHeader({
@@ -252,12 +191,12 @@ export function CourseAssignmentsPageShell({
         defaultTermInstanceId={activeTermInstanceId}
       />
 
-      <AssignmentSummaryStrip
+      <ResultSummaryStrip
         total={total}
-        assignments={assignments}
+        activeCount={assignments.filter((assignment) => assignment.isActive).length}
         page={page}
         pageSize={pageSize}
-        periodLabel={periodLabel}
+        scopeLabel={periodLabel}
       />
 
       {loadError && (

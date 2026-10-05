@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ToolsViewMode } from "./tools-view-selector";
+import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 
 export type EvaluationToolsTab = "templates" | "published";
 

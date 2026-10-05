@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { ToolsViewMode } from "./tools-view-selector";
+import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 
 // ---------------------------------------------------------------------------
 // View DTO

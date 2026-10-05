@@ -52,9 +52,9 @@ import {
 import { Pagination } from "@/components/ui/pagination";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  ToolsViewSelector,
-  type ToolsViewMode,
-} from "@/features/instruments/components/tools-view-selector";
+  ViewSelector as ToolsViewSelector,
+  type ListCardViewMode as ToolsViewMode,
+} from "@/components/layout/view-selector";
 
 import type { FacultyCourseWithCiloCount } from "@/features/evaluations/services/list-faculty-courses-with-cilos";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";

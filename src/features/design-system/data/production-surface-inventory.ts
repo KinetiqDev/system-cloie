@@ -40,6 +40,21 @@ const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
 
 export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
+    path: "src/app/(app)/secretary/users/import/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/secretary/users/import/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/features/users/components/student-import.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
     path: "src/app/(app)/alumni/dashboard/loading.tsx",
     disposition: "task",
     taskId: 24,
@@ -2045,6 +2060,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "layout",
   },
   {
+    path: "src/components/layout/view-selector.tsx",
+    disposition: "task",
+    taskId: 25,
+    category: "layout",
+  },
+  {
     path: "src/components/layout/respondent-route-loading.tsx",
     disposition: "task",
     taskId: 25,
@@ -2903,6 +2924,18 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/course-assignments/components/shared/filter-bar.tsx",
+    disposition: "task",
+    taskId: 15,
+    category: "feature_component",
+  },
+  {
+    path: "src/features/course-assignments/components/shared/result-summary-strip.tsx",
+    disposition: "task",
+    taskId: 15,
+    category: "feature_component",
+  },
+  {
     path: "src/features/course-assignments/components/shared/assignment-summary-block.tsx",
     disposition: "task",
     taskId: 15,
@@ -3098,12 +3131,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/instruments/components/template-start-chooser.tsx",
-    disposition: "task",
-    taskId: 20,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/instruments/components/tools-view-selector.tsx",
     disposition: "task",
     taskId: 20,
     category: "feature_component",

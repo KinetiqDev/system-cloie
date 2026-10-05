@@ -1,5 +1,5 @@
 import type { EvaluationToolsTab } from "./evaluation-tools-tabs";
-import type { ToolsViewMode } from "./tools-view-selector";
+import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 import type { PublishedStatusFilter } from "@/features/evaluations/types";
 type ToolsRouteSearchParams = Record<string, string | string[] | undefined>;
 

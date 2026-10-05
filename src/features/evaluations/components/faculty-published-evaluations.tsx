@@ -12,7 +12,7 @@ import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdow
 import { showToast } from "@/components/ui/toast";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { cn } from "@/lib/utils";
-import type { ToolsViewMode } from "@/features/instruments/components/tools-view-selector";
+import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 import {
   DEFAULT_PUBLISHED_FILTERS,
   normalizePublishedQuery,
