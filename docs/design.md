@@ -380,6 +380,8 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
   arriving; fading it in spends the first frames unreadable, which reads as lag rather than as
   polish. Zero delay with a fade is still a delay.
 - The Dean tablet rail uses the compact footer too: hide the expanded name/email block and make the avatar keyboard-focusable so its identity tooltip is available without hover.
+- **A rail cannot indent.** The md–lg rail and the operator-folded rail are both 64px, which is room for an icon and its 44px target and nothing else; an indented child plus its connector pushes the destination past the rail edge and clips it. Both rails therefore lay a section's destinations flush and separate sections with a hairline rule (`RAIL_DIVIDER`); only the expanded sidebar keeps the indented connector (`EXPANDED_INDENT`).
+- **A rail that scrolls says so.** Any destination list taller than its rail fades the edge that still holds destinations — at every rail width and for every role. The fade is pointer-transparent and appears only on an edge with content below or above it, so a destination past the fold is never simply invisible.
 - Ctrl/⌘ + B toggles the desktop sidebar; the control is also reachable by keyboard and announces
   its state with `aria-expanded` on the navigation it controls.
 - Sidebar row rendering shares the collapsed tooltip and label fold. Primary destinations own their badge display; Dean destinations and groups keep the tablet rail rules. Role and active-destination resolution remain in the sidebar.

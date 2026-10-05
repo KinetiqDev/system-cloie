@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose } from "lucide-react";
-import type { ReactElement, ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
@@ -39,6 +39,18 @@ const NAV_ID = "app-sidebar-nav";
 const SIDEBAR_TOOLTIP_DELAY = 0;
 /** Clears the rail edge so a rail tooltip never covers the icons beside it. */
 const RAIL_TOOLTIP_OFFSET = 12;
+/**
+ * A rail cannot indent.
+ *
+ * The md–lg rail and the operator-folded rail both live in 64px, where an
+ * indented child and its connector push the destination itself past the rail
+ * edge. A rail therefore marks its sections with a rule at zero width cost, and
+ * only the expanded sidebar keeps the indented connector.
+ */
+const RAIL_DIVIDER =
+  "bg-sidebar-foreground/15 mx-2 hidden h-px max-lg:block lg:group-data-[collapsed=true]/sidebar:block";
+const EXPANDED_INDENT =
+  "lg:group-data-[collapsed=false]/sidebar:border-sidebar-border lg:group-data-[collapsed=false]/sidebar:ml-4 lg:group-data-[collapsed=false]/sidebar:border-l lg:group-data-[collapsed=false]/sidebar:pl-2";
 
 // Labels fold within the rail while FOLD_MOTION synchronizes its width and the page gutter.
 const LABEL_MOTION =
@@ -50,6 +62,77 @@ const ARRIVAL =
   "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-left-2 motion-safe:duration-200";
 /** Below lg the Dean's rail is still a rail, so it shows no names either. */
 const RAIL_LABEL_HIDE_BELOW_LG = "md:hidden lg:inline";
+
+interface ScrollEdges {
+  start: boolean;
+  end: boolean;
+}
+
+/**
+ * Reports which ends of a scrolling rail still hold destinations.
+ *
+ * A rail shorter than its destination list clips the tail with nothing to say
+ * so, which reads as a broken sidebar rather than a scrollable one. Both rails
+ * measure this so a destination below the fold is never simply invisible.
+ */
+function useScrollEdges<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [edges, setEdges] = useState<ScrollEdges>({ start: false, end: false });
+
+  const measure = useCallback(() => {
+    const node = ref.current;
+    if (!node) return;
+    const next = {
+      start: node.scrollTop > 1,
+      end: node.scrollTop + node.clientHeight < node.scrollHeight - 1,
+    };
+    setEdges((current) =>
+      current.start === next.start && current.end === next.end ? current : next
+    );
+  }, []);
+
+  useEffect(measure);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(node);
+    return () => {
+      observer?.disconnect();
+      node.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [measure]);
+
+  return { ref, edges };
+}
+
+/**
+ * Fades whichever rail edge still holds destinations.
+ *
+ * Pointer-transparent throughout: the fade reports the scroll position, so it
+ * must never become something the operator has to aim past.
+ */
+function ScrollEdgeFade({ edges }: { edges: ScrollEdges }) {
+  return (
+    <>
+      {edges.start && (
+        <div
+          aria-hidden="true"
+          className="from-sidebar pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b to-transparent"
+        />
+      )}
+      {edges.end && (
+        <div
+          aria-hidden="true"
+          className="from-sidebar pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t to-transparent"
+        />
+      )}
+    </>
+  );
+}
 
 interface RailRowProps {
   collapsed: boolean;
@@ -169,6 +252,7 @@ function RoleSidebar({
   const mainNav = getMainNavByRoles(roles, pathname, activeProgramId);
   const secondaryNav = getSecondaryNavByRoles(roles);
   const activeItem = getDeepestMatchingNavItem(pathname, mainNav);
+  const { ref: scrollRef, edges } = useScrollEdges<HTMLDivElement>();
 
   return (
     <aside
@@ -185,40 +269,46 @@ function RoleSidebar({
         href={getDashboardHref(roles, pathname, activeProgramId)}
       />
 
-      <div className={cn("flex flex-1 flex-col overflow-y-auto py-6", collapsed ? "px-2" : "px-4")}>
-        <nav id={NAV_ID} aria-label="Primary navigation" className="space-y-1">
-          {mainNav.map((item) => (
-            <PrimaryNavRow
-              key={getNavItemIdentity(item)}
-              item={item}
-              active={activeItem === item}
-              collapsed={collapsed}
-            />
-          ))}
-        </nav>
-
-        {secondaryNav.length > 0 && (
-          <nav className="mt-8 space-y-1">
-            {!collapsed && (
-              <div className="mb-2 px-3">
-                <span className="text-sidebar-foreground/50 text-label-sm tracking-wider uppercase">
-                  Support
-                </span>
-              </div>
-            )}
-            {secondaryNav.map((item) => (
-              <RailRow key={item.name} collapsed={collapsed} label={item.name}>
-                <NavigationRow href={item.href} secondary iconOnly={collapsed}>
-                  <item.icon
-                    className="text-sidebar-foreground/50 size-4 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <FoldedLabel collapsed={collapsed}>{item.name}</FoldedLabel>
-                </NavigationRow>
-              </RailRow>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          className={cn("flex flex-1 flex-col overflow-y-auto py-6", collapsed ? "px-2" : "px-4")}
+        >
+          <nav id={NAV_ID} aria-label="Primary navigation" className="space-y-1">
+            {mainNav.map((item) => (
+              <PrimaryNavRow
+                key={getNavItemIdentity(item)}
+                item={item}
+                active={activeItem === item}
+                collapsed={collapsed}
+              />
             ))}
           </nav>
-        )}
+
+          {secondaryNav.length > 0 && (
+            <nav className="mt-8 space-y-1">
+              {!collapsed && (
+                <div className="mb-2 px-3">
+                  <span className="text-sidebar-foreground/50 text-label-sm tracking-wider uppercase">
+                    Support
+                  </span>
+                </div>
+              )}
+              {secondaryNav.map((item) => (
+                <RailRow key={item.name} collapsed={collapsed} label={item.name}>
+                  <NavigationRow href={item.href} secondary iconOnly={collapsed}>
+                    <item.icon
+                      className="text-sidebar-foreground/50 size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <FoldedLabel collapsed={collapsed}>{item.name}</FoldedLabel>
+                  </NavigationRow>
+                </RailRow>
+              ))}
+            </nav>
+          )}
+        </div>
+        <ScrollEdgeFade edges={edges} />
       </div>
 
       <SidebarFooter user={user} collapsed={collapsed} />
@@ -369,6 +459,8 @@ function DeanNavGroup({ group, activeItem, collapsed, isLargeScreen }: DeanNavGr
 
   return (
     <div>
+      {/* A rail has no names to indent, so the rule carries the grouping instead. */}
+      <div aria-hidden="true" className={RAIL_DIVIDER} />
       <DeanNavRow
         item={group}
         active={active}
@@ -376,12 +468,7 @@ function DeanNavGroup({ group, activeItem, collapsed, isLargeScreen }: DeanNavGr
         isLargeScreen={isLargeScreen}
         section
       />
-      <div
-        className={cn(
-          "border-sidebar-border mt-1 hidden gap-1 border-l pl-2 md:flex md:flex-col",
-          collapsed ? "ml-3" : "ml-4"
-        )}
-      >
+      <div className={cn("mt-1 hidden gap-1 md:flex md:flex-col", EXPANDED_INDENT)}>
         {group.items.map((item) => (
           <DeanNavRow
             key={item.href}
@@ -408,11 +495,13 @@ function DeanSidebar({
   const [dashboard, profile] = getDeanStandaloneNav();
   const rail = !collapsed;
   const isLargeScreen = useMediaQuery("(min-width: 1024px)");
+  const { ref: navRef, edges } = useScrollEdges<HTMLElement>();
   return (
     <aside
       data-collapsed={collapsed ? "true" : "false"}
       className={cn(
         "border-sidebar-border bg-sidebar fixed inset-y-0 left-0 z-50 hidden flex-col overflow-hidden border-r md:flex",
+        "group/sidebar",
         FOLD_MOTION,
         collapsed ? "w-16" : "w-16 lg:w-64"
       )}
@@ -423,33 +512,42 @@ function DeanSidebar({
         href={dashboard.href}
         railBelowLg
       />
-      <nav
-        id={NAV_ID}
-        className={cn("flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-6", rail && "lg:px-4")}
-        aria-label="Dean navigation"
-      >
-        <DeanNavRow
-          item={dashboard}
-          active={activeItem === dashboard}
-          collapsed={collapsed}
-          isLargeScreen={isLargeScreen}
-        />
-        {groups.map((group) => (
-          <DeanNavGroup
-            key={group.href}
-            group={group}
-            activeItem={activeItem}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <nav
+          ref={navRef}
+          id={NAV_ID}
+          className={cn(
+            "flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4 lg:py-6",
+            rail && "lg:px-4"
+          )}
+          aria-label="Dean navigation"
+        >
+          <DeanNavRow
+            item={dashboard}
+            active={activeItem === dashboard}
             collapsed={collapsed}
             isLargeScreen={isLargeScreen}
           />
-        ))}
-        <DeanNavRow
-          item={profile}
-          active={activeItem === profile}
-          collapsed={collapsed}
-          isLargeScreen={isLargeScreen}
-        />
-      </nav>
+          {groups.map((group) => (
+            <DeanNavGroup
+              key={group.href}
+              group={group}
+              activeItem={activeItem}
+              collapsed={collapsed}
+              isLargeScreen={isLargeScreen}
+            />
+          ))}
+          {/* Profile stands apart from the sections above it in the rail. */}
+          <div aria-hidden="true" className={RAIL_DIVIDER} />
+          <DeanNavRow
+            item={profile}
+            active={activeItem === profile}
+            collapsed={collapsed}
+            isLargeScreen={isLargeScreen}
+          />
+        </nav>
+        <ScrollEdgeFade edges={edges} />
+      </div>
       <SidebarFooter user={user} collapsed={collapsed || !isLargeScreen} />
     </aside>
   );

@@ -8,6 +8,7 @@ import {
   Building2,
   BookOpen,
   Layers3,
+  ShieldCheck,
   BarChart3,
   Users2,
   UsersRound,
@@ -184,7 +185,7 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
   {
     name: "College Oversight",
     href: "/dean/college-oversight",
-    icon: Layers3,
+    icon: ShieldCheck,
     items: [
       {
         name: "Learning Outcomes",
