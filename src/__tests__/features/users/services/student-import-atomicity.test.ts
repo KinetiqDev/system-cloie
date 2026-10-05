@@ -48,20 +48,38 @@ describe.skipIf(process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1" || !process.e
         expect(await commitStudentImport(bytes, "test-secretary", preview.token)).toMatchObject({
           rows: [{ status: "Skipped" }],
         });
-        // A foreign-key failure after the role insert must roll back the whole account.
         const failedEmail = `rollback-${randomUUID()}@acd.edu.ph`;
-        await expect(
-          prisma.$transaction(async (tx) => {
-            const created = await tx.user.create({
-              data: { name: "Rollback", email: failedEmail },
-            });
-            await tx.userRole.create({ data: { user_id: created.id, role: "STUDENT" } });
-            await tx.studentAcademicProfile.create({
-              data: { user_id: created.id, program_id: randomUUID() },
-            });
-          })
-        ).rejects.toThrow();
-        expect(await prisma.user.findUnique({ where: { email: failedEmail } })).toBeNull();
+        const failedBytes = new TextEncoder().encode(
+          `${STUDENT_IMPORT_TEMPLATE}Rollback,${failedEmail},${quote(program!.code)},${quote(major)},1,Morning`
+        );
+        const failedPreview = await previewStudentImport(failedBytes, "test-secretary");
+        if (!failedPreview.success) throw new Error(failedPreview.error);
+        const transaction = prisma.$transaction.bind(prisma);
+        const transactionSpy = vi
+          .spyOn(prisma, "$transaction")
+          .mockImplementationOnce(async (callback, options) =>
+            transaction(async (tx) => {
+              const createProfile = tx.studentAcademicProfile.create.bind(
+                tx.studentAcademicProfile
+              );
+              tx.studentAcademicProfile.create = ((args) =>
+                createProfile({
+                  ...args,
+                  data: { ...args.data, program_id: randomUUID() },
+                })) as typeof tx.studentAcademicProfile.create;
+              return (callback as (client: typeof tx) => Promise<unknown>)(tx);
+            }, options)
+          );
+        try {
+          expect(
+            await commitStudentImport(failedBytes, "test-secretary", failedPreview.token)
+          ).toMatchObject({
+            rows: [{ status: "Failed" }],
+          });
+          expect(await prisma.user.findUnique({ where: { email: failedEmail } })).toBeNull();
+        } finally {
+          transactionSpy.mockRestore();
+        }
       } finally {
         const user = await prisma.user.findUnique({ where: { email } });
         if (user) {

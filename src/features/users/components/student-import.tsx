@@ -6,7 +6,7 @@ import { Download, FileSpreadsheet, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { BackLink } from "@/components/ui/back-link";
-import { WizardStepper } from "@/components/ui/wizard-stepper";
+import { WizardStepper, type WizardStep } from "@/components/ui/wizard-stepper";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +32,7 @@ const IMPORT_STEPS = [
   { key: "review", label: "Review" },
   { key: "confirm", label: "Confirm" },
   { key: "results", label: "Results" },
-];
+] satisfies WizardStep[];
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));

@@ -886,6 +886,16 @@ function RosterMemberRow({
       <TableHead scope="row" className="px-4 py-4 font-medium whitespace-normal">
         <span className="block">{member.studentName}</span>
         <span className="text-muted-foreground block font-normal">{member.email}</span>
+        <span className="text-muted-foreground block text-xs font-normal">
+          {[
+            member.programCode,
+            member.majorName,
+            getYearLevelDisplay(member.yearLevel),
+            getSectionLabel(member.section),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
       </TableHead>
       {assignment.courseScope === "GENERAL_EDUCATION" && (
         <TableCell className="px-4 py-4 whitespace-normal">{member.programCode ?? "—"}</TableCell>

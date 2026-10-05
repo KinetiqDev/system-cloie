@@ -5,7 +5,7 @@ import {
   type CreateUserBySecretaryInput,
 } from "../schemas/create-user";
 
-export const STUDENT_IMPORT_HEADERS = [
+const STUDENT_IMPORT_HEADERS = [
   "name",
   "email",
   "program_code",
@@ -15,8 +15,8 @@ export const STUDENT_IMPORT_HEADERS = [
 ] as const;
 export const STUDENT_IMPORT_TEMPLATE = `${STUDENT_IMPORT_HEADERS.join(",")}\n`;
 export const STUDENT_IMPORT_MAX_BYTES = 256 * 1024;
-export const STUDENT_IMPORT_MAX_ROWS = 100;
-export type StudentImportInput = Record<(typeof STUDENT_IMPORT_HEADERS)[number], string>;
+const STUDENT_IMPORT_MAX_ROWS = 100;
+type StudentImportInput = Record<(typeof STUDENT_IMPORT_HEADERS)[number], string>;
 export type StudentImportCatalog = Array<{
   id: string;
   code: string;
@@ -30,7 +30,7 @@ export type StudentImportRow = {
   message: string;
   data?: CreateUserBySecretaryInput;
 };
-export const matchImportValue = (value: string) => value.trim().replace(/\s+/gu, " ").toLowerCase();
+const matchImportValue = (value: string) => value.trim().replace(/\s+/gu, " ").toLowerCase();
 
 export function parseStudentImport(
   input: Uint8Array,

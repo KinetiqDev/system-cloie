@@ -66,7 +66,7 @@ export async function previewStudentImport(bytes: Uint8Array, actor: string) {
   });
   const existingEmails = new Set(existing.map((u) => u.email.toLowerCase()));
   const rows = parsed.rows.map((row) =>
-    existingEmails.has(row.input.email.toLowerCase())
+    row.status === "Ready" && existingEmails.has(row.input.email.toLowerCase())
       ? {
           ...row,
           status: "Skipped" as const,
@@ -120,11 +120,7 @@ export async function commitStudentImport(bytes: Uint8Array, actor: string, toke
     select: { email: true },
   });
   const emails = new Set(existing.map((u) => u.email.toLowerCase()));
-  if (
-    parsed.rows.some(
-      (r) => r.status === "Needs correction" && !emails.has(r.input.email.toLowerCase())
-    )
-  )
+  if (parsed.rows.some((r) => r.status === "Needs correction"))
     return {
       success: false as const,
       error: "Correct the invalid rows and review the file again.",

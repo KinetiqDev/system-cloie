@@ -61,6 +61,22 @@ describe("Student import preview and commit", () => {
     });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+  it("rejects duplicate existing emails before any writes", async () => {
+    vi.mocked(prisma.user.findMany).mockResolvedValue([{ email: "ana@acd.edu.ph" }] as never);
+    const duplicateBytes = new TextEncoder().encode(
+      `${STUDENT_IMPORT_TEMPLATE}Ana,ana@acd.edu.ph,BSIT,,1,Morning\nAna,ANA@acd.edu.ph,BSIT,,1,Morning\nBen,ben@acd.edu.ph,BSIT,,2,Evening`
+    );
+    const preview = await previewStudentImport(duplicateBytes, "secretary");
+    expect(preview).toMatchObject({
+      success: true,
+      rows: [{ status: "Needs correction" }, { status: "Needs correction" }, { status: "Ready" }],
+    });
+    if (!preview.success) throw new Error("preview");
+    expect(await commitStudentImport(duplicateBytes, "secretary", preview.token)).toMatchObject({
+      success: false,
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
   it("writes complete students in per-row serializable transactions", async () => {
     const result = await commitStudentImport(bytes, "secretary", await token());
     expect(result).toMatchObject({ rows: [{ status: "Created" }, { status: "Created" }] });

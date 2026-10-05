@@ -754,6 +754,15 @@ describe("course roster pages", () => {
     );
   });
 
+  it("preserves student placement details in program-specific roster rows", () => {
+    render(<CourseRosterDetailPage data={detail} />);
+    const student = screen.getByText("Grace Hopper").closest("tr")!;
+    expect(student).toHaveTextContent("BSCS");
+    expect(student).toHaveTextContent("Software");
+    expect(student).toHaveTextContent("2nd Year");
+    expect(student).toHaveTextContent("Morning");
+  });
+
   it("shows management controls only for mutable authorized rosters", () => {
     render(<CourseRosterDetailPage data={detail} />);
 

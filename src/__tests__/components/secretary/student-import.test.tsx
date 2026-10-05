@@ -51,6 +51,44 @@ describe("Student import step-by-step flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Import another file" }));
     expect(screen.getByRole("button", { name: "Review file" })).toBeDisabled();
   });
+  it("requires a fresh review when the file is replaced", async () => {
+    vi.mocked(studentImportAction).mockResolvedValue({
+      success: true,
+      rows: [row],
+      token: "signed",
+      termId: null,
+      termLabel: null,
+    });
+    await review();
+    fireEvent.click(screen.getByRole("button", { name: "Choose another file" }));
+    expect(screen.getByRole("button", { name: "Review file" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Student CSV file"), {
+      target: { files: [new File(["replacement"], "replacement.csv", { type: "text/csv" })] },
+    });
+    expect(screen.getByRole("button", { name: "Review file" })).toBeEnabled();
+    expect(studentImportAction).toHaveBeenCalledTimes(1);
+  });
+  it("allows retry after a failed review", async () => {
+    vi.mocked(studentImportAction)
+      .mockResolvedValueOnce({ success: false, error: "Review unavailable" })
+      .mockResolvedValueOnce({
+        success: true,
+        rows: [row],
+        token: "retry",
+        termId: null,
+        termLabel: null,
+      });
+    render(<StudentImport programs={[]} />);
+    fireEvent.change(screen.getByLabelText("Student CSV file"), {
+      target: { files: [new File(["csv"], "students.csv", { type: "text/csv" })] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Review file" }));
+    await screen.findByText("Review unavailable");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Review file" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "Review file" }));
+    await screen.findByRole("heading", { name: "Review every row" });
+    expect(studentImportAction).toHaveBeenCalledTimes(2);
+  });
   it("blocks correction rows and all-skipped files", async () => {
     vi.mocked(studentImportAction).mockResolvedValue({
       success: true,
