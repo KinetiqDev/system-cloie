@@ -15,6 +15,7 @@ const { prismaMock } = vi.hoisted(() => ({
     courseBoundEvaluation: { count: vi.fn(), findMany: vi.fn() },
     centralDeployment: { count: vi.fn(), findMany: vi.fn() },
     evaluationAssignment: { findMany: vi.fn() },
+    quantitativeResponseItem: { findMany: vi.fn() },
   },
 }));
 
@@ -48,6 +49,7 @@ describe("listProgramHeadResponseDeployments", () => {
     prismaMock.centralDeployment.count.mockResolvedValue(0);
     prismaMock.centralDeployment.findMany.mockResolvedValue([]);
     prismaMock.evaluationAssignment.findMany.mockResolvedValue([]);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
   });
 
   describe("course-bound list", () => {
@@ -231,7 +233,23 @@ describe("listProgramHeadResponseDeployments", () => {
           id: "eval-it201",
           deployment_name: "IT201 Post-Term",
           status: "ACTIVE",
-          instrument: { structure_snapshot: [], template: { name: "CILO Tool" } },
+          instrument: {
+            structure_snapshot: [
+              {
+                key: "teaching",
+                title: "Teaching",
+                items: [
+                  {
+                    kind: "quantitative",
+                    key: "clarity",
+                    prompt: "Clarity",
+                    scale: [1, 2, 3, 4, 5],
+                  },
+                ],
+              },
+            ],
+            template: { name: "CILO Tool" },
+          },
           term_instance: {
             semester: "SECOND",
             term: "FIRST_TERM",
@@ -246,17 +264,23 @@ describe("listProgramHeadResponseDeployments", () => {
         },
       ]);
       prismaMock.evaluationAssignment.findMany.mockResolvedValue([
-        {
-          ...emptyStats,
-          course_bound_id: "eval-it201",
-          response: { status: "SUBMITTED", quant_items: [{ rating_value: 4 }] },
-        },
-        {
-          ...emptyStats,
-          course_bound_id: "eval-it201",
-          response: { status: "SUBMITTED", quant_items: [{ rating_value: 5 }] },
-        },
+        { ...emptyStats, course_bound_id: "eval-it201", response: { status: "SUBMITTED" } },
+        { ...emptyStats, course_bound_id: "eval-it201", response: { status: "SUBMITTED" } },
         { ...emptyStats, course_bound_id: "eval-it201", response: null },
+      ]);
+      prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+        {
+          rating_value: 4,
+          section_key: "teaching",
+          item_key: "clarity",
+          response: { assignment: { course_bound_id: "eval-it201", central_deployment_id: null } },
+        },
+        {
+          rating_value: 5,
+          section_key: "teaching",
+          item_key: "clarity",
+          response: { assignment: { course_bound_id: "eval-it201", central_deployment_id: null } },
+        },
       ]);
 
       const result = await listProgramHeadResponseDeployments(PROGRAM, filters());
@@ -271,15 +295,31 @@ describe("listProgramHeadResponseDeployments", () => {
 
     it("never fetches IN_PROGRESS answer bodies while still counting every opportunity", async () => {
       // The submitted-response invariant: draft ratings must never be read, so
-      // the status filter is pushed into the quant_items sub-select instead of
-      // being applied in JS after the body has already been fetched. Assignment
-      // rows themselves stay unfiltered, because every one is an opportunity.
+      // rating bodies come from a query that names SUBMITTED, and the
+      // participation read carries no answer columns at all. Assignment rows
+      // stay unfiltered, because every one is an opportunity.
       prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([
         {
           id: "eval-it201",
           deployment_name: "IT201 Post-Term",
           status: "ACTIVE",
-          instrument: { structure_snapshot: [], template: { name: "CILO Tool" } },
+          instrument: {
+            structure_snapshot: [
+              {
+                key: "teaching",
+                title: "Teaching",
+                items: [
+                  {
+                    kind: "quantitative",
+                    key: "clarity",
+                    prompt: "Clarity",
+                    scale: [1, 2, 3, 4, 5],
+                  },
+                ],
+              },
+            ],
+            template: { name: "CILO Tool" },
+          },
           term_instance: {
             semester: "SECOND",
             term: "FIRST_TERM",
@@ -294,24 +334,27 @@ describe("listProgramHeadResponseDeployments", () => {
         },
       ]);
       prismaMock.evaluationAssignment.findMany.mockResolvedValue([
-        {
-          ...emptyStats,
-          course_bound_id: "eval-it201",
-          response: { status: "SUBMITTED", quant_items: [{ rating_value: 4 }] },
-        },
-        {
-          ...emptyStats,
-          course_bound_id: "eval-it201",
-          response: { status: "IN_PROGRESS", quant_items: [] },
-        },
+        { ...emptyStats, course_bound_id: "eval-it201", response: { status: "SUBMITTED" } },
+        { ...emptyStats, course_bound_id: "eval-it201", response: { status: "IN_PROGRESS" } },
         { ...emptyStats, course_bound_id: "eval-it201", response: null },
+      ]);
+      prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+        {
+          rating_value: 4,
+          section_key: "teaching",
+          item_key: "clarity",
+          response: { assignment: { course_bound_id: "eval-it201", central_deployment_id: null } },
+        },
       ]);
 
       const result = await listProgramHeadResponseDeployments(PROGRAM, filters());
 
-      const select = prismaMock.evaluationAssignment.findMany.mock.calls[0][0].select;
-      expect(select.response.select.quant_items.where).toEqual({
-        response: { status: "SUBMITTED" },
+      expect(prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where).toEqual({
+        response: {
+          status: "SUBMITTED",
+          deployment_type: "COURSE_BOUND",
+          assignment: { course_bound_id: { in: ["eval-it201"] } },
+        },
       });
       // Opportunities keep every assignment row; only rating bodies are gated.
       expect(prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where).toEqual({
@@ -342,9 +385,12 @@ describe("listProgramHeadResponseDeployments", () => {
 
       await listProgramHeadResponseDeployments(PROGRAM, filters({ tab: "program-wide" }));
 
-      const select = prismaMock.evaluationAssignment.findMany.mock.calls[0][0].select;
-      expect(select.response.select.quant_items.where).toEqual({
-        response: { status: "SUBMITTED" },
+      expect(prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where).toEqual({
+        response: {
+          status: "SUBMITTED",
+          deployment_type: "CENTRAL",
+          assignment: { central_deployment_id: { in: ["central-1"] } },
+        },
       });
       expect(prismaMock.evaluationAssignment.findMany.mock.calls[0][0].where).toEqual({
         central_deployment_id: { in: ["central-1"] },

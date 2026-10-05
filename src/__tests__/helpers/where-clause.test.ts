@@ -219,4 +219,16 @@ describe("where-clause evaluator", () => {
     // keys is still unproven and must not pass.
     expect(matchesWhere({ status: { contains: "ACT", notIn: ["DRAFT"] } }, row)).toBe(false);
   });
+
+  it("fails closed on inherited operator names", () => {
+    // `in` on a plain object literal also matches inherited names, so a clause
+    // carrying `toString` instead of a modelled operator would otherwise skip
+    // every dispatch and admit the row without its predicate ever running.
+    const row = { status: "ACTIVE" };
+
+    expect(matchesWhere({ status: { toString: "ACTIVE" } } as never, row)).toBe(false);
+    expect(matchesWhere({ toString: { some: [] } } as never, row)).toBe(false);
+    expect(matchesWhere({ constructor: [] } as never, row)).toBe(false);
+    expect(matchesWhere({ status: { in: ["ACTIVE"], toString: "x" } } as never, row)).toBe(false);
+  });
 });

@@ -43,6 +43,23 @@ vi.mock("@/features/auth/services/resolve-auth-session", () => ({
 
 const FILTER = { page: 1 };
 
+const fivePointSnapshot = [
+  {
+    key: "teaching",
+    title: "Teaching",
+    items: [{ kind: "quantitative", key: "clarity", prompt: "Clarity", scale: [1, 2, 3, 4, 5] }],
+  },
+];
+
+function rating(ratingValue: number, sectionKey = "teaching", itemKey = "clarity") {
+  return {
+    rating_value: ratingValue,
+    section_key: sectionKey,
+    item_key: itemKey,
+    response: { assignment: { course_bound_id: "eval-ge" } },
+  };
+}
+
 describe("listGeneralEducationEvaluations (ADR 0034)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,27 +101,29 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
     expect(where.status).toEqual({ not: "DRAFT" });
   });
 
-  it("aggregates participation and mean ratings from assignment rows", async () => {
-    courseBoundEvaluationCountMock.mockResolvedValue(1);
-    courseBoundEvaluationFindManyMock.mockResolvedValue([
-      {
-        id: "eval-ge",
-        deployment_name: "GEETHICS Post-Term CILO Evaluation",
-        status: "CLOSED",
-        instrument: { structure_snapshot: [], template: { name: "GE Template" } },
-        term_instance: {
-          semester: "SECOND",
-          term: "FIRST_TERM",
-          school_year: { code: "2025-2026" },
-        },
-        course_assignment: {
-          year_level: "THIRD_YEAR",
-          section: "MORNING",
-          course: { id: "course-ge", code: "GEETHICS", title: "Ethics", major: null },
-          faculty: { name: "Dr. Santos" },
-        },
+  function evaluationRow(snapshot: unknown) {
+    return {
+      id: "eval-ge",
+      deployment_name: "GEETHICS Post-Term CILO Evaluation",
+      status: "CLOSED",
+      instrument: { structure_snapshot: snapshot, template: { name: "GE Template" } },
+      term_instance: {
+        semester: "SECOND",
+        term: "FIRST_TERM",
+        school_year: { code: "2025-2026" },
       },
-    ]);
+      course_assignment: {
+        year_level: "THIRD_YEAR",
+        section: "MORNING",
+        course: { id: "course-ge", code: "GEETHICS", title: "Ethics", major: null },
+        faculty: { name: "Dr. Santos" },
+      },
+    };
+  }
+
+  it("aggregates participation and excludes ratings outside the resolved scale", async () => {
+    courseBoundEvaluationCountMock.mockResolvedValue(1);
+    courseBoundEvaluationFindManyMock.mockResolvedValue([evaluationRow(fivePointSnapshot)]);
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {
         course_bound_id: "eval-ge",
@@ -112,15 +131,14 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
       },
       { course_bound_id: "eval-ge", response: { status: "IN_PROGRESS" } },
     ]);
-    quantitativeResponseItemFindManyMock.mockResolvedValue([
-      { rating_value: 4, response: { assignment: { course_bound_id: "eval-ge" } } },
-      { rating_value: 5, response: { assignment: { course_bound_id: "eval-ge" } } },
-    ]);
+    quantitativeResponseItemFindManyMock.mockResolvedValue([rating(4), rating(5), rating(9)]);
 
     const list = await listGeneralEducationEvaluations(FILTER);
 
     expect(list!.total).toBe(1);
     expect(list!.items).toHaveLength(1);
+    // 9 falls outside the 1–5 scale the snapshot resolves, so it never enters
+    // the mean the detail view reports for the same evidence.
     expect(list!.items[0]).toMatchObject({
       id: "eval-ge",
       assigned: 2,
@@ -129,5 +147,39 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
       faculty: "Dr. Santos",
       course: { code: "GEETHICS" },
     });
+  });
+
+  it("reports no mean when submitted ratings resolve to incompatible scales", async () => {
+    courseBoundEvaluationCountMock.mockResolvedValue(1);
+    courseBoundEvaluationFindManyMock.mockResolvedValue([
+      evaluationRow([
+        {
+          key: "teaching",
+          title: "Teaching",
+          items: [
+            { kind: "quantitative", key: "clarity", prompt: "Clarity", scale: [1, 2, 3, 4, 5] },
+            {
+              kind: "quantitative",
+              key: "satisfaction",
+              prompt: "Satisfaction",
+              scale: [1, 2, 3, 4, 5, 6, 7],
+            },
+          ],
+        },
+      ]),
+    ]);
+
+    evaluationAssignmentFindManyMock.mockResolvedValue([
+      { course_bound_id: "eval-ge", response: { status: "SUBMITTED" } },
+    ]);
+    quantitativeResponseItemFindManyMock.mockResolvedValue([
+      rating(4),
+      rating(6, "teaching", "satisfaction"),
+    ]);
+
+    const list = await listGeneralEducationEvaluations(FILTER);
+
+    expect(list!.items[0].mean).toBeNull();
+    expect(list!.items[0].scaleLabel).toContain("1–5");
   });
 });

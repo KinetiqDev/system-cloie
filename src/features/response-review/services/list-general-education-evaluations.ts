@@ -13,7 +13,7 @@ import type { ProgramHeadAnalyticsPeriodOptions } from "@/features/analytics/pro
 import { ROLES } from "@/lib/constants/roles";
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import { prisma } from "@/lib/db/prisma";
-import { mean } from "@/features/analytics/services/shared";
+import { comparableRatingMean } from "@/features/analytics/services/comparable-rating-mean";
 import {
   generalEducationCourseAssignmentWhere,
   generalEducationCourseEvaluationWhere,
@@ -61,6 +61,11 @@ export type GeneralEducationEvaluationList = {
 
 type ResponseStats = { assigned: number; submitted: number; mean: number | null };
 const EMPTY_RESPONSE_STATS: ResponseStats = { assigned: 0, submitted: 0, mean: null };
+type ScopedRatingRow = {
+  rating_value: number;
+  section_key: string;
+  item_key: string;
+};
 
 function cleanSearch(value: string | undefined): string | undefined {
   const cleaned = value
@@ -121,8 +126,14 @@ function courseEvaluationWhere(
 // Participation needs every assignment row as denominator, while ratings must
 // come from submitted bodies only. Two reads keep IN_PROGRESS answers
 // unfetched instead of selecting them and filtering in memory.
-async function getResponseStats(ids: string[]): Promise<Map<string, ResponseStats>> {
-  const collected = new Map<string, ResponseStats & { ratings: number[] }>();
+async function getResponseStats(
+  ids: string[],
+  snapshotsByEvaluation: Map<string, unknown>
+): Promise<Map<string, ResponseStats>> {
+  const collected = new Map<
+    string,
+    { assigned: number; submitted: number; ratings: ScopedRatingRow[] }
+  >();
   if (ids.length === 0) {
     return new Map();
   }
@@ -142,6 +153,8 @@ async function getResponseStats(ids: string[]): Promise<Map<string, ResponseStat
       },
       select: {
         rating_value: true,
+        section_key: true,
+        item_key: true,
         response: { select: { assignment: { select: { course_bound_id: true } } } },
       },
     }),
@@ -150,7 +163,7 @@ async function getResponseStats(ids: string[]): Promise<Map<string, ResponseStat
   for (const row of assignmentRows) {
     const id = row.course_bound_id;
     if (!id) continue;
-    const current = collected.get(id) ?? { assigned: 0, submitted: 0, mean: null, ratings: [] };
+    const current = collected.get(id) ?? { assigned: 0, submitted: 0, ratings: [] };
     current.assigned += 1;
     if (row.response?.status === "SUBMITTED") current.submitted += 1;
     collected.set(id, current);
@@ -159,11 +172,18 @@ async function getResponseStats(ids: string[]): Promise<Map<string, ResponseStat
   for (const row of submittedRatingRows) {
     const id = row.response.assignment.course_bound_id;
     if (!id) continue;
-    collected.get(id)?.ratings.push(row.rating_value);
+    collected.get(id)?.ratings.push(row);
   }
 
   return new Map(
-    [...collected].map(([id, value]) => [id, { ...value, mean: mean(value.ratings) }])
+    [...collected].map(([id, value]) => [
+      id,
+      {
+        assigned: value.assigned,
+        submitted: value.submitted,
+        mean: comparableRatingMean(value.ratings, snapshotsByEvaluation.get(id)),
+      },
+    ])
   );
 }
 
@@ -265,7 +285,10 @@ export async function listGeneralEducationEvaluations(
     }),
   ]);
 
-  const stats = await getResponseStats(rows.map((row) => row.id));
+  const stats = await getResponseStats(
+    rows.map((row) => row.id),
+    new Map(rows.map((row) => [row.id, row.instrument.structure_snapshot]))
+  );
 
   return {
     total,

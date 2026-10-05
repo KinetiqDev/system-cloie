@@ -91,15 +91,18 @@ function matchesScalarFilter(expected: unknown, actual: unknown): boolean {
   if (!isPlainObject(expected)) return false;
 
   for (const [operator, operand] of Object.entries(expected)) {
-    if (SCALAR_MODIFIERS[operator]) continue;
-    const matcher = SCALAR_OPERATORS[operator];
-    if (!matcher || !matcher(expected, operand, actual)) return false;
+    if (Object.prototype.hasOwnProperty.call(SCALAR_MODIFIERS, operator)) continue;
+    if (!Object.prototype.hasOwnProperty.call(SCALAR_OPERATORS, operator)) return false;
+    if (!SCALAR_OPERATORS[operator](expected, operand, actual)) return false;
   }
   return isScalarFilter(expected);
 }
 
 function isScalarFilter(value: unknown): value is Record<string, unknown> {
-  return isPlainObject(value) && Object.keys(value).some((key) => key in SCALAR_OPERATORS);
+  return (
+    isPlainObject(value) &&
+    Object.keys(value).some((key) => Object.prototype.hasOwnProperty.call(SCALAR_OPERATORS, key))
+  );
 }
 
 /** Match a single `field: value` entry of a where clause against the row. */
@@ -107,8 +110,10 @@ function matchesField(expected: unknown, actual: unknown): boolean {
   if (isScalarFilter(expected)) return matchesScalarFilter(expected, actual);
   if (!isPlainObject(expected)) return Object.is(expected, actual);
 
-  const listOperator = Object.keys(expected).find((key) => key in LIST_OPERATORS);
-  if (listOperator)
+  const listOperator = Object.keys(expected).find((key) =>
+    Object.prototype.hasOwnProperty.call(LIST_OPERATORS, key)
+  );
+  if (listOperator !== undefined)
     return Array.isArray(actual) && LIST_OPERATORS[listOperator](actual, expected[listOperator]);
 
   // Relation filter: `is` addresses the relation explicitly, any other
@@ -124,7 +129,7 @@ export function matchesWhere(where: Filter, row: Row): boolean {
   if (!isPlainObject(where)) return false;
 
   return Object.entries(where).every(([key, expected]) => {
-    if (key in COMBINATORS) {
+    if (Object.prototype.hasOwnProperty.call(COMBINATORS, key)) {
       const clauses = (Array.isArray(expected) ? expected : [expected]) as Filter[];
       return COMBINATORS[key](clauses, row);
     }
