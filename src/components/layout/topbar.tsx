@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { MobileSidebarDrawer } from "./mobile-sidebar-drawer";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
+import { PageHelpLink } from "@/features/entry/components/page-help-link";
 import type { Role } from "@/lib/constants/roles";
 import type { MobileNavMode } from "@/lib/constants/navigation";
 
@@ -91,6 +92,7 @@ export function Topbar({
       {/* Right side actions */}
       <div className="flex items-center gap-3">
         {children}
+        <PageHelpLink activeRole={roles?.[0] ?? null} />
         <AppearanceMenuTrigger enabled={appearanceEnabled} />
         {/* Profile avatar + dropdown */}
         <DropdownMenu>

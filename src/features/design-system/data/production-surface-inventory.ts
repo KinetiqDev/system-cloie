@@ -1896,6 +1896,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/entry/components/page-help-link.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Contextual help action for the Help Center. Composes the existing Button primitive with a lucide icon and the design system token classes; it introduces no new visual vocabulary.",
+  },
+  {
     path: "src/app/(public)/status/[type]/loading.tsx",
     disposition: "task",
     taskId: 23,
