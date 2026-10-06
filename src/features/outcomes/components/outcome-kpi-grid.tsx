@@ -26,14 +26,14 @@ export function OutcomeKpiGrid({ items }: { items: OutcomeKpi[] }) {
       {items.map(({ label, value, tone = "default" }) => (
         <Card key={label} size="sm" className="min-w-0">
           <CardHeader className="min-w-0 gap-0 px-3 pt-3 pb-0 sm:px-4 sm:pt-4">
-            <CardTitle className="text-label-sm text-muted-foreground sm:text-title-sm leading-tight font-semibold">
+            <CardTitle className="text-title-sm text-muted-foreground leading-tight">
               {label}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4">
             <p
               className={cn(
-                "font-heading sm:text-display-md text-[2rem] leading-none font-bold tracking-tight tabular-nums",
+                "text-display-md leading-none tracking-tight tabular-nums",
                 valueTone[tone]
               )}
             >

@@ -16,10 +16,10 @@ vi.mock("next/navigation", () => ({
 describe("ManagementTemplateBuilder", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // The shared TemplateBuilder renders the GO picker only for
+    // The shared TemplateBuilder renders the PO picker only for
     // program-owned templates; baseline templates skip the picker.
-    // GO picker uses useMediaQuery; stub a desktop viewport.
-    // Stub retained for safety if the GO picker path is reached.
+    // PO picker uses useMediaQuery; stub a desktop viewport.
+    // Stub retained for safety if the PO picker path is reached.
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
@@ -50,7 +50,7 @@ describe("ManagementTemplateBuilder", () => {
 
     expect(screen.getByText("Template Settings")).toBeInTheDocument();
     expect(screen.queryByText("CILO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO Binding")).not.toBeInTheDocument();
   });
 
   test("saves Secretary instrument templates in place", async () => {

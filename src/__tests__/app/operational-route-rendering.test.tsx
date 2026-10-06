@@ -102,7 +102,7 @@ const loadingRoutes = [
   [ProgramHeadResponseReviewLoading, "Loading response review"],
   [ProgramHeadCiloEvaluationNewLoading, "Loading form"],
   [ProgramHeadOutcomesLoading, "Loading records"],
-  [ProgramHeadMappingLoading, "Loading CILO-GO mappings"],
+  [ProgramHeadMappingLoading, "Loading CILO-PO mappings"],
   [ProgramHeadToolsLoading, "Loading records"],
   [ProgramHeadToolsNewLoading, "Loading form"],
   [ProgramHeadToolEditLoading, "Loading form"],
@@ -152,10 +152,10 @@ describe("operational route loading boundaries", () => {
     expect(status).not.toHaveTextContent(/@|student|faculty|secretary|program head|dean|202\d/i);
   });
 
-  it("uses mapping-card geometry instead of review tabs for CILO-GO mappings", () => {
+  it("uses mapping-card geometry instead of review tabs for CILO-PO mappings", () => {
     render(<ProgramHeadMappingLoading />);
 
-    const status = screen.getByRole("status", { name: "Loading CILO-GO mappings" });
+    const status = screen.getByRole("status", { name: "Loading CILO-PO mappings" });
 
     expect(status.querySelectorAll(".rounded-full").length).toBeGreaterThan(0);
     expect(status.querySelector(".border-b")).not.toBeInTheDocument();

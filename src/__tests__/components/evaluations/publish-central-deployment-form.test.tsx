@@ -137,29 +137,29 @@ describe("PublishCentralDeploymentForm", () => {
       },
     });
 
-    expect(screen.queryByText("GO coverage")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO coverage")).not.toBeInTheDocument();
 
     await selectTemplate();
 
-    expect(screen.getByRole("heading", { name: "GO coverage" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "PO coverage" })).toBeInTheDocument();
     expect(
-      screen.getByText("2 of 3 Likert questions bound to a GO, covering 1 GO.")
+      screen.getByText("2 of 3 Likert questions bound to a PO, covering 1 PO.")
     ).toBeInTheDocument();
     expect(screen.getByText("Overall Assessment")).toBeInTheDocument();
     expect(screen.getByText("Overall satisfaction with the program")).toBeInTheDocument();
     expect(
-      screen.getByText(/publish as general evaluation items and give no GO evidence/i)
+      screen.getByText(/publish as general evaluation items and give no PO evidence/i)
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Assign GOs in the template editor" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Assign POs in the template editor" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/tools/template-1/edit"
     );
   });
 
   it("surfaces a readiness failure instead of hiding the coverage panel", () => {
-    renderForm({ readinessError: "Unable to load GO coverage right now." });
+    renderForm({ readinessError: "Unable to load PO coverage right now." });
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Unable to load GO coverage right now.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Unable to load PO coverage right now.");
   });
 
   it("shows the binding problem that still blocks publication", async () => {
@@ -169,7 +169,7 @@ describe("PublishCentralDeploymentForm", () => {
           ...FULLY_BOUND_READINESS,
           boundQuestionCount: 2,
           blockingError:
-            "One or more bound GOs are archived or no longer available. Update the template before publishing.",
+            "One or more bound POs are archived or no longer available. Update the template before publishing.",
           unboundQuestions: [
             {
               itemKey: "q-1",
@@ -185,7 +185,7 @@ describe("PublishCentralDeploymentForm", () => {
     await selectTemplate();
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "One or more bound GOs are archived or no longer available."
+      "One or more bound POs are archived or no longer available."
     );
     expect(screen.getByText("The program prepared me for employment")).toBeInTheDocument();
   });

@@ -10,7 +10,7 @@ import type {
 const RULE_LABELS: Record<NeedsAttentionRule, string> = {
   "closing-soon": "Closing soon",
   "zero-submissions": "No submissions",
-  "zero-go-ratings": "No ratings",
+  "zero-po-ratings": "No ratings",
 };
 
 const MAX_VISIBLE_ITEMS = 6;

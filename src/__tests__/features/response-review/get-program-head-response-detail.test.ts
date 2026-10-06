@@ -89,7 +89,7 @@ const MOCK_EVALUATION_SHAPE = {
       item_key: "clarity",
     },
   ],
-  go_question_bindings: [],
+  po_question_bindings: [],
 };
 
 const MOCK_RESPONSE_DATA = {
@@ -132,7 +132,7 @@ describe("getProgramHeadResponseDetail", () => {
     ciloMappingFindManyMock.mockResolvedValue([
       {
         cilo_id: "cilo-1",
-        go: { id: "plo-1", code: "GO-1", description: "Communicate effectively" },
+        po: { id: "po-1", code: "PO-1", description: "Communicate effectively" },
         manifestation: "LEARNING",
       },
     ]);
@@ -308,11 +308,11 @@ describe("getProgramHeadResponseDetail", () => {
         expect(quant.binding.ciloLabel).toBe("CILO 1");
         expect(quant.binding.layer).toBe("GRADUATE_OUTCOME");
         expect(
-          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.goMappings : []
+          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.poMappings : []
         ).toHaveLength(1);
         expect(
-          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.goMappings[0].goCode : null
-        ).toBe("GO-1");
+          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.poMappings[0].poCode : null
+        ).toBe("PO-1");
       }
     }
     // Qualitative answer
@@ -323,7 +323,7 @@ describe("getProgramHeadResponseDetail", () => {
     }
   });
 
-  it("shows frozen direct GO evidence on a course-bound response answer", async () => {
+  it("shows frozen direct PO evidence on a course-bound response answer", async () => {
     responseFindFirstMock.mockResolvedValue({
       ...MOCK_RESPONSE_DATA,
       assignment: {
@@ -331,11 +331,11 @@ describe("getProgramHeadResponseDetail", () => {
         course_bound: {
           ...MOCK_EVALUATION_SHAPE,
           cilo_question_bindings: [],
-          go_question_bindings: [
+          po_question_bindings: [
             {
-              go_id: "go-direct",
-              go_code_snapshot: "GO-3",
-              go_description_snapshot: "Design sustainable solutions",
+              po_id: "po-direct",
+              po_code_snapshot: "PO-3",
+              po_description_snapshot: "Design sustainable solutions",
               section_key: "teaching",
               item_key: "clarity",
             },
@@ -356,11 +356,11 @@ describe("getProgramHeadResponseDetail", () => {
     const quantitative = result!.sections[0].items.find((item) => item.kind === "quantitative");
 
     expect(quantitative?.binding).toEqual({
-      type: "GO",
-      goBindings: [
+      type: "PO",
+      poBindings: [
         {
-          key: "go-direct",
-          code: "GO-3",
+          key: "po-direct",
+          code: "PO-3",
           description: "Design sustainable solutions",
         },
       ],
@@ -474,7 +474,7 @@ describe("getProgramHeadResponseDetail", () => {
             semester: "FIRST",
             term: null,
           },
-          go_snapshots: [],
+          po_snapshots: [],
         },
       },
       quant_items: [],
@@ -520,7 +520,7 @@ describe("getProgramHeadResponseDetail", () => {
             semester: "FIRST",
             term: null,
           },
-          go_snapshots: [],
+          po_snapshots: [],
         },
       },
       quant_items: [],

@@ -172,7 +172,7 @@ function canonicalRows(ratings: Rating[], evaluationId: string, ciloId: string |
         : { key: "scale5", descriptors: SCALE_5, min: 1, max: 5 },
     cilo: ciloId ? { id: ciloId, label: "CILO 1", description: "Apply methods" } : null,
     evaluationId,
-    goMappings: [],
+    poMappings: [],
   }));
 }
 

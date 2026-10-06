@@ -5,8 +5,8 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
   generateTemplateCode,
-  normalizeGoQuestionBindings,
-  syncTemplateGoBindings,
+  normalizePoQuestionBindings,
+  syncTemplatePoBindings,
   withProgramHeadAssignment,
 } from "./manage-program-head-templates";
 import type { TemplateSettingsInput, TemplateStructure } from "../types";
@@ -20,7 +20,7 @@ export interface CreateBaselineCopyInput {
   baselineId: string;
   customName: string;
   structure: TemplateStructure;
-  goBindings: Array<{ goId: string; itemKey: string; sectionKey: string }>;
+  poBindings: Array<{ poId: string; itemKey: string; sectionKey: string }>;
   /**
    * Template settings the author edited before saving. Absent callers inherit
    * the baseline's own description, type, active state, and faculty access.
@@ -188,10 +188,10 @@ export async function createBaselineCopy(
     return { success: false, error: "Assigned program not found." };
   }
   const copySettings = resolveCopySettings(baseline, input.settings);
-  // Only PROGRAM_WIDE templates bind Graduate Outcomes, so a copy the
+  // Only PROGRAM_WIDE templates bind Program Outcomes, so a copy the
   // author retyped as course-bound carries none.
-  const goBindings =
-    copySettings.templateType === EvaluationTemplateType.PROGRAM_WIDE ? input.goBindings : [];
+  const poBindings =
+    copySettings.templateType === EvaluationTemplateType.PROGRAM_WIDE ? input.poBindings : [];
 
   // Reject a same-name copy before generating a code: code uniqueness was
   // previously derived from the source baseline (program code + baseline code),
@@ -212,21 +212,21 @@ export async function createBaselineCopy(
 
   const code = await resolveAvailableTemplateCode(program.code, customName);
 
-  // Validate question–GO bindings against the program's active GO catalog.
+  // Validate question–PO bindings against the program's active PO catalog.
   // Empty bindings are allowed: drafts copy without bindings, and full Likert
   // coverage is enforced at publication.
   const activeGos =
-    goBindings.length > 0
-      ? await prisma.gO.findMany({
+    poBindings.length > 0
+      ? await prisma.pO.findMany({
           where: { program_id: programId, is_active: true },
           select: { id: true, code: true, description: true },
         })
       : [];
 
-  const bindingValidation = normalizeGoQuestionBindings({
-    bindings: goBindings,
+  const bindingValidation = normalizePoQuestionBindings({
+    bindings: poBindings,
     structure: input.structure,
-    gos: activeGos,
+    pos: activeGos,
   });
 
   if (!bindingValidation.success) {
@@ -259,8 +259,8 @@ export async function createBaselineCopy(
         },
       });
 
-      // The program-owned copy owns the GO bindings made on the baseline.
-      await syncTemplateGoBindings(tx, createdTemplate.id, bindingValidation.bindings);
+      // The program-owned copy owns the PO bindings made on the baseline.
+      await syncTemplatePoBindings(tx, createdTemplate.id, bindingValidation.bindings);
 
       return createdTemplate;
     });

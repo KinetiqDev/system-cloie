@@ -65,12 +65,12 @@ export type DeanLearningOutcomesData = {
   programs: Array<{
     id: string;
     name: string;
-    goCount: number;
+    poCount: number;
     activeContexts: number;
     readyContexts: number;
     missingCiloContexts: number;
     incompleteMappingContexts: number;
-    gos: DeanOutcomeCatalogEntry[];
+    pos: DeanOutcomeCatalogEntry[];
     mappingGaps: DeanMappingGap[];
   }>;
 };
@@ -200,11 +200,11 @@ function v2CiloIsIncomplete(
     return !cilo.mappedTargets.some((target) => !target.isArchived);
   }
   // Program-specific CILOs share the classifier's exhaustive rule: a CILO
-  // is a gap unless it classifies every active owning-Program GO, and
-  // zero active GOs alongside an active CILO is incomplete, not ready.
+  // is a gap unless it classifies every active owning-Program PO, and
+  // zero active POs alongside an active CILO is incomplete, not ready.
   return !hasExhaustiveGoCoverage(
     (cilo.mappedTargets ?? []).filter((target) => !target.isArchived).map((target) => target.id),
-    (context.gos ?? []).filter((go) => !go.isArchived).map((go) => go.id)
+    (context.pos ?? []).filter((po) => !po.isArchived).map((po) => po.id)
   );
 }
 
@@ -361,17 +361,17 @@ export async function getDeanLearningOutcomes(
     const program = programs.get(assignment.program_id) ?? {
       id: assignment.program.id,
       name: archivedLabel(assignment.program.name, !assignment.program.is_active, period.status),
-      goCount: 0,
+      poCount: 0,
       activeContexts: total.activeContexts,
       readyContexts: total.readyContexts,
       missingCiloContexts: total.missingCiloContexts,
       incompleteMappingContexts: total.incompleteMappingContexts,
-      gos: [],
+      pos: [],
       mappingGaps: [],
     };
-    if (program.gos.length === 0 && (context.gos?.length ?? 0) > 0) {
-      program.gos = visibleCatalog(context.gos, period.status);
-      program.goCount = program.gos.length;
+    if (program.pos.length === 0 && (context.pos?.length ?? 0) > 0) {
+      program.pos = visibleCatalog(context.pos, period.status);
+      program.poCount = program.pos.length;
     }
     program.mappingGaps.push(
       ...mappingGapsForContext(assignment, context, period.status, schemaVersion)

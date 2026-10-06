@@ -3,11 +3,11 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 
 import { ProgramHeadOutcomesPage } from "@/features/outcomes/components/program-head-outcomes-page";
 import {
-  deleteGOAction,
-  reorderGOsAction,
-  restoreGOAction,
+  deletePOAction,
+  reorderPOsAction,
+  restorePOAction,
 } from "@/lib/actions/program-head-outcome-actions";
-import type { ProgramGOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
+import type { ProgramPOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
 import { showToast } from "@/components/ui/toast";
 
 const routerRefreshMock = vi.hoisted(() => vi.fn());
@@ -40,25 +40,25 @@ vi.mock("@dnd-kit/core", async (importOriginal) => {
 });
 
 vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
-  createGOAction: vi.fn(),
-  updateGOAction: vi.fn(),
-  deleteGOAction: vi.fn(),
-  reorderGOsAction: vi.fn(),
-  restoreGOAction: vi.fn(),
+  createPOAction: vi.fn(),
+  updatePOAction: vi.fn(),
+  deletePOAction: vi.fn(),
+  reorderPOsAction: vi.fn(),
+  restorePOAction: vi.fn(),
 }));
 
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
-const deleteGOActionMock = vi.mocked(deleteGOAction);
-const reorderGOsActionMock = vi.mocked(reorderGOsAction);
-const restoreGOActionMock = vi.mocked(restoreGOAction);
+const deletePOActionMock = vi.mocked(deletePOAction);
+const reorderPOsActionMock = vi.mocked(reorderPOsAction);
+const restorePOActionMock = vi.mocked(restorePOAction);
 const showToastMock = vi.mocked(showToast);
 
-function makeGO(overrides: Partial<ProgramGOItem> = {}): ProgramGOItem {
+function makePO(overrides: Partial<ProgramPOItem> = {}): ProgramPOItem {
   return {
-    id: "go-1",
-    code: "GO-1",
-    description: "Graduate Outcome one",
+    id: "po-1",
+    code: "PO-1",
+    description: "Program Outcome one",
     order: 0,
     is_active: true,
     program_id: "program-1",
@@ -74,32 +74,32 @@ const program = { id: "program-1", code: "BSCS", name: "BS Computer Science" };
 describe("ProgramHeadOutcomesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    deleteGOActionMock.mockResolvedValue({ success: true });
+    deletePOActionMock.mockResolvedValue({ success: true });
   });
 
   it("shows the empty state and opens the create dialog from it", () => {
-    render(<ProgramHeadOutcomesPage gos={[]} program={program} />);
+    render(<ProgramHeadOutcomesPage pos={[]} program={program} />);
 
-    expect(screen.getByText("No Graduate Outcomes yet")).toBeInTheDocument();
+    expect(screen.getByText("No Program Outcomes yet")).toBeInTheDocument();
     expect(
-      screen.getByText("Add your first GO to start tracking program outcomes.")
+      screen.getByText("Add your first PO to start tracking program outcomes.")
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Add GO" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Add PO" })[0]);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Add Graduate Outcome" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Add Program Outcome" })).toBeInTheDocument();
   });
 
   it("renders mapping statistics and badges with semantic roles", () => {
     render(
       <ProgramHeadOutcomesPage
-        gos={[
-          makeGO(),
-          makeGO({
-            id: "go-2",
-            code: "GO-2",
-            description: "Graduate Outcome two",
+        pos={[
+          makePO(),
+          makePO({
+            id: "po-2",
+            code: "PO-2",
+            description: "Program Outcome two",
             order: 1,
             _count: { cilo_mappings: 3 },
           }),
@@ -108,7 +108,7 @@ describe("ProgramHeadOutcomesPage", () => {
       />
     );
 
-    expect(screen.getByText("Total GOs")).toBeInTheDocument();
+    expect(screen.getByText("Total POs")).toBeInTheDocument();
     expect(screen.getByText("Mapped to CILOs")).toBeInTheDocument();
     expect(screen.getByText("Unmapped")).toBeInTheDocument();
     expect(screen.getByText("3 CILOs mapped")).toBeInTheDocument();
@@ -120,114 +120,114 @@ describe("ProgramHeadOutcomesPage", () => {
     expect(screen.getByText("Drag rows to reorder")).toBeInTheDocument();
   });
 
-  it("archives a GO only through the confirmation dialog", async () => {
-    render(<ProgramHeadOutcomesPage gos={[makeGO()]} program={program} />);
+  it("archives a PO only through the confirmation dialog", async () => {
+    render(<ProgramHeadOutcomesPage pos={[makePO()]} program={program} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive GO-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive PO-1" }));
 
-    expect(screen.getByRole("heading", { name: "Archive Graduate Outcome" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Archive Program Outcome" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
-    await waitFor(() => expect(deleteGOActionMock).toHaveBeenCalledWith("program-1", "go-1"));
-    expect(showToastMock).toHaveBeenCalledWith("Graduate Outcome archived.", "success");
+    await waitFor(() => expect(deletePOActionMock).toHaveBeenCalledWith("program-1", "po-1"));
+    expect(showToastMock).toHaveBeenCalledWith("Program Outcome archived.", "success");
   });
 
   it("keeps the dialog open and shows the error when archiving fails", async () => {
-    deleteGOActionMock.mockResolvedValue({
+    deletePOActionMock.mockResolvedValue({
       success: false,
-      error: "You do not have permission to delete this Graduate Outcome.",
+      error: "You do not have permission to delete this Program Outcome.",
     });
-    render(<ProgramHeadOutcomesPage gos={[makeGO()]} program={program} />);
+    render(<ProgramHeadOutcomesPage pos={[makePO()]} program={program} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive GO-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Archive PO-1" }));
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "You do not have permission to delete this Graduate Outcome."
+      "You do not have permission to delete this Program Outcome."
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      "You do not have permission to delete this Graduate Outcome.",
+      "You do not have permission to delete this Program Outcome.",
       "error"
     );
   });
 
-  it("offers Restore instead of Archive for archived GOs", () => {
-    render(<ProgramHeadOutcomesPage gos={[makeGO({ is_active: false })]} program={program} />);
+  it("offers Restore instead of Archive for archived POs", () => {
+    render(<ProgramHeadOutcomesPage pos={[makePO({ is_active: false })]} program={program} />);
 
     expect(screen.getByText("Archived")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Restore GO-1" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archive GO-1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Restore PO-1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive PO-1" })).not.toBeInTheDocument();
   });
 
-  it("restores an archived GO only through the confirmation dialog", async () => {
-    restoreGOActionMock.mockResolvedValue({ success: true });
-    render(<ProgramHeadOutcomesPage gos={[makeGO({ is_active: false })]} program={program} />);
+  it("restores an archived PO only through the confirmation dialog", async () => {
+    restorePOActionMock.mockResolvedValue({ success: true });
+    render(<ProgramHeadOutcomesPage pos={[makePO({ is_active: false })]} program={program} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Restore GO-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore PO-1" }));
 
-    expect(screen.getByRole("heading", { name: "Restore Graduate Outcome" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Restore Program Outcome" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
 
-    await waitFor(() => expect(restoreGOActionMock).toHaveBeenCalledWith("program-1", "go-1"));
-    expect(showToastMock).toHaveBeenCalledWith("Graduate Outcome restored.", "success");
+    await waitFor(() => expect(restorePOActionMock).toHaveBeenCalledWith("program-1", "po-1"));
+    expect(showToastMock).toHaveBeenCalledWith("Program Outcome restored.", "success");
   });
 
   it("keeps the dialog open and shows the error when restoring fails", async () => {
-    restoreGOActionMock.mockResolvedValue({
+    restorePOActionMock.mockResolvedValue({
       success: false,
-      error: "You do not have permission to restore this Graduate Outcome.",
+      error: "You do not have permission to restore this Program Outcome.",
     });
-    render(<ProgramHeadOutcomesPage gos={[makeGO({ is_active: false })]} program={program} />);
+    render(<ProgramHeadOutcomesPage pos={[makePO({ is_active: false })]} program={program} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Restore GO-1" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore PO-1" }));
     fireEvent.click(screen.getByRole("button", { name: "Restore" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "You do not have permission to restore this Graduate Outcome."
+      "You do not have permission to restore this Program Outcome."
     );
     expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      "You do not have permission to restore this Graduate Outcome.",
+      "You do not have permission to restore this Program Outcome.",
       "error"
     );
   });
 
   it("persists a drag reorder after the save debounce", async () => {
-    reorderGOsActionMock.mockResolvedValue({ success: true });
+    reorderPOsActionMock.mockResolvedValue({ success: true });
     render(
       <ProgramHeadOutcomesPage
-        gos={[makeGO({ id: "go-1", code: "GO-1" }), makeGO({ id: "go-2", code: "GO-2", order: 1 })]}
+        pos={[makePO({ id: "po-1", code: "PO-1" }), makePO({ id: "po-2", code: "PO-2", order: 1 })]}
         program={program}
       />
     );
 
-    act(() => dndState.onDragEnd?.({ active: { id: "go-1" }, over: { id: "go-2" } }));
+    act(() => dndState.onDragEnd?.({ active: { id: "po-1" }, over: { id: "po-2" } }));
 
     await waitFor(
-      () => expect(reorderGOsActionMock).toHaveBeenCalledWith("program-1", ["go-2", "go-1"]),
+      () => expect(reorderPOsActionMock).toHaveBeenCalledWith("program-1", ["po-2", "po-1"]),
       { timeout: 2000 }
     );
   });
 
   it("shows a reorder failure alert and refreshes", async () => {
-    reorderGOsActionMock.mockResolvedValue({
+    reorderPOsActionMock.mockResolvedValue({
       success: false,
-      error: "You do not have permission to reorder Graduate Outcomes.",
+      error: "You do not have permission to reorder Program Outcomes.",
     });
     render(
       <ProgramHeadOutcomesPage
-        gos={[makeGO({ id: "go-1", code: "GO-1" }), makeGO({ id: "go-2", code: "GO-2", order: 1 })]}
+        pos={[makePO({ id: "po-1", code: "PO-1" }), makePO({ id: "po-2", code: "PO-2", order: 1 })]}
         program={program}
       />
     );
 
-    act(() => dndState.onDragEnd?.({ active: { id: "go-1" }, over: { id: "go-2" } }));
+    act(() => dndState.onDragEnd?.({ active: { id: "po-1" }, over: { id: "po-2" } }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "You do not have permission to reorder Graduate Outcomes."
+      "You do not have permission to reorder Program Outcomes."
     );
     expect(routerRefreshMock).toHaveBeenCalled();
   });

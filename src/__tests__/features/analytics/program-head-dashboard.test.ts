@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DeploymentStatus } from "@prisma/client";
 import {
-  buildCentralGoRatingRows,
+  buildCentralPoRatingRows,
   type AttentionDeployment,
   type CentralBindingsByDeployment,
   type CourseBindingRow,
@@ -16,9 +16,9 @@ import {
   toDashboardGoRows,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import {
-  buildCourseDerivedGoMetrics,
-  buildProgramWideGoMetrics,
-} from "@/features/analytics/aggregators/go";
+  buildCourseDerivedPoMetrics,
+  buildProgramWidePoMetrics,
+} from "@/features/analytics/aggregators/po";
 
 // ---------------------------------------------------------------------------
 // Fixtures mirroring the service's Prisma projections
@@ -42,7 +42,7 @@ const SNAPSHOTS: Record<string, unknown> = {
       ],
     },
     {
-      key: "plo-items",
+      key: "po-items",
       title: "S",
       items: [
         {
@@ -73,7 +73,7 @@ const SNAPSHOTS: Record<string, unknown> = {
       ],
     },
     {
-      key: "plo-items",
+      key: "po-items",
       title: "S",
       items: [
         {
@@ -113,7 +113,7 @@ function centralRow(stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER"): Das
   return {
     rating_value: 1,
     response_id: `resp-${stakeholder}`,
-    section_key: "plo-items",
+    section_key: "po-items",
     item_key: "q-plo",
     response: {
       assignment: {
@@ -190,10 +190,10 @@ describe("buildDashboardSourceMeans", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GO row normalization into the shared aggregators (§13.8, §5.8, §5.9, §7)
+// PO row normalization into the shared aggregators (§13.8, §5.8, §5.9, §7)
 // ---------------------------------------------------------------------------
 
-describe("GO row normalization", () => {
+describe("PO row normalization", () => {
   const binding: CourseBindingRow = {
     course_bound_evaluation_id: "cb-1",
     section_key: "cilo-items",
@@ -204,11 +204,11 @@ describe("GO row normalization", () => {
       cilo_mappings: [
         {
           manifestation: "LEARNING",
-          go: { id: "plo-1", code: "GO 1", description: "Communicate." },
+          po: { id: "po-1", code: "PO 1", description: "Communicate." },
         },
         {
           manifestation: "OPPORTUNITY",
-          go: { id: "plo-2", code: "GO 2", description: "Collaborate." },
+          po: { id: "po-2", code: "PO 2", description: "Collaborate." },
         },
       ],
     },
@@ -223,15 +223,15 @@ describe("GO row normalization", () => {
     );
     expect(normalized).toHaveLength(1);
     expect(normalized[0].evaluationId).toBe("cb-1");
-    expect(normalized[0].goMappings.map((mapping) => mapping.goId)).toEqual(["plo-1", "plo-2"]);
-    expect(normalized[0].goMappings.map((mapping) => mapping.manifestation)).toEqual([
+    expect(normalized[0].poMappings.map((mapping) => mapping.poId)).toEqual(["po-1", "po-2"]);
+    expect(normalized[0].poMappings.map((mapping) => mapping.manifestation)).toEqual([
       "LEARNING",
       "OPPORTUNITY",
     ]);
 
-    const metrics = buildCourseDerivedGoMetrics(normalized);
-    expect(metrics.find((metric) => metric.goId === "plo-1")!.ratingCount).toBe(1);
-    expect(metrics.find((metric) => metric.goId === "plo-2")!.ratingCount).toBe(1);
+    const metrics = buildCourseDerivedPoMetrics(normalized);
+    expect(metrics.find((metric) => metric.poId === "po-1")!.ratingCount).toBe(1);
+    expect(metrics.find((metric) => metric.poId === "po-2")!.ratingCount).toBe(1);
   });
 
   it("routes direct course question bindings without a fake CILO", () => {
@@ -243,7 +243,7 @@ describe("GO row normalization", () => {
           {
             ...binding,
             cilo: null,
-            directGoMappings: [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }],
+            directPoMappings: [{ poId: "po-1", poCode: "PO 1", poDescription: "Communicate." }],
           },
         ],
       ]),
@@ -251,8 +251,8 @@ describe("GO row normalization", () => {
     );
 
     expect(normalized[0].cilo).toBeNull();
-    expect(normalized[0].directGoMappings?.[0].goId).toBe("plo-1");
-    expect(buildCourseDerivedGoMetrics(normalized)[0].ratingCount).toBe(1);
+    expect(normalized[0].directPoMappings?.[0].poId).toBe("po-1");
+    expect(buildCourseDerivedPoMetrics(normalized)[0].ratingCount).toBe(1);
   });
 
   it("skips items without a live binding or without selected-Program mappings", () => {
@@ -278,13 +278,13 @@ describe("GO row normalization", () => {
         "cd-STUDENT",
         new Map([
           [
-            JSON.stringify(["plo-items", "q-plo"]),
-            [{ goId: "plo-1", goCode: "GO 1", goDescription: "Communicate." }],
+            JSON.stringify(["po-items", "q-plo"]),
+            [{ poId: "po-1", poCode: "PO 1", poDescription: "Communicate." }],
           ],
         ]),
       ],
     ]);
-    const studentOnly = buildCentralGoRatingRows(
+    const studentOnly = buildCentralPoRatingRows(
       [centralRow("STUDENT"), centralRow("ALUMNI")],
       bindings,
       SNAPSHOT_MAP
@@ -292,18 +292,18 @@ describe("GO row normalization", () => {
     expect(studentOnly).toHaveLength(1);
     expect(studentOnly[0].evaluationId).toBe("cd-STUDENT");
 
-    const metrics = buildProgramWideGoMetrics(studentOnly);
-    expect(metrics.find((metric) => metric.goId === "plo-1")!.questionCount).toBe(1);
-    expect(metrics.find((metric) => metric.goId === "plo-1")!.evaluationCount).toBe(1);
+    const metrics = buildProgramWidePoMetrics(studentOnly);
+    expect(metrics.find((metric) => metric.poId === "po-1")!.questionCount).toBe(1);
+    expect(metrics.find((metric) => metric.poId === "po-1")!.evaluationCount).toBe(1);
   });
 });
 
-describe("GO summary projections", () => {
+describe("PO summary projections", () => {
   const metrics = [
     {
-      goId: "plo-1",
-      goCode: "GO 1",
-      goDescription: "",
+      poId: "po-1",
+      poCode: "PO 1",
+      poDescription: "",
       mean: 4,
       ratingCount: 6,
       responseCount: 3,
@@ -390,7 +390,7 @@ describe("buildNeedsAttentionItems", () => {
       deployments,
       submittedCountsByDeployment: submittedCounts,
       programGos: [],
-      goRowsBySource: {},
+      poRowsBySource: {},
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
     expect(items.filter((item) => item.rule === "closing-soon").map((item) => item.id)).toEqual([
@@ -405,7 +405,7 @@ describe("buildNeedsAttentionItems", () => {
       deployments,
       submittedCountsByDeployment: submittedCounts,
       programGos: [],
-      goRowsBySource: {},
+      poRowsBySource: {},
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
     expect(items.filter((item) => item.rule === "zero-submissions").map((item) => item.id)).toEqual(
@@ -413,21 +413,21 @@ describe("buildNeedsAttentionItems", () => {
     );
   });
 
-  it("reports every live GO without ratings for each evidence source", () => {
+  it("reports every live PO without ratings for each evidence source", () => {
     const items = buildNeedsAttentionItems({
       programId: "program-1",
       now,
       deployments: [],
       submittedCountsByDeployment: new Map(),
       programGos: [
-        { id: "plo-1", code: "GO 1" },
-        { id: "plo-2", code: "GO 2" },
+        { id: "po-1", code: "PO 1" },
+        { id: "po-2", code: "PO 2" },
       ],
-      goRowsBySource: {
+      poRowsBySource: {
         COURSE_STUDENT: [
           {
-            goId: "plo-1",
-            goCode: "GO 1",
+            poId: "po-1",
+            poCode: "PO 1",
             mean: 4,
             ratingCount: 8,
             responseCount: 2,
@@ -443,16 +443,16 @@ describe("buildNeedsAttentionItems", () => {
       },
       analyticsOutcomesHref: "/analytics?tab=outcomes",
     });
-    const zeroRatings = items.filter((item) => item.rule === "zero-go-ratings");
-    // Only COURSE_STUDENT:GO 1 has evidence; every other source/GO pair is flagged.
+    const zeroRatings = items.filter((item) => item.rule === "zero-po-ratings");
+    // Only COURSE_STUDENT:PO 1 has evidence; every other source/PO pair is flagged.
     expect(zeroRatings.map((item) => item.id)).toEqual([
-      "zero-go-ratings:COURSE_STUDENT:plo-2",
-      "zero-go-ratings:CENTRAL_STUDENT:plo-1",
-      "zero-go-ratings:CENTRAL_STUDENT:plo-2",
-      "zero-go-ratings:ALUMNI:plo-1",
-      "zero-go-ratings:ALUMNI:plo-2",
-      "zero-go-ratings:INDUSTRY_PARTNER:plo-1",
-      "zero-go-ratings:INDUSTRY_PARTNER:plo-2",
+      "zero-po-ratings:COURSE_STUDENT:po-2",
+      "zero-po-ratings:CENTRAL_STUDENT:po-1",
+      "zero-po-ratings:CENTRAL_STUDENT:po-2",
+      "zero-po-ratings:ALUMNI:po-1",
+      "zero-po-ratings:ALUMNI:po-2",
+      "zero-po-ratings:INDUSTRY_PARTNER:po-1",
+      "zero-po-ratings:INDUSTRY_PARTNER:po-2",
     ]);
     expect(zeroRatings[0].href).toBe("/analytics?tab=outcomes");
   });
@@ -464,7 +464,7 @@ describe("buildNeedsAttentionItems", () => {
       deployments,
       submittedCountsByDeployment: submittedCounts,
       programGos: [],
-      goRowsBySource: {},
+      poRowsBySource: {},
       analyticsOutcomesHref: "/outcomes",
       periodFilters: {
         schoolYearId: "00000000-0000-4000-8000-000000000009",

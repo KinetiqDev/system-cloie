@@ -10,7 +10,7 @@ const {
   assignmentCreateManyMock,
   bindingCreateManyMock,
   courseBoundEvaluationCreateMock,
-  goBindingCreateManyMock,
+  poBindingCreateManyMock,
   courseAssignmentFindUniqueMock,
   courseAssignmentMembershipFindManyMock,
   courseFindUniqueMock,
@@ -22,7 +22,7 @@ const {
   programHeadAssignmentFindManyMock,
   revalidateProgramHeadAssignmentMock,
   ciloFindManyMock,
-  goFindManyMock,
+  poFindManyMock,
   resolveAuthSessionMock,
   resolveProgramHeadContextMock,
   studentEnrollmentFindManyMock,
@@ -32,7 +32,7 @@ const {
   assignmentCreateManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
   courseBoundEvaluationCreateMock: vi.fn(),
-  goBindingCreateManyMock: vi.fn(),
+  poBindingCreateManyMock: vi.fn(),
   courseAssignmentFindUniqueMock: vi.fn(),
   courseAssignmentMembershipFindManyMock: vi.fn(),
   courseFindUniqueMock: vi.fn(),
@@ -44,7 +44,7 @@ const {
   programHeadAssignmentFindManyMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
   ciloFindManyMock: vi.fn(),
-  goFindManyMock: vi.fn(),
+  poFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
@@ -76,8 +76,8 @@ vi.mock("@/lib/db/prisma", () => ({
     course: {
       findUnique: courseFindUniqueMock,
     },
-    gO: {
-      findMany: goFindManyMock,
+    pO: {
+      findMany: poFindManyMock,
     },
   },
 }));
@@ -93,8 +93,8 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 
 vi.mock("@/features/instruments/services/manage-faculty-templates", async () => {
   // The Faculty-owned context entry point is stubbed (it has its own suite),
-  // but the shared GO-binding validator runs for real: it is what the on-behalf
-  // path resolves its stored GO bindings through, and stubbing it would hide
+  // but the shared PO-binding validator runs for real: it is what the on-behalf
+  // path resolves its stored PO bindings through, and stubbing it would hide
   // exactly the question-kind rule this suite guards.
   const actual = await vi.importActual<typeof FacultyTemplateServices>(
     "@/features/instruments/services/manage-faculty-templates"
@@ -102,7 +102,7 @@ vi.mock("@/features/instruments/services/manage-faculty-templates", async () => 
 
   return {
     getFacultyTemplatePublicationContext: getFacultyTemplatePublicationContextMock,
-    validateCourseBoundGoBindings: actual.validateCourseBoundGoBindings,
+    validateCourseBoundPoBindings: actual.validateCourseBoundPoBindings,
   };
 });
 
@@ -160,7 +160,7 @@ const MOCK_PUBLICATION_CONTEXT = {
       { description: "Apply capstone planning fundamentals.", id: "cilo-1" },
       { description: "Produce a proposal-aligned outline defense artifact.", id: "cilo-2" },
     ],
-    goBindings: [],
+    poBindings: [],
     course: {
       code: "IT-401",
       courseType: "PROGRAM_SPECIFIC",
@@ -183,11 +183,11 @@ const MOCK_PUBLICATION_CONTEXT_WITH_GO = {
   ...MOCK_PUBLICATION_CONTEXT,
   data: {
     ...MOCK_PUBLICATION_CONTEXT.data,
-    goBindings: [
+    poBindings: [
       {
-        goId: "go-1",
-        goCodeSnapshot: "GO-1",
-        goDescriptionSnapshot: "Communicate effectively.",
+        poId: "po-1",
+        poCodeSnapshot: "PO-1",
+        poDescriptionSnapshot: "Communicate effectively.",
         itemKey: "q1",
         questionPromptSnapshot: "I achieved outcome one.",
         sectionKey: "outcomes",
@@ -218,7 +218,7 @@ const MOCK_BOUND_TEMPLATE = {
       item_key: "q2",
     },
   ],
-  template_go_question_bindings: [],
+  template_po_question_bindings: [],
   structure: [
     {
       key: "outcomes",
@@ -247,7 +247,7 @@ describe("publishCourseBoundEvaluation", () => {
         $queryRaw: lockCourseAssignmentMock,
         courseBoundEvaluation: { create: courseBoundEvaluationCreateMock },
         courseBoundCiloQuestionBinding: { createMany: bindingCreateManyMock },
-        courseBoundGoQuestionBinding: { createMany: goBindingCreateManyMock },
+        courseBoundPoQuestionBinding: { createMany: poBindingCreateManyMock },
         courseBoundEvaluationTarget: { createMany: targetCreateManyMock },
         courseBoundEvaluationExclusion: { createMany: exclusionCreateManyMock },
         courseAssignment: { findUnique: courseAssignmentFindUniqueMock },
@@ -258,7 +258,7 @@ describe("publishCourseBoundEvaluation", () => {
         programHeadAssignment: { findMany: programHeadAssignmentFindManyMock },
         cILO: { findMany: ciloFindManyMock },
         course: { findUnique: courseFindUniqueMock },
-        gO: { findMany: goFindManyMock },
+        pO: { findMany: poFindManyMock },
         evaluationAssignment: { createMany: assignmentCreateManyMock },
       })
     );
@@ -290,7 +290,7 @@ describe("publishCourseBoundEvaluation", () => {
           item_key: "q2",
         },
       ],
-      template_go_question_bindings: [],
+      template_po_question_bindings: [],
       structure: [
         {
           key: "outcomes",
@@ -317,7 +317,7 @@ describe("publishCourseBoundEvaluation", () => {
         cilo_mappings: [
           {
             manifestation: "LEARNING",
-            go: { id: "plo-1", program_id: "program-1", is_active: true },
+            po: { id: "po-1", program_id: "program-1", is_active: true },
           },
         ],
         cilo_institutional_outcome_mappings: [],
@@ -328,13 +328,13 @@ describe("publishCourseBoundEvaluation", () => {
         cilo_mappings: [
           {
             manifestation: "PRACTICE",
-            go: { id: "plo-1", program_id: "program-1", is_active: true },
+            po: { id: "po-1", program_id: "program-1", is_active: true },
           },
         ],
         cilo_institutional_outcome_mappings: [],
       },
     ]);
-    goFindManyMock.mockResolvedValue([{ id: "plo-1" }]);
+    poFindManyMock.mockResolvedValue([{ id: "po-1" }]);
 
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: "program-1" }]);
     revalidateProgramHeadAssignmentMock.mockResolvedValue({
@@ -508,7 +508,7 @@ describe("publishCourseBoundEvaluation", () => {
     );
   });
 
-  it("snapshots direct GO bindings with the live labels and question prompt", async () => {
+  it("snapshots direct PO bindings with the live labels and question prompt", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       activeRole: ROLES.FACULTY,
       profileGate: { status: "COMPLETE" },
@@ -523,18 +523,18 @@ describe("publishCourseBoundEvaluation", () => {
     await expect(
       publishCourseBoundEvaluation({
         assignmentId: "assignment-1",
-        deploymentName: "Capstone GO Evaluation",
+        deploymentName: "Capstone PO Evaluation",
         templateId: "template-1",
       })
     ).resolves.toMatchObject({ success: true });
 
-    expect(goBindingCreateManyMock).toHaveBeenCalledWith({
+    expect(poBindingCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
           course_bound_evaluation_id: "evaluation-1",
-          go_code_snapshot: "GO-1",
-          go_description_snapshot: "Communicate effectively.",
-          go_id: "go-1",
+          po_code_snapshot: "PO-1",
+          po_description_snapshot: "Communicate effectively.",
+          po_id: "po-1",
           item_key: "q1",
           question_prompt_snapshot: "I achieved outcome one.",
           section_key: "outcomes",
@@ -796,7 +796,7 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: "LEARNING",
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
@@ -811,7 +811,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Every active CILO must have a manifestation of every active Graduate Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+          "Every active CILO must have a manifestation of every active Program Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
         success: false,
         alignmentCourseId: "course-1",
       });
@@ -925,7 +925,7 @@ describe("publishCourseBoundEvaluation", () => {
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
     });
 
-    it("rejects publication when a CILO leaves an active owning-Program GO unclassified", async () => {
+    it("rejects publication when a CILO leaves an active owning-Program PO unclassified", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
         profileGate: { status: "COMPLETE" },
@@ -941,13 +941,13 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: "LEARNING",
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
-      goFindManyMock.mockResolvedValue([{ id: "plo-1" }, { id: "plo-2" }]);
+      poFindManyMock.mockResolvedValue([{ id: "po-1" }, { id: "po-2" }]);
 
       await expect(
         publishCourseBoundEvaluation({
@@ -957,14 +957,14 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Every active CILO must have a manifestation of every active Graduate Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+          "Every active CILO must have a manifestation of every active Program Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
         success: false,
         alignmentCourseId: "course-1",
       });
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
     });
 
-    it("rejects publication when an active GO pairing carries a legacy null manifestation", async () => {
+    it("rejects publication when an active PO pairing carries a legacy null manifestation", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
         profileGate: { status: "COMPLETE" },
@@ -980,13 +980,13 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: null,
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
         },
       ]);
-      goFindManyMock.mockResolvedValue([{ id: "plo-1" }]);
+      poFindManyMock.mockResolvedValue([{ id: "po-1" }]);
 
       await expect(
         publishCourseBoundEvaluation({
@@ -996,7 +996,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Every active CILO must have a manifestation of every active Graduate Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+          "Every active CILO must have a manifestation of every active Program Outcome of the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
         success: false,
         alignmentCourseId: "course-1",
       });
@@ -1024,7 +1024,7 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: "LEARNING",
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
@@ -1040,7 +1040,7 @@ describe("publishCourseBoundEvaluation", () => {
         })
       ).resolves.toEqual({
         error:
-          "Course IT-401 alignment is incomplete: every active CILO must have a manifestation of every active Graduate Outcome of the Course's owning Academic Program before publishing.",
+          "Course IT-401 alignment is incomplete: every active CILO must have a manifestation of every active Program Outcome of the Course's owning Academic Program before publishing.",
         success: false,
       });
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
@@ -1209,7 +1209,7 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: "LEARNING",
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
@@ -1266,7 +1266,7 @@ describe("publishCourseBoundEvaluation", () => {
           cilo_mappings: [
             {
               manifestation: "LEARNING",
-              go: { id: "plo-1", program_id: "program-1", is_active: true },
+              po: { id: "po-1", program_id: "program-1", is_active: true },
             },
           ],
           cilo_institutional_outcome_mappings: [],
@@ -1298,7 +1298,7 @@ describe("publishCourseBoundEvaluation", () => {
      * The stored shapes a Course-bound template's questions can carry. `type` is
      * the canonical field; the uppercase spellings are the legacy shape earlier
      * rows and fixtures use. All three must resolve, on this path and on the
-     * shared GO-binding validator it delegates to.
+     * shared PO-binding validator it delegates to.
      */
     const STORED_LIKERT_KINDS: Array<[string, Record<string, unknown>]> = [
       ["the canonical lowercase `type`", { type: "likert" }],
@@ -1307,7 +1307,7 @@ describe("publishCourseBoundEvaluation", () => {
     ];
 
     it.each(STORED_LIKERT_KINDS)(
-      "publishes on-behalf a GO-bound question stored with %s",
+      "publishes on-behalf a PO-bound question stored with %s",
       async (_storedAs, kind) => {
         resolveAuthSessionMock.mockResolvedValue({
           activeRole: ROLES.DEAN,
@@ -1317,8 +1317,8 @@ describe("publishCourseBoundEvaluation", () => {
         });
         courseAssignmentFindUniqueMock.mockResolvedValue(MOCK_ASSIGNMENT);
         // q1 carries a CILO and always uses the canonical spelling, so the
-        // only thing this case varies is the kind of the GO-bound q2. A
-        // spelling the GO validator cannot read fails the publication instead
+        // only thing this case varies is the kind of the PO-bound q2. A
+        // spelling the PO validator cannot read fails the publication instead
         // of quietly dropping the intended coverage.
         instrumentTemplateFindFirstMock.mockResolvedValue({
           ...MOCK_BOUND_TEMPLATE,
@@ -1334,8 +1334,8 @@ describe("publishCourseBoundEvaluation", () => {
           template_cilo_question_bindings: [
             { cilo_id: "cilo-1", section_key: "outcomes", item_key: "q1" },
           ],
-          template_go_question_bindings: [
-            { go_id: "go-1", section_key: "outcomes", item_key: "q2" },
+          template_po_question_bindings: [
+            { po_id: "po-1", section_key: "outcomes", item_key: "q2" },
           ],
         });
         ciloFindManyMock.mockResolvedValue([
@@ -1345,32 +1345,32 @@ describe("publishCourseBoundEvaluation", () => {
             cilo_mappings: [
               {
                 manifestation: "LEARNING",
-                go: { id: "go-1", program_id: "program-1", is_active: true },
+                po: { id: "po-1", program_id: "program-1", is_active: true },
               },
             ],
             cilo_institutional_outcome_mappings: [],
           },
         ]);
-        goFindManyMock.mockResolvedValue([
-          { id: "go-1", code: "BSIT-GO1", description: "Communicate effectively." },
+        poFindManyMock.mockResolvedValue([
+          { id: "po-1", code: "BSIT-GO1", description: "Communicate effectively." },
         ]);
         instrumentVersionFindFirstMock.mockResolvedValue({ id: "version-1" });
         courseBoundEvaluationCreateMock.mockResolvedValue({ id: "evaluation-1" });
 
         const result = await publishCourseBoundEvaluation({
           assignmentId: "assignment-1",
-          deploymentName: "Dean GO-Bound On-Behalf Evaluation",
+          deploymentName: "Dean PO-Bound On-Behalf Evaluation",
           templateId: "bound-template-1",
         });
 
         if (!result.success) throw new Error(result.error);
-        expect(goBindingCreateManyMock).toHaveBeenCalledWith({
+        expect(poBindingCreateManyMock).toHaveBeenCalledWith({
           data: [
             {
               course_bound_evaluation_id: "evaluation-1",
-              go_code_snapshot: "BSIT-GO1",
-              go_description_snapshot: "Communicate effectively.",
-              go_id: "go-1",
+              po_code_snapshot: "BSIT-GO1",
+              po_description_snapshot: "Communicate effectively.",
+              po_id: "po-1",
               item_key: "q2",
               question_prompt_snapshot: "I demonstrate the program outcome.",
               section_key: "outcomes",

@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   template: { findFirst: vi.fn() },
   course: { findUnique: vi.fn() },
   cilo: { findMany: vi.fn() },
-  go: { findMany: vi.fn() },
+  po: { findMany: vi.fn() },
   contexts: vi.fn(),
 }));
 
@@ -22,7 +22,7 @@ vi.mock("@/lib/db/prisma", () => ({
     instrumentTemplate: mocks.template,
     course: mocks.course,
     cILO: mocks.cilo,
-    gO: mocks.go,
+    pO: mocks.po,
   },
 }));
 
@@ -33,7 +33,7 @@ const COURSE_ID = "bbbbbbb2-2222-4222-8222-222222222222";
 const CILO_ID = "ccccccc3-3333-4333-8333-333333333333";
 const PROGRAM_ID = "ddddddd4-4444-4444-8444-444444444444";
 const FACULTY_ID = "eeeeeee5-5555-4555-8555-555555555555";
-const GO_ID = "ffffff06-6666-4666-8666-666666666666";
+const PO_ID = "ffffff06-6666-4666-8666-666666666666";
 
 const FACULTY_SESSION = {
   userId: FACULTY_ID,
@@ -84,7 +84,7 @@ function template(overrides: Record<string, unknown> = {}) {
       program: { id: PROGRAM_ID, code: "BSIT", name: "Information Technology" },
       major: null,
     },
-    template_go_question_bindings: [],
+    template_po_question_bindings: [],
     template_cilo_question_bindings: [
       {
         id: "f1",
@@ -103,7 +103,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.session.mockResolvedValue(FACULTY_SESSION);
-    mocks.go.findMany.mockResolvedValue([]);
+    mocks.po.findMany.mockResolvedValue([]);
   });
 
   it("resolves a General Education Course on Course alone when it has no owning Program", async () => {
@@ -227,7 +227,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
             ],
           },
         ],
-        template_go_question_bindings: [],
+        template_po_question_bindings: [],
         template_cilo_question_bindings: [
           {
             id: "f1",
@@ -325,7 +325,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
   });
 });
 
-describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => {
+describe("getFacultyTemplatePublicationContext course-bound PO bindings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.session.mockResolvedValue(FACULTY_SESSION);
@@ -356,7 +356,7 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
     ]);
   });
 
-  it("returns direct GO bindings frozen from the live GO catalog", async () => {
+  it("returns direct PO bindings frozen from the live PO catalog", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template({
         structure: [
@@ -378,8 +378,8 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
                 ],
               },
               {
-                key: "go-attainment-1",
-                prompt: "I demonstrate the program graduate outcome.",
+                key: "po-attainment-1",
+                prompt: "I demonstrate the program program outcome.",
                 type: "likert",
                 order: 2,
                 required: true,
@@ -391,40 +391,40 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
             ],
           },
         ],
-        template_go_question_bindings: [
+        template_po_question_bindings: [
           {
             id: "g1",
-            go_id: GO_ID,
-            go_code_snapshot: "STALE",
-            go_description_snapshot: "Stale description",
+            po_id: PO_ID,
+            po_code_snapshot: "STALE",
+            po_description_snapshot: "Stale description",
             section_key: "cilo-items",
-            item_key: "go-attainment-1",
+            item_key: "po-attainment-1",
             question_prompt_snapshot: "Stale prompt",
           },
         ],
       }),
     });
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    mocks.po.findMany.mockResolvedValue([
+      { id: PO_ID, code: "PO1", description: "Communicates solutions effectively." },
     ]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
 
     expect(result.success).toBe(true);
     if (result.success) {
-      // Snapshot labels come from the live GO at publication, never the stored draft row.
-      // The GO question carries no CILO, so the exclusivity gate passes.
-      expect(result.data.goBindings).toEqual([
+      // Snapshot labels come from the live PO at publication, never the stored draft row.
+      // The PO question carries no CILO, so the exclusivity gate passes.
+      expect(result.data.poBindings).toEqual([
         {
-          goId: GO_ID,
-          goCodeSnapshot: "GO1",
-          goDescriptionSnapshot: "Communicates solutions effectively.",
-          itemKey: "go-attainment-1",
-          questionPromptSnapshot: "I demonstrate the program graduate outcome.",
+          poId: PO_ID,
+          poCodeSnapshot: "PO1",
+          poDescriptionSnapshot: "Communicates solutions effectively.",
+          itemKey: "po-attainment-1",
+          questionPromptSnapshot: "I demonstrate the program program outcome.",
           sectionKey: "cilo-items",
         },
       ]);
-      expect(mocks.go.findMany).toHaveBeenCalledWith(
+      expect(mocks.po.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ program_id: PROGRAM_ID, is_active: true }),
         })
@@ -454,8 +454,8 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
                 required: true,
               },
               {
-                key: "go-attainment-1",
-                prompt: "I demonstrate the program graduate outcome.",
+                key: "po-attainment-1",
+                prompt: "I demonstrate the program program outcome.",
                 question_type: "LIKERT",
                 order: 2,
                 required: true,
@@ -463,21 +463,21 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
             ],
           },
         ],
-        template_go_question_bindings: [
+        template_po_question_bindings: [
           {
             id: "g1",
-            go_id: GO_ID,
-            go_code_snapshot: "STALE",
-            go_description_snapshot: "Stale description",
+            po_id: PO_ID,
+            po_code_snapshot: "STALE",
+            po_description_snapshot: "Stale description",
             section_key: "cilo-items",
-            item_key: "go-attainment-1",
+            item_key: "po-attainment-1",
             question_prompt_snapshot: "Stale prompt",
           },
         ],
       }),
     });
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    mocks.po.findMany.mockResolvedValue([
+      { id: PO_ID, code: "PO1", description: "Communicates solutions effectively." },
     ]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
@@ -493,99 +493,99 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
           sectionKey: "cilo-items",
         },
       ]);
-      expect(result.data.goBindings).toEqual([
+      expect(result.data.poBindings).toEqual([
         {
-          goCodeSnapshot: "GO1",
-          goDescriptionSnapshot: "Communicates solutions effectively.",
-          goId: GO_ID,
-          itemKey: "go-attainment-1",
-          questionPromptSnapshot: "I demonstrate the program graduate outcome.",
+          poCodeSnapshot: "PO1",
+          poDescriptionSnapshot: "Communicates solutions effectively.",
+          poId: PO_ID,
+          itemKey: "po-attainment-1",
+          questionPromptSnapshot: "I demonstrate the program program outcome.",
           sectionKey: "cilo-items",
         },
       ]);
     }
   });
 
-  it("rejects publication when a bound GO is outside the course's owning program", async () => {
+  it("rejects publication when a bound PO is outside the course's owning program", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
           id: "g1",
-          go_id: GO_ID,
-          go_code_snapshot: "GO1",
-          go_description_snapshot: "Communicates solutions effectively.",
+          po_id: PO_ID,
+          po_code_snapshot: "PO1",
+          po_description_snapshot: "Communicates solutions effectively.",
           section_key: "cilo-items",
           item_key: "cilo-attainment-1",
           question_prompt_snapshot: "Question prompt",
         },
       ],
     });
-    mocks.go.findMany.mockResolvedValue([]);
+    mocks.po.findMany.mockResolvedValue([]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
 
     expect(result).toEqual({
       success: false,
-      error: "One or more selected Graduate Outcomes are not available to this course.",
+      error: "One or more selected Program Outcomes are not available to this course.",
     });
   });
 
-  it("rejects publication when a GO binding shares a question with a CILO binding", async () => {
+  it("rejects publication when a PO binding shares a question with a CILO binding", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
           id: "g1",
-          go_id: GO_ID,
-          go_code_snapshot: "GO1",
-          go_description_snapshot: "Communicates solutions effectively.",
+          po_id: PO_ID,
+          po_code_snapshot: "PO1",
+          po_description_snapshot: "Communicates solutions effectively.",
           section_key: "cilo-items",
           item_key: "cilo-attainment-1",
           question_prompt_snapshot: "Question prompt",
         },
       ],
     });
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    mocks.po.findMany.mockResolvedValue([
+      { id: PO_ID, code: "PO1", description: "Communicates solutions effectively." },
     ]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
 
     expect(result).toEqual({
       success: false,
-      error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
+      error: "A Likert question can carry a CILO or Program Outcomes, not both.",
     });
   });
 
-  it("rejects publication when a stored GO binding lost its GO to deletion", async () => {
+  it("rejects publication when a stored PO binding lost its PO to deletion", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
           id: "g1",
-          go_id: null,
-          go_code_snapshot: "GO1",
-          go_description_snapshot: "Communicates solutions effectively.",
+          po_id: null,
+          po_code_snapshot: "PO1",
+          po_description_snapshot: "Communicates solutions effectively.",
           section_key: "cilo-items",
           item_key: "cilo-attainment-1",
           question_prompt_snapshot: "Question prompt",
         },
       ],
     });
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO1", description: "Communicates solutions effectively." },
+    mocks.po.findMany.mockResolvedValue([
+      { id: PO_ID, code: "PO1", description: "Communicates solutions effectively." },
     ]);
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
 
     expect(result).toEqual({
       success: false,
-      error: "One or more selected Graduate Outcomes are not available to this course.",
+      error: "One or more selected Program Outcomes are not available to this course.",
     });
   });
 
-  it("rejects publication when a General Education course carries a GO binding", async () => {
+  it("rejects publication when a General Education course carries a PO binding", async () => {
     mocks.template.findFirst.mockResolvedValue({
       ...template(),
       bound_course: {
@@ -593,12 +593,12 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
         course_scope: "GENERAL_EDUCATION",
         program_id: null,
       },
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
           id: "g1",
-          go_id: GO_ID,
-          go_code_snapshot: "GO1",
-          go_description_snapshot: "Communicates solutions effectively.",
+          po_id: PO_ID,
+          po_code_snapshot: "PO1",
+          po_description_snapshot: "Communicates solutions effectively.",
           section_key: "cilo-items",
           item_key: "cilo-attainment-1",
           question_prompt_snapshot: "Question prompt",
@@ -632,8 +632,8 @@ describe("getFacultyTemplatePublicationContext course-bound GO bindings", () => 
 
     expect(result).toEqual({
       success: false,
-      error: "Graduate Outcomes can only be assigned to questions in program-specific courses.",
+      error: "Program Outcomes can only be assigned to questions in program-specific courses.",
     });
-    expect(mocks.go.findMany).not.toHaveBeenCalled();
+    expect(mocks.po.findMany).not.toHaveBeenCalled();
   });
 });

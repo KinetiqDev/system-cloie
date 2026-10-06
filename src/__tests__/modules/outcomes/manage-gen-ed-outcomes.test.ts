@@ -43,7 +43,7 @@ vi.mock("@/lib/db/prisma", () => ({
       create: institutionalOutcomeCreateMock,
       update: institutionalOutcomeUpdateMock,
     },
-    gO: {
+    pO: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
     },
@@ -72,7 +72,7 @@ vi.mock("@/lib/db/prisma", () => ({
           create: institutionalOutcomeCreateMock,
           update: institutionalOutcomeUpdateMock,
         },
-        gO: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+        pO: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
         cILO: {
           findUnique: ciloFindUniqueMock,
           findMany: vi.fn(),

@@ -48,7 +48,7 @@ export type AnalyticsFilterState = {
   courseId?: string;
   facultyId?: string;
   section?: string;
-  goId?: string;
+  poId?: string;
   evaluationId?: string;
 };
 type Raw = Record<string, string | string[] | undefined>;
@@ -72,7 +72,7 @@ const schema = z.object({
   courseId: uuid.optional().catch(undefined),
   facultyId: uuid.optional().catch(undefined),
   section: z.string().optional().catch(undefined),
-  goId: z.string().trim().max(200).optional().catch(undefined),
+  poId: z.string().trim().max(200).optional().catch(undefined),
   evaluationId: uuid.optional().catch(undefined),
 });
 function couple(
@@ -106,8 +106,9 @@ export function parseAnalyticsSearchParams(raw: Raw = {}): AnalyticsFilterState 
     courseId: first(raw.courseId),
     facultyId: first(raw.facultyId),
     section: first(raw.section),
-    // `ploId` remains a read-only compatibility alias at this parser boundary.
-    goId: first(raw.goId) ?? first(raw.ploId),
+    // `goId` (GO-era links) and `ploId` (PLO-era links) remain read-only
+    // compatibility aliases at this parser boundary; `poId` is canonical.
+    poId: first(raw.poId) ?? first(raw.goId) ?? first(raw.ploId),
     evaluationId: first(raw.evaluationId),
   });
   const normalized = couple(parsed);
@@ -127,13 +128,13 @@ const PARAM_KEYS = [
   "courseId",
   "facultyId",
   "section",
-  "goId",
+  "poId",
   "evaluationId",
 ] as const;
 export function rawAnalyticsSearchParamsToQueryString(raw: Raw): string {
   const p = new URLSearchParams();
   for (const key of PARAM_KEYS) {
-    const value = key === "goId" ? (raw.goId ?? raw.ploId) : raw[key];
+    const value = key === "poId" ? (raw.poId ?? raw.goId ?? raw.ploId) : raw[key];
     for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
       p.append(key, entry);
   }

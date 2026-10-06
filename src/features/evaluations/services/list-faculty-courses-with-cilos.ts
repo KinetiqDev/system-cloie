@@ -81,7 +81,7 @@ export async function listFacultyCoursesWithCilos(
       where: { is_active: true },
       select: { id: true },
     }),
-    prisma.gO.findMany({
+    prisma.pO.findMany({
       where: { is_active: true },
       select: { id: true, program_id: true },
     }),
@@ -90,7 +90,7 @@ export async function listFacultyCoursesWithCilos(
       select: {
         id: true,
         course_id: true,
-        cilo_mappings: { select: { go_id: true, manifestation: true } },
+        cilo_mappings: { select: { po_id: true, manifestation: true } },
         cilo_institutional_outcome_mappings: {
           select: { institutional_outcome_id: true, manifestation: true },
         },
@@ -99,11 +99,11 @@ export async function listFacultyCoursesWithCilos(
   ]);
 
   const activeIloIdSet = new Set(activeIloIds.map((row) => row.id));
-  const gosByProgram = new Map<string, Set<string>>();
-  for (const go of activeGos) {
-    const set = gosByProgram.get(go.program_id) ?? new Set<string>();
-    set.add(go.id);
-    gosByProgram.set(go.program_id, set);
+  const posByProgram = new Map<string, Set<string>>();
+  for (const po of activeGos) {
+    const set = posByProgram.get(po.program_id) ?? new Set<string>();
+    set.add(po.id);
+    posByProgram.set(po.program_id, set);
   }
   const cilosByCourse = new Map<string, typeof ciloRows>();
   for (const row of ciloRows) {
@@ -126,7 +126,7 @@ export async function listFacultyCoursesWithCilos(
       courseScope: c.course_scope,
       programId: c.program?.id ?? null,
       courseCilos: cilosByCourse.get(c.id) ?? [],
-      gosByProgram,
+      posByProgram,
     });
 
     return {
@@ -166,7 +166,7 @@ type FacultyCiloReadinessRow = {
     institutional_outcome_id: string;
     manifestation: string | null;
   }>;
-  cilo_mappings: Array<{ go_id: string; manifestation: string | null }>;
+  cilo_mappings: Array<{ po_id: string; manifestation: string | null }>;
 };
 
 function getCourseReadiness({
@@ -174,13 +174,13 @@ function getCourseReadiness({
   courseScope,
   programId,
   courseCilos,
-  gosByProgram,
+  posByProgram,
 }: {
   activeIloIdSet: Set<string>;
   courseScope: CourseScope;
   programId: string | null;
   courseCilos: FacultyCiloReadinessRow[];
-  gosByProgram: Map<string, Set<string>>;
+  posByProgram: Map<string, Set<string>>;
 }): Pick<FacultyCourseWithCiloCount, "readiness" | "coveredCiloCount"> {
   if (courseCilos.length === 0) {
     return { readiness: "missing-cilos", coveredCiloCount: 0 };
@@ -199,14 +199,14 @@ function getCourseReadiness({
     };
   }
 
-  const programGos = programId ? (gosByProgram.get(programId) ?? new Set<string>()) : new Set();
+  const programGos = programId ? (posByProgram.get(programId) ?? new Set<string>()) : new Set();
   if (programGos.size === 0) {
     return { readiness: "incomplete-mapping", coveredCiloCount: 0 };
   }
 
   const coveredCiloCount = courseCilos.filter((cilo) =>
-    [...programGos].every((goId) =>
-      cilo.cilo_mappings.some((mapping) => mapping.go_id === goId && mapping.manifestation !== null)
+    [...programGos].every((poId) =>
+      cilo.cilo_mappings.some((mapping) => mapping.po_id === poId && mapping.manifestation !== null)
     )
   ).length;
 

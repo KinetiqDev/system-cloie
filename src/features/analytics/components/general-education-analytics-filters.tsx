@@ -139,10 +139,7 @@ function FilterSelect({
 
   return (
     <Field className="gap-1.5">
-      <FieldLabel
-        htmlFor={id}
-        className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
-      >
+      <FieldLabel htmlFor={id} className="text-label-sm text-foreground flex items-center gap-1.5">
         {icon}
         <span>{label}</span>
       </FieldLabel>
@@ -235,7 +232,7 @@ export function GeneralEducationAnalyticsFilters({ filters, options }: Props) {
                 {count} {count === 1 ? "filter active" : "filters active"}
               </Badge>
             ) : (
-              <span className="text-muted-foreground text-xs font-normal">All periods</span>
+              <span className="text-caption text-muted-foreground">All periods</span>
             )}
           </div>
           <p className="text-body-sm text-muted-foreground mt-1 text-pretty">

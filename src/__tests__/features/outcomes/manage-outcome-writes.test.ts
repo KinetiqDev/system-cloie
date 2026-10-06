@@ -3,7 +3,7 @@ import { ROLES } from "@/lib/constants/roles";
 
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
-  go: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  po: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   assignment: { findFirst: vi.fn() },
   selectedContext: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
-    gO: mocks.go,
+    pO: mocks.po,
     cILO: mocks.cilo,
     courseAssignment: mocks.assignment,
     $transaction: mocks.transaction,
@@ -78,14 +78,14 @@ describe("manage-outcome-writes", () => {
     });
     mocks.transaction.mockImplementation(async (callback) =>
       callback({
-        gO: mocks.go,
+        pO: mocks.po,
         cILO: mocks.cilo,
         courseAssignment: mocks.assignment,
       })
     );
-    mocks.go.findUnique.mockResolvedValue({
-      id: "go-1",
-      code: "GO-1",
+    mocks.po.findUnique.mockResolvedValue({
+      id: "po-1",
+      code: "PO-1",
       description: "Old",
       order: 0,
       program_id: "program-1",
@@ -97,11 +97,11 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "update",
       programId: "program-1",
-      id: "go-1",
-      code: "go-2",
+      id: "po-1",
+      code: "po-2",
       description: "New",
     });
 
@@ -109,16 +109,16 @@ describe("manage-outcome-writes", () => {
       success: true,
       data: expect.objectContaining({
         before: {
-          id: "go-1",
-          code: "GO-1",
+          id: "po-1",
+          code: "PO-1",
           description: "Old",
           order: 0,
           program_id: "program-1",
           is_active: true,
         },
         after: {
-          id: "go-1",
-          code: "GO-2",
+          id: "po-1",
+          code: "PO-2",
           description: "New",
           order: 0,
           program_id: "program-1",
@@ -139,31 +139,31 @@ describe("manage-outcome-writes", () => {
       await import("@/features/outcomes/services/manage-outcome-writes");
     expect(
       await prepareOutcomeWrite({
-        kind: "GO",
+        kind: "PO",
         action: "update",
         programId: "program-1",
-        id: "go-1",
-        code: "GO-2",
+        id: "po-1",
+        code: "PO-2",
         description: "New",
       })
     ).toEqual({ success: false, error: "You do not have permission to modify this outcome." });
-    expect(mocks.go.findUnique).not.toHaveBeenCalled();
+    expect(mocks.po.findUnique).not.toHaveBeenCalled();
   });
 
   it("rejects stale confirmation and preserves database write", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "update",
       programId: "program-1",
-      id: "go-1",
-      code: "GO-2",
+      id: "po-1",
+      code: "PO-2",
       description: "New",
     });
-    mocks.go.findUnique.mockResolvedValue({
-      id: "go-1",
-      code: "GO-CHANGED",
+    mocks.po.findUnique.mockResolvedValue({
+      id: "po-1",
+      code: "PO-CHANGED",
       description: "Changed",
       order: 0,
       program_id: "program-1",
@@ -173,18 +173,18 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "Outcome changed after review. Prepare a new review.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.po.update).not.toHaveBeenCalled();
   });
 
   it("rejects forged review payload before opening a transaction", async () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "update",
       programId: "program-1",
-      id: "go-1",
-      code: "GO-2",
+      id: "po-1",
+      code: "PO-2",
       description: "New",
     });
     if (!review.success) throw new Error(review.error);
@@ -194,11 +194,11 @@ describe("manage-outcome-writes", () => {
         {
           ...review.data,
           input: {
-            kind: "GO",
+            kind: "PO",
             action: "update",
             programId: "program-1",
-            id: "go-1",
-            code: "GO-2",
+            id: "po-1",
+            code: "PO-2",
             description: "Forged",
           },
         },
@@ -211,26 +211,26 @@ describe("manage-outcome-writes", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
-  it("rejects partial GO reorder without changing an order", async () => {
-    mocks.go.findMany.mockResolvedValue([
-      { id: "go-1", order: 0 },
-      { id: "go-2", order: 1 },
+  it("rejects partial PO reorder without changing an order", async () => {
+    mocks.po.findMany.mockResolvedValue([
+      { id: "po-1", order: 0 },
+      { id: "po-2", order: 1 },
     ]);
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "reorder",
       programId: "program-1",
-      orderedIds: ["go-1"],
+      orderedIds: ["po-1"],
     });
     if (!review.success) throw new Error(review.error);
 
     expect(await commitOutcomeWrite(review.data, true)).toEqual({
       success: false,
-      error: "Graduate Outcomes must be a complete unique program order.",
+      error: "Program Outcomes must be a complete unique program order.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.po.update).not.toHaveBeenCalled();
   });
 
   it("requires Faculty active assignment-period scope", async () => {
@@ -259,11 +259,11 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "update",
       programId: "program-1",
-      id: "go-1",
-      code: "GO-2",
+      id: "po-1",
+      code: "PO-2",
       description: "New",
     });
     if (!review.success) throw new Error(review.error);
@@ -272,25 +272,25 @@ describe("manage-outcome-writes", () => {
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.go.update).not.toHaveBeenCalled();
+    expect(mocks.po.update).not.toHaveBeenCalled();
   });
 
-  it("rolls back a failed GO reorder", async () => {
+  it("rolls back a failed PO reorder", async () => {
     const persisted = [
-      { id: "go-1", order: 0 },
-      { id: "go-2", order: 1 },
+      { id: "po-1", order: 0 },
+      { id: "po-2", order: 1 },
     ];
-    mocks.go.findMany.mockResolvedValue(persisted);
+    mocks.po.findMany.mockResolvedValue(persisted);
     mocks.transaction.mockImplementation(async (callback) => {
-      const staged = persisted.map((go) => ({ ...go }));
+      const staged = persisted.map((po) => ({ ...po }));
       let calls = 0;
       const tx = {
-        gO: {
+        pO: {
           findMany: vi.fn().mockResolvedValue(staged),
           update: vi.fn(async ({ where, data }) => {
             calls += 1;
             if (calls === 2) throw new Error("write failed");
-            staged.find((go) => go.id === where.id)!.order = data.order;
+            staged.find((po) => po.id === where.id)!.order = data.order;
           }),
         },
       };
@@ -300,38 +300,38 @@ describe("manage-outcome-writes", () => {
     const { prepareOutcomeWrite, commitOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     const review = await prepareOutcomeWrite({
-      kind: "GO",
+      kind: "PO",
       action: "reorder",
       programId: "program-1",
-      orderedIds: ["go-2", "go-1"],
+      orderedIds: ["po-2", "po-1"],
     });
     if (!review.success) throw new Error(review.error);
 
     await expect(commitOutcomeWrite(review.data, true)).rejects.toThrow("write failed");
     expect(persisted).toEqual([
-      { id: "go-1", order: 0 },
-      { id: "go-2", order: 1 },
+      { id: "po-1", order: 0 },
+      { id: "po-2", order: 1 },
     ]);
   });
 
-  it("denies Secretary GO writes before reading state", async () => {
+  it("denies Secretary PO writes before reading state", async () => {
     mocks.session.mockResolvedValue(SECRETARY);
     const { prepareOutcomeWrite } =
       await import("@/features/outcomes/services/manage-outcome-writes");
     await expect(
       prepareOutcomeWrite({
-        kind: "GO",
+        kind: "PO",
         action: "update",
         programId: "program-1",
-        id: "go-1",
-        code: "GO-2",
+        id: "po-1",
+        code: "PO-2",
         description: "New",
       })
     ).resolves.toEqual({
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.go.findUnique).not.toHaveBeenCalled();
+    expect(mocks.po.findUnique).not.toHaveBeenCalled();
     expect(mocks.selectedContext).not.toHaveBeenCalled();
   });
 
@@ -361,18 +361,18 @@ describe("manage-outcome-writes", () => {
     expect(mocks.cilo.findUnique).not.toHaveBeenCalled();
     await expect(
       prepareOutcomeWrite({
-        kind: "GO",
+        kind: "PO",
         action: "update",
         programId: "program-1",
-        id: "go-1",
-        code: "GO-2",
+        id: "po-1",
+        code: "PO-2",
         description: "New",
       })
     ).resolves.toEqual({
       success: false,
       error: "You do not have permission to modify this outcome.",
     });
-    expect(mocks.go.findUnique).not.toHaveBeenCalled();
+    expect(mocks.po.findUnique).not.toHaveBeenCalled();
   });
 });
 

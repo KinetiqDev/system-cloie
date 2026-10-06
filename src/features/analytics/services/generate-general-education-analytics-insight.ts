@@ -51,7 +51,7 @@ import {
  *
  * A rating mean here is ILO *evidence*, never ILO attainment: no institutional
  * target exists, so the prompt forbids attainment, mastery, causation, Faculty
- * ranking, and any ILO-to-GO crosswalk inference.
+ * ranking, and any ILO-to-PO crosswalk inference.
  */
 
 // Prompt version participates in the cache key, so editing this prompt alone
@@ -843,7 +843,7 @@ What the figures are:
 - ILO means are evidence, never attainment. There is no institutional ILO target, so never say an ILO was met, achieved, attained, mastered, or failed, and never convert a mean into a pass or fail.
 - Never claim individual student mastery, grades, causation, or that one factor caused another. Never claim a course, program, or section was better or worse teaching.
 - Never rank, compare, name, or blame Faculty. The packet deliberately contains no faculty identity: never infer or invent one, and never describe a Course row as evidence about a person.
-- Never draw an Institutional Learning Outcome conclusion from a Graduate Outcome, or vice versa: there is no crosswalk between them in this product.
+- Never draw an Institutional Learning Outcome conclusion from a Program Outcome, or vice versa: there is no crosswalk between them in this product.
 - Contributions reach an ILO only through published question-to-CILO bindings and the CILO's current ILO mapping, so historical ratings are grouped by today's mappings.
 
 How to read the evidence:

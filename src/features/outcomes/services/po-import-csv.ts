@@ -1,24 +1,26 @@
 import { parseCsvRecords, type CsvRecord } from "@/lib/csv/parse-csv-records";
-import { GO_IMPORT_MAX_ROWS, type GOImportSourceRow } from "../types/go-import";
+import { PO_IMPORT_MAX_ROWS, type POImportSourceRow } from "../types/po-import";
 
-export { GO_IMPORT_MAX_ROWS } from "../types/go-import";
+export { PO_IMPORT_MAX_ROWS } from "../types/po-import";
 
-export const GO_IMPORT_TEMPLATE = "\uFEFFGO Code,Description\r\n";
+export const PO_IMPORT_TEMPLATE = "\uFEFFPO Code,Description\r\n";
 
 // fallow-ignore-next-line unused-type
-export type GOImportParseResult =
-  | { success: true; rows: GOImportSourceRow[] }
+export type POImportParseResult =
+  | { success: true; rows: POImportSourceRow[] }
   | { success: false; error: string };
 
-type ImportHeader = keyof GOImportSourceRow["input"] | "error";
+type ImportHeader = keyof POImportSourceRow["input"] | "error";
 const HEADER_ALIASES: Record<string, ImportHeader> = {
-  gocode: "go_code",
-  plocode: "go_code",
+  pocode: "po_code",
+  // Legacy GO-era and PLO-era headers stay accepted for older spreadsheets.
+  gocode: "po_code",
+  plocode: "po_code",
   description: "description",
   error: "error",
 };
 const EXPECTED_COLUMNS =
-  "Use the Graduate Outcome import template. Expected columns: GO Code, Description.";
+  "Use the Program Outcome import template. Expected columns: PO Code, Description.";
 
 function normalizedHeader(value: string): string {
   return value.normalize("NFKC").trim().toLowerCase().replaceAll("_", "").replaceAll(" ", "");
@@ -44,22 +46,22 @@ function mappedHeaderNames(cells: string[]): ImportHeader[] | null {
   const valid =
     headers.every((headerName) => headerName !== undefined) &&
     uniqueHeaders.size === headers.length &&
-    headers.includes("go_code") &&
+    headers.includes("po_code") &&
     headers.includes("description") &&
     (headers.length === 2 || (headers.length === 3 && headers.includes("error")));
   return valid ? headers : null;
 }
 
-function toImportRow(record: CsvRecord, headers: ImportHeader[]): GOImportSourceRow {
+function toImportRow(record: CsvRecord, headers: ImportHeader[]): POImportSourceRow {
   const inputValues = Object.fromEntries(
     headers.flatMap((headerName, index) =>
       headerName === "error" ? [] : [[headerName, record.cells[index] ?? ""]]
     )
-  ) as GOImportSourceRow["input"];
+  ) as POImportSourceRow["input"];
   return { sourceIndex: record.sourceIndex, input: inputValues };
 }
 
-export function parseGOImportCsv(input: string | Uint8Array): GOImportParseResult {
+export function parsePOImportCsv(input: string | Uint8Array): POImportParseResult {
   const empty = typeof input === "string" ? input.length === 0 : input.byteLength === 0;
   if (empty) {
     return { success: false, error: "The CSV file is empty." };
@@ -82,13 +84,13 @@ export function parseGOImportCsv(input: string | Uint8Array): GOImportParseResul
 
   const dataRecords = records.filter((record) => !isBlank(record.cells));
   if (dataRecords.length === 0) {
-    return { success: false, error: "Add at least one GO row to the CSV file." };
+    return { success: false, error: "Add at least one PO row to the CSV file." };
   }
-  if (dataRecords.length > GO_IMPORT_MAX_ROWS) {
-    const excess = dataRecords.length - GO_IMPORT_MAX_ROWS;
+  if (dataRecords.length > PO_IMPORT_MAX_ROWS) {
+    const excess = dataRecords.length - PO_IMPORT_MAX_ROWS;
     return {
       success: false,
-      error: `This file contains ${dataRecords.length} GO rows. Each import can contain up to ${GO_IMPORT_MAX_ROWS}. Remove ${excess} row${excess === 1 ? "" : "s"} or split the file into smaller files, then try again.`,
+      error: `This file contains ${dataRecords.length} PO rows. Each import can contain up to ${PO_IMPORT_MAX_ROWS}. Remove ${excess} row${excess === 1 ? "" : "s"} or split the file into smaller files, then try again.`,
     };
   }
   if (dataRecords.some((record) => record.cells.length !== headers.length)) {
@@ -98,13 +100,13 @@ export function parseGOImportCsv(input: string | Uint8Array): GOImportParseResul
   return { success: true, rows: dataRecords.map((record) => toImportRow(record, headers)) };
 }
 
-export function exportFailedGOImportRows(
-  rows: Array<{ goCode: string; description: string; error: string }>
+export function exportFailedPOImportRows(
+  rows: Array<{ poCode: string; description: string; error: string }>
 ): string {
   return [
-    "\uFEFFGO Code,Description,Error",
+    "\uFEFFPO Code,Description,Error",
     ...rows.map((row) =>
-      [row.goCode, row.description, row.error].map((value) => csvCell(value)).join(",")
+      [row.poCode, row.description, row.error].map((value) => csvCell(value)).join(",")
     ),
     "",
   ].join("\r\n");

@@ -71,12 +71,12 @@ function participationFixture(): ParticipationSummary {
   };
 }
 
-function goRow(
-  overrides: Partial<ProgramHeadDashboardData["goSources"]["COURSE_STUDENT"][number]>
+function poRow(
+  overrides: Partial<ProgramHeadDashboardData["poSources"]["COURSE_STUDENT"][number]>
 ) {
   return {
-    goId: "go-x",
-    goCode: "GO X",
+    poId: "po-x",
+    poCode: "PO X",
     mean: null,
     ratingCount: 0,
     responseCount: 0,
@@ -139,11 +139,11 @@ function dashboardDataFixture(
         evidenceSummary: { explanation: "No valid ratings from this evidence source." },
       },
     ],
-    goSources: {
+    poSources: {
       COURSE_STUDENT: [
-        goRow({
-          goId: "go-1",
-          goCode: "GO 1",
+        poRow({
+          poId: "po-1",
+          poCode: "PO 1",
           mean: 4.42,
           ratingCount: 614,
           responseCount: 163,
@@ -158,9 +158,9 @@ function dashboardDataFixture(
       ALUMNI: [],
       INDUSTRY_PARTNER: [],
     },
-    goCatalog: [
-      { id: "go-1", code: "GO 1" },
-      { id: "go-2", code: "GO 2" },
+    poCatalog: [
+      { id: "po-1", code: "PO 1" },
+      { id: "po-2", code: "PO 2" },
     ],
     needsAttention: [
       {
@@ -171,9 +171,9 @@ function dashboardDataFixture(
         href: "/program-head/programs/p1/responses/course/cb-1",
       },
       {
-        id: "zero-go-ratings:ALUMNI:go-2",
-        rule: "zero-go-ratings",
-        title: "GO 2 has no ratings yet",
+        id: "zero-po-ratings:ALUMNI:po-2",
+        rule: "zero-po-ratings",
+        title: "PO 2 has no ratings yet",
         note: "No Alumni ratings in this period",
         href: "/program-head/programs/p1/analytics?tab=outcomes",
       },
@@ -307,7 +307,7 @@ describe("selected Program dashboard route", () => {
     expect(within(card).getByText(/88 assignments still open/)).toBeInTheDocument();
   });
 
-  it("switches GO evidence sources client-side without attainment status", async () => {
+  it("switches PO evidence sources client-side without attainment status", async () => {
     await loadPage();
     expect(screen.getByText("4.42")).toBeInTheDocument();
 
@@ -323,7 +323,7 @@ describe("selected Program dashboard route", () => {
     expect(screen.queryByText(/Fully Achieved|Mostly Achieved/i)).not.toBeInTheDocument();
   });
 
-  it("exposes per-GO evidence details with rating/response/evaluation/contributor counts", async () => {
+  it("exposes per-PO evidence details with rating/response/evaluation/contributor counts", async () => {
     await loadPage();
     const firstDetails = screen.getAllByText("Evidence details")[0].closest("details")!;
     fireEvent.click(screen.getAllByText("Evidence details")[0]);

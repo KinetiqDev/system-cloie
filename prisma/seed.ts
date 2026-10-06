@@ -34,7 +34,7 @@ async function main() {
   console.log("[B.5] Course assignments...");
   const { assignmentMap } = await seedCourseAssignmentsRunner({ pMap, cMap }, termInstance.id);
 
-  console.log("[C] Outcomes (GOs, CILOs, mappings)...");
+  console.log("[C] Outcomes (POs, CILOs, mappings)...");
   const outcomeContext = await seedOutcomesRunner({ pMap, cMap });
   await persistPeriodReadinessSnapshot(termInstances.ti2026First.id);
 

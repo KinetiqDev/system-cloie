@@ -70,7 +70,7 @@ export type ProgramHeadTrendPeriodDTO = {
   instrumentContext: string | null;
   /** Readable scale context, e.g. "1–5 (5-point)"; null without ratings */
   scaleContext: string | null;
-  /** Graduate Outcome codes covered by the period's mapped evidence */
+  /** Program Outcome codes covered by the period's mapped evidence */
   outcomeCodes: string[];
   comparableWithPrevious: boolean;
 };
@@ -104,12 +104,12 @@ export type ProgramHeadTrendsDTO = {
 
 /**
  * One program-wide evidence row from a central deployment (student, alumni, or
- * industry-partner) — aggregated across all GOs in the selected Program. Mean
+ * industry-partner) — aggregated across all POs in the selected Program. Mean
  * retains full precision; rating count is distinct from submitted response count.
  */
 export type ProgramHeadProgramWideOutcomeDTO = {
   stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
-  goId: string;
+  poId: string;
   code: string;
   name: string;
   /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
@@ -128,7 +128,7 @@ export type ProgramHeadProgramWideOutcomeDTO = {
  * Reasons the Outcomes view may show an empty state. The chain mirrors the
  * Overview: no assignments, no submissions, then no mapped outcome evidence.
  * `no-program-wide-evidence` is emitted when a central (program-wide) source
- * is selected but no central GO evidence exists.
+ * is selected but no central PO evidence exists.
  */
 export type ProgramHeadOutcomesEmptyReason =
   | "no-assignments"
@@ -144,14 +144,14 @@ export type ProgramHeadOutcomesDTO = {
   emptyReason: ProgramHeadOutcomesEmptyReason;
   /**
    * Disclosure that historical ratings are grouped by the Program's current
-   * CILO-to-GO mappings because publication-time mapping snapshots do not
+   * CILO-to-PO mappings because publication-time mapping snapshots do not
    * exist yet.
    */
   currentMappingDisclosure: string;
-  /** True when a contributing CILO maps to more than one selected-Program GO. */
+  /** True when a contributing CILO maps to more than one selected-Program PO. */
   manyToManyDisclosure: boolean;
   outcomes: OutcomeEvidenceDTO[];
-  /** Program-wide (central source) GO evidence rows, grouped by stakeholder. */
+  /** Program-wide (central source) PO evidence rows, grouped by stakeholder. */
   programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[];
 };
 

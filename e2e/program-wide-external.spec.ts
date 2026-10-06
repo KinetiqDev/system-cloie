@@ -77,15 +77,15 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   // ADR 0025: the tool leaves its general satisfaction item unbound, so the
   // publish step names it instead of blocking the deployment.
   const partialMapping = fx.programWidePartialMapping;
-  await expect(page.getByRole("heading", { name: "GO coverage" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "PO coverage" })).toBeVisible();
   await expect(
     page.getByText(
-      `${partialMapping.boundQuestionCount} of ${partialMapping.likertCount} Likert questions bound to a GO`
+      `${partialMapping.boundQuestionCount} of ${partialMapping.likertCount} Likert questions bound to a PO`
     )
   ).toBeVisible();
   await expect(page.getByText(partialMapping.unboundPrompt)).toBeVisible();
   await expect(
-    page.getByText(/publish as general evaluation items and give no GO evidence/i)
+    page.getByText(/publish as general evaluation items and give no PO evidence/i)
   ).toBeVisible();
 
   // Select the PLANNED academic term
@@ -108,7 +108,7 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
   await expect(page.getByRole("heading", { name: "Respondent Preview" })).toBeVisible();
   await expect(page.getByText(/respondent\(s\) found/)).toBeVisible();
   // The decision point carries the same coverage panel: configure + preview.
-  await expect(page.getByRole("heading", { name: "GO coverage" })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "PO coverage" })).toHaveCount(2);
   await expect(page.getByRole("cell", { name: "Demo Alumni", exact: true })).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -141,13 +141,13 @@ test("program-wide alumni: publish, preview, submit, and scoped evidence review"
     await rateQuestion(page, prompt, "Agree");
   }
   await page.getByRole("button", { name: "Next Section" }).click();
-  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Program Outcomes Attainment" })).toBeVisible();
 
   // Reload restores the committed draft.
   await page.reload();
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: deploymentName, level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Program Outcomes Attainment" })).toBeVisible();
 
   for (const prompt of ALUMNI_SECTION_2_PROMPTS) {
     await rateQuestion(page, prompt, "Agree");

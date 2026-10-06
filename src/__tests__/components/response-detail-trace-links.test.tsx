@@ -53,16 +53,16 @@ function responseDTO(
             scale: [1, 2, 3, 4, 5],
             descriptorLabels: [null, null, null, null, null],
             binding: {
-              type: "GO",
-              goBindings: [
+              type: "PO",
+              poBindings: [
                 {
                   key: "22222222-2222-4222-8222-222222222222",
-                  code: "GO-1",
-                  description: "Graduate outcomes",
+                  code: "PO-1",
+                  description: "Program outcomes",
                 },
                 {
                   key: "snapshot:GO-9:Retired outcome",
-                  code: "GO-9",
+                  code: "PO-9",
                   description: "Retired outcome",
                 },
               ],
@@ -76,52 +76,52 @@ function responseDTO(
 }
 
 describe("ResponseDetail reverse trace links", () => {
-  it("deep-links GO bindings with a live GO id and preserves source and period", () => {
+  it("deep-links PO bindings with a live PO id and preserves source and period", () => {
     render(
       <ResponseDetail
         response={responseDTO()}
         evaluationHref="/responses/program-wide/d-1"
         analyticsHref="/analytics"
-        outcomeHref={(goId, response) =>
+        outcomeHref={(poId, response) =>
           buildAnalyticsUrl("program-1", {
             tab: "outcomes",
-            goId,
+            poId,
             ...programHeadOutcomeScope(response),
           })
         }
       />
     );
 
-    const goLink = screen.getByRole("link", { name: "GO-1" });
-    const href = goLink.getAttribute("href") ?? "";
+    const poLink = screen.getByRole("link", { name: "PO-1" });
+    const href = poLink.getAttribute("href") ?? "";
     expect(href).toContain("tab=outcomes");
     expect(href).toContain("evidenceSource=ALUMNI");
     expect(href).toContain("stakeholder=ALUMNI");
-    expect(href).toContain("goId=22222222-2222-4222-8222-222222222222");
+    expect(href).toContain("poId=22222222-2222-4222-8222-222222222222");
     expect(href).toContain("termInstanceId=11111111-1111-4111-8111-111111111111");
   });
 
-  it("deep-links retired snapshot GOs through their analytics snapshot key", () => {
+  it("deep-links retired snapshot POs through their analytics snapshot key", () => {
     render(
       <ResponseDetail
         response={responseDTO()}
         evaluationHref="/responses/program-wide/d-1"
         analyticsHref="/analytics"
-        outcomeHref={(goId, response) =>
+        outcomeHref={(poId, response) =>
           buildAnalyticsUrl("program-1", {
             tab: "outcomes",
-            goId,
+            poId,
             ...programHeadOutcomeScope(response),
           })
         }
       />
     );
 
-    const retiredLink = screen.getByRole("link", { name: "GO-9" });
+    const retiredLink = screen.getByRole("link", { name: "PO-9" });
     const href = retiredLink.getAttribute("href") ?? "";
     expect(href).toContain("tab=outcomes");
     expect(href).toContain("evidenceSource=ALUMNI");
-    expect(href).toContain("goId=snapshot%3AGO-9%3ARetired+outcome");
+    expect(href).toContain("poId=snapshot%3AGO-9%3ARetired+outcome");
   });
 
   it("keeps course-bound responses scoped to the COURSE source without a stakeholder", () => {
@@ -155,19 +155,19 @@ describe("ResponseDetail reverse trace links", () => {
               descriptorLabels: [null, null, null, null, null],
               binding: {
                 type: "CILO",
-                // Program-specific course evidence reaches GOs only.
+                // Program-specific course evidence reaches POs only.
                 layer: "GRADUATE_OUTCOME",
                 ciloId: "cilo-1",
                 ciloLabel: "Achieve outcomes",
-                goMappings: [
+                poMappings: [
                   {
-                    goId: "33333333-3333-4333-8333-333333333333",
-                    goCode: "GO 1",
-                    goDescription: "Outcome",
+                    poId: "33333333-3333-4333-8333-333333333333",
+                    poCode: "PO 1",
+                    poDescription: "Outcome",
                     manifestation: "LEARNING",
                   },
                 ],
-                directGoBindings: [],
+                directPoBindings: [],
               },
             },
           ],
@@ -179,19 +179,19 @@ describe("ResponseDetail reverse trace links", () => {
         response={courseResponse}
         evaluationHref="/responses/course/eval-1"
         analyticsHref="/analytics"
-        outcomeHref={(goId, response) =>
+        outcomeHref={(poId, response) =>
           buildAnalyticsUrl("program-1", {
             tab: "outcomes",
-            goId,
+            poId,
             ...programHeadOutcomeScope(response),
           })
         }
       />
     );
 
-    const href = screen.getByRole("link", { name: "GO 1" }).getAttribute("href") ?? "";
+    const href = screen.getByRole("link", { name: "PO 1" }).getAttribute("href") ?? "";
     expect(href).toContain("evidenceSource=COURSE");
     expect(href).not.toContain("stakeholder=");
-    expect(href).toContain("goId=33333333-3333-4333-8333-333333333333");
+    expect(href).toContain("poId=33333333-3333-4333-8333-333333333333");
   });
 });

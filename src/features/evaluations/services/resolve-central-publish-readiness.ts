@@ -1,16 +1,16 @@
 import { EvaluationTemplateType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import { planCentralGoBindings } from "./central-deployment-go-plan";
+import { planCentralPoBindings } from "./central-deployment-po-plan";
 import { type ServiceResult } from "@/lib/utils/service-result";
 import type { CentralPublishReadiness } from "../types";
 
 /**
- * Server-prepared GO binding readiness for the Program Head publish step:
- * which Likert questions the selected template leaves unbound, which GOs it
+ * Server-prepared PO binding readiness for the Program Head publish step:
+ * which Likert questions the selected template leaves unbound, which POs it
  * covers, and any binding problem that still blocks publication. Unbound
  * questions do not block publication; they publish as general evaluation
- * items and produce no GO evidence.
+ * items and produce no PO evidence.
  */
 export async function resolveCentralPublishReadiness(
   programId: string
@@ -27,20 +27,20 @@ export async function resolveCentralPublishReadiness(
       template_type: EvaluationTemplateType.PROGRAM_WIDE,
       OR: [{ program_id: selectedProgram.id }, { program_id: null }],
     },
-    select: { id: true, structure: true, template_go_question_bindings: true },
+    select: { id: true, structure: true, template_po_question_bindings: true },
   });
 
   const boundGoIds = [
     ...new Set(
       templates.flatMap((template) =>
-        template.template_go_question_bindings.map((binding) => binding.go_id)
+        template.template_po_question_bindings.map((binding) => binding.po_id)
       )
     ),
-  ].filter((goId): goId is string => Boolean(goId));
+  ].filter((poId): poId is string => Boolean(poId));
 
   const liveGos =
     boundGoIds.length > 0
-      ? await prisma.gO.findMany({
+      ? await prisma.pO.findMany({
           where: {
             program_id: selectedProgram.id,
             id: { in: boundGoIds },
@@ -52,8 +52,8 @@ export async function resolveCentralPublishReadiness(
 
   const readiness: Record<string, CentralPublishReadiness> = {};
   for (const template of templates) {
-    const plan = planCentralGoBindings({
-      bindings: template.template_go_question_bindings,
+    const plan = planCentralPoBindings({
+      bindings: template.template_po_question_bindings,
       structure: template.structure,
       liveGos,
     });

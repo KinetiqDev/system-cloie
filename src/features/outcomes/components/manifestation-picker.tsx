@@ -26,7 +26,7 @@ type ManifestationPickerProps = {
   ciloIndex: number;
   /** 1-based target position, used in the accessible names. */
   targetIndex: number;
-  /** Short target noun in accessible names, e.g. GO or ILO. */
+  /** Short target noun in accessible names, e.g. PO or ILO. */
   targetNoun?: string;
   value: CILOMappingManifestation | null;
   disabled?: boolean;
@@ -37,14 +37,14 @@ type ManifestationPickerProps = {
 
 /**
  * Per-pair Learning/Practice/Opportunity control.
- * Every option carries the full accessible name "CILO n, GO m, manifestation: <label>";
+ * Every option carries the full accessible name "CILO n, PO m, manifestation: <label>";
  * letters and color are never the sole communication. Clearing is available through
  * the explicit clear button or by activating the already-selected option.
  */
 export function ManifestationPicker({
   ciloIndex,
   targetIndex,
-  targetNoun = "GO",
+  targetNoun = "PO",
   value,
   disabled = false,
   onChange,

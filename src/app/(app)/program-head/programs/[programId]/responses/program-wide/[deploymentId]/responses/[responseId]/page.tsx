@@ -77,10 +77,10 @@ export default async function CentralResponseDetailPage({
         stakeholder,
         termInstanceId: response.evaluation.context.termInstanceId,
       })}
-      outcomeHref={(goId) =>
+      outcomeHref={(poId) =>
         buildAnalyticsUrl(programId, {
           tab: "outcomes",
-          goId,
+          poId,
           evidenceSource: STAKEHOLDER_EVIDENCE_SOURCE[stakeholder],
           stakeholder,
           termInstanceId: response.evaluation.context.termInstanceId,

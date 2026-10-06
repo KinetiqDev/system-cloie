@@ -567,7 +567,7 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
       "buildCiloMetrics",
       "buildQuestionMetrics",
       "buildParticipationSummary",
-      "buildProgramWideGoMetrics",
+      "buildProgramWidePoMetrics",
       "aggregateOutcomeEvidence",
       "buildOutcomeEvidenceDtos",
       "groupRatingsByScale",
@@ -582,7 +582,7 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
       // Metric vocabulary
       "CiloGoMapping",
       "CiloMetric",
-      "GoMetric",
+      "PoMetric",
       "MetricEvidenceSummary",
       "ParticipationSummary",
       "QuestionMetric",

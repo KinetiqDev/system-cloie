@@ -23,16 +23,16 @@ _Avoid_: Draft response review
 ## Outcome binding
 
 **Submitted-answer binding**:
-The outcome binding of one submitted quantitative answer: CILO (with the Course's current typed alignments — CILO-to-GO manifestation mappings in the owning Program for Program-specific Courses, CILO-to-ILO manifestation mappings for General Education Courses — and any frozen direct GO bindings on that Course question), GO (publication-time direct bindings), or GENERAL (no matching binding). The Course scope selects the alignment layer; a General Education answer never shows GO mappings. Bindings govern how ratings are attributed to outcomes.
-_Avoid_: Raw question outcome, unbound rating, GO mapping on a General Education answer
+The outcome binding of one submitted quantitative answer: CILO (with the Course's current typed alignments — CILO-to-PO manifestation mappings in the owning Program for Program-specific Courses, CILO-to-ILO manifestation mappings for General Education Courses — and any frozen direct PO bindings on that Course question), PO (publication-time direct bindings), or GENERAL (no matching binding). The Course scope selects the alignment layer; a General Education answer never shows PO mappings. Bindings govern how ratings are attributed to outcomes.
+_Avoid_: Raw question outcome, unbound rating, PO mapping on a General Education answer
 
 **Coordinator review facets**:
 The Coordinator responses list filters by search, academic period, evaluation status (any non-draft status), response progress (`zero`, `partial`, `complete`), Course, class-context Program (`CourseAssignment.program_id`), ILO (evaluations whose Course has an active CILO currently mapped to it), Faculty, year level, and section. Course scope, not the respondent's Program, keeps ownership.
 _Avoid_: Respondent-Program ownership, Central evidence in Coordinator review
 
-**Publication-time GO binding**:
-A frozen GO binding sourced from `CentralDeploymentGoSnapshot` for Program-wide evidence or `CourseBoundGoQuestionBinding` for direct Course-bound evidence. Both preserve GO code, description, and question prompt, using the physical `plo_*` compatibility columns and `snapshot:<code>:<description>` identity when the live GO was deleted.
-_Avoid_: Current GO binding, live GO label
+**Publication-time PO binding**:
+A frozen PO binding sourced from `CentralDeploymentPoSnapshot` for Program-wide evidence or `CourseBoundPoQuestionBinding` for direct Course-bound evidence. Both preserve PO code, description, and question prompt, using the physical `plo_*` compatibility columns and `snapshot:<code>:<description>` identity when the live PO was deleted.
+_Avoid_: Current PO binding, live PO label
 
 ## Summarization and context
 

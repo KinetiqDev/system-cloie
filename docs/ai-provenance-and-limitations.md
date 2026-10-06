@@ -222,12 +222,12 @@
 ## 7. Known Limitations and Capstone Boundaries
 
 1. **Deferred `cilo_go_mappings_snapshot` migration (accepted boundary).**
-   Course-derived GO metrics (`buildCourseDerivedGoMetrics`) join
+   Course-derived PO metrics (`buildCourseDerivedPoMetrics`) join
    publication-time question-to-CILO bindings with the **current, live**
-   `CILOMapping` table. If a Program Head edits a CILO-to-GO mapping today,
+   `CILOMapping` table. If a Program Head edits a CILO-to-PO mapping today,
    historical course evidence is reinterpreted under the new mapping — historical
-   GO analytics are technically mutable. Program-wide central deployments are
-   unaffected (they correctly use `CentralDeploymentGoSnapshot`). The schema fix
+   PO analytics are technically mutable. Program-wide central deployments are
+   unaffected (they correctly use `CentralDeploymentPoSnapshot`). The schema fix
    (a `cilo_go_mappings_snapshot` JSON column on `CourseBoundEvaluation` plus
    backfill) was deferred as high-migration-risk for this phase; the UI carries the
    "Publication-time mapping snapshots are not yet available" disclosure, and this

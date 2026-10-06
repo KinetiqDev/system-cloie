@@ -35,11 +35,11 @@ const {
     evaluationAssignment: { count: vi.fn(), findMany: vi.fn() },
     quantitativeResponseItem: { aggregate: vi.fn(), findMany: vi.fn() },
     qualitativeResponseItem: { findMany: vi.fn() },
-    gO: { findMany: vi.fn() },
+    pO: { findMany: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
-    courseBoundGoQuestionBinding: { findMany: vi.fn() },
-    centralDeploymentGoSnapshot: { findMany: vi.fn() },
+    courseBoundPoQuestionBinding: { findMany: vi.fn() },
+    centralDeploymentPoSnapshot: { findMany: vi.fn() },
     academicTermInstance: { findFirst: vi.fn(), findMany: vi.fn() },
     facultyProgramAffiliation: { findFirst: vi.fn() },
   },
@@ -89,12 +89,12 @@ function mockEmptyDashboardReads() {
   prismaMock.evaluationAssignment.findMany.mockResolvedValue([]);
   prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
   prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([]);
-  prismaMock.gO.findMany.mockResolvedValue([]);
+  prismaMock.pO.findMany.mockResolvedValue([]);
   prismaMock.centralDeployment.findMany.mockResolvedValue([]);
   prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([]);
   prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
-  prismaMock.courseBoundGoQuestionBinding.findMany.mockResolvedValue([]);
-  prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
+  prismaMock.courseBoundPoQuestionBinding.findMany.mockResolvedValue([]);
+  prismaMock.centralDeploymentPoSnapshot.findMany.mockResolvedValue([]);
 }
 
 describe("analytics dashboard access", () => {
@@ -307,7 +307,7 @@ describe("analytics dashboard access", () => {
       prismaMock.evaluationAssignment.findMany,
       prismaMock.quantitativeResponseItem.findMany,
       prismaMock.qualitativeResponseItem.findMany,
-      prismaMock.gO.findMany,
+      prismaMock.pO.findMany,
       prismaMock.centralDeployment.findMany,
       prismaMock.courseBoundEvaluation.findMany,
       prismaMock.academicTermInstance.findMany,
@@ -322,7 +322,7 @@ describe("analytics dashboard access", () => {
   });
 
   it("excludes General Education course-bound evidence from every dashboard query", async () => {
-    // The dashboard counts, denominators, active-evaluation KPI, GO provenance,
+    // The dashboard counts, denominators, active-evaluation KPI, PO provenance,
     // and qualitative pulse all read course-bound evidence. A GE course can hold
     // an assignment in this same Program, so Program equality alone would leak
     // it; each course-bound predicate must pin the course scope as well.

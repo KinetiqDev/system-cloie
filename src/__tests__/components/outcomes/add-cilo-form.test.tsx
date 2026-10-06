@@ -197,14 +197,14 @@ describe("AddCiloForm", () => {
     await screen.findByText("Existing CILOs (0)");
 
     // Before saving, the course row carries the only mapping action.
-    expect(screen.getAllByRole("link", { name: /Map CILOs to GOs/ })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: /Map CILOs to POs/ })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Save CILOs" }));
     await screen.findByRole("region", { name: /next step.*map/i });
 
     // After saving, the post-save panel carries it and the row drops its copy.
     const mappingActions = [
-      ...screen.queryAllByRole("link", { name: /Map CILOs to GOs/ }),
+      ...screen.queryAllByRole("link", { name: /Map CILOs to POs/ }),
       ...screen.queryAllByRole("link", { name: /Continue to map CILOs/ }),
     ];
     expect(mappingActions).toHaveLength(1);

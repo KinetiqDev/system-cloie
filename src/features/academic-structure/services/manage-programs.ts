@@ -6,7 +6,7 @@ import { type ServiceResult } from "@/lib/utils/service-result";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 export type ProgramDependencyCounts = {
-  academicSetup: { majors: number; courses: number; gos: number };
+  academicSetup: { majors: number; courses: number; pos: number };
   peopleAndHistory: { studentProfiles: number; enrollments: number; alumniProfiles: number };
   teaching: {
     courseAssignments: number;
@@ -44,7 +44,7 @@ async function countProgramDependencies(
   const [
     majors,
     courses,
-    gos,
+    pos,
     studentProfiles,
     enrollments,
     alumniProfiles,
@@ -61,7 +61,7 @@ async function countProgramDependencies(
   ] = await Promise.all([
     db.major.count({ where: { program_id: programId } }),
     db.course.count({ where: { program_id: programId } }),
-    db.gO.count({ where: { program_id: programId } }),
+    db.pO.count({ where: { program_id: programId } }),
     db.studentAcademicProfile.count({ where: { program_id: programId } }),
     db.studentEnrollment.count({ where: { program_id: programId } }),
     db.alumniProfile.count({ where: { program_id: programId } }),
@@ -82,7 +82,7 @@ async function countProgramDependencies(
   });
 
   return {
-    academicSetup: { majors, courses, gos },
+    academicSetup: { majors, courses, pos },
     peopleAndHistory: { studentProfiles, enrollments, alumniProfiles },
     teaching: { courseAssignments, facultyAffiliations, programHeadAssignments },
     evaluation: {

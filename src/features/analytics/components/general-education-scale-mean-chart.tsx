@@ -239,7 +239,7 @@ function ScaleMeanChartPanel({
           <CardTitle id={headingId} className="text-title-md font-semibold">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">Ranked comparison</span>
+          <span className="text-label-sm text-muted-foreground">Ranked comparison</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -307,7 +307,7 @@ function ScaleMeanChartPanel({
           {ranked.map((row, index) => (
             <span role="listitem" key={row.key} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-muted-foreground text-xs">
+              <span className="text-caption text-muted-foreground">
                 {row.label} ({countedNoun(row.submittedResponseCount, "response")})
               </span>
             </span>

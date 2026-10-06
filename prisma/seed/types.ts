@@ -25,7 +25,7 @@ export interface CourseAssignmentContext {
 }
 
 export interface OutcomeContext {
-  goMap: Map<string, { id: string }>;
+  poMap: Map<string, { id: string }>;
   iloMap: Map<string, { id: string }>;
   ciloMap: Map<string, { id: string; description: string; order: number }[]>;
 }

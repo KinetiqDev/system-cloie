@@ -203,7 +203,7 @@ export function GeneralEducationDistributionChart({
           <CardTitle id={titleId} className="text-heading-lg">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">
+          <span className="text-label-sm text-muted-foreground">
             100% of each scale&apos;s valid ratings
           </span>
         </div>
@@ -308,7 +308,7 @@ export function GeneralEducationDistributionChart({
               <div key={row.key} className="flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-label-md text-foreground font-semibold">{row.label}</span>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-caption text-muted-foreground">
                     {row.scaleLabel ?? "No scale resolved"}
                   </span>
                   {/* A distribution carries no respondent count, so it reports
@@ -323,7 +323,7 @@ export function GeneralEducationDistributionChart({
                   {row.categories.map((category) => (
                     <li
                       key={category.value}
-                      className="text-text-secondary flex items-center gap-1.5 text-xs"
+                      className="text-caption text-text-secondary flex items-center gap-1.5"
                     >
                       <ChartSwatch fill={chartFill(chartId, values.indexOf(category.value))} />
                       <span className="tabular-nums">{categoryLegendLabel(category, total)}</span>

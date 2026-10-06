@@ -50,7 +50,7 @@ export type OutcomeContributorDTO =
     };
 
 /**
- * One outcome evidence row (Graduate Outcome or Institutional Learning
+ * One outcome evidence row (Program Outcome or Institutional Learning
  * Outcome). Mean retains full precision; rating count is distinct from
  * submitted response count.
  */
@@ -92,15 +92,15 @@ export type OutcomeEvidenceDTO = {
 
 /** Presentation vocabulary for one outcome layer. */
 export type OutcomeLayerLabels = {
-  /** Singular full name, e.g. "Graduate Outcome". */
+  /** Singular full name, e.g. "Program Outcome". */
   singular: string;
-  /** Short name used in compact headings, e.g. "GO". */
+  /** Short name used in compact headings, e.g. "PO". */
   short: string;
 };
 
 export const GRADUATE_OUTCOME_LABELS: OutcomeLayerLabels = {
-  singular: "Graduate Outcome",
-  short: "GO",
+  singular: "Program Outcome",
+  short: "PO",
 };
 
 export const INSTITUTIONAL_OUTCOME_LABELS: OutcomeLayerLabels = {

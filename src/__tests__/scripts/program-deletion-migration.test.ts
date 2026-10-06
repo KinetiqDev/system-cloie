@@ -20,7 +20,9 @@ describe("Program deletion migration", () => {
       "external_stakeholder_invites",
       "industry_partner_profiles",
     ]) {
-      expect(migration).toMatch(new RegExp(`ALTER TABLE \\"${table}\\" ADD CONSTRAINT .* ON DELETE RESTRICT`));
+      expect(migration).toMatch(
+        new RegExp(`ALTER TABLE \\"${table}\\" ADD CONSTRAINT .* ON DELETE RESTRICT`)
+      );
     }
     expect(migration).toContain('"instrument_templates_bound_program_id_fkey"');
   });

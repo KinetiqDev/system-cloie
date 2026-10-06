@@ -14,8 +14,8 @@ const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
     schoolYear: { findUnique: vi.fn() },
     quantitativeResponseItem: { findMany: vi.fn() },
     courseBoundCiloQuestionBinding: { findMany: vi.fn() },
-    centralDeploymentGoSnapshot: { findMany: vi.fn() },
-    courseBoundGoQuestionBinding: { findMany: vi.fn() },
+    centralDeploymentPoSnapshot: { findMany: vi.fn() },
+    courseBoundPoQuestionBinding: { findMany: vi.fn() },
     evaluationAssignment: { count: vi.fn() },
     response: { count: vi.fn() },
     instrumentVersion: { findMany: vi.fn() },
@@ -115,15 +115,15 @@ function prismaRatingRow(opts: {
   };
 }
 
-const goA = { go: { id: "go-a", code: "GO-1", description: "Effective communicator" } };
-const goB = { go: { id: "go-b", code: "GO-2", description: "Critical thinker" } };
+const poA = { po: { id: "po-a", code: "PO-1", description: "Effective communicator" } };
+const poB = { po: { id: "po-b", code: "PO-2", description: "Critical thinker" } };
 
 function ciloRow(
   opts: {
     ciloId?: string;
     ciloDescription?: string;
     courseCode?: string;
-    goMappings?: Array<typeof goA>;
+    poMappings?: Array<typeof poA>;
   } = {}
 ) {
   const {
@@ -135,7 +135,7 @@ function ciloRow(
     id: ciloId,
     description: ciloDescription,
     course: { id: "course-1", code: courseCode, title: "Education 101", cilos: [{ id: ciloId }] },
-    cilo_mappings: opts.goMappings ?? [goA],
+    cilo_mappings: opts.poMappings ?? [poA],
   };
 }
 
@@ -170,7 +170,7 @@ describe("getProgramHeadOutcomes", () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([]);
-    prismaMock.courseBoundGoQuestionBinding.findMany.mockResolvedValue([]);
+    prismaMock.courseBoundPoQuestionBinding.findMany.mockResolvedValue([]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
   });
@@ -228,7 +228,7 @@ describe("getProgramHeadOutcomes", () => {
   });
 
   it("excludes General Education course-bound evidence from every outcome read", async () => {
-    // GE ratings would otherwise reach the Outcomes view through GO/CILO
+    // GE ratings would otherwise reach the Outcomes view through PO/CILO
     // bindings, since a GE course can hold an assignment in this same Program.
     await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
@@ -265,7 +265,7 @@ describe("getProgramHeadOutcomes", () => {
   it("returns the no-program-wide-evidence empty state when a central source has no snapshot-bound ratings", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
-    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentPoSnapshot.findMany.mockResolvedValue([]);
 
     const result = await getProgramHeadOutcomes("program-bsed", {
       ...outcomesFilters,
@@ -278,7 +278,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(result?.programWideOutcomes).toEqual([]);
   });
 
-  it("builds program-wide GO rows from central ratings through deployment snapshots", async () => {
+  it("builds program-wide PO rows from central ratings through deployment snapshots", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
@@ -299,12 +299,12 @@ describe("getProgramHeadOutcomes", () => {
         },
       },
     ]);
-    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([
+    prismaMock.centralDeploymentPoSnapshot.findMany.mockResolvedValue([
       {
         central_deployment_id: "deployment-1",
-        go_id: "plo-1",
-        go_code_snapshot: "GO-1",
-        go_description_snapshot: "Graduate outcomes",
+        po_id: "po-1",
+        po_code_snapshot: "PO-1",
+        po_description_snapshot: "Program outcomes",
         section_key: "cilo-items",
         item_key: "cilo-attainment-1",
       },
@@ -320,9 +320,9 @@ describe("getProgramHeadOutcomes", () => {
     expect(result?.programWideOutcomes).toEqual([
       {
         stakeholder: "ALUMNI",
-        goId: "plo-1",
-        code: "GO-1",
-        name: "Graduate outcomes",
+        poId: "po-1",
+        code: "PO-1",
+        name: "Program outcomes",
         meanRating: 5,
         ratingCount: 1,
         submittedResponseCount: 1,
@@ -335,7 +335,7 @@ describe("getProgramHeadOutcomes", () => {
           questionCount: 1,
           scaleLabel: "1–5 (5-point)",
           explanation:
-            "Mean of 1 valid ratings from 1 bound question(s) published to this Graduate Outcome; unbound items are excluded.",
+            "Mean of 1 valid ratings from 1 bound question(s) published to this Program Outcome; unbound items are excluded.",
           evidenceHref:
             "/program-head/programs/program-bsed/responses?tab=program-wide&stakeholder=ALUMNI",
         },
@@ -343,7 +343,7 @@ describe("getProgramHeadOutcomes", () => {
     ]);
   });
 
-  it("keeps published evidence when the live GO was deleted, using frozen snapshot labels", async () => {
+  it("keeps published evidence when the live PO was deleted, using frozen snapshot labels", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.instrumentVersion.findMany.mockResolvedValue(instrumentVersions);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
@@ -364,12 +364,12 @@ describe("getProgramHeadOutcomes", () => {
         },
       },
     ]);
-    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([
+    prismaMock.centralDeploymentPoSnapshot.findMany.mockResolvedValue([
       {
         central_deployment_id: "deployment-1",
-        go_id: null,
-        go_code_snapshot: "GO-9",
-        go_description_snapshot: "Retired outcome",
+        po_id: null,
+        po_code_snapshot: "PO-9",
+        po_description_snapshot: "Retired outcome",
         section_key: "cilo-items",
         item_key: "cilo-attainment-1",
       },
@@ -381,15 +381,15 @@ describe("getProgramHeadOutcomes", () => {
     });
 
     expect(result?.programWideOutcomes).toHaveLength(1);
-    expect(result?.programWideOutcomes[0].code).toBe("GO-9");
+    expect(result?.programWideOutcomes[0].code).toBe("PO-9");
     expect(result?.programWideOutcomes[0].name).toBe("Retired outcome");
-    expect(result?.programWideOutcomes[0].goId).toContain("snapshot:");
+    expect(result?.programWideOutcomes[0].poId).toContain("snapshot:");
   });
 
   it("reads both course-bound and central evidence for a bare STUDENT stakeholder", async () => {
     prismaMock.academicTermInstance.findMany.mockResolvedValue(termInstances);
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
-    prismaMock.centralDeploymentGoSnapshot.findMany.mockResolvedValue([]);
+    prismaMock.centralDeploymentPoSnapshot.findMany.mockResolvedValue([]);
 
     await getProgramHeadOutcomes("program-bsed", {
       ...outcomesFilters,
@@ -454,9 +454,9 @@ describe("getProgramHeadOutcomes", () => {
     expect(opportunityCall.where.course_bound.term_instance_id).toEqual({ in: [termId] });
   });
 
-  // ── GO row semantics ─────────────────────────────────────────────────────
+  // ── PO row semantics ─────────────────────────────────────────────────────
 
-  it("builds a GO row with code, name, full-precision mean, and distinct counts", async () => {
+  it("builds a PO row with code, name, full-precision mean, and distinct counts", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 4,
@@ -496,7 +496,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(result!.emptyReason).toBeNull();
     expect(result!.outcomes).toHaveLength(1);
     const row = result!.outcomes[0];
-    expect(row.code).toBe("GO-1");
+    expect(row.code).toBe("PO-1");
     expect(row.name).toBe("Effective communicator");
     expect(row.meanRating).toBe(3.5); // duplicate resp-1 question row contributes once: (4 + 3) / 2
     expect(row.ratingCount).toBe(2);
@@ -515,7 +515,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(row.spansMultipleScales).toBe(false);
   });
 
-  it("ranks GO rows by mean rating descending", async () => {
+  it("ranks PO rows by mean rating descending", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 2,
@@ -534,22 +534,22 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", goMappings: [goA] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-a", poMappings: [poA] }) }),
       bindingRow({
         evaluationId: "eval-2",
-        cilo: ciloRow({ ciloId: "cilo-b", goMappings: [goB] }),
+        cilo: ciloRow({ ciloId: "cilo-b", poMappings: [poB] }),
       }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
-    expect(result!.outcomes.map((row) => row.code)).toEqual(["GO-2", "GO-1"]);
+    expect(result!.outcomes.map((row) => row.code)).toEqual(["PO-2", "PO-1"]);
   });
 
   // ── Many-to-many mapping multiplicity ────────────────────────────────────
 
-  it("contributes one rating to each mapped GO row and discloses the rule", async () => {
+  it("contributes one rating to each mapped PO row and discloses the rule", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 4,
@@ -560,7 +560,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", goMappings: [goA, goB] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-multi", poMappings: [poA, poB] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -569,14 +569,14 @@ describe("getProgramHeadOutcomes", () => {
     expect(result!.manyToManyDisclosure).toBe(true);
     expect(result!.outcomes).toHaveLength(2);
     const byCode = new Map(result!.outcomes.map((row) => [row.code, row]));
-    expect(byCode.get("GO-1")!.meanRating).toBe(4);
-    expect(byCode.get("GO-1")!.ratingCount).toBe(1);
-    expect(byCode.get("GO-1")!.submittedResponseCount).toBe(1);
-    expect(byCode.get("GO-2")!.meanRating).toBe(4);
-    expect(byCode.get("GO-2")!.ratingCount).toBe(1);
+    expect(byCode.get("PO-1")!.meanRating).toBe(4);
+    expect(byCode.get("PO-1")!.ratingCount).toBe(1);
+    expect(byCode.get("PO-1")!.submittedResponseCount).toBe(1);
+    expect(byCode.get("PO-2")!.meanRating).toBe(4);
+    expect(byCode.get("PO-2")!.ratingCount).toBe(1);
   });
 
-  it("leaves the many-to-many disclosure off when no CILO maps to multiple GOs", async () => {
+  it("leaves the many-to-many disclosure off when no CILO maps to multiple POs", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 4,
@@ -587,7 +587,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ goMappings: [goA] }) }),
+      bindingRow({ cilo: ciloRow({ poMappings: [poA] }) }),
     ]);
     prismaMock.instrumentVersion.findMany.mockResolvedValue([instrumentVersions[0]]);
 
@@ -599,7 +599,7 @@ describe("getProgramHeadOutcomes", () => {
 
   // ── Central / unmapped exclusion ─────────────────────────────────────────
 
-  it("never creates a GO row from an unbound or deleted-CILO rating", async () => {
+  it("never creates a PO row from an unbound or deleted-CILO rating", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       // Rating whose item has no published binding in this evaluation.
       prismaRatingRow({
@@ -630,7 +630,7 @@ describe("getProgramHeadOutcomes", () => {
     expect(result!.emptyReason).toBe("no-mapped-outcomes");
   });
 
-  it("never creates a GO row when a bound CILO has no canonical mapping", async () => {
+  it("never creates a PO row when a bound CILO has no canonical mapping", async () => {
     prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
       prismaRatingRow({
         ratingValue: 5,
@@ -641,7 +641,7 @@ describe("getProgramHeadOutcomes", () => {
       }),
     ]);
     prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
-      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", goMappings: [] }) }),
+      bindingRow({ cilo: ciloRow({ ciloId: "cilo-unmapped", poMappings: [] }) }),
     ]);
     mockScopeCounts({ opportunities: 5, submitted: 3 });
 
@@ -743,7 +743,7 @@ describe("getProgramHeadOutcomes", () => {
   });
 
   it("does not fabricate a distribution when the item scale cannot be resolved", async () => {
-    // The binding exists and maps to a GO, but the frozen snapshot does not
+    // The binding exists and maps to a PO, but the frozen snapshot does not
     // carry the item's scale, so the rating cannot be validated or binned.
     const emptyStructure = [
       {
@@ -793,7 +793,7 @@ describe("getProgramHeadOutcomes", () => {
 
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
-    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-GO mappings/i);
+    expect(result!.currentMappingDisclosure).toMatch(/current CILO-to-PO mappings/i);
     expect(result!.currentMappingDisclosure).toMatch(/publication-time/i);
   });
 
@@ -816,7 +816,7 @@ describe("getProgramHeadOutcomes", () => {
     const result = await getProgramHeadOutcomes("program-bsed", outcomesFilters);
 
     expect(result!.outcomes).toHaveLength(1);
-    expect(result!.outcomes[0].code).toBe("GO-1");
+    expect(result!.outcomes[0].code).toBe("PO-1");
     expect(result!.outcomes[0].meanRating).toBe(5);
     expect(result!.outcomes[0].ratingCount).toBe(1);
     expect(result!.outcomes[0].submittedResponseCount).toBe(1);
@@ -946,7 +946,7 @@ describe("aggregateOutcomeEvidence", () => {
       outcomeMappings: [
         {
           outcomeId: "outcome-a",
-          code: "GO-1",
+          code: "PO-1",
           name: "Effective communicator",
           manifestation: "PRACTICE",
         },
@@ -958,7 +958,7 @@ describe("aggregateOutcomeEvidence", () => {
     };
   }
 
-  it("skips rows without a CILO or without any mapped GO", () => {
+  it("skips rows without a CILO or without any mapped PO", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({ cilo: null }),
       evidenceRow({ outcomeMappings: [] }),
@@ -968,12 +968,12 @@ describe("aggregateOutcomeEvidence", () => {
     expect(aggregation.hasMultiMappedCilo).toBe(false);
   });
 
-  it("flags many-to-many mapping when one CILO maps to multiple GOs", () => {
+  it("flags many-to-many mapping when one CILO maps to multiple POs", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({
         outcomeMappings: [
-          { outcomeId: "outcome-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
-          { outcomeId: "outcome-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
+          { outcomeId: "outcome-a", code: "PO-1", name: "A", manifestation: "LEARNING" },
+          { outcomeId: "outcome-b", code: "PO-2", name: "B", manifestation: "PRACTICE" },
         ],
       }),
     ]);
@@ -987,10 +987,10 @@ describe("aggregateOutcomeEvidence", () => {
   });
 });
 
-describe("direct course-bound GO evidence", () => {
+describe("direct course-bound PO evidence", () => {
   const directMapping = {
     outcomeId: "outcome-a",
-    code: "GO-1",
+    code: "PO-1",
     name: "Effective communicator",
     questionPrompt: "I can communicate solutions.",
   };
@@ -1012,7 +1012,7 @@ describe("direct course-bound GO evidence", () => {
     };
   }
 
-  it("keeps colon-bearing question pairs distinct in GO aggregation", () => {
+  it("keeps colon-bearing question pairs distinct in PO aggregation", () => {
     // Regression: separator-joined identities merged (a, b:c) with (a:b, c).
     const collisionStructure = [
       {
@@ -1043,7 +1043,7 @@ describe("direct course-bound GO evidence", () => {
     expect(dto.contributors).toHaveLength(2);
   });
 
-  it("aggregates a direct GO rating without fabricating a CILO contributor", () => {
+  it("aggregates a direct PO rating without fabricating a CILO contributor", () => {
     const outcomes = aggregateOutcomeEvidence([directRow()]);
     const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
@@ -1059,7 +1059,7 @@ describe("direct course-bound GO evidence", () => {
     ]);
   });
 
-  it("deduplicates duplicate direct rows by response, evaluation, question, and GO", () => {
+  it("deduplicates duplicate direct rows by response, evaluation, question, and PO", () => {
     const outcomes = aggregateOutcomeEvidence([directRow(), directRow()]);
     const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
@@ -1067,7 +1067,7 @@ describe("direct course-bound GO evidence", () => {
     expect(dto.submittedResponseCount).toBe(1);
   });
 
-  it("deduplicates overlapping CILO-derived and direct bindings to the same GO", () => {
+  it("deduplicates overlapping CILO-derived and direct bindings to the same PO", () => {
     const cilo = {
       id: "cilo-1",
       code: "CILO 1",
@@ -1080,7 +1080,7 @@ describe("direct course-bound GO evidence", () => {
         outcomeMappings: [
           {
             outcomeId: "outcome-a",
-            code: "GO-1",
+            code: "PO-1",
             name: "Effective communicator",
             manifestation: "LEARNING",
           },
@@ -1095,7 +1095,7 @@ describe("direct course-bound GO evidence", () => {
     ]);
   });
 
-  it("counts invalid direct GO ratings diagnostically without serializing invalid means", () => {
+  it("counts invalid direct PO ratings diagnostically without serializing invalid means", () => {
     const outcomes = aggregateOutcomeEvidence([directRow({ ratingValue: 9 })]);
     const [dto] = buildOutcomeEvidenceDtos(outcomes);
 

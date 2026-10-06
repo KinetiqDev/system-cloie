@@ -9,7 +9,7 @@ const {
   evaluationAssignmentFindManyMock,
   responseFindManyMock,
   iloMappingFindManyMock,
-  goMappingFindManyMock,
+  poMappingFindManyMock,
   studentEnrollmentFindManyMock,
   resolveAuthSessionMock,
 } = vi.hoisted(() => ({
@@ -17,7 +17,7 @@ const {
   evaluationAssignmentFindManyMock: vi.fn(),
   responseFindManyMock: vi.fn(),
   iloMappingFindManyMock: vi.fn(),
-  goMappingFindManyMock: vi.fn(),
+  poMappingFindManyMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
@@ -28,7 +28,7 @@ vi.mock("@/lib/db/prisma", () => ({
     evaluationAssignment: { findMany: evaluationAssignmentFindManyMock },
     response: { findMany: responseFindManyMock },
     cILOInstitutionalOutcomeMapping: { findMany: iloMappingFindManyMock },
-    cILOMapping: { findMany: goMappingFindManyMock },
+    cILOMapping: { findMany: poMappingFindManyMock },
     studentEnrollment: { findMany: studentEnrollmentFindManyMock },
   },
 }));
@@ -194,7 +194,7 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
     expect(detail!.evaluation.periodLabel).toBe("2025-2026 — 2nd Semester — 1st Term");
   });
 
-  it("projects ILO alignments, never GO mappings, on a General Education evaluation", async () => {
+  it("projects ILO alignments, never PO mappings, on a General Education evaluation", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
     evaluationAssignmentFindManyMock.mockResolvedValue([]);
     responseFindManyMock.mockResolvedValue([
@@ -221,8 +221,8 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
       },
     ]);
     // A General Education evaluation must never read the Program-specific
-    // CILO→GO mapping table, and its CILO metrics carry no GO rows.
-    expect(goMappingFindManyMock).not.toHaveBeenCalled();
+    // CILO→PO mapping table, and its CILO metrics carry no PO rows.
+    expect(poMappingFindManyMock).not.toHaveBeenCalled();
     expect(detail!.ciloResults[0].mappings).toEqual([]);
   });
 

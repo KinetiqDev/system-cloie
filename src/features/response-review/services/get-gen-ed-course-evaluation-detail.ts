@@ -277,9 +277,9 @@ function singleScaleMean(scaleKeys: Set<string>, validRatings: number[]): number
 
 /**
  * Build the canonical CILO rating rows plus the ILO alignments behind each
- * CILO. The aggregators read `goMappings`, which a General Education CILO
+ * CILO. The aggregators read `poMappings`, which a General Education CILO
  * never has, so the ILO layer is returned here and attached to the evaluation
- * DTO by the caller rather than forced into the GO-shaped row.
+ * DTO by the caller rather than forced into the PO-shaped row.
  */
 function buildCourseRatingRows(
   submittedResponses: SubmittedResponseWithItems[],
@@ -316,7 +316,7 @@ function buildCourseRatingRows(
 
 /**
  * Project the canonical CILO rating rows onto the neutral outcome engine's
- * row shape. The CILO aggregator reads `goMappings`, which a General Education
+ * row shape. The CILO aggregator reads `poMappings`, which a General Education
  * CILO never has, so ILO alignments travel beside the rows and are attached
  * here. Direct question-to-outcome bindings are Program-only and stay empty.
  */
@@ -381,8 +381,8 @@ function toCourseRatingRow(
           description: binding.cilo_description_snapshot,
         }
       : null,
-    // A General Education CILO has no GO mappings; the ILO layer travels in
-    // `iloMappingsByCilo` and is never forced into this GO-shaped row.
-    goMappings: [],
+    // A General Education CILO has no PO mappings; the ILO layer travels in
+    // `iloMappingsByCilo` and is never forced into this PO-shaped row.
+    poMappings: [],
   };
 }

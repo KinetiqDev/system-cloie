@@ -1,10 +1,10 @@
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import type { ServiceResult } from "@/lib/utils/service-result";
-import { goDetailsSchema } from "../schemas/go";
-import type { GOImportRequest } from "../schemas/go-import";
-import type { GOImportPreview, GOImportPreviewRow, GOImportSummary } from "../types/go-import";
-export function normalizeGOCode(value: string): string {
+import { poDetailsSchema } from "../schemas/po";
+import type { POImportRequest } from "../schemas/po-import";
+import type { POImportPreview, POImportPreviewRow, POImportSummary } from "../types/po-import";
+export function normalizePOCode(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toUpperCase();
 }
 
@@ -12,7 +12,7 @@ function normalizeText(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/gu, " ");
 }
 
-function summarize(rows: GOImportPreviewRow[]): GOImportSummary {
+function summarize(rows: POImportPreviewRow[]): POImportSummary {
   const ready = rows.filter((row) => row.status === "READY").length;
   const existing = rows.filter((row) => row.status.startsWith("DUPLICATE_EXISTING")).length;
   return {
@@ -25,9 +25,9 @@ function summarize(rows: GOImportPreviewRow[]): GOImportSummary {
   };
 }
 
-export async function previewGOImport(
-  request: GOImportRequest
-): Promise<ServiceResult<GOImportPreview>> {
+export async function previewPOImport(
+  request: POImportRequest
+): Promise<ServiceResult<POImportPreview>> {
   const context = await resolveProgramHeadContext(request.programId);
   if (!context.success) return context;
   const programId = context.data.selectedProgram.id;
@@ -37,44 +37,44 @@ export async function previewGOImport(
   });
   if (!program?.is_active) return { success: false, error: "Active Academic Program is required." };
 
-  const existing = await prisma.gO.findMany({
+  const existing = await prisma.pO.findMany({
     where: { program_id: programId },
     select: { code: true, is_active: true },
   });
   const existingByCode = new Map(
-    existing.map((go) => [normalizeGOCode(go.code), go.is_active] as const)
+    existing.map((po) => [normalizePOCode(po.code), po.is_active] as const)
   );
   const counts = new Map<string, number>();
   const parsedRows = request.rows.map((row) => {
-    const parsed = goDetailsSchema.safeParse({
-      code: normalizeText(row.input.go_code),
+    const parsed = poDetailsSchema.safeParse({
+      code: normalizeText(row.input.po_code),
       description: normalizeText(row.input.description),
     });
-    const goCode = normalizeGOCode(row.input.go_code);
-    if (goCode) counts.set(goCode, (counts.get(goCode) ?? 0) + 1);
-    return { row, parsed, goCode };
+    const poCode = normalizePOCode(row.input.po_code);
+    if (poCode) counts.set(poCode, (counts.get(poCode) ?? 0) + 1);
+    return { row, parsed, poCode };
   });
 
-  const rows: GOImportPreviewRow[] = parsedRows.map(({ row, parsed, goCode }) => {
+  const rows: POImportPreviewRow[] = parsedRows.map(({ row, parsed, poCode }) => {
     const description = normalizeText(row.input.description);
     if (!parsed.success) {
       return {
         sourceIndex: row.sourceIndex,
         input: row.input,
-        goCode,
+        poCode,
         description,
         status: "INVALID",
-        error: parsed.error.issues[0]?.message ?? "Enter valid Graduate Outcome details.",
+        error: parsed.error.issues[0]?.message ?? "Enter valid Program Outcome details.",
       };
     }
     if ((counts.get(parsed.data.code) ?? 0) > 1) {
       return {
         sourceIndex: row.sourceIndex,
         input: row.input,
-        goCode: parsed.data.code,
+        poCode: parsed.data.code,
         description: parsed.data.description,
         status: "DUPLICATE_IN_FILE",
-        error: `GO code "${parsed.data.code}" appears more than once in this file. Keep one row.`,
+        error: `PO code "${parsed.data.code}" appears more than once in this file. Keep one row.`,
       };
     }
     if (existingByCode.has(parsed.data.code)) {
@@ -82,18 +82,18 @@ export async function previewGOImport(
       return {
         sourceIndex: row.sourceIndex,
         input: row.input,
-        goCode: parsed.data.code,
+        poCode: parsed.data.code,
         description: parsed.data.description,
         status: archived ? "DUPLICATE_EXISTING_ARCHIVED" : "DUPLICATE_EXISTING_ACTIVE",
         error: archived
-          ? `GO code "${parsed.data.code}" already belongs to an archived Graduate Outcome. It will not be restored.`
-          : `GO code "${parsed.data.code}" already exists in this Program. It will not be changed.`,
+          ? `PO code "${parsed.data.code}" already belongs to an archived Program Outcome. It will not be restored.`
+          : `PO code "${parsed.data.code}" already exists in this Program. It will not be changed.`,
       };
     }
     return {
       sourceIndex: row.sourceIndex,
       input: row.input,
-      goCode: parsed.data.code,
+      poCode: parsed.data.code,
       description: parsed.data.description,
       status: "READY",
       error: null,

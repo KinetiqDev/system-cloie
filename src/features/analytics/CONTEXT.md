@@ -60,22 +60,22 @@ _Avoid_: Central Deployment as General Education evidence, Program-specific evid
 
 **Coordinator analytics scope**:
 Cross-Program read path gated by the active college-wide General Education Coordinator role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes Program-specific and Central evidence. Program Head analytics retain only Program-specific Course-bound and Program-scoped Central evidence; a respondent's Program membership never widens that scope.
-_Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-GO attainment rollup
+_Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PO attainment rollup
 
 **Coordinator analytics workspace**:
 URL-filtered `outcomes`, `courses`, `programs`, `trends`, and `qualitative` views over Coordinator evidence, encoded by `general-education-analytics-state.ts` with `outcomes` as the default. Filters are period (`schoolYearId`, `semester`, `termInstanceId`), `courseId`, class-context `programId` (`CourseAssignment.program_id`), `yearLevel`, and `iloId` (selects and scrolls to one ILO row). Programs replaces the Program Head Stakeholders view because Central evidence is excluded. Each view resolves its own re-authorized read beside the shared frame read; the frame and the filter card stay mounted while only the evidence region shows tab-shaped loading geometry. Means retain server precision and are scale-validated against the frozen instrument snapshot; a scope whose valid ratings span more than one scale reports no single mean and keeps per-scale rows. Rating counts remain distinct from submitted response counts. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
 _Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests, blended cross-scale course mean, Stakeholders view for General Education
 
 **General Education ILO evidence** (ADR 0035):
-Course-bound General Education quantitative evidence connected through a published evaluation's frozen CILO question binding and that CILO's current CILO-to-ILO mappings. Each submitted response item contributes once per `(response, evaluation, question, ILO)`; invalid or out-of-scale ratings are counted as excluded; the row mean pools valid ratings with `spansMultipleScales` disclosure and per-scale distributions, exactly like the Program Head Outcomes GO row. No direct question-to-ILO binding exists, so every contributor is a CILO. Manifestation is descriptive. Valid ratings that reach no ILO are reported as an unlinked count split into general items and CILOs without an ILO mapping. The current-mapping disclosure and the many-to-many disclosure apply, and archived ILOs keep their historical rows. ILO evidence is never labelled attainment.
-_Avoid_: ILO attainment, met/achieved ILO, ILO-to-GO rollup, silent drop of unlinked ratings, manifestation-weighted ILO mean
+Course-bound General Education quantitative evidence connected through a published evaluation's frozen CILO question binding and that CILO's current CILO-to-ILO mappings. Each submitted response item contributes once per `(response, evaluation, question, ILO)`; invalid or out-of-scale ratings are counted as excluded; the row mean pools valid ratings with `spansMultipleScales` disclosure and per-scale distributions, exactly like the Program Head Outcomes PO row. No direct question-to-ILO binding exists, so every contributor is a CILO. Manifestation is descriptive. Valid ratings that reach no ILO are reported as an unlinked count split into general items and CILOs without an ILO mapping. The current-mapping disclosure and the many-to-many disclosure apply, and archived ILOs keep their historical rows. ILO evidence is never labelled attainment.
+_Avoid_: ILO attainment, met/achieved ILO, ILO-to-PO rollup, silent drop of unlinked ratings, manifestation-weighted ILO mean
 
 **Coordinator qualitative floor**:
 Coordinator written-feedback analytics use the shared deterministic corpus (term prevalence, per-prompt structure, tone bands) and release only identifier-redacted terms mentioned more than once. Raw comments stay in the separately authorized identified review.
 _Avoid_: Singleton term in Coordinator browser payload
 
 **Coordinator inline AI insight**:
-Each Coordinator view mounts one automatic inline interpretation that rebuilds and re-authorizes the current view evidence server-side through `generateGeneralEducationAnalyticsInsightAction`. The packet carries the view's bounded aggregates plus every applicable disclosure as limitations, and the instruction forbids attainment language, Faculty ranking, and ILO-to-GO inference.
+Each Coordinator view mounts one automatic inline interpretation that rebuilds and re-authorizes the current view evidence server-side through `generateGeneralEducationAnalyticsInsightAction`. The packet carries the view's bounded aggregates plus every applicable disclosure as limitations, and the instruction forbids attainment language, Faculty ranking, and ILO-to-PO inference.
 _Avoid_: Client-supplied aggregates, AI attainment verdict, Faculty leaderboard
 
 | Coordinator AI cache dimension | Contract |
@@ -92,7 +92,7 @@ _Avoid_: Client-supplied aggregates, AI attainment verdict, Faculty leaderboard
 A separate, authorized response-review flow over General Education Course-bound evidence across Programs. Course breakdowns may link to this flow, but aggregate analytics payloads remain free of respondent identities, raw answers, and comments. The Course scope, not a selected Program or the publisher's role, determines ownership.
 _Avoid_: Identity fields in aggregate analytics, Coordinator Central review, publisher-owned evidence
 
-**Deferred**: ILO attainment (targets, thresholds, met/not met), the ILO-to-GO crosswalk, and Central Deployment General Education analytics. ADR 0035 brings ILO evidence into scope without these. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide (ADR 0018).
+**Deferred**: ILO attainment (targets, thresholds, met/not met), the ILO-to-PO crosswalk, and Central Deployment General Education analytics. ADR 0035 brings ILO evidence into scope without these. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide (ADR 0018).
 _Avoid_: ILO attainment claim, Central General Education analytics
 
 ## Evidence language
@@ -139,25 +139,25 @@ _Avoid_: Raw comment text on the dashboard
 
 ## Outcome evidence
 
-**Program GO evidence**:
-Course-bound quantitative evidence connected either through a frozen direct question-to-GO publication binding or through a published evaluation's CILO question binding and that CILO's current GO mapping in the selected Program. Each submitted response item contributes once per `(response, evaluation, question, GO)`, even when both paths name the same GO. Institutional Outcome evidence is not Program GO evidence.
-_Avoid_: Universal outcome attainment, duplicate direct-plus-CILO contribution, ILO-to-GO evidence
+**Program PO evidence**:
+Course-bound quantitative evidence connected either through a frozen direct question-to-PO publication binding or through a published evaluation's CILO question binding and that CILO's current PO mapping in the selected Program. Each submitted response item contributes once per `(response, evaluation, question, PO)`, even when both paths name the same PO. Institutional Outcome evidence is not Program PO evidence.
+_Avoid_: Universal outcome attainment, duplicate direct-plus-CILO contribution, ILO-to-PO evidence
 
 **Question identity encoding**:
-`analytics/aggregators/question-identity` owns every canonical identity key: the `(section, item)` question tuple, the evaluation-scoped binding tuple, and the `(response, evaluation, question, GO)` contribution tuple. Section and item keys are arbitrary nonempty strings, so each is a structurally encoded tuple rather than a separator join — a separator join would merge `(a, b:c)` with `(a:b, c)`, giving one question the other's prompt, binding, and pooled mean. Analytics, Responses, Instruments, Evaluations, and Response Review all key through these helpers, so a question keeps one identity across authoring, publication, answering, and review.
-_Avoid_: Separator-joined question keys, per-feature encoder copies, reusing the question tuple where a contribution needs its response and GO components
+`analytics/aggregators/question-identity` owns every canonical identity key: the `(section, item)` question tuple, the evaluation-scoped binding tuple, and the `(response, evaluation, question, PO)` contribution tuple. Section and item keys are arbitrary nonempty strings, so each is a structurally encoded tuple rather than a separator join — a separator join would merge `(a, b:c)` with `(a:b, c)`, giving one question the other's prompt, binding, and pooled mean. Analytics, Responses, Instruments, Evaluations, and Response Review all key through these helpers, so a question keeps one identity across authoring, publication, answering, and review.
+_Avoid_: Separator-joined question keys, per-feature encoder copies, reusing the question tuple where a contribution needs its response and PO components
 
 **Current-mapping interpretation**:
-The grouping of historical Course-bound ratings by the selected Program's current CILO-to-GO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
-_Avoid_: Publication-time GO result, immutable historical mapping result
+The grouping of historical Course-bound ratings by the selected Program's current CILO-to-PO mappings when publication-time mapping rows were not snapshotted. This interpretation carries an explicit historical limitation and does not rewrite the underlying response.
+_Avoid_: Publication-time PO result, immutable historical mapping result
 
 **Current-mapping disclosure**:
-The user-facing notice that historical ratings group by the Program's current CILO-to-GO mappings because publication-time mapping snapshots are not yet available, so later mapping edits reinterpret history. The same notice is forwarded into AI limitations.
+The user-facing notice that historical ratings group by the Program's current CILO-to-PO mappings because publication-time mapping snapshots are not yet available, so later mapping edits reinterpret history. The same notice is forwarded into AI limitations.
 _Avoid_: Publication-time mapping guarantee
 
 **Many-to-many disclosure**:
-Shown when a CILO maps to more than one selected-Program GO. Each rating contributes once per mapped GO, so outcome rows are not additive across GOs.
-_Avoid_: Summing ratings across GO rows
+Shown when a CILO maps to more than one selected-Program PO. Each rating contributes once per mapped PO, so outcome rows are not additive across POs.
+_Avoid_: Summing ratings across PO rows
 
 **Spans multiple scales**:
 A flag set when a pooled mean would combine ratings from more than one instrument-version scale identity. Scales stay reported separately rather than merged.
@@ -167,8 +167,8 @@ _Avoid_: Single blended mean across scale identities
 Ratings dropped from a valid aggregate because scale resolution failed or the rating value fell outside the scale.
 _Avoid_: Treating excluded ratings as valid aggregate input
 
-**Program Head Outcomes GO row**:
-The Outcomes view's course-bound GO row is a Program Head evidence surface, not a bare metric. It carries per-contributor provenance (each CILO and each direct question with its own rating count and mean), the frozen publication manifestation label, contributing Courses and CILOs, the contributing evaluations with their review links, the many-to-many and current-mapping disclosures, and scale-separated distributions. Its `meanRating` pools every valid in-scale rating across the row and sets `spansMultipleScales`, and the view prints the cross-scale comparability notice beside that number. The shared `buildCourseDerivedGoMetrics` metric is the wrong shape for this surface: it has no provenance fields and reports `mean: null` for mixed scales, so adopting it would delete evidence and change a rendered mean. Counting rules are shared in practice and pinned by test, so the two agree on contributions, overlap collapse, invalid ratings, and unmapped rows.
+**Program Head Outcomes PO row**:
+The Outcomes view's course-bound PO row is a Program Head evidence surface, not a bare metric. It carries per-contributor provenance (each CILO and each direct question with its own rating count and mean), the frozen publication manifestation label, contributing Courses and CILOs, the contributing evaluations with their review links, the many-to-many and current-mapping disclosures, and scale-separated distributions. Its `meanRating` pools every valid in-scale rating across the row and sets `spansMultipleScales`, and the view prints the cross-scale comparability notice beside that number. The shared `buildCourseDerivedPoMetrics` metric is the wrong shape for this surface: it has no provenance fields and reports `mean: null` for mixed scales, so adopting it would delete evidence and change a rendered mean. Counting rules are shared in practice and pinned by test, so the two agree on contributions, overlap collapse, invalid ratings, and unmapped rows.
 _Avoid_: Bare metric as the Outcomes row, mixed-scale mean as null on the Outcomes row, provenance-free Outcome row
 
 ## AI-assisted interpretation

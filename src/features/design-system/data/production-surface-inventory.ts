@@ -2653,11 +2653,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
   },
   {
-    path: "src/features/analytics/components/program-head-go-summary.tsx",
+    path: "src/features/analytics/components/program-head-po-summary.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 GO summary with evidence-source selector and details disclosure; no attainment status",
+      "Slice #519 PO summary with evidence-source selector and details disclosure; no attainment status",
   },
   {
     path: "src/features/analytics/components/program-head-needs-attention.tsx",
@@ -2744,14 +2744,14 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client horizontal bar chart rendering GO and ILO means on the widest frozen scale with exact-value disclosure alternative",
+      "Client horizontal bar chart rendering PO and ILO means on the widest frozen scale with exact-value disclosure alternative",
   },
   {
     path: "src/features/analytics/components/outcome-contributor-matrix.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Server component exposing per-outcome (GO or ILO) CILO contributor matrix with course, manifestation, mean, and valid count",
+      "Server component exposing per-outcome (PO or ILO) CILO contributor matrix with course, manifestation, mean, and valid count",
   },
   {
     path: "src/features/analytics/components/outcome-evidence-detail.tsx",
@@ -2980,7 +2980,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/evaluations/components/central-go-binding-checklist.tsx",
+    path: "src/features/evaluations/components/central-po-binding-checklist.tsx",
     disposition: "task",
     taskId: 21,
     category: "feature_component",
@@ -3215,7 +3215,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/go-form-dialog.tsx",
+    path: "src/features/outcomes/components/po-form-dialog.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",
@@ -3227,7 +3227,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/outcomes/components/go-import-dialog.tsx",
+    path: "src/features/outcomes/components/po-import-dialog.tsx",
     disposition: "task",
     taskId: 17,
     category: "feature_component",

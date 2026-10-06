@@ -48,12 +48,12 @@ const expectedModels = [
   "CILOInstitutionalOutcomeMapping",
   "CILOMapping",
   "CentralDeployment",
-  "CentralDeploymentGoSnapshot",
+  "CentralDeploymentPoSnapshot",
   "Course",
   "CourseAssignment",
   "CourseAssignmentMembership",
   "CourseBoundCiloQuestionBinding",
-  "CourseBoundGoQuestionBinding",
+  "CourseBoundPoQuestionBinding",
   "CourseBoundEvaluation",
   "CourseBoundEvaluationExclusion",
   "CourseBoundEvaluationTarget",
@@ -61,13 +61,13 @@ const expectedModels = [
   "ExternalStakeholderInvite",
   "FacultyAccessRequest",
   "FacultyProgramAffiliation",
-  "GO",
+  "PO",
   "IndustryPartnerProfile",
   "IndustryPartnerProgramAffiliation",
   "InstitutionalOutcome",
   "InstrumentTemplate",
   "InstrumentTemplateCiloQuestionBinding",
-  "InstrumentTemplateGoQuestionBinding",
+  "InstrumentTemplatePoQuestionBinding",
   "InstrumentVersion",
   "Major",
   "Program",
@@ -136,7 +136,7 @@ describe("Prisma schema structure", () => {
     expect(model).toContain("updated_by");
     expect(model).toContain('@relation("CILOMappingCreator", fields: [created_by]');
     expect(model).toContain('@relation("CILOMappingUpdater", fields: [updated_by]');
-    expect(model).toContain("@@unique([cilo_id, go_id])");
+    expect(model).toContain("@@unique([cilo_id, po_id])");
     expect(model).toContain('@@map("cilo_mappings")');
   });
 
@@ -162,5 +162,42 @@ describe("Prisma schema structure", () => {
     expect(model).toContain("@@index([cilo_id])");
     expect(model).toContain("@@index([institutional_outcome_id])");
     expect(model).toContain('@@map("cilo_institutional_outcome_mappings")');
+  });
+
+  // A stale @map on a Program Outcome field makes every read through that model
+  // throw P2022 "The column `...` does not exist in the current database" at
+  // runtime, long after the schema itself still parses. These pins name the
+  // physical columns the deployed database actually exposes.
+  it("maps every Program Outcome field to the deployed physical column", () => {
+    const outcomesSource = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
+    const instrumentsSource = readFileSync(join(prismaModelsDir, "instruments.prisma"), "utf8");
+    const deploymentsSource = readFileSync(
+      join(prismaModelsDir, "evaluations-deployments.prisma"),
+      "utf8"
+    );
+
+    const ciloMapping = outcomesSource.match(/model CILOMapping \{[\s\S]*?\n\}/)![0];
+    expect(ciloMapping).toContain('po_id         String                    @map("po_id")');
+    expect(ciloMapping).toContain('@@map("cilo_mappings")');
+    expect(outcomesSource.match(/model PO \{[\s\S]*?\n\}/)![0]).toContain('@@map("gos")');
+
+    const templateBinding = instrumentsSource.match(
+      /model InstrumentTemplatePoQuestionBinding \{[\s\S]*?\n\}/
+    )![0];
+    expect(templateBinding).toContain('po_id                   String?  @map("plo_id")');
+    expect(templateBinding).toContain('po_code_snapshot        String   @map("plo_code_snapshot")');
+
+    const courseBinding = deploymentsSource.match(
+      /model CourseBoundPoQuestionBinding \{[\s\S]*?\n\}/
+    )![0];
+    expect(courseBinding).toContain('po_id                    String?  @map("plo_id")');
+    expect(courseBinding).toContain(
+      'po_description_snapshot  String   @map("plo_description_snapshot")'
+    );
+
+    const centralSnapshot = deploymentsSource.match(
+      /model CentralDeploymentPoSnapshot \{[\s\S]*?\n\}/
+    )![0];
+    expect(centralSnapshot).toContain('po_id                   String?  @map("plo_id")');
   });
 });

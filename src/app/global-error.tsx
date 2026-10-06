@@ -85,7 +85,7 @@ export default function GlobalError({
                 textDecoration: "none",
               }}
             >
-              Go Home
+              Po Home
             </a>
           </div>
         </div>

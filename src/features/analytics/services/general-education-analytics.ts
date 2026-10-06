@@ -809,7 +809,7 @@ export async function getGeneralEducationAnalyticsFrame(
  * CILOs rather than dropped, and the catalog keeps every active ILO visible
  * even before any evidence reaches it. Means, exclusions, and mixed-scale
  * disclosure come from the shared outcome engine, so an ILO row behaves exactly
- * like a Program Head GO row.
+ * like a Program Head PO row.
  */
 export async function getGeneralEducationOutcomes(
   filters: GeneralEducationFilters

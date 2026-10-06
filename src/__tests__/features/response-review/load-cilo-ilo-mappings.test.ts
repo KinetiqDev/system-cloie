@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { iloMappingFindManyMock, goMappingFindManyMock } = vi.hoisted(() => ({
+const { iloMappingFindManyMock, poMappingFindManyMock } = vi.hoisted(() => ({
   iloMappingFindManyMock: vi.fn(),
-  goMappingFindManyMock: vi.fn(),
+  poMappingFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     cILOInstitutionalOutcomeMapping: { findMany: iloMappingFindManyMock },
-    cILOMapping: { findMany: goMappingFindManyMock },
+    cILOMapping: { findMany: poMappingFindManyMock },
   },
 }));
 
@@ -20,7 +20,7 @@ import {
 // ---------------------------------------------------------------------------
 // ADR 0035: the two typed alignment layers are separate tables with separate
 // readers. These checks pin that separation at the read boundary — a General
-// Education CILO resolves Institutional Learning Outcomes and never Graduate
+// Education CILO resolves Institutional Learning Outcomes and never Program
 // Outcomes — and pin that manifestation never decides whether an alignment
 // exists.
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ describe("loadCiloIloMappings", () => {
     const byCilo = await loadCiloIloMappings(["cilo-1"]);
 
     expect(iloMappingFindManyMock).toHaveBeenCalledTimes(1);
-    expect(goMappingFindManyMock).not.toHaveBeenCalled();
+    expect(poMappingFindManyMock).not.toHaveBeenCalled();
     expect(byCilo.get("cilo-1")).toEqual([
       {
         iloId: "ilo-1",
@@ -79,12 +79,12 @@ describe("loadCiloIloMappings", () => {
     expect(iloMappingFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("leaves the Program Head GO reader on its own table", async () => {
-    goMappingFindManyMock.mockResolvedValue([
+  it("leaves the Program Head PO reader on its own table", async () => {
+    poMappingFindManyMock.mockResolvedValue([
       {
         cilo_id: "cilo-1",
         manifestation: "PRACTICE",
-        go: { id: "go-1", code: "BSIT-GO1", description: "Analyse." },
+        po: { id: "po-1", code: "BSIT-GO1", description: "Analyse." },
       },
     ]);
 
@@ -92,7 +92,7 @@ describe("loadCiloIloMappings", () => {
 
     expect(iloMappingFindManyMock).not.toHaveBeenCalled();
     expect(byCilo.get("cilo-1")?.[0]).toMatchObject({
-      goCode: "BSIT-GO1",
+      poCode: "BSIT-GO1",
       manifestation: "PRACTICE",
     });
   });

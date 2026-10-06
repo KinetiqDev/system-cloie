@@ -21,10 +21,10 @@ export type FacultyTemplateBindingItem = {
   sectionKey: string;
 };
 
-type FacultyTemplateGoBindingItem = {
-  goId: string;
-  goCodeSnapshot: string;
-  goDescriptionSnapshot: string;
+type FacultyTemplatePoBindingItem = {
+  poId: string;
+  poCodeSnapshot: string;
+  poDescriptionSnapshot: string;
   itemKey: string;
   questionPromptSnapshot: string;
   sectionKey: string;
@@ -33,8 +33,8 @@ type FacultyTemplateGoBindingItem = {
 export type FacultyTemplatePublicationContext = {
   bindings: FacultyTemplateBindingItem[];
   cilos: Array<{ description: string; id: string }>;
-  /** Direct question–GO bindings, frozen into snapshots at publication. */
-  goBindings: FacultyTemplateGoBindingItem[];
+  /** Direct question–PO bindings, frozen into snapshots at publication. */
+  poBindings: FacultyTemplatePoBindingItem[];
   course: {
     code: string;
     courseType: string;
@@ -114,7 +114,7 @@ async function canAccessSourceTemplate(templateId: string, userId: string) {
     },
     include: {
       template_cilo_question_bindings: true,
-      template_go_question_bindings: true,
+      template_po_question_bindings: true,
       versions: {
         orderBy: { version_number: "desc" },
         take: 1,
@@ -238,15 +238,15 @@ async function validateDraftBindings(input: {
 }
 
 /**
- * Validates draft question–GO bindings for a Course-bound template. The GO
+ * Validates draft question–PO bindings for a Course-bound template. The PO
  * pool is the bound Course's owning Program, never the client payload, and
  * General Education Courses are rejected outright: they have no owning Program
  * and their CILOs align to Institutional Outcomes (ADR 0005).
  *
- * Coverage is not required. A Likert question without a GO binding saves and
+ * Coverage is not required. A Likert question without a PO binding saves and
  * publishes as a general evaluation item, mirroring the Program-wide rule.
- * A question with a CILO binding cannot carry GO bindings: CILO-bound ratings
- * already reach GOs through the CILO-to-GO mappings.
+ * A question with a CILO binding cannot carry PO bindings: CILO-bound ratings
+ * already reach POs through the CILO-to-PO mappings.
  */
 type CourseBoundGoCatalog = {
   course: { course_scope: CourseScope; program_id: string };
@@ -268,14 +268,14 @@ async function resolveCourseBoundGoCatalog(
   if (course.course_scope === CourseScope.GENERAL_EDUCATION) {
     return {
       success: false,
-      error: "Graduate Outcomes can only be assigned to questions in program-specific courses.",
+      error: "Program Outcomes can only be assigned to questions in program-specific courses.",
     };
   }
 
   if (!course.program_id) {
     return {
       success: false,
-      error: "This course has no owning program, so Graduate Outcomes cannot be assigned.",
+      error: "This course has no owning program, so Program Outcomes cannot be assigned.",
     };
   }
 
@@ -286,23 +286,23 @@ async function resolveCourseBoundGoCatalog(
 }
 
 type CourseBoundGoLookup = {
-  goMap: Map<string, { id: string; code: string; description: string }>;
+  poMap: Map<string, { id: string; code: string; description: string }>;
   questionMap: Map<string, { prompt: string }>;
   ciloQuestionKeys: Set<string>;
   usedPairs: Set<string>;
 };
 
-function normalizeCourseBoundGoBinding(
-  binding: SaveFacultyTemplateDraftInput["go_question_bindings"][number],
+function normalizeCourseBoundPoBinding(
+  binding: SaveFacultyTemplateDraftInput["po_question_bindings"][number],
   lookup: CourseBoundGoLookup
-): { success: true; data: FacultyTemplateGoBindingItem } | { success: false; error: string } {
+): { success: true; data: FacultyTemplatePoBindingItem } | { success: false; error: string } {
   const questionKey = encodeQuestionKey(binding.sectionKey, binding.itemKey);
-  const go = lookup.goMap.get(binding.goId);
+  const po = lookup.poMap.get(binding.poId);
 
-  if (!go) {
+  if (!po) {
     return {
       success: false,
-      error: "One or more selected Graduate Outcomes are not available to this course.",
+      error: "One or more selected Program Outcomes are not available to this course.",
     };
   }
 
@@ -311,23 +311,23 @@ function normalizeCourseBoundGoBinding(
   if (!question) {
     return {
       success: false,
-      error: "Graduate Outcomes can only be assigned to Likert questions.",
+      error: "Program Outcomes can only be assigned to Likert questions.",
     };
   }
 
   if (lookup.ciloQuestionKeys.has(questionKey)) {
     return {
       success: false,
-      error: "A Likert question can carry a CILO or Graduate Outcomes, not both.",
+      error: "A Likert question can carry a CILO or Program Outcomes, not both.",
     };
   }
 
-  // GO-binding identity, distinct from the question tuple.
-  const pairKey = JSON.stringify([binding.goId, binding.sectionKey, binding.itemKey]);
+  // PO-binding identity, distinct from the question tuple.
+  const pairKey = JSON.stringify([binding.poId, binding.sectionKey, binding.itemKey]);
   if (lookup.usedPairs.has(pairKey)) {
     return {
       success: false,
-      error: "A Graduate Outcome can only be assigned once to the same question.",
+      error: "A Program Outcome can only be assigned once to the same question.",
     };
   }
   lookup.usedPairs.add(pairKey);
@@ -335,9 +335,9 @@ function normalizeCourseBoundGoBinding(
   return {
     success: true,
     data: {
-      goCodeSnapshot: go.code,
-      goDescriptionSnapshot: go.description,
-      goId: go.id,
+      poCodeSnapshot: po.code,
+      poDescriptionSnapshot: po.description,
+      poId: po.id,
       itemKey: binding.itemKey,
       questionPromptSnapshot: question.prompt,
       sectionKey: binding.sectionKey,
@@ -345,14 +345,14 @@ function normalizeCourseBoundGoBinding(
   };
 }
 
-export async function validateCourseBoundGoBindings(input: {
-  bindings: SaveFacultyTemplateDraftInput["go_question_bindings"];
+export async function validateCourseBoundPoBindings(input: {
+  bindings: SaveFacultyTemplateDraftInput["po_question_bindings"];
   boundCourseId?: string | null;
   structure: TemplateStructure;
   db?: PublicationContextDb;
   ciloBindings?: Array<{ sectionKey: string; itemKey: string }>;
 }): Promise<
-  { success: true; bindings: FacultyTemplateGoBindingItem[] } | { success: false; error: string }
+  { success: true; bindings: FacultyTemplatePoBindingItem[] } | { success: false; error: string }
 > {
   if (input.bindings.length === 0) {
     return { success: true, bindings: [] };
@@ -361,7 +361,7 @@ export async function validateCourseBoundGoBindings(input: {
   if (!input.boundCourseId) {
     return {
       success: false,
-      error: "Select a course before assigning Graduate Outcomes to questions.",
+      error: "Select a course before assigning Program Outcomes to questions.",
     };
   }
 
@@ -381,17 +381,17 @@ export async function validateCourseBoundGoBindings(input: {
       question,
     ])
   );
-  const gos = await db.gO.findMany({
+  const pos = await db.pO.findMany({
     where: {
-      id: { in: input.bindings.map((binding) => binding.goId) },
+      id: { in: input.bindings.map((binding) => binding.poId) },
       program_id: course.program_id,
       is_active: true,
     },
     select: { code: true, description: true, id: true },
   });
-  const goMap = new Map(gos.map((go) => [go.id, go]));
+  const poMap = new Map(pos.map((po) => [po.id, po]));
   const lookup: CourseBoundGoLookup = {
-    goMap,
+    poMap,
     questionMap,
     ciloQuestionKeys: new Set(
       (input.ciloBindings ?? []).map((binding) =>
@@ -400,10 +400,10 @@ export async function validateCourseBoundGoBindings(input: {
     ),
     usedPairs: new Set<string>(),
   };
-  const normalized: FacultyTemplateGoBindingItem[] = [];
+  const normalized: FacultyTemplatePoBindingItem[] = [];
 
   for (const binding of input.bindings) {
-    const normalizedBinding = normalizeCourseBoundGoBinding(binding, lookup);
+    const normalizedBinding = normalizeCourseBoundPoBinding(binding, lookup);
 
     if (!normalizedBinding.success) {
       return normalizedBinding;
@@ -558,12 +558,12 @@ async function replaceDraftBindings(
   tx: Prisma.TransactionClient,
   templateId: string,
   bindings: FacultyTemplateBindingItem[],
-  goBindings: FacultyTemplateGoBindingItem[] = []
+  poBindings: FacultyTemplatePoBindingItem[] = []
 ): Promise<void> {
   await tx.instrumentTemplateCiloQuestionBinding.deleteMany({
     where: { template_id: templateId },
   });
-  await tx.instrumentTemplateGoQuestionBinding.deleteMany({
+  await tx.instrumentTemplatePoQuestionBinding.deleteMany({
     where: { template_id: templateId },
   });
 
@@ -580,12 +580,12 @@ async function replaceDraftBindings(
     });
   }
 
-  if (goBindings.length > 0) {
-    await tx.instrumentTemplateGoQuestionBinding.createMany({
-      data: goBindings.map((binding) => ({
-        go_code_snapshot: binding.goCodeSnapshot,
-        go_description_snapshot: binding.goDescriptionSnapshot,
-        go_id: binding.goId,
+  if (poBindings.length > 0) {
+    await tx.instrumentTemplatePoQuestionBinding.createMany({
+      data: poBindings.map((binding) => ({
+        po_code_snapshot: binding.poCodeSnapshot,
+        po_description_snapshot: binding.poDescriptionSnapshot,
+        po_id: binding.poId,
         item_key: binding.itemKey,
         question_prompt_snapshot: binding.questionPromptSnapshot,
         section_key: binding.sectionKey,
@@ -640,15 +640,15 @@ export async function saveFacultyTemplateDraft(
     return bindingValidation;
   }
 
-  const goBindingValidation = await validateCourseBoundGoBindings({
-    bindings: input.go_question_bindings,
+  const poBindingValidation = await validateCourseBoundPoBindings({
+    bindings: input.po_question_bindings,
     boundCourseId: input.bound_course_id,
     structure,
     ciloBindings: bindingValidation.bindings,
   });
 
-  if (!goBindingValidation.success) {
-    return goBindingValidation;
+  if (!poBindingValidation.success) {
+    return poBindingValidation;
   }
 
   try {
@@ -659,7 +659,7 @@ export async function saveFacultyTemplateDraft(
           tx,
           target.ownedTemplateId,
           bindingValidation.bindings,
-          goBindingValidation.bindings
+          poBindingValidation.bindings
         );
         return target.ownedTemplateId;
       }
@@ -669,7 +669,7 @@ export async function saveFacultyTemplateDraft(
         tx,
         createdId,
         bindingValidation.bindings,
-        goBindingValidation.bindings
+        poBindingValidation.bindings
       );
       return createdId;
     });
@@ -743,12 +743,12 @@ export async function duplicateFacultyTemplate(
       });
     }
 
-    if (source.template_go_question_bindings.length > 0) {
-      await tx.instrumentTemplateGoQuestionBinding.createMany({
-        data: source.template_go_question_bindings.map((binding) => ({
-          go_code_snapshot: binding.go_code_snapshot,
-          go_description_snapshot: binding.go_description_snapshot,
-          go_id: binding.go_id,
+    if (source.template_po_question_bindings.length > 0) {
+      await tx.instrumentTemplatePoQuestionBinding.createMany({
+        data: source.template_po_question_bindings.map((binding) => ({
+          po_code_snapshot: binding.po_code_snapshot,
+          po_description_snapshot: binding.po_description_snapshot,
+          po_id: binding.po_id,
           item_key: binding.item_key,
           question_prompt_snapshot: binding.question_prompt_snapshot,
           section_key: binding.section_key,
@@ -892,7 +892,7 @@ export async function getFacultyTemplatePublicationContext(
     include: {
       bound_course: true,
       template_cilo_question_bindings: true,
-      template_go_question_bindings: true,
+      template_po_question_bindings: true,
     },
   });
 
@@ -950,23 +950,23 @@ export async function getFacultyTemplatePublicationContext(
     };
   }
 
-  // Direct question-GO bindings stay optional: an unbound Likert question
-  // publishes as a general item. A null go_id means its GO was deleted
+  // Direct question-PO bindings stay optional: an unbound Likert question
+  // publishes as a general item. A null po_id means its PO was deleted
   // after the draft was saved (FK SET NULL). Block like an archived or
-  // foreign GO so the loss is explicit, matching the central publish
+  // foreign PO so the loss is explicit, matching the central publish
   // plan, instead of silently dropping the intended coverage. The next
   // draft save prunes the row.
-  if (template.template_go_question_bindings.some((binding) => !binding.go_id)) {
+  if (template.template_po_question_bindings.some((binding) => !binding.po_id)) {
     return {
       success: false,
-      error: "One or more selected Graduate Outcomes are not available to this course.",
+      error: "One or more selected Program Outcomes are not available to this course.",
     };
   }
-  const goBindingValidation = await validateCourseBoundGoBindings({
-    bindings: template.template_go_question_bindings
-      .filter((binding) => binding.go_id)
+  const poBindingValidation = await validateCourseBoundPoBindings({
+    bindings: template.template_po_question_bindings
+      .filter((binding) => binding.po_id)
       .map((binding) => ({
-        goId: binding.go_id!,
+        poId: binding.po_id!,
         itemKey: binding.item_key,
         sectionKey: binding.section_key,
       })),
@@ -976,8 +976,8 @@ export async function getFacultyTemplatePublicationContext(
     ciloBindings: bindingValidation.bindings,
   });
 
-  if (!goBindingValidation.success) {
-    return goBindingValidation;
+  if (!poBindingValidation.success) {
+    return poBindingValidation;
   }
 
   return {
@@ -985,7 +985,7 @@ export async function getFacultyTemplatePublicationContext(
     data: {
       bindings: bindingValidation.bindings,
       cilos,
-      goBindings: goBindingValidation.bindings,
+      poBindings: poBindingValidation.bindings,
       course: {
         code: template.bound_course.code,
         courseType: courseContext.courseType,

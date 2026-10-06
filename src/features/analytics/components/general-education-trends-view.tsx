@@ -198,7 +198,7 @@ function TrendsExactValueTable({
                   <TableCell className="align-top font-medium whitespace-nowrap">
                     {period.periodLabel}
                     {!period.comparableWithPrevious ? (
-                      <span className="text-muted-foreground block text-xs font-normal">
+                      <span className="text-caption text-muted-foreground block">
                         First period of its comparable run
                       </span>
                     ) : null}
@@ -208,7 +208,7 @@ function TrendsExactValueTable({
                   </TableCell>
                   <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     {formatResponseRate(period.responseRate)}
-                    <span className="text-muted-foreground block text-xs">
+                    <span className="text-caption text-muted-foreground block">
                       {period.submittedResponseCount}/{period.evaluationOpportunityCount}
                     </span>
                   </TableCell>

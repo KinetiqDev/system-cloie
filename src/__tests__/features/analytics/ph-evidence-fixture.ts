@@ -1,7 +1,7 @@
 import { TargetStakeholder } from "@prisma/client";
 import type { ScaleDescriptor } from "@/features/analytics/aggregators/scale-identity";
 import type { OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
-import type { CentralGoRatingRow } from "@/features/analytics/aggregators/go";
+import type { CentralPoRatingRow } from "@/features/analytics/aggregators/po";
 import type { ParticipationRow } from "@/features/analytics/aggregators/participation";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 
@@ -12,11 +12,11 @@ import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale
 // without), multiple Program Heads, multiple Faculty teaching the same
 // Course, multiple Sections, students across Majors, course evaluations in
 // two academic periods with an incompatible scale, a program-wide student
-// evaluation with direct GO snapshot bindings (one question covering two
-// GOs), an alumni and an industry evaluation, submitted / in-progress /
+// evaluation with direct PO snapshot bindings (one question covering two
+// POs), an alumni and an industry evaluation, submitted / in-progress /
 // unstarted assignments, and one zero-response evaluation. Manifestations
 // LEARNING, PRACTICE, and OPPORTUNITY all appear; one CILO maps to several
-// GOs and several CILOs map to one GO.
+// POs and several CILOs map to one PO.
 //
 // Every expected number used in tests is hand-computed from these literals,
 // never derived from the aggregators under test.
@@ -160,10 +160,10 @@ export const SNAPSHOTS = {
       { key: "q-general", prompt: "The course was well organized." },
     ]),
   ],
-  /** Central student instrument: agreement scale, direct GO binding items. */
-  centralStudent: likertSection("plo-items", "Program Outcomes", AGREEMENT5, [
-    { key: "q-plo-single", prompt: "The program built strong foundations." },
-    { key: "q-plo-multi", prompt: "The program prepared me for further study." },
+  /** Central student instrument: agreement scale, direct PO binding items. */
+  centralStudent: likertSection("po-items", "Program Outcomes", AGREEMENT5, [
+    { key: "q-po-single", prompt: "The program built strong foundations." },
+    { key: "q-po-multi", prompt: "The program prepared me for further study." },
   ]),
   /** Alumni instrument on the 1–4 scale. */
   alumni: likertSection("alumni-items", "Alumni Feedback", SCALE4, [
@@ -184,59 +184,59 @@ export const CILOS = {
 } as const;
 
 /**
- * Many-to-one and one-to-many at once: CILO-a maps to GO1 (LEARNING) and
- * GO2 (OPPORTUNITY); CILO-b maps to GO1 (PRACTICE). Manifestations carry
+ * Many-to-one and one-to-many at once: CILO-a maps to PO1 (LEARNING) and
+ * PO2 (OPPORTUNITY); CILO-b maps to PO1 (PRACTICE). Manifestations carry
  * no weight and never filter contributions (§7).
  */
 export const CILO_MAPPINGS = {
   a: [
     {
-      goId: "plo-1",
-      goCode: "GO1",
-      goDescription: "Communicate effectively.",
+      poId: "po-1",
+      poCode: "PO1",
+      poDescription: "Communicate effectively.",
       manifestation: "LEARNING",
     },
     {
-      goId: "plo-2",
-      goCode: "GO2",
-      goDescription: "Solve problems creatively.",
+      poId: "po-2",
+      poCode: "PO2",
+      poDescription: "Solve problems creatively.",
       manifestation: "OPPORTUNITY",
     },
   ],
   b: [
     {
-      goId: "plo-1",
-      goCode: "GO1",
-      goDescription: "Communicate effectively.",
+      poId: "po-1",
+      poCode: "PO1",
+      poDescription: "Communicate effectively.",
       manifestation: "PRACTICE",
     },
   ],
 } as const;
 
 /** Direct program-wide bindings published on the central deployment. */
-export const CENTRAL_GO_SNAPSHOTS = {
+export const CENTRAL_PO_SNAPSHOTS = {
   single: {
-    sectionKey: "plo-items",
-    itemKey: "q-plo-single",
-    goId: "plo-1",
-    goCodeSnapshot: "GO1",
-    goDescriptionSnapshot: "Communicate effectively.",
+    sectionKey: "po-items",
+    itemKey: "q-po-single",
+    poId: "po-1",
+    poCodeSnapshot: "PO1",
+    poDescriptionSnapshot: "Communicate effectively.",
   },
-  /** One question covering TWO GOs (unweighted coverage). */
+  /** One question covering TWO POs (unweighted coverage). */
   multi: [
     {
-      sectionKey: "plo-items",
-      itemKey: "q-plo-multi",
-      goId: "plo-1",
-      goCodeSnapshot: "GO1",
-      goDescriptionSnapshot: "Communicate effectively.",
+      sectionKey: "po-items",
+      itemKey: "q-po-multi",
+      poId: "po-1",
+      poCodeSnapshot: "PO1",
+      poDescriptionSnapshot: "Communicate effectively.",
     },
     {
-      sectionKey: "plo-items",
-      itemKey: "q-plo-multi",
-      goId: "plo-2",
-      goCodeSnapshot: "GO2",
-      goDescriptionSnapshot: "Solve problems creatively.",
+      sectionKey: "po-items",
+      itemKey: "q-po-multi",
+      poId: "po-2",
+      poCodeSnapshot: "PO2",
+      poDescriptionSnapshot: "Solve problems creatively.",
     },
   ],
 } as const;
@@ -352,7 +352,7 @@ export const EVALUATIONS = {
 export const CENTRAL_EVALUATIONS = {
   /**
    * Program-wide student evaluation, period 1. Submitted: S2 with
-   * q-go-single=4 and q-go-multi=2; S4 unstarted.
+   * q-po-single=4 and q-po-multi=2; S4 unstarted.
    */
   centralStudent: {
     id: "cd-student",
@@ -366,7 +366,7 @@ export const CENTRAL_EVALUATIONS = {
         respondent: "s2",
         response: {
           status: "SUBMITTED",
-          ratings: { "plo-items": { "q-plo-single": 4, "q-plo-multi": 2 } },
+          ratings: { "po-items": { "q-po-single": 4, "q-po-multi": 2 } },
         },
       },
       { respondent: "s4" },
@@ -480,7 +480,7 @@ export function ciloRows(
         evaluationId: entry.evaluationId,
         scale: entry.scale ?? resolveItemScaleIdentity(snapshot, entry.sectionKey, entry.itemKey),
         cilo: cilo ? { id: cilo.id, label: cilo.label, description: cilo.description } : null,
-        goMappings: ciloKey ? [...CILO_MAPPINGS[ciloKey]] : [],
+        poMappings: ciloKey ? [...CILO_MAPPINGS[ciloKey]] : [],
       };
     });
   });
@@ -488,23 +488,23 @@ export function ciloRows(
 
 function centralBindings(sectionKey: string, itemKey: string) {
   const matches = [
-    ...(CENTRAL_GO_SNAPSHOTS.single.sectionKey === sectionKey &&
-    CENTRAL_GO_SNAPSHOTS.single.itemKey === itemKey
-      ? [CENTRAL_GO_SNAPSHOTS.single]
+    ...(CENTRAL_PO_SNAPSHOTS.single.sectionKey === sectionKey &&
+    CENTRAL_PO_SNAPSHOTS.single.itemKey === itemKey
+      ? [CENTRAL_PO_SNAPSHOTS.single]
       : []),
-    ...CENTRAL_GO_SNAPSHOTS.multi.filter(
+    ...CENTRAL_PO_SNAPSHOTS.multi.filter(
       (binding) => binding.sectionKey === sectionKey && binding.itemKey === itemKey
     ),
   ];
   return matches.map((binding) => ({
-    goId: binding.goId,
-    goCode: binding.goCodeSnapshot,
-    goDescription: binding.goDescriptionSnapshot,
+    poId: binding.poId,
+    poCode: binding.poCodeSnapshot,
+    poDescription: binding.poDescriptionSnapshot,
   }));
 }
 
-/** Central student ratings normalized for program-wide GO aggregation. */
-export function centralGoRows(): CentralGoRatingRow[] {
+/** Central student ratings normalized for program-wide PO aggregation. */
+export function centralPoRows(): CentralPoRatingRow[] {
   const evaluation = CENTRAL_EVALUATIONS.centralStudent;
   const snapshot = SNAPSHOTS[evaluation.snapshot];
   return evaluationEntries(evaluation).map((entry) => ({
@@ -514,6 +514,6 @@ export function centralGoRows(): CentralGoRatingRow[] {
     responseId: entry.responseId,
     evaluationId: entry.evaluationId,
     scale: entry.scale ?? resolveItemScaleIdentity(snapshot, entry.sectionKey, entry.itemKey),
-    goBindings: centralBindings(entry.sectionKey, entry.itemKey),
+    poBindings: centralBindings(entry.sectionKey, entry.itemKey),
   }));
 }

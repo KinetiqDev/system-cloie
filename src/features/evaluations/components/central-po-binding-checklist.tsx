@@ -8,8 +8,8 @@ import type { CentralPublishReadiness } from "../types";
 const INLINE_QUESTION_LIMIT = 5;
 
 /**
- * GO binding coverage for the selected Program-wide template: which Likert
- * questions stay unbound, which GOs the template covers, and any binding
+ * PO binding coverage for the selected Program-wide template: which Likert
+ * questions stay unbound, which POs the template covers, and any binding
  * problem that still blocks publication. Unbound questions publish as general
  * evaluation items, so they are named here instead of blocking the publish.
  *
@@ -19,7 +19,7 @@ const INLINE_QUESTION_LIMIT = 5;
  * Text stays on the default foreground over the page background; the tinted
  * muted surface made secondary text fail the color-contrast sweep.
  */
-export function CentralGoBindingChecklist({
+export function CentralPoBindingChecklist({
   instanceKey,
   programId,
   readiness,
@@ -30,16 +30,16 @@ export function CentralGoBindingChecklist({
 }) {
   if (readiness.likertCount === 0 && !readiness.blockingError) return null;
 
-  const headingId = `go-coverage-${readiness.templateId}-${instanceKey}`;
+  const headingId = `po-coverage-${readiness.templateId}-${instanceKey}`;
   const visible = readiness.unboundQuestions.slice(0, INLINE_QUESTION_LIMIT);
   const folded = readiness.unboundQuestions.slice(INLINE_QUESTION_LIMIT);
   const questionNoun = readiness.likertCount === 1 ? "question" : "questions";
-  const goNoun = readiness.coveredGos.length === 1 ? "GO" : "GOs";
+  const poNoun = readiness.coveredGos.length === 1 ? "PO" : "POs";
 
   return (
     <section aria-labelledby={headingId} className="border-border space-y-3 rounded-lg border p-4">
       <h3 id={headingId} className="text-sm font-semibold">
-        GO coverage
+        PO coverage
       </h3>
 
       {readiness.blockingError ? (
@@ -49,16 +49,16 @@ export function CentralGoBindingChecklist({
       ) : null}
 
       <p className="text-sm">
-        {`${readiness.boundQuestionCount} of ${readiness.likertCount} Likert ${questionNoun} bound to a GO`}
+        {`${readiness.boundQuestionCount} of ${readiness.likertCount} Likert ${questionNoun} bound to a PO`}
         {readiness.coveredGos.length > 0
-          ? `, covering ${readiness.coveredGos.length} ${goNoun}.`
+          ? `, covering ${readiness.coveredGos.length} ${poNoun}.`
           : "."}
       </p>
 
       {readiness.unboundQuestions.length > 0 ? (
         <div className="space-y-2">
           <p className="text-sm">
-            Unbound questions publish as general evaluation items and give no GO evidence.
+            Unbound questions publish as general evaluation items and give no PO evidence.
           </p>
           <ul className="space-y-1.5 text-sm">
             {visible.map((question) => (
@@ -87,7 +87,7 @@ export function CentralGoBindingChecklist({
             className="text-sm font-medium underline underline-offset-4"
             href={buildProgramHeadEditToolPath(programId, readiness.templateId)}
           >
-            Assign GOs in the template editor
+            Assign POs in the template editor
           </Link>
         </div>
       ) : null}

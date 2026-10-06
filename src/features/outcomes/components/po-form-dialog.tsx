@@ -19,26 +19,26 @@ import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/fie
 import { showToast } from "@/components/ui/toast";
 import { customZodResolver } from "@/lib/forms/zod-resolver";
 import {
-  createGOSchema,
-  updateGOSchema,
-  type CreateGOInput,
-  type UpdateGOInput,
-} from "../schemas/go";
-import { createGOAction, updateGOAction } from "@/lib/actions/program-head-outcome-actions";
-import type { ProgramGOItem } from "../services/manage-program-head-outcomes";
+  createPOSchema,
+  updatePOSchema,
+  type CreatePOInput,
+  type UpdatePOInput,
+} from "../schemas/po";
+import { createPOAction, updatePOAction } from "@/lib/actions/program-head-outcome-actions";
+import type { ProgramPOItem } from "../services/manage-program-head-outcomes";
 
-type GOFormDialogProps =
+type POFormDialogProps =
   | {
       mode: "create";
       programId: string;
-      go?: undefined;
+      po?: undefined;
       open: boolean;
       onOpenChange: (open: boolean) => void;
     }
   | {
       mode: "edit";
       programId: string;
-      go: ProgramGOItem;
+      po: ProgramPOItem;
       open: boolean;
       onOpenChange: (open: boolean) => void;
     };
@@ -52,24 +52,24 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
     formState: { errors },
     reset,
     setError,
-  } = useForm<CreateGOInput>({
-    resolver: customZodResolver(createGOSchema),
+  } = useForm<CreatePOInput>({
+    resolver: customZodResolver(createPOSchema),
     defaultValues: { programId, code: "", description: "" },
   });
 
-  function onSubmit(data: CreateGOInput) {
+  function onSubmit(data: CreatePOInput) {
     startTransition(async () => {
       const formData = new FormData();
       formData.set("programId", data.programId);
       formData.set("code", data.code);
       formData.set("description", data.description);
-      const result = await createGOAction(formData);
+      const result = await createPOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
         showToast(result.error, "error");
         return;
       }
-      showToast("Graduate Outcome created successfully.", "success");
+      showToast("Program Outcome created successfully.", "success");
       reset();
       onClose();
       router.refresh();
@@ -84,11 +84,11 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
         </Alert>
       )}
       <Field data-invalid={errors.code ? true : undefined}>
-        <FieldLabel htmlFor="create-go-code">GO Code</FieldLabel>
+        <FieldLabel htmlFor="create-go-code">PO Code</FieldLabel>
         <FieldContent>
           <Input
             id="create-go-code"
-            placeholder="e.g. GO-1"
+            placeholder="e.g. PO-1"
             autoComplete="off"
             aria-invalid={errors.code ? true : undefined}
             aria-describedby={errors.code ? "create-go-code-error" : undefined}
@@ -102,7 +102,7 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
         <FieldContent>
           <Textarea
             id="create-go-description"
-            placeholder="Describe the Graduate Outcome..."
+            placeholder="Describe the Program Outcome..."
             rows={4}
             aria-invalid={errors.description ? true : undefined}
             aria-describedby={errors.description ? "create-go-description-error" : undefined}
@@ -122,7 +122,7 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
           Cancel
         </Button>
         <Button type="submit" className="w-full md:w-auto" loading={isPending}>
-          {isPending ? "Saving..." : "Create GO"}
+          {isPending ? "Saving..." : "Create PO"}
         </Button>
       </div>
     </form>
@@ -131,11 +131,11 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
 
 function EditForm({
   programId,
-  go,
+  po,
   onClose,
 }: {
   programId: string;
-  go: ProgramGOItem;
+  po: ProgramPOItem;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -146,25 +146,25 @@ function EditForm({
     formState: { errors },
     reset,
     setError,
-  } = useForm<UpdateGOInput>({
-    resolver: customZodResolver(updateGOSchema),
-    defaultValues: { programId, id: go.id, code: go.code, description: go.description },
+  } = useForm<UpdatePOInput>({
+    resolver: customZodResolver(updatePOSchema),
+    defaultValues: { programId, id: po.id, code: po.code, description: po.description },
   });
 
-  function onSubmit(data: UpdateGOInput) {
+  function onSubmit(data: UpdatePOInput) {
     startTransition(async () => {
       const formData = new FormData();
       formData.set("programId", data.programId);
       formData.set("id", data.id);
       formData.set("code", data.code);
       formData.set("description", data.description);
-      const result = await updateGOAction(formData);
+      const result = await updatePOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
         showToast(result.error, "error");
         return;
       }
-      showToast("Graduate Outcome updated successfully.", "success");
+      showToast("Program Outcome updated successfully.", "success");
       reset();
       onClose();
       router.refresh();
@@ -181,11 +181,11 @@ function EditForm({
         </Alert>
       )}
       <Field data-invalid={errors.code ? true : undefined}>
-        <FieldLabel htmlFor="edit-go-code">GO Code</FieldLabel>
+        <FieldLabel htmlFor="edit-go-code">PO Code</FieldLabel>
         <FieldContent>
           <Input
             id="edit-go-code"
-            placeholder="e.g. GO-1"
+            placeholder="e.g. PO-1"
             autoComplete="off"
             aria-invalid={errors.code ? true : undefined}
             aria-describedby={errors.code ? "edit-go-code-error" : undefined}
@@ -199,7 +199,7 @@ function EditForm({
         <FieldContent>
           <Textarea
             id="edit-go-description"
-            placeholder="Describe the Graduate Outcome..."
+            placeholder="Describe the Program Outcome..."
             rows={4}
             aria-invalid={errors.description ? true : undefined}
             aria-describedby={errors.description ? "edit-go-description-error" : undefined}
@@ -226,7 +226,7 @@ function EditForm({
   );
 }
 
-export function GOFormDialog({ mode, programId, go, open, onOpenChange }: GOFormDialogProps) {
+export function POFormDialog({ mode, programId, po, open, onOpenChange }: POFormDialogProps) {
   function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
   }
@@ -236,19 +236,19 @@ export function GOFormDialog({ mode, programId, go, open, onOpenChange }: GOForm
       <ResponsiveDialogContent desktopClassName="sm:max-w-lg">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>
-            {mode === "create" ? "Add Graduate Outcome" : "Edit Graduate Outcome"}
+            {mode === "create" ? "Add Program Outcome" : "Edit Program Outcome"}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             {mode === "create"
-              ? "Create a Graduate Outcome for your program."
-              : "Update Graduate Outcome details."}
+              ? "Create a Program Outcome for your program."
+              : "Update Program Outcome details."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <ResponsiveDialogBody className="pb-[max(1rem,env(safe-area-inset-bottom))]">
           {mode === "create" ? (
             <CreateForm programId={programId} onClose={() => onOpenChange(false)} />
           ) : (
-            <EditForm programId={programId} go={go} onClose={() => onOpenChange(false)} />
+            <EditForm programId={programId} po={po} onClose={() => onOpenChange(false)} />
           )}
         </ResponsiveDialogBody>
       </ResponsiveDialogContent>

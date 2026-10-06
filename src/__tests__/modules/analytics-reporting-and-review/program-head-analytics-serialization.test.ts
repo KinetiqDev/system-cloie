@@ -49,12 +49,12 @@ const outcomes: ProgramHeadOutcomesDTO = {
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PO mappings group historical ratings.",
   manyToManyDisclosure: true,
   outcomes: [
     {
       outcomeId: "outcome-1",
-      code: "GO-1",
+      code: "PO-1",
       name: "Effective communicator",
       meanRating: 11 / 3,
       ratingCount: 3,
@@ -137,7 +137,7 @@ const trends: ProgramHeadTrendsDTO = {
       ratingCount: 40,
       instrumentContext: "CILO Evaluation v2",
       scaleContext: "1–5 (5-point)",
-      outcomeCodes: ["GO-1"],
+      outcomeCodes: ["PO-1"],
       comparableWithPrevious: false,
     },
   ],
@@ -212,8 +212,8 @@ describe("view-specific AI evidence packets", () => {
 
     expect(packet.view).toBe("outcomes");
     // Response, respondent, evaluation, and course identifiers stay out. The
-    // outcome code (GO-1) is aggregate labeling; the row id (go-1) must not leak.
-    expect(serialized).not.toContain("go-1");
+    // outcome code (PO-1) is aggregate labeling; the row id (po-1) must not leak.
+    expect(serialized).not.toContain("po-1");
     expect(serialized).not.toContain("course-1");
     expect(serialized).not.toContain("eval-1");
     expect(serialized).not.toContain("cilo-1");

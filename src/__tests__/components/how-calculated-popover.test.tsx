@@ -6,7 +6,7 @@ describe("HowCalculatedPopover", () => {
   it("opens a disclosure with explanation, counts, and scale label", () => {
     render(
       <HowCalculatedPopover
-        label="GO 1"
+        label="PO 1"
         metric={{
           ratingCount: 614,
           responseCount: 163,
@@ -18,10 +18,10 @@ describe("HowCalculatedPopover", () => {
       />
     );
 
-    const trigger = screen.getByRole("button", { name: "How calculated: GO 1" });
+    const trigger = screen.getByRole("button", { name: "How calculated: PO 1" });
     fireEvent.click(trigger);
 
-    expect(screen.getByText("How go 1 is calculated")).toBeInTheDocument();
+    expect(screen.getByText("How po 1 is calculated")).toBeInTheDocument();
     expect(
       screen.getByText("Raw mean of 614 valid ratings from 11 contributing CILO(s).")
     ).toBeInTheDocument();

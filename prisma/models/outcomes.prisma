@@ -4,7 +4,7 @@ enum CILOMappingManifestation {
   OPPORTUNITY
 }
 
-model GO {
+model PO {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String
   description String
@@ -16,9 +16,9 @@ model GO {
 
   program                      Program                                @relation(fields: [program_id], references: [id], onDelete: Restrict)
   cilo_mappings                CILOMapping[]
-  template_question_bindings   InstrumentTemplateGoQuestionBinding[]
-  central_deployment_snapshots CentralDeploymentGoSnapshot[]
-  course_bound_question_bindings CourseBoundGoQuestionBinding[]
+  template_question_bindings   InstrumentTemplatePoQuestionBinding[]
+  central_deployment_snapshots CentralDeploymentPoSnapshot[]
+  course_bound_question_bindings CourseBoundPoQuestionBinding[]
 
   @@unique([program_id, code])
   @@map("gos")
@@ -81,7 +81,7 @@ model CILOInstitutionalOutcomeMapping {
 model CILOMapping {
   id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cilo_id       String                    @db.Uuid
-  go_id         String                    @map("go_id") @db.Uuid
+  po_id         String                    @map("po_id") @db.Uuid
   manifestation CILOMappingManifestation?
   created_by    String?                   @db.Uuid
   updated_by    String?                   @db.Uuid
@@ -89,11 +89,11 @@ model CILOMapping {
   updated_at    DateTime?
 
   cilo    CILO  @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
-  go      GO    @relation(fields: [go_id], references: [id], onDelete: Cascade)
+  po      PO    @relation(fields: [po_id], references: [id], onDelete: Cascade)
   creator User? @relation("CILOMappingCreator", fields: [created_by], references: [id], onDelete: SetNull)
   updater User? @relation("CILOMappingUpdater", fields: [updated_by], references: [id], onDelete: SetNull)
 
-  @@unique([cilo_id, go_id])
+  @@unique([cilo_id, po_id])
   @@index([created_by])
   @@index([updated_by])
   @@map("cilo_mappings")

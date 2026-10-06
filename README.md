@@ -191,7 +191,7 @@ src/
 │   ├── evaluations/          # Evaluation workflows and deployments
 │   ├── instruments/          # Templates, instruments, versioning
 │   ├── legal/                # Legal content, versions, acknowledgements
-│   ├── outcomes/             # ILO catalog, Graduate Outcomes (GOs), CILOs, typed mappings
+│   ├── outcomes/             # ILO catalog, Program Outcomes (POs), CILOs, typed mappings
 │   ├── response-review/      # Identified vs anonymized review of submitted responses
 │   ├── responses/            # Responses, one-response invariant, drafts, submission
 │   └── users/                # User profiles and admin management
@@ -242,7 +242,7 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0014 | Google authoritative account names                                        |
 | 0015 | Name-based course roster resolution and student ID removal                |
 | 0016 | Server-side bounded AI interpretation boundary                            |
-| 0017 | Program learning outcome canonical terminology _(Superseded by ADR 0030)_ |
+| 0017 | Program learning outcome canonical terminology _(Superseded by ADR 0036)_ |
 | 0018 | Transfer ILO catalog ownership to General Education Coordinator           |
 | 0019 | Removing Secretary Course Assignment Mutation                             |
 | 0020 | Self-Hosted Supabase Only — Target-Neutral Backends                       |
@@ -250,16 +250,17 @@ Before working in a domain, read its `CONTEXT.md` and relevant ADRs.
 | 0022 | Multi-role accounts with active role context                              |
 | 0023 | Deterministic qualitative evidence and sentiment shape                    |
 | 0024 | Remove Dean enrollment oversight _(Amends ADR 0006)_                      |
-| 0025 | Relax the Central Deployment GO Binding Gate                              |
+| 0025 | Relax the Central Deployment PO Binding Gate                              |
 | 0026 | Institution Time Zone for Rendered Timestamps                             |
 | 0027 | One CILO May Be Evidenced by Several Likert Questions                     |
 | 0028 | Secretary Term Placement for an Unplaced Student                          |
 | 0029 | Multi-Program Program Head Provisioning at Creation                       |
-| 0030 | Graduate Outcome canonical terminology                                    |
+| 0030 | Graduate outcome canonical terminology _(Superseded by ADR 0036)_         |
 | 0031 | Prove the current sign-in method before internal authorization            |
 | 0032 | Entry flow address handoff and server-resolved legal gate                 |
 | 0033 | External registration carries the chosen role into onboarding             |
 | 0034 | Transfer General Education response evidence to the Coordinator           |
+| 0036 | Program outcome canonical terminology                                     |
 
 #### Request Flow
 
@@ -468,7 +469,7 @@ Point `DATABASE_URL` at a disposable test database, never a shared backend. `pnp
 - `src/__tests__/features/course-assignments/course-assignment-membership-constraints.test.ts`
 - `src/__tests__/features/course-assignments/course-seed-provenance-schema.test.ts`
 - `src/__tests__/features/course-assignments/seeded-course-assignment-memberships.test.ts`
-- `src/__tests__/features/evaluations/course-bound-go-question-binding-db-invariants.test.ts`
+- `src/__tests__/features/evaluations/course-bound-po-question-binding-db-invariants.test.ts`
 - `src/__tests__/features/evaluations/publication-roster-lock-db-invariants.test.ts`
 - `src/__tests__/features/instruments/cilo-question-binding-cardinality-db-invariants.test.ts`
 - `src/__tests__/features/responses/response-lifecycle-invariants.test.ts`

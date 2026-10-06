@@ -84,11 +84,11 @@ export type ParticipationSummary = {
   };
 };
 
-/** One CILO-to-GO mapping with its descriptive manifestation label. */
+/** One CILO-to-PO mapping with its descriptive manifestation label. */
 export type CiloGoMapping = {
-  goId: string;
-  goCode: string;
-  goDescription: string;
+  poId: string;
+  poCode: string;
+  poDescription: string;
   manifestation: CILOMappingManifestation | null;
 };
 
@@ -136,9 +136,9 @@ export type QuestionBinding =
       type: "CILO";
       ciloId: string;
       ciloLabel: string;
-      directGoMappings?: CiloGoMapping[];
+      directPoMappings?: CiloGoMapping[];
     }
-  | { type: "GO"; goMappings: CiloGoMapping[] }
+  | { type: "PO"; poMappings: CiloGoMapping[] }
   | { type: "GENERAL" };
 
 /**

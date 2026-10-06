@@ -49,7 +49,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     expectTypeOf<ProgramHeadTrendsDTO>().not.toHaveProperty("text_content");
     expectTypeOf<ProgramHeadTrendsDTO>().not.toHaveProperty("respondent");
 
-    // Outcomes: means per GO, no raw comments
+    // Outcomes: means per PO, no raw comments
     expectTypeOf<ProgramHeadOutcomesDTO>().not.toHaveProperty("text_content");
     expectTypeOf<ProgramHeadOutcomesDTO>().not.toHaveProperty("respondent");
 
@@ -163,9 +163,9 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
 
   it("a submitted CILO answer names its typed layer and can carry only that layer's data", () => {
     // ADR 0035: the layer is the discriminator. A General Education answer
-    // reaches ILOs and holds no GO fields; a Program-specific answer reaches
-    // GOs and holds no ILO fields. One shape with both lists renamed would let
-    // ILO rows ride in a GO field, so the variants are structurally distinct.
+    // reaches ILOs and holds no PO fields; a Program-specific answer reaches
+    // POs and holds no ILO fields. One shape with both lists renamed would let
+    // ILO rows ride in a PO field, so the variants are structurally distinct.
     expectTypeOf<SubmittedCiloAnswerBinding["layer"]>().toEqualTypeOf<
       "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME"
     >();
@@ -182,20 +182,20 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     expect(
       institutional.layer === "INSTITUTIONAL_OUTCOME" ? institutional.iloMappings : []
     ).toHaveLength(1);
-    // The GO field is absent on this variant at both compile and run time, so
-    // a General Education answer can never surface a Graduate Outcome row.
-    // @ts-expect-error ILO rows must not be readable through a GO field name.
-    expect(institutional.goMappings).toBeUndefined();
+    // The PO field is absent on this variant at both compile and run time, so
+    // a General Education answer can never surface a Program Outcome row.
+    // @ts-expect-error ILO rows must not be readable through a PO field name.
+    expect(institutional.poMappings).toBeUndefined();
 
     const graduate: SubmittedCiloAnswerBinding = {
       type: "CILO",
       layer: "GRADUATE_OUTCOME",
       ciloId: "cilo-1",
       ciloLabel: "CILO 1",
-      goMappings: [],
-      directGoBindings: [],
+      poMappings: [],
+      directPoBindings: [],
     };
-    // @ts-expect-error GO rows must not be readable through an ILO field name.
+    // @ts-expect-error PO rows must not be readable through an ILO field name.
     expect(graduate.iloMappings).toBeUndefined();
   });
 

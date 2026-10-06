@@ -6,7 +6,7 @@ import { loginAs } from "./support/helpers";
  * §50: empty/no-data states verified on the fixture — differentiated copy
  * instead of a generic "No data". Covers the landing filtered-empty message,
  * the zero-response evaluation detail state (also §61's zero-response
- * scenario), and the program-wide GO evidence gap.
+ * scenario), and the program-wide PO evidence gap.
  */
 test("empty states differentiate the reason", async ({ page }) => {
   const fx = fixture();
@@ -31,7 +31,7 @@ test("empty states differentiate the reason", async ({ page }) => {
   ).toBeVisible();
 
   // Analytics Outcomes: central evidence exists but no central deployment
-  // publishes a GO snapshot, so the program-wide section shows its
+  // publishes a PO snapshot, so the program-wide section shows its
   // differentiated empty state.
   await loginAs(page, fx.demoPh.email);
   await page.goto(`/program-head/programs/${fx.bsit.id}/analytics?tab=outcomes`);
@@ -39,5 +39,5 @@ test("empty states differentiate the reason", async ({ page }) => {
   await page.getByRole("combobox", { name: "Evidence source" }).click();
   await page.getByRole("option", { name: "Alumni" }).click();
   await page.getByRole("button", { name: "Apply filters" }).click();
-  await expect(page.getByText("No program-wide GO evidence")).toBeVisible();
+  await expect(page.getByText("No program-wide PO evidence")).toBeVisible();
 });

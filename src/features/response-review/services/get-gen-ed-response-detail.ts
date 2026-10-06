@@ -106,17 +106,17 @@ export async function getGenEdResponseDetail(
   ]);
 
   // General Education answers reach Institutional Learning Outcomes only, so
-  // the projection runs on the ILO layer with the GO map left empty. The
-  // loaded direct GO snapshots are Program-only and never surface here.
+  // the projection runs on the ILO layer with the PO map left empty. The
+  // loaded direct PO snapshots are Program-only and never surface here.
   const sections = buildSubmittedResponseSections(
     response,
     {
       snapshot: evaluation.instrument.structure_snapshot,
       ciloBindings: evaluation.cilo_question_bindings,
-      goSnapshots: [],
+      poSnapshots: [],
       layer: "INSTITUTIONAL_OUTCOME",
     },
-    { goMappings: new Map(), iloMappings }
+    { poMappings: new Map(), iloMappings }
   );
 
   return {

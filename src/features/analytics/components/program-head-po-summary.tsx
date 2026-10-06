@@ -14,22 +14,22 @@ import {
 import type {
   DashboardPeriodFilters,
   DashboardGoSummaryRow,
-  GoCatalogEntry,
+  PoCatalogEntry,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 
 function mergeCatalogRows(
   sourceKey: DashboardSourceKey,
-  catalog: GoCatalogEntry[],
+  catalog: PoCatalogEntry[],
   evidenceRows: DashboardGoSummaryRow[]
 ): DashboardGoSummaryRow[] {
-  const byGoId = new Map(evidenceRows.map((row) => [row.goId, row]));
+  const byGoId = new Map(evidenceRows.map((row) => [row.poId, row]));
   const merged = catalog.map(
     (entry) =>
       byGoId.get(entry.id) ?? {
-        goId: entry.id,
-        goCode: entry.code,
+        poId: entry.id,
+        poCode: entry.code,
         mean: null,
         ratingCount: 0,
         responseCount: 0,
@@ -41,14 +41,14 @@ function mergeCatalogRows(
         hasEvidence: false,
         evidenceSummary: {
           explanation:
-            "No evidence from this source for this Graduate Outcome in the selected period.",
+            "No evidence from this source for this Program Outcome in the selected period.",
         },
       }
   );
   const catalogIds = new Set(catalog.map((entry) => entry.id));
-  // Historical evidence may reference GOs no longer active in the catalog.
+  // Historical evidence may reference POs no longer active in the catalog.
   for (const row of evidenceRows) {
-    if (!catalogIds.has(row.goId)) {
+    if (!catalogIds.has(row.poId)) {
       merged.push(row);
     }
   }
@@ -56,39 +56,39 @@ function mergeCatalogRows(
 }
 
 /**
- * Graduate Outcome summary (spec §13.8): one evidence source at a
+ * Program Outcome summary (spec §13.8): one evidence source at a
  * time; details expose rating/response/evaluation plus contributing-CILO or
  * bound-question counts. Rows deep-link into Analytics > Outcomes with
- * period, source, and GO preserved (§12 upward navigation). No attainment
+ * period, source, and PO preserved (§12 upward navigation). No attainment
  * status is shown anywhere.
  */
 export function ProgramHeadGoSummary({
   sources,
-  goCatalog,
+  poCatalog,
   programId,
   periodFilters,
 }: {
   sources: Record<DashboardSourceKey, DashboardGoSummaryRow[]>;
-  goCatalog: GoCatalogEntry[];
+  poCatalog: PoCatalogEntry[];
   programId: string;
   periodFilters: DashboardPeriodFilters;
 }) {
   const [sourceKey, setSourceKey] = useState<DashboardSourceKey>("COURSE_STUDENT");
-  const rows = mergeCatalogRows(sourceKey, goCatalog, sources[sourceKey] ?? []);
-  const rowHref = (goId: string): string =>
+  const rows = mergeCatalogRows(sourceKey, poCatalog, sources[sourceKey] ?? []);
+  const rowHref = (poId: string): string =>
     buildAnalyticsUrl(programId, {
       ...periodFilters,
       tab: "outcomes",
-      goId,
+      poId,
       ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
     });
 
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-heading-lg">Graduate Outcome summary</h2>
+        <h2 className="text-heading-lg">Program Outcome summary</h2>
         <CardDescription>
-          One evidence source at a time; select a GO to open Analytics.
+          One evidence source at a time; select a PO to open Analytics.
         </CardDescription>
         <div
           role="group"
@@ -115,22 +115,22 @@ export function ProgramHeadGoSummary({
       <CardContent className="flex flex-col gap-1">
         {rows.length === 0 ? (
           <Empty>
-            <EmptyTitle>No active Graduate Outcomes</EmptyTitle>
+            <EmptyTitle>No active Program Outcomes</EmptyTitle>
             <EmptyDescription>
-              Define the program&rsquo;s Graduate Outcomes before interpreting GO evidence.
+              Define the program&rsquo;s Program Outcomes before interpreting PO evidence.
             </EmptyDescription>
           </Empty>
         ) : (
           rows.map((row) => (
-            <div key={row.goId} className="border-border/60 border-b py-2 last:border-b-0">
+            <div key={row.poId} className="border-border/60 border-b py-2 last:border-b-0">
               <div className="focus-within:ring-ring -mx-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg px-2 focus-within:ring-2 sm:grid-cols-[3.5rem_minmax(0,1fr)_5rem]">
-                <span className="text-label-md min-w-0 truncate font-bold" title={row.goCode}>
-                  <Link href={rowHref(row.goId)} className="hover:underline">
-                    {row.goCode}
+                <span className="text-label-md min-w-0 truncate font-bold" title={row.poCode}>
+                  <Link href={rowHref(row.poId)} className="hover:underline">
+                    {row.poCode}
                   </Link>
                 </span>
                 <Link
-                  href={rowHref(row.goId)}
+                  href={rowHref(row.poId)}
                   aria-hidden="true"
                   tabIndex={-1}
                   className="bg-muted relative col-span-2 row-start-2 block h-3.5 overflow-hidden rounded border sm:col-span-1 sm:row-start-auto"
@@ -160,8 +160,8 @@ export function ProgramHeadGoSummary({
                     row.mean.toFixed(2)
                   )}
                   <HowCalculatedPopover
-                    metric={{ ...row.evidenceSummary, evidenceHref: rowHref(row.goId) }}
-                    label={row.goCode}
+                    metric={{ ...row.evidenceSummary, evidenceHref: rowHref(row.poId) }}
+                    label={row.poCode}
                   />
                 </span>
               </div>
@@ -222,8 +222,8 @@ export function ProgramHeadGoSummary({
         )}
         <p className="text-muted-foreground text-label-sm mt-2">
           {sourceKey === "COURSE_STUDENT"
-            ? "Course-bound GO means use published direct question bindings and current CILO-to-GO mappings."
-            : "Directly bound questions on published deployments feed this source's GO means."}
+            ? "Course-bound PO means use published direct question bindings and current CILO-to-PO mappings."
+            : "Directly bound questions on published deployments feed this source's PO means."}
         </p>
       </CardContent>
     </Card>

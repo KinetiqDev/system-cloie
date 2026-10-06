@@ -35,7 +35,7 @@ import {
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
 import { buildParticipationSummary } from "../aggregators/participation";
-import { buildProgramWideGoMetrics, type CentralGoRatingRow } from "../aggregators/go";
+import { buildProgramWidePoMetrics, type CentralPoRatingRow } from "../aggregators/po";
 import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
@@ -486,7 +486,7 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
         cilo: {
           select: {
             cilo_mappings: {
-              select: { go: { select: { code: true } } };
+              select: { po: { select: { code: true } } };
             };
           };
         };
@@ -640,7 +640,7 @@ function accumulateRatingRow(
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
   trackRatedSourceResponse(evidence, context.source, context.instrumentVersionId, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
-    evidence.outcomeCodes.add(mapping.go.code);
+    evidence.outcomeCodes.add(mapping.po.code);
   }
 }
 
@@ -741,7 +741,7 @@ function buildCourseBoundResponseScope(
   };
 }
 
-/** Narrow projection of a course-bound rating row for GO evidence. */
+/** Narrow projection of a course-bound rating row for PO evidence. */
 type OutcomeRatingRow = {
   rating_value: number;
   response_id: string;
@@ -767,18 +767,18 @@ type OutcomeBindingRow = {
     course: { id: string; code: string; title: string; cilos: Array<{ id: string }> } | null;
     cilo_mappings: Array<{
       manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      go: { id: string; code: string; description: string };
+      po: { id: string; code: string; description: string };
     }>;
   } | null;
 };
 
-type OutcomeDirectGoBindingRow = {
+type OutcomeDirectPoBindingRow = {
   section_key: string;
   item_key: string;
   course_bound_evaluation_id: string;
-  go_id: string | null;
-  go_code_snapshot: string;
-  go_description_snapshot: string;
+  po_id: string | null;
+  po_code_snapshot: string;
+  po_description_snapshot: string;
   question_prompt_snapshot: string;
   course_bound_evaluation: {
     deployment_name: string;
@@ -792,14 +792,14 @@ function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: st
   return position < 0 ? "—" : `CILO ${position + 1}`;
 }
 
-function toGoMapping(mapping: {
+function toPoMapping(mapping: {
   manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-  go: { id: string; code: string; description: string };
+  po: { id: string; code: string; description: string };
 }) {
   return {
-    outcomeId: mapping.go.id,
-    code: mapping.go.code,
-    name: mapping.go.description,
+    outcomeId: mapping.po.id,
+    code: mapping.po.code,
+    name: mapping.po.description,
     manifestation: mapping.manifestation,
   };
 }
@@ -820,7 +820,7 @@ function resolveInstrumentSnapshot(
 /** Course behind one rating row: CILO course wins, else the direct binding's course. */
 function courseForOutcomeRow(
   cilo: OutcomeBindingRow["cilo"] | null | undefined,
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvidenceRow["course"] {
   if (cilo?.course) {
     return { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title };
@@ -830,14 +830,14 @@ function courseForOutcomeRow(
 
 type OutcomeRowBindings = {
   ciloBinding: OutcomeBindingRow | undefined;
-  directBindings: OutcomeDirectGoBindingRow[];
+  directBindings: OutcomeDirectPoBindingRow[];
   cilo: OutcomeBindingRow["cilo"] | null | undefined;
 };
 
 function lookupOutcomeBindings(
   row: OutcomeRatingRow,
   ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
-  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>
+  directBindingsByItemKey: Map<string, OutcomeDirectPoBindingRow[]>
 ): OutcomeRowBindings {
   const key = encodeBindingKey(
     row.response.assignment.course_bound_id ?? "",
@@ -863,13 +863,13 @@ function ciloEvidenceFor(
 }
 
 function directEvidenceFor(
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvidenceRow["directBindings"] {
   return directBindings.map((binding) => ({
     outcomeId:
-      binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
-    code: binding.go_code_snapshot,
-    name: binding.go_description_snapshot,
+      binding.po_id ?? `snapshot:${binding.po_code_snapshot}:${binding.po_description_snapshot}`,
+    code: binding.po_code_snapshot,
+    name: binding.po_description_snapshot,
     questionPrompt: binding.question_prompt_snapshot,
   }));
 }
@@ -881,7 +881,7 @@ type OutcomeEvaluationIdentity = {
 
 function evaluationIdentityFor(
   ciloBinding: OutcomeBindingRow | undefined,
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvaluationIdentity {
   return {
     evaluationId:
@@ -892,11 +892,11 @@ function evaluationIdentityFor(
   };
 }
 
-/** Map one course-bound rating to its CILO and/or direct GO evidence. */
+/** Map one course-bound rating to its CILO and/or direct PO evidence. */
 function toOutcomeEvidenceRow(
   row: OutcomeRatingRow,
   ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
-  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
+  directBindingsByItemKey: Map<string, OutcomeDirectPoBindingRow[]>,
   snapshotById: Map<string, unknown>
 ): OutcomeEvidenceRow | null {
   const { ciloBinding, directBindings, cilo } = lookupOutcomeBindings(
@@ -918,7 +918,7 @@ function toOutcomeEvidenceRow(
     ),
     course,
     cilo: ciloEvidenceFor(cilo, course),
-    outcomeMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
+    outcomeMappings: cilo?.cilo_mappings.map(toPoMapping) ?? [],
     directBindings: directEvidenceFor(directBindings),
     evaluationId,
     deploymentName,
@@ -927,15 +927,15 @@ function toOutcomeEvidenceRow(
 
 /**
  * Disclosure that historical ratings are grouped by the Program's current
- * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
+ * CILO-to-PO mappings. Publication-time mapping snapshots do not exist yet,
  * so later mapping edits may reinterpret historical outcome rows.
  */
 const CURRENT_MAPPING_DISCLOSURE =
-  "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. " +
+  "Outcome rows group historical ratings using the Program's current CILO-to-PO mappings. " +
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
 /**
- * One central-deployment rating row narrowed for program-wide GO evidence.
+ * One central-deployment rating row narrowed for program-wide PO evidence.
  * The select mirrors the fields program-wide aggregation needs: deployment
  * identity, stakeholder, instrument version, and the rating coordinates.
  */
@@ -956,28 +956,28 @@ type CentralOutcomeRatingRow = {
   };
 };
 
-type CentralGoSnapshotBinding = { goId: string; goCode: string; goDescription: string };
-type CentralGoBindingsByDeployment = Map<string, Map<string, CentralGoSnapshotBinding[]>>;
+type CentralPoSnapshotBinding = { poId: string; poCode: string; poDescription: string };
+type CentralPoBindingsByDeployment = Map<string, Map<string, CentralPoSnapshotBinding[]>>;
 
-/** Published CentralDeploymentGoSnapshot bindings keyed by deployment then section:item. */
-async function loadCentralGoBindings(
+/** Published CentralDeploymentPoSnapshot bindings keyed by deployment then section:item. */
+async function loadCentralPoBindings(
   deploymentIds: string[]
-): Promise<CentralGoBindingsByDeployment> {
+): Promise<CentralPoBindingsByDeployment> {
   if (deploymentIds.length === 0) {
     return new Map();
   }
-  const snapshots = await prisma.centralDeploymentGoSnapshot.findMany({
+  const snapshots = await prisma.centralDeploymentPoSnapshot.findMany({
     where: { central_deployment_id: { in: deploymentIds } },
     select: {
       central_deployment_id: true,
-      go_id: true,
-      go_code_snapshot: true,
-      go_description_snapshot: true,
+      po_id: true,
+      po_code_snapshot: true,
+      po_description_snapshot: true,
       section_key: true,
       item_key: true,
     },
   });
-  const byDeployment: CentralGoBindingsByDeployment = new Map();
+  const byDeployment: CentralPoBindingsByDeployment = new Map();
   for (const snapshot of snapshots) {
     let byQuestion = byDeployment.get(snapshot.central_deployment_id);
     if (!byQuestion) {
@@ -987,15 +987,15 @@ async function loadCentralGoBindings(
     const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     // Identity and labels come from the immutable snapshot fields, never the
-    // live GO relation: renaming or deleting a GO must not rewrite or drop
-    // previously published analytics evidence. A deleted GO keeps its frozen
+    // live PO relation: renaming or deleting a PO must not rewrite or drop
+    // previously published analytics evidence. A deleted PO keeps its frozen
     // label under a stable snapshot-derived identity.
     bindings.push({
-      goId:
-        snapshot.go_id ??
-        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
-      goCode: snapshot.go_code_snapshot,
-      goDescription: snapshot.go_description_snapshot,
+      poId:
+        snapshot.po_id ??
+        `snapshot:${snapshot.po_code_snapshot}:${snapshot.po_description_snapshot}`,
+      poCode: snapshot.po_code_snapshot,
+      poDescription: snapshot.po_description_snapshot,
     });
     byQuestion.set(questionKey, bindings);
   }
@@ -1151,9 +1151,9 @@ function outcomesEmptyReason(
   return "no-program-wide-evidence";
 }
 /**
- * Program-wide GO evidence through published deployment GO snapshots
+ * Program-wide PO evidence through published deployment PO snapshots
  * (§5.9, §16.6). Ratings are grouped by stakeholder so source populations are
- * never pooled; a question the deployment never bound to a live GO
+ * never pooled; a question the deployment never bound to a live PO
  * contributes nothing.
  */
 async function buildProgramWideOutcomeDtos(
@@ -1167,8 +1167,8 @@ async function buildProgramWideOutcomeDtos(
         .filter((id): id is string => Boolean(id))
     ),
   ];
-  const bindingsByDeployment = await loadCentralGoBindings(deploymentIds);
-  const byStakeholder = new Map<TargetStakeholder, CentralGoRatingRow[]>();
+  const bindingsByDeployment = await loadCentralPoBindings(deploymentIds);
+  const byStakeholder = new Map<TargetStakeholder, CentralPoRatingRow[]>();
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     const bindings = deployment
@@ -1190,18 +1190,18 @@ async function buildProgramWideOutcomeDtos(
         row.item_key,
         snapshotById
       ),
-      goBindings: bindings,
+      poBindings: bindings,
     });
     byStakeholder.set(deployment.target_stakeholder, bucket);
   }
   const dtos: ProgramHeadProgramWideOutcomeDTO[] = [];
   for (const [stakeholder, ratingRows] of byStakeholder) {
-    for (const metric of buildProgramWideGoMetrics(ratingRows)) {
+    for (const metric of buildProgramWidePoMetrics(ratingRows)) {
       dtos.push({
         stakeholder,
-        goId: metric.goId,
-        code: metric.goCode,
-        name: metric.goDescription,
+        poId: metric.poId,
+        code: metric.poCode,
+        name: metric.poDescription,
         meanRating: metric.mean,
         ratingCount: metric.ratingCount,
         submittedResponseCount: metric.responseCount,
@@ -1213,7 +1213,7 @@ async function buildProgramWideOutcomeDtos(
           evaluationCount: metric.evaluationCount,
           questionCount: metric.questionCount,
           scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Graduate Outcome; unbound items are excluded.`,
+          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Outcome; unbound items are excluded.`,
         },
       });
     }
@@ -1222,10 +1222,10 @@ async function buildProgramWideOutcomeDtos(
 }
 
 /**
- * Authorized Program GO evidence read for the selected Program. Course-bound
+ * Authorized Program PO evidence read for the selected Program. Course-bound
  * quantitative items contribute through a publication-time CILO question
- * binding and a canonical selected-Program CILO-to-GO mapping; program-wide
- * evidence contributes through published CentralDeploymentGoSnapshot
+ * binding and a canonical selected-Program CILO-to-PO mapping; program-wide
+ * evidence contributes through published CentralDeploymentPoSnapshot
  * bindings (§16.6). Bindings are resolved by evaluation plus section/item
  * keys because the live student submission flow writes ratings without a
  * binding ID, mirroring the existing review evidence compensation.
@@ -1252,8 +1252,8 @@ export async function getProgramHeadOutcomes(
     periodInstances,
   } = context;
 
-  // Course-bound GO evidence comes from CILO bindings; program-wide GO
-  // evidence comes from published CentralDeploymentGoSnapshot bindings
+  // Course-bound PO evidence comes from CILO bindings; program-wide PO
+  // evidence comes from published CentralDeploymentPoSnapshot bindings
   // (§5.9, §16.6). The evidence-source selection gates which read runs so one
   // source's evidence never leaks into the other section.
   const {
@@ -1264,7 +1264,7 @@ export async function getProgramHeadOutcomes(
     wantsCourse,
   } = await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
 
-  // Resolve both CILO bindings and frozen direct GO bindings by the same
+  // Resolve both CILO bindings and frozen direct PO bindings by the same
   // evaluation plus section/item identity written on submitted ratings.
   const evaluationIds = [
     ...new Set(
@@ -1296,25 +1296,25 @@ export async function getProgramHeadOutcomes(
                     },
                   },
                   cilo_mappings: {
-                    where: { go: { program_id: selectedProgram.id } },
+                    where: { po: { program_id: selectedProgram.id } },
                     select: {
                       manifestation: true,
-                      go: { select: { id: true, code: true, description: true } },
+                      po: { select: { id: true, code: true, description: true } },
                     },
                   },
                 },
               },
             },
           }),
-          prisma.courseBoundGoQuestionBinding.findMany({
+          prisma.courseBoundPoQuestionBinding.findMany({
             where: { course_bound_evaluation_id: { in: evaluationIds } },
             select: {
               section_key: true,
               item_key: true,
               course_bound_evaluation_id: true,
-              go_id: true,
-              go_code_snapshot: true,
-              go_description_snapshot: true,
+              po_id: true,
+              po_code_snapshot: true,
+              po_description_snapshot: true,
               question_prompt_snapshot: true,
               course_bound_evaluation: {
                 select: {
@@ -1337,7 +1337,7 @@ export async function getProgramHeadOutcomes(
     );
     if (!bindingByItemKey.has(key)) bindingByItemKey.set(key, binding);
   }
-  const directBindingsByItemKey = new Map<string, OutcomeDirectGoBindingRow[]>();
+  const directBindingsByItemKey = new Map<string, OutcomeDirectPoBindingRow[]>();
   for (const binding of directBindings) {
     const key = encodeBindingKey(
       binding.course_bound_evaluation_id,
@@ -1451,8 +1451,8 @@ export async function getProgramHeadTrends(
             cilo: {
               select: {
                 cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: { go: { select: { code: true } } },
+                  where: { po: { program_id: selectedProgram.id } },
+                  select: { po: { select: { code: true } } },
                 },
               },
             },

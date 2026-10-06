@@ -72,14 +72,14 @@ const outcomeData = {
     {
       id: PROGRAM_ID,
       name: "Computer Science",
-      goCount: 2,
+      poCount: 2,
       activeContexts: 3,
       readyContexts: 2,
       missingCiloContexts: 0,
       incompleteMappingContexts: 1,
-      gos: [
-        { id: "go-1", code: "GO1", statement: "Build systems", isArchived: false, displayOrder: 1 },
-        { id: "go-2", code: "GO2", statement: "Lead change", isArchived: true, displayOrder: 2 },
+      pos: [
+        { id: "po-1", code: "PO1", statement: "Build systems", isArchived: false, displayOrder: 1 },
+        { id: "po-2", code: "PO2", statement: "Lead change", isArchived: true, displayOrder: 2 },
       ],
       mappingGaps: [
         {
@@ -109,7 +109,7 @@ const outcomeData = {
           ciloStatement: "Explain core ideas",
           ciloIsArchived: false,
           reason: "incomplete-mapping" as const,
-          missingGoIds: ["go-2"],
+          missingGoIds: ["po-2"],
           missingInstitutionalOutcomeIds: [],
         },
       ],
@@ -224,7 +224,7 @@ describe("Dean oversight pages", () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/do not reach every active Graduate Outcome/i)
+      screen.queryByText(/do not reach every active Program Outcome/i)
     ).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /Incomplete typed mappings/ })).toHaveAttribute(
       "href",
@@ -292,16 +292,16 @@ describe("Dean oversight pages", () => {
     ).toBeInTheDocument();
     expect(await screen.findByText("ILO1")).toBeInTheDocument();
     expect(
-      (await screen.findByText("ILO1")).compareDocumentPosition(await screen.findByText("GO1")) &
+      (await screen.findByText("ILO1")).compareDocumentPosition(await screen.findByText("PO1")) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
-    expect(await screen.findByRole("heading", { name: "Graduate Outcomes" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Program Outcomes" })).toBeInTheDocument();
     expect(screen.queryByText(/Program Learning Outcome/i)).not.toBeInTheDocument();
     expect(
       await screen.findByText(/Incomplete Institutional Outcome mapping:/)
     ).toBeInTheDocument();
-    expect(await screen.findByText(/Incomplete Graduate Outcome mapping:/)).toBeInTheDocument();
-    expect(screen.queryByText("missing Graduate Outcomes")).not.toBeInTheDocument();
+    expect(await screen.findByText(/Incomplete Program Outcome mapping:/)).toBeInTheDocument();
+    expect(screen.queryByText("missing Program Outcomes")).not.toBeInTheDocument();
     expect(await screen.findAllByText("Archived")).toHaveLength(2);
     expect(
       await screen.findByText(/3 active · 2 ready · 0 missing CILOs · 1 incomplete mapping\b/)

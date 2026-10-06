@@ -235,7 +235,7 @@ function CourseMatrixTable({
                       <span className="text-text-secondary whitespace-normal">
                         {row.courseTitle}
                       </span>
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-caption text-muted-foreground">
                         {countedNoun(row.sectionCount, "section")} ·{" "}
                         {countedNoun(row.programCount, "program")}
                       </span>
@@ -247,7 +247,7 @@ function CourseMatrixTable({
                   <TableCell className="text-right align-top tabular-nums">
                     {formatMean(row.meanRating)}
                     {row.excludedRatingCount > 0 ? (
-                      <span className="text-muted-foreground block text-xs">
+                      <span className="text-caption text-muted-foreground block">
                         {row.excludedRatingCount} excluded
                       </span>
                     ) : null}
@@ -258,17 +258,17 @@ function CourseMatrixTable({
                         <span className="font-medium">
                           {formatChange(row.previousComparable.change)}
                         </span>
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-caption text-muted-foreground">
                           vs {row.previousComparable.periodLabel}
                         </span>
                       </span>
                     ) : (
-                      <span className="text-text-secondary text-xs">No comparable period</span>
+                      <span className="text-caption text-text-secondary">No comparable period</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     {formatResponseRate(row.responseRate)}
-                    <span className="text-muted-foreground block text-xs">
+                    <span className="text-caption text-muted-foreground block">
                       {row.submittedResponseCount}/{row.evaluationOpportunityCount}
                     </span>
                   </TableCell>
@@ -279,12 +279,12 @@ function CourseMatrixTable({
                     {row.scaleGroups.length > 0 ? (
                       <ul className="flex flex-col gap-0.5">
                         {row.scaleGroups.map((scale) => (
-                          <li key={scale.scaleKey} className="text-xs whitespace-nowrap">
+                          <li key={scale.scaleKey} className="text-caption whitespace-nowrap">
                             {scale.scaleLabel}
                           </li>
                         ))}
                         {row.spansMultipleScales ? (
-                          <li className="text-warning text-xs font-medium">Mixed scales</li>
+                          <li className="text-label-sm text-warning">Mixed scales</li>
                         ) : null}
                       </ul>
                     ) : (
@@ -301,7 +301,7 @@ function CourseMatrixTable({
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-text-secondary text-xs whitespace-nowrap">
+                      <span className="text-caption text-text-secondary whitespace-nowrap">
                         No active ILO mapping
                       </span>
                     )}

@@ -10,7 +10,7 @@ import type {
   ParticipationSummary,
   QuestionMetric,
 } from "@/features/analytics/aggregators/types";
-import type { GoMetric } from "@/features/analytics/aggregators/go";
+import type { PoMetric } from "@/features/analytics/aggregators/po";
 import type { WordCloudToken } from "@/features/analytics/types";
 import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-types";
 import type { CiloIloMapping } from "./services/cilo-mappings";
@@ -21,11 +21,11 @@ import type { CiloIloMapping } from "./services/cilo-mappings";
 // These shapes never join Faculty/Dean aggregate DTOs.
 // ---------------------------------------------------------------------------
 
-/** One publication-time GO binding from `CentralDeploymentGoSnapshot`. */
-export type ProgramWideGoBinding = {
+/** One publication-time PO binding from `CentralDeploymentPoSnapshot`. */
+export type ProgramWidePoBinding = {
   /**
-   * Grouping key: `go_id` for live GOs, else the analytics snapshot key
-   * `snapshot:<code>:<description>` so retired GOs stay deep-linkable.
+   * Grouping key: `po_id` for live POs, else the analytics snapshot key
+   * `snapshot:<code>:<description>` so retired POs stay deep-linkable.
    */
   key: string;
   code: string;
@@ -37,8 +37,8 @@ export type ProgramWideGoBinding = {
  *
  * `layer` names the typed alignment the Course's CILOs actually reach, and
  * it is the discriminator: a General Education CILO carries ILO alignments
- * and no GO data, while a Program-specific CILO carries GO mappings and no
- * ILO data. Keeping both lists on one shape would let a renamed GO field
+ * and no PO data, while a Program-specific CILO carries PO mappings and no
+ * ILO data. Keeping both lists on one shape would let a renamed PO field
  * carry ILO rows, so each variant declares only the list it can hold.
  */
 export type SubmittedCiloAnswerBinding =
@@ -47,10 +47,10 @@ export type SubmittedCiloAnswerBinding =
       layer: "GRADUATE_OUTCOME";
       ciloId: string | null;
       ciloLabel: string;
-      /** Current CILO→GO mappings in the owning Program, with manifestation. */
-      goMappings: CiloGoMapping[];
-      /** Frozen direct GO bindings carried by this same course question. */
-      directGoBindings: ProgramWideGoBinding[];
+      /** Current CILO→PO mappings in the owning Program, with manifestation. */
+      poMappings: CiloGoMapping[];
+      /** Frozen direct PO bindings carried by this same course question. */
+      directPoBindings: ProgramWidePoBinding[];
     }
   | {
       type: "CILO";
@@ -63,7 +63,7 @@ export type SubmittedCiloAnswerBinding =
 
 export type SubmittedAnswerBinding =
   | SubmittedCiloAnswerBinding
-  | { type: "GO"; goBindings: ProgramWideGoBinding[] }
+  | { type: "PO"; poBindings: ProgramWidePoBinding[] }
   | { type: "GENERAL" };
 
 export type QuantitativeSubmittedAnswer = {
@@ -241,14 +241,14 @@ export type IdentifiedCourseEvaluationDetail = {
   ciloResults: CiloMetric[];
   /**
    * Typed alignment layer the evaluation's CILOs reach. Program-specific
-   * Courses resolve to GO mappings and General Education Courses to ILO
+   * Courses resolve to PO mappings and General Education Courses to ILO
    * alignments, so a surface never infers the layer from wording.
    */
   alignmentLayer: ReviewAlignmentLayer;
   /**
    * Current ILO alignments behind each CILO id in `ciloResults`, in table
    * order. Empty on Program-specific Courses, where `ciloResults[].mappings`
-   * already carries the GO layer.
+   * already carries the PO layer.
    */
   iloMappingsByCilo: Record<string, CiloIloMapping[]>;
   /** ILO evidence for this one evaluation; empty for Program-specific Courses. */
@@ -261,9 +261,9 @@ export type IdentifiedCourseEvaluationDetail = {
 /** Which typed CILO→outcome table backs this evaluation's review surface. */
 export type ReviewAlignmentLayer = "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME";
 
-/** Program-wide question result with its publication-time GO bindings. */
+/** Program-wide question result with its publication-time PO bindings. */
 export type ProgramHeadCentralQuestionResult = QuestionMetric & {
-  goBindings: ProgramWideGoBinding[];
+  poBindings: ProgramWidePoBinding[];
 };
 
 /** Program-wide evaluation detail (spec §26). */
@@ -292,7 +292,7 @@ export type ProgramHeadCentralEvaluationDetail = {
   };
   participation: ParticipationSummary;
   respondents: ProgramHeadAssignmentRespondentRow[];
-  goResults: GoMetric[];
+  poResults: PoMetric[];
   questionResults: ProgramHeadCentralQuestionResult[];
   qualitative: QualitativeSummary;
 };

@@ -36,7 +36,7 @@ export async function seedInstruments(
   await upsertTemplate(
     "ALUMNI_EVAL",
     "Alumni Evaluation Tool",
-    "Alumni evaluation tool assessing graduate outcomes attainment, employment readiness, and program satisfaction.",
+    "Alumni evaluation tool assessing program outcomes attainment, employment readiness, and program satisfaction.",
     alumniEvalStructure,
     EvaluationTemplateType.PROGRAM_WIDE
   );
@@ -54,17 +54,17 @@ export async function seedInstruments(
     code: "BSIT_ALUMNI_EVAL",
     name: "BSIT Alumni Evaluation Tool",
     description:
-      "BSIT-owned Alumni evaluation tool with Graduate Outcome bindings; the general satisfaction item is deliberately left unbound.",
+      "BSIT-owned Alumni evaluation tool with Program Outcome bindings; the general satisfaction item is deliberately left unbound.",
     programId: bsitProgram.id,
     structure: alumniEvalStructure,
-    // A general item that measures no GO: it publishes as a general
+    // A general item that measures no PO: it publishes as a general
     // evaluation item instead of blocking publication (ADR 0025).
     unboundItemKeys: ["overall-assessment-1"],
   });
   await upsertProgramPublicationTemplate({
     code: "BSIT_INDUSTRY_EVAL",
     name: "BSIT Industry Partner Internship Evaluation Tool",
-    description: "BSIT-owned Industry Partner evaluation tool with Graduate Outcome bindings.",
+    description: "BSIT-owned Industry Partner evaluation tool with Program Outcome bindings.",
     programId: bsitProgram.id,
     structure: industryEvalStructure,
   });
@@ -76,7 +76,7 @@ async function upsertProgramPublicationTemplate(input: {
   description: string;
   programId: string;
   structure: TemplateStructure;
-  /** Likert items left without a GO binding (general evaluation items). */
+  /** Likert items left without a PO binding (general evaluation items). */
   unboundItemKeys?: readonly string[];
 }) {
   const structureJson = input.structure as unknown as Prisma.InputJsonValue;
@@ -110,7 +110,7 @@ async function upsertProgramPublicationTemplate(input: {
     },
   });
 
-  const gos = await prisma.gO.findMany({
+  const pos = await prisma.pO.findMany({
     where: { program_id: input.programId, is_active: true },
     orderBy: { code: "asc" },
     select: { id: true, code: true, description: true },
@@ -119,18 +119,18 @@ async function upsertProgramPublicationTemplate(input: {
   const questions = listTemplateLikertQuestions(input.structure).filter(
     (question) => !unboundItemKeys.has(question.itemKey)
   );
-  await prisma.instrumentTemplateGoQuestionBinding.deleteMany({
+  await prisma.instrumentTemplatePoQuestionBinding.deleteMany({
     where: { template_id: template.id },
   });
-  if (gos.length === 0) return;
-  await prisma.instrumentTemplateGoQuestionBinding.createMany({
+  if (pos.length === 0) return;
+  await prisma.instrumentTemplatePoQuestionBinding.createMany({
     data: questions.map((question, index) => {
-      const go = gos[index % gos.length];
+      const po = pos[index % pos.length];
       return {
         template_id: template.id,
-        go_id: go.id,
-        go_code_snapshot: go.code,
-        go_description_snapshot: go.description,
+        po_id: po.id,
+        po_code_snapshot: po.code,
+        po_description_snapshot: po.description,
         section_key: question.sectionKey,
         item_key: question.itemKey,
         question_prompt_snapshot: question.prompt,

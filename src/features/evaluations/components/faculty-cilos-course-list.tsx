@@ -32,7 +32,7 @@ import {
 import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Input } from "@/components/ui/input";
 import { showToast } from "@/components/ui/toast";
-import { Label } from "@/components/ui/label";
+import { Field, FieldContent, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -941,28 +941,32 @@ export function FacultyCilosCourseList({
             label="Academic period"
           />
         </div>
-        <div className="w-full min-w-0 space-y-2 sm:w-48 sm:shrink-0">
-          <Label htmlFor="cilo-type-filter">Course type</Label>
-          <Select value={typeFilter} onValueChange={handleTypeChange}>
-            <SelectTrigger
-              id="cilo-type-filter"
-              aria-label="Course type"
-              className="w-full min-w-0 pointer-coarse:h-11"
-            >
-              <SelectValue>
-                {typeFilter === "__all__"
-                  ? "All Course Types"
-                  : typeFilter === "program_specific"
-                    ? "Program-Specific"
-                    : "General Education"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
-              <SelectItem value="__all__">All Course Types</SelectItem>
-              <SelectItem value="program_specific">Program-Specific</SelectItem>
-              <SelectItem value="general_education">General Education</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="w-full min-w-0 sm:w-48 sm:shrink-0">
+          <Field className="min-w-0">
+            <FieldLabel htmlFor="cilo-type-filter">Course type</FieldLabel>
+            <FieldContent className="min-w-0">
+              <Select value={typeFilter} onValueChange={handleTypeChange}>
+                <SelectTrigger
+                  id="cilo-type-filter"
+                  aria-label="Course type"
+                  className="w-full min-w-0 pointer-coarse:h-11"
+                >
+                  <SelectValue>
+                    {typeFilter === "__all__"
+                      ? "All Course Types"
+                      : typeFilter === "program_specific"
+                        ? "Program-Specific"
+                        : "General Education"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
+                  <SelectItem value="__all__">All Course Types</SelectItem>
+                  <SelectItem value="program_specific">Program-Specific</SelectItem>
+                  <SelectItem value="general_education">General Education</SelectItem>
+                </SelectContent>
+              </Select>
+            </FieldContent>
+          </Field>
         </div>
         <div className="relative w-full sm:ml-auto sm:max-w-xs">
           <label htmlFor="cilo-search" className="sr-only">

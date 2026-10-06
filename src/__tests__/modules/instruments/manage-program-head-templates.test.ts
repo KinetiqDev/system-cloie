@@ -4,7 +4,7 @@ import { EvaluationTemplateType } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
 import { createPrismaUniqueConstraintError } from "@/__tests__/helpers/prisma-test-helpers";
 import {
-  normalizeGoQuestionBindings,
+  normalizePoQuestionBindings,
   type createProgramHeadTemplate as CreateProgramHeadTemplate,
   type deleteProgramHeadTemplate as DeleteProgramHeadTemplate,
   type duplicateTemplate as DuplicateTemplate,
@@ -29,9 +29,9 @@ const {
   transactionMock,
   resolveProgramHeadContextMock,
   revalidateProgramHeadAssignmentMock,
-  templateGoBindingDeleteManyMock,
-  templateGoBindingCreateManyMock,
-  goFindManyMock,
+  templatePoBindingDeleteManyMock,
+  templatePoBindingCreateManyMock,
+  poFindManyMock,
 } = vi.hoisted(() => ({
   instrumentTemplateFindManyMock: vi.fn(),
   instrumentTemplateFindUniqueMock: vi.fn(),
@@ -47,9 +47,9 @@ const {
   transactionMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
   revalidateProgramHeadAssignmentMock: vi.fn(),
-  templateGoBindingDeleteManyMock: vi.fn(),
-  templateGoBindingCreateManyMock: vi.fn(),
-  goFindManyMock: vi.fn(),
+  templatePoBindingDeleteManyMock: vi.fn(),
+  templatePoBindingCreateManyMock: vi.fn(),
+  poFindManyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db/prisma", () => ({
@@ -69,8 +69,8 @@ vi.mock("@/lib/db/prisma", () => ({
     program: {
       findUnique: programFindUniqueMock,
     },
-    gO: {
-      findMany: goFindManyMock,
+    pO: {
+      findMany: poFindManyMock,
     },
     programHeadAssignment: {
       findMany: programHeadAssignmentFindManyMock,
@@ -265,9 +265,9 @@ describe("manage-program-head-templates", () => {
             id: "ver-1",
           }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          deleteMany: templateGoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          deleteMany: templatePoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       };
       return fn(tx);
@@ -360,9 +360,9 @@ describe("manage-program-head-templates", () => {
           findFirst: instrumentVersionFindFirstMock.mockResolvedValue({ id: "ver-1" }),
           update: instrumentVersionUpdateMock.mockResolvedValue({ id: "ver-1" }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          deleteMany: templateGoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          deleteMany: templatePoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       })
     );
@@ -440,9 +440,9 @@ describe("manage-program-head-templates", () => {
         instrumentVersion: {
           create: instrumentVersionCreateMock.mockResolvedValue({ id: "ver-3" }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          deleteMany: templateGoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          deleteMany: templatePoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       })
     );
@@ -512,9 +512,9 @@ describe("manage-program-head-templates", () => {
             id: "ver-1",
           }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          deleteMany: templateGoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          deleteMany: templatePoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       };
       return fn(tx);
@@ -567,9 +567,9 @@ describe("manage-program-head-templates", () => {
             id: "ver-1",
           }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          deleteMany: templateGoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          deleteMany: templatePoBindingDeleteManyMock.mockResolvedValue({ count: 0 }),
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       };
       return fn(tx);
@@ -659,7 +659,7 @@ describe("manage-program-head-templates", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
-  it("does not expose a baseline's foreign GO bindings in a selected Program copy session", async () => {
+  it("does not expose a baseline's foreign PO bindings in a selected Program copy session", async () => {
     programFindUniqueMock.mockResolvedValue({
       id: PROGRAM_ID,
       code: "BSHM",
@@ -676,19 +676,19 @@ describe("manage-program-head-templates", () => {
       is_faculty_accessible: false,
       program_id: null,
       faculty_owner_id: null,
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
-          go_id: "bsit-go-1",
-          go_code_snapshot: "BSIT-GO1",
-          go_description_snapshot: "Apply computing knowledge",
+          po_id: "bsit-po-1",
+          po_code_snapshot: "BSIT-GO1",
+          po_description_snapshot: "Apply computing knowledge",
           section_key: "sec-1",
           item_key: "q-1",
         },
       ],
     });
-    goFindManyMock.mockResolvedValue([
+    poFindManyMock.mockResolvedValue([
       {
-        id: "bshm-go-1",
+        id: "bshm-po-1",
         code: "BSHM-GO1",
         description: "Apply hospitality knowledge",
       },
@@ -698,14 +698,14 @@ describe("manage-program-head-templates", () => {
 
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.goOptions).toEqual([
+    expect(result.data.poOptions).toEqual([
       {
-        id: "bshm-go-1",
+        id: "bshm-po-1",
         code: "BSHM-GO1",
         description: "Apply hospitality knowledge",
       },
     ]);
-    expect(result.data.template.goBindings).toEqual([]);
+    expect(result.data.template.poBindings).toEqual([]);
   });
 
   // ─── duplicateTemplate ─────────────────────────────────────────────
@@ -724,7 +724,7 @@ describe("manage-program-head-templates", () => {
       is_faculty_accessible: false,
       program_id: PROGRAM_ID,
       faculty_owner_id: null,
-      template_go_question_bindings: [],
+      template_po_question_bindings: [],
     });
 
     const createdDuplicate = { id: "dup-1" };
@@ -756,7 +756,7 @@ describe("manage-program-head-templates", () => {
     expect(createCall.data.structure).toEqual(VALID_STRUCTURE);
   });
 
-  it("drops question–GO bindings when duplicating an institutional baseline", async () => {
+  it("drops question–PO bindings when duplicating an institutional baseline", async () => {
     programFindUniqueMock.mockResolvedValue({
       id: PROGRAM_ID,
       code: "BSIT",
@@ -770,11 +770,11 @@ describe("manage-program-head-templates", () => {
       is_faculty_accessible: false,
       program_id: null,
       faculty_owner_id: null,
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
-          go_id: "go-baseline-1",
-          go_code_snapshot: "BSIT-GO1",
-          go_description_snapshot: "Snapshot desc",
+          po_id: "po-baseline-1",
+          po_code_snapshot: "BSIT-GO1",
+          po_description_snapshot: "Snapshot desc",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "Prompt",
@@ -790,8 +790,8 @@ describe("manage-program-head-templates", () => {
         instrumentVersion: {
           create: instrumentVersionCreateMock.mockResolvedValue({ id: "ver-dup-baseline" }),
         },
-        instrumentTemplateGoQuestionBinding: {
-          createMany: templateGoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
+        instrumentTemplatePoQuestionBinding: {
+          createMany: templatePoBindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
       };
       return fn(tx);
@@ -803,8 +803,8 @@ describe("manage-program-head-templates", () => {
       success: true,
       data: { id: "dup-baseline" },
     });
-    // Baseline GOs are not this program's GOs — the copy must start unbound.
-    expect(templateGoBindingCreateManyMock).not.toHaveBeenCalled();
+    // Baseline POs are not this program's POs — the copy must start unbound.
+    expect(templatePoBindingCreateManyMock).not.toHaveBeenCalled();
   });
 
   // ─── toggleTemplateActive ──────────────────────────────────────────
@@ -984,9 +984,9 @@ describe("manage-program-head-templates", () => {
   });
 });
 
-// ─── normalizeGoQuestionBindings (pure) ─────────────────────────────────────
+// ─── normalizePoQuestionBindings (pure) ─────────────────────────────────────
 
-describe("normalizeGoQuestionBindings", () => {
+describe("normalizePoQuestionBindings", () => {
   const structure = [
     {
       key: "sec-1",
@@ -1025,50 +1025,50 @@ describe("normalizeGoQuestionBindings", () => {
     },
   ];
 
-  const gos = [
-    { id: "go-1", code: "BSIT-GO1", description: "Communicate effectively" },
-    { id: "go-2", code: "BSIT-GO2", description: "Apply technical skills" },
+  const pos = [
+    { id: "po-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    { id: "po-2", code: "BSIT-GO2", description: "Apply technical skills" },
   ];
 
   it("rejects bindings that target non-Likert questions", () => {
-    const result = normalizeGoQuestionBindings({
-      bindings: [{ goId: "go-1", sectionKey: "sec-2", itemKey: "q-3" }],
+    const result = normalizePoQuestionBindings({
+      bindings: [{ poId: "po-1", sectionKey: "sec-2", itemKey: "q-3" }],
       structure,
-      gos,
+      pos,
     });
 
     expect(result).toEqual({
       success: false,
-      error: "GOs can only be assigned to Likert questions.",
+      error: "POs can only be assigned to Likert questions.",
     });
   });
 
-  it("rejects bindings to unknown or inactive GOs", () => {
-    const result = normalizeGoQuestionBindings({
-      bindings: [{ goId: "go-ghost", sectionKey: "sec-1", itemKey: "q-1" }],
+  it("rejects bindings to unknown or inactive POs", () => {
+    const result = normalizePoQuestionBindings({
+      bindings: [{ poId: "po-ghost", sectionKey: "sec-1", itemKey: "q-1" }],
       structure,
-      gos,
+      pos,
     });
 
     expect(result).toEqual({
       success: false,
-      error: "One or more selected GOs are invalid or no longer active.",
+      error: "One or more selected POs are invalid or no longer active.",
     });
   });
 
-  it("rejects duplicate (question, GO) pairs", () => {
-    const result = normalizeGoQuestionBindings({
+  it("rejects duplicate (question, PO) pairs", () => {
+    const result = normalizePoQuestionBindings({
       bindings: [
-        { goId: "go-1", sectionKey: "sec-1", itemKey: "q-1" },
-        { goId: "go-1", sectionKey: "sec-1", itemKey: "q-1" },
+        { poId: "po-1", sectionKey: "sec-1", itemKey: "q-1" },
+        { poId: "po-1", sectionKey: "sec-1", itemKey: "q-1" },
       ],
       structure,
-      gos,
+      pos,
     });
 
     expect(result).toEqual({
       success: false,
-      error: "Each Likert question can only be assigned to a GO once.",
+      error: "Each Likert question can only be assigned to a PO once.",
     });
   });
 
@@ -1111,10 +1111,10 @@ describe("normalizeGoQuestionBindings", () => {
       },
     ];
 
-    const result = normalizeGoQuestionBindings({
-      bindings: [{ goId: "go-1", sectionKey: "a:b", itemKey: "c" }],
+    const result = normalizePoQuestionBindings({
+      bindings: [{ poId: "po-1", sectionKey: "a:b", itemKey: "c" }],
       structure: trickyStructure,
-      gos,
+      pos,
     });
 
     expect(result.success).toBe(true);
@@ -1124,31 +1124,31 @@ describe("normalizeGoQuestionBindings", () => {
     }
   });
 
-  it("snapshots GO code/description and question prompt, and reports unbound Likert questions", () => {
-    const result = normalizeGoQuestionBindings({
+  it("snapshots PO code/description and question prompt, and reports unbound Likert questions", () => {
+    const result = normalizePoQuestionBindings({
       bindings: [
-        { goId: "go-1", sectionKey: "sec-1", itemKey: "q-1" },
-        { goId: "go-2", sectionKey: "sec-1", itemKey: "q-1" },
+        { poId: "po-1", sectionKey: "sec-1", itemKey: "q-1" },
+        { poId: "po-2", sectionKey: "sec-1", itemKey: "q-1" },
       ],
       structure,
-      gos,
+      pos,
     });
 
     expect(result).toEqual({
       success: true,
       bindings: [
         {
-          goCodeSnapshot: "BSIT-GO1",
-          goDescriptionSnapshot: "Communicate effectively",
-          goId: "go-1",
+          poCodeSnapshot: "BSIT-GO1",
+          poDescriptionSnapshot: "Communicate effectively",
+          poId: "po-1",
           itemKey: "q-1",
           questionPromptSnapshot: "Prepared me for employment",
           sectionKey: "sec-1",
         },
         {
-          goCodeSnapshot: "BSIT-GO2",
-          goDescriptionSnapshot: "Apply technical skills",
-          goId: "go-2",
+          poCodeSnapshot: "BSIT-GO2",
+          poDescriptionSnapshot: "Apply technical skills",
+          poId: "po-2",
           itemKey: "q-1",
           questionPromptSnapshot: "Prepared me for employment",
           sectionKey: "sec-1",

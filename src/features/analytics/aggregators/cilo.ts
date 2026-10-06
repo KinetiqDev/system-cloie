@@ -20,7 +20,7 @@ import type {
  * rating with its snapshot-resolved scale identity and binding. The service
  * read resolves `scale` via resolveItemScaleIdentity so these aggregators
  * stay pure. `cilo` null marks an explicit or effective GENERAL item;
- * `goMappings` carries the selected Program's current mappings.
+ * `poMappings` carries the selected Program's current mappings.
  */
 export type OutcomeItemRatingRow = {
   sectionKey: string;
@@ -31,8 +31,8 @@ export type OutcomeItemRatingRow = {
   scale: ScaleIdentity | null;
   cilo: { id: string; label: string; description: string } | null;
   evaluationId?: string;
-  goMappings: CiloGoMapping[];
-  directGoMappings?: CiloGoMapping[];
+  poMappings: CiloGoMapping[];
+  directPoMappings?: CiloGoMapping[];
 };
 
 /** A rating contributes only when its value belongs to the item's frozen scale. */
@@ -60,9 +60,9 @@ function accumulateCiloRow(aggregate: CiloAggregate, row: OutcomeItemRatingRow):
       prompt: row.prompt,
     });
   }
-  for (const mapping of row.goMappings) {
-    if (!aggregate.mappings.has(mapping.goId)) {
-      aggregate.mappings.set(mapping.goId, mapping);
+  for (const mapping of row.poMappings) {
+    if (!aggregate.mappings.has(mapping.poId)) {
+      aggregate.mappings.set(mapping.poId, mapping);
     }
   }
 }
@@ -134,7 +134,7 @@ export function buildCiloMetrics(rows: OutcomeItemRatingRow[]): CiloMetric[] {
         scaleGroups,
         mappings: [...aggregate.mappings.values()].sort(
           (left, right) =>
-            left.goCode.localeCompare(right.goCode) || left.goId.localeCompare(right.goId)
+            left.poCode.localeCompare(right.poCode) || left.poId.localeCompare(right.poId)
         ),
         contributingQuestions: questions,
         evidenceSummary,
@@ -219,12 +219,12 @@ export function buildQuestionMetrics(rows: OutcomeItemRatingRow[]): QuestionMetr
             type: "CILO",
             ciloId: row.cilo.id,
             ciloLabel: row.cilo.label,
-            ...(row.directGoMappings && row.directGoMappings.length > 0
-              ? { directGoMappings: row.directGoMappings }
+            ...(row.directPoMappings && row.directPoMappings.length > 0
+              ? { directPoMappings: row.directPoMappings }
               : {}),
           }
-        : row.directGoMappings && row.directGoMappings.length > 0
-          ? { type: "GO", goMappings: row.directGoMappings }
+        : row.directPoMappings && row.directPoMappings.length > 0
+          ? { type: "PO", poMappings: row.directPoMappings }
           : { type: "GENERAL" };
       const scaleGroups = groupRatingsByScale(entries).map((group) => group.metric);
       scaleGroups.sort((left, right) =>

@@ -14,7 +14,7 @@ export default function CollegeOversightPage() {
         {
           name: "Learning Outcomes",
           href: "/dean/college-oversight/learning-outcomes",
-          description: "Review graduate outcomes and mapping gaps.",
+          description: "Review program outcomes and mapping gaps.",
           icon: BookOpen,
         },
       ]}

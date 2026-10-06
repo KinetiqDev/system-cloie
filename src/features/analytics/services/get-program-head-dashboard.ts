@@ -32,11 +32,11 @@ import {
   type ScaleIdentity,
 } from "../aggregators/scale-identity";
 import {
-  buildCourseDerivedGoMetrics,
-  buildProgramWideGoMetrics,
-  type CentralGoRatingRow,
-  type GoMetric,
-} from "../aggregators/go";
+  buildCourseDerivedPoMetrics,
+  buildProgramWidePoMetrics,
+  type CentralPoRatingRow,
+  type PoMetric,
+} from "../aggregators/po";
 import type { OutcomeItemRatingRow } from "../aggregators/cilo";
 import {
   encodeBindingKey as encodeCourseBindingKey,
@@ -72,8 +72,8 @@ export type DashboardSourceMean = {
 };
 
 export type DashboardGoSummaryRow = {
-  goId: string;
-  goCode: string;
+  poId: string;
+  poCode: string;
   /** Single compatible scale-group mean; null when mixed or without evidence. */
   mean: number | null;
   ratingCount: number;
@@ -89,7 +89,7 @@ export type DashboardGoSummaryRow = {
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };
-export type NeedsAttentionRule = "closing-soon" | "zero-submissions" | "zero-go-ratings";
+export type NeedsAttentionRule = "closing-soon" | "zero-submissions" | "zero-po-ratings";
 
 export type NeedsAttentionItem = {
   id: string;
@@ -117,8 +117,8 @@ type DashboardLinks = {
   analyticsFeedback: string;
 };
 
-/** Active live GOs of the selected Program, for zero-evidence rows (§50). */
-export type GoCatalogEntry = { id: string; code: string };
+/** Active live POs of the selected Program, for zero-evidence rows (§50). */
+export type PoCatalogEntry = { id: string; code: string };
 
 export type ProgramHeadDashboardData = {
   programLabel: string;
@@ -129,8 +129,8 @@ export type ProgramHeadDashboardData = {
   pendingResponses: number;
   activeEvaluations: { total: number; closingWithin7Days: number };
   sourceMeans: DashboardSourceMean[];
-  goSources: Record<DashboardSourceKey, DashboardGoSummaryRow[]>;
-  goCatalog: GoCatalogEntry[];
+  poSources: Record<DashboardSourceKey, DashboardGoSummaryRow[]>;
+  poCatalog: PoCatalogEntry[];
   needsAttention: NeedsAttentionItem[];
   qualitative: QualitativePulse;
   links: DashboardLinks;
@@ -272,15 +272,15 @@ export function buildDashboardSourceMeans(
   });
 }
 
-/** Project GO metrics into the compact summary row shape (§13.8). */
+/** Project PO metrics into the compact summary row shape (§13.8). */
 function toGoSummaryRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string,
+  metrics: PoMetric[],
+  evidenceHrefFor: (poId: string) => string,
   exclusionClause: string
 ): DashboardGoSummaryRow[] {
   return metrics.map((metric) => ({
-    goId: metric.goId,
-    goCode: metric.goCode,
+    poId: metric.poId,
+    poCode: metric.poCode,
     mean: metric.mean,
     ratingCount: metric.ratingCount,
     responseCount: metric.responseCount,
@@ -297,32 +297,32 @@ function toGoSummaryRows(
       questionCount: metric.questionCount,
       scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
       explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); ${exclusionClause}`,
-      evidenceHref: evidenceHrefFor(metric.goId),
+      evidenceHref: evidenceHrefFor(metric.poId),
     },
   }));
 }
 
 /**
- * Project course-derived GO metrics into the compact summary row shape (§13.8).
- * Course evidence additionally excludes general items, which carry no GO binding.
+ * Project course-derived PO metrics into the compact summary row shape (§13.8).
+ * Course evidence additionally excludes general items, which carry no PO binding.
  */
 export function toDashboardGoRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string
+  metrics: PoMetric[],
+  evidenceHrefFor: (poId: string) => string
 ): DashboardGoSummaryRow[] {
   return toGoSummaryRows(metrics, evidenceHrefFor, "unbound and general items are excluded.");
 }
 
 /** Max of the single compatible scale group; null when mixed or unresolved. */
-function singleScaleMax(metric: GoMetric): number | null {
+function singleScaleMax(metric: PoMetric): number | null {
   if (metric.scaleGroups.length !== 1) return null;
   return metric.scaleGroups[0].scale?.max ?? null;
 }
 
-/** Project program-wide GO metrics into the compact summary row shape (§13.8). */
+/** Project program-wide PO metrics into the compact summary row shape (§13.8). */
 export function toCentralDashboardGoRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string
+  metrics: PoMetric[],
+  evidenceHrefFor: (poId: string) => string
 ): DashboardGoSummaryRow[] {
   return toGoSummaryRows(metrics, evidenceHrefFor, "unbound items are excluded.");
 }
@@ -337,17 +337,17 @@ export type CourseBindingRow = {
     description: string;
     cilo_mappings: Array<{
       manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      go: { id: string; code: string; description: string };
+      po: { id: string; code: string; description: string };
     }>;
   } | null;
-  directGoMappings?: Array<{
-    goId: string;
-    goCode: string;
-    goDescription: string;
+  directPoMappings?: Array<{
+    poId: string;
+    poCode: string;
+    poDescription: string;
   }>;
 };
 
-/** Normalize course-bound ratings through CILO and direct GO bindings. */
+/** Normalize course-bound ratings through CILO and direct PO bindings. */
 export function buildCourseGoRatingRows(
   rows: DashboardRatingRow[],
   bindingByKey: Map<string, CourseBindingRow>,
@@ -361,8 +361,8 @@ export function buildCourseGoRatingRows(
       encodeCourseBindingKey(courseBoundId, row.section_key, row.item_key)
     );
     const cilo = binding?.cilo;
-    const directGoMappings = binding?.directGoMappings ?? [];
-    if ((!cilo || cilo.cilo_mappings.length === 0) && directGoMappings.length === 0) continue;
+    const directPoMappings = binding?.directPoMappings ?? [];
+    if ((!cilo || cilo.cilo_mappings.length === 0) && directPoMappings.length === 0) continue;
     normalized.push({
       sectionKey: row.section_key,
       itemKey: row.item_key,
@@ -372,14 +372,14 @@ export function buildCourseGoRatingRows(
       evaluationId: courseBoundId,
       scale: ratingRowScale(row, snapshotById),
       cilo: cilo ? { id: cilo.id, label: cilo.description, description: cilo.description } : null,
-      goMappings:
+      poMappings:
         cilo?.cilo_mappings.map((mapping) => ({
-          goId: mapping.go.id,
-          goCode: mapping.go.code,
-          goDescription: mapping.go.description,
+          poId: mapping.po.id,
+          poCode: mapping.po.code,
+          poDescription: mapping.po.description,
           manifestation: mapping.manifestation,
         })) ?? [],
-      directGoMappings: directGoMappings.map((mapping) => ({
+      directPoMappings: directPoMappings.map((mapping) => ({
         ...mapping,
         manifestation: null,
       })),
@@ -388,23 +388,23 @@ export function buildCourseGoRatingRows(
   return normalized;
 }
 
-/** Snapshot GO bindings keyed by deployment then section/item identity. */
+/** Snapshot PO bindings keyed by deployment then section/item identity. */
 export type CentralBindingsByDeployment = Map<
   string,
-  Map<string, Array<{ goId: string; goCode: string; goDescription: string }>>
+  Map<string, Array<{ poId: string; poCode: string; poDescription: string }>>
 >;
 
 /**
  * Normalize central-deployment ratings into shared-aggregator rows through
- * the published CentralDeploymentGoSnapshot bindings (§5.9). Questions the
- * deployment never bound to a live GO contribute no GO evidence.
+ * the published CentralDeploymentPoSnapshot bindings (§5.9). Questions the
+ * deployment never bound to a live PO contribute no PO evidence.
  */
-export function buildCentralGoRatingRows(
+export function buildCentralPoRatingRows(
   rows: DashboardRatingRow[],
   bindingsByDeployment: CentralBindingsByDeployment,
   snapshotById: Map<string, unknown>
-): CentralGoRatingRow[] {
-  const normalized: CentralGoRatingRow[] = [];
+): CentralPoRatingRow[] {
+  const normalized: CentralPoRatingRow[] = [];
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     if (!deployment) continue;
@@ -419,7 +419,7 @@ export function buildCentralGoRatingRows(
       responseId: row.response_id,
       evaluationId: deployment.id,
       scale: ratingRowScale(row, snapshotById),
-      goBindings: bindings,
+      poBindings: bindings,
     });
   }
   return normalized;
@@ -451,7 +451,7 @@ export function isClosingWithinSevenDays(deployment: AttentionDeployment, now: D
 /**
  * The three concrete needs-attention rules, period-scoped to the selected
  * Program: an ACTIVE deployment whose deadline is within 7 days, an ACTIVE
- * deployment with zero submitted responses, and a live GO with zero ratings
+ * deployment with zero submitted responses, and a live PO with zero ratings
  * for an evidence source. Operational facts only — no attainment or
  * performance classification (resolved §13.9).
  */
@@ -461,7 +461,7 @@ export function buildNeedsAttentionItems(input: {
   deployments: AttentionDeployment[];
   submittedCountsByDeployment: Map<string, number>;
   programGos: Array<{ id: string; code: string }>;
-  goRowsBySource: Partial<Record<DashboardSourceKey, DashboardGoSummaryRow[]>>;
+  poRowsBySource: Partial<Record<DashboardSourceKey, DashboardGoSummaryRow[]>>;
   analyticsOutcomesHref: string;
   periodFilters?: DashboardPeriodFilters;
 }): NeedsAttentionItem[] {
@@ -494,16 +494,16 @@ export function buildNeedsAttentionItems(input: {
 
   for (const sourceKey of DASHBOARD_SOURCE_ORDER) {
     const evidenceGoIds = new Set(
-      (input.goRowsBySource[sourceKey] ?? [])
+      (input.poRowsBySource[sourceKey] ?? [])
         .filter((row) => row.hasEvidence)
-        .map((row) => row.goId)
+        .map((row) => row.poId)
     );
-    for (const go of input.programGos) {
-      if (evidenceGoIds.has(go.id)) continue;
+    for (const po of input.programGos) {
+      if (evidenceGoIds.has(po.id)) continue;
       items.push({
-        id: `zero-go-ratings:${sourceKey}:${go.id}`,
-        rule: "zero-go-ratings",
-        title: `${go.code} has no ratings yet`,
+        id: `zero-po-ratings:${sourceKey}:${po.id}`,
+        rule: "zero-po-ratings",
+        title: `${po.code} has no ratings yet`,
         note: `No ${SOURCE_CARD_LABELS[sourceKey]} ratings in this period`,
         href: input.analyticsOutcomesHref,
       });
@@ -708,7 +708,7 @@ export async function getProgramHeadDashboard(
         },
       },
     }),
-    prisma.gO.findMany({
+    prisma.pO.findMany({
       where: { program_id: scope.programId, is_active: true },
       select: { id: true, code: true },
       orderBy: { code: "asc" },
@@ -736,30 +736,30 @@ export async function getProgramHeadDashboard(
     effectiveFilters
   );
 
-  // ── GO evidence per source (§13.8) ──────────────────────────────────────
+  // ── PO evidence per source (§13.8) ──────────────────────────────────────
 
   const courseBoundRows = ratingRows.filter((row) => row.response.assignment.course_bound);
   const centralRows = ratingRows.filter((row) => !row.response.assignment.course_bound);
 
   const [bindingByKey, centralBindings] = await Promise.all([
     loadCourseBindings(courseBoundRows, scope.programId),
-    loadCentralGoBindings(centralRows),
+    loadCentralPoBindings(centralRows),
   ]);
 
-  const goEvidenceHref = (sourceKey: DashboardSourceKey, goId: string): string =>
+  const poEvidenceHref = (sourceKey: DashboardSourceKey, poId: string): string =>
     buildAnalyticsUrl(scope.programId, {
       ...effectiveFilters,
       tab: "outcomes",
-      goId,
+      poId,
       ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
     });
 
-  const goRowsBySource: Record<DashboardSourceKey, DashboardGoSummaryRow[]> = {
+  const poRowsBySource: Record<DashboardSourceKey, DashboardGoSummaryRow[]> = {
     COURSE_STUDENT: toDashboardGoRows(
-      buildCourseDerivedGoMetrics(
+      buildCourseDerivedPoMetrics(
         buildCourseGoRatingRows(courseBoundRows, bindingByKey, snapshotById)
       ),
-      (goId) => goEvidenceHref("COURSE_STUDENT", goId)
+      (poId) => poEvidenceHref("COURSE_STUDENT", poId)
     ),
     CENTRAL_STUDENT: [],
     ALUMNI: [],
@@ -774,15 +774,15 @@ export async function getProgramHeadDashboard(
     centralBySource.set(sourceKey, bucket);
   }
   for (const sourceKey of ["CENTRAL_STUDENT", "ALUMNI", "INDUSTRY_PARTNER"] as const) {
-    goRowsBySource[sourceKey] = toCentralDashboardGoRows(
-      buildProgramWideGoMetrics(
-        buildCentralGoRatingRows(
+    poRowsBySource[sourceKey] = toCentralDashboardGoRows(
+      buildProgramWidePoMetrics(
+        buildCentralPoRatingRows(
           centralBySource.get(sourceKey) ?? [],
           centralBindings,
           snapshotById
         )
       ),
-      (goId) => goEvidenceHref(sourceKey, goId)
+      (poId) => poEvidenceHref(sourceKey, poId)
     );
   }
 
@@ -813,7 +813,7 @@ export async function getProgramHeadDashboard(
     deployments: activeEvaluations.deployments,
     submittedCountsByDeployment,
     programGos,
-    goRowsBySource,
+    poRowsBySource,
     analyticsOutcomesHref,
     periodFilters: effectiveFilters,
   });
@@ -831,8 +831,8 @@ export async function getProgramHeadDashboard(
       ).length,
     },
     sourceMeans,
-    goSources: goRowsBySource,
-    goCatalog: programGos.map((go) => ({ id: go.id, code: go.code })),
+    poSources: poRowsBySource,
+    poCatalog: programGos.map((po) => ({ id: po.id, code: po.code })),
     needsAttention,
     qualitative: summarizeQualitativePulse(qualitativeRows),
     links: buildDashboardLinks(scope.programId, effectiveFilters),
@@ -920,7 +920,7 @@ async function loadInstrumentSnapshots(
   return new Map(versions.map((version) => [version.id, version.structure_snapshot]));
 }
 
-/** Load CILO and direct GO bindings keyed by evaluation plus question. */
+/** Load CILO and direct PO bindings keyed by evaluation plus question. */
 async function loadCourseBindings(
   courseBoundRows: DashboardRatingRow[],
   programId: string
@@ -945,25 +945,25 @@ async function loadCourseBindings(
             id: true,
             description: true,
             cilo_mappings: {
-              where: { go: { program_id: programId } },
+              where: { po: { program_id: programId } },
               select: {
                 manifestation: true,
-                go: { select: { id: true, code: true, description: true } },
+                po: { select: { id: true, code: true, description: true } },
               },
             },
           },
         },
       },
     }),
-    prisma.courseBoundGoQuestionBinding.findMany({
+    prisma.courseBoundPoQuestionBinding.findMany({
       where: { course_bound_evaluation_id: { in: evaluationIds } },
       select: {
         course_bound_evaluation_id: true,
         section_key: true,
         item_key: true,
-        go_id: true,
-        go_code_snapshot: true,
-        go_description_snapshot: true,
+        po_id: true,
+        po_code_snapshot: true,
+        po_description_snapshot: true,
       },
     }),
   ]);
@@ -977,7 +977,7 @@ async function loadCourseBindings(
       ),
       {
         ...binding,
-        directGoMappings: [],
+        directPoMappings: [],
       }
     );
   }
@@ -992,20 +992,20 @@ async function loadCourseBindings(
       section_key: binding.section_key,
       item_key: binding.item_key,
       cilo: null,
-      directGoMappings: [],
+      directPoMappings: [],
     };
-    existing.directGoMappings!.push({
-      goId:
-        binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
-      goCode: binding.go_code_snapshot,
-      goDescription: binding.go_description_snapshot,
+    existing.directPoMappings!.push({
+      poId:
+        binding.po_id ?? `snapshot:${binding.po_code_snapshot}:${binding.po_description_snapshot}`,
+      poCode: binding.po_code_snapshot,
+      poDescription: binding.po_description_snapshot,
     });
     byKey.set(key, existing);
   }
   return byKey;
 }
 
-async function loadCentralGoBindings(
+async function loadCentralPoBindings(
   centralRows: DashboardRatingRow[]
 ): Promise<CentralBindingsByDeployment> {
   const deploymentIds = [
@@ -1020,13 +1020,13 @@ async function loadCentralGoBindings(
   if (deploymentIds.length === 0) {
     return new Map();
   }
-  const snapshots = await prisma.centralDeploymentGoSnapshot.findMany({
-    where: { central_deployment_id: { in: deploymentIds }, go_id: { not: null } },
+  const snapshots = await prisma.centralDeploymentPoSnapshot.findMany({
+    where: { central_deployment_id: { in: deploymentIds }, po_id: { not: null } },
     select: {
       central_deployment_id: true,
       section_key: true,
       item_key: true,
-      go: { select: { id: true, code: true, description: true } },
+      po: { select: { id: true, code: true, description: true } },
     },
   });
   const byDeployment: CentralBindingsByDeployment = new Map();
@@ -1039,9 +1039,9 @@ async function loadCentralGoBindings(
     const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     bindings.push({
-      goId: snapshot.go!.id,
-      goCode: snapshot.go!.code,
-      goDescription: snapshot.go!.description,
+      poId: snapshot.po!.id,
+      poCode: snapshot.po!.code,
+      poDescription: snapshot.po!.description,
     });
     byQuestion.set(questionKey, bindings);
   }

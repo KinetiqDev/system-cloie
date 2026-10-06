@@ -16,12 +16,12 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     emptyReason: null,
     programWideOutcomes: [],
     currentMappingDisclosure:
-      "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
+      "Outcome rows group historical ratings using the Program's current CILO-to-PO mappings. Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.",
     manyToManyDisclosure: false,
     outcomes: [
       {
         outcomeId: "outcome-a",
-        code: "GO-1",
+        code: "PO-1",
         name: "Effective communicator",
         meanRating: 13 / 3, // 4.3333... full precision
         ratingCount: 3,
@@ -95,7 +95,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
       },
       {
         outcomeId: "outcome-b",
-        code: "GO-2",
+        code: "PO-2",
         name: "Critical thinker",
         meanRating: 2,
         ratingCount: 1,
@@ -137,7 +137,7 @@ function renderView(dto: ProgramHeadOutcomesDTO, selectedGoId?: string) {
 }
 
 describe("ProgramHeadOutcomesView", () => {
-  it("renders the program-wide GO evidence table when program-wide outcomes exist", () => {
+  it("renders the program-wide PO evidence table when program-wide outcomes exist", () => {
     render(
       <ProgramHeadOutcomesView
         programId={PROGRAM_ID}
@@ -146,9 +146,9 @@ describe("ProgramHeadOutcomesView", () => {
           programWideOutcomes: [
             {
               stakeholder: "ALUMNI",
-              goId: "plo-1",
-              code: "GO-1",
-              name: "Graduate outcomes",
+              poId: "po-1",
+              code: "PO-1",
+              name: "Program outcomes",
               meanRating: 4.5,
               ratingCount: 10,
               submittedResponseCount: 8,
@@ -162,8 +162,8 @@ describe("ProgramHeadOutcomesView", () => {
       />
     );
 
-    expect(screen.getByText("Program-wide GO evidence")).toBeInTheDocument();
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("Program-wide PO evidence")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
     expect(screen.getByText("Alumni")).toBeInTheDocument();
     expect(screen.getByText("4.50")).toBeInTheDocument();
   });
@@ -190,7 +190,7 @@ describe("ProgramHeadOutcomesView", () => {
   it("discloses current-mapping interpretation whenever outcome rows exist", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Current CILO-to-GO mappings")).toBeInTheDocument();
+    expect(screen.getByText("Current CILO-to-PO mappings")).toBeInTheDocument();
     expect(
       screen.getByText(/Publication-time mapping snapshots are not yet available/)
     ).toBeInTheDocument();
@@ -198,12 +198,12 @@ describe("ProgramHeadOutcomesView", () => {
 
   it("discloses the many-to-many contribution rule only when it applies", () => {
     const { unmount } = renderView(outcomeDTO({ manyToManyDisclosure: true }));
-    expect(screen.getByText("Multiple Graduate Outcome mapping")).toBeInTheDocument();
+    expect(screen.getByText("Multiple Program Outcome mapping")).toBeInTheDocument();
     expect(screen.getByText(/contributes to each mapped outcome row/)).toBeInTheDocument();
     unmount();
 
     renderView(outcomeDTO({ manyToManyDisclosure: false }));
-    expect(screen.queryByText("Multiple Graduate Outcome mapping")).not.toBeInTheDocument();
+    expect(screen.queryByText("Multiple Program Outcome mapping")).not.toBeInTheDocument();
   });
 
   it("exposes an outcome contributor matrix with provenance, mean, and valid count", () => {
@@ -241,9 +241,9 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO());
 
     expect(
-      await screen.findByText("Mean Rating by Graduate Outcome", {}, { timeout: 10_000 })
+      await screen.findByText("Mean Rating by Program Outcome", {}, { timeout: 10_000 })
     ).toBeInTheDocument();
-    expect(screen.getByText(/Highest mean: GO-1 \(4.33\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Highest mean: PO-1 \(4.33\)/)).toBeInTheDocument();
     expect(screen.getByText("View exact values")).toBeInTheDocument();
   });
 
@@ -251,7 +251,7 @@ describe("ProgramHeadOutcomesView", () => {
     renderView(outcomeDTO());
 
     // Detail content is reachable through the summary disclosure.
-    const go1Summary = screen.getByText("Details for GO-1");
+    const go1Summary = screen.getByText("Details for PO-1");
     fireEvent.click(go1Summary);
     const go1Detail = go1Summary.closest("details")!;
 
@@ -262,7 +262,7 @@ describe("ProgramHeadOutcomesView", () => {
     expect(within(go1Detail).queryByText(String(13 / 3))).not.toBeInTheDocument();
     // The two-decimal summary figure above the disclosure stays the default.
     expect(
-      within(screen.getByRole("table", { name: "Exact values by graduate outcome" })).getByText(
+      within(screen.getByRole("table", { name: "Exact values by program outcome" })).getByText(
         "4.33"
       )
     ).toBeInTheDocument();
@@ -279,18 +279,18 @@ describe("ProgramHeadOutcomesView", () => {
     ).toBeInTheDocument();
 
     // Excluded-rating diagnostic appears only for rows with exclusions.
-    fireEvent.click(screen.getByText("Details for GO-2"));
+    fireEvent.click(screen.getByText("Details for PO-2"));
     expect(screen.getByText(/1 rating was excluded from the valid aggregate/)).toBeInTheDocument();
   });
 
-  it("expands and highlights the GO selected through a deep link", () => {
+  it("expands and highlights the PO selected through a deep link", () => {
     const dto = outcomeDTO();
     dto.programWideOutcomes = [
       {
         stakeholder: "ALUMNI",
-        goId: "outcome-a",
-        code: "GO-1",
-        name: "Graduate outcomes",
+        poId: "outcome-a",
+        code: "PO-1",
+        name: "Program outcomes",
         meanRating: 4.5,
         ratingCount: 10,
         submittedResponseCount: 8,
@@ -301,16 +301,16 @@ describe("ProgramHeadOutcomesView", () => {
     ];
     renderView(dto, "outcome-a");
 
-    const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
+    const go1Detail = screen.getByText("Details for PO-1").closest("details")!;
     expect(go1Detail).toHaveAttribute("open");
     expect(within(go1Detail).getByText("Mean Rating (higher precision)")).toBeInTheDocument();
     // The selected row carries the highlight; other rows stay closed.
-    expect(screen.getByText("Details for GO-2").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("Details for PO-2").closest("details")).not.toHaveAttribute("open");
     // Program-wide row also highlights.
     const programWideTable = screen.getByRole("table", {
-      name: "Program-wide evidence by graduate outcome",
+      name: "Program-wide evidence by program outcome",
     });
-    const pwRow = within(programWideTable).getByRole("row", { name: /GO-1.*Alumni/ });
+    const pwRow = within(programWideTable).getByRole("row", { name: /PO-1.*Alumni/ });
     expect(pwRow.className).toContain("bg-primary-soft");
   });
 
@@ -319,7 +319,7 @@ describe("ProgramHeadOutcomesView", () => {
     dto.outcomes.push({
       ...dto.outcomes[0],
       outcomeId: "outcome-c",
-      code: "GO-3",
+      code: "PO-3",
       name: "Unrated outcome",
       meanRating: null,
       ratingCount: 0,
@@ -328,15 +328,15 @@ describe("ProgramHeadOutcomesView", () => {
     });
     renderView(dto);
 
-    const exactTable = screen.getByRole("table", { name: "Exact values by graduate outcome" });
-    const row = within(exactTable).getByRole("row", { name: /GO-3.*Unrated outcome/ });
+    const exactTable = screen.getByRole("table", { name: "Exact values by program outcome" });
+    const row = within(exactTable).getByRole("row", { name: /PO-3.*Unrated outcome/ });
     const [, meanCell] = within(row).getAllByRole("cell");
     expect(within(meanCell).getByText("—")).toBeInTheDocument();
   });
 
-  it("leaves every row closed without a selected GO", () => {
+  it("leaves every row closed without a selected PO", () => {
     renderView(outcomeDTO());
 
-    expect(screen.getByText("Details for GO-1").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("Details for PO-1").closest("details")).not.toHaveAttribute("open");
   });
 });

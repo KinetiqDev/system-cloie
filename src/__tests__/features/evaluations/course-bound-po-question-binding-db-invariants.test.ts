@@ -6,10 +6,10 @@ import { prisma } from "@/lib/db/prisma";
 import { isUniqueConstraintError } from "@/lib/utils/prisma-errors";
 
 /**
- * Published Course-bound GO question bindings: a Likert question may cover
- * several Graduate Outcomes and one GO may span several questions, so
- * uniqueness is the full (evaluation, GO, question) pair. The rows must also
- * survive a GO deletion with their frozen labels intact.
+ * Published Course-bound PO question bindings: a Likert question may cover
+ * several Program Outcomes and one PO may span several questions, so
+ * uniqueness is the full (evaluation, PO, question) pair. The rows must also
+ * survive a PO deletion with their frozen labels intact.
  *
  * Every test owns its disposable rows and cleans them up in the finally block.
  * The seeded catalog is reused read-only.
@@ -25,7 +25,7 @@ interface OwnedRows {
   templateId: string;
   assignmentId: string;
   evaluationId: string;
-  goIds: [string, string];
+  poIds: [string, string];
 }
 
 const seedPromise = (async () => {
@@ -38,19 +38,19 @@ const seedPromise = (async () => {
 })();
 
 /** One binding row for a disposable evaluation. */
-function bindingFor(rows: OwnedRows, { goId, itemKey }: { goId: string | null; itemKey: string }) {
+function bindingFor(rows: OwnedRows, { poId, itemKey }: { poId: string | null; itemKey: string }) {
   return {
     course_bound_evaluation_id: rows.evaluationId,
-    go_code_snapshot: "BTGO",
-    go_description_snapshot: "Snapshot description",
-    go_id: goId,
+    po_code_snapshot: "BTPO",
+    po_description_snapshot: "Snapshot description",
+    po_id: poId,
     item_key: itemKey,
     question_prompt_snapshot: "Snapshot prompt",
-    section_key: "go-items",
+    section_key: "po-items",
   };
 }
 
-/** Creates a disposable Program with two GOs, its course, template, and evaluation. */
+/** Creates a disposable Program with two POs, its course, template, and evaluation. */
 async function seedOwnedRows(): Promise<OwnedRows> {
   const suffix = randomSuffix();
   const { term, faculty, seededProgram } = await seedPromise;
@@ -59,17 +59,17 @@ async function seedOwnedRows(): Promise<OwnedRows> {
     data: { code: `BIND-TEST-${suffix}`, name: `Binding test program ${suffix}` },
   });
 
-  const firstGo = await prisma.gO.create({
+  const firstGo = await prisma.pO.create({
     data: {
-      code: `BTGO1-${suffix}`,
-      description: "First graduate outcome",
+      code: `BTPO-${suffix}`,
+      description: "First program outcome",
       program_id: program.id,
     },
   });
-  const secondGo = await prisma.gO.create({
+  const secondGo = await prisma.pO.create({
     data: {
-      code: `BTGO2-${suffix}`,
-      description: "Second graduate outcome",
+      code: `BTPO-${suffix}`,
+      description: "Second program outcome",
       program_id: program.id,
     },
   });
@@ -77,7 +77,7 @@ async function seedOwnedRows(): Promise<OwnedRows> {
   const course = await prisma.course.create({
     data: {
       code: `BIND-TEST-${suffix}`,
-      title: "Course-bound GO binding test course",
+      title: "Course-bound PO binding test course",
       course_scope: CourseScope.PROGRAM_SPECIFIC,
       program_id: program.id,
       is_active: true,
@@ -87,7 +87,7 @@ async function seedOwnedRows(): Promise<OwnedRows> {
   const template = await prisma.instrumentTemplate.create({
     data: {
       code: `BIND-TEST-${suffix}`,
-      name: "Course-bound GO binding test template",
+      name: "Course-bound PO binding test template",
       is_active: true,
       template_type: "COURSE_BOUND",
       bound_course_id: course.id,
@@ -95,7 +95,7 @@ async function seedOwnedRows(): Promise<OwnedRows> {
       faculty_owner_id: faculty.id,
       structure: [
         {
-          key: "go-items",
+          key: "po-items",
           title: "Outcomes",
           questions: [
             { key: "q1", prompt: "First question", type: "likert" },
@@ -130,7 +130,7 @@ async function seedOwnedRows(): Promise<OwnedRows> {
     data: {
       term_instance_id: term.id,
       course_assignment_id: assignment.id,
-      deployment_name: `Course-bound GO binding ${suffix}`,
+      deployment_name: `Course-bound PO binding ${suffix}`,
       instrument_version_id: version.id,
       cilos_snapshot: [],
       course_info_snapshot: {},
@@ -145,45 +145,45 @@ async function seedOwnedRows(): Promise<OwnedRows> {
     templateId: template.id,
     assignmentId: assignment.id,
     evaluationId: evaluation.id,
-    goIds: [firstGo.id, secondGo.id],
+    poIds: [firstGo.id, secondGo.id],
   };
 }
 
 async function cleanupOwnedRows(rows: OwnedRows): Promise<void> {
-  await prisma.courseBoundGoQuestionBinding.deleteMany({
+  await prisma.courseBoundPoQuestionBinding.deleteMany({
     where: { course_bound_evaluation_id: rows.evaluationId },
   });
   await prisma.courseBoundEvaluation.deleteMany({ where: { id: rows.evaluationId } });
   await prisma.courseAssignment.deleteMany({ where: { id: rows.assignmentId } });
   await prisma.instrumentTemplate.deleteMany({ where: { id: rows.templateId } });
-  await prisma.gO.deleteMany({ where: { program_id: rows.programId } });
+  await prisma.pO.deleteMany({ where: { program_id: rows.programId } });
   await prisma.course.deleteMany({ where: { id: rows.courseId } });
   await prisma.program.deleteMany({ where: { id: rows.programId } });
 }
 
 describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATION_TESTS !== "1")(
-  "Course-bound GO question binding invariants",
+  "Course-bound PO question binding invariants",
   () => {
-    it("stores one GO bound to several questions and several GOs bound to one question", async () => {
+    it("stores one PO bound to several questions and several POs bound to one question", async () => {
       const rows = await seedOwnedRows();
-      const [firstGo, secondGo] = rows.goIds;
+      const [firstGo, secondGo] = rows.poIds;
 
       try {
-        await prisma.courseBoundGoQuestionBinding.createMany({
+        await prisma.courseBoundPoQuestionBinding.createMany({
           data: [
-            bindingFor(rows, { goId: firstGo, itemKey: "q1" }),
-            bindingFor(rows, { goId: firstGo, itemKey: "q2" }),
-            bindingFor(rows, { goId: secondGo, itemKey: "q1" }),
+            bindingFor(rows, { poId: firstGo, itemKey: "q1" }),
+            bindingFor(rows, { poId: firstGo, itemKey: "q2" }),
+            bindingFor(rows, { poId: secondGo, itemKey: "q1" }),
           ],
         });
 
-        const stored = await prisma.courseBoundGoQuestionBinding.findMany({
+        const stored = await prisma.courseBoundPoQuestionBinding.findMany({
           where: { course_bound_evaluation_id: rows.evaluationId },
-          select: { go_id: true, item_key: true },
+          select: { po_id: true, item_key: true },
         });
         expect(stored).toHaveLength(3);
         expect(
-          stored.filter((binding) => binding.go_id === firstGo).map((binding) => binding.item_key)
+          stored.filter((binding) => binding.po_id === firstGo).map((binding) => binding.item_key)
         ).toEqual(["q1", "q2"]);
         expect(stored.filter((binding) => binding.item_key === "q1")).toHaveLength(2);
       } finally {
@@ -191,42 +191,42 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       }
     }, 30000);
 
-    it("rejects a duplicate (evaluation, GO, question) pair", async () => {
+    it("rejects a duplicate (evaluation, PO, question) pair", async () => {
       const rows = await seedOwnedRows();
-      const [firstGo] = rows.goIds;
+      const [firstGo] = rows.poIds;
 
       try {
-        const binding = bindingFor(rows, { goId: firstGo, itemKey: "q1" });
-        await prisma.courseBoundGoQuestionBinding.create({ data: binding });
+        const binding = bindingFor(rows, { poId: firstGo, itemKey: "q1" });
+        await prisma.courseBoundPoQuestionBinding.create({ data: binding });
 
         await expect(
-          prisma.courseBoundGoQuestionBinding.create({ data: binding })
+          prisma.courseBoundPoQuestionBinding.create({ data: binding })
         ).rejects.toSatisfy(isUniqueConstraintError);
       } finally {
         await cleanupOwnedRows(rows);
       }
     }, 30000);
 
-    it("keeps the frozen snapshot when its GO is deleted", async () => {
+    it("keeps the frozen snapshot when its PO is deleted", async () => {
       const rows = await seedOwnedRows();
-      const [firstGo] = rows.goIds;
+      const [firstGo] = rows.poIds;
 
       try {
-        await prisma.courseBoundGoQuestionBinding.create({
+        await prisma.courseBoundPoQuestionBinding.create({
           data: {
-            ...bindingFor(rows, { goId: firstGo, itemKey: "q1" }),
-            go_code_snapshot: "BTGO1",
+            ...bindingFor(rows, { poId: firstGo, itemKey: "q1" }),
+            po_code_snapshot: "BTPO1",
           },
         });
 
-        await prisma.gO.delete({ where: { id: firstGo } });
+        await prisma.pO.delete({ where: { id: firstGo } });
 
-        const stored = await prisma.courseBoundGoQuestionBinding.findFirstOrThrow({
+        const stored = await prisma.courseBoundPoQuestionBinding.findFirstOrThrow({
           where: { course_bound_evaluation_id: rows.evaluationId },
         });
-        expect(stored.go_id).toBeNull();
-        expect(stored.go_code_snapshot).toBe("BTGO1");
-        expect(stored.go_description_snapshot).toBe("Snapshot description");
+        expect(stored.po_id).toBeNull();
+        expect(stored.po_code_snapshot).toBe("BTPO1");
+        expect(stored.po_description_snapshot).toBe("Snapshot description");
       } finally {
         await cleanupOwnedRows(rows);
       }
@@ -236,14 +236,14 @@ describe.skipIf(!process.env.DATABASE_URL || process.env.RUN_DATABASE_INTEGRATIO
       const rows = await seedOwnedRows();
 
       try {
-        await prisma.courseBoundGoQuestionBinding.create({
-          data: bindingFor(rows, { goId: rows.goIds[0], itemKey: "q1" }),
+        await prisma.courseBoundPoQuestionBinding.create({
+          data: bindingFor(rows, { poId: rows.poIds[0], itemKey: "q1" }),
         });
 
         await prisma.courseBoundEvaluation.delete({ where: { id: rows.evaluationId } });
 
         await expect(
-          prisma.courseBoundGoQuestionBinding.count({
+          prisma.courseBoundPoQuestionBinding.count({
             where: { course_bound_evaluation_id: rows.evaluationId },
           })
         ).resolves.toBe(0);

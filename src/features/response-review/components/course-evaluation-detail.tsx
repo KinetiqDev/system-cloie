@@ -145,7 +145,7 @@ export function CourseEvaluationDetail({
                 <TableHead>CILO</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>
-                  {alignmentLayer === "INSTITUTIONAL_OUTCOME" ? "ILO alignments" : "GO mappings"}
+                  {alignmentLayer === "INSTITUTIONAL_OUTCOME" ? "ILO alignments" : "PO mappings"}
                 </TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
@@ -169,7 +169,7 @@ export function CourseEvaluationDetail({
                     <TableCell className="whitespace-normal">
                       {alignmentLayer === "INSTITUTIONAL_OUTCOME"
                         ? iloAlignmentLabels(iloMappingsByCilo[cilo.ciloId])
-                        : goMappingLabels(cilo)}
+                        : poMappingLabels(cilo)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {cilo.quantitative?.ratingCount ?? 0}
@@ -406,14 +406,14 @@ function SummaryStat({
   );
 }
 
-function goMappingLabels(cilo: { mappings: CiloGoMapping[] }): string {
+function poMappingLabels(cilo: { mappings: CiloGoMapping[] }): string {
   return cilo.mappings.length === 0
     ? "—"
     : cilo.mappings
         .map((mapping) =>
           formatOutcomeAlignment({
-            outcomeId: mapping.goId,
-            outcomeCode: mapping.goCode,
+            outcomeId: mapping.poId,
+            outcomeCode: mapping.poCode,
             manifestation: mapping.manifestation,
           })
         )

@@ -356,7 +356,7 @@ export const alumniEvalStructure: TemplateStructure = [
   },
   {
     key: "graduate-outcomes",
-    title: "Graduate Outcomes Attainment",
+    title: "Program Outcomes Attainment",
     order: 2,
     questions: [
       lq(

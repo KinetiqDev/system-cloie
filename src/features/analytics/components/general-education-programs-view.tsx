@@ -219,11 +219,11 @@ function ProgramCourseMatrix({
                   className="text-right align-top whitespace-nowrap tabular-nums"
                 >
                   {cell.ratingCount === 0 && cell.submittedResponseCount === 0 ? (
-                    <span className="text-text-secondary text-xs">Not evaluated</span>
+                    <span className="text-caption text-text-secondary">Not evaluated</span>
                   ) : (
                     <span className="flex flex-col items-end gap-0.5">
                       <span className="font-medium">{formatMean(cell.meanRating)}</span>
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-caption text-muted-foreground">
                         {cell.submittedResponseCount} resp · {cell.ratingCount} rating
                         {cell.ratingCount === 1 ? "" : "s"}
                         {cell.spansMultipleScales ? " · mixed" : ""}
@@ -274,7 +274,7 @@ function GeneralEducationProgramExactTable({
                   <div className="flex flex-col">
                     <span className="font-semibold whitespace-nowrap">{row.programCode}</span>
                     <span className="text-text-secondary whitespace-normal">{row.programName}</span>
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-caption text-muted-foreground">
                       {row.courseCount} course{row.courseCount === 1 ? "" : "s"}
                     </span>
                     {row.submittedResponseCount > 0 &&
@@ -288,7 +288,7 @@ function GeneralEducationProgramExactTable({
                 </TableCell>
                 <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                   {formatResponseRate(row.responseRate)}
-                  <span className="text-muted-foreground block text-xs">
+                  <span className="text-caption text-muted-foreground block">
                     {row.submittedResponseCount}/{row.evaluationOpportunityCount}
                   </span>
                 </TableCell>
@@ -302,12 +302,12 @@ function GeneralEducationProgramExactTable({
                   {row.scaleGroups.length > 0 ? (
                     <ul className="flex flex-col gap-0.5">
                       {row.scaleGroups.map((scale) => (
-                        <li key={scale.scaleKey} className="text-xs whitespace-nowrap">
+                        <li key={scale.scaleKey} className="text-caption whitespace-nowrap">
                           {scale.scaleLabel}
                         </li>
                       ))}
                       {row.spansMultipleScales ? (
-                        <li className="text-warning text-xs font-medium">Mixed scales</li>
+                        <li className="text-label-sm text-warning">Mixed scales</li>
                       ) : null}
                     </ul>
                   ) : (

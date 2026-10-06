@@ -23,10 +23,10 @@ type FacultyTemplateBuilderData = {
     bound_program_id: string | null;
     structure: TemplateStructure;
   };
-  /** CILO and GO bindings already carried by the stored template. */
+  /** CILO and PO bindings already carried by the stored template. */
   initialBindings: TemplateCiloQuestionBinding[];
-  /** Direct question–GO bindings already carried by the stored template. */
-  initialGoBindings: TemplateGoQuestionBinding[];
+  /** Direct question–PO bindings already carried by the stored template. */
+  initialPoBindings: TemplateGoQuestionBinding[];
 };
 
 /**
@@ -57,12 +57,12 @@ function toFacultyTemplateBuilderData(template: FacultyTemplateItem): FacultyTem
         questionPromptSnapshot: binding.questionPromptSnapshot,
         sectionKey: binding.sectionKey,
       })),
-    initialGoBindings: template.templateGoQuestionBindings
-      .filter((binding) => binding.goId)
+    initialPoBindings: template.templateGoQuestionBindings
+      .filter((binding) => binding.poId)
       .map((binding) => ({
-        goCodeSnapshot: binding.goCodeSnapshot,
-        goDescriptionSnapshot: binding.goDescriptionSnapshot,
-        goId: binding.goId!,
+        poCodeSnapshot: binding.poCodeSnapshot,
+        poDescriptionSnapshot: binding.poDescriptionSnapshot,
+        poId: binding.poId!,
         itemKey: binding.itemKey,
         sectionKey: binding.sectionKey,
       })),

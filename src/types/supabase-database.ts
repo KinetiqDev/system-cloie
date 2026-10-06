@@ -350,11 +350,11 @@ export type Database = {
           cilo_id: string
           created_at: string
           created_by: string | null
-          go_id: string
           id: string
           manifestation:
             | Database["public"]["Enums"]["CILOMappingManifestation"]
             | null
+          po_id: string
           updated_at: string | null
           updated_by: string | null
         }
@@ -362,11 +362,11 @@ export type Database = {
           cilo_id: string
           created_at?: string
           created_by?: string | null
-          go_id: string
           id?: string
           manifestation?:
             | Database["public"]["Enums"]["CILOMappingManifestation"]
             | null
+          po_id: string
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -374,11 +374,11 @@ export type Database = {
           cilo_id?: string
           created_at?: string
           created_by?: string | null
-          go_id?: string
           id?: string
           manifestation?:
             | Database["public"]["Enums"]["CILOMappingManifestation"]
             | null
+          po_id?: string
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -398,8 +398,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cilo_mappings_go_id_fkey"
-            columns: ["go_id"]
+            foreignKeyName: "cilo_mappings_po_id_fkey"
+            columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "gos"
             referencedColumns: ["id"]

@@ -4,26 +4,26 @@ import { resolveFacultyCourseContextScope } from "@/features/evaluations/service
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 import { type ServiceResult } from "@/lib/utils/service-result";
-import type { ProgramGoOption } from "../types";
+import type { ProgramPoOption } from "../types";
 
 /**
- * The Graduate Outcome catalog a Course-bound template editor may bind to,
+ * The Program Outcome catalog a Course-bound template editor may bind to,
  * plus why that catalog is unavailable when it is.
  *
  * `general-education` carries the rule rather than an empty list: a General
  * Education Course has no owning Program and its CILOs align to Institutional
  * Outcomes, so the builder explains the boundary instead of showing an empty
  * picker (ADR 0005). A program-specific Course whose Program simply
- * has no active GOs reports an empty list with no reason, because that is a
+ * has no active POs reports an empty list with no reason, because that is a
  * catalog state the Program Head can change.
  */
 type FacultyCourseGoOptions = {
-  items: ProgramGoOption[];
+  items: ProgramPoOption[];
   unavailableReason: "general-education" | null;
 };
 
 /**
- * Resolves the active Graduate Outcomes of the bound Course's owning Program
+ * Resolves the active Program Outcomes of the bound Course's owning Program
  * for one authorized Faculty Course context. The Course scope and Program are
  * read from the Course record, never from the client payload, so a crafted
  * request cannot widen the pool to another Program's catalog.
@@ -65,7 +65,7 @@ export async function listFacultyCourseGoOptions(context: {
     return { success: true, data: { items: [], unavailableReason: null } };
   }
 
-  const items = await prisma.gO.findMany({
+  const items = await prisma.pO.findMany({
     where: { program_id: course.program_id, is_active: true },
     orderBy: [{ order: "asc" }, { code: "asc" }],
     select: { id: true, code: true, description: true },

@@ -5,8 +5,8 @@ import {
 } from "@/features/instruments/types";
 import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 
-type CentralGoBindingRow = {
-  go_id: string | null;
+type CentralPoBindingRow = {
+  po_id: string | null;
   section_key: string;
   item_key: string;
 };
@@ -17,38 +17,38 @@ type CentralGoOption = {
   description: string;
 };
 
-export type CentralGoSnapshotRow = {
-  go_id: string;
-  go_code: string;
+export type CentralPoSnapshotRow = {
+  po_id: string;
+  po_code: string;
   go_description: string;
   section_key: string;
   item_key: string;
   question_prompt: string;
 };
 
-type CentralGoBindingPlan = {
+type CentralPoBindingPlan = {
   /** First blocking binding problem, or null when the template can publish. */
   error: string | null;
   likertCount: number;
-  snapshotRows: CentralGoSnapshotRow[];
+  snapshotRows: CentralPoSnapshotRow[];
   unboundQuestions: TemplateLikertQuestionOption[];
   coveredGos: CentralGoOption[];
 };
 
 /**
- * Plans the publication-time GO snapshot rows for a PROGRAM_WIDE template.
+ * Plans the publication-time PO snapshot rows for a PROGRAM_WIDE template.
  *
- * A Likert question does not need a GO question binding to publish: an
+ * A Likert question does not need a PO question binding to publish: an
  * unbound question publishes as a general evaluation item and contributes no
- * GO evidence, so it is reported instead of rejected. Publication still
+ * PO evidence, so it is reported instead of rejected. Publication still
  * rejects bindings that no longer match the template structure and bindings
- * whose GO is archived or outside the publishing program.
+ * whose PO is archived or outside the publishing program.
  */
-export function planCentralGoBindings(input: {
-  bindings: CentralGoBindingRow[];
+export function planCentralPoBindings(input: {
+  bindings: CentralPoBindingRow[];
   structure: unknown;
   liveGos: CentralGoOption[];
-}): CentralGoBindingPlan {
+}): CentralPoBindingPlan {
   if (!Array.isArray(input.structure)) {
     return {
       error: "Template structure is invalid.",
@@ -66,34 +66,34 @@ export function planCentralGoBindings(input: {
       question,
     ])
   );
-  const goMap = new Map(input.liveGos.map((go) => [go.id, go]));
+  const poMap = new Map(input.liveGos.map((po) => [po.id, po]));
   const boundQuestionKeys = new Set<string>();
   const coveredGos = new Map<string, CentralGoOption>();
-  const snapshotRows: CentralGoSnapshotRow[] = [];
+  const snapshotRows: CentralPoSnapshotRow[] = [];
   let error: string | null = null;
 
   for (const binding of input.bindings) {
     const questionKey = encodeQuestionKey(binding.section_key, binding.item_key);
     const question = questionMap.get(questionKey);
-    const go = binding.go_id ? goMap.get(binding.go_id) : undefined;
+    const po = binding.po_id ? poMap.get(binding.po_id) : undefined;
 
     if (!question) {
-      error ??= "One or more question–GO bindings no longer match the template structure.";
+      error ??= "One or more question–PO bindings no longer match the template structure.";
       continue;
     }
 
-    if (!go) {
+    if (!po) {
       error ??=
-        "One or more bound GOs are archived or no longer available. Update the template before publishing.";
+        "One or more bound POs are archived or no longer available. Update the template before publishing.";
       continue;
     }
 
     boundQuestionKeys.add(questionKey);
-    coveredGos.set(go.id, go);
+    coveredGos.set(po.id, po);
     snapshotRows.push({
-      go_id: go.id,
-      go_code: go.code,
-      go_description: go.description,
+      po_id: po.id,
+      po_code: po.code,
+      go_description: po.description,
       section_key: binding.section_key,
       item_key: binding.item_key,
       question_prompt: question.prompt,

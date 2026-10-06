@@ -24,7 +24,7 @@ export const SOURCE_CARD_LABELS: Record<DashboardSourceKey, string> = {
   INDUSTRY_PARTNER: "Industry Partners",
 };
 
-/** §13.8 GO-summary evidence-source selector labels. */
+/** §13.8 PO-summary evidence-source selector labels. */
 export const GO_SOURCE_LABELS: Record<DashboardSourceKey, string> = {
   COURSE_STUDENT: "Course CILO",
   CENTRAL_STUDENT: "Program-wide students",

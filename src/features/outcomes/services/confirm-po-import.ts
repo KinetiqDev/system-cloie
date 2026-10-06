@@ -6,29 +6,29 @@ import {
 } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import type { ServiceResult } from "@/lib/utils/service-result";
-import type { GOImportRequest } from "../schemas/go-import";
+import type { POImportRequest } from "../schemas/po-import";
 import type {
-  GOImportOutcome,
-  GOImportResult,
-  GOImportResultRow,
-  GOImportRowStatus,
-} from "../types/go-import";
-import { normalizeGOCode, previewGOImport } from "./preview-go-import";
+  POImportOutcome,
+  POImportResult,
+  POImportResultRow,
+  POImportRowStatus,
+} from "../types/po-import";
+import { normalizePOCode, previewPOImport } from "./preview-po-import";
 
-function duplicateOutcome(isActive: boolean): GOImportOutcome {
+function duplicateOutcome(isActive: boolean): POImportOutcome {
   return isActive ? "DUPLICATE_EXISTING_ACTIVE" : "DUPLICATE_EXISTING_ARCHIVED";
 }
 
-export async function confirmGOImport(
-  request: GOImportRequest
-): Promise<ServiceResult<GOImportResult>> {
+export async function confirmPOImport(
+  request: POImportRequest
+): Promise<ServiceResult<POImportResult>> {
   const context = await resolveProgramHeadContext(request.programId);
   if (!context.success) return context;
-  const preview = await previewGOImport(request);
+  const preview = await previewPOImport(request);
   if (!preview.success) return preview;
   const programId = context.data.selectedProgram.id;
 
-  const runImport = (): Promise<ServiceResult<GOImportResult>> =>
+  const runImport = (): Promise<ServiceResult<POImportResult>> =>
     prisma.$transaction(
       async (tx) => {
         const assignment = await revalidateProgramHeadAssignment(tx, {
@@ -38,7 +38,7 @@ export async function confirmGOImport(
         if (!assignment) {
           return {
             success: false,
-            error: "You do not have permission to import Graduate Outcomes for this Program.",
+            error: "You do not have permission to import Program Outcomes for this Program.",
           };
         }
         const program = await tx.program.findUnique({
@@ -48,22 +48,22 @@ export async function confirmGOImport(
         if (!program?.is_active) {
           return { success: false, error: "Active Academic Program is required." };
         }
-        const current = await tx.gO.findMany({
+        const current = await tx.pO.findMany({
           where: { program_id: programId },
           select: { code: true, order: true, is_active: true },
           orderBy: { order: "asc" },
         });
         const currentByCode = new Map(
-          current.map((go) => [normalizeGOCode(go.code), go.is_active] as const)
+          current.map((po) => [normalizePOCode(po.code), po.is_active] as const)
         );
-        const startOrder = current.reduce((maximum, go) => Math.max(maximum, go.order), -1) + 1;
+        const startOrder = current.reduce((maximum, po) => Math.max(maximum, po.order), -1) + 1;
         const readyRows = preview.data.rows.filter(
-          (row) => row.status === "READY" && !currentByCode.has(row.goCode)
+          (row) => row.status === "READY" && !currentByCode.has(row.poCode)
         );
         if (readyRows.length > 0) {
-          await tx.gO.createMany({
+          await tx.pO.createMany({
             data: readyRows.map((row, index) => ({
-              code: row.goCode,
+              code: row.poCode,
               description: row.description,
               order: startOrder + index,
               program_id: programId,
@@ -71,20 +71,20 @@ export async function confirmGOImport(
           });
         }
 
-        const rows: GOImportResultRow[] = preview.data.rows.map((row) => {
+        const rows: POImportResultRow[] = preview.data.rows.map((row) => {
           if (row.status !== "READY") return { ...row, outcome: row.status };
-          const currentActive = currentByCode.get(row.goCode);
+          const currentActive = currentByCode.get(row.poCode);
           if (currentActive !== undefined) {
             const outcome = duplicateOutcome(currentActive);
-            const status = outcome as GOImportRowStatus;
+            const status = outcome as POImportRowStatus;
             return {
               ...row,
               status,
               outcome,
               error:
                 outcome === "DUPLICATE_EXISTING_ARCHIVED"
-                  ? `GO code "${row.goCode}" already belongs to an archived Graduate Outcome. It was not restored.`
-                  : `GO code "${row.goCode}" already exists in this Program. It was not changed.`,
+                  ? `PO code "${row.poCode}" already belongs to an archived Program Outcome. It was not restored.`
+                  : `PO code "${row.poCode}" already exists in this Program. It was not changed.`,
             };
           }
           return { ...row, outcome: "CREATED" };
@@ -122,12 +122,12 @@ export async function confirmGOImport(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return {
         success: false,
-        error: "The GO catalog changed during import. Check the file again.",
+        error: "The PO catalog changed during import. Check the file again.",
       };
     }
     return {
       success: false,
-      error: "Graduate Outcomes could not be imported. No GOs were created. Try again.",
+      error: "Program Outcomes could not be imported. No POs were created. Try again.",
     };
   }
 }

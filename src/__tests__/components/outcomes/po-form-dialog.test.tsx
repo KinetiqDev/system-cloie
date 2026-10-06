@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 
-import { GOFormDialog } from "@/features/outcomes/components/go-form-dialog";
-import { createGOAction, updateGOAction } from "@/lib/actions/program-head-outcome-actions";
-import type { ProgramGOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
+import { POFormDialog } from "@/features/outcomes/components/po-form-dialog";
+import { createPOAction, updatePOAction } from "@/lib/actions/program-head-outcome-actions";
+import type { ProgramPOItem } from "@/features/outcomes/services/manage-program-head-outcomes";
 import { showToast } from "@/components/ui/toast";
 
 vi.mock("next/navigation", () => ({
@@ -13,21 +13,21 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/ui/toast", () => ({ showToast: vi.fn() }));
 
 vi.mock("@/lib/actions/program-head-outcome-actions", () => ({
-  createGOAction: vi.fn(),
-  updateGOAction: vi.fn(),
-  deleteGOAction: vi.fn(),
-  reorderGOsAction: vi.fn(),
+  createPOAction: vi.fn(),
+  updatePOAction: vi.fn(),
+  deletePOAction: vi.fn(),
+  reorderPOsAction: vi.fn(),
 }));
 
-const createGOActionMock = vi.mocked(createGOAction);
-const updateGOActionMock = vi.mocked(updateGOAction);
+const createPOActionMock = vi.mocked(createPOAction);
+const updatePOActionMock = vi.mocked(updatePOAction);
 const showToastMock = vi.mocked(showToast);
 
-function makeGO(overrides: Partial<ProgramGOItem> = {}): ProgramGOItem {
+function makePO(overrides: Partial<ProgramPOItem> = {}): ProgramPOItem {
   return {
     id: "11111111-1111-4111-8111-111111111112",
-    code: "GO-1",
-    description: "Graduate Outcome one",
+    code: "PO-1",
+    description: "Program Outcome one",
     order: 0,
     is_active: true,
     program_id: "11111111-1111-4111-8111-111111111111",
@@ -47,16 +47,16 @@ function readFormData(formData: FormData) {
   };
 }
 
-describe("GOFormDialog", () => {
+describe("POFormDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    createGOActionMock.mockResolvedValue({ success: true });
-    updateGOActionMock.mockResolvedValue({ success: true });
+    createPOActionMock.mockResolvedValue({ success: true });
+    updatePOActionMock.mockResolvedValue({ success: true });
   });
 
   it("shows field validation errors on invalid submit", async () => {
     render(
-      <GOFormDialog
+      <POFormDialog
         mode="create"
         programId="11111111-1111-4111-8111-111111111111"
         open
@@ -64,17 +64,17 @@ describe("GOFormDialog", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Create GO" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create PO" }));
 
-    expect(await screen.findByText("GO code is required.")).toBeInTheDocument();
+    expect(await screen.findByText("PO code is required.")).toBeInTheDocument();
     expect(screen.getByText("Description must be at least 3 characters.")).toBeInTheDocument();
-    expect(createGOActionMock).not.toHaveBeenCalled();
+    expect(createPOActionMock).not.toHaveBeenCalled();
   });
 
   it("submits a valid create form and closes the dialog", async () => {
     const onOpenChange = vi.fn();
     render(
-      <GOFormDialog
+      <POFormDialog
         mode="create"
         programId="11111111-1111-4111-8111-111111111111"
         open
@@ -82,31 +82,31 @@ describe("GOFormDialog", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("GO Code"), { target: { value: "GO-5" } });
+    fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-5" } });
     fireEvent.change(screen.getByLabelText("Description"), {
-      target: { value: "Graduate Outcome five" },
+      target: { value: "Program Outcome five" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create GO" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create PO" }));
 
-    await waitFor(() => expect(createGOActionMock).toHaveBeenCalledWith(expect.any(FormData)));
-    expect(readFormData(createGOActionMock.mock.calls[0][0])).toEqual({
+    await waitFor(() => expect(createPOActionMock).toHaveBeenCalledWith(expect.any(FormData)));
+    expect(readFormData(createPOActionMock.mock.calls[0][0])).toEqual({
       programId: "11111111-1111-4111-8111-111111111111",
-      code: "GO-5",
-      description: "Graduate Outcome five",
+      code: "PO-5",
+      description: "Program Outcome five",
       id: null,
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(showToastMock).toHaveBeenCalledWith("Graduate Outcome created successfully.", "success");
+    expect(showToastMock).toHaveBeenCalledWith("Program Outcome created successfully.", "success");
   });
 
   it("surfaces a server error and keeps the dialog open", async () => {
-    createGOActionMock.mockResolvedValue({
+    createPOActionMock.mockResolvedValue({
       success: false,
-      error: "Graduate Outcome code already exists.",
+      error: "Program Outcome code already exists.",
     });
     const onOpenChange = vi.fn();
     render(
-      <GOFormDialog
+      <POFormDialog
         mode="create"
         programId="11111111-1111-4111-8111-111111111111"
         open
@@ -114,59 +114,59 @@ describe("GOFormDialog", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("GO Code"), { target: { value: "GO-5" } });
+    fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-5" } });
     fireEvent.change(screen.getByLabelText("Description"), {
-      target: { value: "Graduate Outcome five" },
+      target: { value: "Program Outcome five" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create GO" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create PO" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Graduate Outcome code already exists."
+      "Program Outcome code already exists."
     );
     expect(onOpenChange).not.toHaveBeenCalled();
-    expect(showToastMock).toHaveBeenCalledWith("Graduate Outcome code already exists.", "error");
+    expect(showToastMock).toHaveBeenCalledWith("Program Outcome code already exists.", "error");
   });
 
   it("prefills the edit form and submits an update", async () => {
     const onOpenChange = vi.fn();
     render(
-      <GOFormDialog
+      <POFormDialog
         mode="edit"
         programId="11111111-1111-4111-8111-111111111111"
-        go={makeGO()}
+        po={makePO()}
         open
         onOpenChange={onOpenChange}
       />
     );
 
-    expect(screen.getByLabelText("GO Code")).toHaveValue("GO-1");
-    expect(screen.getByLabelText("Description")).toHaveValue("Graduate Outcome one");
+    expect(screen.getByLabelText("PO Code")).toHaveValue("PO-1");
+    expect(screen.getByLabelText("Description")).toHaveValue("Program Outcome one");
 
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Revised outcome" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
-    await waitFor(() => expect(updateGOActionMock).toHaveBeenCalledWith(expect.any(FormData)));
-    expect(readFormData(updateGOActionMock.mock.calls[0][0])).toEqual({
+    await waitFor(() => expect(updatePOActionMock).toHaveBeenCalledWith(expect.any(FormData)));
+    expect(readFormData(updatePOActionMock.mock.calls[0][0])).toEqual({
       programId: "11111111-1111-4111-8111-111111111111",
-      code: "GO-1",
+      code: "PO-1",
       description: "Revised outcome",
       id: "11111111-1111-4111-8111-111111111112",
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(showToastMock).toHaveBeenCalledWith("Graduate Outcome updated successfully.", "success");
+    expect(showToastMock).toHaveBeenCalledWith("Program Outcome updated successfully.", "success");
   });
 
   it("announces the pending action state on the submit button", async () => {
     let resolveAction!: (value: { success: true } | { success: false; error: string }) => void;
-    createGOActionMock.mockReturnValue(
+    createPOActionMock.mockReturnValue(
       new Promise((resolve) => {
         resolveAction = resolve;
       })
     );
     render(
-      <GOFormDialog
+      <POFormDialog
         mode="create"
         programId="11111111-1111-4111-8111-111111111111"
         open
@@ -174,9 +174,9 @@ describe("GOFormDialog", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("GO Code"), { target: { value: "GO-9" } });
+    fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-9" } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Nine" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create GO" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create PO" }));
 
     const pending = await screen.findByRole("button", { name: "Saving..." });
     expect(pending).toHaveAttribute("aria-busy", "true");

@@ -80,7 +80,7 @@ describe("OutcomeMeanBarChart", () => {
   it("encodes bar length proportionally to the mean from a zero baseline", () => {
     const { container } = render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Graduate Outcome"
+        title="Mean Rating by Program Outcome"
         outcomes={outcomes}
         labels={GRADUATE_OUTCOME_LABELS}
       />
@@ -126,7 +126,7 @@ describe("OutcomeMeanBarChart", () => {
   it("labels each bar with its two-decimal mean so close means stay readable", () => {
     render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Graduate Outcome"
+        title="Mean Rating by Program Outcome"
         outcomes={outcomes}
         labels={GRADUATE_OUTCOME_LABELS}
       />
@@ -139,7 +139,7 @@ describe("OutcomeMeanBarChart", () => {
   it("never draws or ranks an unrated row", () => {
     render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Graduate Outcome"
+        title="Mean Rating by Program Outcome"
         outcomes={[
           ...outcomes,
           outcomeDTO({ outcomeId: "outcome-3", code: "BSIT-GO3", meanRating: null }),
@@ -149,20 +149,20 @@ describe("OutcomeMeanBarChart", () => {
     );
 
     expect(barGeometry(document.body)).toHaveLength(2);
-    expect(regionInsight("Mean Rating by Graduate Outcome")).not.toContain("BSIT-GO3");
+    expect(regionInsight("Mean Rating by Program Outcome")).not.toContain("BSIT-GO3");
   });
 
   it("resolves bar fills from semantic tokens and hatches beyond five categories", () => {
     const many = Array.from({ length: 7 }, (_, index) =>
       outcomeDTO({
         outcomeId: `outcome-${index}`,
-        code: `BSIT-GO${index + 1}`,
+        code: `BSIT-PO${index + 1}`,
         meanRating: 4 - index / 10,
       })
     );
     const { container } = render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Graduate Outcome"
+        title="Mean Rating by Program Outcome"
         outcomes={many}
         labels={GRADUATE_OUTCOME_LABELS}
       />
@@ -184,7 +184,7 @@ describe("OutcomeMeanBarChart", () => {
   it("renders an accessible empty state when no row is rated", () => {
     const { container } = render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Graduate Outcome"
+        title="Mean Rating by Program Outcome"
         outcomes={[outcomeDTO({ meanRating: null })]}
         labels={GRADUATE_OUTCOME_LABELS}
       />

@@ -76,12 +76,12 @@ const outcomesDTO = () => ({
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PO mappings group historical ratings.",
   manyToManyDisclosure: false,
   outcomes: [
     {
       outcomeId: "outcome-1",
-      code: "GO-1",
+      code: "PO-1",
       name: "Effective communicator",
       meanRating: 4.25,
       ratingCount: 8,
@@ -166,7 +166,7 @@ const trendsDTO = () => ({
       ratingCount: 40,
       instrumentContext: "CILO Evaluation v2",
       scaleContext: "1–5 (5-point)",
-      outcomeCodes: ["GO-1"],
+      outcomeCodes: ["PO-1"],
       comparableWithPrevious: false,
     },
   ],

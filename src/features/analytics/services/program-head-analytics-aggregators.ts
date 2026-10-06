@@ -22,7 +22,7 @@ import type {
  * Identity of a period's evidence for trend comparability. Two periods are
  * comparable only when every dimension matches: immutable instrument version
  * IDs, the source-to-instrument relation and normalized response share, Likert
- * scale identities, mapped Graduate Outcome codes, and normalized
+ * scale identities, mapped Program Outcome codes, and normalized
  * source composition. The relation prevents two sources exchanging instrument
  * versions from appearing comparable merely because the unordered source and
  * instrument sets still match. All arrays are sorted for order-independent

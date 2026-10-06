@@ -92,7 +92,7 @@ function EvidenceStrip({ kpi }: { kpi: GeneralEducationAnalyticsFrameDTO["kpi"] 
           ) : null}
         </dd>
         {isThinSample ? (
-          <dd className="text-warning text-xs font-medium">
+          <dd className="text-label-sm text-warning">
             Thin sample: fewer than 5 submitted responses
           </dd>
         ) : null}
@@ -100,7 +100,7 @@ function EvidenceStrip({ kpi }: { kpi: GeneralEducationAnalyticsFrameDTO["kpi"] 
       <div className="flex min-w-0 flex-col gap-0.5">
         <dt className="text-label-sm text-text-secondary">Mean rating</dt>
         <dd className="text-heading-md text-foreground tabular-nums">{mean.value}</dd>
-        <dd className="text-text-secondary text-xs text-pretty">{mean.note}</dd>
+        <dd className="text-caption text-text-secondary text-pretty">{mean.note}</dd>
       </div>
     </dl>
   );

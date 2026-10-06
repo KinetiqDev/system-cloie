@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCourseDerivedGoMetrics } from "@/features/analytics/aggregators/go";
+import { buildCourseDerivedPoMetrics } from "@/features/analytics/aggregators/po";
 import type { OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
 import {
   toScaleIdentity,
@@ -12,18 +12,18 @@ import {
 } from "@/features/analytics/aggregators/outcome-evidence";
 
 /**
- * Program Head Outcomes and canonical GO metric boundaries (issue #639).
+ * Program Head Outcomes and canonical PO metric boundaries (issue #639).
  *
- * The Outcomes view has not been cut over to `buildCourseDerivedGoMetrics`,
+ * The Outcomes view has not been cut over to `buildCourseDerivedPoMetrics`,
  * and this suite pins why. The two agree on every counting rule that matters —
- * one contribution per (response, evaluation, question, GO), direct and
+ * one contribution per (response, evaluation, question, PO), direct and
  * CILO-mapped overlap collapsed, invalid ratings counted rather than summed,
- * many-to-many fan-out, GO pooling across evaluations, complete labelled
- * distributions, and no row for unmapped or unbound ratings — but they disagree on what a GO
+ * many-to-many fan-out, PO pooling across evaluations, complete labelled
+ * distributions, and no row for unmapped or unbound ratings — but they disagree on what a PO
  * row *is*. The legacy DTO is the Program Head's evidence surface: it carries
  * per-contributor and per-course provenance, the frozen manifestation label,
  * the evaluation list, the many-to-many disclosure flag, and a pooled mean that
- * the UI discloses as cross-scale. The canonical `GoMetric` carries none of
+ * the UI discloses as cross-scale. The canonical `PoMetric` carries none of
  * those, and it refuses a combined mean for mixed scales. A cutover would
  * therefore delete evidence and change a rendered number, so this suite holds
  * both halves still.
@@ -60,13 +60,13 @@ const SNAPSHOT = {
 const COURSE = { id: "course-1", code: "IT201", title: "Software Engineering" };
 const GO_1 = {
   outcomeId: "outcome-1",
-  code: "GO-1",
+  code: "PO-1",
   name: "Discipline knowledge",
   manifestation: "LEARNING" as const,
 };
 const GO_2 = {
   outcomeId: "outcome-2",
-  code: "GO-2",
+  code: "PO-2",
   name: "Communication",
   manifestation: "PRACTICE" as const,
 };
@@ -120,16 +120,16 @@ function canonicalRow(spec: Spec): OutcomeItemRatingRow {
         ? null
         : { id: "cilo-1", label: "Apply methods", description: "Apply methods" },
     evaluationId: spec.evaluationId ?? "eval-1",
-    goMappings: (spec.outcomeMappings ?? []).map((mapping) => ({
-      goId: mapping.outcomeId,
-      goCode: mapping.code,
-      goDescription: mapping.name,
+    poMappings: (spec.outcomeMappings ?? []).map((mapping) => ({
+      poId: mapping.outcomeId,
+      poCode: mapping.code,
+      poDescription: mapping.name,
       manifestation: mapping.manifestation,
     })),
-    directGoMappings: (spec.directBindings ?? []).map((binding) => ({
-      goId: binding.outcomeId,
-      goCode: binding.code,
-      goDescription: binding.name,
+    directPoMappings: (spec.directBindings ?? []).map((binding) => ({
+      poId: binding.outcomeId,
+      poCode: binding.code,
+      poDescription: binding.name,
       manifestation: null,
     })),
   };
@@ -140,12 +140,12 @@ function legacyDto(specs: Spec[]) {
 }
 
 function canonicalMetric(specs: Spec[]) {
-  return buildCourseDerivedGoMetrics(specs.map(canonicalRow));
+  return buildCourseDerivedPoMetrics(specs.map(canonicalRow));
 }
 
-describe("Program Head Outcomes and canonical GO metric boundaries", () => {
-  it("counts one contribution per response, evaluation, question, and GO in both paths", () => {
-    // One response, one question, mapped to two GOs: one contribution each.
+describe("Program Head Outcomes and canonical PO metric boundaries", () => {
+  it("counts one contribution per response, evaluation, question, and PO in both paths", () => {
+    // One response, one question, mapped to two POs: one contribution each.
     const specs: Spec[] = [
       { responseId: "r1", itemKey: "five", ratingValue: 4, outcomeMappings: [GO_1, GO_2] },
     ];
@@ -157,18 +157,18 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         mean: row.meanRating,
       }))
     ).toEqual([
-      { code: "GO-1", ratingCount: 1, mean: 4 },
-      { code: "GO-2", ratingCount: 1, mean: 4 },
+      { code: "PO-1", ratingCount: 1, mean: 4 },
+      { code: "PO-2", ratingCount: 1, mean: 4 },
     ]);
     expect(
       canonicalMetric(specs).map((row) => ({
-        code: row.goCode,
+        code: row.poCode,
         ratingCount: row.ratingCount,
         mean: row.mean,
       }))
     ).toEqual([
-      { code: "GO-1", ratingCount: 1, mean: 4 },
-      { code: "GO-2", ratingCount: 1, mean: 4 },
+      { code: "PO-1", ratingCount: 1, mean: 4 },
+      { code: "PO-2", ratingCount: 1, mean: 4 },
     ]);
   });
 
@@ -231,7 +231,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     expect(buildOutcomeEvidenceDtos(result)[0].ratingCount).toBe(1);
   });
 
-  it("collapses a direct binding and a CILO mapping that name the same GO", () => {
+  it("collapses a direct binding and a CILO mapping that name the same PO", () => {
     const specs: Spec[] = [
       {
         responseId: "r1",
@@ -241,7 +241,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         directBindings: [
           {
             outcomeId: "outcome-1",
-            code: "GO-1",
+            code: "PO-1",
             name: "Discipline knowledge",
             questionPrompt: "Q",
           },
@@ -263,7 +263,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         directBindings: [
           {
             outcomeId: "outcome-1",
-            code: "GO-1",
+            code: "PO-1",
             name: "Discipline knowledge",
             questionPrompt: "Q",
           },
@@ -334,7 +334,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         directBindings: [
           {
             outcomeId: "outcome-1",
-            code: "GO-1",
+            code: "PO-1",
             name: "Discipline knowledge",
             questionPrompt: "Q",
           },
@@ -345,7 +345,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     ];
 
     const aggregation = aggregateOutcomeEvidence(specs.map(legacyRow));
-    const [go1] = buildOutcomeEvidenceDtos(aggregation).filter((row) => row.code === "GO-1");
+    const [go1] = buildOutcomeEvidenceDtos(aggregation).filter((row) => row.code === "PO-1");
 
     // Each provenance kind stays distinguishable, with its own mean.
     expect(go1!.contributors.map((contributor) => contributor.kind).sort()).toEqual([
@@ -372,7 +372,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     expect(aggregation.hasMultiMappedCilo).toBe(true);
 
     // The canonical metric keeps a CILO label list and counts, and nothing else.
-    const [canonicalGo1] = canonicalMetric(specs).filter((row) => row.goCode === "GO-1");
+    const [canonicalGo1] = canonicalMetric(specs).filter((row) => row.poCode === "PO-1");
     expect(canonicalGo1!.contributingCilos).toEqual([{ id: "cilo-1", label: "Apply methods" }]);
     expect(canonicalGo1!.evaluationCount).toBe(2);
     expect(canonicalGo1).not.toHaveProperty("contributors");
@@ -381,7 +381,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     expect(canonicalGo1).not.toHaveProperty("distributions");
   });
 
-  it("groups one GO across evaluations in both paths, since neither partitions by evaluation", () => {
+  it("groups one PO across evaluations in both paths, since neither partitions by evaluation", () => {
     const specs: Spec[] = [
       {
         responseId: "r1",
@@ -400,7 +400,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     ];
 
     // Unlike the Faculty CILO builders, the Outcomes view and the canonical
-    // aggregator agree here: a GO pools across the course-bound evaluations in
+    // aggregator agree here: a PO pools across the course-bound evaluations in
     // scope, and the DTO lists them.
     expect(legacyDto(specs)[0]).toMatchObject({ ratingCount: 2, meanRating: 3 });
     expect(canonicalMetric(specs)[0]).toMatchObject({ ratingCount: 2, mean: 3 });
@@ -413,7 +413,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
 
   it("produces no row when a bound CILO has no current mapping, in either path", () => {
     // The Program's current mappings are the caller's input to both paths, so a
-    // deleted or unmapped GO simply contributes nothing to either surface.
+    // deleted or unmapped PO simply contributes nothing to either surface.
     const specs: Spec[] = [
       { responseId: "r1", itemKey: "five", ratingValue: 5, outcomeMappings: [] },
     ];

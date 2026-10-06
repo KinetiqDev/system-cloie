@@ -9,7 +9,7 @@ import { encodeQuestionKey } from "@/features/analytics/aggregators/question-ide
  * Draft authoring bindings: identity, validity, and payload projection.
  *
  * A draft holds three parallel views of the same document — the section and
- * question structure, the CILO binding map, and the GO binding map. Structure
+ * question structure, the CILO binding map, and the PO binding map. Structure
  * edits are what break the other two: deleting a section or question, or
  * switching a question to guided open-ended, leaves binding entries pointing at
  * a question that no longer accepts them. This module owns that rule so every
@@ -17,7 +17,7 @@ import { encodeQuestionKey } from "@/features/analytics/aggregators/question-ide
  * the maps it happens to remember.
  *
  * One rule governs both axes: a binding is live only while its question exists
- * in the structure and is still Likert. CILO-or-GO exclusivity per question is
+ * in the structure and is still Likert. CILO-or-PO exclusivity per question is
  * a separate rule, enforced where the author chooses a binding and again on
  * save; this module never drops a binding to satisfy it, because choosing which
  * axis to discard is not derivable here.
@@ -49,8 +49,8 @@ function decodeQuestionBindingKey(
 /** CILO bindings by question identity: at most one CILO per question. */
 type DraftCiloBindings = Record<string, string>;
 
-/** GO bindings by question identity: a question may carry several GOs. */
-type DraftGoBindings = Record<string, string[]>;
+/** PO bindings by question identity: a question may carry several POs. */
+type DraftPoBindings = Record<string, string[]>;
 
 /** Question identities that exist in the structure and still accept bindings. */
 function liveBindingKeys(structure: TemplateStructure): Set<string> {
@@ -108,21 +108,21 @@ export function collectCiloBindings(
 }
 
 /**
- * The draft GO question bindings a save must carry. Bindings live only while
+ * The draft PO question bindings a save must carry. Bindings live only while
  * their Likert question does, so this walks the structure rather than the map:
- * a question deleted or retyped since the GO was chosen simply emits nothing.
+ * a question deleted or retyped since the PO was chosen simply emits nothing.
  */
-export function collectGoBindings(
+export function collectPoBindings(
   structure: TemplateStructure,
-  goBindings: DraftGoBindings
+  poBindings: DraftPoBindings
 ): TemplateGoQuestionBinding[] {
   return structure.flatMap((section) =>
     section.questions.flatMap((question) => {
       if (question.type !== "likert") return [];
-      const goIds = goBindings[encodeQuestionKey(section.key, question.key)] ?? [];
-      return goIds
+      const poIds = poBindings[encodeQuestionKey(section.key, question.key)] ?? [];
+      return poIds
         .filter(Boolean)
-        .map((goId) => ({ itemKey: question.key, goId, sectionKey: section.key }));
+        .map((poId) => ({ itemKey: question.key, poId, sectionKey: section.key }));
     })
   );
 }

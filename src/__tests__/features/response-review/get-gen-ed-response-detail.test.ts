@@ -75,7 +75,7 @@ const MOCK_RESPONSE = {
           item_key: "clarity",
         },
       ],
-      go_question_bindings: [],
+      po_question_bindings: [],
     },
     central_deployment: null,
   },
@@ -175,7 +175,7 @@ describe("getGenEdResponseDetail (ADR 0034)", () => {
     expect(items[1]).toMatchObject({ kind: "qualitative", text: "Very clear." });
   });
 
-  it("binds a General Education answer to the ILO layer with no GO data", async () => {
+  it("binds a General Education answer to the ILO layer with no PO data", async () => {
     responseFindFirstMock.mockResolvedValue(MOCK_RESPONSE);
     iloMappingFindManyMock.mockResolvedValue([
       {
@@ -190,7 +190,7 @@ describe("getGenEdResponseDetail (ADR 0034)", () => {
     const answer = detail!.sections[0].items[0];
     if (answer.kind !== "quantitative") throw new Error("expected a quantitative answer");
     // The layer is decided by Course scope, so a General Education answer
-    // cannot carry GO mappings even when direct GO snapshots exist on the row.
+    // cannot carry PO mappings even when direct PO snapshots exist on the row.
     expect(answer.binding).toEqual({
       type: "CILO",
       layer: "INSTITUTIONAL_OUTCOME",

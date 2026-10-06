@@ -15,7 +15,7 @@ export const LOW_SAMPLE_RESPONSES = 5;
  */
 export function LowSampleMarker({ responseCount }: { responseCount: number }) {
   return (
-    <span className="text-warning inline-flex items-center gap-1 text-xs font-medium">
+    <span className="text-label-sm text-warning inline-flex items-center gap-1">
       <TriangleAlert aria-hidden="true" className="size-3.5 shrink-0" />
       <span className="tabular-nums">
         Thin sample: {responseCount} submitted {responseCount === 1 ? "response" : "responses"}
@@ -30,7 +30,7 @@ export function LowSampleMarker({ responseCount }: { responseCount: number }) {
  */
 export function FewRatingsMarker({ ratingCount }: { ratingCount: number }) {
   return (
-    <span className="text-warning inline-flex items-center gap-1 text-xs font-medium">
+    <span className="text-label-sm text-warning inline-flex items-center gap-1">
       <TriangleAlert aria-hidden="true" className="size-3.5 shrink-0" />
       <span className="tabular-nums">
         Few ratings: {ratingCount} valid {ratingCount === 1 ? "rating" : "ratings"}
@@ -42,7 +42,7 @@ export function FewRatingsMarker({ ratingCount }: { ratingCount: number }) {
 /** Neutral chip used for course/outcome codes inside dense matrix cells. */
 export function CodeChip({ children }: { children: ReactNode }) {
   return (
-    <span className="border-border bg-muted/50 text-text-secondary rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap">
+    <span className="border-border bg-muted/50 text-text-secondary rounded-md border px-2 py-0.5 text-label-sm whitespace-nowrap">
       {children}
     </span>
   );

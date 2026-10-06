@@ -176,7 +176,7 @@ describe("selected Program insights routes", () => {
       outcomes: [
         {
           outcomeId: "11111111-1111-4111-8111-111111111111",
-          code: "GO 2",
+          code: "PO 2",
           name: "Graduate attribute",
           meanRating: 4.2,
           ratingCount: 10,
@@ -307,7 +307,7 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
-  it("shows the selected GO as the deepest breadcrumb step when goId is present", async () => {
+  it("shows the selected PO as the deepest breadcrumb step when poId is present", async () => {
     const Page = await loadAnalyticsPage();
     outcomesMock.mockResolvedValue({
       scope: {
@@ -323,7 +323,7 @@ describe("selected Program insights routes", () => {
       outcomes: [
         {
           outcomeId: "11111111-1111-4111-8111-111111111111",
-          code: "GO 2",
+          code: "PO 2",
           name: "Graduate attribute",
           meanRating: 4.2,
           ratingCount: 10,
@@ -342,14 +342,14 @@ describe("selected Program insights routes", () => {
     analyticsFrameMock.mockResolvedValue({
       scope: bsedOverview.scope,
       periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
-      goCode: "GO 2",
+      poCode: "PO 2",
     });
 
     const page = await Page({
       params: Promise.resolve({ programId: "program-bsed" }),
       searchParams: Promise.resolve({
         tab: "outcomes",
-        goId: "11111111-1111-4111-8111-111111111111",
+        poId: "11111111-1111-4111-8111-111111111111",
       }),
     });
     render(page);
@@ -357,8 +357,8 @@ describe("selected Program insights routes", () => {
     const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumbs" });
     expect(breadcrumb.textContent).toContain("Analytics");
     expect(breadcrumb.textContent).toContain("Outcomes");
-    expect(within(breadcrumb).getByText("GO 2")).toHaveAttribute("aria-current", "page");
-    // The Outcomes step links back up without the GO selection.
+    expect(within(breadcrumb).getByText("PO 2")).toHaveAttribute("aria-current", "page");
+    // The Outcomes step links back up without the PO selection.
     const outcomesStep = within(breadcrumb).getByRole("link", { name: "Outcomes" });
     expect(outcomesStep.getAttribute("href")).toContain("tab=outcomes");
     expect(outcomesStep.getAttribute("href")).not.toContain("ploId=");
@@ -494,7 +494,7 @@ describe("selected Program insights routes", () => {
           ratingCount: 36,
           instrumentContext: "CILO Evaluation v1",
           scaleContext: "1–5 (5-point)",
-          outcomeCodes: ["GO-1"],
+          outcomeCodes: ["PO-1"],
           comparableWithPrevious: false,
         },
         {
@@ -505,7 +505,7 @@ describe("selected Program insights routes", () => {
           ratingCount: 42,
           instrumentContext: "CILO Evaluation v2",
           scaleContext: "1–5 (5-point)",
-          outcomeCodes: ["GO-1"],
+          outcomeCodes: ["PO-1"],
           comparableWithPrevious: false,
         },
       ],

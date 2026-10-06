@@ -54,14 +54,22 @@ describe("parseAnalyticsSearchParams", () => {
       { tab: "outcomes", evidenceSource: "ALUMNI", stakeholder: "ALUMNI" }
     );
   });
-  it("accepts the legacy ploId alias and gives canonical goId precedence", () => {
-    expect(parseAnalyticsSearchParams({ ploId: "legacy-outcome" })).toEqual({
+  it("accepts the legacy goId and ploId aliases and gives canonical poId precedence", () => {
+    expect(parseAnalyticsSearchParams({ goId: "go-era-outcome" })).toEqual({
       tab: "outcomes",
-      goId: "legacy-outcome",
+      poId: "go-era-outcome",
+    });
+    expect(parseAnalyticsSearchParams({ ploId: "plo-era-outcome" })).toEqual({
+      tab: "outcomes",
+      poId: "plo-era-outcome",
     });
     expect(
-      parseAnalyticsSearchParams({ goId: "canonical-outcome", ploId: "legacy-outcome" })
-    ).toEqual({ tab: "outcomes", goId: "canonical-outcome" });
+      parseAnalyticsSearchParams({
+        poId: "canonical-outcome",
+        goId: "go-era-outcome",
+        ploId: "plo-era-outcome",
+      })
+    ).toEqual({ tab: "outcomes", poId: "canonical-outcome" });
   });
 });
 
@@ -96,9 +104,13 @@ describe("analytics URLs", () => {
     expect(rawAnalyticsSearchParamsToQueryString({ tab: ["trends", "outcomes"] })).toBe(
       "tab=trends&tab=outcomes"
     ));
-  it("serializes legacy raw links through the canonical goId key", () => {
-    const query = rawAnalyticsSearchParamsToQueryString({ ploId: "legacy-outcome" });
-    expect(query).toBe("goId=legacy-outcome");
+  it("serializes legacy raw links through the canonical poId key", () => {
+    expect(rawAnalyticsSearchParamsToQueryString({ goId: "go-era-outcome" })).toBe(
+      "poId=go-era-outcome"
+    );
+    const query = rawAnalyticsSearchParamsToQueryString({ ploId: "plo-era-outcome" });
+    expect(query).toBe("poId=plo-era-outcome");
+    expect(query).not.toContain("goId=");
     expect(query).not.toContain("ploId=");
   });
 

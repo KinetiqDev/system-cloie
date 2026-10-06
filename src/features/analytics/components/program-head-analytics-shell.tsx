@@ -21,7 +21,7 @@ type ProgramHeadAnalyticsShellProps = {
   scope: ProgramHeadAnalyticsScopeSummary;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
   children: ReactNode;
-  goCode?: string;
+  poCode?: string;
 };
 
 export function ProgramHeadAnalyticsShell({
@@ -30,7 +30,7 @@ export function ProgramHeadAnalyticsShell({
   scope,
   periodOptions,
   children,
-  goCode,
+  poCode,
 }: ProgramHeadAnalyticsShellProps) {
   const breadcrumbItems = [
     {
@@ -43,15 +43,15 @@ export function ProgramHeadAnalyticsShell({
         stakeholder: filters.stakeholder,
       }),
     },
-    ...(goCode
+    ...(poCode
       ? [
           {
             label: ANALYTICS_TAB_LABELS[filters.tab],
-            href: buildAnalyticsUrl(programId, { ...filters, goId: undefined }),
+            href: buildAnalyticsUrl(programId, { ...filters, poId: undefined }),
           },
         ]
       : []),
-    { label: goCode ?? ANALYTICS_TAB_LABELS[filters.tab] },
+    { label: poCode ?? ANALYTICS_TAB_LABELS[filters.tab] },
   ];
 
   return (

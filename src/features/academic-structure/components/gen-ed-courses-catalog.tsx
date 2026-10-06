@@ -12,6 +12,7 @@ import {
 } from "./course-schedule-filters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader } from "@/components/ui/card";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -98,14 +99,16 @@ function StatCard({
   muted?: boolean;
 }) {
   return (
-    <div className="border-border bg-surface hover:bg-surface-alt flex h-28 flex-col justify-between rounded-lg border p-5 transition-colors">
-      <span className="text-label-sm text-muted-foreground tracking-wider uppercase">{label}</span>
-      <span
-        className={`font-heading text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
-      >
-        {value}
-      </span>
-    </div>
+    <Card size="sm">
+      <CardHeader>
+        <p className="text-label-md text-muted-foreground tracking-wider uppercase">{label}</p>
+        <p
+          className={`text-heading-xl tabular-nums ${muted ? "text-muted-foreground" : "text-foreground"}`}
+        >
+          {value.toLocaleString()}
+        </p>
+      </CardHeader>
+    </Card>
   );
 }
 
@@ -163,18 +166,18 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
   }
 
   return (
-    <div>
-      <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-heading text-text-primary text-2xl font-black">
+            <h1 className="text-heading-xl text-foreground text-pretty">
               College-Wide General Education
             </h1>
-            <Badge variant="secondary" className="bg-primary-soft text-selected-fg font-semibold">
+            <Badge variant="outline" className="font-semibold">
               College-Wide
             </Badge>
           </div>
-          <p className="text-body-md text-text-muted mt-2">
+          <p className="text-body-sm text-muted-foreground">
             General Education courses only — college-wide catalog
           </p>
         </div>
@@ -190,7 +193,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
         </div>
       </div>
 
-      <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {/* fallow-ignore-next-line code-duplication */}
         <StatCard label="Total Courses" value={summary.total} />
         <StatCard label="Active" value={summary.active} />
@@ -198,7 +201,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       </div>
 
       {/* fallow-ignore-next-line code-duplication */}
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         <Select
           value={statusFilter}
           onValueChange={(v) => {
@@ -357,7 +360,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                   <TableCell className="w-[99%] max-w-[200px] max-md:align-top md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>
-                      <span className="text-muted-foreground line-clamp-2 text-xs break-words whitespace-normal md:hidden">
+                      <span className="text-muted-foreground line-clamp-2 text-caption break-words whitespace-normal md:hidden">
                         {course.title}
                       </span>
                       <div className="mt-1 md:hidden">
@@ -383,7 +386,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                     </Badge>
                   </TableCell>
                   {/* fallow-ignore-next-line code-duplication */}
-                  <TableCell className="text-muted-foreground hidden text-xs whitespace-nowrap md:table-cell">
+                  <TableCell className="text-muted-foreground text-caption hidden whitespace-nowrap md:table-cell">
                     {formatDate(course.updated_at)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -417,7 +420,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       {/* fallow-ignore-next-line code-duplication */}
       {totalPages > 1 && (
         <div className="flex items-center justify-end gap-2 px-4 py-4">
-          <span className="text-text-muted text-xs">
+          <span className="text-muted-foreground text-caption">
             {(safePage - 1) * PAGE_SIZE + 1}–
             {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length}
           </span>
