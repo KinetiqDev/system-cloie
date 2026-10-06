@@ -650,7 +650,7 @@ function CourseCardGrid({
                       : "Some outcomes still need alignment before publication."}
                 </p>
               </CardContent>
-              <CardFooter className="flex flex-wrap gap-2">
+              <CardFooter className="flex flex-wrap justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
