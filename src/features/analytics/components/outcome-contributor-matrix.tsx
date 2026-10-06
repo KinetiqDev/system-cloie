@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Table,
   TableBody,
@@ -7,7 +8,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
-import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
+import type {
+  OutcomeContributorDTO,
+  OutcomeEvidenceDTO,
+  OutcomeLayerLabels,
+} from "@/features/analytics/outcome-evidence-types";
 
 const MANIFESTATION_LABELS = {
   LEARNING: "Learning",
@@ -15,12 +20,14 @@ const MANIFESTATION_LABELS = {
   OPPORTUNITY: "Opportunity",
 } as const;
 
-type ProgramHeadContributorMatrixProps = {
-  outcomes: ProgramHeadOutcomeDTO[];
-  selectedGoId?: string;
+type OutcomeContributorMatrixProps = {
+  outcomes: OutcomeEvidenceDTO[];
+  labels: OutcomeLayerLabels;
+  selectedOutcomeId?: string;
+  renderReviewLinks?: (outcome: OutcomeEvidenceDTO) => ReactNode;
 };
 
-type OutcomeContributor = ProgramHeadOutcomeDTO["contributors"][number];
+type OutcomeContributor = OutcomeContributorDTO;
 
 function contributorKey(contributor: OutcomeContributor): string {
   return contributor.kind === "CILO"
@@ -33,11 +40,17 @@ function contributorKey(contributor: OutcomeContributor): string {
       ]);
 }
 
-function ContributorName({ contributor }: { contributor: OutcomeContributor }) {
+function ContributorName({
+  contributor,
+  labels,
+}: {
+  contributor: OutcomeContributor;
+  labels: OutcomeLayerLabels;
+}) {
   return (
     <div className="flex flex-col">
       <span className="font-semibold">
-        {contributor.kind === "CILO" ? contributor.ciloCode : "Direct GO question"}
+        {contributor.kind === "CILO" ? contributor.ciloCode : `Direct ${labels.short} question`}
       </span>
       <span className="text-text-secondary">
         {contributor.kind === "CILO" ? contributor.ciloDescription : contributor.questionPrompt}
@@ -65,11 +78,17 @@ function ContributorBinding({ contributor }: { contributor: OutcomeContributor }
   return <>{MANIFESTATION_LABELS[contributor.manifestation]}</>;
 }
 
-function ContributorRow({ contributor }: { contributor: OutcomeContributor }) {
+function ContributorRow({
+  contributor,
+  labels,
+}: {
+  contributor: OutcomeContributor;
+  labels: OutcomeLayerLabels;
+}) {
   return (
     <TableRow>
       <TableCell className="align-top">
-        <ContributorName contributor={contributor} />
+        <ContributorName contributor={contributor} labels={labels} />
       </TableCell>
       <TableCell className="align-top">
         <ContributorCourse contributor={contributor} />
@@ -87,27 +106,34 @@ function ContributorRow({ contributor }: { contributor: OutcomeContributor }) {
 
 /**
  * Expandable outcome contributor matrix. CILO-derived rows retain course and
- * manifestation context; direct GO rows retain their frozen question prompt.
+ * manifestation context; direct rows retain their frozen question prompt.
  */
-export function ProgramHeadContributorMatrix({
+export function OutcomeContributorMatrix({
   outcomes,
-  selectedGoId,
-}: ProgramHeadContributorMatrixProps) {
+  labels,
+  selectedOutcomeId,
+  renderReviewLinks,
+}: OutcomeContributorMatrixProps) {
+  const hasDirect = outcomes.some((outcome) =>
+    outcome.contributors.some((contributor) => contributor.kind === "DIRECT")
+  );
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <h2 className="text-heading-lg text-foreground">Outcome contributor matrix</h2>
         <p className="text-body-sm text-text-secondary">
-          Graduate Outcome means may include CILO-derived evidence and questions bound directly at
-          publication. Means and counts pool valid in-scale ratings only.
+          {hasDirect
+            ? `${labels.singular} means may include CILO-derived evidence and questions bound directly at publication.`
+            : `${labels.singular} means come from rated questions bound to CILOs aligned with each outcome.`}{" "}
+          Means and counts pool valid in-scale ratings only.
         </p>
       </div>
       <div className="flex flex-col gap-3">
         {outcomes.map((outcome) => {
-          const isSelected = outcome.goId === selectedGoId;
+          const isSelected = outcome.outcomeId === selectedOutcomeId;
           return (
             <Disclosure
-              key={outcome.goId}
+              key={outcome.outcomeId}
               open={isSelected || undefined}
               className="border-border/80 bg-card rounded-xl border px-4 py-3 shadow-xs sm:px-5"
             >
@@ -139,6 +165,7 @@ export function ProgramHeadContributorMatrix({
                           <ContributorRow
                             key={contributorKey(contributor)}
                             contributor={contributor}
+                            labels={labels}
                           />
                         ))}
                       </TableBody>
@@ -149,6 +176,7 @@ export function ProgramHeadContributorMatrix({
                     No valid contributor evidence in this scope.
                   </p>
                 )}
+                {renderReviewLinks?.(outcome)}
               </DisclosureContent>
             </Disclosure>
           );

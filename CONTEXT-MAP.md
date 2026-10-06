@@ -40,7 +40,7 @@ Presentation or read-model code that owns no domain invariants. Rules stay in th
 - **Academic Calendar -> Outcomes**: Outcome readiness and completed-period readiness snapshots are scoped to academic periods.
 - **Analytics -> Academic Calendar**: Analytics evidence is filterable by canonical School Year, Semester, and Academic Term context.
 - **Analytics -> Course Catalog and Assignments**: Course-bound student evidence and evaluation opportunities originate from Course-bound evaluations and their assignments.
-- **Analytics -> Outcomes**: Program GO evidence follows typed Program-specific CILO-to-GO mappings; Institutional Outcome evidence and ILO-to-GO crosswalks remain separate/deferred.
+- **Analytics -> Outcomes**: Program GO evidence follows typed Program-specific CILO-to-GO mappings; General Education ILO evidence follows typed CILO-to-ILO mappings (ADR 0035); ILO attainment and ILO-to-GO crosswalks remain deferred.
 - **Design System -> All Contexts**: Design System provides shared semantic tokens, appearance resolution, and production component primitives consumed across all feature visual surfaces.
 - **Evaluations -> Instruments**: deployments pin an InstrumentVersion; published instruments never reference the live template.
 - **Evaluations -> Outcomes**: the publication alignment gate enforces typed alignment manifestations for every active CILO before a Course-bound evaluation publishes.

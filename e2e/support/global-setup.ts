@@ -708,7 +708,27 @@ export default async function globalSetup(): Promise<void> {
     where: { id: geContract.evaluationId },
     select: {
       deployment_name: true,
-      course_assignment: { select: { course: { select: { course_scope: true } } } },
+      term_instance_id: true,
+      course_assignment: {
+        select: { course_id: true, program_id: true, course: { select: { course_scope: true } } },
+      },
+      cilo_question_bindings: {
+        select: {
+          section_key: true,
+          item_key: true,
+          cilo_description_snapshot: true,
+          cilo: {
+            select: {
+              cilo_institutional_outcome_mappings: {
+                select: {
+                  manifestation: true,
+                  institutional_outcome: { select: { id: true, code: true } },
+                },
+              },
+            },
+          },
+        },
+      },
       assignments: {
         where: { response: { is: { status: "SUBMITTED" } } },
         select: {
@@ -731,6 +751,50 @@ export default async function globalSetup(): Promise<void> {
     geResponse?.response && geResponse.respondent.name === geContract.respondentName,
     "General Education identified review fixture must retain its reviewed respondent"
   );
+
+  const geRatings = await prisma.quantitativeResponseItem.findMany({
+    where: {
+      response: {
+        status: "SUBMITTED",
+        deployment_type: "COURSE_BOUND",
+        assignment: { course_bound_id: geContract.evaluationId },
+      },
+    },
+    select: { section_key: true, item_key: true, rating_value: true },
+  });
+  assertContract(
+    geRatings.length === geContract.validRatingCount &&
+      geRatings.reduce((sum, rating) => sum + rating.rating_value, 0) / geRatings.length ===
+        geContract.meanRating,
+    "General Education submitted ratings must match the reviewed course mean and item count"
+  );
+  const geIloEvidence = geContract.iloEvidence.map((expected) => {
+    const binding = geEvaluation.cilo_question_bindings.find(
+      (entry) => entry.cilo_description_snapshot === expected.ciloDescription
+    );
+    const mapping = binding?.cilo?.cilo_institutional_outcome_mappings.find(
+      (entry) => entry.institutional_outcome.code === expected.code
+    );
+    assertContract(
+      binding && mapping && mapping.manifestation === expected.manifestation,
+      `General Education ${expected.code} must retain its reviewed CILO alignment`
+    );
+    const ratings = geRatings.filter(
+      (rating) => rating.section_key === binding.section_key && rating.item_key === binding.item_key
+    );
+    assertContract(
+      ratings.length === expected.ratingCount &&
+        ratings.reduce((sum, rating) => sum + rating.rating_value, 0) / ratings.length ===
+          expected.meanRating,
+      `General Education ${expected.code} must retain its reviewed mean and contribution count`
+    );
+    return {
+      id: mapping.institutional_outcome.id,
+      code: expected.code,
+      ratingCount: expected.ratingCount,
+      meanRating: expected.meanRating,
+    };
+  });
 
   const contract = E2E_CONTRACT;
   const fixture: FixtureData = {
@@ -844,6 +908,10 @@ export default async function globalSetup(): Promise<void> {
       title: geContract.title,
       responseId: geResponse.response.id,
       respondentName: geContract.respondentName,
+      courseId: geEvaluation.course_assignment.course_id,
+      programId: geEvaluation.course_assignment.program_id,
+      termInstanceId: geEvaluation.term_instance_id,
+      iloEvidence: geIloEvidence,
     },
     publicationTemplate,
     publicationTarget,

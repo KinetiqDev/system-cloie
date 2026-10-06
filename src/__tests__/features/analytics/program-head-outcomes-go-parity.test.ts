@@ -7,9 +7,9 @@ import {
 } from "@/features/analytics/aggregators/scale-identity";
 import {
   aggregateOutcomeEvidence,
-  buildProgramHeadOutcomeDtos,
+  buildOutcomeEvidenceDtos,
   type OutcomeEvidenceRow,
-} from "@/features/analytics/services/program-head-analytics-aggregators";
+} from "@/features/analytics/aggregators/outcome-evidence";
 
 /**
  * Program Head Outcomes and canonical GO metric boundaries (issue #639).
@@ -59,13 +59,13 @@ const SNAPSHOT = {
 
 const COURSE = { id: "course-1", code: "IT201", title: "Software Engineering" };
 const GO_1 = {
-  goId: "go-1",
+  outcomeId: "outcome-1",
   code: "GO-1",
   name: "Discipline knowledge",
   manifestation: "LEARNING" as const,
 };
 const GO_2 = {
-  goId: "go-2",
+  outcomeId: "outcome-2",
   code: "GO-2",
   name: "Communication",
   manifestation: "PRACTICE" as const,
@@ -75,8 +75,8 @@ type Spec = {
   responseId: string;
   itemKey: string;
   ratingValue: number;
-  goMappings?: OutcomeEvidenceRow["goMappings"];
-  directGoBindings?: OutcomeEvidenceRow["directGoBindings"];
+  outcomeMappings?: OutcomeEvidenceRow["outcomeMappings"];
+  directBindings?: OutcomeEvidenceRow["directBindings"];
   withCilo?: boolean;
   evaluationId?: string;
   deploymentName?: string;
@@ -99,8 +99,8 @@ function legacyRow(spec: Spec): OutcomeEvidenceRow {
             description: "Apply methods",
             course: COURSE,
           },
-    goMappings: spec.goMappings ?? [],
-    directGoBindings: spec.directGoBindings ?? [],
+    outcomeMappings: spec.outcomeMappings ?? [],
+    directBindings: spec.directBindings ?? [],
     evaluationId: spec.evaluationId ?? "eval-1",
     deploymentName: spec.deploymentName ?? "End-of-term evaluation",
   };
@@ -120,14 +120,14 @@ function canonicalRow(spec: Spec): OutcomeItemRatingRow {
         ? null
         : { id: "cilo-1", label: "Apply methods", description: "Apply methods" },
     evaluationId: spec.evaluationId ?? "eval-1",
-    goMappings: (spec.goMappings ?? []).map((mapping) => ({
-      goId: mapping.goId,
+    goMappings: (spec.outcomeMappings ?? []).map((mapping) => ({
+      goId: mapping.outcomeId,
       goCode: mapping.code,
       goDescription: mapping.name,
       manifestation: mapping.manifestation,
     })),
-    directGoMappings: (spec.directGoBindings ?? []).map((binding) => ({
-      goId: binding.goId,
+    directGoMappings: (spec.directBindings ?? []).map((binding) => ({
+      goId: binding.outcomeId,
       goCode: binding.code,
       goDescription: binding.name,
       manifestation: null,
@@ -136,7 +136,7 @@ function canonicalRow(spec: Spec): OutcomeItemRatingRow {
 }
 
 function legacyDto(specs: Spec[]) {
-  return buildProgramHeadOutcomeDtos(aggregateOutcomeEvidence(specs.map(legacyRow)));
+  return buildOutcomeEvidenceDtos(aggregateOutcomeEvidence(specs.map(legacyRow)));
 }
 
 function canonicalMetric(specs: Spec[]) {
@@ -147,7 +147,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
   it("counts one contribution per response, evaluation, question, and GO in both paths", () => {
     // One response, one question, mapped to two GOs: one contribution each.
     const specs: Spec[] = [
-      { responseId: "r1", itemKey: "five", ratingValue: 4, goMappings: [GO_1, GO_2] },
+      { responseId: "r1", itemKey: "five", ratingValue: 4, outcomeMappings: [GO_1, GO_2] },
     ];
 
     expect(
@@ -172,15 +172,79 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     ]);
   });
 
+  it("pools institutional evidence from raw ratings without manifestation weights or duplicate fan-out", () => {
+    const mapping = {
+      outcomeId: "ilo-1",
+      code: "ILO1",
+      name: "Ethical reasoning",
+      manifestation: "OPPORTUNITY" as const,
+    };
+    const first = legacyRow({
+      responseId: "r1",
+      itemKey: "five",
+      ratingValue: 5,
+      outcomeMappings: [mapping, mapping],
+    });
+    const second = legacyRow({
+      responseId: "r2",
+      itemKey: "five",
+      ratingValue: 2,
+      outcomeMappings: [{ ...mapping, manifestation: "LEARNING" }],
+    });
+    const third = legacyRow({
+      responseId: "r2",
+      itemKey: "four",
+      ratingValue: 3,
+      outcomeMappings: [mapping],
+    });
+    const [outcome] = buildOutcomeEvidenceDtos(
+      aggregateOutcomeEvidence([first, first, second, third])
+    );
+    expect(outcome).toMatchObject({
+      outcomeId: "ilo-1",
+      ratingCount: 3,
+      submittedResponseCount: 2,
+      meanRating: 10 / 3,
+      spansMultipleScales: true,
+    });
+    expect(
+      outcome.distributions
+        .map((distribution) =>
+          distribution.categories.reduce((sum, category) => sum + category.count, 0)
+        )
+        .sort()
+    ).toEqual([1, 2]);
+    expect(outcome.contributors).toEqual([
+      expect.objectContaining({ kind: "CILO", ratingCount: 3, meanRating: 10 / 3 }),
+    ]);
+  });
+
+  it("does not report a many-to-many relationship for repeated copies of the same mapping", () => {
+    const row = legacyRow({
+      responseId: "r1",
+      itemKey: "five",
+      ratingValue: 4,
+      outcomeMappings: [GO_1, GO_1],
+    });
+    const result = aggregateOutcomeEvidence([row]);
+    expect(result.hasMultiMappedCilo).toBe(false);
+    expect(buildOutcomeEvidenceDtos(result)[0].ratingCount).toBe(1);
+  });
+
   it("collapses a direct binding and a CILO mapping that name the same GO", () => {
     const specs: Spec[] = [
       {
         responseId: "r1",
         itemKey: "five",
         ratingValue: 5,
-        goMappings: [GO_1],
-        directGoBindings: [
-          { goId: "go-1", code: "GO-1", name: "Discipline knowledge", questionPrompt: "Q" },
+        outcomeMappings: [GO_1],
+        directBindings: [
+          {
+            outcomeId: "outcome-1",
+            code: "GO-1",
+            name: "Discipline knowledge",
+            questionPrompt: "Q",
+          },
         ],
       },
     ];
@@ -196,8 +260,13 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         itemKey: "five",
         ratingValue: 9,
         withCilo: false,
-        directGoBindings: [
-          { goId: "go-1", code: "GO-1", name: "Discipline knowledge", questionPrompt: "Q" },
+        directBindings: [
+          {
+            outcomeId: "outcome-1",
+            code: "GO-1",
+            name: "Discipline knowledge",
+            questionPrompt: "Q",
+          },
         ],
       },
     ];
@@ -216,8 +285,8 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
 
   it("keeps incompatible scales in separate groups, but pools the Outcomes mean and the canonical one stays null", () => {
     const specs: Spec[] = [
-      { responseId: "r1", itemKey: "five", ratingValue: 5, goMappings: [GO_1] },
-      { responseId: "r2", itemKey: "four", ratingValue: 3, goMappings: [GO_1] },
+      { responseId: "r1", itemKey: "five", ratingValue: 5, outcomeMappings: [GO_1] },
+      { responseId: "r2", itemKey: "four", ratingValue: 3, outcomeMappings: [GO_1] },
     ];
 
     const [legacy] = legacyDto(specs);
@@ -253,7 +322,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         responseId: "r1",
         itemKey: "five",
         ratingValue: 4,
-        goMappings: [GO_1, GO_2],
+        outcomeMappings: [GO_1, GO_2],
         evaluationId: "eval-1",
         deploymentName: "End-of-term evaluation",
       },
@@ -262,8 +331,13 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         itemKey: "five",
         ratingValue: 5,
         withCilo: false,
-        directGoBindings: [
-          { goId: "go-1", code: "GO-1", name: "Discipline knowledge", questionPrompt: "Q" },
+        directBindings: [
+          {
+            outcomeId: "outcome-1",
+            code: "GO-1",
+            name: "Discipline knowledge",
+            questionPrompt: "Q",
+          },
         ],
         evaluationId: "eval-2",
         deploymentName: "Retake evaluation",
@@ -271,12 +345,12 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
     ];
 
     const aggregation = aggregateOutcomeEvidence(specs.map(legacyRow));
-    const [go1] = buildProgramHeadOutcomeDtos(aggregation).filter((row) => row.code === "GO-1");
+    const [go1] = buildOutcomeEvidenceDtos(aggregation).filter((row) => row.code === "GO-1");
 
     // Each provenance kind stays distinguishable, with its own mean.
     expect(go1!.contributors.map((contributor) => contributor.kind).sort()).toEqual([
       "CILO",
-      "DIRECT_GO",
+      "DIRECT",
     ]);
     expect(go1!.contributors.every((contributor) => contributor.meanRating !== undefined)).toBe(
       true
@@ -313,14 +387,14 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
         responseId: "r1",
         itemKey: "five",
         ratingValue: 5,
-        goMappings: [GO_1],
+        outcomeMappings: [GO_1],
         evaluationId: "eval-1",
       },
       {
         responseId: "r2",
         itemKey: "five",
         ratingValue: 1,
-        goMappings: [GO_1],
+        outcomeMappings: [GO_1],
         evaluationId: "eval-2",
       },
     ];
@@ -340,7 +414,9 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
   it("produces no row when a bound CILO has no current mapping, in either path", () => {
     // The Program's current mappings are the caller's input to both paths, so a
     // deleted or unmapped GO simply contributes nothing to either surface.
-    const specs: Spec[] = [{ responseId: "r1", itemKey: "five", ratingValue: 5, goMappings: [] }];
+    const specs: Spec[] = [
+      { responseId: "r1", itemKey: "five", ratingValue: 5, outcomeMappings: [] },
+    ];
 
     expect(legacyDto(specs)).toEqual([]);
     expect(canonicalMetric(specs)).toEqual([]);
@@ -355,7 +431,7 @@ describe("Program Head Outcomes and canonical GO metric boundaries", () => {
 
   it("keeps every frozen distribution category labelled in both paths", () => {
     const specs: Spec[] = [
-      { responseId: "r1", itemKey: "five", ratingValue: 4, goMappings: [GO_1] },
+      { responseId: "r1", itemKey: "five", ratingValue: 4, outcomeMappings: [GO_1] },
     ];
 
     const [legacy] = legacyDto(specs);

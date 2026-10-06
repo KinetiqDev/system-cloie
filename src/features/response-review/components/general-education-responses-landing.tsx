@@ -19,15 +19,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { GeneralEducationResponsesFilters } from "@/features/response-review/components/general-education-responses-filters";
-import { GeneralEducationResponsesWorkspace } from "@/features/response-review/components/general-education-responses-workspace";
-import { GeneralEducationResponsesPagination } from "@/features/response-review/components/general-education-responses-pagination";
+import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
+import { ResponsesPagination } from "@/features/response-review/components/responses-pagination";
 import {
   formatResponseProgress,
   formatResponseSection,
   formatResponseStatus,
   formatResponseYearLevel,
   responseStatusVariant,
-} from "@/features/analytics/program-head-responses-labels";
+} from "@/features/response-review/components/response-review-labels";
 import type { GeneralEducationEvaluationList } from "@/features/response-review/services/list-general-education-evaluations";
 import {
   buildGeneralEducationResponsesUrl,
@@ -59,11 +59,12 @@ export function GeneralEducationResponsesLanding({ state, data, upwardState }: P
         </p>
       </header>
 
-      <GeneralEducationResponsesWorkspace
+      <ResponsesWorkspace
+        sectionLabel="Course evaluations evidence"
         filters={<GeneralEducationResponsesFilters state={state} options={data.options} />}
       >
         <EvaluationEvidence state={state} data={data} upwardState={upwardState} />
-      </GeneralEducationResponsesWorkspace>
+      </ResponsesWorkspace>
     </div>
   );
 }
@@ -141,6 +142,7 @@ function EvaluationEvidence({
                     <Fact label="Class">
                       {formatResponseYearLevel(item.yearLevel)} ·{" "}
                       {formatResponseSection(item.section)}
+                      {item.program ? ` · ${item.program}` : ""}
                     </Fact>
                     <Fact label="Faculty">{item.faculty}</Fact>
                     <Fact label="Period">{item.period}</Fact>
@@ -163,7 +165,11 @@ function EvaluationEvidence({
         )}
         {data.total > data.pageSize ? (
           <div className="border-border mt-4 border-t pt-4">
-            <GeneralEducationResponsesPagination state={state} totalPages={totalPages} />
+            <ResponsesPagination
+              page={state.page}
+              totalPages={totalPages}
+              buildPageUrl={(page) => buildGeneralEducationResponsesUrl({ ...state, page })}
+            />
           </div>
         ) : null}
       </CardContent>
@@ -200,7 +206,14 @@ function EvaluationTable({ items, upwardState }: { items: Evaluation[]; upwardSt
               </span>
             </TableCell>
             <TableCell className="whitespace-normal">
-              {formatResponseYearLevel(item.yearLevel)} · {formatResponseSection(item.section)}
+              <span>
+                {formatResponseYearLevel(item.yearLevel)} · {formatResponseSection(item.section)}
+              </span>
+              {item.program ? (
+                <span className="text-label-sm text-muted-foreground mt-1 block">
+                  {item.program}
+                </span>
+              ) : null}
             </TableCell>
             <TableCell className="whitespace-normal">{item.faculty}</TableCell>
             <TableCell className="whitespace-normal">{item.period}</TableCell>

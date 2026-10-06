@@ -2,7 +2,7 @@ import { StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { loadCiloMappings } from "./cilo-mappings";
+import { loadCiloIloMappings } from "./cilo-mappings";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
 import {
@@ -10,7 +10,6 @@ import {
   respondentIdentityFragment,
   submittedResponseMean,
   type CourseBoundCiloBinding,
-  type GoQuestionBindingSnapshot,
 } from "./submitted-response-projection";
 import type { IdentifiedSubmittedResponseDetail } from "../types";
 
@@ -39,7 +38,6 @@ type GeneralEducationCourseBoundEvaluation = {
     };
   };
   cilo_question_bindings: CourseBoundCiloBinding[];
-  go_question_bindings: GoQuestionBindingSnapshot[];
 };
 
 export async function getGenEdResponseDetail(
@@ -78,7 +76,6 @@ export async function getGenEdResponseDetail(
                 },
               },
               cilo_question_bindings: true,
-              go_question_bindings: true,
             },
           },
         },
@@ -95,27 +92,31 @@ export async function getGenEdResponseDetail(
   const evaluation: GeneralEducationCourseBoundEvaluation = response.assignment.course_bound;
   const ca = evaluation.course_assignment;
 
-  const [identityContexts, ciloMappings] = await Promise.all([
+  const [identityContexts, iloMappings] = await Promise.all([
     loadRespondentIdentityContexts(
       [response.respondent.id],
       TargetStakeholder.STUDENT,
       ca.term_instance.id
     ),
-    loadCiloMappings(
+    loadCiloIloMappings(
       evaluation.cilo_question_bindings
         .map((binding) => binding.cilo_id)
         .filter((ciloId): ciloId is string => ciloId !== null)
     ),
   ]);
 
+  // General Education answers reach Institutional Learning Outcomes only, so
+  // the projection runs on the ILO layer with the GO map left empty. The
+  // loaded direct GO snapshots are Program-only and never surface here.
   const sections = buildSubmittedResponseSections(
     response,
     {
       snapshot: evaluation.instrument.structure_snapshot,
       ciloBindings: evaluation.cilo_question_bindings,
-      goSnapshots: evaluation.go_question_bindings,
+      goSnapshots: [],
+      layer: "INSTITUTIONAL_OUTCOME",
     },
-    ciloMappings
+    { goMappings: new Map(), iloMappings }
   );
 
   return {

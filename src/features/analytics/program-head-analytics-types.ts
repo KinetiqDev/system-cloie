@@ -1,5 +1,6 @@
 import type { MetricEvidenceSummary } from "@/features/analytics/aggregators/types";
 import type { QualitativeToneShape } from "./types";
+import type { OutcomeEvidenceDTO } from "./outcome-evidence-types";
 
 /** Readable scope summary for the current analytics view */
 export type ProgramHeadAnalyticsScopeSummary = {
@@ -101,92 +102,6 @@ export type ProgramHeadTrendsDTO = {
 // Outcomes
 // ---------------------------------------------------------------------------
 
-/** One category of a scale-resolved Likert distribution. */
-export type ProgramHeadOutcomeCategoryDTO = {
-  value: number;
-  label: string | null;
-  count: number;
-  /** Full-precision share of the scale group; round only for display. */
-  percentage: number;
-};
-
-/**
- * A Likert distribution for one instrument-version scale identity. Scales are
- * never merged: each distinct frozen descriptor set produces its own group.
- */
-export type ProgramHeadOutcomeScaleDistributionDTO = {
-  /** Readable scale summary, e.g. "1–5 (5-point)"; labels come from the frozen snapshot. */
-  scaleLabel: string;
-  categories: ProgramHeadOutcomeCategoryDTO[];
-};
-
-/**
- * One ranked Program Graduate Outcome evidence row. Mean retains full
- * precision; rating count is distinct from submitted response count.
- */
-export type ProgramHeadOutcomeDTO = {
-  goId: string;
-  code: string;
-  name: string;
-  /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
-  meanRating: number | null;
-  /** Count of valid in-scale ratings mapped to this GO. */
-  ratingCount: number;
-  /** Distinct submitted responses that contributed valid ratings to this GO. */
-  submittedResponseCount: number;
-  /** CILOs that contributed ratings to this row. */
-  contributingCilos: Array<{ id: string; description: string }>;
-  /** Courses whose course-bound evidence contributed to this row. */
-  contributingCourses: Array<{ id: string; code: string; title: string }>;
-  /** Valid-rating contributors behind this row, preserving CILO or direct-question provenance. */
-  contributors: ProgramHeadOutcomeContributorDTO[];
-  /**
-   * Course-bound evaluations behind this row. Links resolve to the existing
-   * selected-Program CILO review route, which independently re-authorizes
-   * before exposing any raw response text.
-   */
-  evidenceEvaluations: Array<{ evaluationId: string; deploymentName: string }>;
-  /** Scale-separated Likert distributions resolved from frozen structure snapshots. */
-  distributions: ProgramHeadOutcomeScaleDistributionDTO[];
-  /**
-   * True when the pooled mean combines ratings from more than one distinct
-   * instrument-version scale identity. The mean stays spec-mandated
-   * full-precision, and the UI discloses that cross-scale values are not
-   * directly comparable.
-   */
-  spansMultipleScales: boolean;
-  /** Ratings excluded from the valid aggregate (unresolvable or out-of-scale values). */
-  excludedRatingCount: number;
-  /** Presentation metadata for the "How calculated" disclosure (§41). */
-  evidenceSummary: MetricEvidenceSummary;
-};
-
-/** One valid-rating contribution behind a Program GO row. */
-type ProgramHeadOutcomeContributorDTO =
-  | {
-      kind: "CILO";
-      ciloId: string;
-      /** Positional `CILO n` label within the contributor's course. */
-      ciloCode: string;
-      ciloDescription: string;
-      /** Course behind the contribution; null when the course record is gone. */
-      course: { id: string; code: string; title: string } | null;
-      manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      meanRating: number;
-      ratingCount: number;
-    }
-  | {
-      kind: "DIRECT_GO";
-      evaluationId: string;
-      deploymentName: string;
-      sectionKey: string;
-      itemKey: string;
-      questionPrompt: string;
-      course: { id: string; code: string; title: string } | null;
-      meanRating: number;
-      ratingCount: number;
-    };
-
 /**
  * One program-wide evidence row from a central deployment (student, alumni, or
  * industry-partner) — aggregated across all GOs in the selected Program. Mean
@@ -235,7 +150,7 @@ export type ProgramHeadOutcomesDTO = {
   currentMappingDisclosure: string;
   /** True when a contributing CILO maps to more than one selected-Program GO. */
   manyToManyDisclosure: boolean;
-  outcomes: ProgramHeadOutcomeDTO[];
+  outcomes: OutcomeEvidenceDTO[];
   /** Program-wide (central source) GO evidence rows, grouped by stakeholder. */
   programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[];
 };

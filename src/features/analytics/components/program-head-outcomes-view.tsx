@@ -22,13 +22,14 @@ import {
 import { cn } from "@/lib/utils";
 import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/program-head-routes";
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
+import { GRADUATE_OUTCOME_LABELS } from "@/features/analytics/outcome-evidence-types";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
-import { ProgramHeadGODetail } from "./program-head-go-detail";
-import { LazyProgramHeadGoMeanBarChart } from "./program-head-analytics-visualizations";
-import { ProgramHeadContributorMatrix } from "./program-head-contributor-matrix";
+import { OutcomeEvidenceDetail } from "./outcome-evidence-detail";
+import { LazyOutcomeMeanBarChart } from "./program-head-analytics-visualizations";
+import { OutcomeContributorMatrix } from "./outcome-contributor-matrix";
 import { ProgramHeadInlineAiInsight } from "./program-head-inline-ai-insight";
 import { HowCalculatedPopover } from "./how-calculated-popover";
-import { SelectedGoScrollTarget } from "./selected-go-scroll-target";
+import { SelectedOutcomeScrollTarget } from "./selected-outcome-scroll-target";
 
 /**
  * Many-to-many contribution rule: a rating bound to a CILO mapped to several
@@ -164,12 +165,17 @@ export function ProgramHeadOutcomesView({
             )}
           </div>
 
-          <LazyProgramHeadGoMeanBarChart
+          <LazyOutcomeMeanBarChart
             title="Mean Rating by Graduate Outcome"
             outcomes={outcomes}
+            labels={GRADUATE_OUTCOME_LABELS}
           />
 
-          <ProgramHeadContributorMatrix outcomes={outcomes} selectedGoId={selectedGoId} />
+          <OutcomeContributorMatrix
+            outcomes={outcomes}
+            labels={GRADUATE_OUTCOME_LABELS}
+            selectedOutcomeId={selectedGoId}
+          />
 
           {aiFilters ? (
             <ProgramHeadInlineAiInsight
@@ -208,7 +214,7 @@ export function ProgramHeadOutcomesView({
                 {data.programWideOutcomes.map((row) => (
                   <TableRow
                     key={`${row.stakeholder}-${row.goId}`}
-                    data-go-row={row.goId}
+                    data-outcome-row={row.goId}
                     className={cn(row.goId === selectedGoId && "bg-primary-soft/40")}
                   >
                     <TableCell className="align-top">
@@ -245,7 +251,7 @@ export function ProgramHeadOutcomesView({
           </div>
         </div>
       )}
-      <SelectedGoScrollTarget goId={selectedGoId} />
+      <SelectedOutcomeScrollTarget outcomeId={selectedGoId} />
     </div>
   );
 }
@@ -275,12 +281,12 @@ function OutcomesExactValueTable({
           </TableHeader>
           <TableBody>
             {outcomes.flatMap((outcome) => {
-              const detailId = `go-detail-${outcome.goId}`;
-              const isSelected = outcome.goId === selectedGoId;
+              const detailId = `go-detail-${outcome.outcomeId}`;
+              const isSelected = outcome.outcomeId === selectedGoId;
               const rows = [
                 <TableRow
-                  key={outcome.goId}
-                  data-go-row={outcome.goId}
+                  key={outcome.outcomeId}
+                  data-outcome-row={outcome.outcomeId}
                   className={cn(isSelected && "bg-primary-soft/40")}
                 >
                   <TableCell className="align-top">
@@ -323,14 +329,14 @@ function OutcomesExactValueTable({
                     )}
                   </TableCell>
                 </TableRow>,
-                <TableRow key={`${outcome.goId}-detail`}>
+                <TableRow key={`${outcome.outcomeId}-detail`}>
                   <TableCell colSpan={5}>
                     <Disclosure open={isSelected}>
                       <DisclosureTrigger variant="link" id={detailId}>
                         Details for {outcome.code}
                       </DisclosureTrigger>
                       <DisclosureContent>
-                        <ProgramHeadGODetail outcome={outcome} />
+                        <OutcomeEvidenceDetail outcome={outcome} />
                       </DisclosureContent>
                     </Disclosure>
                   </TableCell>

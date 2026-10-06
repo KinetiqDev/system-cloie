@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BarChart3,
-  Bot,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -53,12 +52,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ViewTabs } from "@/components/layout/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import { encodeQuestionKey } from "../aggregators/question-identity";
+import {
+  AnalyticsInsightCard,
+  AnalyticsInsightPending,
+  AnalyticsInsightUnavailable,
+} from "./analytics-insight-card";
 import { generateFacultyAnalyticsInsightAction } from "@/lib/actions/faculty-analytics-actions";
 import { cn } from "@/lib/utils";
 import type {
@@ -71,7 +74,10 @@ import type {
   FacultyTrendPoint,
 } from "../types";
 import type { DeploymentStatus } from "@prisma/client";
-import { formatResponseStatus, responseStatusVariant } from "../program-head-responses-labels";
+import {
+  formatResponseStatus,
+  responseStatusVariant,
+} from "@/features/response-review/components/response-review-labels";
 import type {
   FacultyAIInsight,
   FacultyAISectionInsight,
@@ -1093,7 +1099,6 @@ function DistributionGroups({
 
 // Pending/insight/disabled/insufficient/timeout states with qualitative disclaimer are one
 // AI-state contract that never blocks deterministic evidence; splitting would scatter it.
-// fallow-ignore-next-line complexity
 function AIOverview({
   insight,
   state,
@@ -1110,93 +1115,26 @@ function AIOverview({
   const basis = qualitative
     ? `${data.qualitative.itemCount} anonymous written answers`
     : `${data.kpi.submittedResponseCount} submitted responses and ${data.kpi.validRatingCount} valid ratings`;
-  if (pending)
+  if (pending) return <AnalyticsInsightPending />;
+  if (insight && state?.ok) {
+    const truncated = state.data.evidence;
+    const boundedEvidence = qualitative
+      ? truncated.qualitativeTruncated
+      : truncated.truncatedEvidence;
     return (
-      <div
-        className="bg-information-soft border-information/25 min-h-36 rounded-lg border p-4"
-        role="status"
-        aria-label="Generating AI insight"
-        aria-busy="true"
-      >
-        <div className="flex items-center gap-2 font-medium">
-          <Bot aria-hidden="true" className="size-4" />
-          Interpreting this evidence
-        </div>
-        <p className="text-body-sm text-text-secondary mt-1">
-          System CLOIE is preparing an AI-generated overview. The verified analytics remain
-          available while this finishes.
-        </p>
-        <div className="mt-4 flex flex-col gap-2" aria-hidden="true">
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-[88%]" />
-          <Skeleton className="h-3 w-[64%]" />
-        </div>
-      </div>
+      <AnalyticsInsightCard
+        insight={insight}
+        evidenceBasis={basis}
+        qualitative={qualitative}
+        boundedEvidence={boundedEvidence}
+        boundedEvidenceNote={
+          qualitative
+            ? undefined
+            : "A scope this wide exceeds one AI evidence packet, so the interpretation used the highest-volume groups only. The charts above carry the complete figures."
+        }
+      />
     );
-  if (insight)
-    return (
-      <div className="bg-information-soft border-information/25 rounded-lg border p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Bot aria-hidden="true" className="size-4" />
-          <h3 className="text-label-lg">AI-generated insight</h3>
-        </div>
-        <p className="text-body-md mt-2">{insight.observation}</p>
-        <div className="mt-3">
-          <p className="text-label-sm font-semibold">Supporting evidence</p>
-          <ul className="mt-1 flex flex-col gap-1">
-            {insight.evidence.map((item) => (
-              <li key={item} className="text-body-sm flex items-start gap-2">
-                <span
-                  aria-hidden="true"
-                  className="bg-information mt-[0.45rem] size-1.5 shrink-0 rounded-full"
-                />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
-        {insight.connection ? (
-          <p className="text-body-sm text-text-secondary mt-2">
-            <span className="text-foreground font-semibold">What this suggests: </span>
-            {insight.connection}
-          </p>
-        ) : null}
-        {insight.limitation ? (
-          <p className="text-body-sm text-text-secondary mt-2">
-            <span className="text-foreground font-semibold">Limitation: </span>
-            {insight.limitation}
-          </p>
-        ) : null}
-        {insight.reviewQuestion ? (
-          <p className="text-body-sm text-text-secondary mt-2">
-            <span className="text-foreground font-semibold">Worth discussing: </span>
-            {insight.reviewQuestion}
-          </p>
-        ) : null}
-        <p className="text-muted-foreground mt-3 text-xs">
-          Based on {basis}. AI can be wrong. Use the chart and exact values as the evidence.
-        </p>
-        {qualitative ? (
-          <p className="text-muted-foreground mt-2 text-xs">
-            Based on anonymous aggregate counts, redacted term counts, per-prompt structure, and a
-            fixed word-list tone distribution. It does not read or display individual student
-            responses and may miss context, sarcasm, and uncommon feedback.
-          </p>
-        ) : null}
-        {qualitative && state?.ok && state.data.evidence.qualitativeTruncated ? (
-          <p className="text-muted-foreground mt-2 text-xs">
-            The interpretation used a bounded slice of the written-feedback evidence, not the entire
-            corpus.
-          </p>
-        ) : null}
-        {!qualitative && state?.ok && state.data.evidence.truncatedEvidence ? (
-          <p className="text-muted-foreground mt-2 text-xs">
-            A scope this wide exceeds one AI evidence packet, so the interpretation used the
-            highest-volume groups only. The charts above carry the complete figures.
-          </p>
-        ) : null}
-      </div>
-    );
+  }
   const failure = state && !state.ok ? state.state : null;
   let label: string;
   if (failure === "disabled") {
@@ -1210,13 +1148,7 @@ function AIOverview({
     label = "The AI overview is loading with this scope's evidence.";
   }
   return (
-    <div className="border-border rounded-lg border border-dashed p-4">
-      <div className="flex items-center gap-2 font-medium">
-        <Bot aria-hidden="true" className="size-4" />
-        AI-generated overview
-      </div>
-      <p className="text-body-sm text-text-secondary mt-1">{label}</p>
-    </div>
+    <AnalyticsInsightUnavailable title="AI-generated overview">{label}</AnalyticsInsightUnavailable>
   );
 }
 

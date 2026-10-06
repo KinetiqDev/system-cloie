@@ -12,6 +12,8 @@ import type {
 } from "@/features/analytics/aggregators/types";
 import type { GoMetric } from "@/features/analytics/aggregators/go";
 import type { WordCloudToken } from "@/features/analytics/types";
+import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-types";
+import type { CiloIloMapping } from "./services/cilo-mappings";
 
 // ---------------------------------------------------------------------------
 // Identified review belongs to Program Heads for Program-specific/Central
@@ -30,17 +32,37 @@ export type ProgramWideGoBinding = {
   description: string;
 };
 
-/** Outcome binding of one submitted quantitative answer (§27.4). */
-export type SubmittedAnswerBinding =
+/**
+ * Outcome binding of one submitted quantitative answer (§27.4).
+ *
+ * `layer` names the typed alignment the Course's CILOs actually reach, and
+ * it is the discriminator: a General Education CILO carries ILO alignments
+ * and no GO data, while a Program-specific CILO carries GO mappings and no
+ * ILO data. Keeping both lists on one shape would let a renamed GO field
+ * carry ILO rows, so each variant declares only the list it can hold.
+ */
+export type SubmittedCiloAnswerBinding =
   | {
       type: "CILO";
+      layer: "GRADUATE_OUTCOME";
       ciloId: string | null;
       ciloLabel: string;
-      /** Selected Program's current CILO→GO mappings, with manifestation. */
+      /** Current CILO→GO mappings in the owning Program, with manifestation. */
       goMappings: CiloGoMapping[];
       /** Frozen direct GO bindings carried by this same course question. */
       directGoBindings: ProgramWideGoBinding[];
     }
+  | {
+      type: "CILO";
+      layer: "INSTITUTIONAL_OUTCOME";
+      ciloId: string | null;
+      ciloLabel: string;
+      /** Current CILO→ILO alignments with manifestation; the only outcome list here. */
+      iloMappings: CiloIloMapping[];
+    };
+
+export type SubmittedAnswerBinding =
+  | SubmittedCiloAnswerBinding
   | { type: "GO"; goBindings: ProgramWideGoBinding[] }
   | { type: "GENERAL" };
 
@@ -197,6 +219,8 @@ export type IdentifiedCourseEvaluationDetail = {
     section: StudentSection;
     majorLabel: string | null;
     periodLabel: string;
+    /** Academic term instance behind this evaluation (§12 upward navigation). */
+    termInstanceId: string;
     activationAt: Date | null;
     deadlineAt: Date | null;
     status: DeploymentStatus;
@@ -215,10 +239,27 @@ export type IdentifiedCourseEvaluationDetail = {
   };
   participation: ParticipationSummary;
   ciloResults: CiloMetric[];
+  /**
+   * Typed alignment layer the evaluation's CILOs reach. Program-specific
+   * Courses resolve to GO mappings and General Education Courses to ILO
+   * alignments, so a surface never infers the layer from wording.
+   */
+  alignmentLayer: ReviewAlignmentLayer;
+  /**
+   * Current ILO alignments behind each CILO id in `ciloResults`, in table
+   * order. Empty on Program-specific Courses, where `ciloResults[].mappings`
+   * already carries the GO layer.
+   */
+  iloMappingsByCilo: Record<string, CiloIloMapping[]>;
+  /** ILO evidence for this one evaluation; empty for Program-specific Courses. */
+  iloResults: OutcomeEvidenceDTO[];
   questionResults: QuestionMetric[];
   qualitative: QualitativeSummary;
   respondents: IdentifiedSubmittedRespondentRow[];
 };
+
+/** Which typed CILO→outcome table backs this evaluation's review surface. */
+export type ReviewAlignmentLayer = "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME";
 
 /** Program-wide question result with its publication-time GO bindings. */
 export type ProgramHeadCentralQuestionResult = QuestionMetric & {

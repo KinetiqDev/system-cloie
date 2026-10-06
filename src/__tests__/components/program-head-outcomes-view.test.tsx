@@ -20,7 +20,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
     manyToManyDisclosure: false,
     outcomes: [
       {
-        goId: "go-a",
+        outcomeId: "outcome-a",
         code: "GO-1",
         name: "Effective communicator",
         meanRating: 13 / 3, // 4.3333... full precision
@@ -63,6 +63,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         distributions: [
           {
             scaleLabel: "1–5 (5-point)",
+            maxValue: 5,
             categories: [
               { value: 1, label: null, count: 0, percentage: 0 },
               { value: 2, label: null, count: 0, percentage: 0 },
@@ -73,6 +74,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
           },
           {
             scaleLabel: "1–4 (4-point)",
+            maxValue: 4,
             categories: [
               { value: 1, label: "Strongly Disagree", count: 0, percentage: 0 },
               { value: 2, label: "Disagree", count: 0, percentage: 0 },
@@ -92,7 +94,7 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomesDTO> = {}): ProgramHea
         },
       },
       {
-        goId: "go-b",
+        outcomeId: "outcome-b",
         code: "GO-2",
         name: "Critical thinker",
         meanRating: 2,
@@ -286,7 +288,7 @@ describe("ProgramHeadOutcomesView", () => {
     dto.programWideOutcomes = [
       {
         stakeholder: "ALUMNI",
-        goId: "go-a",
+        goId: "outcome-a",
         code: "GO-1",
         name: "Graduate outcomes",
         meanRating: 4.5,
@@ -297,7 +299,7 @@ describe("ProgramHeadOutcomesView", () => {
         evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
       },
     ];
-    renderView(dto, "go-a");
+    renderView(dto, "outcome-a");
 
     const go1Detail = screen.getByText("Details for GO-1").closest("details")!;
     expect(go1Detail).toHaveAttribute("open");
@@ -316,7 +318,7 @@ describe("ProgramHeadOutcomesView", () => {
     const dto = outcomeDTO();
     dto.outcomes.push({
       ...dto.outcomes[0],
-      goId: "go-c",
+      outcomeId: "outcome-c",
       code: "GO-3",
       name: "Unrated outcome",
       meanRating: null,

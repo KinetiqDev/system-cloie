@@ -90,6 +90,8 @@ export type QualitativeCorpusItem = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   promptLabel: string;
+  /** Structural section/item identity when the caller has frozen question coordinates. */
+  promptKey?: string;
   /**
    * Instrument version the answer came from. `instrumentId` keeps two versions
    * that share a prompt label apart; `instrumentLabel` is what a reviewer or the
@@ -168,6 +170,7 @@ type QualitativePromptEvidence = {
   sourceKey: ProgramHeadStakeholderSourceKey;
   sourceLabel: string;
   promptLabel: string;
+  promptKey: string;
   /** Stable instrument identity; two versions can share a visible label. */
   instrumentId: string;
   instrumentLabel: string;
@@ -333,16 +336,20 @@ export function analyzeQualitativeCorpus(
     );
 
   const prompts = [
-    ...groupQualitativeItems(
-      prepared,
-      (item) =>
-        `${item.sourceKey}\u0000${item.sourceLabel}\u0000${item.instrumentId}\u0000${item.promptLabel}`
+    ...groupQualitativeItems(prepared, (item) =>
+      JSON.stringify([
+        item.sourceKey,
+        item.sourceLabel,
+        item.instrumentId,
+        item.promptKey ?? item.promptLabel,
+      ])
     ).values(),
   ]
     .map<QualitativePromptEvidence>((group) => ({
       sourceKey: group[0]!.item.sourceKey,
       sourceLabel: group[0]!.item.sourceLabel,
       promptLabel: group[0]!.item.promptLabel,
+      promptKey: group[0]!.item.promptKey ?? group[0]!.item.promptLabel,
       instrumentId: group[0]!.item.instrumentId,
       instrumentLabel: group[0]!.item.instrumentLabel,
       itemCount: group.length,

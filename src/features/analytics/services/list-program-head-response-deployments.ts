@@ -10,7 +10,7 @@ import { DEFAULT_TABLE_PAGE_SIZE } from "@/lib/constants/page-sizes";
 import type { ProgramHeadAnalyticsPeriodOptions } from "../program-head-analytics-types";
 import { comparableRatingMean } from "./comparable-rating-mean";
 import { describeScales, extractDistinctScales } from "../aggregators/scale-identity";
-import { formatResponseYearLevel } from "../program-head-responses-labels";
+import { formatResponseYearLevel } from "@/features/response-review/components/response-review-labels";
 import type { ProgramHeadResponsesFilterState } from "./program-head-responses-state";
 
 import { buildInstancePeriodLabel, toPeriodOption } from "./academic-periods";

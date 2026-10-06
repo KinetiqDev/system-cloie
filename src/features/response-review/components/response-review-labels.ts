@@ -1,4 +1,5 @@
 import type {
+  CILOMappingManifestation,
   DeploymentStatus,
   StudentSection,
   TargetStakeholder,
@@ -6,7 +7,35 @@ import type {
 } from "@prisma/client";
 import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "@/lib/constants/year-levels";
 
+// ---------------------------------------------------------------------------
+// Response-review presentation vocabulary shared by every identified review
+// owner. Program Heads and the General Education Coordinator filter the same
+// evaluation rosters, so the wording, status variants, and progress phrasing
+// live here instead of being re-derived per role.
+// ---------------------------------------------------------------------------
+
+/** One filter dropdown entry: a stable id plus its human label. */
 export type ResponseFilterOption = { id: string; label: string };
+
+/** One typed CILO→outcome alignment rendered on a review surface. */
+export type ResponseOutcomeAlignment = {
+  outcomeId: string;
+  outcomeCode: string;
+  manifestation: CILOMappingManifestation | null;
+};
+
+/**
+ * Badge text for one alignment: the outcome code plus its descriptive
+ * manifestation. Manifestation never filters or weights a mean — it only
+ * tells the reader how the CILO contributes (ADR 0035). A mapping with no
+ * recorded manifestation is still real alignment, so it is labelled rather
+ * than hidden.
+ */
+export function formatOutcomeAlignment(alignment: ResponseOutcomeAlignment): string {
+  return alignment.manifestation
+    ? `${alignment.outcomeCode} (${alignment.manifestation})`
+    : `${alignment.outcomeCode} (Not classified)`;
+}
 
 export const RESPONSE_YEAR_LEVEL_OPTIONS: ResponseFilterOption[] = YEAR_LEVEL_OPTIONS.map(
   (option) => ({ id: option.value, label: option.label })

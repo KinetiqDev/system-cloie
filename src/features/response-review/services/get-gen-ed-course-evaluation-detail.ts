@@ -7,7 +7,11 @@ import {
   buildQuestionMetrics,
   type OutcomeItemRatingRow,
 } from "@/features/analytics/aggregators/cilo";
-import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
+import {
+  aggregateOutcomeEvidence,
+  buildOutcomeEvidenceDtos,
+  type OutcomeEvidenceRow,
+} from "@/features/analytics/aggregators/outcome-evidence";
 import { groupRatingsByScale } from "@/features/analytics/aggregators/quantitative";
 import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
@@ -24,7 +28,7 @@ import {
   resolveSnapshotNullableText,
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
-import { loadCiloMappings } from "./cilo-mappings";
+import { loadCiloIloMappings, type CiloIloMapping } from "./cilo-mappings";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
@@ -116,22 +120,32 @@ export async function getGenEdCourseEvaluationDetail(
     });
   }
 
-  const ciloMappings = await loadCiloMappings(
+  const iloMappings = await loadCiloIloMappings(
     evaluation.cilo_question_bindings
       .map((binding) => binding.cilo_id)
       .filter((ciloId): ciloId is string => ciloId !== null)
   );
 
-  const { ratingRows, meanByResponse } = buildCourseRatingRows(
+  const { ratingRows, meanByResponse, iloMappingsByCilo } = buildCourseRatingRows(
     submittedResponses,
     snapshot,
     snapshotItems,
     bindingByQuestionKey,
-    ciloMappings
+    iloMappings
   );
 
   const ciloResults = buildCiloMetrics(ratingRows);
   const questionResults = buildQuestionMetrics(ratingRows);
+
+  // ILO evidence for this evaluation alone, aggregated by the neutral outcome
+  // engine over the same valid ratings. The engine reads current CILO→ILO
+  // alignments, so this history is grouped by today's mappings; the
+  // disclosure travels with the row rather than being stated as attainment.
+  const iloResults = buildOutcomeEvidenceDtos(
+    aggregateOutcomeEvidence(
+      toOutcomeEvidenceRows(ratingRows, evaluation, snapshot, iloMappingsByCilo)
+    )
+  );
 
   const scaleGroups = groupRatingsByScale(
     ratingRows.map((row) => ({
@@ -199,6 +213,7 @@ export async function getGenEdCourseEvaluationDetail(
         semester: resolveSnapshotText(courseInfo, "semester", ca.term_instance.semester),
         term: resolveSnapshotNullableText(courseInfo, "term", ca.term_instance.term),
       }),
+      termInstanceId: ca.term_instance.id,
       activationAt: evaluation.activation_at,
       deadlineAt: evaluation.deadline_at,
       status: evaluation.status,
@@ -215,6 +230,9 @@ export async function getGenEdCourseEvaluationDetail(
     },
     participation,
     ciloResults,
+    alignmentLayer: "INSTITUTIONAL_OUTCOME",
+    iloMappingsByCilo: Object.fromEntries(iloMappingsByCilo),
+    iloResults,
     questionResults,
     qualitative,
     respondents,
@@ -234,18 +252,26 @@ type CiloBindingSnapshot = {
   cilo_description_snapshot: string;
 };
 
+/**
+ * Build the canonical CILO rating rows plus the ILO alignments behind each
+ * CILO. The aggregators read `goMappings`, which a General Education CILO
+ * never has, so the ILO layer is returned here and attached to the evaluation
+ * DTO by the caller rather than forced into the GO-shaped row.
+ */
 function buildCourseRatingRows(
   submittedResponses: SubmittedResponseWithItems[],
   snapshot: unknown,
   snapshotItems: Map<string, { prompt: string }>,
   bindingByQuestionKey: Map<string, CiloBindingSnapshot>,
-  ciloMappings: Map<string, CiloGoMapping[]>
+  iloMappings: Map<string, CiloIloMapping[]>
 ): {
   ratingRows: OutcomeItemRatingRow[];
   meanByResponse: Map<string, number | null>;
+  iloMappingsByCilo: Map<string, CiloIloMapping[]>;
 } {
   const ratingRows: OutcomeItemRatingRow[] = [];
   const meanByResponse = new Map<string, number | null>();
+  const iloMappingsByCilo = new Map<string, CiloIloMapping[]>();
   for (const response of submittedResponses) {
     const scaleKeys = new Set<string>();
     const validRatings: number[] = [];
@@ -258,9 +284,10 @@ function buildCourseRatingRows(
       validRatings.push(item.rating_value);
       const questionKey = encodeQuestionKey(item.section_key, item.item_key);
       const binding = bindingByQuestionKey.get(questionKey);
-      ratingRows.push(
-        toCourseRatingRow(item, scale, response.id, snapshotItems, binding, ciloMappings)
-      );
+      ratingRows.push(toCourseRatingRow(item, scale, response.id, snapshotItems, binding));
+      if (binding?.cilo_id) {
+        iloMappingsByCilo.set(binding.cilo_id, iloMappings.get(binding.cilo_id) ?? []);
+      }
     }
     meanByResponse.set(
       response.id,
@@ -269,7 +296,52 @@ function buildCourseRatingRows(
         : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
     );
   }
-  return { ratingRows, meanByResponse };
+  return { ratingRows, meanByResponse, iloMappingsByCilo };
+}
+
+/**
+ * Project the canonical CILO rating rows onto the neutral outcome engine's
+ * row shape. The CILO aggregator reads `goMappings`, which a General Education
+ * CILO never has, so ILO alignments travel beside the rows and are attached
+ * here. Direct question-to-outcome bindings are Program-only and stay empty.
+ */
+function toOutcomeEvidenceRows(
+  ratingRows: OutcomeItemRatingRow[],
+  evaluation: {
+    id: string;
+    deployment_name: string;
+    instrument_version_id: string;
+    course_assignment: { course: { id: string; code: string; title: string } };
+  },
+  structureSnapshot: unknown,
+  iloMappings: Map<string, CiloIloMapping[]>
+): OutcomeEvidenceRow[] {
+  const course = evaluation.course_assignment.course;
+  return ratingRows.map((row) => ({
+    ratingValue: row.ratingValue,
+    responseId: row.responseId,
+    sectionKey: row.sectionKey,
+    itemKey: row.itemKey,
+    // The frozen instrument version is what produced these ratings, so the
+    // engine validates each value against that snapshot rather than a live one.
+    instrumentVersion: {
+      id: evaluation.instrument_version_id,
+      structureSnapshot,
+    },
+    course,
+    cilo: row.cilo
+      ? { id: row.cilo.id, code: row.cilo.label, description: row.cilo.description, course }
+      : null,
+    outcomeMappings: (row.cilo ? (iloMappings.get(row.cilo.id) ?? []) : []).map((mapping) => ({
+      outcomeId: mapping.iloId,
+      code: mapping.iloCode,
+      name: mapping.iloDescription,
+      manifestation: mapping.manifestation,
+    })),
+    directBindings: [],
+    evaluationId: evaluation.id,
+    deploymentName: evaluation.deployment_name,
+  }));
 }
 
 function toCourseRatingRow(
@@ -277,8 +349,7 @@ function toCourseRatingRow(
   scale: ScaleIdentity,
   responseId: string,
   snapshotItems: Map<string, { prompt: string }>,
-  binding: CiloBindingSnapshot | undefined,
-  ciloMappings: Map<string, CiloGoMapping[]>
+  binding: CiloBindingSnapshot | undefined
 ): OutcomeItemRatingRow {
   const questionKey = encodeQuestionKey(item.section_key, item.item_key);
   return {
@@ -295,6 +366,8 @@ function toCourseRatingRow(
           description: binding.cilo_description_snapshot,
         }
       : null,
-    goMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
+    // A General Education CILO has no GO mappings; the ILO layer travels in
+    // `iloMappingsByCilo` and is never forced into this GO-shaped row.
+    goMappings: [],
   };
 }

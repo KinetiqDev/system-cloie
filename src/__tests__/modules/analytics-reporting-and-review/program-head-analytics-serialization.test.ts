@@ -53,7 +53,7 @@ const outcomes: ProgramHeadOutcomesDTO = {
   manyToManyDisclosure: true,
   outcomes: [
     {
-      goId: "go-1",
+      outcomeId: "outcome-1",
       code: "GO-1",
       name: "Effective communicator",
       meanRating: 11 / 3,
@@ -66,6 +66,7 @@ const outcomes: ProgramHeadOutcomesDTO = {
       distributions: [
         {
           scaleLabel: "1–5 (5-point)",
+          maxValue: 5,
           categories: [
             { value: 3, label: null, count: 1, percentage: 1 / 3 },
             { value: 4, label: null, count: 2, percentage: 2 / 3 },

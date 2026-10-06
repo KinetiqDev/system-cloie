@@ -8,8 +8,8 @@ const { pushMock, navState } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
 }));
-vi.mock("@/features/analytics/components/program-head-responses-workspace", () => ({
-  useProgramHeadResponsesNavigation: () => ({ isPending: navState.isPending, navigate: pushMock }),
+vi.mock("@/features/response-review/components/responses-workspace", () => ({
+  useResponsesNavigation: () => ({ isPending: navState.isPending, navigate: pushMock }),
 }));
 
 import { fireEvent, render, screen } from "@testing-library/react";

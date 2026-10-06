@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ProgramHeadLikertDistribution } from "@/features/analytics/components/program-head-likert-distribution";
-import type { ProgramHeadOutcomeScaleDistributionDTO } from "@/features/analytics/program-head-analytics-types";
+import { LikertDistributionTable } from "@/features/analytics/components/likert-distribution-table";
+import type { OutcomeScaleDistributionDTO } from "@/features/analytics/outcome-evidence-types";
 
-const rated: ProgramHeadOutcomeScaleDistributionDTO = {
+const rated: OutcomeScaleDistributionDTO = {
   scaleLabel: "1–5 (5-point)",
+  maxValue: 5,
   categories: [
     { value: 1, label: "Strongly disagree", count: 1, percentage: 0.0625 },
     { value: 2, label: "Disagree", count: 3, percentage: 0.1875 },
@@ -14,8 +15,9 @@ const rated: ProgramHeadOutcomeScaleDistributionDTO = {
   ],
 };
 
-const unrated: ProgramHeadOutcomeScaleDistributionDTO = {
+const unrated: OutcomeScaleDistributionDTO = {
   scaleLabel: "1–5 (5-point)",
+  maxValue: 5,
   categories: [
     { value: 1, label: "Strongly disagree", count: 0, percentage: 0 },
     { value: 2, label: "Disagree", count: 0, percentage: 0 },
@@ -25,9 +27,9 @@ const unrated: ProgramHeadOutcomeScaleDistributionDTO = {
   ],
 };
 
-describe("ProgramHeadLikertDistribution", () => {
+describe("LikertDistributionTable", () => {
   it("renders scale categories with counts, shares, and a named table", () => {
-    render(<ProgramHeadLikertDistribution distribution={rated} />);
+    render(<LikertDistributionTable distribution={rated} />);
 
     expect(screen.getByText("Scale: 1–5 (5-point)")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Likert distribution by category" });
@@ -37,7 +39,7 @@ describe("ProgramHeadLikertDistribution", () => {
   });
 
   it("renders an explicit empty state instead of a zero-filled table", () => {
-    const { container } = render(<ProgramHeadLikertDistribution distribution={unrated} />);
+    const { container } = render(<LikertDistributionTable distribution={unrated} />);
 
     expect(screen.getByText("Scale: 1–5 (5-point)")).toBeInTheDocument();
     expect(screen.getByText("No ratings on this scale")).toBeInTheDocument();

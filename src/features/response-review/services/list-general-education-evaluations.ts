@@ -40,6 +40,8 @@ type GeneralEducationEvaluationRow = {
   mean: number | null;
   scaleLabel: string | null;
   course: { id: string; code: string; title: string; major: string | null };
+  /** Class-context Program label shown in the class cell. */
+  program: string | null;
   faculty: string;
   yearLevel: YearLevel;
   section: StudentSection;
@@ -48,7 +50,10 @@ type GeneralEducationEvaluationRow = {
 export type GeneralEducationEvaluationFilterOptions = {
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
   courses: Array<{ id: string; label: string }>;
+  /** Class-context Programs with General Education classes in any period. */
+  programs: Array<{ id: string; label: string }>;
   faculty: Array<{ id: string; label: string }>;
+  ilos: Array<{ id: string; label: string }>;
 };
 
 export type GeneralEducationEvaluationList = {
@@ -91,8 +96,25 @@ function assignmentFilterWhere(
   return {
     ...(filters.courseId ? { course_id: filters.courseId } : {}),
     ...(filters.facultyId ? { faculty_id: filters.facultyId } : {}),
+    ...(filters.programId ? { program_id: filters.programId } : {}),
     ...(filters.yearLevel ? { year_level: filters.yearLevel } : {}),
     ...(filters.section ? { section: filters.section } : {}),
+    ...(filters.iloId ? { course: { cilos: { some: iloCiloWhere(filters.iloId) } } } : {}),
+  };
+}
+
+/**
+ * ILO facet: evaluations whose Course has an active CILO currently mapped to
+ * the selected ILO. Manifestation is descriptive, so it never narrows the
+ * facet — a mapping with no recorded classification still counts as
+ * alignment. Only current mappings are considered, so re-pointing a CILO at a
+ * different ILO moves the evaluation between facets; that limitation is
+ * disclosed on the review surface.
+ */
+function iloCiloWhere(iloId: string): Prisma.CILOWhereInput {
+  return {
+    is_active: true,
+    cilo_institutional_outcome_mappings: { some: { institutional_outcome_id: iloId } },
   };
 }
 
@@ -107,19 +129,45 @@ function searchClause(q: string | undefined): Prisma.CourseBoundEvaluationWhereI
   ];
 }
 
+/**
+ * Response progress against the evaluation's real opportunities. Every
+ * assignment row is one opportunity, so "no responses" is an empty roster
+ * rather than a 0-of-0 comparison that would otherwise read as complete.
+ */
+function completionWhere(
+  completion: GeneralEducationResponsesFilterState["completion"]
+): Record<string, unknown> | undefined {
+  if (!completion) return undefined;
+  const submitted = { response: { is: { status: "SUBMITTED" as const } } };
+  const notSubmitted = { NOT: submitted };
+  if (completion === "zero") return { assignments: { none: submitted } };
+  if (completion === "complete") {
+    return {
+      AND: [
+        { assignments: { some: submitted } },
+        { assignments: { every: submitted } },
+        { assignments: { some: {} } },
+      ],
+    };
+  }
+  return { AND: [{ assignments: { some: submitted } }, { assignments: { some: notSubmitted } }] };
+}
+
 function courseEvaluationWhere(
   filters: GeneralEducationResponsesFilterState
 ): Prisma.CourseBoundEvaluationWhereInput {
   const search = searchClause(cleanSearch(filters.q));
+  const completion = completionWhere(filters.completion);
   return {
     ...generalEducationCourseEvaluationWhere(),
-    status: { not: "DRAFT" },
+    status: filters.status ?? { not: "DRAFT" },
     term_instance: termInstanceWhere(filters),
     course_assignment: {
       ...generalEducationCourseAssignmentWhere(),
       ...assignmentFilterWhere(filters),
     },
     ...(search ? { OR: search } : {}),
+    ...(completion ?? {}),
   };
 }
 
@@ -188,7 +236,7 @@ async function getResponseStats(
 }
 
 async function loadFilterOptions(): Promise<GeneralEducationEvaluationFilterOptions> {
-  const [periods, courses, faculty] = await Promise.all([
+  const [periods, courses, faculty, programs, ilos] = await Promise.all([
     prisma.academicTermInstance.findMany({
       where: {
         course_bound_evaluations: {
@@ -223,6 +271,33 @@ async function loadFilterOptions(): Promise<GeneralEducationEvaluationFilterOpti
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    // Class-context Programs only: the Programs whose General Education
+    // classes actually produced reviewable evidence. This is a filter on the
+    // assignment's Program, never on a respondent's Program.
+    prisma.program.findMany({
+      where: {
+        course_assignments: {
+          some: {
+            course: { course_scope: "GENERAL_EDUCATION" },
+            course_bound_evaluations: { some: {} },
+          },
+        },
+      },
+      select: { id: true, code: true, name: true },
+      orderBy: { code: "asc" },
+    }),
+    // The reachable ILO set, matching the facet exactly: an ILO some active
+    // General Education CILO currently maps to. Manifestation never narrows
+    // this — a mapping with no classification still makes the ILO selectable.
+    prisma.institutionalOutcome.findMany({
+      where: {
+        cilo_mappings: {
+          some: { cilo: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } } },
+        },
+      },
+      select: { id: true, code: true, description: true },
+      orderBy: [{ order: "asc" }, { code: "asc" }],
+    }),
   ]);
 
   return {
@@ -235,7 +310,12 @@ async function loadFilterOptions(): Promise<GeneralEducationEvaluationFilterOpti
       id: course.id,
       label: `${course.code} · ${course.title}`,
     })),
+    programs: programs.map((program) => ({
+      id: program.id,
+      label: `${program.code} · ${program.name}`,
+    })),
     faculty: faculty.map((person) => ({ id: person.id, label: person.name })),
+    ilos: ilos.map((ilo) => ({ id: ilo.id, label: `${ilo.code} — ${ilo.description}` })),
   };
 }
 
@@ -279,6 +359,7 @@ export async function listGeneralEducationEvaluations(
               select: { id: true, code: true, title: true, major: { select: { name: true } } },
             },
             faculty: { select: { name: true } },
+            program: { select: { code: true, name: true } },
           },
         },
       },
@@ -312,6 +393,9 @@ export async function listGeneralEducationEvaluations(
           title: row.course_assignment.course.title,
           major: row.course_assignment.course.major?.name ?? null,
         },
+        program: row.course_assignment.program
+          ? `${row.course_assignment.program.code} · ${row.course_assignment.program.name}`
+          : null,
         faculty: row.course_assignment.faculty.name,
         yearLevel: row.course_assignment.year_level,
         section: row.course_assignment.section,

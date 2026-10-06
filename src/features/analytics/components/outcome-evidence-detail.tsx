@@ -1,5 +1,5 @@
-import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
-import { ProgramHeadLikertDistribution } from "./program-head-likert-distribution";
+import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-types";
+import { LikertDistributionTable } from "./likert-distribution-table";
 
 /** How many decimals the detail mean carries beyond the two-decimal summary. */
 const DETAIL_MEAN_DECIMALS = 4;
@@ -14,12 +14,12 @@ function formatBoundedMean(value: number, decimals: number): string {
 }
 
 /**
- * Contextual detail for one Graduate Outcome evidence row: the mean at higher
+ * Contextual detail for one outcome evidence row: the mean at higher
  * precision than the two-decimal summary, scale-separated Likert
  * distributions, and a diagnostic count of ratings excluded from the valid
  * aggregate.
  */
-export function ProgramHeadGODetail({ outcome }: { outcome: ProgramHeadOutcomeDTO }) {
+export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -41,8 +41,10 @@ export function ProgramHeadGODetail({ outcome }: { outcome: ProgramHeadOutcomeDT
         <div className="flex flex-col gap-4">
           <h4 className="text-title-sm text-foreground">Likert distribution by scale</h4>
           {outcome.distributions.map((distribution) => (
-            <ProgramHeadLikertDistribution
-              key={distribution.scaleLabel}
+            <LikertDistributionTable
+              key={JSON.stringify(
+                distribution.categories.map(({ value, label }) => [value, label])
+              )}
               distribution={distribution}
             />
           ))}

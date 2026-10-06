@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
 import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
+import { formatOutcomeAlignment } from "./response-review-labels";
 import type { IdentifiedSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { formatDateTime } from "@/lib/utils/date-format";
@@ -15,12 +16,12 @@ type ResponseDetailProps = {
   /** Link to the Analytics tab for upward trace (§27.6). */
   analyticsHref: string;
   /**
-   * Outcome deep links (§27.6 reverse trace). Program Heads pass their
-   * selected Program id so GO links resolve into their Analytics workspace; the
-   * Coordinator passes a General Education outcome resolver instead, so no
-   * Program-scoped href is ever built for college-wide evidence.
+   * Outcome deep links (§27.6 reverse trace). The id is whichever typed
+   * alignment the answer actually carries: a GO id for Program-specific and
+   * Central evidence, an ILO id for General Education. Each role resolves it
+   * against its own Analytics workspace, so no href crosses role scopes.
    */
-  outcomeHref: (goId: string, response: IdentifiedSubmittedResponseDetail) => string;
+  outcomeHref: (outcomeId: string, response: IdentifiedSubmittedResponseDetail) => string;
   /** Trail rendered directly below the page title (§12). */
   breadcrumbs?: ReactNode;
 };
@@ -128,7 +129,42 @@ function QuantitativeAnswerCard({
         descriptorLabels={item.descriptorLabels}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {binding.type === "CILO" && (
+        {binding.type === "CILO" && binding.layer === "INSTITUTIONAL_OUTCOME" && (
+          // General Education: the CILO reaches Institutional Learning
+          // Outcomes only, so each alignment links into the Coordinator's own
+          // Analytics workspace for that ILO in this response's period.
+          <Badge
+            variant="outline"
+            className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
+          >
+            <span>
+              <span className="font-semibold">CILO:</span> {binding.ciloLabel}
+            </span>
+            {binding.iloMappings.length > 0 && (
+              <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
+                <span>→</span>
+                {binding.iloMappings.map((mapping, index) => (
+                  <Fragment key={mapping.iloId}>
+                    {index > 0 ? ", " : null}
+                    <span>
+                      <Link
+                        href={outcomeHref(mapping.iloId)}
+                        className="hover:text-foreground font-medium underline underline-offset-2"
+                      >
+                        {formatOutcomeAlignment({
+                          outcomeId: mapping.iloId,
+                          outcomeCode: mapping.iloCode,
+                          manifestation: mapping.manifestation,
+                        })}
+                      </Link>
+                    </span>
+                  </Fragment>
+                ))}
+              </span>
+            )}
+          </Badge>
+        )}
+        {binding.type === "CILO" && binding.layer === "GRADUATE_OUTCOME" && (
           <Badge
             variant="outline"
             className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"

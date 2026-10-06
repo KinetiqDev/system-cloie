@@ -37,7 +37,7 @@ A purpose-built, college-wide OBE attainment-evidence engine for ACD. The mechan
 - **Evaluation lifecycle:** instrument templates with immutable frozen versions; Course-bound and Central deployments; server-side publication alignment gate; roster exclusions and reversals; availability windows.
 - **Responses:** one-response invariant per deployment; eligibility gating; section-scoped drafts; atomic submission completeness.
 - **Review:** identified vs anonymized review flows over SUBMITTED responses only. Program Heads own identified Program-specific Course-bound and Central evidence within authorized Programs; the General Education Coordinator owns identified General Education Course-bound evidence college-wide.
-- **Analytics:** deterministic aggregates are the authoritative evidence surface; AI-assisted interpretation is supplementary, server-side, de-identified, bounded, never persisted (ADR 0016).
+- **Analytics:** deterministic aggregates are authoritative. Program GO and General Education ILO evidence follow frozen CILO question bindings and current typed mappings, with explicit historical and cross-scale limitations. ILO attainment targets and ILO-to-GO propagation remain deferred (ADR 0035). AI interpretation is supplementary, server-side, de-identified, bounded, and never persisted (ADR 0016).
 - **Reports:** formal institutional evidence output for QA/accreditation.
 - **Environments (separate security boundaries):** Primary Production, dedicated resettable demo deployment, local dev auth, and disposable CI test sessions. Never cross them.
 - **PWA:** installable app shell on desktop and mobile; offline data caching deferred by ADR 0006.

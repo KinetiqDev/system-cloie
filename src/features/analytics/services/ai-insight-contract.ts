@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { GeneralEducationAnalyticsTab } from "./general-education-analytics-state";
 
 /** Section bounds the browser contract promises; provider output is normalized onto them. */
 const OBSERVATION_MAX_CHARS = 400;
@@ -102,3 +103,42 @@ export type AnalyticsInsightView = (typeof ANALYTICS_INSIGHT_VIEWS)[number];
  * cap keeps the Program Head and Faculty qualitative evidence comparable.
  */
 export const AI_PACKET_MAX_PROMPT_TERMS = 6;
+/**
+ * What the provider actually analyzed vs. what was available. Discloses that
+ * interpretation covers bounded aggregate evidence only, never raw written
+ * feedback, and names each tier the bound dropped.
+ */
+export type GeneralEducationViewEvidenceScope = {
+  submittedResponseCount: number;
+  qualitativeItemCount: number | null;
+  /** Deterministic tiers left out of the packet, e.g. "CILO rows: carried 24 of 40 rows." */
+  truncations: string[];
+  /** Every disclosure that applies to this view, forwarded as model limitations. */
+  limitations: string[];
+};
+/** Validated, bounded per-view interpretation returned to the browser. */
+export type GeneralEducationAnalyticsViewInsight = {
+  fingerprint: string;
+  view: GeneralEducationAnalyticsTab;
+  insight: InsightSection;
+  evidenceScope: GeneralEducationViewEvidenceScope;
+};
+
+type GenerateAiInsightInsufficientDetail = {
+  view: GeneralEducationAnalyticsTab;
+  submittedResponseCount: number;
+  minimumSubmittedResponses: number;
+  qualitativeItemCount: number | null;
+  minimumQualitativeItems: number;
+};
+
+export type GenerateGeneralEducationAiInsightResult =
+  | { ok: true; data: GeneralEducationAnalyticsViewInsight }
+  | { ok: false; state: "disabled" }
+  | { ok: false; state: "unauthorized" }
+  | { ok: false; state: "insufficient-evidence"; detail: GenerateAiInsightInsufficientDetail }
+  | { ok: false; state: "timeout" }
+  | { ok: false; state: "provider-error" }
+  | { ok: false; state: "invalid-output" }
+  | { ok: false; state: "invalid-request" }
+  | { ok: false; state: "unexpected" };

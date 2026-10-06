@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getProgramHeadOutcomes } from "@/features/analytics/services/get-program-head-analytics";
 import {
   aggregateOutcomeEvidence,
-  buildProgramHeadOutcomeDtos,
+  buildOutcomeEvidenceDtos,
   type OutcomeEvidenceRow,
-} from "@/features/analytics/services/program-head-analytics-aggregators";
+} from "@/features/analytics/aggregators/outcome-evidence";
 import { resolveSnapshotItemScale } from "@/features/analytics/aggregators/scale-identity";
 
 const { resolveProgramHeadContextMock, prismaMock } = vi.hoisted(() => ({
@@ -943,10 +943,15 @@ describe("aggregateOutcomeEvidence", () => {
         description: "Achieve the outcome",
         course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
       },
-      goMappings: [
-        { goId: "go-a", code: "GO-1", name: "Effective communicator", manifestation: "PRACTICE" },
+      outcomeMappings: [
+        {
+          outcomeId: "outcome-a",
+          code: "GO-1",
+          name: "Effective communicator",
+          manifestation: "PRACTICE",
+        },
       ],
-      directGoBindings: [],
+      directBindings: [],
       evaluationId: "eval-1",
       deploymentName: "CILO Evaluation",
       ...overrides,
@@ -956,7 +961,7 @@ describe("aggregateOutcomeEvidence", () => {
   it("skips rows without a CILO or without any mapped GO", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({ cilo: null }),
-      evidenceRow({ goMappings: [] }),
+      evidenceRow({ outcomeMappings: [] }),
     ]);
 
     expect(aggregation.outcomes.size).toBe(0);
@@ -966,9 +971,9 @@ describe("aggregateOutcomeEvidence", () => {
   it("flags many-to-many mapping when one CILO maps to multiple GOs", () => {
     const aggregation = aggregateOutcomeEvidence([
       evidenceRow({
-        goMappings: [
-          { goId: "go-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
-          { goId: "go-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
+        outcomeMappings: [
+          { outcomeId: "outcome-a", code: "GO-1", name: "A", manifestation: "LEARNING" },
+          { outcomeId: "outcome-b", code: "GO-2", name: "B", manifestation: "PRACTICE" },
         ],
       }),
     ]);
@@ -984,7 +989,7 @@ describe("aggregateOutcomeEvidence", () => {
 
 describe("direct course-bound GO evidence", () => {
   const directMapping = {
-    goId: "go-a",
+    outcomeId: "outcome-a",
     code: "GO-1",
     name: "Effective communicator",
     questionPrompt: "I can communicate solutions.",
@@ -999,8 +1004,8 @@ describe("direct course-bound GO evidence", () => {
       instrumentVersion: { id: "iv-cilo-v1", structureSnapshot: ciloStructure },
       course: { id: "course-1", code: "EDUC 101", title: "Education 101" },
       cilo: null,
-      goMappings: [],
-      directGoBindings: [directMapping],
+      outcomeMappings: [],
+      directBindings: [directMapping],
       evaluationId: "eval-1",
       deploymentName: "Course Outcome Evaluation",
       ...overrides,
@@ -1033,21 +1038,21 @@ describe("direct course-bound GO evidence", () => {
         instrumentVersion: { id: "iv-collision", structureSnapshot: collisionStructure },
       }),
     ]);
-    const [dto] = buildProgramHeadOutcomeDtos(collisions);
+    const [dto] = buildOutcomeEvidenceDtos(collisions);
     expect(dto.ratingCount).toBe(2);
     expect(dto.contributors).toHaveLength(2);
   });
 
   it("aggregates a direct GO rating without fabricating a CILO contributor", () => {
     const outcomes = aggregateOutcomeEvidence([directRow()]);
-    const [dto] = buildProgramHeadOutcomeDtos(outcomes);
+    const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
     expect(dto.ratingCount).toBe(1);
     expect(dto.meanRating).toBe(4);
     expect(dto.contributingCilos).toEqual([]);
     expect(dto.contributors).toEqual([
       expect.objectContaining({
-        kind: "DIRECT_GO",
+        kind: "DIRECT",
         questionPrompt: "I can communicate solutions.",
         ratingCount: 1,
       }),
@@ -1056,7 +1061,7 @@ describe("direct course-bound GO evidence", () => {
 
   it("deduplicates duplicate direct rows by response, evaluation, question, and GO", () => {
     const outcomes = aggregateOutcomeEvidence([directRow(), directRow()]);
-    const [dto] = buildProgramHeadOutcomeDtos(outcomes);
+    const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
     expect(dto.ratingCount).toBe(1);
     expect(dto.submittedResponseCount).toBe(1);
@@ -1072,12 +1077,17 @@ describe("direct course-bound GO evidence", () => {
     const outcomes = aggregateOutcomeEvidence([
       directRow({
         cilo,
-        goMappings: [
-          { goId: "go-a", code: "GO-1", name: "Effective communicator", manifestation: "LEARNING" },
+        outcomeMappings: [
+          {
+            outcomeId: "outcome-a",
+            code: "GO-1",
+            name: "Effective communicator",
+            manifestation: "LEARNING",
+          },
         ],
       }),
     ]);
-    const [dto] = buildProgramHeadOutcomeDtos(outcomes);
+    const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
     expect(dto.ratingCount).toBe(1);
     expect(dto.contributors).toEqual([
@@ -1087,7 +1097,7 @@ describe("direct course-bound GO evidence", () => {
 
   it("counts invalid direct GO ratings diagnostically without serializing invalid means", () => {
     const outcomes = aggregateOutcomeEvidence([directRow({ ratingValue: 9 })]);
-    const [dto] = buildProgramHeadOutcomeDtos(outcomes);
+    const [dto] = buildOutcomeEvidenceDtos(outcomes);
 
     expect(dto.meanRating).toBeNull();
     expect(dto.ratingCount).toBe(0);

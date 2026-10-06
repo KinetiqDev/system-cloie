@@ -5,8 +5,8 @@ const { pushMock, navState } = vi.hoisted(() => ({
   navState: { isPending: false },
 }));
 
-vi.mock("@/features/response-review/components/general-education-responses-workspace", () => ({
-  useGeneralEducationResponsesNavigation: () => ({
+vi.mock("@/features/response-review/components/responses-workspace", () => ({
+  useResponsesNavigation: () => ({
     isPending: navState.isPending,
     navigate: pushMock,
   }),
@@ -20,6 +20,8 @@ import type { GeneralEducationEvaluationFilterOptions } from "@/features/respons
 const TERM_INSTANCE = "11111111-1111-4111-8111-111111111111";
 const COURSE = "22222222-2222-4222-8222-222222222222";
 const FACULTY = "33333333-3333-4333-8333-333333333333";
+const PROGRAM = "44444444-4444-4444-8444-444444444444";
+const ILO = "55555555-5555-4555-8555-555555555555";
 
 const options: GeneralEducationEvaluationFilterOptions = {
   periodOptions: {
@@ -38,7 +40,9 @@ const options: GeneralEducationEvaluationFilterOptions = {
     ],
   },
   courses: [{ id: COURSE, label: "GE 1 — Understanding the Self" }],
+  programs: [{ id: PROGRAM, label: "BSIT · Information Technology" }],
   faculty: [{ id: FACULTY, label: "Dr. Santos" }],
+  ilos: [{ id: ILO, label: "ILO1 — Think critically" }],
 };
 
 function renderFilters(state: GeneralEducationResponsesFilterState) {
@@ -150,6 +154,7 @@ describe("GeneralEducationResponsesFilters", () => {
     renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
 
     const dialog = await openMobileDrawer();
+    fireEvent.click(within(dialog).getByText("More filters"));
     const course = openCombobox("Course", dialog);
     fireEvent.click(await screen.findByRole("option", { name: "GE 1 — Understanding the Self" }));
     await waitFor(() => expect(course).toHaveValue("GE 1 — Understanding the Self"));
@@ -166,6 +171,7 @@ describe("GeneralEducationResponsesFilters", () => {
     renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
 
     const dialog = await openMobileDrawer();
+    fireEvent.click(within(dialog).getByText("More filters"));
     const course = openCombobox("Course", dialog);
     fireEvent.click(await screen.findByRole("option", { name: "GE 1 — Understanding the Self" }));
     await waitFor(() => expect(course).toHaveValue("GE 1 — Understanding the Self"));
@@ -178,6 +184,23 @@ describe("GeneralEducationResponsesFilters", () => {
     expect(within(reopened).getByRole("combobox", { name: "Course" })).toHaveValue("");
     expect(within(reopened).getByRole("combobox", { name: "Academic period" })).toHaveValue(
       "2025-2026 · 2nd Semester · 1st Term"
+    );
+  });
+
+  it("applies the Program Head review facets and the class Program and ILO context", async () => {
+    renderFilters({ page: 2 });
+
+    await chooseSelectOption("Status", "Closed");
+    await chooseSelectOption("Response progress", "Complete");
+    fireEvent.click(screen.getByText("More filters"));
+    await chooseComboboxOption("Class program", "BSIT · Information Technology");
+    await chooseComboboxOption("Institutional Learning Outcome", "ILO1 — Think critically");
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+
+    // Applying filters resets to the first page of the new scope.
+    expect(pushMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/responses?programId=${PROGRAM}&iloId=${ILO}&status=CLOSED&completion=complete`
     );
   });
 

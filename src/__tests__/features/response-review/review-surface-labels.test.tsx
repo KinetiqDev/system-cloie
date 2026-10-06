@@ -17,7 +17,9 @@ import type {
 const activatedAt = new Date("2026-08-23T00:00:00.000Z");
 const deadlineAt = new Date("2026-11-28T00:00:00.000Z");
 
-function courseDetail(): IdentifiedCourseEvaluationDetail {
+function courseDetail(
+  overrides: Partial<IdentifiedCourseEvaluationDetail> = {}
+): IdentifiedCourseEvaluationDetail {
   return {
     evaluation: {
       id: "eval-1",
@@ -29,6 +31,7 @@ function courseDetail(): IdentifiedCourseEvaluationDetail {
       section: "AFTERNOON",
       majorLabel: null,
       periodLabel: "2026-2027 — 2nd Semester — 2nd Term",
+      termInstanceId: "11111111-1111-4111-8111-111111111111",
       activationAt: activatedAt,
       deadlineAt: deadlineAt,
       status: "ACTIVE",
@@ -52,10 +55,24 @@ function courseDetail(): IdentifiedCourseEvaluationDetail {
       stakeholders: [],
       respondents: { total: 1, complete: 1, partial: 0, notStarted: 0 },
     },
-    ciloResults: [],
+    ciloResults: [
+      {
+        ciloId: "cilo-1",
+        description: "Achieve outcomes",
+        quantitative: null,
+        scaleGroups: [],
+        mappings: [],
+        contributingQuestions: [],
+        evidenceSummary: { ratingCount: 0, responseCount: 0, explanation: "No ratings." },
+      },
+    ],
+    alignmentLayer: "GRADUATE_OUTCOME",
+    iloMappingsByCilo: {},
+    iloResults: [],
     questionResults: [],
     qualitative: { answerCount: 0, respondentCount: 0, prompts: [], topTerms: [] },
     respondents: [],
+    ...overrides,
   };
 }
 
@@ -165,6 +182,48 @@ describe("review surface academic-context labels", () => {
       .map((element) => element.textContent)
       .join(" ");
     expect(headerTexts).toContain("2026-2027 — 2nd Semester — 2nd Term");
+  });
+
+  it("names the alignment layer the Course actually reaches", () => {
+    // Program-specific evidence shows GO mappings; General Education shows ILO
+    // alignments. The header is the reader's only cue about which layer a row
+    // is grouped through, so it must not be generic wording.
+    const { unmount } = render(
+      <CourseEvaluationDetail
+        detail={courseDetail()}
+        responseHref={() => "/r"}
+        analyticsHref="/a"
+      />
+    );
+    expect(screen.getByRole("columnheader", { name: "GO mappings" })).toBeInTheDocument();
+    unmount();
+
+    render(
+      <CourseEvaluationDetail
+        detail={courseDetail({
+          alignmentLayer: "INSTITUTIONAL_OUTCOME",
+          iloMappingsByCilo: {
+            "cilo-1": [
+              {
+                iloId: "ilo-1",
+                iloCode: "ILO1",
+                iloDescription: "Think",
+                manifestation: "LEARNING",
+              },
+              { iloId: "ilo-2", iloCode: "ILO2", iloDescription: "Write", manifestation: null },
+            ],
+          },
+        })}
+        responseHref={() => "/r"}
+        analyticsHref="/a"
+      />
+    );
+
+    expect(screen.getByRole("columnheader", { name: "ILO alignments" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "GO mappings" })).not.toBeInTheDocument();
+    // An unclassified mapping is labelled rather than hidden, so a reader can
+    // see the alignment exists and report it.
+    expect(screen.getByText("ILO1 (LEARNING), ILO2 (Not classified)")).toBeInTheDocument();
   });
 
   it("program-wide evaluation detail renders friendly year level and status", () => {

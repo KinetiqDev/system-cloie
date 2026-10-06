@@ -49,7 +49,7 @@ async function resolveOutcomesTab(
   const data = await getProgramHeadOutcomes(programId, filters);
   if (!data) notFound();
   const goCode = filters.goId
-    ? (data.outcomes.find((outcome) => outcome.goId === filters.goId)?.code ??
+    ? (data.outcomes.find((outcome) => outcome.outcomeId === filters.goId)?.code ??
       data.programWideOutcomes.find((outcome) => outcome.goId === filters.goId)?.code)
     : undefined;
   return {

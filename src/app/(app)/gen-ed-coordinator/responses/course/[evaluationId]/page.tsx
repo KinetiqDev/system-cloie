@@ -7,10 +7,8 @@ import {
   generalEducationResponsesQuery,
   parseGeneralEducationResponsesSearchParams,
 } from "@/features/response-review/services/general-education-responses-state";
-import {
-  GEN_ED_ANALYTICS_PATH,
-  buildGenEdResponsesCourseResponsePath,
-} from "@/lib/constants/gen-ed-routes";
+import { buildGeneralEducationAnalyticsUrl } from "@/features/analytics/services/general-education-analytics-state";
+import { buildGenEdResponsesCourseResponsePath } from "@/lib/constants/gen-ed-routes";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
@@ -49,9 +47,11 @@ export default async function GenEdCourseEvaluationDetailPage({
   return (
     <CourseEvaluationDetail
       detail={detail}
-      analyticsHref={
-        upwardQuery ? `${GEN_ED_ANALYTICS_PATH}?${upwardQuery}` : GEN_ED_ANALYTICS_PATH
-      }
+      // Keep the response evidence's own term so the qualitative trace and the
+      // ILO deep links resolve to the period this evaluation belongs to.
+      analyticsHref={buildGeneralEducationAnalyticsUrl({
+        termInstanceId: detail.evaluation.termInstanceId,
+      })}
       breadcrumbs={
         <Breadcrumbs
           className="text-body-sm"

@@ -6,15 +6,15 @@ vi.mock("next/navigation", () => ({
 
 import { render, screen } from "@testing-library/react";
 import SelectedProgramResponsesLoading from "@/app/(app)/program-head/programs/[programId]/responses/loading";
-import { ProgramHeadResponsesContentFallback } from "@/features/analytics/components/program-head-responses-content-fallback";
-import { ProgramHeadResponsesWorkspace } from "@/features/analytics/components/program-head-responses-workspace";
+import { ResponsesContentFallback } from "@/features/response-review/components/responses-content-fallback";
+import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
 
-describe("ProgramHeadResponsesWorkspace", () => {
+describe("ResponsesWorkspace", () => {
   it("preserves filters while scoping the busy region to the evaluation evidence", () => {
     render(
-      <ProgramHeadResponsesWorkspace tab="program-wide" filters={<div>Filters</div>}>
+      <ResponsesWorkspace sectionLabel="Program-wide evidence" filters={<div>Filters</div>}>
         <p>Evidence</p>
-      </ProgramHeadResponsesWorkspace>
+      </ResponsesWorkspace>
     );
 
     expect(screen.getByText("Filters")).toBeInTheDocument();
@@ -24,7 +24,7 @@ describe("ProgramHeadResponsesWorkspace", () => {
   });
 
   it("models the evaluation evidence skeleton for scoped reloads", () => {
-    render(<ProgramHeadResponsesContentFallback />);
+    render(<ResponsesContentFallback />);
 
     expect(screen.getByRole("status", { name: "Loading evaluation evidence" })).toBeInTheDocument();
     expect(screen.getByTestId("responses-evidence-skeleton")).toBeInTheDocument();

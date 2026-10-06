@@ -20,7 +20,7 @@ import GenEdCourseResponseDetailPage from "../../app/(app)/gen-ed-coordinator/re
 
 const TERM_INSTANCE = "11111111-1111-4111-8111-111111111111";
 const SCHOOL_YEAR = "22222222-2222-4222-8222-222222222222";
-const GO = "33333333-3333-4333-8333-333333333333";
+const ILO = "33333333-3333-4333-8333-333333333333";
 
 function responseDetail(): IdentifiedSubmittedResponseDetail {
   return {
@@ -55,19 +55,21 @@ function responseDetail(): IdentifiedSubmittedResponseDetail {
             rating: 5,
             scale: [1, 2, 3, 4, 5],
             descriptorLabels: [null, null, null, null, null],
+            // General Education CILOs align to Institutional Learning
+            // Outcomes, so the binding carries ILO rows and no GO data.
             binding: {
               type: "CILO",
+              layer: "INSTITUTIONAL_OUTCOME",
               ciloId: "cilo-1",
               ciloLabel: "CILO 1",
-              goMappings: [
+              iloMappings: [
                 {
-                  goId: GO,
-                  goCode: "GO 1",
-                  goDescription: "Institutional outcome",
+                  iloId: ILO,
+                  iloCode: "ILO1",
+                  iloDescription: "Think critically",
                   manifestation: "LEARNING",
                 },
               ],
-              directGoBindings: [],
             },
           },
         ],
@@ -105,19 +107,21 @@ describe("gen-ed-coordinator course response detail route", () => {
     expect(screen.getByText("Clarity of instructions")).toBeInTheDocument();
     expect(screen.getByText("GEETHICS — Ethics")).toBeInTheDocument();
 
-    // No Program context exists for college-wide evidence, so the outcome
-    // trace resolves to the same college-wide Analytics period.
     const destinations = screen.getByRole("navigation", { name: "Response destinations" });
     expect(
       within(destinations).getByRole("link", { name: "View evaluation results" })
     ).toHaveAttribute("href", "/gen-ed-coordinator/responses/course/eval-ge");
+    // Both the page trace and the answer badge resolve into the Coordinator's
+    // own Analytics workspace for this response's term, so a link can never
+    // land on a scope the evidence did not come from.
     expect(within(destinations).getByRole("link", { name: "Open Analytics" })).toHaveAttribute(
       "href",
-      "/gen-ed-coordinator/analytics"
+      `/gen-ed-coordinator/analytics?termInstanceId=${TERM_INSTANCE}`
     );
-    expect(screen.getByRole("link", { name: "GO 1" })).toHaveAttribute(
+    const iloLink = screen.getByRole("link", { name: "ILO1 (LEARNING)" });
+    expect(iloLink).toHaveAttribute(
       "href",
-      "/gen-ed-coordinator/analytics"
+      `/gen-ed-coordinator/analytics?termInstanceId=${TERM_INSTANCE}&iloId=${ILO}`
     );
   });
 
@@ -148,14 +152,17 @@ describe("gen-ed-coordinator course response detail route", () => {
     ).toHaveAttribute("href", `/gen-ed-coordinator/responses/course/eval-ge${scoped}`);
 
     const destinations = screen.getByRole("navigation", { name: "Response destinations" });
+    // Analytics scopes on the response's own term, so the term facet is
+    // carried; school year and semester are Responses-only params and are
+    // deliberately not forwarded into a workspace that cannot read them.
     expect(within(destinations).getByRole("link", { name: "Open Analytics" })).toHaveAttribute(
       "href",
-      `/gen-ed-coordinator/analytics${scoped}`
+      `/gen-ed-coordinator/analytics?termInstanceId=${TERM_INSTANCE}`
     );
     // Class-level filters reset on upward navigation.
     for (const link of [
       within(destinations).getByRole("link", { name: "View evaluation results" }),
-      screen.getByRole("link", { name: "GO 1" }),
+      screen.getByRole("link", { name: "ILO1 (LEARNING)" }),
     ]) {
       const href = link.getAttribute("href") ?? "";
       expect(href).not.toContain("courseId");

@@ -6,12 +6,12 @@ import { getGenEdResponseDetail } from "@/features/response-review/services/get-
 
 const {
   responseFindFirstMock,
-  ciloMappingFindManyMock,
+  iloMappingFindManyMock,
   studentEnrollmentFindManyMock,
   resolveAuthSessionMock,
 } = vi.hoisted(() => ({
   responseFindFirstMock: vi.fn(),
-  ciloMappingFindManyMock: vi.fn(),
+  iloMappingFindManyMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
@@ -19,7 +19,7 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     response: { findFirst: responseFindFirstMock },
-    cILOMapping: { findMany: ciloMappingFindManyMock },
+    cILOInstitutionalOutcomeMapping: { findMany: iloMappingFindManyMock },
     studentEnrollment: { findMany: studentEnrollmentFindManyMock },
   },
 }));
@@ -98,7 +98,7 @@ describe("getGenEdResponseDetail (ADR 0034)", () => {
       roles: [ROLES.GEN_ED_COORDINATOR],
       userId: "coordinator-1",
     });
-    ciloMappingFindManyMock.mockResolvedValue([]);
+    iloMappingFindManyMock.mockResolvedValue([]);
     studentEnrollmentFindManyMock.mockResolvedValue([
       {
         student_user_id: "student-p",
@@ -173,6 +173,64 @@ describe("getGenEdResponseDetail (ADR 0034)", () => {
       binding: { type: "CILO", ciloLabel: "CILO 1" },
     });
     expect(items[1]).toMatchObject({ kind: "qualitative", text: "Very clear." });
+  });
+
+  it("binds a General Education answer to the ILO layer with no GO data", async () => {
+    responseFindFirstMock.mockResolvedValue(MOCK_RESPONSE);
+    iloMappingFindManyMock.mockResolvedValue([
+      {
+        cilo_id: "cilo-ge-1",
+        manifestation: "PRACTICE",
+        institutional_outcome: { id: "ilo-1", code: "ILO1", description: "Think critically" },
+      },
+    ]);
+
+    const detail = await getGenEdResponseDetail("response-1");
+
+    const answer = detail!.sections[0].items[0];
+    if (answer.kind !== "quantitative") throw new Error("expected a quantitative answer");
+    // The layer is decided by Course scope, so a General Education answer
+    // cannot carry GO mappings even when direct GO snapshots exist on the row.
+    expect(answer.binding).toEqual({
+      type: "CILO",
+      layer: "INSTITUTIONAL_OUTCOME",
+      ciloId: "cilo-ge-1",
+      ciloLabel: "CILO 1",
+      iloMappings: [
+        {
+          iloId: "ilo-1",
+          iloCode: "ILO1",
+          iloDescription: "Think critically",
+          manifestation: "PRACTICE",
+        },
+      ],
+    });
+  });
+
+  it("keeps an unclassified ILO alignment visible on the answer", async () => {
+    responseFindFirstMock.mockResolvedValue(MOCK_RESPONSE);
+    iloMappingFindManyMock.mockResolvedValue([
+      {
+        cilo_id: "cilo-ge-1",
+        manifestation: null,
+        institutional_outcome: { id: "ilo-1", code: "ILO1", description: "Think critically" },
+      },
+    ]);
+
+    const detail = await getGenEdResponseDetail("response-1");
+
+    const answer = detail!.sections[0].items[0];
+    if (answer.kind !== "quantitative" || answer.binding.type !== "CILO") {
+      throw new Error("expected a CILO-bound quantitative answer");
+    }
+    // Manifestation never decides whether an alignment exists, so the row is
+    // present and carries a null manifestation rather than being dropped.
+    expect(
+      answer.binding.layer === "INSTITUTIONAL_OUTCOME" && answer.binding.iloMappings
+    ).toHaveLength(1);
+    expect(
+      answer.binding.layer === "INSTITUTIONAL_OUTCOME" && answer.binding.iloMappings[0]
+    ).toMatchObject({ iloCode: "ILO1", manifestation: null });
   });
 
   it("returns null for a non-submitted or out-of-scope response", async () => {

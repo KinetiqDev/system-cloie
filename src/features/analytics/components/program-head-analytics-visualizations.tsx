@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import { AnalyticsChartSkeleton } from "./program-head-analytics-content-fallback";
 import type { ProgramHeadComparisonChart as ComparisonChartComponent } from "./program-head-comparison-chart";
 import type { ProgramHeadInstrumentBreakdownChart as InstrumentChartComponent } from "./program-head-instrument-breakdown-chart";
-import type { ProgramHeadGoMeanBarChart as GoMeanBarChartComponent } from "./program-head-go-mean-bar-chart";
+import type { OutcomeMeanBarChart as OutcomeMeanBarChartComponent } from "./outcome-mean-bar-chart";
 import type { ProgramHeadTrendChart as TrendChartComponent } from "./program-head-trend-chart";
 import type { QualitativeWordCloud as WordCloudComponent } from "./qualitative-word-cloud";
 
@@ -42,11 +42,8 @@ export const LazyProgramHeadInstrumentBreakdownChart = dynamic<
   }
 );
 
-export const LazyProgramHeadGoMeanBarChart = dynamic<
-  ComponentProps<typeof GoMeanBarChartComponent>
->(
-  () =>
-    import("./program-head-go-mean-bar-chart").then((module) => module.ProgramHeadGoMeanBarChart),
+export const LazyOutcomeMeanBarChart = dynamic<ComponentProps<typeof OutcomeMeanBarChartComponent>>(
+  () => import("./outcome-mean-bar-chart").then((module) => module.OutcomeMeanBarChart),
   {
     ssr: false,
     loading: () => <VisualizationFallback label="Loading outcome chart" />,

@@ -11,6 +11,8 @@ const {
   courseFindManyMock,
   userFindManyMock,
   academicTermInstanceFindManyMock,
+  programFindManyMock,
+  institutionalOutcomeFindManyMock,
   resolveAuthSessionMock,
 } = vi.hoisted(() => ({
   courseBoundEvaluationCountMock: vi.fn(),
@@ -20,6 +22,8 @@ const {
   courseFindManyMock: vi.fn(),
   userFindManyMock: vi.fn(),
   academicTermInstanceFindManyMock: vi.fn(),
+  programFindManyMock: vi.fn(),
+  institutionalOutcomeFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
 
@@ -34,6 +38,8 @@ vi.mock("@/lib/db/prisma", () => ({
     course: { findMany: courseFindManyMock },
     user: { findMany: userFindManyMock },
     academicTermInstance: { findMany: academicTermInstanceFindManyMock },
+    program: { findMany: programFindManyMock },
+    institutionalOutcome: { findMany: institutionalOutcomeFindManyMock },
   },
 }));
 
@@ -75,6 +81,8 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
     courseFindManyMock.mockResolvedValue([]);
     userFindManyMock.mockResolvedValue([]);
     academicTermInstanceFindManyMock.mockResolvedValue([]);
+    programFindManyMock.mockResolvedValue([]);
+    institutionalOutcomeFindManyMock.mockResolvedValue([]);
   });
 
   it("denies Program Heads, Deans, and unauthenticated callers without querying", async () => {
@@ -117,9 +125,76 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
         section: "MORNING",
         course: { id: "course-ge", code: "GEETHICS", title: "Ethics", major: null },
         faculty: { name: "Dr. Santos" },
+        program: { code: "BSIT", name: "Information Technology" },
       },
     };
   }
+
+  it("filters by the class Program without turning it into an ownership scope", async () => {
+    await listGeneralEducationEvaluations({ page: 1, programId: "prog-bsit" });
+
+    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    // The predicate narrows the class context only; the read stays
+    // course-scoped, so ownership never follows the respondent's Program.
+    expect(where.course_assignment.program_id).toBe("prog-bsit");
+    expect(where.course_assignment.course.course_scope).toBe("GENERAL_EDUCATION");
+  });
+
+  it("lists an evaluation whose course has an active CILO currently mapped to the ILO", async () => {
+    await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
+
+    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(where.course_assignment.course.cilos).toEqual({
+      some: {
+        is_active: true,
+        cilo_institutional_outcome_mappings: { some: { institutional_outcome_id: "ilo-1" } },
+      },
+    });
+  });
+
+  it("keeps an unclassified ILO mapping inside the facet", async () => {
+    // Manifestation is descriptive and never narrows a facet: an alignment
+    // with no recorded classification is still a current mapping.
+    await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
+
+    const [where] = courseBoundEvaluationFindManyMock.mock.calls[0];
+    expect(JSON.stringify(where.where)).not.toContain("manifestation");
+  });
+
+  it("classifies response progress against real opportunities, never 0 of 0 as complete", async () => {
+    await listGeneralEducationEvaluations({ page: 1, completion: "complete" });
+
+    const clauses = courseBoundEvaluationFindManyMock.mock.calls[0][0].where.AND;
+    // "every assignment is submitted" is vacuously true for an empty roster,
+    // so a non-empty `assignments` clause must also hold before Complete can
+    // match. Otherwise a 0-of-0 evaluation would read as fully complete.
+    expect(clauses).toContainEqual({ assignments: { some: {} } });
+    expect(clauses).toContainEqual({
+      assignments: { some: { response: { is: { status: "SUBMITTED" } } } },
+    });
+    expect(clauses).toContainEqual({
+      assignments: { every: { response: { is: { status: "SUBMITTED" } } } },
+    });
+  });
+
+  it("treats an evaluation with no assignments as having no responses", async () => {
+    await listGeneralEducationEvaluations({ page: 1, completion: "zero" });
+
+    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.assignments).toEqual({
+      none: { response: { is: { status: "SUBMITTED" } } },
+    });
+  });
+
+  it("filters by a chosen non-draft status and defaults to excluding drafts", async () => {
+    await listGeneralEducationEvaluations({ page: 1, status: "ARCHIVED" });
+    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.status).toBe("ARCHIVED");
+
+    courseBoundEvaluationFindManyMock.mockClear();
+    await listGeneralEducationEvaluations(FILTER);
+    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.status).toEqual({
+      not: "DRAFT",
+    });
+  });
 
   it("aggregates participation and excludes ratings outside the resolved scale", async () => {
     courseBoundEvaluationCountMock.mockResolvedValue(1);

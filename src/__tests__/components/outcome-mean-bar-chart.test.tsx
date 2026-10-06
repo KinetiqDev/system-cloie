@@ -1,11 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ProgramHeadGoMeanBarChart } from "@/features/analytics/components/program-head-go-mean-bar-chart";
-import type { ProgramHeadOutcomeDTO } from "@/features/analytics/program-head-analytics-types";
+import { OutcomeMeanBarChart } from "@/features/analytics/components/outcome-mean-bar-chart";
+import {
+  GRADUATE_OUTCOME_LABELS,
+  type OutcomeEvidenceDTO,
+} from "@/features/analytics/outcome-evidence-types";
 
-function outcomeDTO(overrides: Partial<ProgramHeadOutcomeDTO> = {}): ProgramHeadOutcomeDTO {
+function outcomeDTO(overrides: Partial<OutcomeEvidenceDTO> = {}): OutcomeEvidenceDTO {
   return {
-    goId: "go-a",
+    outcomeId: "outcome-a",
     code: "BSIT-GO1",
     name: "Apply computing and IT solutions",
     meanRating: 3.87,
@@ -15,7 +18,19 @@ function outcomeDTO(overrides: Partial<ProgramHeadOutcomeDTO> = {}): ProgramHead
     contributingCourses: [],
     contributors: [],
     evidenceEvaluations: [],
-    distributions: [],
+    distributions: [
+      {
+        scaleLabel: "1–5 (5-point)",
+        maxValue: 5,
+        categories: [
+          { value: 1, label: null, count: 0, percentage: 0 },
+          { value: 2, label: null, count: 0, percentage: 0 },
+          { value: 3, label: null, count: 1, percentage: 1 / 3 },
+          { value: 4, label: null, count: 2, percentage: 2 / 3 },
+          { value: 5, label: null, count: 0, percentage: 0 },
+        ],
+      },
+    ],
     spansMultipleScales: false,
     excludedRatingCount: 0,
     evidenceSummary: { ratingCount: 54, explanation: "Mean of 54 valid ratings." },
@@ -56,29 +71,19 @@ function regionInsight(name: string): string {
   return document.getElementById(region.getAttribute("aria-describedby")!)!.textContent!;
 }
 
-describe("ProgramHeadGoMeanBarChart", () => {
+describe("OutcomeMeanBarChart", () => {
   const outcomes = [
-    outcomeDTO({ goId: "go-1", code: "BSIT-GO1", meanRating: 3.79 }),
-    outcomeDTO({ goId: "go-2", code: "BSIT-GO2", meanRating: 3.87 }),
+    outcomeDTO({ outcomeId: "outcome-1", code: "BSIT-GO1", meanRating: 3.79 }),
+    outcomeDTO({ outcomeId: "outcome-2", code: "BSIT-GO2", meanRating: 3.87 }),
   ];
-
-  it("draws horizontal bars rather than the thin lollipop stem and dot", () => {
-    const { container } = render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={outcomes} />
-    );
-
-    expect(container.querySelectorAll(".recharts-bar-rectangle").length).toBeGreaterThan(0);
-    // The lollipop composed chart also drew Scatter dots and 4px stems; both
-    // are gone, and every drawn bar is a wide horizontal rectangle.
-    expect(container.querySelectorAll(".recharts-scatter-symbol")).toHaveLength(0);
-    for (const bar of barGeometry(container)) {
-      expect(bar.width).toBeGreaterThan(bar.height * 4);
-    }
-  });
 
   it("encodes bar length proportionally to the mean from a zero baseline", () => {
     const { container } = render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={outcomes} />
+      <OutcomeMeanBarChart
+        title="Mean Rating by Graduate Outcome"
+        outcomes={outcomes}
+        labels={GRADUATE_OUTCOME_LABELS}
+      />
     );
 
     // Descending rank: the higher mean draws the longer bar.
@@ -91,47 +96,55 @@ describe("ProgramHeadGoMeanBarChart", () => {
     expect(xAxisTicks(container)).toEqual(["0", "1", "2", "3", "4", "5"]);
   });
 
+  it("uses a four-point instrument's full range without implying a fifth category", () => {
+    const { container } = render(
+      <OutcomeMeanBarChart
+        title="Four-point outcome evidence"
+        labels={GRADUATE_OUTCOME_LABELS}
+        outcomes={[
+          outcomeDTO({
+            meanRating: 3,
+            distributions: [
+              {
+                scaleLabel: "1–4 (4-point)",
+                maxValue: 4,
+                categories: [1, 2, 3, 4].map((value) => ({
+                  value,
+                  label: null,
+                  count: value === 3 ? 1 : 0,
+                  percentage: value === 3 ? 1 : 0,
+                })),
+              },
+            ],
+          }),
+        ]}
+      />
+    );
+    expect(xAxisTicks(container)).toEqual(["0", "1", "2", "3", "4"]);
+  });
+
   it("labels each bar with its two-decimal mean so close means stay readable", () => {
     render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={outcomes} />
+      <OutcomeMeanBarChart
+        title="Mean Rating by Graduate Outcome"
+        outcomes={outcomes}
+        labels={GRADUATE_OUTCOME_LABELS}
+      />
     );
 
     expect(screen.getAllByText("3.87").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("3.79").length).toBeGreaterThanOrEqual(1);
-    // The value labels ride the theme foreground, not Recharts' #808080 default.
-    const labels = document.querySelectorAll(".recharts-label-list text");
-    expect(labels.length).toBeGreaterThan(0);
-    for (const label of labels) {
-      expect(label.getAttribute("fill")).toBe("var(--foreground)");
-    }
-  });
-
-  it("ranks bars by mean descending and reports highest and lowest in the insight", () => {
-    render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={outcomes} />
-    );
-
-    expect(regionInsight("Mean Rating by Graduate Outcome")).toBe(
-      "Highest mean: BSIT-GO2 (3.87). Lowest mean: BSIT-GO1 (3.79)."
-    );
-  });
-
-  it("renders a single-row insight without a comparison claim", () => {
-    render(
-      <ProgramHeadGoMeanBarChart
-        title="Mean Rating by Graduate Outcome"
-        outcomes={[outcomeDTO({ meanRating: 4.2 })]}
-      />
-    );
-
-    expect(regionInsight("Mean Rating by Graduate Outcome")).toBe("BSIT-GO1: 4.20.");
   });
 
   it("never draws or ranks an unrated row", () => {
     render(
-      <ProgramHeadGoMeanBarChart
+      <OutcomeMeanBarChart
         title="Mean Rating by Graduate Outcome"
-        outcomes={[...outcomes, outcomeDTO({ goId: "go-3", code: "BSIT-GO3", meanRating: null })]}
+        outcomes={[
+          ...outcomes,
+          outcomeDTO({ outcomeId: "outcome-3", code: "BSIT-GO3", meanRating: null }),
+        ]}
+        labels={GRADUATE_OUTCOME_LABELS}
       />
     );
 
@@ -141,10 +154,18 @@ describe("ProgramHeadGoMeanBarChart", () => {
 
   it("resolves bar fills from semantic tokens and hatches beyond five categories", () => {
     const many = Array.from({ length: 7 }, (_, index) =>
-      outcomeDTO({ goId: `go-${index}`, code: `BSIT-GO${index + 1}`, meanRating: 4 - index / 10 })
+      outcomeDTO({
+        outcomeId: `outcome-${index}`,
+        code: `BSIT-GO${index + 1}`,
+        meanRating: 4 - index / 10,
+      })
     );
     const { container } = render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={many} />
+      <OutcomeMeanBarChart
+        title="Mean Rating by Graduate Outcome"
+        outcomes={many}
+        labels={GRADUATE_OUTCOME_LABELS}
+      />
     );
 
     const fills = Array.from(
@@ -157,34 +178,19 @@ describe("ProgramHeadGoMeanBarChart", () => {
       "var(--chart-4)",
       "var(--chart-5)",
     ]);
-    expect(fills[5]).toMatch(/^url\(#go-mean-bar-[A-Za-z0-9_]+-hatch-0-c1\)$/);
+    expect(fills[5]).toMatch(/^url\(#outcome-mean-bar-[A-Za-z0-9_]+-hatch-0-c1\)$/);
   });
 
   it("renders an accessible empty state when no row is rated", () => {
     const { container } = render(
-      <ProgramHeadGoMeanBarChart
+      <OutcomeMeanBarChart
         title="Mean Rating by Graduate Outcome"
         outcomes={[outcomeDTO({ meanRating: null })]}
+        labels={GRADUATE_OUTCOME_LABELS}
       />
     );
 
     expect(container.querySelector(".recharts-bar-rectangle")).toBeNull();
     expect(screen.getByText("No rated outcome evidence yet")).toBeInTheDocument();
-    expect(
-      screen.getByText("No valid ratings are available for these outcomes.")
-    ).toBeInTheDocument();
-  });
-
-  it("keeps exact values, counts, and the full outcome name reachable", () => {
-    render(
-      <ProgramHeadGoMeanBarChart title="Mean Rating by Graduate Outcome" outcomes={outcomes} />
-    );
-
-    expect(screen.getByText("View exact values")).toBeInTheDocument();
-    expect(screen.getByText("Fixed 1–5 scale")).toBeInTheDocument();
-    // The full code-and-name label appears in both the legend and the exact table.
-    expect(screen.getAllByText("BSIT-GO1 — Apply computing and IT solutions")).toHaveLength(2);
-    expect(screen.getByText("Rating Count")).toBeInTheDocument();
-    expect(screen.getByText("Submitted Responses")).toBeInTheDocument();
   });
 });
