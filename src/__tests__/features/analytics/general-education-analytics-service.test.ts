@@ -170,15 +170,17 @@ function bindingRow(opts: {
   courseId?: string;
 }) {
   const ciloId = opts.ciloId === undefined ? "cilo-1" : opts.ciloId;
+  const courseId = opts.courseId ?? ETHICS.id;
+  const { sectionKey = "cilo", itemKey = "q1", evaluationId = "eval-1" } = opts;
   return {
-    section_key: opts.sectionKey ?? "cilo",
-    item_key: opts.itemKey ?? "q1",
-    course_bound_evaluation_id: opts.evaluationId ?? "eval-1",
+    section_key: sectionKey,
+    item_key: itemKey,
+    course_bound_evaluation_id: evaluationId,
     cilo: ciloId
       ? {
           id: ciloId,
           description: opts.ciloDescription ?? "Reason about consequences",
-          course: { id: opts.courseId ?? ETHICS.id, code: ETHICS.code, title: ETHICS.title },
+          course: { id: courseId, code: ETHICS.code, title: ETHICS.title },
           cilo_institutional_outcome_mappings: opts.mappings ?? [
             {
               manifestation: "LEARNING",
@@ -189,7 +191,7 @@ function bindingRow(opts: {
       : null,
     course_bound_evaluation: {
       cilos_snapshot: [{ id: ciloId ?? "", label: "CILO 1", description: opts.ciloDescription }],
-      course_assignment: { course: { id: opts.courseId ?? ETHICS.id } },
+      course_assignment: { course: { id: courseId } },
     },
   };
 }
@@ -240,26 +242,26 @@ function mockEvidenceByTermInstance(periods: PeriodEvidenceFixture[]): void {
     | { response?: { assignment?: { course_bound?: { term_instance_id?: { in?: string[] } } } } };
 
   /** The term ids one resolved scope asked for, from any predicate nesting. */
+  const combinedPeriod: PeriodEvidenceFixture = {
+    termInstanceId: periods[0]?.termInstanceId ?? "",
+    ratings: periods.flatMap((period) => period.ratings),
+    responses: periods.flatMap((period) => period.responses),
+    respondents: periods.flatMap((period) => period.respondents),
+  };
   const periodFor = (where: ScopeWhere | undefined): PeriodEvidenceFixture | undefined => {
     const scope = (where ?? {}) as {
       course_bound?: { term_instance_id?: { in?: string[] } };
       assignment?: { course_bound?: { term_instance_id?: { in?: string[] } } };
       response?: { assignment?: { course_bound?: { term_instance_id?: { in?: string[] } } } };
     };
-    const requested =
-      scope.course_bound?.term_instance_id?.in ??
-      scope.assignment?.course_bound?.term_instance_id?.in ??
-      scope.response?.assignment?.course_bound?.term_instance_id?.in;
+    const assignmentScope = scope.response?.assignment ?? scope.assignment;
+    const boundScope = scope.course_bound ?? assignmentScope?.course_bound;
+    const requested = boundScope?.term_instance_id?.in;
     if (requested) {
       return periods.find((period) => requested.includes(period.termInstanceId));
     }
     // An unfiltered scope spans every fixture period.
-    return {
-      termInstanceId: periods[0]?.termInstanceId ?? "",
-      ratings: periods.flatMap((period) => period.ratings),
-      responses: periods.flatMap((period) => period.responses),
-      respondents: periods.flatMap((period) => period.respondents),
-    };
+    return combinedPeriod;
   };
   const courseBoundFor = (period: PeriodEvidenceFixture | undefined) =>
     period ? periodCourseBound(period, `eval-${period.termInstanceId}`) : null;
@@ -887,9 +889,13 @@ describe("General Education Coordinator analytics reads", () => {
     // section.
     expect(ethics.sectionCount).toBe(1);
     expect(ethics.sections.map((section) => section.facultyName)).toContain("Prof. Dela Cruz");
-    // The archived evaluation has no submitted response, so it is a denominator
-    // row rather than a contributing evaluation.
-    expect(ethics.evidenceEvaluations.map((entry) => entry.evaluationId)).toEqual(["eval-1"]);
+    expect(ethics.evidenceEvaluations.map((entry) => entry.evaluationId)).toEqual([
+      "eval-archived",
+      "eval-1",
+    ]);
+    expect(
+      ethics.sections.find((section) => section.evaluationId === "eval-archived")
+    ).toMatchObject({ submittedResponseCount: 0, evaluationOpportunityCount: 1, meanRating: null });
   });
 
   describe("trends", () => {

@@ -156,6 +156,18 @@ function completionWhere(
   return { AND: [{ assignments: { some: submitted } }, { assignments: { some: notSubmitted } }] };
 }
 
+/**
+ * Drafts are unpublished, so they never enter Coordinator review. The
+ * restriction holds beside a chosen status facet instead of being replaced by
+ * it, so a crafted `status=DRAFT` resolves to no rows rather than to the draft
+ * evaluations this list exists to keep out of review.
+ */
+function reviewableStatusWhere(
+  status: GeneralEducationResponsesFilterState["status"]
+): Prisma.CourseBoundEvaluationWhereInput {
+  return { NOT: { status: "DRAFT" }, ...(status ? { status } : {}) };
+}
+
 function courseEvaluationWhere(
   filters: GeneralEducationResponsesFilterState
 ): Prisma.CourseBoundEvaluationWhereInput {
@@ -163,7 +175,7 @@ function courseEvaluationWhere(
   const completion = completionWhere(filters.completion);
   return {
     ...generalEducationCourseEvaluationWhere(),
-    status: filters.status ?? { not: "DRAFT" },
+    ...reviewableStatusWhere(filters.status),
     term_instance: termInstanceWhere(filters),
     course_assignment: assignmentFilterWhere(filters),
     ...(search ? { OR: search } : {}),

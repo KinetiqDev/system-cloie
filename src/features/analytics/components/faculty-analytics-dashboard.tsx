@@ -1097,6 +1097,34 @@ function DistributionGroups({
   );
 }
 
+/**
+ * Why the section is absent, and whether waiting is the honest answer. Each
+ * state names its own cause; none of them blocks the deterministic evidence
+ * rendered above it.
+ */
+function aiUnavailableLabel(
+  state: GenerateFacultyAIInsightResult | null,
+  pending: boolean,
+  hasSubmittedResponses: boolean
+): string {
+  if (state === null) {
+    return pending || hasSubmittedResponses
+      ? "The AI overview is loading with this scope's evidence."
+      : "There is not enough combined evidence in this scope for a responsible AI overview.";
+  }
+  if (state.ok) {
+    return "There is not enough combined evidence in this scope for a responsible AI overview.";
+  }
+  switch (state.state) {
+    case "disabled":
+      return "AI overview is not enabled for this deployment.";
+    case "insufficient-evidence":
+      return "There is not enough combined evidence in this scope for a responsible AI overview.";
+    default:
+      return "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
+  }
+}
+
 // Pending/insight/disabled/insufficient/timeout states with qualitative disclaimer are one
 // AI-state contract that never blocks deterministic evidence; splitting would scatter it.
 function AIOverview({
@@ -1112,21 +1140,19 @@ function AIOverview({
   data: FacultyAnalyticsData;
   qualitative?: boolean;
 }) {
-  const basis = qualitative
-    ? `${data.qualitative.itemCount} anonymous written answers`
-    : `${data.kpi.submittedResponseCount} submitted responses and ${data.kpi.validRatingCount} valid ratings`;
   if (pending) return <AnalyticsInsightPending />;
   if (insight && state?.ok) {
-    const truncated = state.data.evidence;
-    const boundedEvidence = qualitative
-      ? truncated.qualitativeTruncated
-      : truncated.truncatedEvidence;
+    const evidence = state.data.evidence;
     return (
       <AnalyticsInsightCard
         insight={insight}
-        evidenceBasis={basis}
+        evidenceBasis={
+          qualitative
+            ? `${data.qualitative.itemCount} anonymous written answers`
+            : `${data.kpi.submittedResponseCount} submitted responses and ${data.kpi.validRatingCount} valid ratings`
+        }
         qualitative={qualitative}
-        boundedEvidence={boundedEvidence}
+        boundedEvidence={qualitative ? evidence.qualitativeTruncated : evidence.truncatedEvidence}
         boundedEvidenceNote={
           qualitative
             ? undefined
@@ -1135,20 +1161,10 @@ function AIOverview({
       />
     );
   }
-  const failure = state && !state.ok ? state.state : null;
-  let label: string;
-  if (failure === "disabled") {
-    label = "AI overview is not enabled for this deployment.";
-  } else if (failure && failure !== "insufficient-evidence") {
-    label =
-      "The AI overview is temporarily unavailable. The verified analytics above are unaffected.";
-  } else if (state || data.kpi.submittedResponseCount === 0) {
-    label = "There is not enough combined evidence in this scope for a responsible AI overview.";
-  } else {
-    label = "The AI overview is loading with this scope's evidence.";
-  }
   return (
-    <AnalyticsInsightUnavailable title="AI-generated overview">{label}</AnalyticsInsightUnavailable>
+    <AnalyticsInsightUnavailable title="AI-generated overview">
+      {aiUnavailableLabel(state, pending, data.kpi.submittedResponseCount > 0)}
+    </AnalyticsInsightUnavailable>
   );
 }
 

@@ -33,6 +33,7 @@ import { OutcomeEvidenceDetail } from "./outcome-evidence-detail";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 import { SelectedOutcomeScrollTarget } from "./selected-outcome-scroll-target";
 import {
+  countedNoun,
   emptyScopeCopy,
   formatMean,
   scaleIdentityKey,
@@ -126,11 +127,7 @@ export function GeneralEducationOutcomesView({
   const contributingCourseIds = new Set(
     ordered.flatMap((outcome) => outcome.contributingCourses.map((course) => course.id))
   );
-  const evidenceBasis = `${ordered.length} institutional learning ${
-    ordered.length === 1 ? "outcome" : "outcomes"
-  } with evidence from ${contributingCourseIds.size} ${
-    contributingCourseIds.size === 1 ? "course" : "courses"
-  }`;
+  const evidenceBasis = `${countedNoun(ordered.length, "institutional learning outcome")} with evidence from ${countedNoun(contributingCourseIds.size, "course")}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -141,12 +138,10 @@ export function GeneralEducationOutcomesView({
         <Alert variant="warning">
           <AlertTitle>Valid ratings that reached no learning outcome</AlertTitle>
           <AlertDescription>
-            {unlinkedRatings.unmappedCilos} rating
-            {unlinkedRatings.unmappedCilos === 1 ? "" : "s"} came from CILOs with no current ILO
-            mapping, and {unlinkedRatings.generalItems} general question rating
-            {unlinkedRatings.generalItems === 1 ? "" : "s"} bound to no CILO. They are counted here
-            rather than silently dropped, and no institutional target exists against which any mean
-            could be judged.
+            {countedNoun(unlinkedRatings.unmappedCilos, "rating")} came from CILOs with no current
+            ILO mapping, and {countedNoun(unlinkedRatings.generalItems, "general question rating")}{" "}
+            bound to no CILO. They are counted here rather than silently dropped, and no
+            institutional target exists against which any mean could be judged.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -182,8 +177,8 @@ export function GeneralEducationOutcomesView({
             {crossScaleOutcomes.length > 0 ? (
               <Alert variant="warning">
                 <AlertTitle>
-                  {crossScaleOutcomes.length} outcome
-                  {crossScaleOutcomes.length === 1 ? "" : "s"} pool more than one rating scale
+                  {countedNoun(crossScaleOutcomes.length, "outcome")} pool more than one rating
+                  scale
                 </AlertTitle>
                 <AlertDescription>
                   {crossScaleOutcomes.map((outcome) => outcome.code).join(", ")} combine ratings
@@ -371,6 +366,31 @@ function CourseIloMatrix({
   );
 }
 
+function OutcomeCatalogLabel({ outcome }: { outcome: GeneralEducationIloEvidenceDTO }) {
+  const isThinSample =
+    outcome.submittedResponseCount > 0 && outcome.submittedResponseCount < LOW_SAMPLE_RESPONSES;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-semibold">{outcome.code}</span>
+        {!outcome.isActive ? <Badge variant="secondary">Archived</Badge> : null}
+      </div>
+      <span className="text-text-secondary whitespace-normal">{outcome.name}</span>
+      {!outcome.isActive ? (
+        <span className="text-muted-foreground text-xs">
+          Archived: kept for historical evidence, no longer assignable to new mappings.
+        </span>
+      ) : null}
+      {outcome.ratingCount === 0 ? (
+        <span className="text-text-secondary text-xs">
+          No evidence in this scope — listed from the ILO catalog, not from responses.
+        </span>
+      ) : null}
+      {isThinSample ? <LowSampleMarker responseCount={outcome.submittedResponseCount} /> : null}
+    </div>
+  );
+}
+
 function OutcomesExactValueTable({
   outcomes,
   selectedIloId,
@@ -397,11 +417,6 @@ function OutcomesExactValueTable({
           {outcomes.flatMap((outcome) => {
             const detailId = `ge-ilo-detail-${outcome.outcomeId}`;
             const isSelected = outcome.outcomeId === selectedIloId;
-            // The threshold counts respondents: one response can contribute many
-            // ratings, so a rating count is not a sample size.
-            const isThinSample =
-              outcome.submittedResponseCount > 0 &&
-              outcome.submittedResponseCount < LOW_SAMPLE_RESPONSES;
             return [
               <TableRow
                 key={outcome.outcomeId}
@@ -409,27 +424,7 @@ function OutcomesExactValueTable({
                 className={cn(isSelected && "bg-primary-soft/40")}
               >
                 <TableCell className="align-top">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="font-semibold">{outcome.code}</span>
-                      {!outcome.isActive ? <Badge variant="secondary">Archived</Badge> : null}
-                    </div>
-                    <span className="text-text-secondary whitespace-normal">{outcome.name}</span>
-                    {outcome.isActive ? null : (
-                      <span className="text-muted-foreground text-xs">
-                        Archived: kept for historical evidence, no longer assignable to new
-                        mappings.
-                      </span>
-                    )}
-                    {outcome.ratingCount === 0 ? (
-                      <span className="text-text-secondary text-xs">
-                        No evidence in this scope — listed from the ILO catalog, not from responses.
-                      </span>
-                    ) : null}
-                    {isThinSample ? (
-                      <LowSampleMarker responseCount={outcome.submittedResponseCount} />
-                    ) : null}
-                  </div>
+                  <OutcomeCatalogLabel outcome={outcome} />
                 </TableCell>
                 <TableCell className="text-right align-top tabular-nums">
                   <span className="inline-flex items-center gap-1">

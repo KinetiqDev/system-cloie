@@ -311,19 +311,24 @@ function contributorDtoFor(
       };
 }
 
+function contributorSortKeys(contributor: OutcomeContributorDTO): readonly string[] {
+  return contributor.kind === "CILO"
+    ? [contributor.course?.code ?? "", contributor.kind, contributor.ciloCode, contributor.ciloId]
+    : [
+        contributor.course?.code ?? "",
+        contributor.kind,
+        contributor.deploymentName,
+        contributor.itemKey,
+      ];
+}
+
 /** Rank contributors: course, then kind, then stable identity. */
 function compareContributorDtos(left: OutcomeContributorDTO, right: OutcomeContributorDTO): number {
-  const courseOrder = (left.course?.code ?? "").localeCompare(right.course?.code ?? "");
-  if (courseOrder !== 0) return courseOrder;
-  if (left.kind !== right.kind) return left.kind.localeCompare(right.kind);
-  if (left.kind === "CILO" && right.kind === "CILO") {
-    return left.ciloCode.localeCompare(right.ciloCode) || left.ciloId.localeCompare(right.ciloId);
-  }
-  if (left.kind === "DIRECT" && right.kind === "DIRECT") {
-    return (
-      left.deploymentName.localeCompare(right.deploymentName) ||
-      left.itemKey.localeCompare(right.itemKey)
-    );
+  const leftKeys = contributorSortKeys(left);
+  const rightKeys = contributorSortKeys(right);
+  for (let index = 0; index < leftKeys.length; index += 1) {
+    const order = leftKeys[index].localeCompare(rightKeys[index]);
+    if (order !== 0) return order;
   }
   return 0;
 }

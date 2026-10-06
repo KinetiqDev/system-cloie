@@ -156,6 +156,44 @@ describe("GeneralEducationAnalyticsFilters", () => {
     );
   });
 
+  it("drops an academic term from the semester the coordinator just left", async () => {
+    renderFilters({
+      tab: "trends",
+      schoolYearId: YEAR_2024,
+      semester: "FIRST",
+      termInstanceId: TERM_2024_FIRST,
+    });
+
+    // Both values belong to the same school year, so a school-year-only check
+    // would submit a term from a semester the scope no longer names — and the
+    // evidence read would then match nothing in the newly selected semester.
+    await pickFacet(document.body, "Semester", "2nd Semester");
+    apply();
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/analytics?tab=trends&schoolYearId=${YEAR_2024}&semester=SECOND`
+    );
+  });
+
+  it("keeps an academic term that belongs to the newly selected semester", async () => {
+    renderFilters({
+      tab: "trends",
+      schoolYearId: YEAR_2024,
+      semester: "FIRST",
+      termInstanceId: TERM_2024_FIRST,
+    });
+
+    // 2024-2025 runs both semesters, so the second-semester term that the
+    // coordinator now scopes by survives the transition.
+    await pickFacet(document.body, "Semester", "2nd Semester");
+    await pickFacet(document.body, "Academic Term", "2024-2025 · 2nd Semester · 1st Term");
+    apply();
+
+    expect(navigateMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/analytics?tab=trends&schoolYearId=${YEAR_2024}&semester=SECOND&termInstanceId=${TERM_2024_SECOND}`
+    );
+  });
+
   it("keeps both period children when the coordinator clears the school year", async () => {
     renderFilters({
       tab: "trends",

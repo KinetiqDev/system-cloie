@@ -154,24 +154,34 @@ const ROW_TIERS: Record<GeneralEducationAnalyticsTab, readonly string[]> = {
   qualitative: ["promptEvidence", "wordFrequencyTokens"],
 };
 
+/**
+ * Trim the packet's row tiers until the serialized packet fits the configured
+ * ceiling, and return exactly what the provider would read.
+ *
+ * Rows are dropped from the last tier first, so a wide scope loses its
+ * lowest-ranked rows instead of aborting the interpretation, and every
+ * omission is recorded. A null return means trimming every optional row still
+ * left an oversized packet: the residue is the fixed structure no row budget
+ * can reach, so the caller rejects the request rather than sending evidence
+ * past the configured bound.
+ */
 function boundPacketToCeiling(
   packet: Record<string, unknown>,
   view: GeneralEducationAnalyticsTab,
   config: AiConfiguration
-) {
+): string | null {
   const truncations = packet.truncations as string[];
-  let size = JSON.stringify(packet).length;
   for (const tier of ROW_TIERS[view]) {
     const rows = packet[tier];
     if (!Array.isArray(rows)) continue;
-    while (rows.length > 0 && size > config.maxPacketChars) {
+    while (rows.length > 0 && JSON.stringify(packet).length > config.maxPacketChars) {
       rows.pop();
       const note = `${tier}: trimmed to ${rows.length} rows to fit the packet ceiling.`;
       if (truncations.at(-1) !== note) truncations.push(note);
-      size = JSON.stringify(packet).length;
     }
-    if (size <= config.maxPacketChars) break;
   }
+  const serialized = JSON.stringify(packet);
+  return serialized.length <= config.maxPacketChars ? serialized : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +323,36 @@ type GeneralEducationViewReads =
   | { view: "programs"; programs: GeneralEducationProgramsDTO }
   | { view: "trends"; trends: GeneralEducationTrendsDTO }
   | { view: "qualitative"; feedback: GeneralEducationFeedbackDTO };
+
+/**
+ * The one evidence read each view authorizes. Only the requested view's arm
+ * runs, so a request never pays for evidence it will not interpret.
+ */
+const VIEW_READERS: Record<
+  GeneralEducationAnalyticsTab,
+  (filters: GeneralEducationAnalyticsFilterState) => Promise<GeneralEducationViewReads | null>
+> = {
+  outcomes: async (filters) => {
+    const outcomes = await getGeneralEducationOutcomes(filters);
+    return outcomes ? { view: "outcomes", outcomes } : null;
+  },
+  courses: async (filters) => {
+    const courses = await getGeneralEducationCourses(filters);
+    return courses ? { view: "courses", courses } : null;
+  },
+  programs: async (filters) => {
+    const programs = await getGeneralEducationPrograms(filters);
+    return programs ? { view: "programs", programs } : null;
+  },
+  trends: async (filters) => {
+    const trends = await getGeneralEducationTrends(filters);
+    return trends ? { view: "trends", trends } : null;
+  },
+  qualitative: async (filters) => {
+    const feedback = await getGeneralEducationFeedback(filters);
+    return feedback ? { view: "qualitative", feedback } : null;
+  },
+};
 
 function buildOutcomesPacket(
   frame: GeneralEducationAnalyticsFrameDTO,
@@ -669,134 +709,118 @@ const PACKET_BUILDERS: Record<
     ),
 };
 
-async function readViewEvidence(
-  view: GeneralEducationAnalyticsTab,
-  filters: GeneralEducationAnalyticsFilterState
-): Promise<GeneralEducationViewReads | null> {
-  switch (view) {
-    case "outcomes": {
-      const outcomes = await getGeneralEducationOutcomes(filters);
-      return outcomes ? { view, outcomes } : null;
-    }
-    case "courses": {
-      const courses = await getGeneralEducationCourses(filters);
-      return courses ? { view, courses } : null;
-    }
-    case "programs": {
-      const programs = await getGeneralEducationPrograms(filters);
-      return programs ? { view, programs } : null;
-    }
-    case "trends": {
-      const trends = await getGeneralEducationTrends(filters);
-      return trends ? { view, trends } : null;
-    }
-    case "qualitative": {
-      const feedback = await getGeneralEducationFeedback(filters);
-      return feedback ? { view, feedback } : null;
-    }
-  }
-}
-
 /**
- * Disclosures forwarded as model limitations for the requested view. Every
- * applicable ILO limit travels with the evidence, so the interpretation cannot
- * present current-mapping, many-to-many, mixed-scale, unlinked, attribution, or
- * comparability limits as if they did not apply.
+ * The disclosures one view's own evidence demands. Each unit reads only the
+ * arm that view already fetched, so every applicable ILO, attribution, or
+ * comparability limit travels inside the packet it constrains instead of
+ * being described as if it did not apply.
  */
-function viewLimitations(
-  view: GeneralEducationAnalyticsTab,
-  frame: GeneralEducationAnalyticsFrameDTO,
+type ViewDisclosures = (
   reads: GeneralEducationViewReads,
   filters: GeneralEducationAnalyticsFilterState
-): string[] {
-  const limitations = scopeLimitations(frame.kpi);
-  const applied = describeAppliedFilters(filters, frame.options);
-  const namedFacets = Object.values(applied).filter((facet): facet is string => facet !== null);
-  if (namedFacets.length > 0) {
-    limitations.push(
-      `Every figure here reflects the applied scope: ${namedFacets.join(", ")}. The figures are the same whatever the filter is called.`
-    );
-  }
+) => string[];
 
-  if (reads.view === "outcomes") {
-    const outcomes = reads.outcomes;
+const VIEW_DISCLOSURES: Record<GeneralEducationAnalyticsTab, ViewDisclosures> = {
+  outcomes: (reads) => {
+    if (reads.view !== "outcomes") return [];
+    const { outcomes } = reads;
+    const disclosures: string[] = [];
     if (outcomes.currentMappingDisclosure.length > 0) {
-      limitations.push(outcomes.currentMappingDisclosure);
+      disclosures.push(outcomes.currentMappingDisclosure);
     }
     if (outcomes.manyToManyDisclosure) {
-      limitations.push(
+      disclosures.push(
         "Some Course-level learning outcomes map to more than one ILO, so each rating contributes once per mapped ILO and the ILO rows are not additive."
       );
     }
-    limitations.push(
+    disclosures.push(
       "ILO manifestation (learning, practice, opportunity) is descriptive only: it never filters or weights a rating."
     );
-    if (outcomes.unlinkedRatings.generalItems > 0 || outcomes.unlinkedRatings.unmappedCilos > 0) {
-      limitations.push(
-        `${outcomes.unlinkedRatings.generalItems} valid ratings did not reach any ILO through a question, and ${outcomes.unlinkedRatings.unmappedCilos} reached a CILO with no ILO mapping, so they are outside every ILO row.`
+    const { generalItems, unmappedCilos } = outcomes.unlinkedRatings;
+    if (generalItems > 0 || unmappedCilos > 0) {
+      disclosures.push(
+        `${generalItems} valid ratings did not reach any ILO through a question, and ${unmappedCilos} reached a CILO with no ILO mapping, so they are outside every ILO row.`
       );
     }
     if (outcomes.outcomes.some((outcome) => outcome.spansMultipleScales)) {
-      limitations.push(
+      disclosures.push(
         "At least one ILO row pools more than one scale identity; read its per-scale distributions rather than the pooled mean alone."
       );
     }
-  }
-
-  if (reads.view === "courses") {
-    const hasMultiScale = reads.courses.rows.some((row) => row.spansMultipleScales);
-    limitations.push(
-      "Course means are class-context evidence for a General Education course, not a faculty performance measure: faculty identity is excluded and no course ranks a person."
-    );
-    limitations.push(
-      "Courses reached through several Programs contribute to each of those Programs' rows, so Program and Course figures overlap."
-    );
-    if (hasMultiScale) {
-      limitations.push(
-        "A course row pooling more than one scale identity is not directly comparable to a single-scale row."
-      );
-    }
-  }
-
-  if (reads.view === "programs") {
-    limitations.push(clampLabel(reads.programs.attributionNote));
-    limitations.push(
-      "Program figures are attributed by the class context a respondent was assigned in; a Program with no General Education assignment here contributes nothing."
-    );
-    limitations.push(
-      "Programs and Courses overlap: one course assignment contributes to both its Course and its Program."
-    );
-  }
-
-  if (reads.view === "trends") {
-    for (const breakNote of reads.trends.breaks) {
-      limitations.push(
+    return disclosures;
+  },
+  courses: (reads) => {
+    if (reads.view !== "courses") return [];
+    return [
+      "Course means are class-context evidence for a General Education course, not a faculty performance measure: faculty identity is excluded and no course ranks a person.",
+      "Courses reached through several Programs contribute to each of those Programs' rows, so Program and Course figures overlap.",
+      ...(reads.courses.rows.some((row) => row.spansMultipleScales)
+        ? [
+            "A course row pooling more than one scale identity is not directly comparable to a single-scale row.",
+          ]
+        : []),
+    ];
+  },
+  programs: (reads) => {
+    if (reads.view !== "programs") return [];
+    return [
+      clampLabel(reads.programs.attributionNote),
+      "Program figures are attributed by the class context a respondent was assigned in; a Program with no General Education assignment here contributes nothing.",
+      "Programs and Courses overlap: one course assignment contributes to both its Course and its Program.",
+    ];
+  },
+  trends: (reads, filters) => {
+    if (reads.view !== "trends") return [];
+    const disclosures = reads.trends.breaks.map(
+      (breakNote) =>
         `Trend comparability break: ${breakNote.fromPeriodLabel} → ${breakNote.toPeriodLabel} (${breakNote.reason}).`
-      );
-    }
+    );
     if (reads.trends.periods.some((period) => !period.comparableWithPrevious)) {
-      limitations.push(
+      disclosures.push(
         "A period marked not comparable with the previous one may not be read as a rise or fall against it."
       );
     }
     if (filters.iloId) {
-      limitations.push("This trend scope was narrowed to the selected ILO's current mappings.");
+      disclosures.push("This trend scope was narrowed to the selected ILO's current mappings.");
     }
-  }
+    return disclosures;
+  },
+  qualitative: () => [
+    "Written feedback crosses as term prevalence, per-prompt structure, and tone band counts only; no answer, sentence, or excerpt is read or reproduced.",
+    "Terms cross only when they are identifier-redacted and mentioned more than once, both scope-wide and within a prompt. No prompt is withheld for carrying few responses, so a prompt's counts may rest on a small cohort.",
+    "toneShape comes from a fixed word list banded at positive above +0.2 and negative below -0.2; it misses sarcasm and some negations, and averages an answer mixing praise and criticism into one band.",
+  ],
+};
 
-  if (reads.view === "qualitative") {
-    limitations.push(
-      "Written feedback crosses as term prevalence, per-prompt structure, and tone band counts only; no answer, sentence, or excerpt is read or reproduced."
-    );
-    limitations.push(
-      "Terms cross only when they are identifier-redacted and mentioned more than once, both scope-wide and within a prompt. No prompt is withheld for carrying few responses, so a prompt's counts may rest on a small cohort."
-    );
-    limitations.push(
-      "toneShape comes from a fixed word list banded at positive above +0.2 and negative below -0.2; it misses sarcasm and some negations, and averages an answer mixing praise and criticism into one band."
-    );
-  }
+/**
+ * Names the scope the Coordinator chose. Every figure already reflects it, so
+ * the sentence also states that the figures do not change with the filter's
+ * name.
+ */
+function appliedScopeDisclosure(
+  filters: GeneralEducationAnalyticsFilterState,
+  options: GeneralEducationAnalyticsFrameDTO["options"]
+): string[] {
+  const named = Object.values(describeAppliedFilters(filters, options)).filter(
+    (facet): facet is string => facet !== null
+  );
+  return named.length === 0
+    ? []
+    : [
+        `Every figure here reflects the applied scope: ${named.join(", ")}. The figures are the same whatever the filter is called.`,
+      ];
+}
 
-  return limitations;
+function viewLimitations(
+  frame: GeneralEducationAnalyticsFrameDTO,
+  reads: GeneralEducationViewReads,
+  filters: GeneralEducationAnalyticsFilterState
+): string[] {
+  return [
+    ...scopeLimitations(frame.kpi),
+    ...appliedScopeDisclosure(filters, frame.options),
+    ...VIEW_DISCLOSURES[reads.view](reads, filters),
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -920,7 +944,7 @@ export async function generateGeneralEducationAnalyticsInsight(
     };
   }
 
-  const reads = await readViewEvidence(input.view, filters);
+  const reads = await VIEW_READERS[input.view](filters);
   if (!reads) return { ok: false, state: "unauthorized" };
 
   if (
@@ -941,7 +965,8 @@ export async function generateGeneralEducationAnalyticsInsight(
   }
 
   // Disclosures are part of the evidence, not decoration added afterwards: the
-  const limitations = viewLimitations(input.view, frame, reads, filters);
+  // model reads every applicable limit in the same packet as the figures.
+  const limitations = viewLimitations(frame, reads, filters);
   let packet: GeneralEducationViewPacket & Record<string, unknown>;
   try {
     packet = PACKET_BUILDERS[input.view](
@@ -956,10 +981,12 @@ export async function generateGeneralEducationAnalyticsInsight(
   }
 
   // The hard ceiling binds whatever the per-tier budgets admitted: a wide
-  // scope loses its lowest-ranked rows, with the omission recorded, instead of
-  // aborting the whole interpretation as `unexpected`.
-  boundPacketToCeiling(packet, input.view, config);
-  const serialized = JSON.stringify(packet);
+  // scope loses its lowest-ranked rows, with the omission recorded. A ceiling
+  // below the fixed structure every packet carries cannot be met by dropping
+  // rows at all, so such a request is rejected here — before the cache key and
+  // before any provider call — rather than sending evidence past the bound.
+  const serialized = boundPacketToCeiling(packet, input.view, config);
+  if (serialized === null) return { ok: false, state: "unexpected" };
 
   const evidenceScope: GeneralEducationViewEvidenceScope = {
     submittedResponseCount,

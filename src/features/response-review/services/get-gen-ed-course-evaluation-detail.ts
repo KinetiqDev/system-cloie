@@ -252,6 +252,29 @@ type CiloBindingSnapshot = {
   cilo_description_snapshot: string;
 };
 
+type SubmittedQuantItem = SubmittedResponseWithItems["quant_items"][number];
+
+/**
+ * The frozen scale a submitted rating must belong to. A rating outside the
+ * resolved scale's own descriptors is not evidence of that scale, so it is
+ * dropped here rather than counted as an exclusion downstream.
+ */
+function resolvedScaleFor(snapshot: unknown, item: SubmittedQuantItem): ScaleIdentity | undefined {
+  const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
+  if (!scale) return undefined;
+  return scale.descriptors.some((d) => d.value === item.rating_value) ? scale : undefined;
+}
+
+/**
+ * A response's mean, only when its valid ratings all came from one scale.
+ * Mixing scales would average numbers that are not commensurable, so the
+ * response reports no mean and its per-scale breakdown carries the evidence.
+ */
+function singleScaleMean(scaleKeys: Set<string>, validRatings: number[]): number | null {
+  if (validRatings.length === 0 || scaleKeys.size > 1) return null;
+  return validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length;
+}
+
 /**
  * Build the canonical CILO rating rows plus the ILO alignments behind each
  * CILO. The aggregators read `goMappings`, which a General Education CILO
@@ -276,25 +299,17 @@ function buildCourseRatingRows(
     const scaleKeys = new Set<string>();
     const validRatings: number[] = [];
     for (const item of response.quant_items) {
-      const scale = resolveItemScaleIdentity(snapshot, item.section_key, item.item_key);
-      if (!scale || !scale.descriptors.some((d) => d.value === item.rating_value)) {
-        continue;
-      }
+      const scale = resolvedScaleFor(snapshot, item);
+      if (!scale) continue;
       scaleKeys.add(scale.key);
       validRatings.push(item.rating_value);
-      const questionKey = encodeQuestionKey(item.section_key, item.item_key);
-      const binding = bindingByQuestionKey.get(questionKey);
+      const binding = bindingByQuestionKey.get(encodeQuestionKey(item.section_key, item.item_key));
       ratingRows.push(toCourseRatingRow(item, scale, response.id, snapshotItems, binding));
       if (binding?.cilo_id) {
         iloMappingsByCilo.set(binding.cilo_id, iloMappings.get(binding.cilo_id) ?? []);
       }
     }
-    meanByResponse.set(
-      response.id,
-      validRatings.length === 0 || scaleKeys.size > 1
-        ? null
-        : validRatings.reduce((sum, value) => sum + value, 0) / validRatings.length
-    );
+    meanByResponse.set(response.id, singleScaleMean(scaleKeys, validRatings));
   }
   return { ratingRows, meanByResponse, iloMappingsByCilo };
 }

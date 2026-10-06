@@ -87,7 +87,24 @@ export function GeneralEducationInlineAiInsight({
   if (result === null) {
     return <AnalyticsInsightPending />;
   }
-  if (result.ok && result.data.insight) {
+  if (!result.ok) {
+    const retryable = result.state !== "disabled" && result.state !== "insufficient-evidence";
+    let label =
+      "The AI insight is temporarily unavailable. The verified analytics above are unaffected.";
+    if (result.state === "disabled") label = "AI insight is not enabled for this deployment.";
+    if (result.state === "insufficient-evidence")
+      label = "There is not enough evidence in this scope for a responsible AI insight.";
+    return (
+      <AnalyticsInsightRecoverable
+        title="AI-generated insight"
+        onRetry={retryable ? handleRefresh : undefined}
+        retrying={isPending}
+      >
+        {label}
+      </AnalyticsInsightRecoverable>
+    );
+  }
+  if (result.data.insight) {
     return (
       <AnalyticsInsightCard
         insight={result.data.insight}
@@ -108,31 +125,10 @@ export function GeneralEducationInlineAiInsight({
     );
   }
 
-  if (result.ok && result.data.insight === null) {
-    return (
-      <AnalyticsInsightUnavailable title="AI-generated insight">
-        The available evidence is too thin for a responsible AI insight. The verified analytics
-        above are unaffected.
-      </AnalyticsInsightUnavailable>
-    );
-  }
-
-  const failure = result.ok ? null : result.state;
-  const retryable =
-    failure !== null && failure !== "disabled" && failure !== "insufficient-evidence";
-  const label =
-    failure === "disabled"
-      ? "AI insight is not enabled for this deployment."
-      : failure === "insufficient-evidence"
-        ? "There is not enough evidence in this scope for a responsible AI insight."
-        : "The AI insight is temporarily unavailable. The verified analytics above are unaffected.";
   return (
-    <AnalyticsInsightRecoverable
-      title="AI-generated insight"
-      onRetry={retryable ? handleRefresh : undefined}
-      retrying={isPending}
-    >
-      {label}
-    </AnalyticsInsightRecoverable>
+    <AnalyticsInsightUnavailable title="AI-generated insight">
+      The available evidence is too thin for a responsible AI insight. The verified analytics above
+      are unaffected.
+    </AnalyticsInsightUnavailable>
   );
 }

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import type { OutcomeCategoryDTO } from "@/features/analytics/outcome-evidence-types";
 import { FewRatingsMarker, MissingValue } from "./general-education-evidence-marks";
+import { countedNoun } from "./general-education-evidence-primitives";
 
 /** One 100% Likert row: a single instrument-version scale identity. */
 export type GeneralEducationDistributionGroup = {
@@ -256,7 +257,7 @@ export function GeneralEducationDistributionChart({
                   const percent = Number(payload?.[String(name)] ?? 0);
                   const count = total === 0 ? 0 : Math.round((percent / 100) * total);
                   return [
-                    `${count} ${count === 1 ? "rating" : "ratings"} (${percent.toFixed(1)}%${
+                    `${countedNoun(count, "rating")} (${percent.toFixed(1)}%${
                       category?.label ? ` · ${category.label}` : ""
                     })`,
                     `Value ${String(name).replace(/^v/, "").replace("-", ".")}`,

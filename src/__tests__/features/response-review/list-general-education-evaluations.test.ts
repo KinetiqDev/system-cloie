@@ -1,3 +1,7 @@
+import { selectRows } from "@/__tests__/helpers/where-clause";
+
+import { parseGeneralEducationResponsesSearchParams } from "@/features/response-review/services/general-education-responses-state";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ROLES } from "@/lib/constants/roles";
@@ -106,8 +110,21 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
     const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
     expect(where.course_assignment.course.course_scope).toBe("GENERAL_EDUCATION");
     expect(where.course_assignment.program_id).toBeUndefined();
-    expect(where.status).toEqual({ not: "DRAFT" });
+    expect(where.NOT).toEqual({ status: "DRAFT" });
   });
+
+  /**
+   * Probe rows carrying only the fields the clause reads, so `selectRows`
+   * evaluates the emitted `where` the way Prisma would instead of trusting
+   * the clause's shape.
+   */
+  function reviewStatusRow(status: string) {
+    return {
+      status,
+      term_instance: {},
+      course_assignment: { course: { course_scope: "GENERAL_EDUCATION" } },
+    };
+  }
 
   function evaluationRow(snapshot: unknown) {
     return {
@@ -187,14 +204,34 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
   });
 
   it("filters by a chosen non-draft status and defaults to excluding drafts", async () => {
-    await listGeneralEducationEvaluations({ page: 1, status: "ARCHIVED" });
-    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.status).toBe("ARCHIVED");
+    await listGeneralEducationEvaluations({ page: 1, status: "CLOSED" });
+    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.status).toBe("CLOSED");
 
     courseBoundEvaluationFindManyMock.mockClear();
     await listGeneralEducationEvaluations(FILTER);
-    expect(courseBoundEvaluationFindManyMock.mock.calls[0][0].where.status).toEqual({
-      not: "DRAFT",
-    });
+    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(where.status).toBeUndefined();
+    expect(where.NOT).toEqual({ status: "DRAFT" });
+    expect(
+      selectRows(where, [reviewStatusRow("CLOSED"), reviewStatusRow("DRAFT")]).map(
+        (row) => row.status
+      )
+    ).toEqual(["CLOSED"]);
+  });
+
+  it("resolves a crafted draft status facet to no rows instead of the drafts", async () => {
+    // An authorized Coordinator can put status=DRAFT in the URL and the parser
+    // keeps it, so the read — not the URL — has to hold the non-draft
+    // restriction that keeps unpublished evaluations out of review.
+    const state = parseGeneralEducationResponsesSearchParams({ status: "DRAFT" });
+    expect(state.status).toBe("DRAFT");
+
+    await listGeneralEducationEvaluations(state);
+
+    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(where.status).toBe("DRAFT");
+    expect(selectRows(where, [reviewStatusRow("DRAFT"), reviewStatusRow("CLOSED")])).toEqual([]);
+    expect(courseBoundEvaluationCountMock).toHaveBeenCalledWith({ where });
   });
 
   it("aggregates participation and excludes ratings outside the resolved scale", async () => {

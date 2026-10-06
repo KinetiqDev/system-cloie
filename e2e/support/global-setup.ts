@@ -739,8 +739,11 @@ export default async function globalSetup(): Promise<void> {
     },
   });
   assertContract(
-    geEvaluation?.deployment_name === geContract.title &&
-      geEvaluation.course_assignment.course.course_scope === geContract.courseScope &&
+    geEvaluation?.deployment_name === geContract.title,
+    "General Education review fixture must retain its title"
+  );
+  assertContract(
+    geEvaluation.course_assignment.course.course_scope === geContract.courseScope &&
       geEvaluation.assignments.length === geContract.submittedCount,
     "General Education review fixture must retain its scope, title and submitted population"
   );

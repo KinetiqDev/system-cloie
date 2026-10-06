@@ -20,6 +20,7 @@ import {
   parseGeneralEducationAnalyticsSearchParams,
   rawGeneralEducationAnalyticsSearchParamsToQueryString,
   type GeneralEducationAnalyticsFilterState,
+  type GeneralEducationAnalyticsTab,
 } from "@/features/analytics/services/general-education-analytics-state";
 import { buildPageTitle } from "@/lib/page-title";
 import { GEN_ED_ANALYTICS_PATH } from "@/lib/constants/gen-ed-routes";
@@ -33,68 +34,62 @@ function resetHref(filters: GeneralEducationAnalyticsFilterState): string {
   return buildGeneralEducationAnalyticsUrl({ tab: filters.tab });
 }
 
+/** One tab's re-authorized read plus the view that renders it. */
+type ViewResolver = (filters: GeneralEducationAnalyticsFilterState) => Promise<ReactNode>;
+
 /**
  * Each view resolves its own re-authorized read beside the shared frame read.
  * The frame and the filter card stay mounted while only the evidence region
  * shows tab-shaped loading geometry, so applying a filter never replaces the
  * whole workspace.
+ *
+ * Keyed by tab rather than switched on: one entry states the whole contract
+ * of a tab — its re-authorized read and the view that renders it — and the
+ * record type makes adding or renaming a tab a compile error instead of a tab
+ * that silently renders nothing.
  */
-async function resolveView(filters: GeneralEducationAnalyticsFilterState): Promise<ReactNode> {
-  switch (filters.tab) {
-    case "outcomes": {
-      const data = await getGeneralEducationOutcomes(filters);
-      if (!data) notFound();
-      return (
-        <GeneralEducationOutcomesView
-          data={data}
-          resetHref={resetHref(filters)}
-          filters={filters}
-        />
-      );
-    }
-    case "courses": {
-      const data = await getGeneralEducationCourses(filters);
-      if (!data) notFound();
-      return (
-        <GeneralEducationCoursesView
-          rows={data.rows}
-          emptyReason={data.emptyReason}
-          resetHref={resetHref(filters)}
-          filters={filters}
-        />
-      );
-    }
-    case "programs": {
-      const data = await getGeneralEducationPrograms(filters);
-      if (!data) notFound();
-      return (
-        <GeneralEducationProgramsView
-          data={data}
-          resetHref={resetHref(filters)}
-          filters={filters}
-        />
-      );
-    }
-    case "trends": {
-      const data = await getGeneralEducationTrends(filters);
-      if (!data) notFound();
-      return (
-        <GeneralEducationTrendsView data={data} resetHref={resetHref(filters)} filters={filters} />
-      );
-    }
-    case "qualitative": {
-      const data = await getGeneralEducationFeedback(filters);
-      if (!data) notFound();
-      return (
-        <GeneralEducationFeedbackView
-          data={data}
-          resetHref={resetHref(filters)}
-          filters={filters}
-        />
-      );
-    }
-  }
-}
+const TAB_VIEWS: Record<GeneralEducationAnalyticsTab, ViewResolver> = {
+  outcomes: async (filters) => {
+    const data = await getGeneralEducationOutcomes(filters);
+    if (!data) notFound();
+    return (
+      <GeneralEducationOutcomesView data={data} resetHref={resetHref(filters)} filters={filters} />
+    );
+  },
+  courses: async (filters) => {
+    const data = await getGeneralEducationCourses(filters);
+    if (!data) notFound();
+    return (
+      <GeneralEducationCoursesView
+        rows={data.rows}
+        emptyReason={data.emptyReason}
+        resetHref={resetHref(filters)}
+        filters={filters}
+      />
+    );
+  },
+  programs: async (filters) => {
+    const data = await getGeneralEducationPrograms(filters);
+    if (!data) notFound();
+    return (
+      <GeneralEducationProgramsView data={data} resetHref={resetHref(filters)} filters={filters} />
+    );
+  },
+  trends: async (filters) => {
+    const data = await getGeneralEducationTrends(filters);
+    if (!data) notFound();
+    return (
+      <GeneralEducationTrendsView data={data} resetHref={resetHref(filters)} filters={filters} />
+    );
+  },
+  qualitative: async (filters) => {
+    const data = await getGeneralEducationFeedback(filters);
+    if (!data) notFound();
+    return (
+      <GeneralEducationFeedbackView data={data} resetHref={resetHref(filters)} filters={filters} />
+    );
+  },
+};
 
 export default async function GenEdCoordinatorAnalyticsPage({
   searchParams,
@@ -111,7 +106,7 @@ export default async function GenEdCoordinatorAnalyticsPage({
 
   const [frame, view] = await Promise.all([
     getGeneralEducationAnalyticsFrame(filters),
-    resolveView(filters),
+    TAB_VIEWS[filters.tab](filters),
   ]);
   if (!frame) notFound();
 

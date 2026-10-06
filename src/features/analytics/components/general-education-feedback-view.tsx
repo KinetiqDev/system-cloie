@@ -19,6 +19,7 @@ import { GeneralEducationInlineAiInsight } from "./general-education-inline-ai-i
 import { LazyQualitativeWordCloud } from "./general-education-analytics-visualizations";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
 import {
+  countedNoun,
   emptyScopeCopy,
   ScopeEmptyState,
   SectionShell,
@@ -52,11 +53,7 @@ export function GeneralEducationFeedbackView({
   } = data;
   const scopeEmpty = emptyScopeCopy(emptyReason === "no-qualitative-evidence" ? null : emptyReason);
 
-  const evidenceBasis = `${qualitativeItemCount} identifier-redacted written ${
-    qualitativeItemCount === 1 ? "answer" : "answers"
-  } from ${qualitativeResponseCount} submitted ${
-    qualitativeResponseCount === 1 ? "response" : "responses"
-  }`;
+  const evidenceBasis = `${countedNoun(qualitativeItemCount, "identifier-redacted written answer")} from ${countedNoun(qualitativeResponseCount, "submitted response")}`;
 
   return (
     <div className="flex flex-col gap-6">

@@ -37,6 +37,15 @@ export function formatChange(change: number): string {
 }
 
 /**
+ * A count with its noun, pluralized once for every surface. Counts and their
+ * nouns always travel together here, so a chart tooltip, a legend, and a table
+ * cell cannot disagree about whether a single rating reads as "ratings".
+ */
+export function countedNoun(count: number, singular: string, plural = `${singular}s`): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+/**
  * Semantic identity of one frozen rating scale.
  *
  * Two scales are the same scale only when their descriptor sets match value

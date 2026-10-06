@@ -25,6 +25,7 @@ import {
   LOW_SAMPLE_RESPONSES,
   MissingValue,
 } from "./general-education-evidence-marks";
+import { countedNoun } from "./general-education-evidence-primitives";
 
 /** One comparable row inside a single instrument-version scale identity. */
 export type GeneralEducationScaleMeanDatum = {
@@ -54,6 +55,32 @@ type ScaleMeanChartProps = {
   emptyTitle: string;
   emptyDescription: string;
 };
+
+/** One readable sentence naming where the ranked means land on their scale. */
+function rankedInsight(
+  ranked: Array<GeneralEducationScaleMeanDatum & { meanRating: number }>,
+  scaleLabel: string
+): string {
+  const highest = ranked[0];
+  if (ranked.length === 1) {
+    return `Mean Rating for ${highest.label} on ${scaleLabel}: ${highest.meanRating.toFixed(2)} from ${countedNoun(highest.ratingCount, "rating")}.`;
+  }
+  const lowest = ranked[ranked.length - 1];
+  return `Highest on ${scaleLabel}: ${highest.label} (${highest.meanRating.toFixed(2)}). Lowest: ${lowest.label} (${lowest.meanRating.toFixed(2)}).`;
+}
+
+/** Tooltip text for one ranked bar: the mean beside its own exact counts. */
+function meanTooltipText(_value: unknown, _name: unknown, item: { payload?: unknown }) {
+  const row = item?.payload as Partial<GeneralEducationScaleMeanDatum> | undefined;
+  const mean = row?.meanRating == null ? "N/A" : row.meanRating.toFixed(2);
+  return [
+    `${mean} · ${countedNoun(row?.ratingCount ?? 0, "rating")} · ${countedNoun(
+      row?.submittedResponseCount ?? 0,
+      "response"
+    )}`,
+    "Mean Rating",
+  ] as [string, string];
+}
 
 function ScaleExactValuesTable({ series }: { series: GeneralEducationScaleMeanSeries[] }) {
   const showsContext = series.some((entry) => entry.rows.some((row) => row.context != null));
@@ -200,10 +227,7 @@ function ScaleMeanChartPanel({
     );
   }
 
-  const insight =
-    ranked.length === 1
-      ? `Mean Rating for ${ranked[0].label} on ${series.scaleLabel}: ${ranked[0].meanRating.toFixed(2)} from ${ranked[0].ratingCount} valid ${ranked[0].ratingCount === 1 ? "rating" : "ratings"}.`
-      : `Highest on ${series.scaleLabel}: ${ranked[0].label} (${ranked[0].meanRating.toFixed(2)}). Lowest: ${ranked[ranked.length - 1].label} (${ranked[ranked.length - 1].meanRating.toFixed(2)}).`;
+  const insight = rankedInsight(ranked, series.scaleLabel);
   const thinSampleRows = series.rows.filter(
     (row) => row.submittedResponseCount > 0 && row.submittedResponseCount < LOW_SAMPLE_RESPONSES
   );
@@ -251,22 +275,7 @@ function ScaleMeanChartPanel({
                   label.length > 20 ? `${label.slice(0, 19)}…` : label
                 }
               />
-              <ChartTooltip
-                formatter={(_value, _name, item) => {
-                  const payload = item?.payload as
-                    | (GeneralEducationScaleMeanDatum & { lowSample?: boolean })
-                    | undefined;
-                  const responses = payload?.submittedResponseCount ?? 0;
-                  return [
-                    `${payload?.meanRating == null ? "N/A" : payload.meanRating.toFixed(2)} · ${
-                      payload?.ratingCount ?? 0
-                    } ${payload?.ratingCount === 1 ? "rating" : "ratings"} · ${responses} ${
-                      responses === 1 ? "response" : "responses"
-                    }`,
-                    "Mean Rating",
-                  ];
-                }}
-              />
+              <ChartTooltip formatter={meanTooltipText} />
               <Bar
                 dataKey="meanRating"
                 maxBarSize={32}
@@ -299,8 +308,7 @@ function ScaleMeanChartPanel({
             <span role="listitem" key={row.key} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
               <span className="text-muted-foreground text-xs">
-                {row.label} ({row.submittedResponseCount}{" "}
-                {row.submittedResponseCount === 1 ? "response" : "responses"})
+                {row.label} ({countedNoun(row.submittedResponseCount, "response")})
               </span>
             </span>
           ))}

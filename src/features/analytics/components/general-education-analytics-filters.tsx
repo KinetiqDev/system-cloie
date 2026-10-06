@@ -35,10 +35,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import type { GeneralEducationAnalyticsOptions } from "@/features/analytics/general-education-analytics-types";
 import type { GeneralEducationAnalyticsFilterState } from "@/features/analytics/services/general-education-analytics-state";
-import {
-  buildGeneralEducationAnalyticsUrl,
-  type GeneralEducationAnalyticsTab,
-} from "@/features/analytics/services/general-education-analytics-state";
+import { buildGeneralEducationAnalyticsUrl } from "@/features/analytics/services/general-education-analytics-state";
 import { cn } from "@/lib/utils";
 import { useGeneralEducationAnalyticsNavigation } from "./general-education-analytics-workspace";
 
@@ -50,29 +47,73 @@ type Props = {
 };
 
 /**
- * Dependent academic choices. A school year constrains the semester list, a
- * semester constrains the term-instance list, and clearing a parent clears its
- * children in the submitted state, so a URL can never carry a semester that
- * belongs to a different school year.
+ * The academic period the coordinator submitted: one school year, one semester
+ * within it, and at most one academic term within that semester.
  */
-function dependentOptions(
+type PeriodDraft = {
+  schoolYearId?: string;
+  semester?: GeneralEducationAnalyticsFilterState["semester"];
+  termInstanceId?: string;
+};
+
+/**
+ * Resolve the submitted period against the option catalog. A child survives
+ * only when the term instances behind it belong to the selected school year and
+ * semester, so a URL can never carry a semester or term the evidence read would
+ * never match. An empty parent constrains nothing, so it never discards a child.
+ */
+function resolvePeriod(options: GeneralEducationAnalyticsOptions, draft: PeriodDraft): PeriodDraft {
+  // Each level narrows the next, so one pass over the catalog resolves the whole
+  // period against its chosen school year and semester.
+  const inSemester = options.termInstances.filter(
+    (instance) =>
+      (draft.schoolYearId === undefined || instance.schoolYearId === draft.schoolYearId) &&
+      (draft.semester === undefined || instance.semester === draft.semester)
+  );
+
+  return {
+    schoolYearId: draft.schoolYearId,
+    semester: inSemester.length > 0 ? draft.semester : undefined,
+    termInstanceId: inSemester.some((instance) => instance.id === draft.termInstanceId)
+      ? draft.termInstanceId
+      : undefined,
+  };
+}
+
+/** Distinct semesters behind one school year's term instances, in catalog order. */
+function semesterOptionsFor(
   options: GeneralEducationAnalyticsOptions,
-  draft: { schoolYearId?: string; semester?: string }
-) {
-  const semesters = draft.schoolYearId
-    ? options.termInstances
-        .filter((instance) => instance.schoolYearId === draft.schoolYearId)
-        .map((instance) => ({ value: instance.semester, label: instance.semesterLabel }))
-        .filter(
-          (entry, index, all) => all.findIndex((item) => item.value === entry.value) === index
-        )
-    : options.semesters;
+  schoolYearId: string | undefined
+): OptionItem[] {
+  if (schoolYearId === undefined) return options.semesters;
+  return options.termInstances
+    .filter((instance) => instance.schoolYearId === schoolYearId)
+    .map((instance) => ({ value: instance.semester, label: instance.semesterLabel }))
+    .filter((entry, index, all) => all.findIndex((item) => item.value === entry.value) === index);
+}
 
-  const termInstances = draft.schoolYearId
-    ? options.termInstances.filter((instance) => instance.schoolYearId === draft.schoolYearId)
-    : options.termInstances;
+/**
+ * The filter grid. The desktop card lays the controls out in aligned columns
+ * beside the apply row; the mobile drawer stacks them in one column.
+ */
+function FilterGrid({ drawer, children }: { drawer: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        drawer
+          ? "flex flex-col gap-4"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-10"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
-  return { semesters, termInstances };
+/** One filter control in the grid: full width in the drawer, two columns wide
+ * on the desktop card. */
+function FilterField({ children }: { children: ReactNode }) {
+  return <div className="w-full lg:col-span-2">{children}</div>;
 }
 
 function FilterSelect({
@@ -157,39 +198,27 @@ export function GeneralEducationAnalyticsFilters({ filters, options }: Props) {
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const schoolYearId = formValue(data, "schoolYearId");
-    const semester = formValue(data, "semester") as
-      | GeneralEducationAnalyticsFilterState["semester"]
-      | undefined;
-    const termInstanceId = formValue(data, "termInstanceId");
-    const term = options.termInstances.find((instance) => instance.id === termInstanceId);
-
-    // A child survives only when it is compatible with the chosen parent; an
-    // empty parent constrains nothing, so it never discards a valid child.
-    const semesterIsCompatible =
-      semester !== undefined &&
-      (schoolYearId === undefined ||
-        options.termInstances.some(
-          (instance) => instance.semester === semester && instance.schoolYearId === schoolYearId
-        ));
-    const termIsCompatible =
-      termInstanceId !== undefined &&
-      (schoolYearId === undefined || term?.schoolYearId === schoolYearId);
-
-    const nextFilters: GeneralEducationAnalyticsFilterState = {
-      tab: filters.tab,
-      schoolYearId,
-      semester: semesterIsCompatible ? semester : undefined,
-      termInstanceId: termIsCompatible ? termInstanceId : undefined,
-      courseId: formValue(data, "courseId"),
-      programId: formValue(data, "programId"),
-      yearLevel: formValue(data, "yearLevel") as GeneralEducationAnalyticsFilterState["yearLevel"],
-      // The ILO deep link belongs to the Outcomes view only.
-      iloId: filters.tab === "outcomes" ? formValue(data, "iloId") : undefined,
-    };
+    const period = resolvePeriod(options, {
+      schoolYearId: formValue(data, "schoolYearId"),
+      semester: formValue(data, "semester") as GeneralEducationAnalyticsFilterState["semester"],
+      termInstanceId: formValue(data, "termInstanceId"),
+    });
 
     setDrawerOpen(false);
-    navigate(buildGeneralEducationAnalyticsUrl(nextFilters));
+    navigate(
+      buildGeneralEducationAnalyticsUrl({
+        tab: filters.tab,
+        ...period,
+        courseId: formValue(data, "courseId"),
+        programId: formValue(data, "programId"),
+        yearLevel: formValue(
+          data,
+          "yearLevel"
+        ) as GeneralEducationAnalyticsFilterState["yearLevel"],
+        // The ILO deep link belongs to the Outcomes view only.
+        iloId: filters.tab === "outcomes" ? formValue(data, "iloId") : undefined,
+      })
+    );
   }
 
   return (
@@ -292,133 +321,21 @@ function FilterForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const idPrefix = useId();
-  const schoolYearId = `${idPrefix}-school-year`;
-  const semesterId = `${idPrefix}-semester`;
-  const termId = `${idPrefix}-term`;
-  const courseId = `${idPrefix}-course`;
-  const programId = `${idPrefix}-program`;
-  const yearLevelId = `${idPrefix}-year-level`;
-  const iloId = `${idPrefix}-ilo`;
   const count = activeFilterCount(filters);
 
-  // Controls render from the committed URL state; the submitted state resolves
-  // dependent academic choices so a child cannot outlive an invalid parent.
-  const { semesters, termInstances } = dependentOptions(options, {
-    schoolYearId: filters.schoolYearId,
-    semester: filters.semester,
-  });
-  const fieldClass = drawer ? "w-full" : "lg:col-span-2";
-
   return (
-    <form
-      onSubmit={onSubmit}
-      aria-busy={isPending || undefined}
-      className={cn(
-        drawer
-          ? "flex flex-col gap-4"
-          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
-      )}
-    >
+    <form onSubmit={onSubmit} aria-busy={isPending || undefined} className="flex flex-col gap-4">
       {filters.tab !== "outcomes" ? <input type="hidden" name="tab" value={filters.tab} /> : null}
 
-      <div className={fieldClass}>
-        <FilterSelect
-          id={schoolYearId}
-          label="School Year"
-          name="schoolYearId"
-          value={filters.schoolYearId ?? ""}
-          blankLabel="All school years"
-          icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={options.schoolYears.map((entry) => ({ value: entry.id, label: entry.label }))}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <FilterSelect
-          id={semesterId}
-          label="Semester"
-          name="semester"
-          value={filters.semester ?? ""}
-          blankLabel="All semesters"
-          disabled={options.semesters.length === 0}
-          icon={<Layers className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={semesters}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <FilterSelect
-          id={termId}
-          label="Academic Term"
-          name="termInstanceId"
-          value={filters.termInstanceId ?? ""}
-          blankLabel="All academic terms"
-          disabled={termInstances.length === 0}
-          icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={termInstances.map((instance) => ({ value: instance.id, label: instance.label }))}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <FilterSelect
-          id={courseId}
-          label="Course"
-          name="courseId"
-          value={filters.courseId ?? ""}
-          blankLabel="All General Education courses"
-          disabled={options.courses.length === 0}
-          icon={<BookOpen className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={options.courses.map((course) => ({ value: course.id, label: course.label }))}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <FilterSelect
-          id={programId}
-          label="Class Program"
-          name="programId"
-          value={filters.programId ?? ""}
-          blankLabel="All programs"
-          disabled={options.programs.length === 0}
-          icon={<GraduationCap className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={options.programs.map((program) => ({ value: program.id, label: program.label }))}
-        />
-      </div>
-
-      <div className={fieldClass}>
-        <FilterSelect
-          id={yearLevelId}
-          label="Year Level"
-          name="yearLevel"
-          value={filters.yearLevel ?? ""}
-          blankLabel="All year levels"
-          disabled={options.yearLevels.length === 0}
-          icon={<Users className="text-muted-foreground size-3.5" aria-hidden="true" />}
-          options={options.yearLevels.map((level) => ({ value: level.value, label: level.label }))}
-        />
-      </div>
-
-      {filters.tab === "outcomes" ? (
-        <div className={fieldClass}>
-          <FilterSelect
-            id={iloId}
-            label="Institutional Learning Outcome"
-            name="iloId"
-            value={filters.iloId ?? ""}
-            blankLabel="All learning outcomes"
-            disabled={options.ilos.length === 0}
-            icon={<Target className="text-muted-foreground size-3.5" aria-hidden="true" />}
-            options={options.ilos.map((outcome) => ({ value: outcome.id, label: outcome.label }))}
-          />
-        </div>
-      ) : null}
+      <FilterGrid drawer={drawer}>
+        <PeriodSelects filters={filters} options={options} idPrefix={idPrefix} />
+        <ScopeSelects filters={filters} options={options} idPrefix={idPrefix} />
+      </FilterGrid>
 
       <div
         className={cn(
-          "flex items-center gap-2 pt-1",
-          drawer
-            ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
-            : "lg:col-span-2 lg:justify-end"
+          "flex items-center gap-2",
+          drawer && "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
         )}
       >
         <Button
@@ -432,9 +349,7 @@ function FilterForm({
         </Button>
         {count > 0 ? (
           <Link
-            href={buildGeneralEducationAnalyticsUrl({
-              tab: filters.tab as GeneralEducationAnalyticsTab,
-            })}
+            href={buildGeneralEducationAnalyticsUrl({ tab: filters.tab })}
             className={cn(
               buttonVariants({ variant: "outline", size: "default" }),
               drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
@@ -445,5 +360,125 @@ function FilterForm({
         ) : null}
       </div>
     </form>
+  );
+}
+
+/**
+ * The academic period controls. A school year narrows the semester list, and
+ * the term list follows the committed period so no control offers a choice the
+ * submitted period cannot keep.
+ */
+function PeriodSelects({ filters, options, idPrefix }: Props & { idPrefix: string }) {
+  // The term list follows the committed school year, so a control never offers
+  // a term the submitted period would immediately discard.
+  const termInstances = options.termInstances.filter(
+    (instance) =>
+      filters.schoolYearId === undefined || instance.schoolYearId === filters.schoolYearId
+  );
+
+  return (
+    <>
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-school-year`}
+          label="School Year"
+          name="schoolYearId"
+          value={filters.schoolYearId ?? ""}
+          blankLabel="All school years"
+          icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={options.schoolYears.map((entry) => ({ value: entry.id, label: entry.label }))}
+        />
+      </FilterField>
+
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-semester`}
+          label="Semester"
+          name="semester"
+          value={filters.semester ?? ""}
+          blankLabel="All semesters"
+          disabled={options.semesters.length === 0}
+          icon={<Layers className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={semesterOptionsFor(options, filters.schoolYearId)}
+        />
+      </FilterField>
+
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-term`}
+          label="Academic Term"
+          name="termInstanceId"
+          value={filters.termInstanceId ?? ""}
+          blankLabel="All academic terms"
+          disabled={termInstances.length === 0}
+          icon={<Calendar className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={termInstances.map((instance) => ({ value: instance.id, label: instance.label }))}
+        />
+      </FilterField>
+    </>
+  );
+}
+
+/**
+ * The evidence scope controls: which course, class context, year level, and —
+ * on Outcomes only — which Institutional Learning Outcome the read reports.
+ */
+function ScopeSelects({ filters, options, idPrefix }: Props & { idPrefix: string }) {
+  return (
+    <>
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-course`}
+          label="Course"
+          name="courseId"
+          value={filters.courseId ?? ""}
+          blankLabel="All General Education courses"
+          disabled={options.courses.length === 0}
+          icon={<BookOpen className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={options.courses.map((course) => ({ value: course.id, label: course.label }))}
+        />
+      </FilterField>
+
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-program`}
+          label="Class Program"
+          name="programId"
+          value={filters.programId ?? ""}
+          blankLabel="All programs"
+          disabled={options.programs.length === 0}
+          icon={<GraduationCap className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={options.programs.map((program) => ({ value: program.id, label: program.label }))}
+        />
+      </FilterField>
+
+      <FilterField>
+        <FilterSelect
+          id={`${idPrefix}-year-level`}
+          label="Year Level"
+          name="yearLevel"
+          value={filters.yearLevel ?? ""}
+          blankLabel="All year levels"
+          disabled={options.yearLevels.length === 0}
+          icon={<Users className="text-muted-foreground size-3.5" aria-hidden="true" />}
+          options={options.yearLevels.map((level) => ({ value: level.value, label: level.label }))}
+        />
+      </FilterField>
+
+      {filters.tab !== "outcomes" ? null : (
+        <FilterField>
+          <FilterSelect
+            id={`${idPrefix}-ilo`}
+            label="Institutional Learning Outcome"
+            name="iloId"
+            value={filters.iloId ?? ""}
+            blankLabel="All learning outcomes"
+            disabled={options.ilos.length === 0}
+            icon={<Target className="text-muted-foreground size-3.5" aria-hidden="true" />}
+            options={options.ilos.map((outcome) => ({ value: outcome.id, label: outcome.label }))}
+          />
+        </FilterField>
+      )}
+    </>
   );
 }

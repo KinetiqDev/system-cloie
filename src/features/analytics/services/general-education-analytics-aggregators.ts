@@ -104,6 +104,8 @@ export type GeAssignmentRow = {
   section: StudentSection;
   facultyName: string;
   termInstanceId: string;
+  deploymentName?: string;
+  instrumentVersionId?: string;
 };
 
 /**
@@ -244,6 +246,26 @@ function accumulateGeRating(
  * accumulator. Scale identities and counts merge by canonical identity, so a
  * scope total is a pooled raw sum and count — never a mean of per-group means.
  */
+function mergeScaleEvidence(scope: GeEvidenceAggregate, group: GeEvidenceAggregate): void {
+  for (const [key, scale] of group.scaleIdentities) scope.scaleIdentities.set(key, scale);
+  for (const [key, counts] of group.scaleCounts) {
+    const merged = scope.scaleCounts.get(key) ?? new Map<number, number>();
+    for (const [value, count] of counts) merged.set(value, (merged.get(value) ?? 0) + count);
+    scope.scaleCounts.set(key, merged);
+  }
+  for (const [key, sum] of group.scaleSums)
+    scope.scaleSums.set(key, (scope.scaleSums.get(key) ?? 0) + sum);
+}
+
+function mergeGroupedResponseIds(
+  target: Map<string, Set<string>>,
+  source: ReadonlyMap<string, Set<string>>
+): void {
+  for (const [key, ids] of source) {
+    for (const id of ids) addIdTo(target, key, id);
+  }
+}
+
 export function mergeGeEvidenceIntoScope(
   scope: GeEvidenceAggregate,
   group: GeEvidenceAggregate
@@ -252,32 +274,16 @@ export function mergeGeEvidenceIntoScope(
   scope.ratingCount += group.ratingCount;
   scope.excludedRatingCount += group.excludedRatingCount;
   for (const responseId of group.responseIds) scope.responseIds.add(responseId);
-  for (const [key, scale] of group.scaleIdentities) scope.scaleIdentities.set(key, scale);
-  for (const [key, counts] of group.scaleCounts) {
-    const merged = scope.scaleCounts.get(key) ?? new Map<number, number>();
-    for (const [value, count] of counts) merged.set(value, (merged.get(value) ?? 0) + count);
-    scope.scaleCounts.set(key, merged);
-  }
-  for (const [key, sum] of group.scaleSums) {
-    scope.scaleSums.set(key, (scope.scaleSums.get(key) ?? 0) + sum);
-  }
-  for (const [key, ids] of group.scaleResponseIds) {
-    for (const id of ids) addIdTo(scope.scaleResponseIds, key, id);
-  }
-  for (const [key, ids] of group.instrumentResponseIds) {
-    for (const id of ids) addIdTo(scope.instrumentResponseIds, key, id);
-  }
+  mergeScaleEvidence(scope, group);
+  mergeGroupedResponseIds(scope.scaleResponseIds, group.scaleResponseIds);
+  mergeGroupedResponseIds(scope.instrumentResponseIds, group.instrumentResponseIds);
   for (const versionId of group.instrumentVersionIds) {
     scope.instrumentVersionIds.add(versionId);
   }
   for (const identity of group.questionIdentities) scope.questionIdentities.add(identity);
   for (const code of group.outcomeCodes) scope.outcomeCodes.add(code);
-  for (const [courseId, ids] of group.courseResponseIds) {
-    for (const id of ids) addIdTo(scope.courseResponseIds, courseId, id);
-  }
-  for (const [key, ids] of group.courseProgramResponseIds) {
-    for (const id of ids) addIdTo(scope.courseProgramResponseIds, key, id);
-  }
+  mergeGroupedResponseIds(scope.courseResponseIds, group.courseResponseIds);
+  mergeGroupedResponseIds(scope.courseProgramResponseIds, group.courseProgramResponseIds);
   return scope;
 }
 
@@ -804,6 +810,17 @@ export function buildGeTrendPeriodInputs(input: {
  * a single point is never implied to be a flat trend. Response-rate
  * chronology is reported independently of mean comparability.
  */
+function longestComparableRun(periods: GeneralEducationTrendsDTO["periods"]): number {
+  let longestRun = 0;
+  let run = 0;
+  for (const period of periods) {
+    if (period.meanRating === null) run = 0;
+    else run = period.comparableWithPrevious ? run + 1 : 1;
+    longestRun = Math.max(longestRun, run);
+  }
+  return longestRun;
+}
+
 export function buildGeTrendSeries(
   inputs: readonly GeTrendPeriodInput[]
 ): Pick<GeneralEducationTrendsDTO, "periods" | "breaks" | "emptyReason"> {
@@ -850,17 +867,7 @@ export function buildGeTrendSeries(
     });
   }
 
-  let longestRun = 0;
-  let run = 0;
-  for (const period of periods) {
-    run =
-      period.meanRating !== null && period.comparableWithPrevious
-        ? run + 1
-        : period.meanRating !== null
-          ? 1
-          : 0;
-    longestRun = Math.max(longestRun, run);
-  }
+  const longestRun = longestComparableRun(periods);
 
   return {
     periods,
@@ -965,6 +972,25 @@ export function buildGeCourseRows(input: {
   }
   for (const row of input.assignments) {
     courses.set(row.course.id, row.course);
+    addIdTo(evaluationIdsByCourse, row.course.id, row.evaluationId);
+    classContextByEvaluation.set(row.evaluationId, {
+      program: row.program,
+      yearLevel: row.yearLevel,
+      section: row.section,
+      facultyName: row.facultyName,
+    });
+    if (row.deploymentName) deployments.set(row.evaluationId, row.deploymentName);
+    if (row.instrumentVersionId)
+      addIdTo(instrumentIdsByCourse, row.course.id, row.instrumentVersionId);
+  }
+
+  function courseOpportunityContext(courseId: string) {
+    return {
+      sectionCount: opportunities.sectionsByCourse.get(courseId)?.size ?? 0,
+      programCount: opportunities.programsByCourse.get(courseId)?.size ?? 0,
+      alignedIlos: input.labels.alignedIlosByCourse.get(courseId) ?? [],
+      previousComparable: input.previousComparable?.get(courseId) ?? null,
+    };
   }
 
   const rows: GeneralEducationCourseBreakdownRow[] = [...courses.values()].map((course) => {
@@ -979,8 +1005,7 @@ export function buildGeCourseRows(input: {
       courseId: course.id,
       courseCode: course.code,
       courseTitle: course.title,
-      sectionCount: opportunities.sectionsByCourse.get(course.id)?.size ?? 0,
-      programCount: opportunities.programsByCourse.get(course.id)?.size ?? 0,
+      ...courseOpportunityContext(course.id),
       evaluationOpportunityCount: courseOpportunities,
       submittedResponseCount: aggregate.responseIds.size,
       responseRate: geResponseRate(aggregate.responseIds.size, courseOpportunities),
@@ -991,8 +1016,6 @@ export function buildGeCourseRows(input: {
       instrumentContext:
         instrumentContext.length > 0 ? [...new Set(instrumentContext)].sort().join(", ") : null,
       scaleGroups: buildGeScaleGroupDtos(aggregate),
-      alignedIlos: input.labels.alignedIlosByCourse.get(course.id) ?? [],
-      previousComparable: input.previousComparable?.get(course.id) ?? null,
       evidenceEvaluations: evaluationIds
         .map((evaluationId) => ({
           evaluationId,

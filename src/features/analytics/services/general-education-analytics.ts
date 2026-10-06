@@ -224,8 +224,9 @@ const resolveGeneralEducationReadScope = cache(async function resolveGeneralEduc
     Object.fromEntries(new URLSearchParams(scopeKey))
   );
   const periodFilter = buildTermInstanceWhere(filters);
-  const hasPeriodFilter =
-    Boolean(filters.termInstanceId) || Boolean(filters.schoolYearId) || Boolean(filters.semester);
+  const hasPeriodFilter = [filters.termInstanceId, filters.schoolYearId, filters.semester].some(
+    Boolean
+  );
   const instances = hasPeriodFilter
     ? await prisma.academicTermInstance.findMany({
         where: periodFilter,
@@ -233,9 +234,7 @@ const resolveGeneralEducationReadScope = cache(async function resolveGeneralEduc
       })
     : [];
 
-  const schoolYearLabel =
-    (await resolveSchoolYearLabel(filters.schoolYearId, instances)) ??
-    (filters.schoolYearId ? (instances[0]?.school_year.code ?? null) : null);
+  const schoolYearLabel = await resolveSchoolYearLabel(filters.schoolYearId, instances);
 
   const courseAssignmentWhere: Prisma.CourseAssignmentWhereInput = {
     ...generalEducationCourseAssignmentWhere(),
@@ -252,29 +251,20 @@ const resolveGeneralEducationReadScope = cache(async function resolveGeneralEduc
             : [IMPOSSIBLE_TERM_INSTANCE_ID],
       }
     : undefined;
-  const courseBound = { course_assignment: courseAssignmentWhere };
+  const periodScope = termInstanceId ? { term_instance_id: termInstanceId } : {};
+  const courseBound = { course_assignment: courseAssignmentWhere, ...periodScope };
 
   return {
     periodLabel: buildPeriodLabel(filters, schoolYearLabel, instances),
     responseScope: {
       status: ResponseStatus.SUBMITTED,
       deployment_type: "COURSE_BOUND",
-      assignment: {
-        course_bound: {
-          ...courseBound,
-          ...(termInstanceId ? { term_instance_id: termInstanceId } : {}),
-        },
-      },
+      assignment: { course_bound: courseBound },
     },
-    opportunityScope: {
-      course_bound: {
-        ...courseBound,
-        ...(termInstanceId ? { term_instance_id: termInstanceId } : {}),
-      },
-    },
+    opportunityScope: { course_bound: courseBound },
     courseAssignmentScope: {
       ...courseAssignmentWhere,
-      ...(termInstanceId ? { term_instance_id: termInstanceId } : {}),
+      ...periodScope,
     },
   };
 });
@@ -305,6 +295,32 @@ function addIdToList(byEvaluation: Map<string, string[]>, key: string, value: st
   const values = byEvaluation.get(key) ?? [];
   if (!values.includes(value)) values.push(value);
   byEvaluation.set(key, values);
+}
+
+function indexEvidenceBindings(
+  bindings: readonly GeCiloBindingRow[],
+  ciloOrderByCourse: ReadonlyMap<string, string[]>
+) {
+  const bindingByQuestion = new Map<string, GeCiloBindingRow>();
+  const outcomeIdsByQuestion = new Map<string, readonly GeIloMappingRow[]>();
+  const ciloIdsByEvaluation = new Map<string, string[]>();
+  const ciloLabelsByEvaluation = new Map<string, Map<string, string>>();
+  for (const binding of bindings) {
+    const evaluationId = binding.course_bound_evaluation_id;
+    const key = questionKey(evaluationId, binding.section_key, binding.item_key);
+    if (!bindingByQuestion.has(key)) bindingByQuestion.set(key, binding);
+    if (binding.cilo) addIdToList(ciloIdsByEvaluation, evaluationId, binding.cilo.id);
+    if (!ciloLabelsByEvaluation.has(evaluationId)) {
+      const orderedCiloIds =
+        ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
+      ciloLabelsByEvaluation.set(
+        evaluationId,
+        resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds)
+      );
+    }
+    outcomeIdsByQuestion.set(key, binding.cilo?.cilo_institutional_outcome_mappings ?? []);
+  }
+  return { bindingByQuestion, outcomeIdsByQuestion, ciloIdsByEvaluation, ciloLabelsByEvaluation };
 }
 
 /**
@@ -378,15 +394,7 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
     ...assignmentRows.map((row) => row.course_bound),
   ].filter((row): row is NonNullable<typeof row> => row !== null);
 
-  const evaluationIds = [
-    ...new Set(
-      [
-        ...ratingSelectRows.map((row) => row.response.assignment.course_bound?.id),
-        ...responseSelectRows.map((row) => row.assignment.course_bound?.id),
-        ...assignmentRows.map((row) => row.course_bound?.id),
-      ].filter((id): id is string => Boolean(id))
-    ),
-  ];
+  const evaluationIds = [...new Set(courseBoundByRow.map((row) => row.id))];
   const instrumentVersionIds = [
     ...new Set(
       courseBoundByRow
@@ -464,10 +472,6 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
     instrumentVersions.map((version) => [version.id, instrumentVersionLabel(version)])
   );
 
-  const bindingByQuestion = new Map<string, GeCiloBindingRow>();
-  const outcomeIdsByQuestion = new Map<string, readonly GeIloMappingRow[]>();
-  const ciloIdsByEvaluation = new Map<string, string[]>();
-  const ciloLabelsByEvaluation = new Map<string, Map<string, string>>();
   const ciloOrderByCourse = new Map(
     courses.map((course) => [course.id, course.cilos.map((cilo) => cilo.id)])
   );
@@ -477,23 +481,8 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
     deploymentsByEvaluation.set(row.id, row.deployment_name);
   }
 
-  for (const binding of bindings) {
-    const evaluationId = binding.course_bound_evaluation_id;
-    const key = questionKey(evaluationId, binding.section_key, binding.item_key);
-    if (!bindingByQuestion.has(key)) bindingByQuestion.set(key, binding);
-    if (binding.cilo) {
-      addIdToList(ciloIdsByEvaluation, evaluationId, binding.cilo.id);
-    }
-    if (!ciloLabelsByEvaluation.has(evaluationId)) {
-      const orderedCiloIds =
-        ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
-      ciloLabelsByEvaluation.set(
-        evaluationId,
-        resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds)
-      );
-    }
-    outcomeIdsByQuestion.set(key, binding.cilo?.cilo_institutional_outcome_mappings ?? []);
-  }
+  const { bindingByQuestion, outcomeIdsByQuestion, ciloIdsByEvaluation, ciloLabelsByEvaluation } =
+    indexEvidenceBindings(bindings, ciloOrderByCourse);
 
   const ratingRows: GeRatingEvidence[] = ratingSelectRows.flatMap((row) => {
     const courseBound = row.response.assignment.course_bound;
@@ -554,6 +543,8 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
     return [
       {
         evaluationId: courseBound.id,
+        deploymentName: courseBound.deployment_name,
+        instrumentVersionId: courseBound.instrument_version_id,
         course: { ...courseBound.course_assignment.course },
         program: { ...courseBound.course_assignment.program },
         yearLevel: courseBound.course_assignment.year_level,

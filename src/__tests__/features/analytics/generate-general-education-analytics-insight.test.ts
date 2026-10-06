@@ -1001,4 +1001,14 @@ describe("generateGeneralEducationAnalyticsInsight", () => {
       "Every figure here reflects the applied scope"
     );
   });
+  it("rejects a ceiling smaller than fixed evidence before contacting the provider", async () => {
+    stubEnabledConfig({ CLOIE_AI_MAX_PACKET_CHARS: "700" });
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "courses", filters: FILTER("courses") },
+      transport
+    );
+    expect(result).toEqual({ ok: false, state: "unexpected" });
+    expect(transport).not.toHaveBeenCalled();
+  });
 });

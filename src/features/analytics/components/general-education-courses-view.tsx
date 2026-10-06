@@ -22,6 +22,7 @@ import type { GeneralEducationDistributionGroup } from "./general-education-dist
 import type { GeneralEducationScaleMeanDatum } from "./general-education-scale-mean-chart";
 import {
   buildScaleSeries,
+  countedNoun,
   emptyScopeCopy,
   formatChange,
   scaleIdentityKey,
@@ -235,8 +236,8 @@ function CourseMatrixTable({
                         {row.courseTitle}
                       </span>
                       <span className="text-muted-foreground text-xs">
-                        {row.sectionCount} section{row.sectionCount === 1 ? "" : "s"} ·{" "}
-                        {row.programCount} program{row.programCount === 1 ? "" : "s"}
+                        {countedNoun(row.sectionCount, "section")} ·{" "}
+                        {countedNoun(row.programCount, "program")}
                       </span>
                       {isThinSample ? (
                         <LowSampleMarker responseCount={row.submittedResponseCount} />
