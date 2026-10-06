@@ -12,7 +12,7 @@ import type { InsightSection } from "@/features/analytics/services/ai-insight-co
  * the retry. Deterministic charts and tables never wait on this component.
  */
 
-export type AnalyticsInsightCardProps = {
+type AnalyticsInsightCardProps = {
   insight: NonNullable<InsightSection>;
   /** Human-readable evidence basis, e.g. "42 submitted responses and 128 valid ratings". */
   evidenceBasis: string;
@@ -36,7 +36,7 @@ export function AnalyticsInsightCard({
   onRefresh,
 }: AnalyticsInsightCardProps) {
   return (
-    <div className="bg-information-soft border-information/25 rounded-lg border p-4">
+    <div className="bg-info-soft border-info/25 rounded-lg border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Bot aria-hidden="true" className="size-4" />
@@ -65,7 +65,7 @@ export function AnalyticsInsightCard({
             <li key={item} className="text-body-sm flex items-start gap-2">
               <span
                 aria-hidden="true"
-                className="bg-information mt-[0.45rem] size-1.5 shrink-0 rounded-full"
+                className="bg-info mt-[0.45rem] size-1.5 shrink-0 rounded-full"
               />
               {item}
             </li>
@@ -113,7 +113,7 @@ export function AnalyticsInsightCard({
 export function AnalyticsInsightPending() {
   return (
     <div
-      className="bg-information-soft border-information/25 min-h-36 rounded-lg border p-4"
+      className="bg-info-soft border-info/25 min-h-36 rounded-lg border p-4"
       role="status"
       aria-label="Generating AI insight"
       aria-busy="true"

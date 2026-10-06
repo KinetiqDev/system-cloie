@@ -117,7 +117,7 @@ export type GeneralEducationViewEvidenceScope = {
   limitations: string[];
 };
 /** Validated, bounded per-view interpretation returned to the browser. */
-export type GeneralEducationAnalyticsViewInsight = {
+type GeneralEducationAnalyticsViewInsight = {
   fingerprint: string;
   view: GeneralEducationAnalyticsTab;
   insight: InsightSection;

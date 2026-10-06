@@ -47,7 +47,7 @@ export type AiModelTransport = (input: {
  * providers that ignore `response_format`; `json_schema` makes the provider
  * enforce the complete declared shape itself.
  */
-export type AiResponseFormat =
+type AiResponseFormat =
   | { type: "json_object" }
   | {
       type: "json_schema";
@@ -120,10 +120,8 @@ export function buildEvidenceBoundedUserMessage(lead: string, packetJson: string
   ].join("\n");
 }
 
-export type AiGenerationFailure = "timeout" | "provider-error" | "invalid-output";
-export type AiJsonOutputResult =
-  | { ok: true; value: unknown }
-  | { ok: false; state: AiGenerationFailure };
+type AiGenerationFailure = "timeout" | "provider-error" | "invalid-output";
+type AiJsonOutputResult = { ok: true; value: unknown } | { ok: false; state: AiGenerationFailure };
 
 /**
  * One bounded provider request returning parsed JSON. The hard character
@@ -165,7 +163,7 @@ export async function requestAiJsonOutput(
   }
 }
 
-export type AiSectionRequestResult =
+type AiSectionRequestResult =
   | { ok: true; insight: InsightSection }
   | { ok: false; state: AiGenerationFailure };
 
@@ -200,7 +198,7 @@ export async function requestAiInsightSection(
 // ---------------------------------------------------------------------------
 
 /** Maximum validated entries retained per interpretation scope. */
-export const AI_INSIGHT_CACHE_MAX_ENTRIES = 128;
+const AI_INSIGHT_CACHE_MAX_ENTRIES = 128;
 
 /**
  * SHA-256 over every input that can change the validated interpretation: the

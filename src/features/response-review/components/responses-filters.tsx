@@ -70,7 +70,7 @@ export type AdvancedResponseFilterField<State = Record<string, unknown>> = {
 /** Raw filter state as a URL-facing key/value map, before role parsing. */
 export type RawResponseFilters = Record<string, string>;
 
-export type ResponsesFiltersProps<State = Record<string, unknown>> = {
+type ResponsesFiltersProps<State = Record<string, unknown>> = {
   /** Parsed current state, used for the active-filter count and defaults. */
   activeCount: number;
   advancedCount: number;

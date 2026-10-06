@@ -205,7 +205,7 @@ function labelFromOptions(
   return entry?.label ?? null;
 }
 
-export function describeAppliedFilters(
+function describeAppliedFilters(
   filters: GeneralEducationAnalyticsFilterState,
   options: GeneralEducationAnalyticsFrameDTO["options"]
 ): AppliedAnalyticsFilters {
@@ -307,7 +307,7 @@ type GeneralEducationViewPacket =
   | ReturnType<typeof buildQualitativePacket>;
 
 /** View-keyed deterministic reads backing one packet; only one arm is fetched. */
-export type GeneralEducationViewReads =
+type GeneralEducationViewReads =
   | { view: "outcomes"; outcomes: GeneralEducationOutcomesDTO }
   | { view: "courses"; courses: GeneralEducationCoursesDTO }
   | { view: "programs"; programs: GeneralEducationProgramsDTO }
@@ -847,7 +847,7 @@ Writing rules:
 // ---------------------------------------------------------------------------
 
 /** Filter fingerprint of the scope this interpretation was generated for. */
-export function buildGeneralEducationFilterFingerprint(
+function buildGeneralEducationFilterFingerprint(
   filters: GeneralEducationAnalyticsFilterState
 ): string {
   return buildGeneralEducationAnalyticsQueryString(filters);

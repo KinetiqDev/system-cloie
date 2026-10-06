@@ -19,7 +19,7 @@ const MAX_QUERY_LENGTH = 100;
 
 const RESPONSE_COMPLETION_FILTERS = ["zero", "partial", "complete"] as const;
 /** Response progress against the evaluation's real assignment opportunities. */
-export type ResponseCompletionFilter = (typeof RESPONSE_COMPLETION_FILTERS)[number];
+type ResponseCompletionFilter = (typeof RESPONSE_COMPLETION_FILTERS)[number];
 
 export type GeneralEducationResponsesFilterState = {
   page: number;

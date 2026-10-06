@@ -18,7 +18,7 @@ import { YEAR_LEVEL_OPTIONS, getYearLevelDisplay } from "@/lib/constants/year-le
 export type ResponseFilterOption = { id: string; label: string };
 
 /** One typed CILO→outcome alignment rendered on a review surface. */
-export type ResponseOutcomeAlignment = {
+type ResponseOutcomeAlignment = {
   outcomeId: string;
   outcomeCode: string;
   manifestation: CILOMappingManifestation | null;

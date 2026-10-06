@@ -122,7 +122,7 @@ export function buildGeneralEducationAnalyticsTabUrl(
 }
 
 /** Scope facets only — what every evidence read and AI packet is keyed on. */
-export type GeneralEducationEvidenceScope = Omit<GeneralEducationAnalyticsFilterState, "tab">;
+type GeneralEducationEvidenceScope = Omit<GeneralEducationAnalyticsFilterState, "tab">;
 
 export function toGeneralEducationEvidenceScope(
   filters: GeneralEducationAnalyticsFilterState

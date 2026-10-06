@@ -4,7 +4,6 @@ import { createContext, Suspense, useContext, useTransition, type ReactNode } fr
 import { useRouter } from "next/navigation";
 import {
   GENERAL_EDUCATION_ANALYTICS_TAB_LABELS,
-  type GeneralEducationAnalyticsFilterState,
   type GeneralEducationAnalyticsTab,
 } from "@/features/analytics/services/general-education-analytics-state";
 import { GeneralEducationAnalyticsContentFallback } from "./general-education-analytics-content-fallback";
@@ -64,5 +63,3 @@ export function GeneralEducationAnalyticsWorkspace({
     </AnalyticsNavigationContext.Provider>
   );
 }
-
-export type { GeneralEducationAnalyticsFilterState };

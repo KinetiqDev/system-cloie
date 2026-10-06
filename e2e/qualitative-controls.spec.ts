@@ -57,8 +57,8 @@ test.describe("Qualitative analytics controls", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAs(page, "demo-gened@cloie.test");
 
-    await page.goto("/gen-ed-coordinator/analytics");
-    await expect(page.getByRole("region", { name: "Qualitative feedback" })).toBeVisible();
+    await page.goto("/gen-ed-coordinator/analytics?tab=qualitative");
+    await expect(page.getByRole("region", { name: "Most-mentioned terms" })).toBeVisible();
     await expectQualitativeControlsToWork(page);
   });
 });

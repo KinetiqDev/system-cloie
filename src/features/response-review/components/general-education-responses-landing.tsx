@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { GeneralEducationResponsesFilters } from "@/features/response-review/components/general-education-responses-filters";
 import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
-import { ResponsesPagination } from "@/features/response-review/components/responses-pagination";
+import { GeneralEducationResponsesPagination } from "./general-education-responses-pagination";
 import {
   formatResponseProgress,
   formatResponseSection,
@@ -165,11 +165,7 @@ function EvaluationEvidence({
         )}
         {data.total > data.pageSize ? (
           <div className="border-border mt-4 border-t pt-4">
-            <ResponsesPagination
-              page={state.page}
-              totalPages={totalPages}
-              buildPageUrl={(page) => buildGeneralEducationResponsesUrl({ ...state, page })}
-            />
+            <GeneralEducationResponsesPagination state={state} totalPages={totalPages} />
           </div>
         ) : null}
       </CardContent>

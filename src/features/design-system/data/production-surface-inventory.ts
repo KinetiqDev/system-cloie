@@ -2597,13 +2597,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/program-head-responses-workspace.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes:
-      "Narrow client transition boundary preserving responses controls while the evaluation evidence region reloads",
-  },
-  {
     path: "src/features/response-review/components/responses-content-fallback.tsx",
     disposition: "already_compliant",
     category: "feature_component",
@@ -3065,6 +3058,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/response-review/components/general-education-responses-landing.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/general-education-responses-pagination.tsx",
     disposition: "already_compliant",
     category: "feature_component",
   },

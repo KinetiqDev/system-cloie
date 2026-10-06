@@ -241,7 +241,7 @@ function ProgramCourseMatrix({
 }
 
 /** Exact program rows keep their own scale breakdown and review links. */
-export function GeneralEducationProgramExactTable({
+function GeneralEducationProgramExactTable({
   rows,
   filters,
 }: {

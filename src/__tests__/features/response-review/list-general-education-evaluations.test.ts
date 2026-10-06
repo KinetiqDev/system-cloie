@@ -144,6 +144,7 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
     await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
 
     const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(where.course_assignment.course.course_scope).toBe("GENERAL_EDUCATION");
     expect(where.course_assignment.course.cilos).toEqual({
       some: {
         is_active: true,

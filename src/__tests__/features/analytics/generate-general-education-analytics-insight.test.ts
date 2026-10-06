@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { YearLevel } from "@prisma/client";
 import type {
   AiModelTransport,
   AiModelTransportResult,
@@ -835,5 +836,169 @@ describe("generateGeneralEducationAnalyticsInsight", () => {
     expect(userMessage).not.toContain("courseId");
     expect(userMessage).not.toContain("iloId");
     expect(userMessage).not.toContain("course-1");
+  });
+  it("carries the courses-view disclosure that no course row measures a person", async () => {
+    stubEnabledConfig();
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "courses", filters: FILTER("courses") },
+      transport
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const limitations = result.data.evidenceScope.limitations.join(" ");
+    expect(limitations).toContain(
+      "Course means are class-context evidence for a General Education course, not a faculty performance measure"
+    );
+    // The comparable-row caveat is a claim about this scope's rows, so it may
+    // only appear when a row actually pools more than one scale identity.
+    expect(limitations).not.toContain("A course row pooling more than one scale identity");
+
+    coursesMock.mockResolvedValue({
+      ...coursesDTO(),
+      rows: coursesDTO().rows.map((row) => ({ ...row, spansMultipleScales: true })),
+    });
+    const pooled = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "courses", filters: FILTER("courses") },
+      enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) })
+    );
+    expect(pooled.ok).toBe(true);
+    if (!pooled.ok) return;
+    expect(pooled.data.evidenceScope.limitations.join(" ")).toContain(
+      "A course row pooling more than one scale identity is not directly comparable to a single-scale row."
+    );
+  });
+
+  it("forwards the programs attribution rule so Program figures are never read as outcomes", async () => {
+    stubEnabledConfig();
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "programs", filters: FILTER("programs") },
+      transport
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const limitations = result.data.evidenceScope.limitations.join(" ");
+    // The view's own attribution note travels verbatim, so the reader and the
+    // interpretation state the same rule.
+    expect(limitations).toContain(programsDTO().attributionNote);
+    expect(limitations).toContain("Program figures are attributed by the class context");
+    expect(limitations).toContain("Programs and Courses overlap");
+    // ILO-only disclosures never leak into a Program scope.
+    expect(limitations).not.toContain("ILO manifestation");
+  });
+
+  it("names every trend comparability break and refuses a rise-or-fall reading of the break", async () => {
+    stubEnabledConfig();
+    trendsMock.mockResolvedValue({
+      ...trendsDTO(),
+      breaks: [
+        {
+          fromPeriodLabel: "2024-2025 · 2nd",
+          toPeriodLabel: "2025-2026 · 1st",
+          reason: "scale change",
+        },
+        {
+          fromPeriodLabel: "2025-2026 · 1st",
+          toPeriodLabel: "2026-2027 · 1st",
+          reason: "instrument change",
+        },
+      ],
+    });
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const unscoped = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "trends", filters: FILTER("trends") },
+      transport
+    );
+
+    expect(unscoped.ok).toBe(true);
+    if (!unscoped.ok) return;
+    const limitations = unscoped.data.evidenceScope.limitations.join(" ");
+    expect(limitations).toContain(
+      "Trend comparability break: 2024-2025 · 2nd → 2025-2026 · 1st (scale change)."
+    );
+    expect(limitations).toContain(
+      "Trend comparability break: 2025-2026 · 1st → 2026-2027 · 1st (instrument change)."
+    );
+    // The fixture's single period is not comparable with a predecessor.
+    expect(limitations).toContain("may not be read as a rise or fall");
+    // Only an ILO-narrowed scope carries the narrowing caveat.
+    expect(limitations).not.toContain("narrowed to the selected ILO");
+
+    const narrowed = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "trends", filters: { ...FILTER("trends"), iloId: "ilo-1" } },
+      enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) })
+    );
+    expect(narrowed.ok).toBe(true);
+    if (!narrowed.ok) return;
+    expect(narrowed.data.evidenceScope.limitations.join(" ")).toContain(
+      "This trend scope was narrowed to the selected ILO's current mappings."
+    );
+  });
+
+  it("states that written feedback is never read or reproduced, whatever the scope", async () => {
+    stubEnabledConfig();
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "qualitative", filters: FILTER("qualitative") },
+      transport
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const limitations = result.data.evidenceScope.limitations.join(" ");
+    expect(limitations).toContain("no answer, sentence, or excerpt is read or reproduced");
+    expect(limitations).toContain("identifier-redacted and mentioned more than once");
+    expect(limitations).toContain("toneShape comes from a fixed word list");
+    // Rating-only ILO caveats do not belong to a written-feedback scope.
+    expect(limitations).not.toContain("ILO manifestation");
+  });
+
+  it("names the applied scope the Coordinator chose and says the figures already reflect it", async () => {
+    stubEnabledConfig();
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      {
+        view: "outcomes",
+        filters: {
+          ...FILTER("outcomes"),
+          courseId: "course-1",
+          programId: "program-1",
+          yearLevel: YearLevel.FIRST_YEAR,
+        },
+      },
+      transport
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Every chosen facet is named in the order the frame resolves them, so the
+    // interpretation can never describe evidence outside this scope.
+    expect(result.data.evidenceScope.limitations).toContain(
+      "Every figure here reflects the applied scope: GE 101 — General Chemistry, BS Chemistry, 1st Year. The figures are the same whatever the filter is called."
+    );
+  });
+
+  it("omits the applied-scope sentence entirely when no facet narrows the view", async () => {
+    stubEnabledConfig();
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+
+    const result = await service.generateGeneralEducationAnalyticsInsight(
+      { view: "outcomes", filters: FILTER("outcomes") },
+      transport
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.evidenceScope.limitations.join(" ")).not.toContain(
+      "Every figure here reflects the applied scope"
+    );
   });
 });

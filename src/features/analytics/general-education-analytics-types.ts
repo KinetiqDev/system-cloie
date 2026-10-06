@@ -1,7 +1,7 @@
 import type { OutcomeEvidenceDTO, OutcomeScaleDistributionDTO } from "./outcome-evidence-types";
 import type { QualitativeToneShape, WordCloudToken } from "./types";
 
-export type GeneralEducationAnalyticsPeriodOptions = {
+type GeneralEducationAnalyticsPeriodOptions = {
   schoolYears: Array<{ id: string; label: string }>;
   semesters: Array<{ value: string; label: string }>;
   termInstances: Array<{

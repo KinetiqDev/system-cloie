@@ -25,7 +25,7 @@ import {
  * group has no in-scope evaluation opportunities: that is an unavailable rate,
  * never a zero-percent rate.
  */
-export type GeneralEducationResponseRateDatum = {
+type GeneralEducationResponseRateDatum = {
   key: string;
   label: string;
   responseRate: number | null;

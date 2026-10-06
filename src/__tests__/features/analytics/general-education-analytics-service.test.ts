@@ -544,6 +544,29 @@ describe("General Education Coordinator analytics reads", () => {
     expect(history.scaleGroups[0].distribution.maxValue).toBe(4);
   });
 
+  it("counts an out-of-scale rating as excluded without pooling it", async () => {
+    prismaMock.instrumentVersion.findMany.mockResolvedValue([
+      {
+        id: "iv-ethics",
+        structure_snapshot: ETHICS_INSTRUMENT,
+        version_number: 1,
+        template: { name: "GE Ethics" },
+      },
+    ]);
+    prismaMock.response.findMany.mockResolvedValue([responseRow({ id: "r1" })]);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+      ratingRow({ value: 3, responseId: "r1" }),
+      // Submitted, but outside the item's frozen 1–5 scale.
+      ratingRow({ value: 9, responseId: "r1" }),
+    ]);
+
+    const frame = await getGeneralEducationAnalyticsFrame({ tab: "outcomes" });
+    expect(frame!.kpi.ratingCount).toBe(1);
+    expect(frame!.kpi.meanRating).toBe(3);
+    expect(frame!.kpi.excludedRatingCount).toBe(1);
+    expect(frame!.kpi.scaleContext).toBe("1–5 (5-point)");
+  });
+
   describe("ILO outcomes", () => {
     beforeEach(() => {
       prismaMock.instrumentVersion.findMany.mockResolvedValue([
@@ -989,6 +1012,82 @@ describe("General Education Coordinator analytics reads", () => {
       expect(dto!.breaks).toHaveLength(1);
       expect(dto!.breaks[0].reason).toContain("instrument version");
       expect(dto!.emptyReason).toBe("no-comparable-history");
+    });
+
+    it("keeps comparability and ILO disclosure to the valid ratings alone", async () => {
+      prismaMock.academicTermInstance.findMany.mockResolvedValue([
+        termInstance("term-1", "2025-2026", "FIRST"),
+        termInstance("term-2", "2025-2026", "SECOND"),
+      ]);
+      prismaMock.instrumentVersion.findMany.mockResolvedValue([
+        {
+          id: "iv-ethics",
+          structure_snapshot: ETHICS_INSTRUMENT,
+          version_number: 1,
+          template: { name: "GE Ethics" },
+        },
+        {
+          id: "iv-ethics-2",
+          structure_snapshot: ETHICS_INSTRUMENT,
+          version_number: 2,
+          template: { name: "GE Ethics" },
+        },
+      ]);
+      prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+        bindingRow({
+          evaluationId: "eval-1",
+          itemKey: "q1",
+          mappings: [{ manifestation: "LEARNING", institutional_outcome: ILO_LEARNING }],
+        }),
+        bindingRow({
+          evaluationId: "eval-2",
+          itemKey: "q1",
+          mappings: [{ manifestation: "LEARNING", institutional_outcome: ILO_LEARNING }],
+        }),
+        // The second term's second evaluation is CILO-bound to another ILO, so
+        // an excluded-only question would advertise it if exclusions counted.
+        bindingRow({
+          evaluationId: "eval-3",
+          itemKey: "q2",
+          mappings: [{ manifestation: "PRACTICE", institutional_outcome: ILO_COMMUNICATION }],
+        }),
+      ]);
+      const secondTermBound = courseBound({ id: "eval-2", term_instance_id: "term-2" });
+      const excludedOnlyBound = courseBound({
+        id: "eval-3",
+        term_instance_id: "term-2",
+        instrument_version_id: "iv-ethics-2",
+      });
+      prismaMock.response.findMany.mockResolvedValue([
+        responseRow({ id: "r1" }),
+        responseRow({ id: "r2", courseBound: secondTermBound }),
+        responseRow({ id: "r3", courseBound: excludedOnlyBound }),
+      ]);
+      prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+        ratingRow({ value: 3, responseId: "r1" }),
+        ratingRow({ value: 5, responseId: "r2", courseBound: secondTermBound }),
+        // Submitted participation whose only rating falls outside the scale.
+        ratingRow({ value: 9, responseId: "r3", itemKey: "q2", courseBound: excludedOnlyBound }),
+      ]);
+      prismaMock.evaluationAssignment.findMany.mockResolvedValue([
+        assignmentRow({ respondentId: "u1" }),
+        assignmentRow({ respondentId: "u2", courseBound: secondTermBound }),
+        assignmentRow({ respondentId: "u3", courseBound: excludedOnlyBound }),
+      ]);
+
+      const dto = await getGeneralEducationTrends({ tab: "trends" });
+      // Both terms pool the same instrument, question, and ILO, so the second
+      // point joins the run: an excluded rating never redefines the identity of
+      // the measurement it was dropped from.
+      expect(dto!.emptyReason).toBeNull();
+      expect(dto!.breaks).toEqual([]);
+      expect(dto!.periods[1].comparableWithPrevious).toBe(true);
+      expect(dto!.periods.map((period) => period.meanRating)).toEqual([3, 5]);
+      // The excluded instrument version reaches neither the ILO disclosure nor
+      // the period's instrument context; its response is still participation.
+      expect(dto!.periods[1].outcomeCodes).toEqual([ILO_LEARNING.code]);
+      expect(dto!.periods[1].instrumentContext).toBe("GE Ethics v1");
+      expect(dto!.periods[1].submittedResponseCount).toBe(2);
     });
 
     it("narrows rating evidence to the selected ILO without inventing an ILO denominator", async () => {

@@ -55,7 +55,7 @@ for (const width of [1440, 393]) {
       `/gen-ed-coordinator/responses/course/${ge.evaluationId}/responses/${ge.responseId}`
     );
     await expect(page.getByText(ge.respondentName, { exact: true }).first()).toBeVisible();
-    await page.getByRole("link", { name: ilo.code, exact: true }).first().click();
+    await page.locator(`a[href*="iloId=${ilo.id}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`iloId=${ilo.id}`));
     await expect(page.locator(`tr[data-outcome-row="${ilo.id}"]`).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);

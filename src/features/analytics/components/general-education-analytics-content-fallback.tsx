@@ -23,7 +23,7 @@ function AlertSkeleton() {
   );
 }
 
-export function AnalyticsChartSkeleton() {
+function AnalyticsChartSkeleton() {
   return (
     <Card data-testid="analytics-chart-skeleton">
       <CardHeader className="border-b">

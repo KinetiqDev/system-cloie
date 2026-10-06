@@ -38,7 +38,7 @@ export type GeneralEducationScaleMeanDatum = {
   links?: Array<{ href: string; label: string }>;
 };
 
-export type GeneralEducationScaleMeanSeries = {
+type GeneralEducationScaleMeanSeries = {
   key: string;
   /** Frozen scale identity, e.g. "1–5 (5-point)". */
   scaleLabel: string;

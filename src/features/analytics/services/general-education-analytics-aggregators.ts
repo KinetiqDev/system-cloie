@@ -49,14 +49,14 @@ import type {
 export type GeCourseRef = { id: string; code: string; title: string };
 
 /** Catalog identity of one class-context Program. */
-export type GeProgramRef = { id: string; code: string; name: string };
+type GeProgramRef = { id: string; code: string; name: string };
 
 /**
  * Class context of the `CourseAssignment` that produced the evidence. Course
  * scope, not respondent Program membership, decides ownership, so this is
  * attribution of the class the evaluation ran in — never of a respondent.
  */
-export type GeClassContext = {
+type GeClassContext = {
   program: GeProgramRef;
   yearLevel: YearLevel;
   section: StudentSection;
@@ -64,7 +64,7 @@ export type GeClassContext = {
 };
 
 /** Deployment identity and course context behind one in-scope evidence row. */
-export type GeEvaluationEvidence = {
+type GeEvaluationEvidence = {
   evaluationId: string;
   deploymentName: string;
   termInstanceId: string;
@@ -120,7 +120,7 @@ const NO_OUTCOMES: readonly string[] = [];
  * publishes a new evaluation for the same class, so an evaluation-scoped key
  * would make every period look like a different measurement.
  */
-export function geQuestionIdentity(row: {
+function geQuestionIdentity(row: {
   course: GeCourseRef;
   ciloId: string | null;
   ciloDescription: string | null;
@@ -188,7 +188,7 @@ function addIdTo(byKey: Map<string, Set<string>>, key: string, value: string): v
 }
 
 /** Resolve the frozen scale of one rating; null when the snapshot cannot place it. */
-export function geRatingScale(
+function geRatingScale(
   row: GeRatingEvidence,
   snapshotById: ReadonlyMap<string, unknown>
 ): ScaleIdentity | null {
@@ -202,25 +202,25 @@ export function geRatingScale(
 /**
  * Accumulate one rating. An unresolvable scale or an out-of-scale value is
  * counted as excluded and enters no mean, count, distribution, or fingerprint
- * dimension; only valid ratings define the population behind a mean.
+ * dimension; only valid ratings define the population behind a mean and the
+ * period identity behind a plotted point.
  */
-export function accumulateGeRating(
+function accumulateGeRating(
   aggregate: GeEvidenceAggregate,
   row: GeRatingEvidence,
   scale: ScaleIdentity | null,
   outcomeIds: readonly string[] = NO_OUTCOMES
 ): void {
-  aggregate.instrumentVersionIds.add(row.instrumentVersionId);
-  aggregate.questionIdentities.add(geQuestionIdentity(row));
-  for (const outcomeId of outcomeIds) {
-    aggregate.outcomeCodes.add(outcomeId);
-  }
-
   if (scale === null || !ratingBelongsToScale(scale, row.ratingValue)) {
     aggregate.excludedRatingCount += 1;
     return;
   }
 
+  aggregate.instrumentVersionIds.add(row.instrumentVersionId);
+  aggregate.questionIdentities.add(geQuestionIdentity(row));
+  for (const outcomeId of outcomeIds) {
+    aggregate.outcomeCodes.add(outcomeId);
+  }
   aggregate.ratingSum += row.ratingValue;
   aggregate.ratingCount += 1;
   aggregate.responseIds.add(row.responseId);
@@ -282,20 +282,8 @@ export function mergeGeEvidenceIntoScope(
 }
 
 /** Record submitted participation that carries no usable rating. */
-export function accumulateGeResponse(
-  aggregate: GeEvidenceAggregate,
-  row: GeResponseEvidence
-): void {
+function accumulateGeResponse(aggregate: GeEvidenceAggregate, row: GeResponseEvidence): void {
   aggregate.responseIds.add(row.responseId);
-}
-
-/** Distinct responses that contributed at least one valid rating. */
-export function geRatedResponseCount(aggregate: GeEvidenceAggregate): number {
-  const rated = new Set<string>();
-  for (const ids of aggregate.scaleResponseIds.values()) {
-    for (const id of ids) rated.add(id);
-  }
-  return rated.size;
 }
 
 /**
@@ -352,9 +340,7 @@ function buildGeScaleGroupDto(
  * count, submitted-response count, and full-precision Likert distribution.
  * Incompatible scales stay separate rows instead of collapsing into one mean.
  */
-export function buildGeScaleGroupDtos(
-  aggregate: GeEvidenceAggregate
-): GeneralEducationScaleGroupDTO[] {
+function buildGeScaleGroupDtos(aggregate: GeEvidenceAggregate): GeneralEducationScaleGroupDTO[] {
   return [...aggregate.scaleIdentities.values()]
     .map((scale) => buildGeScaleGroupDto(aggregate, scale, describeScale(scale.descriptors)))
     .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey));
@@ -433,7 +419,7 @@ export function collectGeCourseEvidence(
  * attribution comes from the Course Assignment the evaluation ran in, never
  * from a respondent's Program membership.
  */
-export function collectGeProgramEvidence(
+function collectGeProgramEvidence(
   ratingRows: readonly GeRatingEvidence[],
   responseRows: readonly GeResponseEvidence[],
   snapshotById: ReadonlyMap<string, unknown>
@@ -447,7 +433,7 @@ export function collectGeProgramEvidence(
 }
 
 /** Evaluation-keyed evidence, keyed by `CourseBoundEvaluation.id`. */
-export function collectGeEvaluationEvidence(
+function collectGeEvaluationEvidence(
   ratingRows: readonly GeRatingEvidence[],
   responseRows: readonly GeResponseEvidence[],
   snapshotById: ReadonlyMap<string, unknown>
@@ -461,12 +447,12 @@ export function collectGeEvaluationEvidence(
 }
 
 /** Structural key of one Course-by-ILO evidence cell. */
-export function geCourseOutcomeKey(courseId: string, outcomeId: string): string {
+function geCourseOutcomeKey(courseId: string, outcomeId: string): string {
   return JSON.stringify([courseId, outcomeId]);
 }
 
 /** Structural key of one Course-by-Program evidence cell. */
-export function geCourseProgramKey(courseId: string, programId: string): string {
+function geCourseProgramKey(courseId: string, programId: string): string {
   return JSON.stringify([courseId, programId]);
 }
 
@@ -497,7 +483,7 @@ export function collectGeCourseOutcomeEvidence(
 }
 
 /** Course-by-Program evidence keyed by `geCourseProgramKey`. */
-export function collectGeCourseProgramEvidence(
+function collectGeCourseProgramEvidence(
   ratingRows: readonly GeRatingEvidence[],
   responseRows: readonly GeResponseEvidence[],
   snapshotById: ReadonlyMap<string, unknown>
@@ -520,7 +506,7 @@ function classSectionKey(programId: string, yearLevel: YearLevel, section: Stude
 }
 
 /** Opportunity counts and class-context coverage, keyed several ways at once. */
-export type GeOpportunitySummary = {
+type GeOpportunitySummary = {
   total: number;
   byCourse: Map<string, number>;
   byProgram: Map<string, number>;
@@ -607,7 +593,7 @@ export function geScopeEmptyReason(
  * population composition all match. Every dimension is sorted for
  * order-independent equality.
  */
-export type GeComparabilityFingerprint = {
+type GeComparabilityFingerprint = {
   instrumentVersions: string[];
   scaleIdentities: string[];
   questionIdentities: string[];
@@ -617,7 +603,7 @@ export type GeComparabilityFingerprint = {
   courseProgramComposition: string[];
 };
 
-export function buildGeComparabilityFingerprint(
+function buildGeComparabilityFingerprint(
   aggregate: GeEvidenceAggregate
 ): GeComparabilityFingerprint {
   return {
@@ -646,7 +632,7 @@ function arraysEqual(left: readonly string[], right: readonly string[]): boolean
 }
 
 /** True when two scopes are the same comparable measurement. */
-export function geFingerprintsEqual(
+function geFingerprintsEqual(
   left: GeComparabilityFingerprint,
   right: GeComparabilityFingerprint
 ): boolean {
@@ -694,7 +680,7 @@ function describeGeFingerprintChange(
 }
 
 /** Readable instrument-version context, e.g. "GE CILO Evaluation v2". */
-export function geInstrumentContext(
+function geInstrumentContext(
   aggregate: GeEvidenceAggregate,
   instrumentLabels: ReadonlyMap<string, string>
 ): string | null {
@@ -705,7 +691,7 @@ export function geInstrumentContext(
 }
 
 /** Canonical academic parts of one term instance for chronology and labels. */
-export type GePeriodInstance = {
+type GePeriodInstance = {
   id: string;
   semester: string;
   term: string | null;
@@ -746,7 +732,7 @@ export function resolveGePreviousComparablePeriod(input: {
 }
 
 /** One period of evidence resolved into a comparable series point. */
-export type GeTrendPeriodInput = {
+type GeTrendPeriodInput = {
   termInstanceId: string;
   periodLabel: string;
   sortKey: readonly [string, number, number];
@@ -885,7 +871,7 @@ export function buildGeTrendSeries(
 }
 
 /** One course row's comparable predecessor. */
-export type GeCourseComparable = { periodLabel: string; meanRating: number; change: number };
+type GeCourseComparable = { periodLabel: string; meanRating: number; change: number };
 
 /**
  * Previous-period means a course row may compare against. A predecessor counts
@@ -931,7 +917,7 @@ export function buildGeCoursePreviousComparable(input: {
 // ---------------------------------------------------------------------------
 
 /** Display labels the service resolves for the Courses view. */
-export type GeCourseRowLabels = {
+type GeCourseRowLabels = {
   /** Course -> ILOs aligned through that course's own CILOs. */
   alignedIlosByCourse: ReadonlyMap<string, Array<{ id: string; code: string }>>;
   yearLevelLabel: (yearLevel: YearLevel) => string;

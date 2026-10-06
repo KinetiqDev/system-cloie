@@ -99,7 +99,10 @@ function assignmentFilterWhere(
     ...(filters.programId ? { program_id: filters.programId } : {}),
     ...(filters.yearLevel ? { year_level: filters.yearLevel } : {}),
     ...(filters.section ? { section: filters.section } : {}),
-    ...(filters.iloId ? { course: { cilos: { some: iloCiloWhere(filters.iloId) } } } : {}),
+    course: {
+      course_scope: "GENERAL_EDUCATION",
+      ...(filters.iloId ? { cilos: { some: iloCiloWhere(filters.iloId) } } : {}),
+    },
   };
 }
 
@@ -162,10 +165,7 @@ function courseEvaluationWhere(
     ...generalEducationCourseEvaluationWhere(),
     status: filters.status ?? { not: "DRAFT" },
     term_instance: termInstanceWhere(filters),
-    course_assignment: {
-      ...generalEducationCourseAssignmentWhere(),
-      ...assignmentFilterWhere(filters),
-    },
+    course_assignment: assignmentFilterWhere(filters),
     ...(search ? { OR: search } : {}),
     ...(completion ?? {}),
   };

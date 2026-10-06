@@ -36,12 +36,6 @@ export function formatChange(change: number): string {
   return `${sign}${change.toFixed(2)}`;
 }
 
-/** The lowest descriptor value on a frozen scale, so an axis starts at truth. */
-export function scaleFloor(distribution: OutcomeScaleDistributionDTO): number {
-  const values = distribution.categories.map((category) => category.value);
-  return values.length === 0 ? 0 : Math.min(...values);
-}
-
 /**
  * Semantic identity of one frozen rating scale.
  *
@@ -57,24 +51,6 @@ export function scaleIdentityKey(distribution: OutcomeScaleDistributionDTO): str
     .map((category) => [category.value, category.label ?? ""])
     .sort((left, right) => Number(left[0]) - Number(right[0]));
   return JSON.stringify([distribution.maxValue, categories]);
-}
-
-/**
- * Deduplicate distributions by structural scale identity. Distinct scales
- * keep distinct rows even when their readable labels happen to agree.
- */
-export function distinctScaleDistributions(
-  distributions: OutcomeScaleDistributionDTO[]
-): OutcomeScaleDistributionDTO[] {
-  const seen = new Set<string>();
-  const distinct: OutcomeScaleDistributionDTO[] = [];
-  for (const distribution of distributions) {
-    const key = scaleIdentityKey(distribution);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    distinct.push(distribution);
-  }
-  return distinct;
 }
 
 /**
@@ -178,7 +154,7 @@ export function emptyScopeCopy(emptyReason: GeneralEducationAnalyticsEmptyReason
   return null;
 }
 
-export type SectionShellProps = {
+type SectionShellProps = {
   id: string;
   title: string;
   description?: ReactNode;

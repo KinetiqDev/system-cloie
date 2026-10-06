@@ -93,7 +93,7 @@ type OutcomeEvidenceAggregate = {
   excludedRatingCount: number;
 };
 
-export type OutcomeEvidenceAggregation = {
+type OutcomeEvidenceAggregation = {
   /** Aggregates keyed by outcome id. */
   outcomes: Map<string, OutcomeEvidenceAggregate>;
   /** True when any contributing CILO maps to more than one outcome. */

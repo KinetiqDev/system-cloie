@@ -14,7 +14,13 @@ import {
   YAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartSwatch, chartFill } from "@/components/ui/chart";
+import {
+  ChartContainer,
+  ChartPatternDefs,
+  ChartTooltip,
+  ChartSwatch,
+  chartFill,
+} from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -149,6 +155,7 @@ export function GeneralEducationTrendChart({
             className="aspect-auto h-full w-full"
           >
             <LineChart data={data} margin={{ bottom: 10, left: 0, right: 12, top: 10 }}>
+              <ChartPatternDefs chartId={chartId} categoryCount={runs.length} />
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="periodLabel"
@@ -320,6 +327,7 @@ export function GeneralEducationResponseRateTrendChart({
             className="aspect-auto h-full w-full"
           >
             <BarChart data={data} margin={{ top: 18, right: 16, bottom: 10, left: 8 }}>
+              <ChartPatternDefs chartId={chartId} categoryCount={data.length} />
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="periodLabel"
@@ -487,6 +495,7 @@ export function GeneralEducationAlignmentChart({
               layout="vertical"
               margin={{ top: 8, right: 40, bottom: 8, left: 8 }}
             >
+              <ChartPatternDefs chartId={chartId} categoryCount={ALIGNMENT_SERIES.length} />
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
               <YAxis
