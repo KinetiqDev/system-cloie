@@ -4,12 +4,10 @@ import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
-  aggregateOutcomeEvidence,
   buildAttributionBreakdown,
   buildCourseBreakdownRows,
   buildInstrumentBreakdownRows,
   buildProgramHeadOverviewKpi,
-  buildProgramHeadOutcomeDtos,
   buildSourceComposition,
   buildStakeholderBuckets,
   buildTrendSeries,
@@ -20,10 +18,14 @@ import {
   type BreakdownAssignmentContext,
   type BreakdownRatingRow,
   type BreakdownResponseRow,
-  type OutcomeEvidenceRow,
   type TrendSeriesPeriodInput,
 } from "./program-head-analytics-aggregators";
 import { encodeBindingKey, encodeQuestionKey } from "../aggregators/question-identity";
+import {
+  aggregateOutcomeEvidence,
+  buildOutcomeEvidenceDtos,
+  type OutcomeEvidenceRow,
+} from "../aggregators/outcome-evidence";
 import {
   buildScaleIdentities,
   describeScales,
@@ -795,7 +797,7 @@ function toGoMapping(mapping: {
   go: { id: string; code: string; description: string };
 }) {
   return {
-    goId: mapping.go.id,
+    outcomeId: mapping.go.id,
     code: mapping.go.code,
     name: mapping.go.description,
     manifestation: mapping.manifestation,
@@ -862,9 +864,9 @@ function ciloEvidenceFor(
 
 function directEvidenceFor(
   directBindings: OutcomeDirectGoBindingRow[]
-): OutcomeEvidenceRow["directGoBindings"] {
+): OutcomeEvidenceRow["directBindings"] {
   return directBindings.map((binding) => ({
-    goId:
+    outcomeId:
       binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
     code: binding.go_code_snapshot,
     name: binding.go_description_snapshot,
@@ -916,8 +918,8 @@ function toOutcomeEvidenceRow(
     ),
     course,
     cilo: ciloEvidenceFor(cilo, course),
-    goMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
-    directGoBindings: directEvidenceFor(directBindings),
+    outcomeMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
+    directBindings: directEvidenceFor(directBindings),
     evaluationId,
     deploymentName,
   };
@@ -1375,7 +1377,7 @@ export async function getProgramHeadOutcomes(
     .filter((row): row is OutcomeEvidenceRow => row !== null);
 
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
-  const outcomes = buildProgramHeadOutcomeDtos(aggregation).map((outcome) => ({
+  const outcomes = buildOutcomeEvidenceDtos(aggregation).map((outcome) => ({
     ...outcome,
     evidenceSummary: {
       ...outcome.evidenceSummary,

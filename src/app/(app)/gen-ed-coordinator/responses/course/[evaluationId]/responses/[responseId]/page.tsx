@@ -6,8 +6,8 @@ import {
   generalEducationResponsesQuery,
   parseGeneralEducationResponsesSearchParams,
 } from "@/features/response-review/services/general-education-responses-state";
+import { buildGeneralEducationAnalyticsUrl } from "@/features/analytics/services/general-education-analytics-state";
 import {
-  GEN_ED_ANALYTICS_PATH,
   buildGenEdResponsesCourseEvaluationPath,
   buildGenEdResponsesPath,
 } from "@/lib/constants/gen-ed-routes";
@@ -45,19 +45,27 @@ export default async function GenEdCourseResponseDetailPage({
     : buildGenEdResponsesPath();
   const evaluationPath = buildGenEdResponsesCourseEvaluationPath(evaluationId);
   const evaluationHref = upwardQuery ? `${evaluationPath}?${upwardQuery}` : evaluationPath;
-  const analyticsHref = upwardQuery
-    ? `${GEN_ED_ANALYTICS_PATH}?${upwardQuery}`
-    : GEN_ED_ANALYTICS_PATH;
+  // Analytics links keep the response's own academic period so an answer badge
+  // and the page-level trace resolve to the same scope the evidence came from.
+  const analyticsHref = buildGeneralEducationAnalyticsUrl({
+    termInstanceId: response.evaluation.context.termInstanceId,
+  });
 
   return (
     <ResponseDetail
       response={response}
       evaluationHref={evaluationHref}
       analyticsHref={analyticsHref}
-      // General Education CILOs align to Institutional Outcomes, so there is no
-      // Program-scoped GO target to deep-link; the badge traces back to the
-      // college-wide Analytics period instead.
-      outcomeHref={() => analyticsHref}
+      // A General Education answer reaches Institutional Learning Outcomes, so
+      // each alignment deep-links into that ILO's row in the Coordinator's
+      // Outcomes view for this response's term.
+      outcomeHref={(iloId) =>
+        buildGeneralEducationAnalyticsUrl({
+          tab: "outcomes",
+          iloId,
+          termInstanceId: response.evaluation.context.termInstanceId,
+        })
+      }
       breadcrumbs={
         <Breadcrumbs
           className="text-body-sm"

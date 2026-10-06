@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AiModelTransport,
   AiModelTransportResult,
-} from "@/features/analytics/services/generate-program-head-analytics-insight";
+} from "@/features/analytics/services/ai-insight-runtime";
 import {
   AI_EVIDENCE_END,
   AI_EVIDENCE_START,
@@ -80,7 +80,7 @@ const outcomesDTO = () => ({
   manyToManyDisclosure: false,
   outcomes: [
     {
-      goId: "go-1",
+      outcomeId: "outcome-1",
       code: "GO-1",
       name: "Effective communicator",
       meanRating: 4.25,
@@ -93,6 +93,7 @@ const outcomesDTO = () => ({
       distributions: [
         {
           scaleLabel: "1–5 (5-point)",
+          maxValue: 5,
           categories: [
             { value: 4, label: null, count: 6, percentage: 0.75 },
             { value: 5, label: null, count: 2, percentage: 0.25 },

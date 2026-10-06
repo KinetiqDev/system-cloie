@@ -175,7 +175,7 @@ describe("selected Program insights routes", () => {
       ...bsedOutcomes,
       outcomes: [
         {
-          goId: "11111111-1111-4111-8111-111111111111",
+          outcomeId: "11111111-1111-4111-8111-111111111111",
           code: "GO 2",
           name: "Graduate attribute",
           meanRating: 4.2,
@@ -201,10 +201,6 @@ describe("selected Program insights routes", () => {
     render(page);
 
     expect(outcomesMock).toHaveBeenCalledWith("program-bsed", { tab: "outcomes" });
-    // Deterministic evidence renders without waiting on the AI insight. The chart
-    // itself loads dynamically, so its title resolves asynchronously.
-    expect(await screen.findByText("Mean Rating by Graduate Outcome")).toBeInTheDocument();
-    expect(screen.getByText("Exact values by Graduate Outcome")).toBeInTheDocument();
     // The default view owns one inline evidence-bound insight requested for its view.
     expect(generateInsightActionMock).toHaveBeenCalledWith({
       programId: "program-bsed",
@@ -326,7 +322,7 @@ describe("selected Program insights routes", () => {
       manyToManyDisclosure: false,
       outcomes: [
         {
-          goId: "11111111-1111-4111-8111-111111111111",
+          outcomeId: "11111111-1111-4111-8111-111111111111",
           code: "GO 2",
           name: "Graduate attribute",
           meanRating: 4.2,

@@ -15,7 +15,14 @@ import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { HowCalculatedPopover } from "@/features/analytics/components/how-calculated-popover";
 import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
-import type { MetricEvidenceSummary, QuestionMetric } from "@/features/analytics/aggregators/types";
+import type {
+  CiloGoMapping,
+  MetricEvidenceSummary,
+  QuestionMetric,
+} from "@/features/analytics/aggregators/types";
+import type { CiloIloMapping } from "@/features/response-review/services/cilo-mappings";
+import { OutcomeEvidenceDetail } from "@/features/analytics/components/outcome-evidence-detail";
+import { formatOutcomeAlignment } from "./response-review-labels";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import { formatDate } from "@/lib/utils/date-format";
@@ -47,6 +54,9 @@ export function CourseEvaluationDetail({
     summary,
     participation,
     ciloResults,
+    alignmentLayer,
+    iloMappingsByCilo,
+    iloResults,
     questionResults,
     qualitative,
     respondents,
@@ -134,7 +144,9 @@ export function CourseEvaluationDetail({
               <TableRow>
                 <TableHead>CILO</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>GO mappings</TableHead>
+                <TableHead>
+                  {alignmentLayer === "INSTITUTIONAL_OUTCOME" ? "ILO alignments" : "GO mappings"}
+                </TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
                 <TableHead className="text-right">Mean</TableHead>
@@ -154,7 +166,11 @@ export function CourseEvaluationDetail({
                     <TableCell className="break-words whitespace-normal">
                       {cilo.description}
                     </TableCell>
-                    <TableCell className="whitespace-normal">{mappingLabels(cilo)}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      {alignmentLayer === "INSTITUTIONAL_OUTCOME"
+                        ? iloAlignmentLabels(iloMappingsByCilo[cilo.ciloId])
+                        : goMappingLabels(cilo)}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {cilo.quantitative?.ratingCount ?? 0}
                     </TableCell>
@@ -177,6 +193,32 @@ export function CourseEvaluationDetail({
           </Table>
         </CardContent>
       </Card>
+
+      {/* ILO evidence (ADR 0035): grouped through the Course's current CILO
+          alignments, so a later mapping edit reinterprets this history. The
+          mean is evidence, never attainment — no institutional target exists. */}
+      {alignmentLayer === "INSTITUTIONAL_OUTCOME" && iloResults.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Institutional Learning Outcome evidence</CardTitle>
+            <CardDescription>
+              Submitted ratings grouped through this Course&apos;s current CILO alignments.
+              Manifestation is descriptive and never filters or weights a mean.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-6">
+            {iloResults.map((outcome) => (
+              <div key={outcome.outcomeId} className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <h3 className="text-title-sm font-semibold">{outcome.code}</h3>
+                  <p className="text-body-sm text-text-secondary">{outcome.name}</p>
+                </div>
+                <OutcomeEvidenceDetail outcome={outcome} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Question results (§25.2) */}
       <Card>
@@ -364,16 +406,36 @@ function SummaryStat({
   );
 }
 
-function mappingLabels(cilo: {
-  mappings: Array<{ goCode: string; manifestation: string | null }>;
-}): string {
+function goMappingLabels(cilo: { mappings: CiloGoMapping[] }): string {
   return cilo.mappings.length === 0
     ? "—"
     : cilo.mappings
         .map((mapping) =>
-          mapping.manifestation ? `${mapping.goCode} (${mapping.manifestation})` : mapping.goCode
+          formatOutcomeAlignment({
+            outcomeId: mapping.goId,
+            outcomeCode: mapping.goCode,
+            manifestation: mapping.manifestation,
+          })
         )
         .join(", ");
+}
+
+/**
+ * ILO alignments for one CILO. Manifestation is descriptive only, so a
+ * mapping with no classification is shown as such rather than dropped — the
+ * alignment itself is still evidence.
+ */
+function iloAlignmentLabels(alignments: CiloIloMapping[] | undefined): string {
+  if (!alignments || alignments.length === 0) return "—";
+  return alignments
+    .map((alignment) =>
+      formatOutcomeAlignment({
+        outcomeId: alignment.iloId,
+        outcomeCode: alignment.iloCode,
+        manifestation: alignment.manifestation,
+      })
+    )
+    .join(", ");
 }
 
 function DistributionCounts({

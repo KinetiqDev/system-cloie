@@ -306,8 +306,13 @@ describe("getProgramHeadResponseDetail", () => {
       expect(quant.binding.type).toBe("CILO");
       if (quant.binding.type === "CILO") {
         expect(quant.binding.ciloLabel).toBe("CILO 1");
-        expect(quant.binding.goMappings).toHaveLength(1);
-        expect(quant.binding.goMappings[0].goCode).toBe("GO-1");
+        expect(quant.binding.layer).toBe("GRADUATE_OUTCOME");
+        expect(
+          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.goMappings : []
+        ).toHaveLength(1);
+        expect(
+          quant.binding.layer === "GRADUATE_OUTCOME" ? quant.binding.goMappings[0].goCode : null
+        ).toBe("GO-1");
       }
     }
     // Qualitative answer

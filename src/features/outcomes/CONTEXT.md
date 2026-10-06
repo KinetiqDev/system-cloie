@@ -22,7 +22,7 @@ A course-level learning outcome that belongs to a Course and is stable across as
 _Avoid_: Assignment-specific CILO, faculty-owned CILO
 
 **Manifestation**:
-The way a CILO contributes to a GO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight, feed no attainment calculation, and never filter analytics contributions: ratings flow to every mapped GO regardless of manifestation.
+The way a CILO contributes to a GO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight, feed no attainment calculation, and never filter analytics contributions: ratings flow to every mapped GO or ILO regardless of manifestation.
 _Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping, manifestation-filtered evidence
 
 **General Education Course**:
@@ -119,7 +119,7 @@ College-wide, read-only, period-scoped, privacy-safe visibility into the Institu
 _Avoid_: Dean outcome editing, GO-only gap labels, roster or response data in oversight
 
 **ILO-to-GO crosswalk**:
-An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Graduate Outcomes; no reporting or attainment semantics exist for it yet.
+An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Graduate Outcomes; no reporting or attainment semantics exist for it yet. General Education ILO evidence (ADR 0035) groups ratings through CILO-to-ILO mappings only and never propagates to GOs.
 _Avoid_: ILO-to-GO mapping, automatic crosswalk, attainment rollup
 
 ## Institutional Learning Outcome catalog ownership (resolved, ADR 0018, issue #490)

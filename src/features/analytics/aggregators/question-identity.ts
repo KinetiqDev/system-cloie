@@ -28,9 +28,9 @@ export function encodeContributionKey(
   evaluationId: string,
   sectionKey: string,
   itemKey: string,
-  goId: string
+  outcomeId: string
 ): string {
-  return JSON.stringify([responseId, evaluationId, sectionKey, itemKey, goId]);
+  return JSON.stringify([responseId, evaluationId, sectionKey, itemKey, outcomeId]);
 }
 
 /** Direct-question contributor identity as a structural tuple. */

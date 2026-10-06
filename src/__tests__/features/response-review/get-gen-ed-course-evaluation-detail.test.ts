@@ -8,14 +8,16 @@ const {
   courseBoundEvaluationFindFirstMock,
   evaluationAssignmentFindManyMock,
   responseFindManyMock,
-  ciloMappingFindManyMock,
+  iloMappingFindManyMock,
+  goMappingFindManyMock,
   studentEnrollmentFindManyMock,
   resolveAuthSessionMock,
 } = vi.hoisted(() => ({
   courseBoundEvaluationFindFirstMock: vi.fn(),
   evaluationAssignmentFindManyMock: vi.fn(),
   responseFindManyMock: vi.fn(),
-  ciloMappingFindManyMock: vi.fn(),
+  iloMappingFindManyMock: vi.fn(),
+  goMappingFindManyMock: vi.fn(),
   studentEnrollmentFindManyMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
 }));
@@ -25,7 +27,8 @@ vi.mock("@/lib/db/prisma", () => ({
     courseBoundEvaluation: { findFirst: courseBoundEvaluationFindFirstMock },
     evaluationAssignment: { findMany: evaluationAssignmentFindManyMock },
     response: { findMany: responseFindManyMock },
-    cILOMapping: { findMany: ciloMappingFindManyMock },
+    cILOInstitutionalOutcomeMapping: { findMany: iloMappingFindManyMock },
+    cILOMapping: { findMany: goMappingFindManyMock },
     studentEnrollment: { findMany: studentEnrollmentFindManyMock },
   },
 }));
@@ -107,7 +110,7 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
       roles: [ROLES.GEN_ED_COORDINATOR],
       userId: "coordinator-1",
     });
-    ciloMappingFindManyMock.mockResolvedValue([]);
+    iloMappingFindManyMock.mockResolvedValue([]);
   });
 
   it("denies a Program Head even when the evaluation is General Education", async () => {
@@ -189,6 +192,71 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
     expect(detail!.summary.eligibleCount).toBe(2);
     expect(detail!.evaluation.courseCode).toBe("GEETHICS");
     expect(detail!.evaluation.periodLabel).toBe("2025-2026 — 2nd Semester — 1st Term");
+  });
+
+  it("projects ILO alignments, never GO mappings, on a General Education evaluation", async () => {
+    courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([
+      seedSubmittedResponse("student-p", "Patricia Luna"),
+      seedSubmittedResponse("student-l", "Ana Reyes"),
+    ]);
+    iloMappingFindManyMock.mockResolvedValue([
+      {
+        cilo_id: "cilo-ge-1",
+        manifestation: "LEARNING",
+        institutional_outcome: { id: "ilo-1", code: "ILO1", description: "Think critically" },
+      },
+    ]);
+
+    const detail = await getGenEdCourseEvaluationDetail("eval-ge");
+
+    expect(detail!.alignmentLayer).toBe("INSTITUTIONAL_OUTCOME");
+    expect(detail!.iloMappingsByCilo["cilo-ge-1"]).toEqual([
+      {
+        iloId: "ilo-1",
+        iloCode: "ILO1",
+        iloDescription: "Think critically",
+        manifestation: "LEARNING",
+      },
+    ]);
+    // A General Education evaluation must never read the Program-specific
+    // CILO→GO mapping table, and its CILO metrics carry no GO rows.
+    expect(goMappingFindManyMock).not.toHaveBeenCalled();
+    expect(detail!.ciloResults[0].mappings).toEqual([]);
+  });
+
+  it("aggregates ILO evidence for this evaluation from the same valid ratings", async () => {
+    courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
+    evaluationAssignmentFindManyMock.mockResolvedValue([]);
+    responseFindManyMock.mockResolvedValue([
+      seedSubmittedResponse("student-p", "Patricia Luna"),
+      seedSubmittedResponse("student-l", "Ana Reyes"),
+    ]);
+    iloMappingFindManyMock.mockResolvedValue([
+      {
+        cilo_id: "cilo-ge-1",
+        manifestation: "LEARNING",
+        institutional_outcome: { id: "ilo-1", code: "ILO1", description: "Think critically" },
+      },
+    ]);
+
+    const detail = await getGenEdCourseEvaluationDetail("eval-ge");
+
+    // Two responses rated 4 on the bound question; the CILO path is the only
+    // route to an ILO, so the row carries both contributions at mean 4.
+    expect(detail!.iloResults).toHaveLength(1);
+    expect(detail!.iloResults[0]).toMatchObject({
+      outcomeId: "ilo-1",
+      code: "ILO1",
+      meanRating: 4,
+      ratingCount: 2,
+      submittedResponseCount: 2,
+    });
+    expect(detail!.iloResults[0].contributors[0]).toMatchObject({
+      kind: "CILO",
+      manifestation: "LEARNING",
+    });
   });
 
   it("never fetches in-progress response bodies", async () => {

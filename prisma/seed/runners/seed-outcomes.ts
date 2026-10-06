@@ -95,7 +95,7 @@ export async function seedOutcomes({
   const geCreatorByDescription = new Map<string, string>(
     ciloDefsGeneralEducation.map((cd) => [cd.desc, cd.createdBy])
   );
-  const geCilos = ciloMap.get("GESTECH") ?? [];
+  const geCilos = ["GESTECH", "GEETHICS"].flatMap((courseCode) => ciloMap.get(courseCode) ?? []);
   for (const cilo of geCilos) {
     const ilo = iloMap.get(`ILO${Math.min(cilo.order, 5)}`)!;
     const manifestation =

@@ -64,7 +64,8 @@ function EvidenceCardsSkeleton() {
   );
 }
 
-export function ProgramHeadResponsesContentFallback() {
+/** Scoped evidence skeleton shown while the filtered list reloads in place. */
+export function ResponsesContentFallback() {
   const label = "Loading evaluation evidence";
   return (
     <Card
@@ -87,7 +88,12 @@ export function ProgramHeadResponsesContentFallback() {
   );
 }
 
-export function ProgramHeadResponsesRouteFallback() {
+/**
+ * Cold-route skeleton for a review workspace: header, optional view tabs, the
+ * filter card, and the evidence region. `showViewTabs` is false for the
+ * Coordinator, who has a single Course-bound view and therefore no tab strip.
+ */
+export function ResponsesRouteFallback({ showViewTabs = true }: { showViewTabs?: boolean }) {
   return (
     <div
       role="status"
@@ -101,10 +107,15 @@ export function ProgramHeadResponsesRouteFallback() {
         <Skeleton className="h-11 w-56" />
         <Skeleton className="h-4 w-full max-w-3xl" />
       </header>
-      <nav aria-label="Loading response views" className="border-border grid grid-cols-2 border-b">
-        <Skeleton className="h-11 w-36" />
-        <Skeleton className="h-11 w-36" />
-      </nav>
+      {showViewTabs ? (
+        <nav
+          aria-label="Loading response views"
+          className="border-border grid grid-cols-2 border-b"
+        >
+          <Skeleton className="h-11 w-36" />
+          <Skeleton className="h-11 w-36" />
+        </nav>
+      ) : null}
       <Card data-testid="responses-filter-skeleton">
         <CardHeader className="border-b">
           <div className="flex items-center gap-2">
@@ -123,7 +134,7 @@ export function ProgramHeadResponsesRouteFallback() {
           <Skeleton className="h-11 w-full lg:hidden" />
         </CardContent>
       </Card>
-      <ProgramHeadResponsesContentFallback />
+      <ResponsesContentFallback />
     </div>
   );
 }

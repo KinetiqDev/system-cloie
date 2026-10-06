@@ -4,7 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { formatMean } from "./format";
 import { LikertScaleReplay } from "@/features/responses/components/likert-scale-replay";
-import type { IdentifiedSubmittedResponseDetail, QuantitativeSubmittedAnswer } from "../types";
+import { formatOutcomeAlignment } from "./response-review-labels";
+import type {
+  IdentifiedSubmittedResponseDetail,
+  QuantitativeSubmittedAnswer,
+  SubmittedAnswerBinding,
+  SubmittedCiloAnswerBinding,
+} from "../types";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { formatDateTime } from "@/lib/utils/date-format";
 
@@ -15,12 +21,12 @@ type ResponseDetailProps = {
   /** Link to the Analytics tab for upward trace (§27.6). */
   analyticsHref: string;
   /**
-   * Outcome deep links (§27.6 reverse trace). Program Heads pass their
-   * selected Program id so GO links resolve into their Analytics workspace; the
-   * Coordinator passes a General Education outcome resolver instead, so no
-   * Program-scoped href is ever built for college-wide evidence.
+   * Outcome deep links (§27.6 reverse trace). The id is whichever typed
+   * alignment the answer actually carries: a GO id for Program-specific and
+   * Central evidence, an ILO id for General Education. Each role resolves it
+   * against its own Analytics workspace, so no href crosses role scopes.
    */
-  outcomeHref: (goId: string, response: IdentifiedSubmittedResponseDetail) => string;
+  outcomeHref: (outcomeId: string, response: IdentifiedSubmittedResponseDetail) => string;
   /** Trail rendered directly below the page title (§12). */
   breadcrumbs?: ReactNode;
 };
@@ -111,6 +117,169 @@ export function ResponseDetail({
   );
 }
 
+const OUTCOME_LINK_CLASS = "hover:text-foreground font-medium underline underline-offset-2";
+const BINDING_BADGE_CLASS =
+  "h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal";
+const ALIGNMENT_ROW_CLASS = "text-text-muted ml-1 inline-flex flex-wrap items-center gap-1";
+
+function CiloLabel({ label }: { label: string }) {
+  return (
+    <span>
+      <span className="font-semibold">CILO:</span> {label}
+    </span>
+  );
+}
+
+/**
+ * Comma-separated outcome deep links, each resolving to the workspace that
+ * owns that outcome for the role reading this response. Renders nothing when
+ * the binding carries no alignment, so an unaligned CILO shows its label
+ * alone instead of a dangling arrow.
+ */
+function OutcomeLinks({
+  className,
+  lead,
+  entries,
+  outcomeHref,
+}: {
+  lead?: string;
+  className?: string;
+  entries: Array<{ key: string; label: ReactNode }>;
+  outcomeHref: (outcomeId: string) => string;
+}) {
+  if (entries.length === 0) return null;
+  return (
+    <span className={className}>
+      {lead ? <span>{lead}</span> : null}
+      {entries.map((entry, index) => (
+        <Fragment key={entry.key}>
+          {index > 0 ? ", " : null}
+          <span>
+            <Link href={outcomeHref(entry.key)} className={OUTCOME_LINK_CLASS}>
+              {entry.label}
+            </Link>
+          </span>
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+// General Education: the CILO reaches Institutional Learning Outcomes only, so
+// each alignment links into the Coordinator's own Analytics workspace for that
+// ILO in this response's period.
+function IloAlignmentBadge({
+  binding,
+  outcomeHref,
+}: {
+  binding: Extract<SubmittedCiloAnswerBinding, { layer: "INSTITUTIONAL_OUTCOME" }>;
+  outcomeHref: (outcomeId: string) => string;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={`border-info/30 bg-info-soft text-info ${BINDING_BADGE_CLASS}`}
+    >
+      <CiloLabel label={binding.ciloLabel} />
+      <OutcomeLinks
+        className={ALIGNMENT_ROW_CLASS}
+        entries={binding.iloMappings.map((mapping) => ({
+          key: mapping.iloId,
+          label: formatOutcomeAlignment({
+            outcomeId: mapping.iloId,
+            outcomeCode: mapping.iloCode,
+            manifestation: mapping.manifestation,
+          }),
+        }))}
+        outcomeHref={outcomeHref}
+      />
+    </Badge>
+  );
+}
+
+function CiloGoBadge({
+  binding,
+  outcomeHref,
+}: {
+  binding: Extract<SubmittedCiloAnswerBinding, { layer: "GRADUATE_OUTCOME" }>;
+  outcomeHref: (outcomeId: string) => string;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={`border-info/30 bg-info-soft text-info ${BINDING_BADGE_CLASS}`}
+    >
+      <CiloLabel label={binding.ciloLabel} />
+      <OutcomeLinks
+        className={ALIGNMENT_ROW_CLASS}
+        entries={binding.goMappings.map((mapping) => ({
+          key: mapping.goId,
+          label: mapping.goCode,
+        }))}
+        outcomeHref={outcomeHref}
+      />
+      <OutcomeLinks
+        className={ALIGNMENT_ROW_CLASS}
+        entries={binding.directGoBindings.map((go) => ({ key: go.key, label: go.code }))}
+        outcomeHref={outcomeHref}
+      />
+    </Badge>
+  );
+}
+
+function GoBadge({
+  goBindings,
+  outcomeHref,
+}: {
+  goBindings: Extract<SubmittedAnswerBinding, { type: "GO" }>["goBindings"];
+  outcomeHref: (outcomeId: string) => string;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={`border-success/30 bg-success-soft text-success ${BINDING_BADGE_CLASS}`}
+    >
+      <span>
+        <span className="font-semibold">GO:</span>{" "}
+        <OutcomeLinks
+          className="inline-flex flex-wrap items-center gap-1"
+          entries={goBindings.map((go) => ({ key: go.key, label: go.code }))}
+          outcomeHref={outcomeHref}
+        />
+      </span>
+    </Badge>
+  );
+}
+
+/**
+ * Which alignment badge an answer carries. `binding.type`/`binding.layer`
+ * discriminate the typed layer rather than inferring it from wording, so a
+ * General Education answer can never render a GO link.
+ */
+function AnswerBindingBadges({
+  binding,
+  outcomeHref,
+}: {
+  binding: SubmittedAnswerBinding;
+  outcomeHref: (outcomeId: string) => string;
+}) {
+  if (binding.type === "GENERAL") {
+    return (
+      <Badge variant="outline" className="border-border text-muted-foreground">
+        General evaluation item
+      </Badge>
+    );
+  }
+  if (binding.type === "GO") {
+    return <GoBadge goBindings={binding.goBindings} outcomeHref={outcomeHref} />;
+  }
+  return binding.layer === "INSTITUTIONAL_OUTCOME" ? (
+    <IloAlignmentBadge binding={binding} outcomeHref={outcomeHref} />
+  ) : (
+    <CiloGoBadge binding={binding} outcomeHref={outcomeHref} />
+  );
+}
+
 function QuantitativeAnswerCard({
   item,
   outcomeHref,
@@ -118,7 +287,6 @@ function QuantitativeAnswerCard({
   item: QuantitativeSubmittedAnswer;
   outcomeHref: (goId: string) => string;
 }) {
-  const { binding } = item;
   return (
     <div className="border-border/70 flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">
       <p className="text-body-md font-semibold text-pretty">{item.prompt}</p>
@@ -128,78 +296,7 @@ function QuantitativeAnswerCard({
         descriptorLabels={item.descriptorLabels}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        {binding.type === "CILO" && (
-          <Badge
-            variant="outline"
-            className="border-info/30 bg-info-soft text-info h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
-          >
-            <span>
-              <span className="font-semibold">CILO:</span> {binding.ciloLabel}
-            </span>
-            {binding.goMappings.length > 0 && (
-              <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
-                <span>→</span>
-                {binding.goMappings.map((m, index) => (
-                  <Fragment key={m.goId}>
-                    {index > 0 ? ", " : null}
-                    <span>
-                      <Link
-                        href={outcomeHref(m.goId)}
-                        className="hover:text-foreground font-medium underline underline-offset-2"
-                      >
-                        {m.goCode}
-                      </Link>
-                    </span>
-                  </Fragment>
-                ))}
-              </span>
-            )}
-            {binding.directGoBindings.length > 0 && (
-              <span className="text-text-muted ml-1 inline-flex flex-wrap items-center gap-1">
-                <span>· Direct GO:</span>
-                {binding.directGoBindings.map((go, index) => (
-                  <Fragment key={go.key}>
-                    {index > 0 ? ", " : null}
-                    <Link
-                      href={outcomeHref(go.key)}
-                      className="hover:text-foreground font-medium underline underline-offset-2"
-                    >
-                      {go.code}
-                    </Link>
-                  </Fragment>
-                ))}
-              </span>
-            )}
-          </Badge>
-        )}
-        {binding.type === "GO" && (
-          <Badge
-            variant="outline"
-            className="border-success/30 bg-success-soft text-success h-auto max-w-full justify-start py-1 text-left text-xs leading-relaxed break-words whitespace-normal"
-          >
-            <span>
-              <span className="font-semibold">GO:</span>{" "}
-              {binding.goBindings.map((p, index) => (
-                <Fragment key={p.key}>
-                  {index > 0 ? ", " : null}
-                  <span>
-                    <Link
-                      href={outcomeHref(p.key)}
-                      className="hover:text-foreground font-medium underline underline-offset-2"
-                    >
-                      {p.code}
-                    </Link>
-                  </span>
-                </Fragment>
-              ))}
-            </span>
-          </Badge>
-        )}
-        {binding.type === "GENERAL" && (
-          <Badge variant="outline" className="border-border text-muted-foreground">
-            General evaluation item
-          </Badge>
-        )}
+        <AnswerBindingBadges binding={item.binding} outcomeHref={outcomeHref} />
       </div>
     </div>
   );

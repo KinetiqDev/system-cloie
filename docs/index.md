@@ -19,7 +19,7 @@ Supporting modules without contracts: `src/features/portals/` (entry UI) and `sr
 
 ## Durable Decisions
 
-[docs/adr/](adr/) — decision records numbered 0001–0034 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 is superseded by 0021; 0017 is superseded by 0030; the 0006 Enrollments scope is removed by 0024-remove-dean-enrollment-oversight). Read before any architecture change; index table in [architecture/overview.md](architecture/overview.md).
+[docs/adr/](adr/) contains decision records numbered 0001–0035 (number 0001 exists twice; 0001 single-role is superseded by 0022; 0013 by 0021; 0017 by 0030; the 0006 Enrollments scope is removed by 0024). Read before architecture changes. The index in [architecture/overview.md](architecture/overview.md) includes [General Education ILO evidence](adr/0035-general-education-ilo-evidence.md).
 
 ## Product
 

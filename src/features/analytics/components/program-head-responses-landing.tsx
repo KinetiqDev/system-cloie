@@ -25,7 +25,7 @@ import {
   formatResponseStatus,
   formatResponseYearLevel,
   responseStatusVariant,
-} from "@/features/analytics/program-head-responses-labels";
+} from "@/features/response-review/components/response-review-labels";
 import type { ResponseDeploymentList } from "@/features/analytics/services/list-program-head-response-deployments";
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
 import {
@@ -40,7 +40,7 @@ import {
 import { ViewTabs } from "@/components/layout/view-tabs";
 import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
-import { ProgramHeadResponsesWorkspace } from "./program-head-responses-workspace";
+import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
 
 type Deployment = ResponseDeploymentList["items"][number];
 
@@ -96,14 +96,14 @@ export function ProgramHeadResponsesLanding({
         ]}
       />
 
-      <ProgramHeadResponsesWorkspace
-        tab={state.tab}
+      <ResponsesWorkspace
+        sectionLabel={`${state.tab === "course" ? "Course evaluations" : "Program-wide"} evidence`}
         filters={
           <ProgramHeadResponsesFilters programId={programId} state={state} options={data.options} />
         }
       >
         <EvaluationEvidence programId={programId} state={state} data={data} isCourse={isCourse} />
-      </ProgramHeadResponsesWorkspace>
+      </ResponsesWorkspace>
     </div>
   );
 }

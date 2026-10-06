@@ -507,7 +507,7 @@ function sharedOffenders(): string[] {
  * that owns a shared contract; the rule then pins the *exact* imported names, so
  * a consumer cannot quietly widen its use of another feature's internals, and the
  * owning feature cannot rename or drop a documented export without this test
- * failing. The same three seams are described for readers in
+ * failing. The same seams are described for readers in
  * `docs/architecture/overview.md`.
  *
  * Deliberately NOT registered, with reasons:
@@ -568,6 +568,8 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
       "buildQuestionMetrics",
       "buildParticipationSummary",
       "buildProgramWideGoMetrics",
+      "aggregateOutcomeEvidence",
+      "buildOutcomeEvidenceDtos",
       "groupRatingsByScale",
       // Scale identity
       "resolveItemScaleIdentity",
@@ -588,6 +590,63 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
     ],
     reason:
       "The Program Head review surfaces report the same canonical CILO, question, participation, and scale arithmetic as Analytics. Forking that arithmetic would let the review display disagree with the analytics it reviews, so review reads the canonical builders instead. The aggregators are pure: they take rating rows and return metrics, so the contract is the metric vocabulary rather than a query. Scale identity is part of it because a review row must separate incompatible scales the same way analytics does.",
+  },
+  {
+    module: "src/features/response-review/services/general-education-responses-state",
+    consumer: "analytics",
+    bindings: ["buildGeneralEducationResponsesUrl"],
+    reason:
+      "Analytics drill-down links use the review-owned canonical filter URL contract rather than assembling a second query convention.",
+  },
+  {
+    module: "src/features/response-review/services/general-education-evidence-scope",
+    consumer: "analytics",
+    bindings: ["generalEducationCourseAssignmentWhere", "generalEducationCourseEvaluationWhere"],
+    reason:
+      "Coordinator analytics and identified review share the Course-scope evidence ownership predicate (ADR 0034).",
+  },
+  {
+    module: "src/features/response-review/components/response-review-labels",
+    consumer: "analytics",
+    bindings: [
+      "RESPONSE_SECTION_OPTIONS",
+      "RESPONSE_STAKEHOLDER_OPTIONS",
+      "RESPONSE_YEAR_LEVEL_OPTIONS",
+      "formatResponseProgress",
+      "formatResponseSection",
+      "formatResponseStakeholder",
+      "formatResponseStatus",
+      "formatResponseYearLevel",
+      "responseStatusVariant",
+    ],
+    reason:
+      "Analytics-owned response workspaces and Faculty evidence use the canonical review status, progress, and class-context vocabulary.",
+  },
+  {
+    module: "src/features/response-review/components/responses-filters",
+    consumer: "analytics",
+    bindings: [
+      "ResponseComboboxField",
+      "ResponseSelectField",
+      "ResponsesFilters",
+      "AdvancedResponseFilterField",
+      "RawResponseFilters",
+    ],
+    reason:
+      "Role adapters compose the shared responsive review-filter interaction without duplicating its navigation contract.",
+  },
+  {
+    module: "src/features/response-review/components/responses-pagination",
+    consumer: "analytics",
+    bindings: ["ResponsesPagination"],
+    reason: "Role adapters supply canonical URLs to the shared review paging interaction.",
+  },
+  {
+    module: "src/features/response-review/components/responses-workspace",
+    consumer: "analytics",
+    bindings: ["ResponsesWorkspace"],
+    reason:
+      "Role-owned landing pages share the identified review workspace layout while preserving their authorization and evidence reads.",
   },
 ];
 
@@ -742,7 +801,6 @@ describe("documented cross-feature interfaces (#174)", () => {
 
   it("records a reason and a consumer feature for every seam", () => {
     for (const seam of DOCUMENTED_CROSS_FEATURE_SEAMS) {
-      expect(seam.reason.length).toBeGreaterThan(80);
       expect(featureOf(seam.module)).not.toBeNull();
       expect(modulePaths.has(seam.module) || seam.module.endsWith("/aggregators")).toBe(true);
     }

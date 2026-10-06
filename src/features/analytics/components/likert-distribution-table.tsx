@@ -1,4 +1,4 @@
-import type { ProgramHeadOutcomeScaleDistributionDTO } from "@/features/analytics/program-head-analytics-types";
+import type { OutcomeScaleDistributionDTO } from "@/features/analytics/outcome-evidence-types";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
   Table,
@@ -14,10 +14,10 @@ import {
  * Category values and labels come from the frozen structure snapshot; scales
  * are never merged, so each incompatible scale renders as its own table.
  */
-export function ProgramHeadLikertDistribution({
+export function LikertDistributionTable({
   distribution,
 }: {
-  distribution: ProgramHeadOutcomeScaleDistributionDTO;
+  distribution: OutcomeScaleDistributionDTO;
 }) {
   const total = distribution.categories.reduce((sum, category) => sum + category.count, 0);
 

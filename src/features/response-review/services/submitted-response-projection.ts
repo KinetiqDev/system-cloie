@@ -5,8 +5,13 @@ import {
   getSnapshotSectionItems,
   isSnapshotSection,
 } from "@/features/analytics/services/snapshot-structure";
+import type { CiloIloMapping } from "./cilo-mappings";
 import type { RespondentIdentityContext } from "./respondent-context";
-import type { IdentifiedSubmittedResponseDetail, SubmittedAnswerBinding } from "../types";
+import type {
+  IdentifiedSubmittedResponseDetail,
+  ReviewAlignmentLayer,
+  SubmittedAnswerBinding,
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Submitted-response body projection shared by every identified review owner
@@ -15,7 +20,8 @@ import type { IdentifiedSubmittedResponseDetail, SubmittedAnswerBinding } from "
 // Authorization and scope are decided by each caller before these pure
 // projections run: only SUBMITTED response rows ever reach them. A Program-wide
 // response passes empty `ciloBindings`, which yields direct GO bindings or
-// GENERAL items instead of a CILO binding.
+// GENERAL items instead of a CILO binding. The alignment layer is supplied by
+// the caller from Course scope, never inferred from the loaded rows.
 // ---------------------------------------------------------------------------
 
 export type CourseBoundCiloBinding = {
@@ -38,12 +44,22 @@ type SubmittedResponseBindingScope = {
   snapshot: unknown;
   ciloBindings: CourseBoundCiloBinding[];
   goSnapshots: GoQuestionBindingSnapshot[];
+  /**
+   * Typed alignment layer for the owning Course (ADR 0035). It is decided
+   * by Course scope before the projection runs, so a General Education answer
+   * can never receive GO rows and a Program-specific answer can never
+   * receive ILO rows, whatever the caller happened to load.
+   */
+  layer: ReviewAlignmentLayer;
 };
 
 function resolveSubmittedAnswerBinding(
   scope: SubmittedResponseBindingScope,
   entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
-  ciloMappings: Map<string, CiloGoMapping[]>
+  alignments: {
+    goMappings: Map<string, CiloGoMapping[]>;
+    iloMappings: Map<string, CiloIloMapping[]>;
+  }
 ): SubmittedAnswerBinding {
   const directBindings = scope.goSnapshots
     .filter(
@@ -70,15 +86,24 @@ function resolveSubmittedAnswerBinding(
       ? { type: "GO", goBindings: directBindings }
       : { type: "GENERAL" };
   }
+  if (scope.layer === "INSTITUTIONAL_OUTCOME") {
+    return {
+      type: "CILO",
+      layer: "INSTITUTIONAL_OUTCOME",
+      ciloId: binding.cilo_id,
+      ciloLabel: binding.cilo_description_snapshot,
+      iloMappings: alignments.iloMappings.get(binding.cilo_id ?? "") ?? [],
+    };
+  }
   return {
     type: "CILO",
+    layer: "GRADUATE_OUTCOME",
     ciloId: binding.cilo_id,
     ciloLabel: binding.cilo_description_snapshot,
-    goMappings: ciloMappings.get(binding.cilo_id ?? "") ?? [],
+    goMappings: alignments.goMappings.get(binding.cilo_id ?? "") ?? [],
     directGoBindings: directBindings,
   };
 }
-
 export function buildSubmittedResponseSections(
   response: {
     quant_items: Array<{
@@ -90,7 +115,10 @@ export function buildSubmittedResponseSections(
     qual_items: Array<{ section_key: string; prompt_key: string; text_content: string }>;
   },
   scope: SubmittedResponseBindingScope,
-  ciloMappings: Map<string, CiloGoMapping[]>
+  alignments: {
+    goMappings: Map<string, CiloGoMapping[]>;
+    iloMappings: Map<string, CiloIloMapping[]>;
+  }
 ): IdentifiedSubmittedResponseDetail["sections"] {
   return (Array.isArray(scope.snapshot) ? scope.snapshot : [])
     .filter(isSnapshotSection)
@@ -112,7 +140,7 @@ export function buildSubmittedResponseSections(
             rating: entry.rating_value,
             scale: scale?.descriptors.map((descriptor) => descriptor.value) ?? [],
             descriptorLabels: scale?.descriptors.map((descriptor) => descriptor.label) ?? [],
-            binding: resolveSubmittedAnswerBinding(scope, entry, ciloMappings),
+            binding: resolveSubmittedAnswerBinding(scope, entry, alignments),
           };
         }
         const entry = response.qual_items.find(

@@ -2,8 +2,12 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import type { FacultyAnalyticsData, WordCloudToken } from "@/features/analytics/types";
 import type {
-  GeneralEducationAnalyticsDTO,
+  GeneralEducationAnalyticsFrameDTO,
+  GeneralEducationCoursesDTO,
   GeneralEducationFeedbackDTO,
+  GeneralEducationOutcomesDTO,
+  GeneralEducationProgramsDTO,
+  GeneralEducationTrendsDTO,
 } from "@/features/analytics/general-education-analytics-types";
 import type {
   ProgramHeadFeedbackDTO,
@@ -13,7 +17,11 @@ import type {
   ProgramHeadStakeholdersDTO,
   ProgramHeadBreakdownsDTO,
 } from "@/features/analytics/program-head-analytics-types";
-import type { IdentifiedSubmittedResponseDetail } from "@/features/response-review/types";
+import type {
+  IdentifiedCourseEvaluationDetail,
+  IdentifiedSubmittedResponseDetail,
+  SubmittedCiloAnswerBinding,
+} from "@/features/response-review/types";
 
 // §31/§36/§40 cross-role response privacy: identified Program Head shapes are
 // pinned separately from aggregate analytics payloads, and aggregate
@@ -75,12 +83,132 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
   });
 
   it("General Education coordinator analytics stays aggregate-only and college-wide", () => {
-    expectTypeOf<GeneralEducationAnalyticsDTO>().not.toHaveProperty("text_content");
-    expectTypeOf<GeneralEducationAnalyticsDTO>().not.toHaveProperty("respondent");
-    expectTypeOf<GeneralEducationAnalyticsDTO>().not.toHaveProperty("email");
+    expectTypeOf<GeneralEducationAnalyticsFrameDTO>().not.toHaveProperty("text_content");
+    expectTypeOf<GeneralEducationAnalyticsFrameDTO>().not.toHaveProperty("respondent");
+    expectTypeOf<GeneralEducationOutcomesDTO>().not.toHaveProperty("respondent");
+    expectTypeOf<GeneralEducationCoursesDTO>().not.toHaveProperty("respondent");
+    expectTypeOf<GeneralEducationCoursesDTO>().not.toHaveProperty("text_content");
+    expectTypeOf<GeneralEducationProgramsDTO>().not.toHaveProperty("email");
+    expectTypeOf<GeneralEducationTrendsDTO>().not.toHaveProperty("text_content");
     expectTypeOf<GeneralEducationFeedbackDTO>().toHaveProperty("tokens");
     expectTypeOf<GeneralEducationFeedbackDTO>().not.toHaveProperty("text_content");
     expectTypeOf<GeneralEducationFeedbackDTO>().not.toHaveProperty("respondent");
+
+    // A real Courses payload — the widest Coordinator DTO, since it carries
+    // class-context section detail — must serialize without respondent
+    // identity, raw ratings, or comment text.
+    const courses: GeneralEducationCoursesDTO = {
+      emptyReason: null,
+      rows: [
+        {
+          courseId: "course-1",
+          courseCode: "GEETHICS",
+          courseTitle: "Ethics",
+          sectionCount: 1,
+          programCount: 1,
+          evaluationOpportunityCount: 2,
+          submittedResponseCount: 1,
+          responseRate: 0.5,
+          meanRating: 4.3125,
+          ratingCount: 16,
+          excludedRatingCount: 0,
+          spansMultipleScales: false,
+          instrumentContext: "GE CILO Evaluation v1",
+          scaleGroups: [
+            {
+              scaleKey: "[[1,null],[2,null],[3,null],[4,null],[5,null]]",
+              scaleLabel: "1–5 (5-point)",
+              meanRating: 4.3125,
+              ratingCount: 16,
+              submittedResponseCount: 1,
+              distribution: {
+                scaleLabel: "1–5 (5-point)",
+                maxValue: 5,
+                categories: [{ value: 5, label: null, count: 16, percentage: 1 }],
+              },
+            },
+          ],
+          alignedIlos: [{ id: "ilo-1", code: "ILO 1" }],
+          previousComparable: {
+            periodLabel: "2025-2026 · 1st Semester · 1st Term",
+            meanRating: 4.1,
+            change: 0.21250000000000006,
+          },
+          evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "Ethics Post-Term" }],
+          sections: [
+            {
+              evaluationId: "eval-1",
+              programCode: "BSED",
+              yearLevel: "1st Year",
+              section: "Morning",
+              facultyName: "Prof. Dela Cruz",
+              submittedResponseCount: 1,
+              evaluationOpportunityCount: 2,
+              meanRating: 4.3125,
+            },
+          ],
+        },
+      ],
+    };
+
+    const serialized = JSON.stringify(courses);
+    expect(serialized).not.toContain("55555555");
+    expect(serialized).not.toContain("demo-student@cloie.test");
+    expect(serialized).not.toContain("responseId");
+    expect(serialized).not.toContain("rating_value");
+    // Faculty name is class context for the section that produced the evidence,
+    // never a ranking or a respondent.
+    expect(serialized).toContain("Prof. Dela Cruz");
+  });
+
+  it("a submitted CILO answer names its typed layer and can carry only that layer's data", () => {
+    // ADR 0035: the layer is the discriminator. A General Education answer
+    // reaches ILOs and holds no GO fields; a Program-specific answer reaches
+    // GOs and holds no ILO fields. One shape with both lists renamed would let
+    // ILO rows ride in a GO field, so the variants are structurally distinct.
+    expectTypeOf<SubmittedCiloAnswerBinding["layer"]>().toEqualTypeOf<
+      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME"
+    >();
+
+    const institutional: SubmittedCiloAnswerBinding = {
+      type: "CILO",
+      layer: "INSTITUTIONAL_OUTCOME",
+      ciloId: "cilo-1",
+      ciloLabel: "CILO 1",
+      iloMappings: [
+        { iloId: "ilo-1", iloCode: "ILO1", iloDescription: "Think", manifestation: "LEARNING" },
+      ],
+    };
+    expect(
+      institutional.layer === "INSTITUTIONAL_OUTCOME" ? institutional.iloMappings : []
+    ).toHaveLength(1);
+    // The GO field is absent on this variant at both compile and run time, so
+    // a General Education answer can never surface a Graduate Outcome row.
+    // @ts-expect-error ILO rows must not be readable through a GO field name.
+    expect(institutional.goMappings).toBeUndefined();
+
+    const graduate: SubmittedCiloAnswerBinding = {
+      type: "CILO",
+      layer: "GRADUATE_OUTCOME",
+      ciloId: "cilo-1",
+      ciloLabel: "CILO 1",
+      goMappings: [],
+      directGoBindings: [],
+    };
+    // @ts-expect-error GO rows must not be readable through an ILO field name.
+    expect(graduate.iloMappings).toBeUndefined();
+  });
+
+  it("a course evaluation detail declares which alignment layer its surfaces use", () => {
+    expectTypeOf<IdentifiedCourseEvaluationDetail["alignmentLayer"]>().toEqualTypeOf<
+      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME"
+    >();
+    // Identified review stays identified: the layer and ILO evidence rows add
+    // no respondent identity of their own and no raw answer text.
+    expectTypeOf<IdentifiedCourseEvaluationDetail["iloResults"]>().not.toHaveProperty(
+      "text_content"
+    );
+    expectTypeOf<IdentifiedCourseEvaluationDetail["iloResults"]>().not.toHaveProperty("respondent");
   });
 
   it("Faculty analytics stays aggregate-only and carries no response-level fields", () => {

@@ -1,17 +1,25 @@
-import { AcademicSemester, StudentSection, YearLevel } from "@prisma/client";
+import { AcademicSemester, DeploymentStatus, StudentSection, YearLevel } from "@prisma/client";
 import { z } from "zod";
 import { GEN_ED_RESPONSES_PATH } from "@/lib/constants/gen-ed-routes";
 
 // ---------------------------------------------------------------------------
-// Coordinator response-review filter state (ADR 0034)
+// Coordinator response-review filter state (ADR 0034, ADR 0035)
 //
-// Deliberately narrower than the Program Head state: there is no Program
-// context, no Central tab, and no stakeholder dimension, because the
-// Coordinator owns General Education Course-bound evidence only.
+// The Coordinator owns General Education Course-bound evidence only, so the
+// state carries no Program context, no Central tab, and no stakeholder
+// dimension. It does carry the Program Head review facets that apply to any
+// course evaluation — status and response progress — plus two class-context
+// facets: `programId` (the assignment's Program, never the respondent's) and
+// `iloId` (evaluations whose Course has an active CILO currently mapped to
+// that Institutional Learning Outcome).
 // ---------------------------------------------------------------------------
 
 const MAX_PAGE = 10_000;
 const MAX_QUERY_LENGTH = 100;
+
+const RESPONSE_COMPLETION_FILTERS = ["zero", "partial", "complete"] as const;
+/** Response progress against the evaluation's real assignment opportunities. */
+type ResponseCompletionFilter = (typeof RESPONSE_COMPLETION_FILTERS)[number];
 
 export type GeneralEducationResponsesFilterState = {
   page: number;
@@ -20,9 +28,15 @@ export type GeneralEducationResponsesFilterState = {
   schoolYearId?: string;
   semester?: AcademicSemester;
   courseId?: string;
+  /** Class-context Program (`CourseAssignment.program_id`). */
+  programId?: string;
   facultyId?: string;
   yearLevel?: YearLevel;
   section?: StudentSection;
+  /** Evaluations whose Course has an active CILO currently mapped to this ILO. */
+  iloId?: string;
+  status?: DeploymentStatus;
+  completion?: ResponseCompletionFilter;
 };
 
 type RawSearchParams = Record<string, string | string[] | undefined>;
@@ -44,9 +58,13 @@ const schema = z.object({
   schoolYearId: uuid.optional().catch(undefined),
   semester: z.nativeEnum(AcademicSemester).optional().catch(undefined),
   courseId: uuid.optional().catch(undefined),
+  programId: uuid.optional().catch(undefined),
   facultyId: uuid.optional().catch(undefined),
   yearLevel: z.nativeEnum(YearLevel).optional().catch(undefined),
   section: z.nativeEnum(StudentSection).optional().catch(undefined),
+  iloId: uuid.optional().catch(undefined),
+  status: z.nativeEnum(DeploymentStatus).optional().catch(undefined),
+  completion: z.enum(RESPONSE_COMPLETION_FILTERS).optional().catch(undefined),
 });
 
 export function parseGeneralEducationResponsesSearchParams(
@@ -59,9 +77,13 @@ export function parseGeneralEducationResponsesSearchParams(
     schoolYearId: first(raw.schoolYearId),
     semester: first(raw.semester),
     courseId: first(raw.courseId),
+    programId: first(raw.programId),
     facultyId: first(raw.facultyId),
     yearLevel: first(raw.yearLevel),
     section: first(raw.section),
+    iloId: first(raw.iloId),
+    status: first(raw.status),
+    completion: first(raw.completion),
   });
   return { ...parsed, q: parsed.q || undefined };
 }
@@ -73,9 +95,13 @@ const PARAM_KEYS = [
   "schoolYearId",
   "semester",
   "courseId",
+  "programId",
   "facultyId",
   "yearLevel",
   "section",
+  "iloId",
+  "status",
+  "completion",
 ] as const;
 
 /** Raw query preserved verbatim so unknown parameters survive upward navigation. */
@@ -101,9 +127,13 @@ export function generalEducationResponsesQuery(
     ["schoolYearId", state.schoolYearId],
     ["semester", state.semester],
     ["courseId", state.courseId],
+    ["programId", state.programId],
     ["facultyId", state.facultyId],
     ["yearLevel", state.yearLevel],
     ["section", state.section],
+    ["iloId", state.iloId],
+    ["status", state.status],
+    ["completion", state.completion],
   ] as const;
   for (const [key, value] of entries) {
     if (value) params.set(key, value);
@@ -112,8 +142,8 @@ export function generalEducationResponsesQuery(
 }
 
 export function buildGeneralEducationResponsesUrl(
-  state: GeneralEducationResponsesFilterState
+  state: Partial<GeneralEducationResponsesFilterState> = {}
 ): string {
-  const query = generalEducationResponsesQuery(state);
+  const query = generalEducationResponsesQuery({ page: 1, ...state });
   return query ? `${GEN_ED_RESPONSES_PATH}?${query}` : GEN_ED_RESPONSES_PATH;
 }

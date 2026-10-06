@@ -164,7 +164,7 @@ export async function getProgramHeadResponseDetail(
 
   const evaluation = projectEvaluation(response);
 
-  const [identityContexts, ciloMappings] = await Promise.all([
+  const [identityContexts, goMappings] = await Promise.all([
     loadRespondentIdentityContexts(
       [response.respondent.id],
       evaluation.stakeholder,
@@ -175,14 +175,17 @@ export async function getProgramHeadResponseDetail(
       : Promise.resolve(new Map<string, CiloGoMapping[]>()),
   ]);
 
+  // Program-specific and Central evidence reach Graduate Outcomes only, so
+  // the ILO map stays empty and the projection runs on the GO layer.
   const sections = buildSubmittedResponseSections(
     response,
     {
       snapshot: evaluation.snapshot,
       ciloBindings: evaluation.bindings,
       goSnapshots: evaluation.goSnapshots,
+      layer: "GRADUATE_OUTCOME",
     },
-    ciloMappings
+    { goMappings, iloMappings: new Map() }
   );
   const quantitativeMean = submittedResponseMean(sections, evaluation.snapshot);
 

@@ -62,16 +62,38 @@ _Avoid_: Central Deployment as General Education evidence, Program-specific evid
 Cross-Program read path gated by the active college-wide General Education Coordinator role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes Program-specific and Central evidence. Program Head analytics retain only Program-specific Course-bound and Program-scoped Central evidence; a respondent's Program membership never widens that scope.
 _Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-GO attainment rollup
 
-**Coordinator analytics boundaries (for issue #477 approval)**:
-The first release supports academic-period filtering, overview counts and means, Course breakdowns, comparable trends, and aggregate qualitative feedback. Means retain server precision; rating counts remain distinct from submitted response counts; rating categories derive from the instrument structure snapshot. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
-_Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests
+**Coordinator analytics workspace**:
+URL-filtered `outcomes`, `courses`, `programs`, `trends`, and `qualitative` views over Coordinator evidence, encoded by `general-education-analytics-state.ts` with `outcomes` as the default. Filters are period (`schoolYearId`, `semester`, `termInstanceId`), `courseId`, class-context `programId` (`CourseAssignment.program_id`), `yearLevel`, and `iloId` (selects and scrolls to one ILO row). Programs replaces the Program Head Stakeholders view because Central evidence is excluded. Each view resolves its own re-authorized read beside the shared frame read; the frame and the filter card stay mounted while only the evidence region shows tab-shaped loading geometry. Means retain server precision and are scale-validated against the frozen instrument snapshot; a scope whose valid ratings span more than one scale reports no single mean and keeps per-scale rows. Rating counts remain distinct from submitted response counts. Response-rate denominator is in-scope `EvaluationAssignment` opportunities; zero opportunities reports unavailable rather than `0%`. Payloads are aggregate-only and request-scoped: no raw comments, response rows, respondent IDs, account emails, roster data, or shared cache entry. Authorization is rechecked per request before querying private evidence.
+_Avoid_: Raw qualitative text in browser payload, shared cache across Coordinator requests, blended cross-scale course mean, Stakeholders view for General Education
+
+**General Education ILO evidence** (ADR 0035):
+Course-bound General Education quantitative evidence connected through a published evaluation's frozen CILO question binding and that CILO's current CILO-to-ILO mappings. Each submitted response item contributes once per `(response, evaluation, question, ILO)`; invalid or out-of-scale ratings are counted as excluded; the row mean pools valid ratings with `spansMultipleScales` disclosure and per-scale distributions, exactly like the Program Head Outcomes GO row. No direct question-to-ILO binding exists, so every contributor is a CILO. Manifestation is descriptive. Valid ratings that reach no ILO are reported as an unlinked count split into general items and CILOs without an ILO mapping. The current-mapping disclosure and the many-to-many disclosure apply, and archived ILOs keep their historical rows. ILO evidence is never labelled attainment.
+_Avoid_: ILO attainment, met/achieved ILO, ILO-to-GO rollup, silent drop of unlinked ratings, manifestation-weighted ILO mean
+
+**Coordinator qualitative floor**:
+Coordinator written-feedback analytics use the shared deterministic corpus (term prevalence, per-prompt structure, tone bands) and release only identifier-redacted terms mentioned more than once. Raw comments stay in the separately authorized identified review.
+_Avoid_: Singleton term in Coordinator browser payload
+
+**Coordinator inline AI insight**:
+Each Coordinator view mounts one automatic inline interpretation that rebuilds and re-authorizes the current view evidence server-side through `generateGeneralEducationAnalyticsInsightAction`. The packet carries the view's bounded aggregates plus every applicable disclosure as limitations, and the instruction forbids attainment language, Faculty ranking, and ILO-to-GO inference.
+_Avoid_: Client-supplied aggregates, AI attainment verdict, Faculty leaderboard
+
+| Coordinator AI cache dimension | Contract |
+| --- | --- |
+| Key | SHA-256 over prompt version, authorized Coordinator user ID, provider base URL, model, view, and the complete bounded aggregate evidence packet |
+| Scope | One Coordinator principal, one view, one exact aggregate evidence state |
+| Lifetime | Bounded to 128 validated entries in one application process; cleared on restart or deployment |
+| Tags | None; this is not a persistent Next.js Data Cache entry |
+| Invalidation triggers | Any packet change, filter change, prompt version, provider, or model |
+| Authorization boundary | Session and Coordinator role are re-authorized and evidence is rebuilt before every lookup |
+| Stale behavior | No stale result is served after evidence changes; concurrent identical requests share one provider call |
 
 **Coordinator identified review**:
 A separate, authorized response-review flow over General Education Course-bound evidence across Programs. Course breakdowns may link to this flow, but aggregate analytics payloads remain free of respondent identities, raw answers, and comments. The Course scope, not a selected Program or the publisher's role, determines ownership.
 _Avoid_: Identity fields in aggregate analytics, Coordinator Central review, publisher-owned evidence
 
-**Deferred**: ILO attainment, ILO-to-GO crosswalk, and Central Deployment General Education analytics are not part of this change. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide via the subsequent approved change `transfer-ilo-catalog-to-gen-ed-coordinator` (ADR 0018); that change — not this one — owns the `GEN_ED_COORDINATOR` ILO CRUD/reorder/archive/restore surface.
-_Avoid_: ILO analytics assumption, Coordinator ILO catalog editor in this change
+**Deferred**: ILO attainment (targets, thresholds, met/not met), the ILO-to-GO crosswalk, and Central Deployment General Education analytics. ADR 0035 brings ILO evidence into scope without these. ILO catalog ownership is `GEN_ED_COORDINATOR` college-wide (ADR 0018).
+_Avoid_: ILO attainment claim, Central General Education analytics
 
 ## Evidence language
 

@@ -2597,14 +2597,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/analytics/components/program-head-responses-workspace.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes:
-      "Narrow client transition boundary preserving responses controls while the evaluation evidence region reloads",
-  },
-  {
-    path: "src/features/analytics/components/program-head-responses-content-fallback.tsx",
+    path: "src/features/response-review/components/responses-content-fallback.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
@@ -2639,11 +2632,11 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #521 how-calculated disclosure on the shared Base UI popover primitive; spec §41 presentation metadata only",
   },
   {
-    path: "src/features/analytics/components/selected-go-scroll-target.tsx",
+    path: "src/features/analytics/components/selected-outcome-scroll-target.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #521 scrolls the deep-linked GO row into view after mount; matches data-go-row by value to avoid selector escaping",
+      "Slice #521 scrolls the deep-linked outcome row into view after mount; matches data-outcome-row by value to avoid selector escaping",
   },
   {
     path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
@@ -2747,28 +2740,28 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component composing outcome disclosures, ranked chart, exact-value table, and detail rows",
   },
   {
-    path: "src/features/analytics/components/program-head-go-mean-bar-chart.tsx",
+    path: "src/features/analytics/components/outcome-mean-bar-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client horizontal bar chart rendering GO means on the fixed 1-5 scale with exact-value disclosure alternative",
+      "Client horizontal bar chart rendering GO and ILO means on the widest frozen scale with exact-value disclosure alternative",
   },
   {
-    path: "src/features/analytics/components/program-head-contributor-matrix.tsx",
+    path: "src/features/analytics/components/outcome-contributor-matrix.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Server component exposing per-GO CILO contributor matrix with course, manifestation, mean, and valid count",
+      "Server component exposing per-outcome (GO or ILO) CILO contributor matrix with course, manifestation, mean, and valid count",
   },
   {
-    path: "src/features/analytics/components/program-head-go-detail.tsx",
+    path: "src/features/analytics/components/outcome-evidence-detail.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
       "New server component exposing the higher-precision mean, scale-separated distributions, and excluded-rating diagnostics",
   },
   {
-    path: "src/features/analytics/components/program-head-likert-distribution.tsx",
+    path: "src/features/analytics/components/likert-distribution-table.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
@@ -3074,7 +3067,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/response-review/components/general-education-responses-workspace.tsx",
+    path: "src/features/response-review/components/responses-pagination.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/features/response-review/components/responses-workspace.tsx",
     disposition: "already_compliant",
     category: "feature_component",
   },
@@ -3353,6 +3351,131 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     taskId: 2,
     category: "tokens",
     notes: "Root CSS semantic design tokens and utilities",
+  },
+  {
+    path: "src/features/analytics/components/analytics-insight-card.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-analytics-content-fallback.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-analytics-filters.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-analytics-shell.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-analytics-visualizations.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-courses-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-distribution-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-evidence-marks.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-evidence-primitives.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-feedback-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-inline-ai-insight.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-outcomes-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-programs-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-response-rate-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-scale-mean-chart.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-trends-charts.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/analytics/components/general-education-trends-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
+  },
+  {
+    path: "src/features/response-review/components/responses-filters.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Shared role-adapted response filters preserve authorization and URL scope",
   },
 ];
 

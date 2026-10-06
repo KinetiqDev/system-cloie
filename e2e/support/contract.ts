@@ -184,6 +184,24 @@ export const E2E_CONTRACT = {
     respondentId: U.STU_BEED,
     respondentName: "Patricia Luna",
     submittedCount: 2,
+    iloEvidence: [
+      {
+        code: "ILO1",
+        ciloDescription: "Apply ethical frameworks to contemporary moral dilemmas.",
+        manifestation: "LEARNING",
+        ratingCount: 2,
+        meanRating: 4.5,
+      },
+      {
+        code: "ILO2",
+        ciloDescription: "Evaluate the consequences of personal and collective choices.",
+        manifestation: "PRACTICE",
+        ratingCount: 2,
+        meanRating: 4.5,
+      },
+    ],
+    validRatingCount: 16,
+    meanRating: 4.3125,
   },
 
   /** Reviewed expectations for the IT201 course-bound SUBMITTED response (journey A). */
@@ -266,6 +284,10 @@ export type FixtureData = {
     title: string;
     responseId: string;
     respondentName: string;
+    courseId: string;
+    termInstanceId: string;
+    programId: string;
+    iloEvidence: Array<{ id: string; code: string; ratingCount: number; meanRating: number }>;
   };
   gestechAssignment: { id: string };
   gestechMobileAssignment: { id: string };

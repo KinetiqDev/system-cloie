@@ -88,7 +88,7 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List className="min-h-0 overflow-y-auto overscroll-contain">
+          <SelectPrimitive.List className="relative max-h-(--available-height) min-h-0 touch-pan-y overflow-y-auto overscroll-contain">
             {children}
           </SelectPrimitive.List>
           <SelectScrollDownButton />
