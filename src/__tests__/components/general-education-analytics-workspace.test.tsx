@@ -107,6 +107,28 @@ describe("GeneralEducationAnalyticsWorkspace", () => {
     expect(await screen.findByText("course evidence")).toBeInTheDocument();
   });
 
+  it("places the summary after the scope filters and before the evidence region", () => {
+    render(
+      <GeneralEducationAnalyticsWorkspace
+        tab="outcomes"
+        filters={<p>scope filters</p>}
+        summary={<p>summary strip</p>}
+      >
+        <p>ilo evidence</p>
+      </GeneralEducationAnalyticsWorkspace>
+    );
+
+    const order = ["scope filters", "summary strip", "ilo evidence"].map((text) =>
+      screen.getByText(text)
+    );
+    expect(
+      order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
   it("presents every scope facet and scopes Reset to the active view", () => {
     renderWorkspace({ tab: "outcomes", courseId: COURSE, iloId: "ilo-1" });
 

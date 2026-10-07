@@ -128,14 +128,15 @@ export function GeneralEducationAnalyticsRouteFallback() {
         </CardHeader>
         <CardContent>
           <div className="hidden grid-cols-12 items-end gap-4 lg:grid">
-            {["first", "second", "third", "fourth", "fifth", "sixth", "seventh"].map((slot) => (
-              <Skeleton key={slot} className="h-14 lg:col-span-2" />
+            {["first", "second", "third", "fourth", "fifth", "sixth"].map((slot) => (
+              <Skeleton key={slot} className="h-14 lg:col-span-3" />
             ))}
-            <Skeleton className="h-10 lg:col-span-2" />
+            <Skeleton className="h-10 lg:col-span-2 lg:col-start-11" />
           </div>
           <Skeleton className="h-11 w-full lg:hidden" />
         </CardContent>
       </Card>
+      <Skeleton data-testid="ge-analytics-summary-skeleton" className="h-24 w-full rounded-xl" />
       <EvidenceSkeleton tab="outcomes" />
     </div>
   );

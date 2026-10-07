@@ -93,8 +93,9 @@ function semesterOptionsFor(
 }
 
 /**
- * The filter grid. The desktop card lays the controls out in aligned columns
- * beside the apply row; the mobile drawer stacks them in one column.
+ * The filter grid. The desktop card lays the controls out on a 12-column grid
+ * with the apply cell closing the last row; the mobile drawer stacks them in
+ * one column.
  */
 function FilterGrid({ drawer, children }: { drawer: boolean; children: ReactNode }) {
   return (
@@ -102,7 +103,7 @@ function FilterGrid({ drawer, children }: { drawer: boolean; children: ReactNode
       className={cn(
         drawer
           ? "flex flex-col gap-4"
-          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-10"
+          : "grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:grid-cols-12"
       )}
     >
       {children}
@@ -110,10 +111,10 @@ function FilterGrid({ drawer, children }: { drawer: boolean; children: ReactNode
   );
 }
 
-/** One filter control in the grid: full width in the drawer, two columns wide
- * on the desktop card. */
+/** One filter control in the grid: full width in the drawer, three of twelve
+ * columns on the desktop card so four controls share a row. */
 function FilterField({ children }: { children: ReactNode }) {
-  return <div className="w-full lg:col-span-2">{children}</div>;
+  return <div className="w-full lg:col-span-3">{children}</div>;
 }
 
 function FilterSelect({
@@ -139,7 +140,10 @@ function FilterSelect({
 
   return (
     <Field className="gap-1.5">
-      <FieldLabel htmlFor={id} className="text-label-sm text-foreground flex items-center gap-1.5">
+      <FieldLabel
+        htmlFor={id}
+        className="text-label-sm text-foreground flex items-center gap-1.5 font-medium"
+      >
         {icon}
         <span>{label}</span>
       </FieldLabel>
@@ -232,7 +236,7 @@ export function GeneralEducationAnalyticsFilters({ filters, options }: Props) {
                 {count} {count === 1 ? "filter active" : "filters active"}
               </Badge>
             ) : (
-              <span className="text-caption text-muted-foreground">All periods</span>
+              <span className="text-muted-foreground text-xs font-normal">All periods</span>
             )}
           </div>
           <p className="text-body-sm text-muted-foreground mt-1 text-pretty">
@@ -321,41 +325,43 @@ function FilterForm({
   const count = activeFilterCount(filters);
 
   return (
-    <form onSubmit={onSubmit} aria-busy={isPending || undefined} className="flex flex-col gap-4">
+    <form onSubmit={onSubmit} aria-busy={isPending || undefined}>
       {filters.tab !== "outcomes" ? <input type="hidden" name="tab" value={filters.tab} /> : null}
 
       <FilterGrid drawer={drawer}>
         <PeriodSelects filters={filters} options={options} idPrefix={idPrefix} />
         <ScopeSelects filters={filters} options={options} idPrefix={idPrefix} />
-      </FilterGrid>
 
-      <div
-        className={cn(
-          "flex items-center gap-2",
-          drawer && "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
-        )}
-      >
-        <Button
-          type="submit"
-          size="default"
-          disabled={isPending}
-          className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
+        <div
+          className={cn(
+            "flex items-center gap-2",
+            drawer
+              ? "bg-background border-border/60 sticky bottom-0 border-t pt-3 pb-1"
+              : "sm:col-span-2 lg:col-span-2 lg:col-start-11 lg:justify-end"
+          )}
         >
-          {isPending ? <Spinner data-icon="inline-start" /> : null}
-          {isPending ? "Applying filters" : "Apply filters"}
-        </Button>
-        {count > 0 ? (
-          <Link
-            href={buildGeneralEducationAnalyticsUrl({ tab: filters.tab })}
-            className={cn(
-              buttonVariants({ variant: "outline", size: "default" }),
-              drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
-            )}
+          <Button
+            type="submit"
+            size="default"
+            disabled={isPending}
+            className={cn(drawer ? "min-h-11 flex-1 sm:min-h-9" : "w-full")}
           >
-            Reset
-          </Link>
-        ) : null}
-      </div>
+            {isPending ? <Spinner data-icon="inline-start" /> : null}
+            {isPending ? "Applying filters" : "Apply filters"}
+          </Button>
+          {count > 0 ? (
+            <Link
+              href={buildGeneralEducationAnalyticsUrl({ tab: filters.tab })}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "default" }),
+                drawer ? "min-h-11 px-4 sm:min-h-9" : "lg:hidden"
+              )}
+            >
+              Reset
+            </Link>
+          ) : null}
+        </div>
+      </FilterGrid>
     </form>
   );
 }

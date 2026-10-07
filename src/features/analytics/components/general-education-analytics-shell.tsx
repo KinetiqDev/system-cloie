@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Library } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ViewTabs } from "@/components/layout/view-tabs";
 import type {
   GeneralEducationAnalyticsFrameDTO,
@@ -11,6 +12,7 @@ import {
   GENERAL_EDUCATION_ANALYTICS_TABS,
   GENERAL_EDUCATION_ANALYTICS_TAB_LABELS,
   buildGeneralEducationAnalyticsTabUrl,
+  buildGeneralEducationAnalyticsUrl,
 } from "@/features/analytics/services/general-education-analytics-state";
 import { LOW_SAMPLE_RESPONSES } from "./general-education-evidence-marks";
 import { GeneralEducationAnalyticsFilters } from "./general-education-analytics-filters";
@@ -121,7 +123,7 @@ export function GeneralEducationAnalyticsShell({
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-heading-xl text-balance">General Education analytics</h1>
             <Badge variant="outline" className="max-w-full rounded-full px-2.5 py-1 font-medium">
@@ -129,14 +131,24 @@ export function GeneralEducationAnalyticsShell({
               <span className="truncate">College-wide General Education</span>
             </Badge>
           </div>
-          <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
+          <Breadcrumbs
+            items={[
+              {
+                label: "Analytics",
+                href: buildGeneralEducationAnalyticsUrl({ ...filters, tab: undefined }),
+              },
+              { label: GENERAL_EDUCATION_ANALYTICS_TAB_LABELS[filters.tab] },
+            ]}
+            className="text-body-sm"
+          />
+          <p className="text-body-sm text-text-secondary mt-1 max-w-3xl text-pretty">
             Submitted Course-bound General Education evidence across every Program, grouped through
             the current CILO-to-ILO mappings. Means describe what respondents rated; they are not
             attainment verdicts.
           </p>
-          <p className="text-label-sm text-text-secondary tabular-nums">
-            {scope.periodLabel ?? "All academic periods"}
-          </p>
+          {scope.periodLabel ? (
+            <p className="text-body-sm text-text-secondary text-pretty">{scope.periodLabel}</p>
+          ) : null}
         </div>
       </header>
 
@@ -150,11 +162,10 @@ export function GeneralEducationAnalyticsShell({
         }))}
       />
 
-      <EvidenceStrip kpi={kpi} />
-
       <GeneralEducationAnalyticsWorkspace
         tab={filters.tab}
         filters={<GeneralEducationAnalyticsFilters filters={filters} options={options} />}
+        summary={<EvidenceStrip kpi={kpi} />}
       >
         {children}
       </GeneralEducationAnalyticsWorkspace>
