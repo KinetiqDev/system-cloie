@@ -12,6 +12,10 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
+  if (session.profileGate.status === "ROLE_SELECTION_REQUIRED" && session.roles.length > 1) {
+    redirect("/select-role");
+  }
+
   redirect(
     resolvePostLoginDestination({
       requestedPath: "/dashboard",

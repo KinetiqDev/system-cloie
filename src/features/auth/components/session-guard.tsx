@@ -8,16 +8,29 @@ import { resolvePostLoginDestination } from "@/features/auth/services/resolve-po
 type SessionGuardProps = {
   children: ReactNode;
   allowedRoles?: Role[];
+  allowRoleSelection?: boolean;
 };
 
-export async function SessionGuard({ children, allowedRoles = [] }: SessionGuardProps) {
+export async function SessionGuard({
+  children,
+  allowedRoles = [],
+  allowRoleSelection = false,
+}: SessionGuardProps) {
   const session = await resolveAuthSession();
 
   if (!session) {
     redirect("/");
   }
 
+  const awaitingRoleSelection =
+    session.profileGate.status === "ROLE_SELECTION_REQUIRED" && session.roles.length > 1;
+
+  if (awaitingRoleSelection && (!allowRoleSelection || allowedRoles.length > 0)) {
+    redirect("/select-role");
+  }
+
   if (
+    !awaitingRoleSelection &&
     session.profileGate.status !== "COMPLETE" &&
     session.profileGate.status !== "DEFERRED_ENROLLMENT"
   ) {
