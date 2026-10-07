@@ -165,6 +165,15 @@ function buildOutcomesPacket(
         submittedResponseCount: outcome.submittedResponseCount,
         spansMultipleScales: outcome.spansMultipleScales,
         excludedRatingCount: outcome.excludedRatingCount,
+        attainment: outcome.attainment
+          ? {
+              status: outcome.attainment.status,
+              interpretation: outcome.attainment.interpretation,
+              cqi: outcome.attainment.cqi,
+              meetsBenchmark: outcome.attainment.meetsBenchmark,
+              isIndirect: outcome.attainment.isIndirect,
+            }
+          : null,
         distributions: outcome.distributions.map((distribution) => ({
           scaleLabel: clampLabel(distribution.scaleLabel),
           categories: distribution.categories.map((category) => ({
@@ -175,7 +184,10 @@ function buildOutcomesPacket(
         })),
       })),
     },
-    limitations: [outcomes.currentMappingDisclosure].filter((limitation) => limitation.length > 0),
+    limitations: [
+      outcomes.currentMappingDisclosure,
+      "Program Outcome attainment follows the proposed institutional benchmark (3.50, policy CLOIE_OUTCOME_MEAN_V1). Classifications are predetermined and cannot be altered or recalculated.",
+    ].filter((limitation) => limitation.length > 0),
   };
 }
 
@@ -608,6 +620,7 @@ Shape: {"observation": string, "evidence": string[], "connection"?: string, "lim
 
 How to read this evidence:
 - Rating means sit on the scale named in the evidence (for example 1-5, where 5 carries the most favorable descriptor). Judge a mean against its scale range, never against an absolute standard, and say the scale when you cite the number.
+- Outcome attainment classifications (for example Fully Attained, Attained, Partially Attained, Slightly Attained, Not Attained) and Continuous Quality Improvement classifications (Meets Benchmark, Needs Attention, Below Benchmark) are deterministically calculated by System CLOIE before this request under policy CLOIE_OUTCOME_MEAN_V1 (benchmark 3.50). Never recalculate attainment, never invent your own thresholds or cutoffs, and never override or contradict the provided classification. You may explain established results, discuss how contributing CILOs or questions relate to the outcome, and note whether the evidence originates from direct course assessment or indirect stakeholder surveys.
 - A small response pool limits what results can prove: with few respondents, say that the picture may not represent everyone.
 - Distribution shape matters as much as the mean: the same mean can come from consistent ratings or from sharply divided ones; describe which pattern appears.
 - Compare trend periods only when the evidence marks them comparable; when a period has a break reason, say the periods cannot be directly compared.

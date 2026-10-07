@@ -8,6 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
+import { AttainmentBadge } from "./outcome-attainment-badge";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 import type {
   OutcomeContributorDTO,
   OutcomeEvidenceDTO,
@@ -85,6 +87,7 @@ function ContributorRow({
   contributor: OutcomeContributor;
   labels: OutcomeLayerLabels;
 }) {
+  const meetsBenchmark = contributor.meanRating >= OUTCOME_ATTAINMENT_BENCHMARK;
   return (
     <TableRow>
       <TableCell className="align-top">
@@ -97,7 +100,14 @@ function ContributorRow({
         <ContributorBinding contributor={contributor} />
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">
-        {contributor.meanRating.toFixed(2)}
+        <div>{contributor.meanRating.toFixed(2)}</div>
+        <span
+          className={`text-label-xs block font-medium ${
+            meetsBenchmark ? "text-success" : "text-warning"
+          }`}
+        >
+          {meetsBenchmark ? "≥ 3.50 benchmark" : "< 3.50 benchmark"}
+        </span>
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">{contributor.ratingCount}</TableCell>
     </TableRow>
@@ -142,9 +152,12 @@ export function OutcomeContributorMatrix({
                   {outcome.code}
                   <span className="text-text-secondary font-normal"> — {outcome.name}</span>
                 </span>
-                <span className="text-text-secondary text-xs font-medium tabular-nums">
-                  {outcome.contributors.length} contributor
-                  {outcome.contributors.length === 1 ? "" : "s"}
+                <span className="flex items-center gap-2">
+                  <AttainmentBadge attainment={outcome.attainment} compact />
+                  <span className="text-text-secondary text-xs font-medium tabular-nums">
+                    {outcome.contributors.length} contributor
+                    {outcome.contributors.length === 1 ? "" : "s"}
+                  </span>
                 </span>
               </DisclosureTrigger>
               <DisclosureContent>

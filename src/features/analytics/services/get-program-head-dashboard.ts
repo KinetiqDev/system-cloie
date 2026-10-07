@@ -43,6 +43,8 @@ import {
   encodeQuestionKey,
 } from "../aggregators/question-identity";
 import type { MetricEvidenceSummary, ParticipationSummary } from "../aggregators/types";
+import type { OutcomeAttainment } from "../aggregators/outcome-attainment";
+import { classifyOutcomeMean } from "../aggregators/outcome-attainment";
 import type { WordCloudToken } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -86,6 +88,8 @@ export type DashboardGoSummaryRow = {
   /** Max of the single compatible scale; null when mixed scales or no evidence. */
   scaleMax: number | null;
   hasEvidence: boolean;
+  /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
+  attainment?: OutcomeAttainment;
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };
@@ -290,6 +294,11 @@ function toGoSummaryRows(
     spansMultipleScales: metric.spansMultipleScales,
     scaleMax: singleScaleMax(metric),
     hasEvidence: metric.ratingCount > 0,
+    attainment: classifyOutcomeMean(
+      metric.mean,
+      metric.scaleGroups.length === 1 ? metric.scaleGroups[0].scale : null,
+      { spansMultipleScales: metric.spansMultipleScales }
+    ),
     evidenceSummary: {
       ratingCount: metric.ratingCount,
       responseCount: metric.responseCount,

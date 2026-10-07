@@ -137,8 +137,8 @@ The following are explicitly deferred:
 - automated intervention recommendations;
 - arbitrary stakeholder weighting;
 - one combined Program-wide PO score across Course, Alumni, Industry, and other sources;
-- new attainment thresholds or interpretation bands;
-- red/green academic performance classification;
+- new attainment thresholds or interpretation bands (resolved by ADR 0037: canonical proposed institutional policy CLOIE_OUTCOME_MEAN_V1 now implemented for compatible 5-point scales with benchmark 3.50);
+- red/green academic performance classification (resolved by ADR 0037: CQI classifications Meets Benchmark / Needs Attention / Below Benchmark are displayed with text labels and semantic badges, never color alone);
 - direct assessment data such as grades, exams, capstone rubrics, or LMS scores;
 - faculty access redesign;
 - Dean analytics redesign;
@@ -626,7 +626,7 @@ Details expose:
 
 Click opens Analytics > Outcomes with period, source, and PO preserved.
 
-Do not show attainment status.
+Attainment status is displayed per PO under proposed institutional policy `CLOIE_OUTCOME_MEAN_V1` (benchmark 3.50; ADR 0037), with source-specific summary counts and benchmark reference lines. Operational 'Needs attention' remains distinct from academic attainment.
 
 ## 13.9 Needs attention
 

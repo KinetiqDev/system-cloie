@@ -9,8 +9,8 @@ Aggregate-only Course-bound evaluation evidence for Course Assignments owned by 
 _Avoid_: Deployer-owned evidence, affiliation-wide evidence, another Faculty member's class
 
 **Faculty analytics workspace**:
-The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
-_Avoid_: Evaluation checkbox dashboard, mean of means, CILO attainment claim, cross-course trend
+The URL-filtered `Overview`, `CILO results`, `Question results`, `Trends`, and `Written feedback` views over faculty-owned evaluation evidence. Means pool valid raw ratings within one compatible frozen scale; incompatible scales remain separate. Classifiable CILO means on approved 5-point scales receive deterministic attainment interpretation under proposed institutional policy `CLOIE_OUTCOME_MEAN_V1` with benchmark 3.50 (ADR 0037). Response rate uses historical EvaluationAssignment opportunities, and a scope with no opportunities reports unavailable.
+_Avoid_: Evaluation checkbox dashboard, mean of means, unapproved attainment overrides, cross-course trend
 
 **Faculty CILO and question grouping**:
 One metric per `(evaluation, CILO)` and per `(evaluation, question)`. A Faculty scope spans several owned evaluations, so the same CILO never pools its ratings across terms; each evaluation keeps its own mean and its own publication-time label. The question view enumerates the frozen structure snapshot, so an unrated question still appears for the unrated disclosure, and a Likert question here describes one `(section, item)` identity. A binding whose CILO row is gone keeps its own group rather than pooling under another CILO. Shared arithmetic, not grouping, is what the Faculty builders reuse from the canonical Analytics aggregators.
@@ -170,6 +170,24 @@ _Avoid_: Treating excluded ratings as valid aggregate input
 **Program Head Outcomes PO row**:
 The Outcomes view's course-bound PO row is a Program Head evidence surface, not a bare metric. It carries per-contributor provenance (each CILO and each direct question with its own rating count and mean), the frozen publication manifestation label, contributing Courses and CILOs, the contributing evaluations with their review links, the many-to-many and current-mapping disclosures, and scale-separated distributions. Its `meanRating` pools every valid in-scale rating across the row and sets `spansMultipleScales`, and the view prints the cross-scale comparability notice beside that number. The shared `buildCourseDerivedPoMetrics` metric is the wrong shape for this surface: it has no provenance fields and reports `mean: null` for mixed scales, so adopting it would delete evidence and change a rendered mean. Counting rules are shared in practice and pinned by test, so the two agree on contributions, overlap collapse, invalid ratings, and unmapped rows.
 _Avoid_: Bare metric as the Outcomes row, mixed-scale mean as null on the Outcomes row, provenance-free Outcome row
+
+## Outcome attainment interpretation (ADR 0037)
+
+**Canonical outcome attainment interpretation policy (`CLOIE_OUTCOME_MEAN_V1`)**:
+Proposed institutional policy governing the deterministic classification and Continuous Quality Improvement (CQI) categorization of full-precision CILO and PO means on approved 5-point rating scales. Informed by OBE/CQI assessment practices; not an external mandate from CHED, ABET, or PAASCU. Institutional approval is unrecorded and the policy retains proposed status.
+- Primary attainment benchmark: `mean >= 3.50`.
+- Bands:
+  - `4.50–5.00`: Fully Attained (Meets Benchmark)
+  - `3.50–below 4.50`: Attained (Meets Benchmark)
+  - `2.50–below 3.50`: Partially Attained (Needs Attention)
+  - `1.50–below 2.50`: Slightly Attained (Below Benchmark)
+  - `1.00–below 1.50`: Not Attained (Below Benchmark)
+- Classification operates on full-precision floating-point means; rounding occurs only for display. Boundary values belong to the upper band (e.g. 3.50 is Attained).
+- Three frozen 5-point descriptor sets are supported: direct achievement (`Not Achieved`..`Fully Achieved`), agreement (`Strongly Disagree`..`Strongly Agree`), and performance evaluation (`Poor`..`Excellent`).
+- Agreement and performance scales carry `isIndirect: true` to indicate stakeholder perception rather than demonstrated competency.
+- Missing evidence (`no-evidence`), unsupported scales (`unsupported-scale`), and mixed-scale pools (`mixed-scales`) remain distinct and never produce attainment labels; they are strictly distinguished from non-attainment (`Not Attained`).
+- Generic course means, overall stakeholder means, and Institutional Learning Outcomes (ILOs) are never classified as outcome attainment (ADR 0035).
+_Avoid_: Claiming external mandate, classifying unapproved scales, treating missing evidence as non-attainment, rounding before classifying, labelling ILOs as attained
 
 ## AI-assisted interpretation
 

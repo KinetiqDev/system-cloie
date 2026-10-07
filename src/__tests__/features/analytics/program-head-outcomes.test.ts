@@ -328,6 +328,16 @@ describe("getProgramHeadOutcomes", () => {
         submittedResponseCount: 1,
         evaluationCount: 1,
         questionCount: 1,
+        attainment: {
+          policyId: "CLOIE_OUTCOME_MEAN_V1",
+          benchmark: 3.5,
+          status: "unsupported-scale",
+          interpretation: null,
+          cqi: null,
+          meetsBenchmark: null,
+          scaleKind: null,
+          isIndirect: null,
+        },
         evidenceSummary: {
           ratingCount: 1,
           responseCount: 1,

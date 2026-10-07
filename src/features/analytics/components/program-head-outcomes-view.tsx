@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { ClipboardList, Inbox, Target } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -24,6 +27,8 @@ import { buildProgramHeadResponsesCourseEvaluationPath } from "@/lib/constants/p
 import type { ProgramHeadOutcomesDTO } from "@/features/analytics/program-head-analytics-types";
 import { GRADUATE_OUTCOME_LABELS } from "@/features/analytics/outcome-evidence-types";
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
+import { AttainmentBadge } from "./outcome-attainment-badge";
 import { OutcomeEvidenceDetail } from "./outcome-evidence-detail";
 import { LazyOutcomeMeanBarChart } from "./program-head-analytics-visualizations";
 import { OutcomeContributorMatrix } from "./outcome-contributor-matrix";
@@ -61,10 +66,34 @@ export function ProgramHeadOutcomesView({
   aiFilters,
 }: ProgramHeadOutcomesViewProps) {
   const { emptyReason, outcomes, currentMappingDisclosure, manyToManyDisclosure } = data;
+  const [attainmentFilter, setAttainmentFilter] = useState<
+    "all" | "meets" | "attention" | "below" | "noEvidence"
+  >("all");
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
   const hasOutcomes = outcomes.length > 0;
   const totalResponses = outcomes.reduce((sum, outcome) => sum + outcome.submittedResponseCount, 0);
   const totalRatings = outcomes.reduce((sum, outcome) => sum + outcome.ratingCount, 0);
+
+  const attainmentCounts = {
+    all: outcomes.length,
+    meets: outcomes.filter((o) => o.attainment?.cqi === "Meets Benchmark").length,
+    attention: outcomes.filter((o) => o.attainment?.cqi === "Needs Attention").length,
+    below: outcomes.filter((o) => o.attainment?.cqi === "Below Benchmark").length,
+    noEvidence: outcomes.filter(
+      (o) => o.meanRating === null || o.attainment?.status === "no-evidence"
+    ).length,
+  };
+
+  const visibleOutcomes = outcomes.filter((outcome) => {
+    if (attainmentFilter === "all") return true;
+    if (attainmentFilter === "meets") return outcome.attainment?.cqi === "Meets Benchmark";
+    if (attainmentFilter === "attention") return outcome.attainment?.cqi === "Needs Attention";
+    if (attainmentFilter === "below") return outcome.attainment?.cqi === "Below Benchmark";
+    if (attainmentFilter === "noEvidence") {
+      return outcome.meanRating === null || outcome.attainment?.status === "no-evidence";
+    }
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,14 +194,98 @@ export function ProgramHeadOutcomesView({
             )}
           </div>
 
+          <div className="border-border/80 bg-card rounded-xl border p-4 shadow-xs sm:p-5">
+            <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+              <div>
+                <h2 className="text-title-sm font-semibold text-foreground">
+                  Program Outcome Attainment Summary
+                </h2>
+                <p className="text-body-sm text-text-secondary mt-0.5">
+                  Benchmark is ≥ 3.50.
+                </p>
+              </div>
+            </div>
+            <div
+              role="group"
+              aria-label="Filter outcomes by attainment status"
+              className="mt-3 flex flex-wrap items-center gap-1.5"
+            >
+              <button
+                type="button"
+                aria-pressed={attainmentFilter === "all"}
+                onClick={() => setAttainmentFilter("all")}
+                className={cn(
+                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  attainmentFilter === "all"
+                    ? "bg-primary-soft text-selected-fg"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                All POs ({attainmentCounts.all})
+              </button>
+              <button
+                type="button"
+                aria-pressed={attainmentFilter === "meets"}
+                onClick={() => setAttainmentFilter("meets")}
+                className={cn(
+                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  attainmentFilter === "meets"
+                    ? "bg-success-soft text-success"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                Meets Benchmark ({attainmentCounts.meets})
+              </button>
+              <button
+                type="button"
+                aria-pressed={attainmentFilter === "attention"}
+                onClick={() => setAttainmentFilter("attention")}
+                className={cn(
+                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  attainmentFilter === "attention"
+                    ? "bg-warning-soft text-warning"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                Needs Attention ({attainmentCounts.attention})
+              </button>
+              <button
+                type="button"
+                aria-pressed={attainmentFilter === "below"}
+                onClick={() => setAttainmentFilter("below")}
+                className={cn(
+                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  attainmentFilter === "below"
+                    ? "bg-danger-soft text-danger"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                Below Benchmark ({attainmentCounts.below})
+              </button>
+              <button
+                type="button"
+                aria-pressed={attainmentFilter === "noEvidence"}
+                onClick={() => setAttainmentFilter("noEvidence")}
+                className={cn(
+                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  attainmentFilter === "noEvidence"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                Lacking Evidence ({attainmentCounts.noEvidence})
+              </button>
+            </div>
+          </div>
+
           <LazyOutcomeMeanBarChart
             title="Mean Rating by Program Outcome"
-            outcomes={outcomes}
+            outcomes={visibleOutcomes}
             labels={GRADUATE_OUTCOME_LABELS}
           />
 
           <OutcomeContributorMatrix
-            outcomes={outcomes}
+            outcomes={visibleOutcomes}
             labels={GRADUATE_OUTCOME_LABELS}
             selectedOutcomeId={selectedGoId}
           />
@@ -188,7 +301,7 @@ export function ProgramHeadOutcomesView({
 
           <OutcomesExactValueTable
             programId={programId}
-            outcomes={outcomes}
+            outcomes={visibleOutcomes}
             selectedGoId={selectedGoId}
           />
         </>
@@ -197,58 +310,70 @@ export function ProgramHeadOutcomesView({
       {data.programWideOutcomes.length > 0 && (
         <div className="flex flex-col gap-3">
           <h2 className="text-heading-lg text-foreground">Program-wide PO evidence</h2>
-          <div className="border-border overflow-x-auto rounded-lg border">
-            <Table aria-label="Program-wide evidence by program outcome">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Program Outcome</TableHead>
-                  <TableHead>Stakeholder</TableHead>
-                  <TableHead className="text-right">Mean Rating</TableHead>
-                  <TableHead className="text-right">Rating Count</TableHead>
-                  <TableHead className="text-right">Submitted Responses</TableHead>
-                  <TableHead className="text-right">Evaluations</TableHead>
-                  <TableHead className="text-right">Bound Questions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.programWideOutcomes.map((row) => (
-                  <TableRow
-                    key={`${row.stakeholder}-${row.poId}`}
-                    data-outcome-row={row.poId}
-                    className={cn(row.poId === selectedGoId && "bg-primary-soft/40")}
-                  >
-                    <TableCell className="align-top">
-                      <div className="flex flex-col">
-                        <span className="font-semibold">{row.code}</span>
-                        <span className="text-text-secondary">{row.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {STAKEHOLDER_LABELS[row.stakeholder]}
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      {row.meanRating === null ? "—" : row.meanRating.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      {row.ratingCount}
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      {row.submittedResponseCount}
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      {row.evaluationCount}
-                    </TableCell>
-                    <TableCell className="text-right align-top tabular-nums">
-                      <span className="inline-flex items-center gap-1">
-                        {row.questionCount}
-                        <HowCalculatedPopover metric={row.evidenceSummary} label={row.code} />
+          <Table
+            aria-label="Program-wide evidence by program outcome"
+            containerClassName="border-border rounded-lg border"
+          >
+            <TableHeader>
+              <TableRow>
+                <TableHead>Program Outcome</TableHead>
+                <TableHead>Stakeholder</TableHead>
+                <TableHead className="text-right">Mean Rating</TableHead>
+                <TableHead>Attainment</TableHead>
+                <TableHead className="text-right">Rating Count</TableHead>
+                <TableHead className="text-right">Submitted Responses</TableHead>
+                <TableHead className="text-right">Evaluations</TableHead>
+                <TableHead className="text-right">Bound Questions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.programWideOutcomes.map((row) => (
+                <TableRow
+                  key={`${row.stakeholder}-${row.poId}`}
+                  data-outcome-row={row.poId}
+                  className={cn(row.poId === selectedGoId && "bg-primary-soft/40")}
+                >
+                  <TableCell className="align-top whitespace-normal max-w-xs">
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{row.code}</span>
+                      <span className="text-text-secondary">{row.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top whitespace-nowrap">
+                    {STAKEHOLDER_LABELS[row.stakeholder]}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                    <div>{row.meanRating === null ? "—" : row.meanRating.toFixed(2)}</div>
+                    {row.meanRating !== null && row.attainment?.status === "classified" && (
+                      <span className="text-label-xs text-muted-foreground block">
+                        {row.meanRating >= OUTCOME_ATTAINMENT_BENCHMARK
+                          ? `+${(row.meanRating - OUTCOME_ATTAINMENT_BENCHMARK).toFixed(2)} vs benchmark`
+                          : `${(row.meanRating - OUTCOME_ATTAINMENT_BENCHMARK).toFixed(2)} vs benchmark`}
                       </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="align-top whitespace-nowrap">
+                    <AttainmentBadge attainment={row.attainment} />
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                    {row.ratingCount}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                    {row.submittedResponseCount}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                    {row.evaluationCount}
+                  </TableCell>
+                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1">
+                      {row.questionCount}
+                      <HowCalculatedPopover metric={row.evidenceSummary} label={row.code} />
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
       <SelectedOutcomeScrollTarget outcomeId={selectedGoId} />
@@ -268,85 +393,97 @@ function OutcomesExactValueTable({
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-heading-lg text-foreground">Exact values by Program Outcome</h2>
-      <div className="border-border overflow-x-auto rounded-lg border">
-        <Table aria-label="Exact values by program outcome">
-          <TableHeader>
-            <TableRow>
-              <TableHead>Program Outcome</TableHead>
-              <TableHead className="text-right">Mean Rating</TableHead>
-              <TableHead className="text-right">Rating Count</TableHead>
-              <TableHead className="text-right">Submitted Responses</TableHead>
-              <TableHead>Review Evidence</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {outcomes.flatMap((outcome) => {
-              const detailId = `po-detail-${outcome.outcomeId}`;
-              const isSelected = outcome.outcomeId === selectedGoId;
-              const rows = [
-                <TableRow
-                  key={outcome.outcomeId}
-                  data-outcome-row={outcome.outcomeId}
-                  className={cn(isSelected && "bg-primary-soft/40")}
-                >
-                  <TableCell className="align-top">
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{outcome.code}</span>
-                      <span className="text-text-secondary">{outcome.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    <span className="inline-flex items-center gap-1">
-                      {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
-                      <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
+      <Table
+        aria-label="Exact values by program outcome"
+        containerClassName="border-border rounded-lg border"
+      >
+        <TableHeader>
+          <TableRow>
+            <TableHead>Program Outcome</TableHead>
+            <TableHead className="text-right">Mean Rating</TableHead>
+            <TableHead>Attainment</TableHead>
+            <TableHead className="text-right">Rating Count</TableHead>
+            <TableHead className="text-right">Submitted Responses</TableHead>
+            <TableHead>Review Evidence</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {outcomes.flatMap((outcome) => {
+            const detailId = `po-detail-${outcome.outcomeId}`;
+            const isSelected = outcome.outcomeId === selectedGoId;
+            const rows = [
+              <TableRow
+                key={outcome.outcomeId}
+                data-outcome-row={outcome.outcomeId}
+                className={cn(isSelected && "bg-primary-soft/40")}
+              >
+                <TableCell className="align-top whitespace-normal max-w-xs">
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{outcome.code}</span>
+                    <span className="text-text-secondary">{outcome.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <div className="inline-flex items-center gap-1">
+                    {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
+                    <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
+                  </div>
+                  {outcome.meanRating !== null && outcome.attainment?.status === "classified" && (
+                    <span className="text-label-xs text-muted-foreground block">
+                      {outcome.meanRating >= OUTCOME_ATTAINMENT_BENCHMARK
+                        ? `+${(outcome.meanRating - OUTCOME_ATTAINMENT_BENCHMARK).toFixed(2)} vs benchmark`
+                        : `${(outcome.meanRating - OUTCOME_ATTAINMENT_BENCHMARK).toFixed(2)} vs benchmark`}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.ratingCount}
-                  </TableCell>
-                  <TableCell className="text-right align-top tabular-nums">
-                    {outcome.submittedResponseCount}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    {outcome.evidenceEvaluations.length > 0 ? (
-                      <ul className="flex flex-col gap-1">
-                        {outcome.evidenceEvaluations.map((evaluation) => (
-                          <li key={evaluation.evaluationId}>
-                            <Link
-                              href={buildProgramHeadResponsesCourseEvaluationPath(
-                                programId,
-                                evaluation.evaluationId
-                              )}
-                              className="text-link hover:text-foreground underline underline-offset-3"
-                            >
-                              {evaluation.deploymentName}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                </TableRow>,
-                <TableRow key={`${outcome.outcomeId}-detail`}>
-                  <TableCell colSpan={5}>
-                    <Disclosure open={isSelected}>
-                      <DisclosureTrigger variant="link" id={detailId}>
-                        Details for {outcome.code}
-                      </DisclosureTrigger>
-                      <DisclosureContent>
-                        <OutcomeEvidenceDetail outcome={outcome} />
-                      </DisclosureContent>
-                    </Disclosure>
-                  </TableCell>
-                </TableRow>,
-              ];
-              return rows;
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                  )}
+                </TableCell>
+                <TableCell className="align-top whitespace-nowrap">
+                  <AttainmentBadge attainment={outcome.attainment} />
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  {outcome.ratingCount}
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  {outcome.submittedResponseCount}
+                </TableCell>
+                <TableCell className="align-top whitespace-normal max-w-xs">
+                  {outcome.evidenceEvaluations.length > 0 ? (
+                    <ul className="flex flex-col gap-1">
+                      {outcome.evidenceEvaluations.map((evaluation) => (
+                        <li key={evaluation.evaluationId}>
+                          <Link
+                            href={buildProgramHeadResponsesCourseEvaluationPath(
+                              programId,
+                              evaluation.evaluationId
+                            )}
+                            className="text-link hover:text-foreground underline underline-offset-3 break-words"
+                          >
+                            {evaluation.deploymentName}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+              </TableRow>,
+              <TableRow key={`${outcome.outcomeId}-detail`}>
+                <TableCell colSpan={6} className="bg-muted/15 whitespace-normal p-4">
+                  <Disclosure open={isSelected}>
+                    <DisclosureTrigger variant="link" id={detailId}>
+                      Details for {outcome.code}
+                    </DisclosureTrigger>
+                    <DisclosureContent className="mt-3">
+                      <OutcomeEvidenceDetail outcome={outcome} />
+                    </DisclosureContent>
+                  </Disclosure>
+                </TableCell>
+              </TableRow>,
+            ];
+            return rows;
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { MetricEvidenceSummary } from "./aggregators/types";
+import type { OutcomeAttainment } from "./aggregators/outcome-attainment";
 
 /** One category of a scale-resolved Likert distribution. */
 export type OutcomeCategoryDTO = {
@@ -86,6 +87,13 @@ export type OutcomeEvidenceDTO = {
   spansMultipleScales: boolean;
   /** Ratings excluded from the valid aggregate (unresolvable or out-of-scale values). */
   excludedRatingCount: number;
+  /**
+   * Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation. Present on Program
+   * Outcome and CILO rows with compatible scales; absent on Institutional
+   * Learning Outcome rows, which are never labelled attainment. Missing or
+   * unsupported evidence stays distinct from non-attainment.
+   */
+  attainment?: OutcomeAttainment;
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };

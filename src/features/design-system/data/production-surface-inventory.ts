@@ -2747,6 +2747,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Client horizontal bar chart rendering PO and ILO means on the widest frozen scale with exact-value disclosure alternative",
   },
   {
+    path: "src/features/analytics/components/outcome-attainment-badge.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Client component rendering deterministic outcome attainment badges and benchmark captions with full screen-reader accessibility",
+  },
+  {
     path: "src/features/analytics/components/outcome-contributor-matrix.tsx",
     disposition: "already_compliant",
     category: "feature_component",

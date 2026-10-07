@@ -1,5 +1,6 @@
 import type { MetricEvidenceSummary } from "@/features/analytics/aggregators/types";
 import type { QualitativeToneShape } from "./types";
+import type { OutcomeAttainment } from "./aggregators/outcome-attainment";
 import type { OutcomeEvidenceDTO } from "./outcome-evidence-types";
 
 /** Readable scope summary for the current analytics view */
@@ -120,6 +121,8 @@ export type ProgramHeadProgramWideOutcomeDTO = {
   evaluationCount: number;
   /** Number of distinct questions (items) that contributed to this row. */
   questionCount: number;
+  /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
+  attainment?: OutcomeAttainment;
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };

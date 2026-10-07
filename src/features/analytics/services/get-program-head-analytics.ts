@@ -34,6 +34,10 @@ import {
   resolveItemScaleIdentity,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
+import {
+  classifyOutcomeDistributions,
+  classifyOutcomeMean,
+} from "../aggregators/outcome-attainment";
 import { buildParticipationSummary } from "../aggregators/participation";
 import { buildProgramWidePoMetrics, type CentralPoRatingRow } from "../aggregators/po";
 import {
@@ -1207,6 +1211,11 @@ async function buildProgramWideOutcomeDtos(
         submittedResponseCount: metric.responseCount,
         evaluationCount: metric.evaluationCount,
         questionCount: metric.questionCount,
+        attainment: classifyOutcomeMean(
+          metric.mean,
+          metric.scaleGroups.length === 1 ? metric.scaleGroups[0].scale : null,
+          { spansMultipleScales: metric.spansMultipleScales }
+        ),
         evidenceSummary: {
           ratingCount: metric.ratingCount,
           responseCount: metric.responseCount,
@@ -1379,6 +1388,11 @@ export async function getProgramHeadOutcomes(
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
   const outcomes = buildOutcomeEvidenceDtos(aggregation).map((outcome) => ({
     ...outcome,
+    attainment: classifyOutcomeDistributions(
+      outcome.meanRating,
+      outcome.distributions,
+      outcome.spansMultipleScales
+    ),
     evidenceSummary: {
       ...outcome.evidenceSummary,
       evidenceHref: buildProgramHeadResponsesPath(selectedProgram.id, "course"),

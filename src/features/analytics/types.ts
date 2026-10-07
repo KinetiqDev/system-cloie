@@ -1,3 +1,5 @@
+import type { OutcomeAttainment } from "./aggregators/outcome-attainment";
+
 export type WordCloudToken = {
   text: string;
   value: number;
@@ -84,6 +86,11 @@ export type FacultyCiloMetric = {
   /** Every Likert question evidencing this CILO, in binding order. */
   questions: Array<{ sectionKey: string; itemKey: string; prompt: string }>;
   scaleGroups: FacultyScaleDistribution[];
+  /**
+   * Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this CILO mean,
+   * based only on classifiable CILO evidence. Absent only for legacy payloads.
+   */
+  attainment?: OutcomeAttainment;
 };
 
 export type FacultyQuestionMetric = {

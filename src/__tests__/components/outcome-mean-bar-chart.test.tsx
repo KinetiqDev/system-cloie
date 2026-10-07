@@ -152,7 +152,7 @@ describe("OutcomeMeanBarChart", () => {
     expect(regionInsight("Mean Rating by Program Outcome")).not.toContain("BSIT-GO3");
   });
 
-  it("resolves bar fills from semantic tokens and hatches beyond five categories", () => {
+  it("renders descriptive outcomes with uniform canonical chart token instead of rotating colors", () => {
     const many = Array.from({ length: 7 }, (_, index) =>
       outcomeDTO({
         outcomeId: `outcome-${index}`,
@@ -162,7 +162,7 @@ describe("OutcomeMeanBarChart", () => {
     );
     const { container } = render(
       <OutcomeMeanBarChart
-        title="Mean Rating by Program Outcome"
+        title="Mean Rating by Institutional Learning Outcome"
         outcomes={many}
         labels={GRADUATE_OUTCOME_LABELS}
       />
@@ -171,14 +171,75 @@ describe("OutcomeMeanBarChart", () => {
     const fills = Array.from(
       container.querySelectorAll<SVGPathElement>(".recharts-bar-rectangle path")
     ).map((path) => path.getAttribute("fill") ?? "");
-    expect(fills.slice(0, 5)).toEqual([
-      "var(--chart-1)",
-      "var(--chart-2)",
-      "var(--chart-3)",
-      "var(--chart-4)",
-      "var(--chart-5)",
+    expect(fills).toHaveLength(7);
+    expect(fills.every((fill) => fill === "var(--chart-1)")).toBe(true);
+  });
+
+  it("renders classified outcomes using 3-tier CQI attainment colors", () => {
+    const classifiedOutcomes = [
+      outcomeDTO({
+        outcomeId: "outcome-meets",
+        code: "PO-1",
+        meanRating: 4.2,
+        attainment: {
+          policyId: "CLOIE_OUTCOME_MEAN_V1",
+          benchmark: 3.5,
+          status: "classified",
+          interpretation: "Attained",
+          cqi: "Meets Benchmark",
+          meetsBenchmark: true,
+          scaleKind: "direct-attainment",
+          isIndirect: false,
+        },
+      }),
+      outcomeDTO({
+        outcomeId: "outcome-attention",
+        code: "PO-2",
+        meanRating: 3.0,
+        attainment: {
+          policyId: "CLOIE_OUTCOME_MEAN_V1",
+          benchmark: 3.5,
+          status: "classified",
+          interpretation: "Partially Attained",
+          cqi: "Needs Attention",
+          meetsBenchmark: false,
+          scaleKind: "direct-attainment",
+          isIndirect: false,
+        },
+      }),
+      outcomeDTO({
+        outcomeId: "outcome-below",
+        code: "PO-3",
+        meanRating: 1.8,
+        attainment: {
+          policyId: "CLOIE_OUTCOME_MEAN_V1",
+          benchmark: 3.5,
+          status: "classified",
+          interpretation: "Slightly Attained",
+          cqi: "Below Benchmark",
+          meetsBenchmark: false,
+          scaleKind: "direct-attainment",
+          isIndirect: false,
+        },
+      }),
+    ];
+
+    const { container } = render(
+      <OutcomeMeanBarChart
+        title="Mean Rating by Program Outcome"
+        outcomes={classifiedOutcomes}
+        labels={GRADUATE_OUTCOME_LABELS}
+      />
+    );
+
+    const fills = Array.from(
+      container.querySelectorAll<SVGPathElement>(".recharts-bar-rectangle path")
+    ).map((path) => path.getAttribute("fill") ?? "");
+    expect(fills).toEqual([
+      "var(--color-success)",
+      "var(--color-warning)",
+      "var(--color-danger)",
     ]);
-    expect(fills[5]).toMatch(/^url\(#outcome-mean-bar-[A-Za-z0-9_]+-hatch-0-c1\)$/);
   });
 
   it("renders an accessible empty state when no row is rated", () => {

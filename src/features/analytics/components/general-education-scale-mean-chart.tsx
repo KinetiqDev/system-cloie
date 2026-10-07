@@ -8,7 +8,6 @@ import {
   ChartTooltip,
   ChartPatternDefs,
   ChartSwatch,
-  chartFill,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
@@ -282,8 +281,8 @@ function ScaleMeanChartPanel({
                 radius={[0, 6, 6, 0]}
                 isAnimationActive={false}
               >
-                {ranked.map((row, index) => (
-                  <Cell key={row.key} fill={chartFill(chartId, index)} />
+                {ranked.map((row) => (
+                  <Cell key={row.key} fill="var(--chart-1)" />
                 ))}
                 <LabelList
                   dataKey="meanRating"
@@ -304,9 +303,9 @@ function ScaleMeanChartPanel({
           className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
           aria-label={`Chart legend for ${series.scaleLabel}`}
         >
-          {ranked.map((row, index) => (
+          {ranked.map((row) => (
             <span role="listitem" key={row.key} className="flex items-center gap-1.5">
-              <ChartSwatch fill={chartFill(chartId, index)} />
+              <ChartSwatch fill="var(--chart-1)" />
               <span className="text-caption text-muted-foreground">
                 {row.label} ({countedNoun(row.submittedResponseCount, "response")})
               </span>
