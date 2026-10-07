@@ -1,9 +1,19 @@
-"use client";
-
 import { Badge } from "@/components/ui/badge";
-import type { OutcomeAttainment } from "../aggregators/outcome-attainment";
+import type {
+  OutcomeAttainment,
+  OutcomeCqiClassification,
+} from "../aggregators/outcome-attainment";
 import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 import { cn } from "@/lib/utils";
+
+export const ATTAINMENT_PRESENTATION = {
+  "Meets Benchmark": { variant: "success", color: "var(--color-success)", colorName: "Green" },
+  "Needs Attention": { variant: "warning", color: "var(--color-warning)", colorName: "Amber" },
+  "Below Benchmark": { variant: "destructive", color: "var(--color-danger)", colorName: "Red" },
+} as const satisfies Record<
+  OutcomeCqiClassification,
+  { variant: string; color: string; colorName: string }
+>;
 
 /**
  * Deterministic attainment label for one classified CILO or PO mean.
@@ -23,12 +33,7 @@ export function AttainmentBadge({
   if (!attainment || attainment.status !== "classified" || !attainment.interpretation) {
     return <AttainmentEmpty attainment={attainment} className={className} compact={compact} />;
   }
-  const variant =
-    attainment.cqi === "Meets Benchmark"
-      ? "success"
-      : attainment.cqi === "Needs Attention"
-        ? "warning"
-        : "destructive";
+  const variant = attainment.cqi ? ATTAINMENT_PRESENTATION[attainment.cqi].variant : "outline";
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
       <Badge variant={variant}>{attainment.interpretation}</Badge>
@@ -68,28 +73,8 @@ function AttainmentEmpty({
   );
 }
 
-/**
- * 3-tier canonical color fill for outcome attainment charts and indicators:
- * - Meets Benchmark: var(--color-success) (#047857)
- * - Needs Attention: var(--color-warning) (#b45309)
- * - Below Benchmark: var(--color-danger) (#b91c1c)
- * - Unclassified / Descriptive: defaultColor (defaults to var(--chart-1))
- */
-export function getAttainmentColor(
-  attainment?: OutcomeAttainment,
-  defaultColor = "var(--chart-1)"
-): string {
-  if (!attainment || attainment.status !== "classified") {
-    return defaultColor;
-  }
-  switch (attainment.cqi) {
-    case "Meets Benchmark":
-      return "var(--color-success)";
-    case "Needs Attention":
-      return "var(--color-warning)";
-    case "Below Benchmark":
-      return "var(--color-danger)";
-    default:
-      return defaultColor;
-  }
+export function getAttainmentColor(attainment?: OutcomeAttainment): string {
+  return attainment?.status === "classified" && attainment.cqi
+    ? ATTAINMENT_PRESENTATION[attainment.cqi].color
+    : "var(--text-muted)";
 }

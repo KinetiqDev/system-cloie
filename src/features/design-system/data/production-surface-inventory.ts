@@ -2751,7 +2751,14 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Client component rendering deterministic outcome attainment badges and benchmark captions with full screen-reader accessibility",
+      "Shared deterministic outcome attainment badges and canonical CQI chart colors with screen-reader context",
+  },
+  {
+    path: "src/features/analytics/components/outcome-attainment-legend.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Responsive CILO and PO interpretation guide with semantic color swatches, exact policy bands, and unclassified evidence disclosure",
   },
   {
     path: "src/features/analytics/components/outcome-contributor-matrix.tsx",

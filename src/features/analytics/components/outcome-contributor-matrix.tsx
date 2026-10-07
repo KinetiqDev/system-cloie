@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/table";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { AttainmentBadge } from "./outcome-attainment-badge";
-import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 import type {
   OutcomeContributorDTO,
   OutcomeEvidenceDTO,
@@ -87,7 +86,6 @@ function ContributorRow({
   contributor: OutcomeContributor;
   labels: OutcomeLayerLabels;
 }) {
-  const meetsBenchmark = contributor.meanRating >= OUTCOME_ATTAINMENT_BENCHMARK;
   return (
     <TableRow>
       <TableCell className="align-top">
@@ -101,13 +99,6 @@ function ContributorRow({
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">
         <div>{contributor.meanRating.toFixed(2)}</div>
-        <span
-          className={`text-label-xs block font-medium ${
-            meetsBenchmark ? "text-success" : "text-warning"
-          }`}
-        >
-          {meetsBenchmark ? "≥ 3.50 benchmark" : "< 3.50 benchmark"}
-        </span>
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">{contributor.ratingCount}</TableCell>
     </TableRow>

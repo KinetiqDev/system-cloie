@@ -1,13 +1,17 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, ReferenceLine, XAxis, YAxis } from "recharts";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartPatternDefs,
-  ChartSwatch,
-} from "@/components/ui/chart";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartSwatch } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,6 +29,7 @@ import type {
 } from "@/features/analytics/outcome-evidence-types";
 import { OUTCOME_ATTAINMENT_BENCHMARK } from "@/features/analytics/aggregators/outcome-attainment";
 import { AttainmentBadge, getAttainmentColor } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
 
 type MeanBarDatum = {
   code: string;
@@ -83,6 +88,11 @@ export function OutcomeMeanBarChart({
     rated.flatMap((outcome) => outcome.distributions.map((scale) => scale.scaleLabel))
   );
 
+  const hasAttainment =
+    labels.short === "PO" ||
+    labels.short === "CILO" ||
+    outcomes.some((outcome) => outcome.attainment !== undefined);
+
   if (bars.length === 0) {
     return (
       <div className="flex flex-col gap-3">
@@ -93,6 +103,7 @@ export function OutcomeMeanBarChart({
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
           <EmptyDescription>No valid ratings are available for these outcomes.</EmptyDescription>
         </Empty>
+        {hasAttainment && <AttainmentLegend />}
       </div>
     );
   }
@@ -130,7 +141,6 @@ export function OutcomeMeanBarChart({
               layout="vertical"
               margin={{ top: 28, right: 48, bottom: 8, left: 8 }}
             >
-              <ChartPatternDefs chartId={chartId} categoryCount={bars.length} />
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis
                 type="number"
@@ -159,7 +169,7 @@ export function OutcomeMeanBarChart({
               {showBenchmark ? (
                 <ReferenceLine
                   x={OUTCOME_ATTAINMENT_BENCHMARK}
-                  stroke="var(--warning)"
+                  stroke="var(--text-muted)"
                   strokeDasharray="6 4"
                   strokeWidth={2}
                   label={{
@@ -173,7 +183,7 @@ export function OutcomeMeanBarChart({
               <Bar dataKey="value" maxBarSize={32} radius={[0, 6, 6, 0]} isAnimationActive={false}>
                 {bars.map((entry) => {
                   const outcome = byOutcomeId.get(entry.outcomeId);
-                  const fill = hasClassified
+                  const fill = hasAttainment
                     ? getAttainmentColor(outcome?.attainment)
                     : "var(--chart-1)";
                   return <Cell key={entry.code} fill={fill} />;
@@ -191,25 +201,8 @@ export function OutcomeMeanBarChart({
             </BarChart>
           </ChartContainer>
         </div>
-        {hasClassified ? (
-          <div
-            role="list"
-            className="flex flex-wrap items-center gap-x-5 gap-y-1.5"
-            aria-label="Attainment benchmark status legend"
-          >
-            <span role="listitem" className="flex items-center gap-1.5">
-              <ChartSwatch fill="var(--color-success)" />
-              <span className="text-label-sm text-muted-foreground">Meets Benchmark (≥ 3.50)</span>
-            </span>
-            <span role="listitem" className="flex items-center gap-1.5">
-              <ChartSwatch fill="var(--color-warning)" />
-              <span className="text-label-sm text-muted-foreground">Needs Attention (2.50–3.49)</span>
-            </span>
-            <span role="listitem" className="flex items-center gap-1.5">
-              <ChartSwatch fill="var(--color-danger)" />
-              <span className="text-label-sm text-muted-foreground">Below Benchmark (&lt; 2.50)</span>
-            </span>
-          </div>
+        {hasAttainment ? (
+          <AttainmentLegend />
         ) : (
           <div
             role="list"

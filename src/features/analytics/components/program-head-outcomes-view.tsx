@@ -29,6 +29,7 @@ import { GRADUATE_OUTCOME_LABELS } from "@/features/analytics/outcome-evidence-t
 import type { ProgramHeadInsightFilters } from "@/features/analytics/services/program-head-analytics-state";
 import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 import { AttainmentBadge } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
 import { OutcomeEvidenceDetail } from "./outcome-evidence-detail";
 import { LazyOutcomeMeanBarChart } from "./program-head-analytics-visualizations";
 import { OutcomeContributorMatrix } from "./outcome-contributor-matrix";
@@ -197,12 +198,10 @@ export function ProgramHeadOutcomesView({
           <div className="border-border/80 bg-card rounded-xl border p-4 shadow-xs sm:p-5">
             <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
               <div>
-                <h2 className="text-title-sm font-semibold text-foreground">
+                <h2 className="text-title-sm text-foreground font-semibold">
                   Program Outcome Attainment Summary
                 </h2>
-                <p className="text-body-sm text-text-secondary mt-0.5">
-                  Benchmark is ≥ 3.50.
-                </p>
+                <p className="text-body-sm text-text-secondary mt-0.5">Benchmark is ≥ 3.50.</p>
               </div>
             </div>
             <div
@@ -215,7 +214,7 @@ export function ProgramHeadOutcomesView({
                 aria-pressed={attainmentFilter === "all"}
                 onClick={() => setAttainmentFilter("all")}
                 className={cn(
-                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   attainmentFilter === "all"
                     ? "bg-primary-soft text-selected-fg"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -228,7 +227,7 @@ export function ProgramHeadOutcomesView({
                 aria-pressed={attainmentFilter === "meets"}
                 onClick={() => setAttainmentFilter("meets")}
                 className={cn(
-                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   attainmentFilter === "meets"
                     ? "bg-success-soft text-success"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -241,7 +240,7 @@ export function ProgramHeadOutcomesView({
                 aria-pressed={attainmentFilter === "attention"}
                 onClick={() => setAttainmentFilter("attention")}
                 className={cn(
-                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   attainmentFilter === "attention"
                     ? "bg-warning-soft text-warning"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -254,7 +253,7 @@ export function ProgramHeadOutcomesView({
                 aria-pressed={attainmentFilter === "below"}
                 onClick={() => setAttainmentFilter("below")}
                 className={cn(
-                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   attainmentFilter === "below"
                     ? "bg-danger-soft text-danger"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -267,7 +266,7 @@ export function ProgramHeadOutcomesView({
                 aria-pressed={attainmentFilter === "noEvidence"}
                 onClick={() => setAttainmentFilter("noEvidence")}
                 className={cn(
-                  "text-label-sm min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                  "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
                   attainmentFilter === "noEvidence"
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -310,6 +309,7 @@ export function ProgramHeadOutcomesView({
       {data.programWideOutcomes.length > 0 && (
         <div className="flex flex-col gap-3">
           <h2 className="text-heading-lg text-foreground">Program-wide PO evidence</h2>
+          <AttainmentLegend />
           <Table
             aria-label="Program-wide evidence by program outcome"
             containerClassName="border-border rounded-lg border"
@@ -333,7 +333,7 @@ export function ProgramHeadOutcomesView({
                   data-outcome-row={row.poId}
                   className={cn(row.poId === selectedGoId && "bg-primary-soft/40")}
                 >
-                  <TableCell className="align-top whitespace-normal max-w-xs">
+                  <TableCell className="max-w-xs align-top whitespace-normal">
                     <div className="flex flex-col">
                       <span className="font-semibold">{row.code}</span>
                       <span className="text-text-secondary">{row.name}</span>
@@ -342,7 +342,7 @@ export function ProgramHeadOutcomesView({
                   <TableCell className="align-top whitespace-nowrap">
                     {STAKEHOLDER_LABELS[row.stakeholder]}
                   </TableCell>
-                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     <div>{row.meanRating === null ? "—" : row.meanRating.toFixed(2)}</div>
                     {row.meanRating !== null && row.attainment?.status === "classified" && (
                       <span className="text-label-xs text-muted-foreground block">
@@ -355,16 +355,16 @@ export function ProgramHeadOutcomesView({
                   <TableCell className="align-top whitespace-nowrap">
                     <AttainmentBadge attainment={row.attainment} />
                   </TableCell>
-                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     {row.ratingCount}
                   </TableCell>
-                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     {row.submittedResponseCount}
                   </TableCell>
-                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     {row.evaluationCount}
                   </TableCell>
-                  <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                  <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                     <span className="inline-flex items-center gap-1">
                       {row.questionCount}
                       <HowCalculatedPopover metric={row.evidenceSummary} label={row.code} />
@@ -417,13 +417,13 @@ function OutcomesExactValueTable({
                 data-outcome-row={outcome.outcomeId}
                 className={cn(isSelected && "bg-primary-soft/40")}
               >
-                <TableCell className="align-top whitespace-normal max-w-xs">
+                <TableCell className="max-w-xs align-top whitespace-normal">
                   <div className="flex flex-col">
                     <span className="font-semibold">{outcome.code}</span>
                     <span className="text-text-secondary">{outcome.name}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                   <div className="inline-flex items-center gap-1">
                     {outcome.meanRating === null ? "—" : outcome.meanRating.toFixed(2)}
                     <HowCalculatedPopover metric={outcome.evidenceSummary} label={outcome.code} />
@@ -439,13 +439,13 @@ function OutcomesExactValueTable({
                 <TableCell className="align-top whitespace-nowrap">
                   <AttainmentBadge attainment={outcome.attainment} />
                 </TableCell>
-                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                   {outcome.ratingCount}
                 </TableCell>
-                <TableCell className="text-right align-top tabular-nums whitespace-nowrap">
+                <TableCell className="text-right align-top whitespace-nowrap tabular-nums">
                   {outcome.submittedResponseCount}
                 </TableCell>
-                <TableCell className="align-top whitespace-normal max-w-xs">
+                <TableCell className="max-w-xs align-top whitespace-normal">
                   {outcome.evidenceEvaluations.length > 0 ? (
                     <ul className="flex flex-col gap-1">
                       {outcome.evidenceEvaluations.map((evaluation) => (
@@ -455,7 +455,7 @@ function OutcomesExactValueTable({
                               programId,
                               evaluation.evaluationId
                             )}
-                            className="text-link hover:text-foreground underline underline-offset-3 break-words"
+                            className="text-link hover:text-foreground break-words underline underline-offset-3"
                           >
                             {evaluation.deploymentName}
                           </Link>
@@ -468,7 +468,7 @@ function OutcomesExactValueTable({
                 </TableCell>
               </TableRow>,
               <TableRow key={`${outcome.outcomeId}-detail`}>
-                <TableCell colSpan={6} className="bg-muted/15 whitespace-normal p-4">
+                <TableCell colSpan={6} className="bg-muted/15 p-4 whitespace-normal">
                   <Disclosure open={isSelected}>
                     <DisclosureTrigger variant="link" id={detailId}>
                       Details for {outcome.code}

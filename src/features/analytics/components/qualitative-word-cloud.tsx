@@ -404,7 +404,8 @@ export function QualitativeWordCloud({ title, tokens, answerCount }: Qualitative
           )}
         </div>
         <p id={insightId} className="text-body-sm text-text-secondary">
-          {insight}
+          {insight} Word size represents mention count; colors distinguish terms, not tone or
+          attainment.
         </p>
       </CardContent>
     </Card>

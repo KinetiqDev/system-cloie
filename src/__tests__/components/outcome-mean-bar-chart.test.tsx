@@ -1,8 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { OutcomeMeanBarChart } from "@/features/analytics/components/outcome-mean-bar-chart";
+import { classifyOutcomeDistributions } from "@/features/analytics/aggregators/outcome-attainment";
 import {
   GRADUATE_OUTCOME_LABELS,
+  INSTITUTIONAL_OUTCOME_LABELS,
   type OutcomeEvidenceDTO,
 } from "@/features/analytics/outcome-evidence-types";
 
@@ -164,7 +166,7 @@ describe("OutcomeMeanBarChart", () => {
       <OutcomeMeanBarChart
         title="Mean Rating by Institutional Learning Outcome"
         outcomes={many}
-        labels={GRADUATE_OUTCOME_LABELS}
+        labels={INSTITUTIONAL_OUTCOME_LABELS}
       />
     );
 
@@ -235,23 +237,61 @@ describe("OutcomeMeanBarChart", () => {
     const fills = Array.from(
       container.querySelectorAll<SVGPathElement>(".recharts-bar-rectangle path")
     ).map((path) => path.getAttribute("fill") ?? "");
-    expect(fills).toEqual([
-      "var(--color-success)",
-      "var(--color-warning)",
-      "var(--color-danger)",
-    ]);
+    expect(fills).toEqual(["var(--color-success)", "var(--color-warning)", "var(--color-danger)"]);
+    expect(container.querySelector(".recharts-reference-line-line")).toHaveAttribute(
+      "stroke",
+      "var(--text-muted)"
+    );
+    expect(
+      screen.getByRole("region", { name: "Attainment interpretation guide" })
+    ).toBeInTheDocument();
+  });
+
+  it("shows a neutral legend and no benchmark when all outcome scales are unsupported", () => {
+    const { container } = render(
+      <OutcomeMeanBarChart
+        title="Unsupported outcome evidence"
+        outcomes={[outcomeDTO({ attainment: classifyOutcomeDistributions(3.87, [], false) })]}
+        labels={GRADUATE_OUTCOME_LABELS}
+      />
+    );
+    expect(container.querySelector(".recharts-bar-rectangle path")).toHaveAttribute(
+      "fill",
+      "var(--text-muted)"
+    );
+    expect(container.querySelector(".recharts-reference-line")).toBeNull();
+    expect(
+      screen.getByRole("region", { name: "Attainment interpretation guide" })
+    ).toHaveTextContent("Not classified");
+  });
+
+  it("keeps the interpretation guide visible when a status filter has no matching rows", () => {
+    render(
+      <OutcomeMeanBarChart title="Empty PO filter" outcomes={[]} labels={GRADUATE_OUTCOME_LABELS} />
+    );
+    expect(
+      screen.getByRole("region", { name: "Attainment interpretation guide" })
+    ).toBeInTheDocument();
   });
 
   it("renders an accessible empty state when no row is rated", () => {
     const { container } = render(
       <OutcomeMeanBarChart
         title="Mean Rating by Program Outcome"
-        outcomes={[outcomeDTO({ meanRating: null })]}
+        outcomes={[
+          outcomeDTO({
+            meanRating: null,
+            attainment: classifyOutcomeDistributions(null, [], false),
+          }),
+        ]}
         labels={GRADUATE_OUTCOME_LABELS}
       />
     );
 
     expect(container.querySelector(".recharts-bar-rectangle")).toBeNull();
     expect(screen.getByText("No rated outcome evidence yet")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Attainment interpretation guide" })
+    ).toHaveTextContent("not non-attainment");
   });
 });

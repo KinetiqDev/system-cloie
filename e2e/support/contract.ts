@@ -220,6 +220,23 @@ export const E2E_CONTRACT = {
     ],
   },
 
+  /** ADR 0037 presentation expectations; no additional database fixture is required. */
+  attainmentGuide: {
+    interpretations: [
+      "Fully Attained",
+      "Attained",
+      "Partially Attained",
+      "Slightly Attained",
+      "Not Attained",
+    ],
+    fills: [
+      "var(--color-success)",
+      "var(--color-warning)",
+      "var(--color-danger)",
+      "var(--text-muted)",
+    ],
+  },
+
   /** Reviewed expectations for the ITRES1 response and its bottom-up PO evidence link (journey B). */
   bottomUpResponse: {
     respondentName: "Demo Student",

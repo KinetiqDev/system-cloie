@@ -1,6 +1,11 @@
 // fallow-ignore-file code-duplication
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
+import { verifyAttainmentGuide } from "./support/attainment";
+
+test("mobile Program Head attainment guide explains canonical chart colors", async ({ page }) => {
+  await verifyAttainmentGuide(page);
+});
 import {
   expectNoAxeViolations,
   expectNoHorizontalOverflow,

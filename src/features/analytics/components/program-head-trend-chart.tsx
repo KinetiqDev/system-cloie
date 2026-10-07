@@ -65,11 +65,6 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
   const highest = sortedRated[sortedRated.length - 1];
 
   const hasDrawableRun = runs.some((run) => run.length >= 2);
-  const isPoEvidence = periods.some((p) => p.outcomeCodes.length > 0);
-  const isFivePointScale = periods.every(
-    (p) => !p.scaleContext || p.scaleContext.includes("5-point") || p.scaleContext.includes("1–5")
-  );
-  const showBenchmark = isPoEvidence && isFivePointScale;
 
   if (chartable.length === 0 || !hasDrawableRun) {
     return null;
@@ -77,9 +72,6 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
 
   const insight = [
     `Mean ratings range from ${lowest.meanRating.toFixed(2)} (${lowest.periodLabel}) to ${highest.meanRating.toFixed(2)} (${highest.periodLabel}) across ${rated.length} rated period${rated.length === 1 ? "" : "s"}.`,
-    showBenchmark
-      ? `Benchmark 3.50 marks the primary Program Outcome attainment threshold.`
-      : null,
     breaks.length > 0
       ? `${breaks.length} comparability break${breaks.length === 1 ? "" : "s"} separate this series; values are joined only within comparable periods.`
       : null,
@@ -126,20 +118,6 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
             <ChartTooltip
               formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
             />
-            {showBenchmark ? (
-              <ReferenceLine
-                y={3.5}
-                stroke="var(--warning)"
-                strokeDasharray="6 4"
-                strokeWidth={2}
-                label={{
-                  value: "Benchmark 3.50",
-                  position: "insideTopRight",
-                  fill: "var(--foreground)",
-                  fontSize: 12,
-                }}
-              />
-            ) : null}
             {breakLabels.map((label) => (
               <ReferenceLine
                 key={label}
@@ -189,7 +167,7 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
         })}
       </div>
       <p id={insightId} className="text-body-sm text-text-secondary">
-        {insight}
+        {insight} Colors identify comparable period runs, not attainment classifications.
       </p>
       {breaks.length > 0 ? (
         <div className="rounded-lg border border-dashed p-3">

@@ -19,6 +19,7 @@ import type {
 import { buildAnalyticsUrl } from "@/features/analytics/services/program-head-analytics-state";
 import { classifyOutcomeMean } from "@/features/analytics/aggregators/outcome-attainment";
 import { AttainmentBadge, getAttainmentColor } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
 import { HowCalculatedPopover } from "./how-calculated-popover";
 
 function mergeCatalogRows(
@@ -152,7 +153,8 @@ export function ProgramHeadGoSummary({
           </div>
         )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-1">
+      <CardContent className="flex flex-col gap-3">
+        {rows.length > 0 && <AttainmentLegend />}
         {rows.length === 0 ? (
           <Empty>
             <EmptyTitle>No active Program Outcomes</EmptyTitle>
@@ -175,7 +177,7 @@ export function ProgramHeadGoSummary({
                   tabIndex={-1}
                   className="bg-muted relative col-span-2 row-start-2 block h-3.5 overflow-hidden rounded border sm:col-span-1 sm:row-start-auto"
                 >
-                  {row.scaleMax !== null && row.scaleMax >= 3.5 ? (
+                  {row.attainment?.status === "classified" && row.scaleMax !== null ? (
                     <span
                       aria-hidden="true"
                       title="Benchmark 3.50"
@@ -189,7 +191,6 @@ export function ProgramHeadGoSummary({
                       style={{
                         width: `${Math.min(100, (row.mean / row.scaleMax) * 100)}%`,
                         backgroundColor: getAttainmentColor(row.attainment),
-                        opacity: 0.86,
                       }}
                     />
                   ) : null}
@@ -264,7 +265,7 @@ export function ProgramHeadGoSummary({
                       </dd>
                     </div>
                   </dl>
-                  <div className="text-muted-foreground text-label-sm mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/40 pt-1.5">
+                  <div className="text-muted-foreground text-label-sm border-border/40 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-1.5">
                     <span>
                       <strong className="text-foreground">Classification:</strong>{" "}
                       {row.attainment?.status === "classified"
