@@ -469,6 +469,9 @@ Dashboard answers:
 > What is happening in this evaluation cycle, and what needs attention?
 
 It should not duplicate full Analytics.
+The dashboard distillation keeps the evaluation-cycle overview and moves detailed comparisons, calculation disclosures, and interactive qualitative exploration into Analytics. Responses remains the entry to identified submitted answers. This replaces the earlier four-card, repeated-shortcut, and dashboard-word-cloud layout.
+
+The headline band contains three linked figures: Response completion, Respondents, and Active evaluations. On mobile these become compact horizontal rows. Desktop uses three columns. Labels use sentence case, decision text uses the design system's 14px floor, and numerals use tabular figures. The dashboard has no icon-only calculation popovers.
 
 ## 13.1 Header
 
@@ -490,7 +493,7 @@ Primary:
 
 ```text
 78%
-312 of 400 eligible evaluation assignments submitted
+312 of 400 submitted
 ```
 
 Calculation:
@@ -500,13 +503,7 @@ submitted eligible assignments / eligible assignments
 ```
 
 Eligible follows §5.12: every in-scope assignment row counts, regardless of any exclusion record.
-Provide an accessible details popover containing stakeholder breakdown:
-
-```text
-Students             265 / 340   77.9%
-Alumni                27 / 35    77.1%
-Industry Partners     20 / 25    80.0%
-```
+The visible Response progress panel supplies the stakeholder breakdown, so the KPI does not repeat it in a popover. The headline link opens Analytics > Stakeholders in the same period scope.
 
 Do not use registered Program population as denominator.
 
@@ -515,10 +512,8 @@ Do not use registered Program population as denominator.
 Example:
 
 ```text
-231 respondents
-184 complete
-31 partial
-16 not started
+231
+184 complete · 31 partial · 16 not started
 ```
 
 Definitions:
@@ -548,22 +543,11 @@ Example:
 
 Include relevant Course and Program-wide deployments.
 
-Click opens Responses with relevant status filter.
+Click opens the Course evaluations view of Responses with `status=ACTIVE` and the selected period. Switching to Program-wide preserves these filters. Deployment-specific attention items link directly to their Course or Program-wide review route.
 
-## 13.5 KPI card: Quantitative results
+## 13.5 Quantitative results belong in Analytics
 
-Do not display one global mean.
-
-Show source-specific summary:
-
-```text
-Course evaluations              4.18 / 5
-Program-wide students           4.07 / 5
-Alumni                          4.23 / 5
-Industry Partners               3.96 / 5
-```
-
-If a source spans incompatible scales, show `Multiple scales`.
+The landing page does not show a fourth KPI containing source-specific means. Analytics > Stakeholders retains those comparisons, and Analytics > Outcomes retains PO-level evidence detail. Sources remain separate and are never combined into one program score.
 
 ## 13.6 Response progress by stakeholder
 
@@ -584,18 +568,11 @@ Each row displays:
 
 Keep the respondent count visibly separate from `submitted / assigned`. One person may hold several evaluation assignments, so these denominators are not expected to match.
 
-Tooltip/focus details expose exact segment counts.
+Each row's accessible name exposes exact submitted, in-progress, and not-started counts. All bars share the same available width. Clicking a row opens Analytics > Stakeholders while preserving the period scope.
 
-Clicking a row opens Analytics > Stakeholders scoped to that stakeholder.
+## 13.7 Navigation without repeated quick actions
 
-## 13.7 Quick actions
-
-Include:
-
-- View Responses;
-- Explore Analytics;
-- Manage Course Assignments;
-- Manage Learning Outcomes.
+`View Responses` and `Open Analytics` remain in the header. Course Assignments and Outcomes remain in the role navigation, including the mobile drawer. Do not repeat these destinations in a Quick actions card on the dashboard.
 
 ## 13.8 PO summary
 
@@ -615,18 +592,15 @@ For each PO:
 - code;
 - compact horizontal bar or dot-bar;
 - mean;
-- details control.
+- attainment or explicit unclassified status.
 
-Details expose:
-
-- rating count;
-- response count;
-- evaluation count;
-- contributing CILO count or directly bound question count.
+Each complete row is one link, rather than separate code, bar, calculation, and evidence-detail controls. Rating, response, evaluation, and contributor counts remain in Analytics > Outcomes.
 
 Click opens Analytics > Outcomes with period, source, and PO preserved.
 
 Attainment status is displayed per PO under proposed institutional policy `CLOIE_OUTCOME_MEAN_V1` (benchmark 3.50; ADR 0037), with source-specific summary counts and benchmark reference lines. Operational 'Needs attention' remains distinct from academic attainment.
+
+The interpretation guide is available in a collapsed `How ratings are classified` disclosure. It retains all five bands, exact bounds, the proposed-policy caveat, and the indirect-survey limitation. Missing evidence, unsupported scales, and mixed scales remain distinct in visible summaries and accessible names. Unsupported or mixed evidence must not count as `without evidence`.
 
 ## 13.9 Needs attention
 
@@ -640,25 +614,18 @@ Concrete rules (period-scoped, selected Program):
 
 Do not classify academic performance without an approved rule.
 
+One deployment produces one attention row, even when both closing-soon and zero-submissions rules apply. Its note names both facts. Closing-soon deployments appear first, ordered by deadline. PO rating gaps collapse into one row per evidence source and link to Outcomes with the period and source filters preserved. The first five rows are visible; remaining rows use an accessible disclosure. Notes carry the meaning without relying on dot color alone.
+
 ## 13.10 Qualitative pulse
 
-Show:
+Show a compact `Written feedback` card with:
 
-- qualitative respondents;
-- qualitative answers;
-- contributing evaluations;
-- source chips;
-- word cloud;
-- top-word count slider;
-- link to Qualitative Analytics.
+- non-empty written-answer count;
+- distinct respondent count;
+- the twelve most-mentioned identifier-redacted terms and mention counts;
+- a link to Analytics > Qualitative when safe terms are available.
 
-Slider range:
-
-```text
-10 to 60 words
-```
-
-Slider changes only client-side visible token count when the server already returned the bounded token list.
+The card renders on the server and has no word-cloud slider or Ranked/Cloud toggle. Those controls, prompt/source breakdowns, and exact qualitative values remain in Analytics > Qualitative. Raw comments remain in Responses.
 
 ---
 

@@ -1,196 +1,76 @@
-import { BarChart3, ClipboardList, Users } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ParticipationSummary } from "@/features/analytics/aggregators/types";
-import type { DashboardSourceMean } from "@/features/analytics/services/get-program-head-dashboard";
-import { CompletionBreakdownPopover } from "./program-head-dashboard-completion-popover";
-import { HowCalculatedPopover } from "./how-calculated-popover";
+
+type Kpi = { label: string; value: string; detail: string; href: string };
 
 /**
- * The four dashboard KPI cards (spec §13.2–§13.5). Completion uses the raw
- * assignment denominator (resolved §5.12); respondents are person-level
- * (§13.3); quantitative means stay separated per evidence source (§8, §9).
+ * Three headline figures for the period (spec §13.2–§13.4). Completion uses
+ * the raw assignment denominator (resolved §5.12); respondents are
+ * person-level (§13.3). Each figure links to the view that explains it.
  */
-export function ProgramHeadDashboardKpiGrid({
+export function ProgramHeadDashboardKpis({
   participation,
-  pendingResponses,
   activeEvaluations,
-  sourceMeans,
-  responsesActiveCourseHref,
-  responsesActiveProgramWideHref,
-  responsesHref,
+  stakeholdersHref,
+  activeEvaluationsHref,
 }: {
   participation: ParticipationSummary;
-  pendingResponses: number;
   activeEvaluations: { total: number; closingWithin7Days: number };
-  sourceMeans: DashboardSourceMean[];
-  responsesActiveCourseHref: string;
-  responsesActiveProgramWideHref: string;
-  responsesHref: string;
+  stakeholdersHref: string;
+  activeEvaluationsHref: string;
 }) {
-  const completionEvidence = {
-    assignmentCount: participation.assigned,
-    responseCount: participation.submitted,
-    explanation:
-      "Submitted eligible evaluation assignments over every in-scope assignment row. The registered population is never the denominator.",
-    evidenceHref: responsesHref,
-  };
-  const respondentsEvidence = {
-    assignmentCount: participation.assigned,
-    responseCount: participation.submitted,
-    explanation:
-      "Person-level status across every eligible assignment: complete means all submitted, partial means at least one started or submitted, not started means none.",
-    evidenceHref: responsesHref,
-  };
-  const activeEvaluationsEvidence = {
-    evaluationCount: activeEvaluations.total,
-    explanation:
-      "ACTIVE course and program-wide deployments for the selected Program and academic period.",
-    evidenceHref: responsesHref,
-  };
+  const { completionRate, submitted, assigned, respondents } = participation;
+  const kpis: Kpi[] = [
+    {
+      label: "Response completion",
+      value: completionRate === null ? "—" : `${Math.round(completionRate * 100)}%`,
+      detail:
+        completionRate === null
+          ? "No evaluations assigned yet"
+          : `${submitted.toLocaleString()} of ${assigned.toLocaleString()} submitted`,
+      href: stakeholdersHref,
+    },
+    {
+      label: "Respondents",
+      value: respondents.total.toLocaleString(),
+      detail: `${respondents.complete.toLocaleString()} complete · ${respondents.partial.toLocaleString()} partial · ${respondents.notStarted.toLocaleString()} not started`,
+      href: stakeholdersHref,
+    },
+    {
+      label: "Active evaluations",
+      value: activeEvaluations.total.toLocaleString(),
+      detail: `${activeEvaluations.closingWithin7Days.toLocaleString()} close within 7 days`,
+      href: activeEvaluationsHref,
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardDescription className="text-muted-foreground text-label-sm font-semibold tracking-wider uppercase">
-              Response completion
-            </CardDescription>
-            <div className="flex items-center gap-1">
-              <HowCalculatedPopover metric={completionEvidence} label="Response completion" />
-              <CompletionBreakdownPopover stakeholders={participation.stakeholders} />
-            </div>
-          </div>
-          <CardTitle className="text-display-md tabular-nums">
-            {participation.completionRate === null
-              ? "—"
-              : `${Math.round(participation.completionRate * 100)}%`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground text-body-sm">
-          {participation.completionRate === null ? (
-            <p>No eligible evaluation assignments in this period.</p>
-          ) : (
-            <p>
-              {participation.submitted.toLocaleString()} of{" "}
-              {participation.assigned.toLocaleString()} eligible evaluation assignments submitted
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardDescription className="text-muted-foreground text-label-sm font-semibold tracking-wider uppercase">
-              Respondents
-            </CardDescription>
-            <HowCalculatedPopover metric={respondentsEvidence} label="Respondents" />
-          </div>
-          <CardTitle className="text-display-md flex items-center gap-2 tabular-nums">
-            <Users aria-hidden="true" className="text-muted-foreground size-5" />
-            {participation.respondents.total.toLocaleString()}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <dl className="text-body-sm grid grid-cols-2 gap-x-3 gap-y-1">
-            <dt className="text-muted-foreground">Complete</dt>
-            <dd className="text-right font-semibold tabular-nums">
-              {participation.respondents.complete.toLocaleString()}
-            </dd>
-            <dt className="text-muted-foreground">Partial</dt>
-            <dd className="text-right font-semibold tabular-nums">
-              {participation.respondents.partial.toLocaleString()}
-            </dd>
-            <dt className="text-muted-foreground">Not started</dt>
-            <dd className="text-right font-semibold tabular-nums">
-              {participation.respondents.notStarted.toLocaleString()}
-            </dd>
-          </dl>
-          <p className="text-muted-foreground text-body-sm mt-2">
-            Person-level status across eligible assignments.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-2">
-            <CardDescription className="text-muted-foreground text-label-sm font-semibold tracking-wider uppercase">
-              Active evaluations
-            </CardDescription>
-            <HowCalculatedPopover metric={activeEvaluationsEvidence} label="Active evaluations" />
-          </div>
-          <CardTitle className="text-display-md flex items-center gap-2 tabular-nums">
-            <ClipboardList aria-hidden="true" className="text-muted-foreground size-5" />
-            {activeEvaluations.total.toLocaleString()}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground text-body-sm flex flex-col gap-2">
-          <p>{`${activeEvaluations.closingWithin7Days} close within the next 7 days`}</p>
-          <p>
-            {`${pendingResponses.toLocaleString()} assignment${pendingResponses === 1 ? "" : "s"} still open`}
-          </p>
-          <div className="flex flex-col gap-1">
-            <Link
-              href={responsesActiveCourseHref}
-              className="text-link font-semibold hover:underline"
-            >
-              Review active course evaluations
-            </Link>
-            <Link
-              href={responsesActiveProgramWideHref}
-              className="text-link font-semibold hover:underline"
-            >
-              Review active program-wide evaluations
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardDescription className="text-muted-foreground text-label-sm flex items-center justify-between font-semibold tracking-wider uppercase">
-            Quantitative results
-            <BarChart3 aria-hidden="true" className="text-muted-foreground size-4" />
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <dl className="text-body-sm grid gap-y-2">
-            {sourceMeans.map((source) => (
-              <div
-                key={source.sourceKey}
-                className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-2"
-              >
-                <dt className="text-muted-foreground min-w-0 break-words">{source.label}</dt>
-                <dd className="flex items-center gap-1 text-right font-semibold tabular-nums">
-                  {source.spansMultipleScales ? (
-                    <span>
-                      Multiple scales
-                      <span className="sr-only">
-                        ; evidence uses incompatible rating scales, so no combined mean is shown
-                      </span>
-                    </span>
-                  ) : source.mean === null ? (
-                    <span className="font-normal">—</span>
-                  ) : (
-                    <>
-                      {source.mean.toFixed(2)} / {source.scaleMax ?? "–"}
-                      <span className="text-muted-foreground text-caption ml-1 font-normal">
-                        ({source.ratingCount})
-                      </span>
-                    </>
-                  )}
-                  <HowCalculatedPopover metric={source.evidenceSummary} label={source.label} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="text-muted-foreground text-label-sm mt-2">
-            Source means stay separate and are never pooled into one program score.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <section
+      aria-label="Key figures"
+      className="bg-card border-border grid overflow-hidden rounded-xl border shadow-sm sm:grid-cols-3"
+    >
+      {kpis.map((kpi) => (
+        <Link
+          key={kpi.label}
+          href={kpi.href}
+          className="group hover:bg-surface-hover focus-visible:ring-ring border-border grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 border-b px-4 py-3.5 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset motion-reduce:transition-none sm:grid-cols-1 sm:items-start sm:gap-y-1 sm:border-r sm:border-b-0 sm:px-5 sm:py-5 sm:last:border-r-0"
+        >
+          <span className="text-title-sm text-text-primary col-start-1 row-start-1 flex items-center gap-1">
+            {kpi.label}
+            <ChevronRight
+              aria-hidden="true"
+              className="text-text-secondary size-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+            />
+          </span>
+          <span className="text-heading-xl sm:text-display-md col-start-2 row-span-2 row-start-1 tabular-nums sm:col-start-1 sm:row-span-1 sm:row-start-2">
+            {kpi.value}
+          </span>
+          <span className="text-body-sm text-text-secondary col-start-1 row-start-2 text-pretty sm:row-start-3">
+            {kpi.detail}
+          </span>
+        </Link>
+      ))}
+    </section>
   );
 }

@@ -7,13 +7,11 @@ import {
   type CourseBindingRow,
   type DashboardRatingRow,
   buildCourseGoRatingRows,
-  buildDashboardSourceMeans,
   buildNeedsAttentionItems,
   isClosingWithinSevenDays,
   QUALITATIVE_TOKEN_CAP,
   summarizeQualitativePulse,
-  toCentralDashboardGoRows,
-  toDashboardGoRows,
+  toDashboardPoRows,
 } from "@/features/analytics/services/get-program-head-dashboard";
 import {
   buildCourseDerivedPoMetrics,
@@ -130,66 +128,6 @@ function centralRow(stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER"): Das
 }
 
 // ---------------------------------------------------------------------------
-// Source-separated quantitative means (§13.5, §8, §9)
-// ---------------------------------------------------------------------------
-
-describe("buildDashboardSourceMeans", () => {
-  it("keeps the four evidence sources separate with their own ratings", () => {
-    const rows = [
-      courseRow({ rating_value: 2 }),
-      courseRow({ rating_value: 1, response_id: "resp-course-2" }),
-      centralRow("STUDENT"),
-      centralRow("ALUMNI"),
-      centralRow("INDUSTRY_PARTNER"),
-    ];
-    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP, "program-1");
-    expect(means.map((mean) => mean.sourceKey)).toEqual([
-      "COURSE_STUDENT",
-      "CENTRAL_STUDENT",
-      "ALUMNI",
-      "INDUSTRY_PARTNER",
-    ]);
-    expect(means[0].ratingCount).toBe(2);
-    expect(means[0].mean).toBe(1.5);
-    expect(means[0].scaleMax).toBe(2);
-    for (const mean of means.slice(1)) {
-      expect(mean.ratingCount).toBe(1);
-      expect(mean.mean).toBe(1);
-    }
-  });
-
-  it("reports Multiple scales instead of pooling incompatible scales within a source", () => {
-    const rows = [
-      courseRow(),
-      courseRow({
-        response_id: "resp-other-version",
-        response: {
-          assignment: {
-            course_bound_id: "cb-2",
-            course_bound: { id: "cb-2", instrument_version_id: "iv-scale3" },
-            central_deployment: null,
-          },
-        },
-      }),
-    ];
-    const means = buildDashboardSourceMeans(rows, SNAPSHOT_MAP, "program-1");
-    expect(means[0].spansMultipleScales).toBe(true);
-    expect(means[0].mean).toBeNull();
-    expect(means[0].ratingCount).toBe(2);
-    expect(means[0].scaleMax).toBeNull();
-    expect(means[1].ratingCount).toBe(0);
-  });
-
-  it("reports an unavailable mean for a source without evidence", () => {
-    const means = buildDashboardSourceMeans([courseRow()], SNAPSHOT_MAP, "program-1");
-    expect(means.map((mean) => mean.mean)).toEqual([2, null, null, null]);
-    expect(means[1].spansMultipleScales).toBe(false);
-    expect(means[1].ratingCount).toBe(0);
-    expect(means[1].scaleMax).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // PO row normalization into the shared aggregators (§13.8, §5.8, §5.9, §7)
 // ---------------------------------------------------------------------------
 
@@ -298,46 +236,33 @@ describe("PO row normalization", () => {
   });
 });
 
-describe("PO summary projections", () => {
-  const metrics = [
-    {
-      poId: "po-1",
-      poCode: "PO 1",
-      poDescription: "",
-      mean: 4,
-      ratingCount: 6,
-      responseCount: 3,
-      evaluationCount: 2,
-      questionCount: 3,
-      scaleGroups: [],
-      spansMultipleScales: false,
-      excludedRatingCount: 0,
-      contributingCilos: [
-        { id: "cilo-1", label: "CILO 1" },
-        { id: "cilo-2", label: "CILO 2" },
-      ],
-    },
-  ];
+describe("toDashboardPoRows", () => {
+  const metric = {
+    poId: "po-1",
+    poCode: "PO 1",
+    poDescription: "",
+    mean: 4,
+    ratingCount: 6,
+    responseCount: 3,
+    evaluationCount: 2,
+    questionCount: 3,
+    scaleGroups: [],
+    spansMultipleScales: false,
+    excludedRatingCount: 0,
+    contributingCilos: [],
+  };
 
-  it("exposes bound-question counts for course evidence", () => {
-    const row = toDashboardGoRows(
-      metrics,
-      () => "/program-head/programs/p1/analytics?tab=outcomes"
-    )[0];
-    expect(row.contributorKind).toBe("questions");
-    expect(row.contributorCount).toBe(3);
+  it("marks rated POs as evidenced and never classifies without a resolved scale", () => {
+    const [row] = toDashboardPoRows([metric]);
     expect(row.hasEvidence).toBe(true);
     expect(row.scaleMax).toBeNull();
-    expect(row.evidenceSummary.evidenceHref).toContain("tab=outcomes");
+    expect(row.attainment.status).not.toBe("classified");
   });
 
-  it("exposes bound-question counts for program-wide evidence", () => {
-    const row = toCentralDashboardGoRows(
-      metrics,
-      () => "/program-head/programs/p1/analytics?tab=outcomes"
-    )[0];
-    expect(row.contributorKind).toBe("questions");
-    expect(row.contributorCount).toBe(3);
+  it("treats an unrated PO as lacking evidence", () => {
+    const [row] = toDashboardPoRows([{ ...metric, mean: null, ratingCount: 0 }]);
+    expect(row.hasEvidence).toBe(false);
+    expect(row.attainment.status).toBe("no-evidence");
   });
 });
 
@@ -383,96 +308,98 @@ describe("buildNeedsAttentionItems", () => {
     ["d-zero", 0],
   ]);
 
-  it("flags ACTIVE deployments closing within seven days; never SCHEDULED or far deadlines", () => {
-    const items = buildNeedsAttentionItems({
+  function items(overrides: Partial<Parameters<typeof buildNeedsAttentionItems>[0]> = {}) {
+    return buildNeedsAttentionItems({
       programId: "program-1",
       now,
       deployments,
       submittedCountsByDeployment: submittedCounts,
       programGos: [],
       poRowsBySource: {},
-      analyticsOutcomesHref: "/analytics?tab=outcomes",
+      ...overrides,
     });
-    expect(items.filter((item) => item.rule === "closing-soon").map((item) => item.id)).toEqual([
-      "closing-soon:course:d-closing",
-    ]);
+  }
+
+  it("flags ACTIVE deployments closing within seven days; never SCHEDULED or far deadlines", () => {
+    expect(
+      items()
+        .filter((item) => item.rules.includes("closing-soon"))
+        .map((item) => item.id)
+    ).toEqual(["deployment:course:d-closing"]);
   });
 
   it("flags ACTIVE deployments with zero submissions regardless of deadline", () => {
-    const items = buildNeedsAttentionItems({
-      programId: "program-1",
-      now,
-      deployments,
-      submittedCountsByDeployment: submittedCounts,
-      programGos: [],
-      poRowsBySource: {},
-      analyticsOutcomesHref: "/analytics?tab=outcomes",
-    });
-    expect(items.filter((item) => item.rule === "zero-submissions").map((item) => item.id)).toEqual(
-      ["zero-submissions:central:d-zero"]
-    );
+    expect(
+      items()
+        .filter((item) => item.rules.includes("zero-submissions"))
+        .map((item) => item.id)
+    ).toEqual(["deployment:central:d-zero"]);
   });
 
-  it("reports every live PO without ratings for each evidence source", () => {
-    const items = buildNeedsAttentionItems({
-      programId: "program-1",
-      now,
+  it("merges both deployment rules into one item, listed before other deployments", () => {
+    const result = items({
+      submittedCountsByDeployment: new Map([
+        ["d-far", 2],
+        ["d-zero", 0],
+      ]),
+    });
+    expect(result.map((item) => item.id)).toEqual([
+      "deployment:course:d-closing",
+      "deployment:central:d-zero",
+    ]);
+    expect(result[0].rules).toEqual(["closing-soon", "zero-submissions"]);
+    expect(result[0].note).toBe("Closes within 7 days · No submissions yet");
+  });
+
+  it("collapses PO rating gaps into one item per evidence source naming the missing POs", () => {
+    const result = items({
       deployments: [],
-      submittedCountsByDeployment: new Map(),
       programGos: [
         { id: "po-1", code: "PO 1" },
         { id: "po-2", code: "PO 2" },
       ],
       poRowsBySource: {
-        COURSE_STUDENT: [
+        COURSE_STUDENT: toDashboardPoRows([
           {
             poId: "po-1",
             poCode: "PO 1",
+            poDescription: "",
             mean: 4,
             ratingCount: 8,
             responseCount: 2,
             evaluationCount: 1,
-            contributorCount: 2,
-            contributorKind: "questions",
+            questionCount: 2,
+            scaleGroups: [],
             spansMultipleScales: false,
-            scaleMax: 5,
-            hasEvidence: true,
-            evidenceSummary: { ratingCount: 8, explanation: "Raw mean of 8 valid ratings." },
+            excludedRatingCount: 0,
+            contributingCilos: [],
           },
-        ],
+        ]),
       },
-      analyticsOutcomesHref: "/analytics?tab=outcomes",
+      periodFilters: { termInstanceId: "00000000-0000-4000-8000-000000000001" },
     });
-    const zeroRatings = items.filter((item) => item.rule === "zero-po-ratings");
-    // Only COURSE_STUDENT:PO 1 has evidence; every other source/PO pair is flagged.
-    expect(zeroRatings.map((item) => item.id)).toEqual([
-      "zero-po-ratings:COURSE_STUDENT:po-2",
-      "zero-po-ratings:CENTRAL_STUDENT:po-1",
-      "zero-po-ratings:CENTRAL_STUDENT:po-2",
-      "zero-po-ratings:ALUMNI:po-1",
-      "zero-po-ratings:ALUMNI:po-2",
-      "zero-po-ratings:INDUSTRY_PARTNER:po-1",
-      "zero-po-ratings:INDUSTRY_PARTNER:po-2",
+    expect(result.map((item) => [item.id, item.note])).toEqual([
+      ["zero-po-ratings:COURSE_STUDENT", "PO 2"],
+      ["zero-po-ratings:CENTRAL_STUDENT", "All 2 POs"],
+      ["zero-po-ratings:ALUMNI", "All 2 POs"],
+      ["zero-po-ratings:INDUSTRY_PARTNER", "All 2 POs"],
     ]);
-    expect(zeroRatings[0].href).toBe("/analytics?tab=outcomes");
+    const alumniHref = result[2].href;
+    expect(alumniHref).toContain("tab=outcomes");
+    expect(alumniHref).toContain("evidenceSource=ALUMNI");
+    expect(alumniHref).toContain("termInstanceId=00000000-0000-4000-8000-000000000001");
   });
 
   it("links deployment items to their canonical Responses routes", () => {
-    const items = buildNeedsAttentionItems({
+    const result = items({
       programId: "program-9",
-      now,
-      deployments,
-      submittedCountsByDeployment: submittedCounts,
-      programGos: [],
-      poRowsBySource: {},
-      analyticsOutcomesHref: "/outcomes",
       periodFilters: {
         schoolYearId: "00000000-0000-4000-8000-000000000009",
         semester: "SECOND",
       },
     });
-    const closingHref = items.find((item) => item.rule === "closing-soon")!.href;
-    const zeroHref = items.find((item) => item.rule === "zero-submissions")!.href;
+    const closingHref = result.find((item) => item.rules.includes("closing-soon"))!.href;
+    const zeroHref = result.find((item) => item.id === "deployment:central:d-zero")!.href;
     expect(closingHref).toContain("/responses/course/d-closing");
     expect(zeroHref).toContain("/responses/program-wide/d-zero");
     for (const href of [closingHref, zeroHref]) {
@@ -503,46 +430,18 @@ describe("buildNeedsAttentionItems", () => {
 
 describe("summarizeQualitativePulse", () => {
   let sequence = 0;
-  function qualRow(text: string, source: "course" | "alumni" | "industry" | "student") {
-    sequence += 1;
-    const id = `resp-${sequence}`;
-    return {
-      text_content: text,
-      response: {
-        id,
-        respondent_id: `person-${id}`,
-        assignment:
-          source === "course"
-            ? { course_bound: { id: "cb-1" }, central_deployment: null }
-            : {
-                course_bound: null,
-                central_deployment: {
-                  id: `cd-${source}`,
-                  target_stakeholder:
-                    source === "alumni"
-                      ? ("ALUMNI" as const)
-                      : source === "industry"
-                        ? ("INDUSTRY_PARTNER" as const)
-                        : ("STUDENT" as const),
-                },
-              },
-      },
-    };
+  function qualRow(text: string, respondentId = `person-${++sequence}`) {
+    return { text_content: text, response: { respondent_id: respondentId } };
   }
 
-  it("counts respondents, answers, and contributing evaluations across sources", () => {
+  it("counts non-empty answers and distinct respondents", () => {
     const pulse = summarizeQualitativePulse([
-      qualRow("Great laboratory activities", "course"),
-      qualRow("Loved the internship support", "alumni"),
-      qualRow("   ", "student"),
+      qualRow("Great laboratory activities"),
+      qualRow("Loved the internship support"),
+      qualRow("   "),
     ]);
     expect(pulse.answerCount).toBe(2);
     expect(pulse.respondentCount).toBe(2);
-    expect(pulse.evaluationCount).toBe(2);
-    expect(pulse.sourceCounts.map((source) => source.sourceKey)).toEqual([
-      "COURSE_STUDENT",
-      "ALUMNI",
-    ]);
   });
 
   it("returns identifier-redacted tokens capped server-side at sixty", () => {
@@ -552,7 +451,7 @@ describe("summarizeQualitativePulse", () => {
       (_, index) => `topic word${index}`
     );
     const pulse = summarizeQualitativePulse(
-      texts.map((text) => qualRow(`${text} Maria Santos a1b2@mail.com`, "course"))
+      texts.map((text) => qualRow(`${text} Maria Santos a1b2@mail.com`))
     );
     expect(pulse.tokens.length).toBeLessThanOrEqual(QUALITATIVE_TOKEN_CAP);
     const serialized = JSON.stringify(pulse.tokens);
@@ -564,30 +463,17 @@ describe("summarizeQualitativePulse", () => {
     }
   });
 
-  it("counts one person once across several evaluations (§13.3 person-level)", () => {
-    sequence = 0;
-    const rows = [
-      qualRow("Great laboratory activities", "course"),
-      qualRow("Loved the internship support", "course"),
-    ];
-    // Both rows belong to the same person: respondent identity is shared.
-    const personId = "person-shared";
-    const pulse = summarizeQualitativePulse(
-      rows.map((row) => ({
-        ...row,
-        response: { ...row.response, respondent_id: personId },
-      }))
-    );
+  it("counts one person once across several answers (§13.3 person-level)", () => {
+    const pulse = summarizeQualitativePulse([
+      qualRow("Great laboratory activities", "person-shared"),
+      qualRow("Loved the internship support", "person-shared"),
+    ]);
     expect(pulse.respondentCount).toBe(1);
     expect(pulse.answerCount).toBe(2);
-    expect(pulse.evaluationCount).toBe(1);
   });
 
   it("never carries raw comment text on the returned projection", () => {
-    sequence = 100;
-    const pulse = summarizeQualitativePulse([
-      qualRow("Confidential remark about Juan Cruz", "industry"),
-    ]);
+    const pulse = summarizeQualitativePulse([qualRow("Confidential remark about Juan Cruz")]);
     const serialized = JSON.stringify(pulse);
     expect(serialized).not.toContain("Confidential remark");
     expect(serialized).not.toContain("Juan Cruz");

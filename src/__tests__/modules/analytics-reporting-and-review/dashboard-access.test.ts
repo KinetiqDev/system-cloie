@@ -161,7 +161,7 @@ describe("analytics dashboard access", () => {
     expect(prismaMock.program.findUniqueOrThrow).not.toHaveBeenCalled();
   });
 
-  it("derives pending responses from the same raw assignment rows as completion", async () => {
+  it("derives completion and respondent status from the same raw assignment rows", async () => {
     mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
     mockEmptyDashboardReads();
     // Two submitted, one in progress, one not started over four opportunity rows.
@@ -174,9 +174,9 @@ describe("analytics dashboard access", () => {
 
     const result = await getProgramHeadDashboard("program-1");
 
-    expect(result).toMatchObject({ pendingResponses: 2 });
     expect(result?.participation.assigned).toBe(4);
     expect(result?.participation.submitted).toBe(2);
+    expect(result?.participation.respondents).toMatchObject({ total: 3, complete: 1 });
 
     // The participation read carries every in-scope row with no availability
     // or exclusion filtering (resolved §5.12).
@@ -208,7 +208,6 @@ describe("analytics dashboard access", () => {
     // and filters by the same ACTIVE status the KPI counts, so the drill-down
     // never lists evaluations absent from the displayed total.
     expect(result?.links.responsesActiveCourse).toContain("termInstanceId=term-1");
-    expect(result?.links.responsesActiveProgramWide).toContain("termInstanceId=term-1");
     expect(result?.links.responsesActiveCourse).toContain("status=ACTIVE");
 
     // Status-based KPI: SCHEDULED deployments never inflate the count.
@@ -265,11 +264,7 @@ describe("analytics dashboard access", () => {
       semester: "SECOND",
     });
 
-    for (const href of [
-      result?.links.responses,
-      result?.links.responsesActiveCourse,
-      result?.links.responsesActiveProgramWide,
-    ]) {
+    for (const href of [result?.links.responses, result?.links.responsesActiveCourse]) {
       expect(href).toContain("schoolYearId=00000000-0000-4000-8000-000000000001");
       expect(href).toContain("semester=SECOND");
       if (href === result?.links.responses) {
@@ -404,94 +399,15 @@ describe("analytics dashboard access", () => {
     expect(JSON.stringify(result)).not.toContain("GEETHICS");
   });
 
-  it("keeps source quantitative means at full precision and separated per evidence source", async () => {
-    mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
-    mockEmptyDashboardReads();
-    const snapshot = [
-      {
-        key: "cilo-items",
-        title: "S",
-        items: [
-          {
-            key: "q-cilo-a",
-            prompt: "Q",
-            likertDescriptors: [
-              { value: 1, label: "Low" },
-              { value: 2, label: "Mid" },
-              { value: 3, label: "High" },
-            ],
-          },
-        ],
-      },
-    ];
-    prismaMock.instrumentVersion.findMany.mockResolvedValue([
-      { id: "iv-course", structure_snapshot: snapshot },
-    ]);
-    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
-      courseRating("r1", 3),
-      courseRating("r2", 3),
-      courseRating("r2", 4),
-    ]);
-
-    const result = await getProgramHeadDashboard("program-1");
-
-    expect(result).not.toBeNull();
-    if (!result) return;
-
-    const courseMean = result.sourceMeans.find((mean) => mean.sourceKey === "COURSE_STUDENT")!;
-    // Full precision pooled mean of [3, 3, 4]; presentation rounds later.
-    expect(courseMean.mean).toBe(10 / 3);
-    expect(courseMean.ratingCount).toBe(3);
-    expect(courseMean.scaleMax).toBe(3);
-    // Central sources stay separate even though this program has course evidence.
-    for (const key of ["CENTRAL_STUDENT", "ALUMNI", "INDUSTRY_PARTNER"] as const) {
-      expect(result.sourceMeans.find((mean) => mean.sourceKey === key)).toMatchObject({
-        mean: null,
-        ratingCount: 0,
-      });
-    }
-  });
-
-  function courseRating(responseId: string, rating_value: number) {
-    return {
-      rating_value,
-      response_id: responseId,
-      section_key: "cilo-items",
-      item_key: "q-cilo-a",
-      response: {
-        assignment: {
-          course_bound_id: "cb-1",
-          course_bound: { id: "cb-1", instrument_version_id: "iv-course" },
-          central_deployment: null,
-        },
-      },
-    };
-  }
-
   it("returns aggregate-only de-identified qualitative pulse data without raw comment text", async () => {
     mockAuthorizedProgramHead("program-1", "BSIT", "Information Technology");
     mockEmptyDashboardReads();
     prismaMock.qualitativeResponseItem.findMany.mockResolvedValue([
       {
         text_content: "Private respondent@example.com student123 comment",
-        response: {
-          id: "resp-1",
-          assignment: {
-            course_bound: { id: "cb-9" },
-            central_deployment: null,
-          },
-        },
+        response: { respondent_id: "person-1" },
       },
-      {
-        text_content: "   ",
-        response: {
-          id: "resp-2",
-          assignment: {
-            course_bound: { id: "cb-9" },
-            central_deployment: null,
-          },
-        },
-      },
+      { text_content: "   ", response: { respondent_id: "person-2" } },
     ]);
 
     const result = await getProgramHeadDashboard("program-1");
@@ -501,7 +417,6 @@ describe("analytics dashboard access", () => {
 
     expect(result.qualitative.answerCount).toBe(1);
     expect(result.qualitative.respondentCount).toBe(1);
-    expect(result.qualitative.evaluationCount).toBe(1);
     expect(result.qualitative.tokens.length).toBeLessThanOrEqual(60);
     for (const token of result.qualitative.tokens) {
       expect(Object.keys(token).sort()).toEqual(["text", "value"]);

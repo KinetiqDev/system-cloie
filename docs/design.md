@@ -227,7 +227,7 @@ Exact sizes live in `globals.css`.
 - 4/8 px rhythm; prefer `gap-*` over `space-*`.
 - Standard component gap: 16 px; section gap: 24 px.
 - Admin pages: medium density; respondent/onboarding: low density.
-- Dashboard stakeholder progress rows share column tracks across labels, bars, and counts. Every bar has the same available width so differing assignment-count lengths cannot distort visual comparisons.
+- Dashboard stakeholder progress rows use a full-width bar beneath their label/count line. Every bar has the same available width so differing assignment-count lengths cannot distort visual comparisons.
 - Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
 - Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Landing and public entry actions use the standard `default` button size: 40 px on desktop, 44 px on touch-capable devices, and 14 px labels. Public entry inputs, selects, and grouped controls match those heights through `entry-controls`; input text stays 16 px to avoid mobile browser zoom.
 - `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.
@@ -272,6 +272,14 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 | Settings              | medium      | grouped forms                  | clear persistent preferences | analytics density      |
 
 Theme selection must not change the page pattern.
+
+### Program Head dashboard
+
+- The landing page answers evaluation-cycle status and what needs attention. Detailed source means, exact evidence counts, and interactive word clouds stay in Analytics; identified answers stay in Responses.
+- A single headline band contains Response completion, Respondents, and Active evaluations. Use three columns on desktop and compact horizontal rows on mobile. Labels use sentence case and the 14 px decision-text floor; numbers use tabular figures. Links have visible navigation affordances and keyboard focus.
+- Program Outcomes shows one evidence source at a time, compact mean bars, and text attainment or unclassified labels. Each row links to its filtered Analytics outcome. Keep the full interpretation guide behind a disclosure rather than showing every band above the rows.
+- Needs attention combines deployment rules into one row per deployment and groups missing PO ratings by source. Show five rows before disclosure. The note text names the condition, so status is never color-only.
+- Written feedback shows answer/respondent counts and twelve redacted term chips. The dashboard does not repeat the sidebar/header destinations in a Quick actions card or add calculation popovers to each metric.
 
 ### Respondent dashboards
 

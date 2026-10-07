@@ -16,7 +16,7 @@ export const DASHBOARD_SOURCE_ORDER = [
 
 export type DashboardSourceKey = (typeof DASHBOARD_SOURCE_ORDER)[number];
 
-/** §13.5 quantitative-results card labels; sources stay separate (§8). */
+/** Evidence-source labels shared by attention items and Analytics filter descriptions (§8). */
 export const SOURCE_CARD_LABELS: Record<DashboardSourceKey, string> = {
   COURSE_STUDENT: "Course evaluations",
   CENTRAL_STUDENT: "Program-wide students",
@@ -58,8 +58,8 @@ export const DASHBOARD_SOURCE_TO_ANALYTICS_FILTER: Record<
 };
 
 /**
- * Server-side ceiling for the qualitative pulse word cloud (§13.10). Tokens
- * are identifier-redacted and truncated server-side; the client slider only
- * re-slices this bounded list.
+ * Server-side ceiling for the qualitative pulse token projection (§13.10).
+ * Tokens are identifier-redacted; the server-rendered dashboard shows only
+ * its top twelve terms. Interactive qualitative exploration lives in Analytics.
  */
 export const QUALITATIVE_TOKEN_CAP = 60;

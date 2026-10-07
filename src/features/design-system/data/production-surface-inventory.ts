@@ -2608,7 +2608,7 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 KPI cards: semantic tokens, tabular numerals, accessible popover breakdown, source-separated means",
+      "Three linked headline figures (completion, respondents, active evaluations); semantic tokens, tabular numerals, no popovers",
   },
   {
     path: "src/components/ui/breadcrumbs.tsx",
@@ -2639,38 +2639,31 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Slice #521 scrolls the deep-linked outcome row into view after mount; matches data-outcome-row by value to avoid selector escaping",
   },
   {
-    path: "src/features/analytics/components/program-head-dashboard-completion-popover.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes:
-      "Slice #519 completion breakdown popover on the shared Base UI popover primitive with labelled table",
-  },
-  {
     path: "src/features/analytics/components/program-head-stakeholder-progress.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 keyboard-operable stacked participation bars; counts and percentage visible without hover",
+      "Keyboard-operable stacked participation bars; percentage, submitted/assigned, and respondent counts visible without hover",
   },
   {
     path: "src/features/analytics/components/program-head-po-summary.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 PO summary with evidence-source selector and details disclosure; no attainment status",
+      "PO summary with evidence-source selector; each row links to Analytics Outcomes; ADR 0037 guide behind a disclosure",
   },
   {
     path: "src/features/analytics/components/program-head-needs-attention.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes:
-      "Slice #519 needs-attention list carrying text status labels rather than color-only signals",
+      "Needs-attention list grouped per deployment and per evidence source; text notes name each rule, never color alone",
   },
   {
     path: "src/features/analytics/components/program-head-qualitative-pulse.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Slice #519 qualitative pulse; slider re-slices server-capped redacted tokens only",
+    notes: "Written-feedback pulse: answer/respondent counts and top server-capped redacted terms",
   },
   {
     path: "src/features/analytics/components/program-head-analytics-shell.tsx",
