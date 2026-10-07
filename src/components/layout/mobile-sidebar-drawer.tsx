@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -21,18 +21,39 @@ import {
 import { ROLES } from "@/lib/constants/roles";
 import { NavigationRow } from "./navigation-row";
 
+/**
+ * Drawer slide timing. A confident deceleration curve that mirrors the desktop
+ * sidebar fold (sidebar-fold.ts) while staying a touch faster for the snappier
+ * mobile interaction.
+ */
+const DRAWER_DURATION_MS = 280;
+const DRAWER_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
+
 interface MobileSidebarDrawerProps {
   roles?: Role[];
   user?: { name?: string | null; email?: string | null };
   activeProgramId?: string | null;
 }
 
+/**
+ * Manages the three-phase lifecycle that lets the drawer animate out before
+ * being removed from the accessibility tree:
+ *
+ *   closed  → mounting (DOM present, start entrance)  → open
+ *   open    → closing  (run exit transition)           → closed
+ *
+ * While `closing`, the drawer remains mounted so CSS transitions run against a
+ * real element, but `aria-hidden` removes it from the accessibility tree
+ * immediately so screen readers never read stale content.
+ */
+type DrawerPhase = "closed" | "mounting" | "open" | "closing";
+
 export function MobileSidebarDrawer({
   roles = [],
   user,
   activeProgramId = null,
 }: MobileSidebarDrawerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [phase, setPhase] = useState<DrawerPhase>("closed");
   const pathname = usePathname();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -42,8 +63,28 @@ export function MobileSidebarDrawer({
     ? getDeanActiveItem(pathname)
     : getDeepestMatchingNavItem(pathname, mainNav);
   const restoreFocusRef = useRef(true);
+
+  const mounted = phase !== "closed";
+  const visible = phase === "open";
+
+  // Phase: mounting → open (after one frame, so the browser paints the
+  // off-screen position and the transition has somewhere to animate from).
   useEffect(() => {
-    if (!isOpen) return;
+    if (phase !== "mounting") return;
+    const frame = requestAnimationFrame(() => setPhase("open"));
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
+
+  // Phase: closing → closed (after the exit transition finishes).
+  useEffect(() => {
+    if (phase !== "closing") return;
+    const timeout = setTimeout(() => setPhase("closed"), DRAWER_DURATION_MS);
+    return () => clearTimeout(timeout);
+  }, [phase]);
+
+  // Focus management + scroll lock, active only while the drawer is interactive.
+  useEffect(() => {
+    if (phase !== "open") return;
     const previousOverflow = document.body.style.overflow;
     const trigger = triggerRef.current;
     document.body.style.overflow = "hidden";
@@ -59,7 +100,7 @@ export function MobileSidebarDrawer({
       if (event.key === "Escape") {
         event.preventDefault();
         restoreFocusRef.current = true;
-        setIsOpen(false);
+        setPhase("closing");
         return;
       }
       if (event.key !== "Tab" || !drawerRef.current) return;
@@ -92,12 +133,14 @@ export function MobileSidebarDrawer({
       document.removeEventListener("keydown", handleKeyDown);
       if (restoreFocusRef.current) trigger?.focus();
     };
-  }, [isOpen]);
+  }, [phase]);
 
-  const close = (restoreFocus = true) => {
+  const open = useCallback(() => setPhase("mounting"), []);
+  const close = useCallback((restoreFocus = true) => {
     restoreFocusRef.current = restoreFocus;
-    setIsOpen(false);
-  };
+    setPhase("closing");
+  }, []);
+
   const renderLink = (item: { name: string; href: string; icon: LucideIcon }) => {
     const active = activeItem === item;
     return (
@@ -119,33 +162,48 @@ export function MobileSidebarDrawer({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={open}
         className={cn(
           "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground focus-visible:outline-ring flex min-h-11 min-w-11 items-center justify-center rounded-md transition-colors focus-visible:outline-2",
           dean ? "md:hidden" : "lg:hidden"
         )}
         aria-label="Open navigation menu"
-        aria-expanded={isOpen}
+        aria-expanded={visible}
       >
         <Menu className="size-5" aria-hidden="true" />
       </button>
-      {isOpen && (
+      {mounted && (
         <div
-          className={cn("bg-scrim fixed inset-0 z-50", dean ? "md:hidden" : "lg:hidden")}
+          className={cn(
+            "fixed inset-0 z-50",
+            dean ? "md:hidden" : "lg:hidden",
+            "bg-scrim transition-opacity motion-reduce:transition-none",
+          )}
+          style={{
+            transitionDuration: `${DRAWER_DURATION_MS}ms`,
+            opacity: visible ? 1 : 0,
+          }}
           onClick={() => close()}
           aria-hidden="true"
         />
       )}
-      {isOpen && (
+      {mounted && (
         <aside
           ref={drawerRef}
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
+          aria-hidden={!visible}
           className={cn(
             "bg-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl",
-            dean ? "md:hidden" : "lg:hidden"
+            dean ? "md:hidden" : "lg:hidden",
+            "transition-transform motion-reduce:transition-none",
           )}
+          style={{
+            transitionDuration: `${DRAWER_DURATION_MS}ms`,
+            transitionTimingFunction: DRAWER_EASING,
+            transform: visible ? "translateX(0)" : "translateX(-100%)",
+          }}
         >
           <div className="border-sidebar-border flex min-h-16 shrink-0 items-center justify-between border-b px-5">
             <Link
