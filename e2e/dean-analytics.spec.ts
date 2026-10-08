@@ -83,14 +83,17 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
   await page.setViewportSize({ width: 820, height: 1180 });
   await expectNoHorizontalOverflow(page);
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
   await page.getByRole("menuitemradio", { name: "Dark", exact: true }).click();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await expectNoAxeViolations(page);
   await page.screenshot({
     path: join(testInfo.outputDir, "dean-analytics-tablet-dark.png"),
     fullPage: true,
   });
   await page.goto("/dean/analytics?view=outcomes");
+  await waitForStableState(page);
   await expect(page.getByText(/No evaluations match this scope/)).toBeVisible();
   await page.goto("/dean/analytics?termInstanceId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await waitForStableState(page);

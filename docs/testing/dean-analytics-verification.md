@@ -19,8 +19,8 @@ The technical scope decision is ADR 0038. Deterministic calculations reuse the e
 
 ## Executed verification
 
-- Full Vitest regression passed with 481 files and 4,600 tests before the final additional three readiness-composition tests. Seven tests and one file retained repository opt-in skips. An earlier full run failed one mobile-drawer Escape timing assertion; the unchanged focused drawer suite and the subsequent full run passed. No assertion or timeout was weakened.
-- Latest focused analytics, Dean, route, navigation and design inventory run passed 37 files and 588 tests.
+- Full Vitest regression passed with 482 files and 4,603 tests. Seven tests and one file retained repository opt-in skips. Two earlier full runs exposed a mobile-drawer Escape readiness race. The test now waits for the first navigation link to receive focus and asserts scroll lock before Escape, rather than relying on dialog visibility before the key handler is ready. Closing, restored-focus and unlocked-scroll assertions remain intact. No assertion or timeout was weakened.
+- After fast-forwarding the worktree to local dev commit `5fd63977`, focused analytics, Dean, route, navigation, drawer and design inventory tests passed 38 files and 603 tests. Type checking passed and production-runtime browser journeys passed in the integrated worktree.
 - TypeScript `pnpm exec tsc --noEmit` passed.
 - `pnpm lint` passed with two existing warnings in `src/app/error.tsx` and `src/components/ui/alert.tsx`.
 - `pnpm build` passed repeatedly, including the production-runtime Playwright gate.
@@ -45,3 +45,4 @@ Independent standards and spec reviews led to current-scope AI thresholds, quali
 - The shared local seed failed the existing General Education ILO fixture contract. Verification used a fresh disposable fixture instead of modifying shared data.
 - The existing Playwright production startup uses `next start` despite standalone output and logs that warning. Some cross-role navigations log `destination stream closed early` while route-denial assertions still pass. These are retained observations, not hidden test failures.
 - No deployment, remote push or database migration was performed against a deployed environment.
+- Local dev commit `5fd63977` already contained the reviewed Dean analytics implementation. The original `dev-wt` worktree was zero commits ahead and one behind, so a conflict-free fast-forward was sufficient; no history rewrite or duplicate feature commit was needed. The residual drawer test correction was preserved with a patch and applied to the integrated worktree. Independent review found no new product-code regression.
