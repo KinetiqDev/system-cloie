@@ -17,6 +17,7 @@ import { D, U } from "../../prisma/seed/constants/ids";
  * them separately because they are not identifiers under test.
  */
 export const E2E_CONTRACT = {
+  deanAnalytics: { programCodes: ["BSIT", "BEED", "BSBA"] },
   /** Deterministic SystemRole identities reused from the Prisma seed. */
   demoPh: { id: U.PH_BSIT, email: "demo-ph@cloie.test", name: "Demo Program Head" },
   beedPh: { id: U.PH_BEED, email: "ph-beed@cloie.test", name: "Maria Santos" },

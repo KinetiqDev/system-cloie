@@ -303,6 +303,30 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
+    path: "src/app/(app)/dean/analytics/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+    notes: "Dean analytics uses semantic tokens and responsive evidence controls",
+  },
+  {
+    path: "src/features/analytics/components/dean-analytics-filter-form.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean URL filter navigation preserves the workspace frame",
+  },
+  {
+    path: "src/features/analytics/components/dean-ai-insight.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean analytics uses semantic tokens and responsive evidence controls",
+  },
+  {
+    path: "src/features/analytics/components/dean-evidence-view.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean analytics uses semantic tokens and responsive evidence controls",
+  },
+  {
     path: "src/app/(app)/dean/analytics/page.tsx",
     disposition: "task",
     taskId: 22,

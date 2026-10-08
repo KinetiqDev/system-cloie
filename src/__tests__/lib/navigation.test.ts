@@ -155,6 +155,7 @@ describe("navigation helpers", () => {
     const deanNav = getMainNavByRoles([ROLES.DEAN]);
     expect(deanNav.map((item) => item.href)).toEqual([
       "/dean/dashboard",
+      "/dean/analytics",
       "/dean/academic-structure",
       "/dean/college-oversight",
       "/dean/profile",
@@ -206,7 +207,7 @@ describe("navigation helpers", () => {
       getDeanNavGroups()
         .find((group) => group.name === "College Oversight")
         ?.items.map((item) => item.name)
-    ).toEqual(["Learning Outcomes"]);
+    ).toEqual(["Analytics", "Learning Outcomes"]);
     expect(
       getDeanNavGroups()
         .find((group) => group.name === "Academic Structure")
@@ -220,6 +221,7 @@ describe("navigation helpers", () => {
     ["/dean/academic-structure/courses/abc/edit", "Courses"],
     ["/dean/academic-structure/instruments", "Evaluation Tools"],
     ["/dean/college-oversight/learning-outcomes", "Learning Outcomes"],
+    ["/dean/analytics", "Analytics"],
     ["/dean/profile/details", "Profile"],
   ])("selects one deepest destination for %s", (pathname, expectedName) => {
     expect(getDeanActiveItem(pathname)?.name).toBe(expectedName);

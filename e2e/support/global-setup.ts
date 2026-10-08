@@ -604,6 +604,7 @@ async function verifyPoEvidenceLink(programId: string): Promise<string> {
 }
 
 export default async function globalSetup(): Promise<void> {
+  await Promise.all(E2E_CONTRACT.deanAnalytics.programCodes.map(findProgramByCode));
   await verifyIdentities();
   const [deployments, academicPeriods] = await Promise.all([
     verifyDeployments(),

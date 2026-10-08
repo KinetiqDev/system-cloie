@@ -1,5 +1,6 @@
 import type { Prisma, YearLevel } from "@prisma/client";
 import { ResponseStatus } from "@prisma/client";
+import { requireDeanAnalytics } from "./dean-analytics";
 import { cache } from "react";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 import { prisma } from "@/lib/db/prisma";
@@ -161,7 +162,10 @@ type GeneralEducationEvidence = {
 };
 
 /** Coordinator authorization. Every read resolves this itself, per request. */
-async function requireGeneralEducationCoordinator(): Promise<boolean> {
+async function requireGeneralEducationCoordinator(
+  reader: "coordinator" | "dean"
+): Promise<boolean> {
+  if (reader === "dean") return !!(await requireDeanAnalytics());
   const session = await resolveAuthSession();
   return session?.activeRole === ROLES.GEN_ED_COORDINATOR;
 }
@@ -780,9 +784,10 @@ async function loadAnalyticsOptions(): Promise<GeneralEducationAnalyticsOptions>
  * evidence only. Returns null for any non-Coordinator caller.
  */
 export async function getGeneralEducationAnalyticsFrame(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationAnalyticsFrameDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const [scope, options] = await Promise.all([
     resolveGeneralEducationReadScope(evidenceScopeKey(filters)),
     loadAnalyticsOptions(),
@@ -812,9 +817,10 @@ export async function getGeneralEducationAnalyticsFrame(
  * like a Program Head PO row.
  */
 export async function getGeneralEducationOutcomes(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationOutcomesDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const scopeKey = evidenceScopeKey(filters);
   const scope = await resolveGeneralEducationReadScope(scopeKey);
   const [evidence, iloCatalog, alignments, scopedCourses] = await Promise.all([
@@ -940,9 +946,10 @@ function isValidGeRating(
  * comparable predecessor delta when one is defensible.
  */
 export async function getGeneralEducationCourses(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationCoursesDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const scopeKey = evidenceScopeKey(filters);
   const [evidence, alignments, iloCatalog] = await Promise.all([
     readGeneralEducationEvidence(scopeKey),
@@ -1023,9 +1030,10 @@ export async function getGeneralEducationCourses(
  * respondent's Program membership, and Central evidence stays excluded.
  */
 export async function getGeneralEducationPrograms(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationProgramsDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const scopeKey = evidenceScopeKey(filters);
   const evidence = await readGeneralEducationEvidence(scopeKey);
   const { rows, courseMatrix } = buildGeProgramRows({
@@ -1054,9 +1062,10 @@ export async function getGeneralEducationPrograms(
  * numerator must not fabricate an ILO-specific denominator.
  */
 export async function getGeneralEducationTrends(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationTrendsDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const scopeKey = evidenceScopeKey(filters);
   const evidence = await readGeneralEducationEvidence(scopeKey);
   const outcomeIdsOf = geOutcomeIdResolverFor(evidence);
@@ -1095,9 +1104,10 @@ export async function getGeneralEducationTrends(
  * this boundary.
  */
 export async function getGeneralEducationFeedback(
-  filters: GeneralEducationFilters
+  filters: GeneralEducationFilters,
+  reader: "coordinator" | "dean" = "coordinator"
 ): Promise<GeneralEducationFeedbackDTO | null> {
-  if (!(await requireGeneralEducationCoordinator())) return null;
+  if (!(await requireGeneralEducationCoordinator(reader))) return null;
   const scopeKey = evidenceScopeKey(filters);
   const scope = await resolveGeneralEducationReadScope(scopeKey);
   const [qualitativeRows, evidence] = await Promise.all([
@@ -1195,11 +1205,7 @@ export async function getGeneralEducationFeedback(
         evaluationId,
         deploymentName: evidence.deploymentsByEvaluation.get(evaluationId) ?? "",
       }))
-      .sort(
-        (left, right) =>
-          left.deploymentName.localeCompare(right.deploymentName) ||
-          left.evaluationId.localeCompare(right.evaluationId)
-      ),
+      .sort((left, right) => compareEvaluationProvenance(left, right)),
   };
 }
 
@@ -1214,4 +1220,12 @@ function resolvePromptLabel(snapshot: unknown, sectionKey: string, promptKey: st
     getSnapshotSectionItems(section).find((item) => item.key === promptKey)?.prompt ??
     "Unlabeled prompt"
   );
+}
+
+function compareEvaluationProvenance(
+  left: { deploymentName: string; evaluationId: string },
+  right: { deploymentName: string; evaluationId: string }
+): number {
+  const nameOrder = left.deploymentName.localeCompare(right.deploymentName);
+  return nameOrder || left.evaluationId.localeCompare(right.evaluationId);
 }

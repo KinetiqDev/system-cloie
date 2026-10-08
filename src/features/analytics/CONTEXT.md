@@ -210,3 +210,14 @@ _Avoid_: Provider-judged sentiment, tone verdict without the stated rule
 **Qualitative evidence tier**:
 Deterministic qualitative structure ships to the provider; verbatim de-identified excerpts remain unshipped per ADR 0016/0023 with no schema migration.
 _Avoid_: Verbatim excerpt in the provider packet, provider-reproduced respondent text
+
+
+## Dean analytics workspace (ADR 0038)
+
+The active Dean has a college-wide, aggregate-only read path at `/dean/analytics`. The college view compares historical opportunities, submitted responses and deployment activity across programs, keeping General Education outside program-specific comparison. College totals also include General Education and Central deployments without a program; program cards therefore do not sum to the college total. Programs keep distinct POs and no college PO ranking or pooled outcome score exists.
+
+Program views show PO catalog evidence gaps, frozen direct bindings, current CILO mapping contributions, scale-separated distributions, evaluation provenance, course/instrument results, source-separated stakeholders, comparable history and repeated-term feedback. The institutional view shows General Education CILO-to-ILO evidence, unlinked ratings, course contributions and history without attainment or PO propagation. Operational evidence ownership does not change.
+
+Every public read and AI action reauthorizes the active Dean role. No identified response, raw comment, respondent identifier or roster reaches the workspace. Invalid existing-period or incompatible evaluation filters never widen evidence. No persistent cache is added. AI accepts filters only and uses allowlisted bounded aggregates with current-scope evidence thresholds and repeated distinct-response terms. Disabled or failed AI leaves deterministic analytics intact. Production AI governance remains ADR 0016.
+
+Dean period means are withheld unless the rating-bearing period contains one instrument version, one frozen scale identity and one evidence source. This stricter overview rule avoids presenting a pooled cross-construct mean to college oversight. All submitted responses still count toward participation.
