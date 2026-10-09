@@ -61,14 +61,14 @@ async function seedOwnedRows(): Promise<OwnedRows> {
 
   const firstGo = await prisma.pO.create({
     data: {
-      code: `BTPO-${suffix}`,
+      code: `BTPO1-${suffix}`,
       description: "First program outcome",
       program_id: program.id,
     },
   });
   const secondGo = await prisma.pO.create({
     data: {
-      code: `BTPO-${suffix}`,
+      code: `BTPO2-${suffix}`,
       description: "Second program outcome",
       program_id: program.id,
     },
