@@ -38,7 +38,8 @@ describe("Dean mobile navigation drawer", () => {
     render(<MobileSidebarDrawer roles={[ROLES.DEAN]} />);
     const trigger = screen.getByRole("button", { name: "Open navigation menu" });
     fireEvent.click(trigger);
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("link", { name: "Dashboard" })).toHaveFocus());
+    expect(document.body.style.overflow).toBe("hidden");
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
