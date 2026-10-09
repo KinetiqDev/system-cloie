@@ -324,11 +324,6 @@ function PeriodTick({
   );
 }
 
-/**
- * One value per row: horizontal bars for groups, vertical columns for
- * periods (kept in the order given, oldest first). Means and counts share a
- * zero baseline so bar length stays proportional.
- */
 function DeanValueExactTable({
   title,
   valueLabel,
@@ -519,6 +514,11 @@ function deanValuePlot({
   );
 }
 
+/**
+ * One value per row: horizontal bars for groups, vertical columns for
+ * periods (kept in the order given, oldest first). Means and counts share a
+ * zero baseline so bar length stays proportional.
+ */
 export function DeanValueChart({
   title,
   description,

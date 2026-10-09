@@ -1,3 +1,4 @@
+import { isRepeatedTerm } from "../types";
 import { z } from "zod";
 import { getDeanEvidence, type DeanEvidence } from "./dean-evidence";
 import { requireDeanAnalytics } from "./dean-analytics";
@@ -112,9 +113,7 @@ function deanAiFeedbackPacket(evidence: Extract<DeanEvidence, { kind: "feedback"
   return {
     program: label(evidence.program.code),
     writtenAnswers: evidence.data?.qualitativeItemCount,
-    terms: cap(
-      (evidence.data?.tokens ?? []).filter((row) => row.value > 1 && row.responseCount > 1)
-    ).map((row) => ({
+    terms: cap((evidence.data?.tokens ?? []).filter(isRepeatedTerm)).map((row) => ({
       term: label(row.text),
       mentions: row.value,
       responses: row.responseCount,

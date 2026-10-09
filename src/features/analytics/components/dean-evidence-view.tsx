@@ -9,7 +9,7 @@ import {
   INSTITUTIONAL_OUTCOME_LABELS,
   type OutcomeEvidenceDTO,
 } from "../outcome-evidence-types";
-import type { WordCloudToken } from "../types";
+import { isRepeatedTerm, type WordCloudToken } from "../types";
 import type { DeanEvidence } from "../services/dean-evidence";
 import { deanAnalyticsUrl, type DeanAnalyticsFilters } from "../services/dean-analytics-state";
 import {
@@ -26,6 +26,7 @@ import { LikertDistributionTable } from "./likert-distribution-table";
 import { AttainmentBadge, getAttainmentColor } from "./outcome-attainment-badge";
 import { AttainmentLegend } from "./outcome-attainment-legend";
 import { deanScopedParticipation, deanScaleDomain } from "./dean-presentation";
+import type { ProgramHeadProgramWideOutcomeDTO } from "../program-head-analytics-types";
 import {
   LazyOutcomeMeanBarChart,
   LazyProgramHeadInstrumentBreakdownChart,
@@ -116,7 +117,7 @@ function RepeatedTermsCloud({
   tokens: WordCloudToken[];
   answerCount: number;
 }) {
-  const repeated = tokens.filter((token) => token.value > 1 && (token.responseCount ?? 0) > 1);
+  const repeated = tokens.filter(isRepeatedTerm);
   if (repeated.length === 0) return <Note>No word was mentioned by more than one respondent.</Note>;
   return (
     <LazyQualitativeWordCloud
@@ -137,12 +138,12 @@ function DeanOutcomeRows({
   return (
     <div className="flex flex-col gap-3">
       {rows.map((row) => (
-        <details key={row.outcomeId} className="bg-card rounded-xl border p-4">
-          <summary className="text-body-sm cursor-pointer font-semibold break-words pointer-coarse:min-h-11">
+        <Disclosure key={row.outcomeId} className="bg-card rounded-xl border p-4">
+          <DisclosureTrigger className="text-body-sm font-semibold break-words">
             {row.code} · {row.name}{" "}
             <span className="text-muted-foreground font-normal">· {row.ratingCount} ratings</span>
-          </summary>
-          <div className="text-body-sm mt-4 flex flex-col gap-4">
+          </DisclosureTrigger>
+          <DisclosureContent className="text-body-sm mt-4 flex flex-col gap-4">
             <p className="tabular-nums">
               Average:{" "}
               {row.spansMultipleScales
@@ -186,8 +187,8 @@ function DeanOutcomeRows({
                 {row.evidenceEvaluations.map((evaluation) => evaluation.deploymentName).join(", ")}
               </p>
             )}
-          </div>
-        </details>
+          </DisclosureContent>
+        </Disclosure>
       ))}
     </div>
   );
@@ -632,6 +633,88 @@ function DeanPoCatalog({ evidence }: { evidence: EvidenceKind<"outcomes"> }) {
   );
 }
 
+type ProgramWideGroup = {
+  label: string;
+  rows: ComponentProps<typeof LazyDeanValueChart>["rows"];
+};
+
+function programWideRow(
+  row: ProgramHeadProgramWideOutcomeDTO,
+  scale: {
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number | null;
+    ratingCount: number;
+  }
+): ComponentProps<typeof LazyDeanValueChart>["rows"][number] | null {
+  if (scale.meanRating === null) return null;
+  const group = `${DEAN_STAKEHOLDER_LABELS[row.stakeholder]} · ${row.code}`;
+  return {
+    key: `${row.poId}:${scale.scaleKey}`,
+    label: group,
+    fullLabel: `${group} · ${row.name}`,
+    value: scale.meanRating,
+    detail: `${scale.ratingCount} ratings · ${row.submittedResponseCount} submissions`,
+    color: getAttainmentColor(row.attainment),
+    status:
+      row.attainment?.status === "classified" && row.attainment.interpretation
+        ? row.attainment.interpretation
+        : "Not classified",
+  };
+}
+
+/** Group program-wide rows by the frozen scale identity their mean sits on. */
+function groupProgramWideByScale(rows: ProgramHeadProgramWideOutcomeDTO[]) {
+  const byScale = new Map<string, ProgramWideGroup>();
+  for (const row of rows) {
+    for (const scale of row.scaleGroups) {
+      const entry = programWideRow(row, scale);
+      if (!entry || scale.ratingCount === 0) continue;
+      const group = byScale.get(scale.scaleKey) ?? { label: scale.scaleLabel, rows: [] };
+      group.rows.push(entry);
+      byScale.set(scale.scaleKey, group);
+    }
+  }
+  return byScale;
+}
+
+/**
+ * One chart per frozen scale identity in the Program-wide evaluations view.
+ * Stakeholders answer different instruments, so their means are only
+ * comparable inside one descriptor set; a row whose evidence spans several
+ * identities appears once per identity with that identity's own mean, never
+ * as a blended number ranked against another scale.
+ */
+function DeanProgramWideCharts({
+  rows,
+  hasClassified,
+}: {
+  rows: ProgramHeadProgramWideOutcomeDTO[];
+  hasClassified: boolean;
+}) {
+  const byScale = groupProgramWideByScale(rows);
+  if (byScale.size === 0) return <Note>No rated program-wide evidence in this scope.</Note>;
+  return [...byScale.entries()].map(([key, group], index) => (
+    <LazyDeanValueChart
+      key={key}
+      title={`Average rating by group and PO · ${group.label}${byScale.size > 1 ? ` · scale group ${index + 1}` : ""}`}
+      valueLabel="Average rating"
+      format="mean"
+      max={Math.max(
+        0,
+        ...deanScaleDomain(
+          [group.label],
+          group.rows.map((row) => row.value)
+        )
+      )}
+      benchmark={hasClassified ? OUTCOME_ATTAINMENT_BENCHMARK : undefined}
+      keepOrder
+      rows={group.rows}
+      emptyText="No rated program-wide evidence in this scope."
+    />
+  ));
+}
+
 function DeanOutcomesView({
   evidence,
   filters,
@@ -679,34 +762,9 @@ function DeanOutcomesView({
       {central.length > 0 && (
         <Section
           title="Program-wide evaluations"
-          intro="Students, alumni and industry partners rate POs directly. Each group is shown separately."
+          intro="Students, alumni and industry partners rate POs directly. Each group is shown separately, and each frozen rating scale is charted on its own so means are never compared across scales."
         >
-          <LazyDeanValueChart
-            title="Average rating by group and PO"
-            valueLabel="Average rating"
-            format="mean"
-            max={Math.max(
-              0,
-              ...deanScaleDomain(
-                central.map((row) => row.evidenceSummary.scaleLabel),
-                central.map((row) => row.meanRating)
-              )
-            )}
-            benchmark={hasClassified ? OUTCOME_ATTAINMENT_BENCHMARK : undefined}
-            keepOrder
-            rows={central.map((row) => ({
-              key: `${row.stakeholder}-${row.poId}`,
-              label: `${DEAN_STAKEHOLDER_LABELS[row.stakeholder]} · ${row.code}`,
-              value: row.meanRating ?? 0,
-              detail: `${row.submittedResponseCount} submissions`,
-              color: getAttainmentColor(row.attainment),
-              status:
-                row.attainment?.status === "classified" && row.attainment.interpretation
-                  ? row.attainment.interpretation
-                  : "Not classified",
-            }))}
-            emptyText="No program-wide ratings yet."
-          />
+          <DeanProgramWideCharts rows={central} hasClassified={hasClassified} />
           <AttainmentLegend />
         </Section>
       )}
@@ -1014,7 +1072,7 @@ function DeanFeedbackView({
               <ul className="bg-card text-body-sm flex flex-col divide-y rounded-xl border">
                 {data.promptCounts.map((prompt, index) => {
                   const terms = prompt.terms
-                    .filter((term) => term.value > 1 && term.responseCount > 1)
+                    .filter(isRepeatedTerm)
                     .map((term) => `${term.text} (${term.value})`)
                     .join(", ");
                   return (

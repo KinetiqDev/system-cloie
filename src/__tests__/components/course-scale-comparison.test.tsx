@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { DeanValueChart } from "@/features/analytics/components/dean-charts";
 import { DeanEvidenceView } from "@/features/analytics/components/dean-evidence-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
-import type { ProgramHeadBreakdownsDTO } from "@/features/analytics/program-head-analytics-types";
+import type {
+  ProgramHeadBreakdownsDTO,
+  ProgramHeadProgramWideOutcomeDTO,
+} from "@/features/analytics/program-head-analytics-types";
 
 vi.mock("@/features/analytics/components/dean-visualizations", async () => {
   const charts = await import("@/features/analytics/components/dean-charts");
@@ -243,5 +246,123 @@ describe("Course-scale comparisons", () => {
       "href",
       "/program-head/programs/program/responses/course/eval-1"
     );
+  });
+});
+
+describe("Dean program-wide scale separation", () => {
+  const programWideRow = (
+    outcomeId: string,
+    code: string,
+    labels: Array<[number, string | null]>
+  ) => {
+    const maxValue = labels[labels.length - 1][0];
+    const scaleLabel = `1–${maxValue} (${labels.length}-point)`;
+    const mean = labels.reduce((sum, [value]) => sum + value, 0) / labels.length;
+    return {
+      stakeholder: "STUDENT" as const,
+      poId: outcomeId,
+      code,
+      name: `${code} outcome`,
+      meanRating: mean,
+      ratingCount: labels.length,
+      submittedResponseCount: labels.length,
+      evaluationCount: 1,
+      questionCount: 1,
+      attainment: undefined,
+      evidenceSummary: { scaleLabel, explanation: "" },
+      scaleGroups: [
+        {
+          scaleKey: JSON.stringify(labels.map(([value, label]) => ({ value, label }))),
+          scaleLabel,
+          meanRating: mean,
+          ratingCount: labels.length,
+        },
+      ],
+    };
+  };
+
+  function deanView(programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[]) {
+    return render(
+      <DeanEvidenceView
+        filters={{ view: "outcomes", programId: "program" }}
+        evidence={{
+          kind: "outcomes",
+          program: { id: "program", code: "P", name: "Program", is_active: true },
+          college: {
+            programs: [],
+            periods: [],
+            evidence: [],
+            programRows: [],
+            invalidPeriod: false,
+            summary: {
+              opportunities: 0,
+              submitted: 0,
+              rate: null,
+              deployments: 0,
+              active: 0,
+              closedIncomplete: 0,
+            },
+          },
+          data: {
+            scope: { programCode: "P", programName: "Program", periodLabel: null },
+            periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
+            outcomes: [],
+            programWideOutcomes,
+            currentMappingDisclosure: "",
+            manyToManyDisclosure: false,
+            emptyReason: null,
+          },
+          catalog: [],
+          alignment: null,
+          alignmentUnavailable: false,
+          alignmentBasis: "Live active-period readiness",
+        }}
+      />
+    );
+  }
+
+  it("charts each program-wide stakeholder scale separately and never ranks across them", () => {
+    deanView([
+      programWideRow("po-a", "PO1", [
+        [1, null],
+        [2, null],
+        [3, null],
+        [4, null],
+      ]),
+      programWideRow("po-b", "PO2", [
+        [1, null],
+        [2, null],
+        [3, null],
+        [4, null],
+        [5, null],
+        [6, null],
+        [7, null],
+      ]),
+    ]);
+    const regions = screen.getAllByRole("region", { name: /Average rating by group and PO/ });
+    expect(regions).toHaveLength(2);
+    // The seven-point 7.00 is never ranked above the four-point 2.50.
+    expect(screen.queryByText(/Highest:.*7\.00/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lowest:.*2\.50/)).not.toBeInTheDocument();
+    expect(regions[0]).toHaveAccessibleName(/4-point/);
+    expect(regions[1]).toHaveAccessibleName(/7-point/);
+  });
+
+  it("discloses the scale of every ranked program-wide row", () => {
+    deanView([
+      programWideRow("po-a", "PO1", [
+        [1, null],
+        [2, null],
+        [3, null],
+        [4, null],
+      ]),
+    ]);
+    const region = screen.getByRole("region", { name: /Average rating by group and PO/ });
+    expect(region).toHaveAccessibleName(/4-point/);
+    // The exact-value table discloses the scale the ranked rows sit on.
+    expect(screen.getAllByText(/Students · PO1/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("table", { name: /Average rating by group and PO/ })
+    ).toBeInTheDocument();
   });
 });

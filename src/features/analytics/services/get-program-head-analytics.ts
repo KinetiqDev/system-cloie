@@ -30,6 +30,7 @@ import {
 import {
   buildScaleIdentities,
   ratingBelongsToScale,
+  describeScale,
   describeScales,
   describeSingleScaleGroup,
   extractDistinctScales,
@@ -1262,6 +1263,14 @@ async function buildProgramWideOutcomeDtos(
           scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
           explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Outcome; unbound items are excluded.`,
         },
+        scaleGroups: metric.scaleGroups
+          .map((group) => ({
+            scaleKey: group.scale?.key ?? "",
+            scaleLabel: group.scale ? describeScale(group.scale.descriptors) : "",
+            meanRating: group.mean,
+            ratingCount: group.ratingCount,
+          }))
+          .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey)),
       });
     }
   }

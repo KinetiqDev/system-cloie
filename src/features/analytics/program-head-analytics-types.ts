@@ -121,6 +121,18 @@ export type ProgramHeadProgramWideOutcomeDTO = {
   evaluationCount: number;
   /** Number of distinct questions (items) that contributed to this row. */
   questionCount: number;
+  /**
+   * One entry per frozen scale identity behind this row's valid ratings.
+   * A row whose ratings span incompatible identities has no single mean, so
+   * each identity keeps its own mean and rating count and readers never
+   * rank one stakeholder's mean against another's.
+   */
+  scaleGroups: Array<{
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number | null;
+    ratingCount: number;
+  }>;
   /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
   attainment?: OutcomeAttainment;
   /** Presentation metadata for the "How calculated" disclosure (§41). */

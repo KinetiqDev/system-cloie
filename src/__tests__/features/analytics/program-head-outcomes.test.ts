@@ -349,6 +349,14 @@ describe("getProgramHeadOutcomes", () => {
           evidenceHref:
             "/program-head/programs/program-bsed/responses?tab=program-wide&stakeholder=ALUMNI",
         },
+        scaleGroups: [
+          {
+            scaleKey: expect.any(String),
+            scaleLabel: "1–5 (5-point)",
+            meanRating: 5,
+            ratingCount: 1,
+          },
+        ],
       },
     ]);
   });

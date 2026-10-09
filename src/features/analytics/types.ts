@@ -8,6 +8,15 @@ export type WordCloudToken = {
 };
 
 /**
+ * The one repeated-term threshold every qualitative surface applies. A term
+ * reaches a reader only when it was mentioned more than once by more than
+ * one distinct respondent, so no single answer can expose its own wording.
+ */
+export function isRepeatedTerm(token: WordCloudToken): boolean {
+  return token.value > 1 && (token.responseCount ?? 0) > 1;
+}
+
+/**
  * Deterministic tone distribution over scored answers (ADR 0023). Counts only:
  * `positive + neutral + negative === scoredItemCount`.
  */
