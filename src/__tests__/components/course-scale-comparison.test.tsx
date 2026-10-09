@@ -281,6 +281,33 @@ describe("Dean program-wide scale separation", () => {
     };
   };
 
+  /** A classified mean only exists on an approved five-point descriptor set. */
+  const fivePoint = (
+    outcomeId: string,
+    code: string,
+    classified: boolean
+  ): ProgramHeadProgramWideOutcomeDTO => ({
+    ...programWideRow(outcomeId, code, [
+      [1, "Not Achieved"],
+      [2, "Slightly Achieved"],
+      [3, "Moderately Achieved"],
+      [4, "Mostly Achieved"],
+      [5, "Fully Achieved"],
+    ]),
+    attainment: classified
+      ? {
+          policyId: "CLOIE_OUTCOME_MEAN_V1",
+          benchmark: 3.5,
+          status: "classified",
+          interpretation: "Attained",
+          cqi: "Meets Benchmark",
+          meetsBenchmark: true,
+          scaleKind: "direct-attainment",
+          isIndirect: false,
+        }
+      : undefined,
+  });
+
   function deanView(programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[]) {
     return render(
       <DeanEvidenceView
@@ -364,5 +391,26 @@ describe("Dean program-wide scale separation", () => {
     expect(
       screen.getByRole("table", { name: /Average rating by group and PO/ })
     ).toBeInTheDocument();
+  });
+  it("draws the 3.50 benchmark only on the scale identity the policy classified", () => {
+    deanView([
+      fivePoint("po-classified", "PO1", true),
+      programWideRow("po-unsupported", "PO2", [
+        [1, null],
+        [2, null],
+        [3, null],
+        [4, null],
+      ]),
+    ]);
+    const regions = screen.getAllByRole("region", { name: /Average rating by group and PO/ });
+    expect(regions).toHaveLength(2);
+    expect(screen.getByText("Target 3.50")).toBeInTheDocument();
+    // The four-point group carries no benchmark: the policy classifies no
+    // scale other than the three approved five-point descriptor sets, so the
+    // target would present a threshold the policy does not define.
+    expect(regions[0]).toHaveAccessibleName(/5-point/);
+    expect(regions[1]).toHaveAccessibleName(/4-point/);
+    expect(regions[0].querySelector(".recharts-reference-line")).not.toBeNull();
+    expect(regions[1].querySelector(".recharts-reference-line")).toBeNull();
   });
 });

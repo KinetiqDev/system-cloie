@@ -636,6 +636,8 @@ function DeanPoCatalog({ evidence }: { evidence: EvidenceKind<"outcomes"> }) {
 type ProgramWideGroup = {
   label: string;
   rows: ComponentProps<typeof LazyDeanValueChart>["rows"];
+  /** True when a row in this scale identity carries a classified mean. */
+  hasClassified?: boolean;
 };
 
 function programWideRow(
@@ -672,6 +674,10 @@ function groupProgramWideByScale(rows: ProgramHeadProgramWideOutcomeDTO[]) {
       if (!entry || scale.ratingCount === 0) continue;
       const group = byScale.get(scale.scaleKey) ?? { label: scale.scaleLabel, rows: [] };
       group.rows.push(entry);
+      // The 3.50 benchmark is only defensible where the policy classified a
+      // mean, which requires an approved five-point descriptor set. A scale
+      // group with no classified row carries no target at all.
+      if (row.attainment?.status === "classified") group.hasClassified = true;
       byScale.set(scale.scaleKey, group);
     }
   }
@@ -685,13 +691,7 @@ function groupProgramWideByScale(rows: ProgramHeadProgramWideOutcomeDTO[]) {
  * identities appears once per identity with that identity's own mean, never
  * as a blended number ranked against another scale.
  */
-function DeanProgramWideCharts({
-  rows,
-  hasClassified,
-}: {
-  rows: ProgramHeadProgramWideOutcomeDTO[];
-  hasClassified: boolean;
-}) {
+function DeanProgramWideCharts({ rows }: { rows: ProgramHeadProgramWideOutcomeDTO[] }) {
   const byScale = groupProgramWideByScale(rows);
   if (byScale.size === 0) return <Note>No rated program-wide evidence in this scope.</Note>;
   return [...byScale.entries()].map(([key, group], index) => (
@@ -707,7 +707,7 @@ function DeanProgramWideCharts({
           group.rows.map((row) => row.value)
         )
       )}
-      benchmark={hasClassified ? OUTCOME_ATTAINMENT_BENCHMARK : undefined}
+      benchmark={group.hasClassified ? OUTCOME_ATTAINMENT_BENCHMARK : undefined}
       keepOrder
       rows={group.rows}
       emptyText="No rated program-wide evidence in this scope."
@@ -725,7 +725,6 @@ function DeanOutcomesView({
   const data = evidence.data;
   if (!data) return null;
   const central = data.programWideOutcomes.filter((row) => row.meanRating !== null);
-  const hasClassified = central.some((row) => row.attainment?.status === "classified");
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <ProgramSnapshot
@@ -764,7 +763,7 @@ function DeanOutcomesView({
           title="Program-wide evaluations"
           intro="Students, alumni and industry partners rate POs directly. Each group is shown separately, and each frozen rating scale is charted on its own so means are never compared across scales."
         >
-          <DeanProgramWideCharts rows={central} hasClassified={hasClassified} />
+          <DeanProgramWideCharts rows={central} />
           <AttainmentLegend />
         </Section>
       )}
