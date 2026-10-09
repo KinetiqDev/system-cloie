@@ -469,7 +469,7 @@ Dashboard answers:
 > What is happening in this evaluation cycle, and what needs attention?
 
 It should not duplicate full Analytics.
-The dashboard distillation keeps the evaluation-cycle overview and moves detailed comparisons, calculation disclosures, and interactive qualitative exploration into Analytics. Responses remains the entry to identified submitted answers. This replaces the earlier four-card, repeated-shortcut, and dashboard-word-cloud layout.
+The dashboard distillation keeps the evaluation-cycle overview and moves detailed comparisons, calculation disclosures, and interactive qualitative exploration into Analytics. Responses remains the entry to identified submitted answers. This replaces the earlier four-card and repeated-shortcut layout. The dashboard keeps an interactive written-feedback word cloud; see §13.10.
 
 The headline band contains three linked figures: Response completion, Respondents, and Active evaluations. On mobile these become compact horizontal rows. Desktop uses three columns. Labels use sentence case, decision text uses the design system's 14px floor, and numerals use tabular figures. The dashboard has no icon-only calculation popovers.
 
