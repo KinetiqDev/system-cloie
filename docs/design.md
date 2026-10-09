@@ -209,7 +209,7 @@ Exact sizes live in `globals.css`.
 
 - Use token utilities, not ad hoc type scales.
 - Body copy stays at least `0.875rem`; no text below `0.75rem`.
-- Decision text (KPI labels, status, nav labels, auth constraints, action links, chart axes) targets at least `0.875rem` as surfaces migrate; `0.75rem` (`text-label-sm`, `text-caption`) is reserved for tertiary metadata, timestamps, and non-decision annotations. New surfaces MUST meet the target; existing 12px decision text is queued for the typeset pass.
+- Decision text (KPI labels, status, nav labels, auth constraints, action links, chart axes) targets at least `0.875rem` as surfaces migrate; `0.75rem` (`text-label-sm`, `text-caption`) is reserved for tertiary metadata, timestamps, and non-decision annotations. New surfaces MUST meet the target; existing 12px decision text is queued for the typeset pass. The General Education Coordinator dashboard has completed it: KPI values use `.text-heading-xl`, KPI labels and details use `.text-body-sm`, and list-item titles use `.text-title-md`. `DashboardQuickActions` takes `typography="comfortable"` to opt into the same row scale; its default `compact` scale is unchanged until the other dashboards migrate.
 - Headings use primary foreground, not cyan decoration.
 - Legal content uses `.legal-prose`.
 

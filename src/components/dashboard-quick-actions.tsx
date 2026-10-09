@@ -11,6 +11,17 @@ type DashboardQuickAction = {
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>;
 };
 
+const TYPOGRAPHY = {
+  compact: {
+    label: "text-title-sm text-text-primary",
+    detail: "text-caption text-muted-foreground",
+  },
+  comfortable: {
+    label: "text-title-md text-text-primary",
+    detail: "text-body-sm text-text-secondary",
+  },
+} as const;
+
 export function DashboardQuickActions({
   title = "Quick actions",
   description,
@@ -23,6 +34,7 @@ export function DashboardQuickActions({
   typography?: "compact" | "comfortable";
 }) {
   const headingId = useId();
+  const styles = TYPOGRAPHY[typography];
   return (
     <section aria-labelledby={headingId}>
       <Card>
@@ -45,25 +57,9 @@ export function DashboardQuickActions({
                       <Icon aria-hidden="true" className="size-4" />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span
-                        className={cn(
-                          "text-text-primary text-pretty",
-                          typography === "comfortable" ? "text-title-md" : "text-title-sm"
-                        )}
-                      >
-                        {label}
-                      </span>
+                      <span className={cn("text-pretty", styles.label)}>{label}</span>
                       {detail ? (
-                        <span
-                          className={cn(
-                            "text-pretty",
-                            typography === "comfortable"
-                              ? "text-body-sm text-text-secondary"
-                              : "text-caption text-muted-foreground"
-                          )}
-                        >
-                          {detail}
-                        </span>
+                        <span className={cn("text-pretty", styles.detail)}>{detail}</span>
                       ) : null}
                     </span>
                     <ArrowRight
