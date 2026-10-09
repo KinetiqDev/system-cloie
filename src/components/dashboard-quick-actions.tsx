@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useId, type ComponentType } from "react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
 type DashboardQuickAction = {
@@ -14,10 +15,12 @@ export function DashboardQuickActions({
   title = "Quick actions",
   description,
   actions,
+  typography = "compact",
 }: {
   title?: string;
   description: string;
   actions: DashboardQuickAction[];
+  typography?: "compact" | "comfortable";
 }) {
   const headingId = useId();
   return (
@@ -42,9 +45,23 @@ export function DashboardQuickActions({
                       <Icon aria-hidden="true" className="size-4" />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-title-sm text-text-primary text-pretty">{label}</span>
+                      <span
+                        className={cn(
+                          "text-text-primary text-pretty",
+                          typography === "comfortable" ? "text-title-md" : "text-title-sm"
+                        )}
+                      >
+                        {label}
+                      </span>
                       {detail ? (
-                        <span className="text-caption text-muted-foreground text-pretty">
+                        <span
+                          className={cn(
+                            "text-pretty",
+                            typography === "comfortable"
+                              ? "text-body-sm text-text-secondary"
+                              : "text-caption text-muted-foreground"
+                          )}
+                        >
                           {detail}
                         </span>
                       ) : null}
