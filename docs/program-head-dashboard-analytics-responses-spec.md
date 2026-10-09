@@ -622,10 +622,11 @@ Show a compact `Written feedback` card with:
 
 - non-empty written-answer count;
 - distinct respondent count;
-- the twelve most-mentioned identifier-redacted terms and mention counts;
+- an interactive word cloud over the full identifier-redacted token list, capped at 60 terms by the server;
+- a word-count slider and Ranked/Cloud toggle, with exact mention counts in the ranked view;
 - a link to Analytics > Qualitative when safe terms are available.
 
-The card renders on the server and has no word-cloud slider or Ranked/Cloud toggle. Those controls, prompt/source breakdowns, and exact qualitative values remain in Analytics > Qualitative. Raw comments remain in Responses.
+The server prepares the authorized aggregate counts and safe terms. The shared client word-cloud visualization handles the slider and view toggle. Prompt/source breakdowns remain in Analytics > Qualitative. Raw comments remain in Responses.
 
 ---
 
