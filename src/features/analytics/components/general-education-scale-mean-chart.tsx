@@ -3,12 +3,7 @@
 import { useId } from "react";
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartPatternDefs,
-  ChartSwatch,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartPatternDefs, ChartSwatch } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {

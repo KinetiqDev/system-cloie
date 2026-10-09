@@ -177,7 +177,7 @@ export function MobileSidebarDrawer({
           className={cn(
             "fixed inset-0 z-50",
             dean ? "md:hidden" : "lg:hidden",
-            "bg-scrim transition-opacity motion-reduce:transition-none",
+            "bg-scrim transition-opacity motion-reduce:transition-none"
           )}
           style={{
             transitionDuration: `${DRAWER_DURATION_MS}ms`,
@@ -197,7 +197,7 @@ export function MobileSidebarDrawer({
           className={cn(
             "bg-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl",
             dean ? "md:hidden" : "lg:hidden",
-            "transition-transform motion-reduce:transition-none",
+            "transition-transform motion-reduce:transition-none"
           )}
           style={{
             transitionDuration: `${DRAWER_DURATION_MS}ms`,

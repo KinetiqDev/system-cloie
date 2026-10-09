@@ -23,12 +23,10 @@ function formatBoundedMean(value: number, decimals: number): string {
  */
 export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO }) {
   const benchmarkDelta =
-    outcome.meanRating !== null
-      ? outcome.meanRating - OUTCOME_ATTAINMENT_BENCHMARK
-      : null;
+    outcome.meanRating !== null ? outcome.meanRating - OUTCOME_ATTAINMENT_BENCHMARK : null;
 
   return (
-    <div className="flex flex-col gap-4 max-w-full overflow-hidden">
+    <div className="flex max-w-full flex-col gap-4 overflow-hidden">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1">
           <span className="text-label-sm text-text-secondary">Mean Rating (higher precision)</span>
@@ -58,7 +56,8 @@ export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO
 
       {outcome.attainment?.isIndirect && (
         <p className="text-warning text-label-sm font-medium">
-          Note: This evidence originates from an indirect stakeholder survey (reflects perceived attainment).
+          Note: This evidence originates from an indirect stakeholder survey (reflects perceived
+          attainment).
         </p>
       )}
 

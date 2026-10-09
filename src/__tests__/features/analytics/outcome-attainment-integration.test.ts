@@ -240,10 +240,7 @@ describe("Outcome Attainment Policy Integration", () => {
       // Mean: (3 + 4) / 2 = 3.50
       expect(metric.mean).toBe(3.5);
 
-      const attainment = classifyOutcomeMean(
-        metric.mean,
-        metric.scaleGroups[0]?.scale ?? null
-      );
+      const attainment = classifyOutcomeMean(metric.mean, metric.scaleGroups[0]?.scale ?? null);
       expect(attainment.status).toBe("classified");
       expect(attainment.interpretation).toBe("Attained");
       expect(attainment.cqi).toBe("Meets Benchmark");
@@ -265,7 +262,9 @@ describe("Outcome Attainment Policy Integration", () => {
               {
                 key: "cilo-items",
                 title: "CILO Items",
-                items: [{ key: "q1", kind: "quantitative", likertDescriptors: CILO_SCALE_DESCRIPTORS }],
+                items: [
+                  { key: "q1", kind: "quantitative", likertDescriptors: CILO_SCALE_DESCRIPTORS },
+                ],
               },
             ],
           },
@@ -277,7 +276,12 @@ describe("Outcome Attainment Policy Integration", () => {
             course: { id: "c-1", code: "IT 101", title: "Intro to IT" },
           },
           outcomeMappings: [
-            { outcomeId: "po-1", code: "PO-1", name: "Computing Knowledge", manifestation: "LEARNING" },
+            {
+              outcomeId: "po-1",
+              code: "PO-1",
+              name: "Computing Knowledge",
+              manifestation: "LEARNING",
+            },
           ],
           directBindings: [],
           evaluationId: "eval-1",

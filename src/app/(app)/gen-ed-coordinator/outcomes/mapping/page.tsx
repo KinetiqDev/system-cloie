@@ -155,9 +155,7 @@ export default async function GenEdOutcomesMappingPage() {
                     Shared General Education
                   </Badge>
                 </div>
-                <h2 className="text-heading-lg text-pretty">
-                  {course.courseTitle}
-                </h2>
+                <h2 className="text-heading-lg text-pretty">{course.courseTitle}</h2>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
                 </CardDescription>

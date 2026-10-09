@@ -360,7 +360,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                   <TableCell className="w-[99%] max-w-[200px] max-md:align-top md:w-auto md:max-w-none">
                     <div className="flex flex-col gap-1">
                       <span className="text-foreground truncate font-bold">{course.code}</span>
-                      <span className="text-muted-foreground line-clamp-2 text-caption break-words whitespace-normal md:hidden">
+                      <span className="text-muted-foreground text-caption line-clamp-2 break-words whitespace-normal md:hidden">
                         {course.title}
                       </span>
                       <div className="mt-1 md:hidden">

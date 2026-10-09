@@ -153,9 +153,9 @@ describe("distribution-based classification", () => {
   it("rejects mixed, missing, and multi-distribution rows", () => {
     expect(classifyOutcomeDistributions(4.8, dist(DIRECT), true).status).toBe("mixed-scales");
     expect(classifyOutcomeDistributions(null, dist(DIRECT), false).status).toBe("no-evidence");
-    expect(
-      classifyOutcomeDistributions(4.2, [...dist(DIRECT), ...dist(AGREE)], false).status
-    ).toBe("unsupported-scale");
+    expect(classifyOutcomeDistributions(4.2, [...dist(DIRECT), ...dist(AGREE)], false).status).toBe(
+      "unsupported-scale"
+    );
     expect(classifyOutcomeDistributions(4.2, [], false).status).toBe("unsupported-scale");
   });
 });

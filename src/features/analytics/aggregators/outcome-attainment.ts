@@ -125,9 +125,7 @@ function canonicalKey(descriptors: Array<{ value: number; label: string | null }
   );
 }
 
-function unclassified(
-  status: Exclude<OutcomeAttainmentStatus, "classified">
-): OutcomeAttainment {
+function unclassified(status: Exclude<OutcomeAttainmentStatus, "classified">): OutcomeAttainment {
   return {
     policyId: OUTCOME_ATTAINMENT_POLICY_ID,
     benchmark: OUTCOME_ATTAINMENT_BENCHMARK,
@@ -141,9 +139,7 @@ function unclassified(
 }
 
 /** Resolve a scale identity to a supported kind; null when unsupported. */
-export function supportedOutcomeScaleKind(
-  scale: ScaleIdentity | null
-): OutcomeScaleKind | null {
+export function supportedOutcomeScaleKind(scale: ScaleIdentity | null): OutcomeScaleKind | null {
   if (!scale) return null;
   return SUPPORTED_KEYS.get(canonicalKey(scale.descriptors)) ?? null;
 }

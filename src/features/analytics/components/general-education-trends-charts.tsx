@@ -312,9 +312,7 @@ export function GeneralEducationResponseRateTrendChart({
           <CardTitle id={titleId} className="text-heading-lg">
             {title}
           </CardTitle>
-          <span className="text-label-sm text-muted-foreground">
-            Submitted ÷ opportunities
-          </span>
+          <span className="text-label-sm text-muted-foreground">Submitted ÷ opportunities</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

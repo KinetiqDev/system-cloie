@@ -447,7 +447,10 @@ function OutcomesExactValueTable({
                   {outcome.distributions.length > 0 ? (
                     <ul className="flex flex-col gap-0.5">
                       {outcome.distributions.map((distribution) => (
-                        <li key={distribution.scaleLabel} className="text-caption whitespace-nowrap">
+                        <li
+                          key={distribution.scaleLabel}
+                          className="text-caption whitespace-nowrap"
+                        >
                           {distribution.scaleLabel}
                         </li>
                       ))}
@@ -470,7 +473,10 @@ function OutcomesExactValueTable({
                     {outcome.evidenceEvaluations.length > 0 ? (
                       <ul className="flex flex-col gap-0.5">
                         {outcome.evidenceEvaluations.map((evaluation) => (
-                          <li key={evaluation.evaluationId} className="text-caption whitespace-nowrap">
+                          <li
+                            key={evaluation.evaluationId}
+                            className="text-caption whitespace-nowrap"
+                          >
                             {evaluation.deploymentName}
                           </li>
                         ))}

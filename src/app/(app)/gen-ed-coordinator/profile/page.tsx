@@ -45,7 +45,7 @@ export default async function GenEdCoordinatorProfilePage() {
               <CardDescription>General Education stewardship</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4 pt-4 text-body-sm font-semibold">
+          <CardContent className="text-body-sm space-y-4 pt-4 font-semibold">
             <div className="space-y-1">
               <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Scope</p>
               <p className="flex items-center gap-2">

@@ -42,7 +42,7 @@ export function FewRatingsMarker({ ratingCount }: { ratingCount: number }) {
 /** Neutral chip used for course/outcome codes inside dense matrix cells. */
 export function CodeChip({ children }: { children: ReactNode }) {
   return (
-    <span className="border-border bg-muted/50 text-text-secondary rounded-md border px-2 py-0.5 text-label-sm whitespace-nowrap">
+    <span className="border-border bg-muted/50 text-text-secondary text-label-sm rounded-md border px-2 py-0.5 whitespace-nowrap">
       {children}
     </span>
   );
