@@ -41,8 +41,8 @@ describe("Dean analytics route and evidence views", () => {
     render(await DeanAnalyticsPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("heading", { name: "Analytics" })).toBeVisible();
     expect(screen.getByLabelText("Academic period")).toBeVisible();
-    expect(screen.getByText(/No evaluations match this scope/)).toBeVisible();
-    expect(screen.queryByText(/Inspect 0 evaluations/)).not.toBeInTheDocument();
+    expect(screen.getByText(/No evaluations match this view/)).toBeVisible();
+    expect(screen.queryByText(/Show all/)).not.toBeInTheDocument();
   });
   it("denies direct route data when unauthorized", async () => {
     read.mockResolvedValue(null);

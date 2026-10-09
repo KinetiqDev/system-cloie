@@ -23,3 +23,5 @@ _Avoid_: Readiness issue, alignment warning
 **Archived outcome display**:
 The period-status-dependent visibility of archived outcomes in the Dean's learning-outcomes view: in COMPLETED periods archived targets remain visible and are labeled `(Archived)`, while in ACTIVE periods archived targets are hidden.
 _Avoid_: Live catalog view, uniform archive filtering
+
+The Learning Outcomes academic-period control uses the shared Base UI Select with wrapped, scrollable options. It preserves the ACTIVE/COMPLETED eligible-period list, submits the `period` query parameter through View period, and retains the risk filter.

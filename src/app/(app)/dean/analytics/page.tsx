@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DeanAnalyticsFilterForm } from "@/features/analytics/components/dean-analytics-filter-form";
+import { DeanFilterSelect } from "@/features/analytics/components/dean-filter-select";
 import { DeanAiInsight } from "@/features/analytics/components/dean-ai-insight";
 import { notFound, redirect } from "next/navigation";
 import { buildPageTitle } from "@/lib/page-title";
@@ -9,7 +10,15 @@ import {
   deanAnalyticsUrl,
   parseDeanAnalyticsFilters,
 } from "@/features/analytics/services/dean-analytics-state";
-import { DeanEvidenceView, deanRate } from "@/features/analytics/components/dean-evidence-view";
+import { DeanEvidenceView } from "@/features/analytics/components/dean-evidence-view";
+import {
+  DEAN_SOURCE_LABELS,
+  deanRate,
+  deanStatus,
+} from "@/features/analytics/components/dean-format";
+import type { DeanDeploymentEvidence } from "@/features/analytics/services/dean-analytics";
+import type { DeanAnalyticsFilters } from "@/features/analytics/services/dean-analytics-state";
+import { ViewTabs } from "@/components/layout/view-tabs";
 
 export const metadata = { title: buildPageTitle("Analytics", "Dean") };
 const viewLabels = {
@@ -39,31 +48,28 @@ export default async function DeanAnalyticsPage({
     <div className="flex min-w-0 flex-col gap-6">
       <header>
         <h1 className="text-heading-xl">Analytics</h1>
-        <p className="text-body-sm text-muted-foreground mt-2">
-          College-wide participation, evidence gaps and program-specific learning outcome evidence.
+        <p className="text-body-sm text-text-secondary mt-2">
+          How the college is doing: who responded, and what the ratings say about learning outcomes.
         </p>
       </header>
-      <nav aria-label="Dean analytics views" className="flex flex-wrap gap-2">
-        {DEAN_ANALYTICS_VIEWS.map((view) => (
-          <Link
-            key={view}
-            aria-current={filters.view === view ? "page" : undefined}
-            className={`text-body-sm focus-visible:outline-ring rounded-lg border px-3 py-2 focus-visible:outline-2 pointer-coarse:min-h-11 ${filters.view === view ? "bg-primary text-primary-foreground" : "bg-card"}`}
-            href={deanAnalyticsUrl(parseDeanAnalyticsFilters({ ...filters, view }))}
-          >
-            {viewLabels[view]}
-          </Link>
-        ))}
-      </nav>
+      <ViewTabs
+        label="Dean analytics views"
+        activeValue={filters.view}
+        items={DEAN_ANALYTICS_VIEWS.map((view) => ({
+          value: view,
+          label: viewLabels[view],
+          href: deanAnalyticsUrl(parseDeanAnalyticsFilters({ ...filters, view })),
+        }))}
+      />
       <DeanFilters filters={filters} college={college} />
       {filters.evaluationId && (
         <p className="text-body-sm">
-          One evaluation selected.{" "}
+          Showing one evaluation.{" "}
           <Link
             className="text-link underline"
             href={deanAnalyticsUrl({ ...filters, evaluationId: undefined })}
           >
-            Return to program scope
+            Back to the whole program
           </Link>
         </p>
       )}
@@ -73,62 +79,43 @@ export default async function DeanAnalyticsPage({
           filters.
         </p>
       )}
-      {filters.view === "college" && (
-        <section
-          aria-label="College participation"
-          className="bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-3"
-        >
-          <p className="text-body-sm">
-            Submitted responses
-            <br />
-            <strong className="text-heading-lg tabular-nums">{college.summary.submitted}</strong>
-          </p>
-          <p className="text-body-sm">
-            Historical evaluation opportunities
-            <br />
-            <strong className="text-heading-lg tabular-nums">
-              {college.summary.opportunities}
-            </strong>
-          </p>
-          <p className="text-body-sm">
-            Response rate
-            <br />
-            <strong className="text-heading-lg tabular-nums">
-              {deanRate(college.summary.rate)}
-            </strong>
-          </p>
-        </section>
-      )}
+      <DeanEvidenceView evidence={evidence} filters={filters} />
       <details className="text-body-sm rounded-xl border p-4">
         <summary className="cursor-pointer font-semibold pointer-coarse:min-h-11">
-          Evidence methodology and limitations
+          How to read these numbers
         </summary>
-        <p className="mt-3">
-          Only finalized SUBMITTED responses contribute. Participation uses historical
-          EvaluationAssignment opportunities, not the current eligible roster or distinct people. No
-          opportunities means the rate is unavailable. Active cycles are incomplete. College totals
-          include General Education and college-wide Central activity. Program cards exclude those
-          sources and do not sum to the college total. These totals describe activity, never a
-          college outcome score. Archived records remain available for history. Rating counts are
-          distinct from response counts. PO rows retain their owning program. Different scales and
-          sources do not establish comparability. General Education evidence follows CILO-to-ILO
-          mappings and does not propagate to POs.
-        </p>
+        <ul className="mt-3 flex list-disc flex-col gap-1.5 pl-5">
+          <li>Only submitted evaluations count. Drafts and in-progress answers are left out.</li>
+          <li>
+            Response rate is submitted evaluations out of everything assigned, even if the person
+            has since left. No assignments means no rate, which is not the same as 0%.
+          </li>
+          <li>Evaluations still open are incomplete. Their numbers can still change.</li>
+          <li>
+            Ratings show what people reported, not individual student mastery. Totals describe
+            activity and are not a college score.
+          </li>
+          <li>
+            Different programs, groups and rating scales are shown side by side but not combined or
+            ranked.
+          </li>
+          <li>
+            College totals include General Education and college-wide evaluations. Program totals
+            exclude those, so they do not add up to the college total.
+          </li>
+          <li>
+            General Education ratings follow course-to-ILO links and never feed Program Outcomes.
+          </li>
+        </ul>
       </details>
-      <DeanEvidenceView evidence={evidence} filters={filters} />
-      <section className="flex flex-col gap-4">
-        <h2 className="text-heading-lg">Evaluation activity and participation</h2>
-        <p className="text-body-sm text-muted-foreground">
-          Each row explains the program signals above. Closed evaluations with outstanding
-          opportunities warrant review, not an automatic academic judgment. Zero opportunities is
-          not zero-percent participation.
-        </p>
-        {activity.length > 0 && (
+      <section className="flex flex-col gap-3">
+        <h2 className="text-heading-lg">Evaluations in this view</h2>
+        {activity.length > 0 ? (
           <details>
             <summary className="text-body-sm cursor-pointer font-semibold pointer-coarse:min-h-11">
-              Inspect {activity.length} evaluations in this scope
+              Show all {activity.length}
             </summary>
-            <div className="mt-3 flex flex-col gap-3">
+            <ul className="bg-card text-body-sm mt-3 flex flex-col divide-y rounded-xl border">
               {activity.map((row) => (
                 <DeanActivityRow
                   key={row.id}
@@ -138,12 +125,11 @@ export default async function DeanAnalyticsPage({
                   }
                 />
               ))}
-            </div>
+            </ul>
           </details>
-        )}
-        {!activity.length && (
+        ) : (
           <p className="text-body-sm">
-            No evaluations match this scope. Choose a program, change the filters or inspect another
+            No evaluations match this view. Choose a program, change the filters or try another
             period.
           </p>
         )}
@@ -157,16 +143,9 @@ function DeanActivityRow({
   row,
   programCode,
 }: {
-  row: import("@/features/analytics/services/dean-analytics").DeanDeploymentEvidence;
+  row: DeanDeploymentEvidence;
   programCode?: string;
 }) {
-  const sourceLabels = {
-    COURSE: "Course-bound students",
-    GENERAL_EDUCATION: "General Education students",
-    STUDENT: "Central students",
-    ALUMNI: "Alumni",
-    INDUSTRY_PARTNER: "Industry partners",
-  };
   const source =
     row.source === "GENERAL_EDUCATION"
       ? undefined
@@ -178,43 +157,39 @@ function DeanActivityRow({
             INDUSTRY_PARTNER: "INDUSTRY",
           } as const
         )[row.source];
+  const missing = row.opportunities - row.submitted;
   return (
-    <details key={row.id} className="text-body-sm rounded-xl border p-4">
-      <summary className="cursor-pointer font-semibold break-words pointer-coarse:min-h-11">
-        {row.name} · {sourceLabels[row.source]} · {row.status}
-      </summary>
-      <div className="mt-3 flex flex-col gap-2">
-        <p>
-          {row.periodLabel} · {row.instrument}
-        </p>
-        <p className="break-words">
-          {row.courseLabel ?? "Central deployment"} · {programCode ?? "College-wide central scope"}
-        </p>
-        <p className="tabular-nums">
-          {row.submitted} submitted / {row.opportunities} opportunities ·{" "}
+    <li className="flex flex-col gap-1 px-4 py-3">
+      <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <span className="font-semibold break-words">{row.name}</span>
+        <span className="text-text-secondary tabular-nums">
+          {row.submitted}/{row.opportunities} ·{" "}
           {deanRate(row.opportunities ? (row.submitted / row.opportunities) * 100 : null)}
-        </p>
-        {row.status === "CLOSED" && row.submitted < row.opportunities && (
-          <p>
-            Closed with {row.opportunities - row.submitted} outstanding historical opportunities.
-          </p>
-        )}
-        {row.source !== "GENERAL_EDUCATION" && row.programId && (
-          <Link
-            className="text-link underline underline-offset-4"
-            href={deanAnalyticsUrl({
-              view: "outcomes",
-              programId: row.programId,
-              termInstanceId: row.periodId,
-              evaluationId: row.id,
-              source,
-            })}
-          >
-            Inspect mapped PO evidence
-          </Link>
-        )}
-      </div>
-    </details>
+        </span>
+      </span>
+      <span className="text-text-secondary break-words">
+        {deanStatus(row.status)} · {DEAN_SOURCE_LABELS[row.source]} · {row.periodLabel} ·{" "}
+        {row.courseLabel ?? programCode ?? "College-wide"}
+      </span>
+      <span className="text-text-secondary break-words">{row.instrument}</span>
+      {row.status === "CLOSED" && missing > 0 && (
+        <span>Closed with {missing} responses missing.</span>
+      )}
+      {row.source !== "GENERAL_EDUCATION" && row.programId && (
+        <Link
+          className="text-link inline-flex w-fit underline underline-offset-4 pointer-coarse:min-h-11 pointer-coarse:items-center"
+          href={deanAnalyticsUrl({
+            view: "outcomes",
+            programId: row.programId,
+            termInstanceId: row.periodId,
+            evaluationId: row.id,
+            source,
+          })}
+        >
+          Inspect mapped PO evidence
+        </Link>
+      )}
+    </li>
   );
 }
 
@@ -225,10 +200,7 @@ function rawDeanAnalyticsUrl(raw: Record<string, string | string[] | undefined>)
   }
   return `/dean/analytics${params.size ? `?${params}` : ""}`;
 }
-function filterDeanActivity(
-  rows: import("@/features/analytics/services/dean-analytics").DeanDeploymentEvidence[],
-  filters: import("@/features/analytics/services/dean-analytics-state").DeanAnalyticsFilters
-) {
+function filterDeanActivity(rows: DeanDeploymentEvidence[], filters: DeanAnalyticsFilters) {
   const programViews = filters.view !== "college" && filters.view !== "institutional";
   return rows
     .filter(
@@ -256,63 +228,54 @@ function DeanFilters({
   filters,
   college,
 }: {
-  filters: import("@/features/analytics/services/dean-analytics-state").DeanAnalyticsFilters;
+  filters: DeanAnalyticsFilters;
   college: NonNullable<Awaited<ReturnType<typeof getDeanEvidence>>>["college"];
 }) {
   const programViews = filters.view !== "college" && filters.view !== "institutional";
   return (
     <DeanAnalyticsFilterForm scopeKey={deanAnalyticsUrl(filters)}>
       <input type="hidden" name="view" value={filters.view} />
-      <label className="text-body-sm flex min-w-0 flex-col gap-2">
-        Academic period
-        <select
-          className="bg-background focus-visible:outline-ring h-11 w-full min-w-0 rounded-lg border px-2 focus-visible:outline-2"
-          name="termInstanceId"
-          defaultValue={filters.termInstanceId ?? ""}
-        >
-          <option value="">All periods</option>
-          {college.invalidPeriod && (
-            <option value={filters.termInstanceId}>Unavailable selected period</option>
-          )}
-          {college.periods.map((period) => (
-            <option key={period.id} value={period.id}>
-              {period.label} · {period.status}
-            </option>
-          ))}
-        </select>
-      </label>
+      <DeanFilterSelect
+        name="termInstanceId"
+        label="Academic period"
+        value={filters.termInstanceId ?? ""}
+        options={[
+          { value: "", label: "All periods" },
+          ...(college.invalidPeriod
+            ? [{ value: filters.termInstanceId!, label: "Unavailable selected period" }]
+            : []),
+          ...college.periods.map((period) => ({
+            value: period.id,
+            label: `${period.label} · ${deanStatus(period.status)}`,
+          })),
+        ]}
+      />
       {programViews && (
         <>
-          <label className="text-body-sm flex min-w-0 flex-col gap-2">
-            Program
-            <select
-              className="bg-background focus-visible:outline-ring h-11 w-full min-w-0 rounded-lg border px-2 focus-visible:outline-2"
-              name="programId"
-              defaultValue={filters.programId ?? ""}
-            >
-              <option value="">Choose a program</option>
-              {college.programs.map((program) => (
-                <option key={program.id} value={program.id}>
-                  {program.code} · {program.name}
-                  {!program.is_active && " · Archived"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-body-sm flex min-w-0 flex-col gap-2">
-            Evidence source
-            <select
-              className="bg-background focus-visible:outline-ring h-11 w-full rounded-lg border px-2 focus-visible:outline-2"
-              name="source"
-              defaultValue={filters.source ?? ""}
-            >
-              <option value="">All sources, reported separately</option>
-              <option value="COURSE">Course-bound students</option>
-              <option value="PROGRAM_WIDE_STUDENT">Central students</option>
-              <option value="ALUMNI">Alumni</option>
-              <option value="INDUSTRY">Industry partners</option>
-            </select>
-          </label>
+          <DeanFilterSelect
+            name="programId"
+            label="Program"
+            value={filters.programId ?? ""}
+            options={[
+              { value: "", label: "Choose a program" },
+              ...college.programs.map((program) => ({
+                value: program.id,
+                label: `${program.code} · ${program.name}${program.is_active ? "" : " · Archived"}`,
+              })),
+            ]}
+          />
+          <DeanFilterSelect
+            name="source"
+            label="Who responded"
+            value={filters.source ?? ""}
+            options={[
+              { value: "", label: "Everyone, shown separately" },
+              { value: "COURSE", label: "Course students" },
+              { value: "PROGRAM_WIDE_STUDENT", label: "Program-wide students" },
+              { value: "ALUMNI", label: "Alumni" },
+              { value: "INDUSTRY", label: "Industry partners" },
+            ]}
+          />
         </>
       )}
       <div className="flex items-end gap-3">

@@ -13,7 +13,7 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
 }, testInfo) => {
   await loginAs(page, E2E_CONTRACT.demoDean.email);
   await page.goto("/dean/analytics");
-  await expect(page.getByRole("heading", { name: "Program evidence comparison" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Programs", exact: true })).toBeVisible();
   for (const code of E2E_CONTRACT.deanAnalytics.programCodes)
     await expect(page.getByRole("link", { name: `Inspect ${code} evidence` })).toBeVisible();
   await expect(
@@ -31,31 +31,32 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
   await expect(page.getByRole("heading", { name: "BSIT Program Outcomes" })).toBeVisible();
   await expect(page.getByText("PO catalog and evidence availability")).toBeVisible();
   await waitForStableState(page);
-  await page
-    .getByRole("combobox", { name: "Academic period", exact: true })
-    .selectOption({ index: 1 });
+  await page.getByRole("combobox", { name: "Academic period", exact: true }).click();
+  await page.getByRole("option").nth(1).click();
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/termInstanceId=/);
   await page.getByRole("link", { name: "Reset", exact: true }).click();
   await expect(page).toHaveURL(/view=outcomes$/);
   await waitForStableState(page);
+  await page.getByRole("combobox", { name: "Program", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "Program", exact: true })
-    .selectOption({ label: "BSIT · Bachelor of Science in Information Technology" });
+    .getByRole("option", {
+      name: "BSIT · Bachelor of Science in Information Technology",
+      exact: true,
+    })
+    .click();
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page.getByRole("heading", { name: "BSIT Program Outcomes" })).toBeVisible();
   await page.getByRole("link", { name: "Courses and instruments", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "Course and instrument evidence", exact: true })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Courses", exact: true })).toBeVisible();
   const drill = page.getByRole("link", { name: /^Inspect / }).first();
   await expect(drill).toBeVisible();
   await drill.click();
-  await expect(page.getByText("One evaluation selected.")).toBeVisible();
+  await expect(page.getByText("Showing one evaluation.")).toBeVisible();
   await expect(page).toHaveURL(/evaluationId=/);
   for (const [link, heading] of [
-    ["Stakeholders", "Stakeholder evidence"],
-    ["Period history", "Program period history"],
+    ["Stakeholders", "Who responded"],
+    ["Period history", "Trends"],
     ["Written feedback", "Written feedback"],
   ]) {
     await page.getByRole("link", { name: link, exact: true }).click();
@@ -63,14 +64,14 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
     await expectNoHorizontalOverflow(page);
   }
   await page.getByRole("link", { name: "General Education / ILOs", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "General Education and institutional evidence" })
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "General Education", exact: true })).toBeVisible();
   await expect(page.getByText(/ILOs are not classified as attainment/)).toBeVisible();
+  const courseRate = page.locator("section, div").filter({
+    has: page.getByRole("heading", { name: "Response rate by course" }),
+  });
+  await courseRate.getByText("Show numbers").first().click();
   await expect(
-    page
-      .getByRole("article")
-      .filter({ has: page.getByRole("heading", { name: "GEETHICS · Ethics" }) })
+    page.getByRole("row").filter({ hasText: "GEETHICS · Ethics" }).first()
   ).toContainText("100.0%");
   await expectNoAxeViolations(page);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -94,13 +95,13 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
   });
   await page.goto("/dean/analytics?view=outcomes");
   await waitForStableState(page);
-  await expect(page.getByText(/No evaluations match this scope/)).toBeVisible();
+  await expect(page.getByText(/No evaluations match this view/)).toBeVisible();
   await page.goto("/dean/analytics?termInstanceId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await waitForStableState(page);
   await expect(
     page.getByRole("status").filter({ hasText: "This period no longer exists" })
   ).toBeVisible();
-  await expect(page.getByText(/No evaluations match this scope/)).toBeVisible();
+  await expect(page.getByText(/No evaluations match this view/)).toBeVisible();
   await page.getByRole("button", { name: "Interpret current evidence" }).click();
   await expect(
     page.getByText(/AI is disabled or unconfigured|Interpretation unavailable/)
@@ -110,6 +111,6 @@ test("Dean inspects multi-program evidence, institutional evidence and empty sco
 test("Program Head cannot open Dean analytics directly", async ({ page }) => {
   await loginAs(page, E2E_CONTRACT.demoPh.email);
   await page.goto("/dean/analytics");
-  await expect(page.getByRole("heading", { name: "Program evidence comparison" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Programs", exact: true })).toHaveCount(0);
   await expect(page).not.toHaveURL(/\/dean\/analytics/);
 });

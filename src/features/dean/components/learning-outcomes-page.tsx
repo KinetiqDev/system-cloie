@@ -16,6 +16,7 @@ import {
   type DeanLearningOutcomesData,
 } from "@/features/dean/services/read-dean-learning-outcomes";
 import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
+import { DeanPeriodSelect } from "./dean-period-select";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
 
 type SearchParams = { period?: string; risk?: string; program?: string };
@@ -193,18 +194,7 @@ function PeriodControls({
         <label htmlFor="period" className="text-label-lg">
           Academic Period
         </label>
-        <select
-          id="period"
-          name="period"
-          defaultValue={selectedPeriodId}
-          className="border-input bg-background focus-visible:ring-ring text-body-sm h-11 w-full min-w-0 rounded-lg border px-3 outline-none focus-visible:ring-3 sm:w-auto sm:min-w-64"
-        >
-          {periods.map((period) => (
-            <option key={period.id} value={period.id}>
-              {period.label}
-            </option>
-          ))}
-        </select>
+        <DeanPeriodSelect periods={periods} selectedPeriodId={selectedPeriodId} />
       </div>
       {risk && <input type="hidden" name="risk" value={risk} />}
       <Button type="submit" className="h-11">

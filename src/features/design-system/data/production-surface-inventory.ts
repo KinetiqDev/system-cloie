@@ -315,7 +315,25 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     notes: "Dean URL filter navigation preserves the workspace frame",
   },
   {
+    path: "src/features/analytics/components/dean-filter-select.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean filters use shared Base UI selects with wrapped options and touch targets",
+  },
+  {
     path: "src/features/analytics/components/dean-ai-insight.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean analytics uses semantic tokens and responsive evidence controls",
+  },
+  {
+    path: "src/features/analytics/components/dean-charts.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "Dean analytics uses semantic tokens and responsive evidence controls",
+  },
+  {
+    path: "src/features/analytics/components/dean-visualizations.tsx",
     disposition: "already_compliant",
     category: "feature_component",
     notes: "Dean analytics uses semantic tokens and responsive evidence controls",
