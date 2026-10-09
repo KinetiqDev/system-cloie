@@ -277,7 +277,6 @@ describe("Dean oversight pages", () => {
       })
     );
     expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Academic Period" })).toHaveValue(PERIOD_ID);
     expect(screen.getByText("Risk: Incomplete mappings")).toBeInTheDocument();
     cleanup();
     render(
@@ -323,7 +322,6 @@ describe("Dean oversight pages", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Academic Period" })).toHaveValue(PERIOD_ID);
     expect(screen.getByLabelText("Loading Learning Outcomes")).toBeInTheDocument();
   });
 

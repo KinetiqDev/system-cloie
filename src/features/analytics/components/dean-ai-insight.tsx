@@ -8,11 +8,10 @@ export function DeanAiInsight({ filters }: { filters: DeanAnalyticsFilters }) {
   const [pending, startTransition] = useTransition();
   return (
     <section className="bg-card text-body-sm flex flex-col gap-3 rounded-xl border p-4">
-      <h2 className="text-heading-lg">AI-assisted interpretation</h2>
-      <p>
-        Optional interpretation of bounded server-computed aggregates. Deterministic evidence above
-        remains authoritative. No respondent records or raw comments are sent. AI cannot decide
-        accreditation or curriculum changes.
+      <h2 className="text-heading-lg">AI summary</h2>
+      <p className="text-text-secondary">
+        Optional plain-language summary of the totals above. No names or comments are sent. The
+        charts remain the source of truth, and AI cannot decide accreditation or curriculum.
       </p>
       <button
         type="button"
