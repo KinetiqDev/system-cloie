@@ -85,11 +85,11 @@ export default async function SelectedProgramDashboardPage({
 
       <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(19rem,1fr)]">
         <div className="flex min-w-0 flex-col gap-6 lg:order-2">
-          <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
           <ProgramHeadStakeholderProgress
             participation={dashboard.participation}
             stakeholdersHref={dashboard.links.analyticsStakeholders}
           />
+          <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
         </div>
         <div className="flex min-w-0 flex-col gap-6 lg:order-1">
           <ProgramHeadGoSummary

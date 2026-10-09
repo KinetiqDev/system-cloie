@@ -199,6 +199,15 @@ describe("selected Program dashboard route", () => {
     expect(screen.queryByRole("button", { name: /How calculated/ })).not.toBeInTheDocument();
   });
 
+  it("places Response progress before Needs attention in reading order", async () => {
+    await loadPage();
+    const progress = screen.getByRole("heading", { name: "Response progress" });
+    const attention = screen.getByRole("heading", { name: /Needs attention/ });
+    expect(
+      progress.compareDocumentPosition(attention) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
   it("reconciles assignment progress with distinct respondent counts per stakeholder", async () => {
     await loadPage();
     const row = screen.getByRole("link", {

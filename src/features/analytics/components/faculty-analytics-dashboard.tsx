@@ -158,8 +158,8 @@ export function FacultyAnalyticsDashboard({ data, options }: Props) {
         </Badge>
       </header>
 
-      <ScopeFilters filters={data.filters} options={options} scopeLabel={data.scopeLabel} />
       <ViewNavigation filters={data.filters} />
+      <ScopeFilters filters={data.filters} options={options} scopeLabel={data.scopeLabel} />
 
       {data.evaluations.length === 0 ? (
         <NoEvidence filters={data.filters} />

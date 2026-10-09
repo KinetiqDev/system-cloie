@@ -236,6 +236,27 @@ afterEach(() => {
 });
 
 describe("FacultyAnalyticsDashboard", () => {
+  it.each(["overview", "cilos", "questions", "trends", "qualitative"] as const)(
+    "places view navigation before the evidence scope in the %s view",
+    (view) => {
+      render(<FacultyAnalyticsDashboard data={{ ...data, filters: { view } }} options={options} />);
+
+      const heading = screen.getByRole("heading", { level: 1 });
+      const navigation = screen.getByRole("navigation", { name: "Analytics view" });
+      const scope = screen.getByRole("region", { name: "Evidence scope" });
+      const mobileViewSelect = screen.getByRole("combobox", { name: "Analytics view" });
+      expect(
+        mobileViewSelect.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        navigation.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    }
+  );
+
   it("renders the analytics views as link tabs that mark the active view", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
