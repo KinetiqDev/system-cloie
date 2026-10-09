@@ -45,6 +45,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/dean/components/dean-period-select.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Dean period filter delegates to the shared Base UI select with wrapped options and a touch-sized trigger",
+  },
+  {
     path: "src/features/dean/components/learning-outcomes-page.tsx",
     disposition: "already_compliant",
     category: "feature_component",
