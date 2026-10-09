@@ -28,6 +28,16 @@ function detailMean(): string {
 }
 
 describe("OutcomeEvidenceDetail", () => {
+  it("does not classify rated ILO evidence as missing attainment", () => {
+    render(
+      <OutcomeEvidenceDetail
+        outcome={outcomeDTO({ code: "ILO1", meanRating: 4, ratingCount: 12 })}
+      />
+    );
+    expect(detailMean()).toBe("4");
+    expect(screen.queryByText("Attainment Status")).not.toBeInTheDocument();
+    expect(screen.queryByText("No evidence")).not.toBeInTheDocument();
+  });
   it("caps the detail mean at four decimals instead of printing the raw float", () => {
     render(<OutcomeEvidenceDetail outcome={outcomeDTO()} />);
 

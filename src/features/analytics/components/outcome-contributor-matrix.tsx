@@ -144,7 +144,9 @@ export function OutcomeContributorMatrix({
                   <span className="text-text-secondary font-normal"> — {outcome.name}</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <AttainmentBadge attainment={outcome.attainment} compact />
+                  {outcome.attainment !== undefined && (
+                    <AttainmentBadge attainment={outcome.attainment} compact />
+                  )}
                   <span className="text-text-secondary text-xs font-medium tabular-nums">
                     {outcome.contributors.length} contributor
                     {outcome.contributors.length === 1 ? "" : "s"}

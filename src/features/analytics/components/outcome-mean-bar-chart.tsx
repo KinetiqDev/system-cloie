@@ -232,7 +232,7 @@ export function OutcomeMeanBarChart({
                   <TableRow>
                     <TableHead>{labels.singular}</TableHead>
                     <TableHead className="text-right">Mean Rating</TableHead>
-                    <TableHead>Attainment</TableHead>
+                    {hasAttainment && <TableHead>Attainment</TableHead>}
                     <TableHead className="text-right">Rating Count</TableHead>
                     <TableHead className="text-right">Submitted Responses</TableHead>
                   </TableRow>
@@ -246,9 +246,11 @@ export function OutcomeMeanBarChart({
                         <TableCell className="text-right tabular-nums">
                           {entry.value.toFixed(2)}
                         </TableCell>
-                        <TableCell>
-                          <AttainmentBadge attainment={outcome?.attainment} />
-                        </TableCell>
+                        {hasAttainment && (
+                          <TableCell>
+                            <AttainmentBadge attainment={outcome?.attainment} />
+                          </TableCell>
+                        )}
                         <TableCell className="text-right tabular-nums">
                           {entry.ratingCount}
                         </TableCell>

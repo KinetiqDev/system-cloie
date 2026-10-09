@@ -29,10 +29,7 @@ export const OUTCOME_ATTAINMENT_POLICY_ID = "CLOIE_OUTCOME_MEAN_V1" as const;
 /** Primary attainment benchmark: `mean >= 3.50` meets benchmark. */
 export const OUTCOME_ATTAINMENT_BENCHMARK = 3.5 as const;
 
-/** Institutional approval has not been recorded; the policy stays proposed. */
-export const OUTCOME_ATTAINMENT_POLICY_STATUS = "proposed" as const;
-
-export type OutcomeAttainmentInterpretation =
+type OutcomeAttainmentInterpretation =
   | "Fully Attained"
   | "Attained"
   | "Partially Attained"
@@ -45,14 +42,10 @@ export type OutcomeCqiClassification = "Meets Benchmark" | "Needs Attention" | "
  * Why a row has no interpretation. Missing evidence, incompatible scales,
  * and mixed-scale pools stay distinct from non-attainment (`Not Attained`).
  */
-export type OutcomeAttainmentStatus =
-  | "classified"
-  | "no-evidence"
-  | "unsupported-scale"
-  | "mixed-scales";
+type OutcomeAttainmentStatus = "classified" | "no-evidence" | "unsupported-scale" | "mixed-scales";
 
 /** Frozen-descriptor semantics behind a supported five-point scale. */
-export type OutcomeScaleKind = "direct-attainment" | "agreement" | "performance";
+type OutcomeScaleKind = "direct-attainment" | "agreement" | "performance";
 
 export type OutcomeAttainment = {
   policyId: typeof OUTCOME_ATTAINMENT_POLICY_ID;

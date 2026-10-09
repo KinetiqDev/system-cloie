@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { OutcomeContributorMatrix } from "@/features/analytics/components/outcome-contributor-matrix";
 import { describe, expect, it } from "vitest";
 import { OutcomeMeanBarChart } from "@/features/analytics/components/outcome-mean-bar-chart";
 import { classifyOutcomeDistributions } from "@/features/analytics/aggregators/outcome-attainment";
@@ -74,6 +75,24 @@ function regionInsight(name: string): string {
 }
 
 describe("OutcomeMeanBarChart", () => {
+  it("keeps rated ILO tables and contributors free of attainment labels", () => {
+    const outcomes = [outcomeDTO({ code: "ILO1", meanRating: 4, ratingCount: 12 })];
+    render(
+      <>
+        <OutcomeMeanBarChart
+          title="ILO evidence"
+          outcomes={outcomes}
+          labels={INSTITUTIONAL_OUTCOME_LABELS}
+        />
+        <OutcomeContributorMatrix outcomes={outcomes} labels={INSTITUTIONAL_OUTCOME_LABELS} />
+      </>
+    );
+    fireEvent.click(screen.getByText("View exact values"));
+    expect(screen.queryByRole("columnheader", { name: "Attainment" })).not.toBeInTheDocument();
+    expect(screen.queryByText("No evidence")).not.toBeInTheDocument();
+    expect(screen.getByRole("table")).toHaveTextContent("4.00");
+    expect(screen.getByRole("table")).toHaveTextContent("12");
+  });
   const outcomes = [
     outcomeDTO({ outcomeId: "outcome-1", code: "BSIT-GO1", meanRating: 3.79 }),
     outcomeDTO({ outcomeId: "outcome-2", code: "BSIT-GO2", meanRating: 3.87 }),

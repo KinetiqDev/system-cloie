@@ -40,18 +40,23 @@ export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO
           <span className="text-label-sm text-text-secondary">Rating Count</span>
           <span className="text-body-md text-foreground tabular-nums">{outcome.ratingCount}</span>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-label-sm text-text-secondary">Attainment Status</span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <AttainmentBadge attainment={outcome.attainment} />
-            {benchmarkDelta !== null && outcome.attainment?.status === "classified" && (
-              <span className="text-label-sm text-muted-foreground tabular-nums">
-                ({benchmarkDelta >= 0 ? `+${benchmarkDelta.toFixed(2)}` : benchmarkDelta.toFixed(2)}{" "}
-                vs 3.50 benchmark)
-              </span>
-            )}
+        {outcome.attainment !== undefined && (
+          <div className="flex flex-col gap-1">
+            <span className="text-label-sm text-text-secondary">Attainment Status</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <AttainmentBadge attainment={outcome.attainment} />
+              {benchmarkDelta !== null && outcome.attainment.status === "classified" && (
+                <span className="text-label-sm text-muted-foreground tabular-nums">
+                  (
+                  {benchmarkDelta >= 0
+                    ? `+${benchmarkDelta.toFixed(2)}`
+                    : benchmarkDelta.toFixed(2)}{" "}
+                  vs 3.50 benchmark)
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {outcome.attainment?.isIndirect && (
