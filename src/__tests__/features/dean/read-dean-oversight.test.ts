@@ -326,6 +326,41 @@ describe("Dean oversight read model", () => {
     expect(prismaMock.institutionalOutcome.findMany).not.toHaveBeenCalled();
   });
 
+  it.each([1, 2])(
+    "preserves legacy gos catalogs and genuine mapping gaps in version %i snapshots",
+    async (schemaVersion) => {
+      prismaMock.academicTermInstance.findUnique.mockResolvedValue(period("COMPLETED"));
+      prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
+      const readiness = mixedReadiness("COMPLETED");
+      const context = readiness.contexts[1];
+      const { pos, ...legacyContext } = context;
+      readinessMock.mockResolvedValue({
+        ...readiness,
+        schemaVersion,
+        contexts: [
+          {
+            ...legacyContext,
+            gos: pos,
+            cilos: [
+              ...context.cilos,
+              {
+                ...context.cilos[0],
+                id: "complete-cilo",
+                mappedTargets: [{ id: "po-1", isArchived: false }],
+                missingGoIds: [],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await getDeanLearningOutcomes(PERIOD_ID);
+      if (result.state !== "ready") throw new Error("expected ready state");
+      expect(result.data.programs[0].pos.map((po) => po.code)).toEqual(["PO1", "PO2"]);
+      expect(result.data.programs[0].mappingGaps.map((gap) => gap.ciloId)).toEqual(["cilo-1"]);
+    }
+  );
+
   it("does not relabel legacy completed snapshots as Institutional Outcome coverage", async () => {
     prismaMock.academicTermInstance.findUnique.mockResolvedValue(period("COMPLETED"));
     prismaMock.courseAssignment.findMany.mockResolvedValue([generalEducationAssignment()]);

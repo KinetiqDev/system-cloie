@@ -204,7 +204,7 @@ function v2CiloIsIncomplete(
   // zero active POs alongside an active CILO is incomplete, not ready.
   return !hasExhaustiveGoCoverage(
     (cilo.mappedTargets ?? []).filter((target) => !target.isArchived).map((target) => target.id),
-    (context.pos ?? []).filter((po) => !po.isArchived).map((po) => po.id)
+    (context.pos ?? context.gos ?? []).filter((po) => !po.isArchived).map((po) => po.id)
   );
 }
 
@@ -369,8 +369,9 @@ export async function getDeanLearningOutcomes(
       pos: [],
       mappingGaps: [],
     };
-    if (program.pos.length === 0 && (context.pos?.length ?? 0) > 0) {
-      program.pos = visibleCatalog(context.pos, period.status);
+    const catalog = context.pos ?? context.gos ?? [];
+    if (program.pos.length === 0 && catalog.length > 0) {
+      program.pos = visibleCatalog(catalog, period.status);
       program.poCount = program.pos.length;
     }
     program.mappingGaps.push(

@@ -65,6 +65,8 @@ export type ReadinessContext = {
   /** College-wide catalog for General Education contexts; empty otherwise. */
   institutionalOutcomes: ReadinessCatalogTarget[];
   pos: ReadinessCatalogTarget[];
+  /** Immutable snapshots created before the PO terminology cutover use this key. */
+  gos?: ReadinessCatalogTarget[];
   affectedCiloIds: string[];
   affectedGoIds: string[];
   affectedInstitutionalOutcomeIds: string[];
