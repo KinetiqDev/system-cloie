@@ -666,6 +666,15 @@ describe("selected Program insights routes", () => {
           meanRating: 4.1,
           ratingCount: 12,
           submittedResponseCount: 6,
+          scaleGroups: [
+            {
+              scaleKey: "five-point",
+              scaleLabel: "1–5 (5-point)",
+              meanRating: 4.1,
+              ratingCount: 12,
+              submittedResponseCount: 6,
+            },
+          ],
           instrumentContext: "CILO Evaluation v2",
           evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Deployment" }],
         },
@@ -706,7 +715,7 @@ describe("selected Program insights routes", () => {
 
     expect(breakdownsMock).toHaveBeenCalledWith("program-bsed", { tab: "courses" });
     expect(analyticsMock).not.toHaveBeenCalled();
-    expect(await screen.findByText("Mean Rating by Course")).toBeInTheDocument();
+    expect(await screen.findByText("Mean Rating by Course · 1–5 (5-point)")).toBeInTheDocument();
     expect(screen.getAllByText("CS101 — Intro to CS").length).toBeGreaterThan(0);
     expect(screen.getByText("Mean Rating by Major")).toBeInTheDocument();
     expect(

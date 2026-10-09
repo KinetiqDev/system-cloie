@@ -115,6 +115,15 @@ const breakdowns: ProgramHeadBreakdownsDTO = {
       meanRating: 4.3,
       ratingCount: 20,
       submittedResponseCount: 5,
+      scaleGroups: [
+        {
+          scaleKey: JSON.stringify([1, 2, 3, 4, 5].map((value) => ({ value, label: null }))),
+          scaleLabel: "1–5 (5-point)",
+          meanRating: 4.3,
+          ratingCount: 20,
+          submittedResponseCount: 5,
+        },
+      ],
       instrumentContext: "CILO Evaluation v2",
       evidenceEvaluations: [{ evaluationId: "eval-1", deploymentName: "CILO Evaluation" }],
     },

@@ -109,6 +109,22 @@ export function ProgramHeadBreakdownsView({
   aiFilters,
 }: ProgramHeadBreakdownsViewProps) {
   const { emptyReason, courseRows, instrumentRows, majorBreakdown, yearLevelBreakdown } = data;
+  const coursesByScale = new Map<string, { label: string; rows: ProgramHeadComparisonDatum[] }>();
+  for (const course of courseRows) {
+    for (const scale of course.scaleGroups) {
+      const group = coursesByScale.get(scale.scaleKey) ?? { label: scale.scaleLabel, rows: [] };
+      group.rows.push({
+        ...courseRowToDatum(programId, course),
+        meanRating: scale.meanRating,
+        ratingCount: scale.ratingCount,
+        submittedResponseCount: scale.submittedResponseCount,
+      });
+      coursesByScale.set(scale.scaleKey, group);
+    }
+  }
+  const unratedCourses = courseRows
+    .filter((course) => course.scaleGroups.length === 0)
+    .map((course) => courseRowToDatum(programId, course));
   const resetClassName = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
   if (emptyReason === "no-assignments") {
@@ -157,12 +173,23 @@ export function ProgramHeadBreakdownsView({
   return (
     <div className="flex flex-col gap-6">
       {courseRows.length > 0 ? (
-        <section aria-label="Course breakdown">
-          <LazyProgramHeadComparisonChart
-            title="Mean Rating by Course"
-            description="Course-bound student evidence only. Each row discloses the instruments behind its ratings and links to authorized review evidence."
-            rows={courseRows.map((row) => courseRowToDatum(programId, row))}
-          />
+        <section aria-label="Course breakdown" className="flex min-w-0 flex-col gap-6">
+          <p className="text-body-sm text-text-secondary">
+            Course-bound student evidence only. Means are compared within one frozen scale at a
+            time. A course with incompatible scales appears separately for each scale, never as one
+            blended mean. Rated submissions may contribute to more than one scale.
+          </p>
+          {[...coursesByScale.entries()].map(([key, group], index) => (
+            <LazyProgramHeadComparisonChart
+              key={key}
+              title={`Mean Rating by Course · ${group.label}${coursesByScale.size > 1 ? ` · scale group ${index + 1}` : ""}`}
+              rows={group.rows}
+              tableOnlyRows={index === 0 ? unratedCourses : []}
+            />
+          ))}
+          {coursesByScale.size === 0 && (
+            <LazyProgramHeadComparisonChart title="Mean Rating by Course" rows={unratedCourses} />
+          )}
         </section>
       ) : (
         <DimensionNote title="Course Breakdown" resetHref={resetHref}>

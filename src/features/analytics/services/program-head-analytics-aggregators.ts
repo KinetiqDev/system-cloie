@@ -1,4 +1,10 @@
-import { resolveSnapshotItemScale } from "../aggregators/scale-identity";
+import {
+  describeScale,
+  ratingBelongsToScale,
+  resolveItemScaleIdentity,
+  resolveSnapshotItemScale,
+  type ScaleIdentity,
+} from "../aggregators/scale-identity";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -550,6 +556,7 @@ export function buildCourseBreakdownRows(
       course: { id: string; code: string; title: string };
       instruments: Map<string, string>;
       evaluations: Map<string, string>;
+      scales: Map<string, BreakdownAggregate & { scale: ScaleIdentity }>;
     }
   >();
 
@@ -566,10 +573,22 @@ export function buildCourseBreakdownRows(
         course,
         instruments: new Map(),
         evaluations: new Map(),
+        scales: new Map(),
       };
       byCourse.set(course.id, aggregate);
     }
-    accumulateEvidenceRow(aggregate, row, ratingValueIsValid(row, snapshotById));
+    const scale = resolveItemScaleIdentity(
+      snapshotById.get(courseBound.instrument.id),
+      row.section_key,
+      row.item_key
+    );
+    const valid = ratingBelongsToScale(scale, row.rating_value);
+    accumulateEvidenceRow(aggregate, row, valid);
+    if (scale && valid) {
+      const group = aggregate.scales.get(scale.key) ?? { ...emptyBreakdownAggregate(), scale };
+      accumulateEvidenceRow(group, row, true);
+      aggregate.scales.set(scale.key, group);
+    }
     aggregate.instruments.set(courseBound.instrument.id, instrumentLabel(courseBound.instrument));
     aggregate.evaluations.set(courseBound.id, courseBound.deployment_name);
   }
@@ -587,6 +606,7 @@ export function buildCourseBreakdownRows(
         course,
         instruments: new Map(),
         evaluations: new Map(),
+        scales: new Map(),
       };
       byCourse.set(course.id, aggregate);
     }
@@ -607,6 +627,16 @@ export function buildCourseBreakdownRows(
         `${aggregate.course.code} — ${aggregate.course.title}`,
         false
       ),
+      meanRating: aggregate.scales.size === 1 ? aggregate.ratingSum / aggregate.ratingCount : null,
+      scaleGroups: [...aggregate.scales.values()]
+        .map((group) => ({
+          scaleKey: group.scale.key,
+          scaleLabel: describeScale(group.scale.descriptors),
+          meanRating: group.ratingSum / group.ratingCount,
+          ratingCount: group.ratingCount,
+          submittedResponseCount: group.responseIds.size,
+        }))
+        .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey)),
       courseCode: aggregate.course.code,
       instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,
       evidenceEvaluations: evaluations,

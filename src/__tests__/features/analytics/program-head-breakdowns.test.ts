@@ -1265,6 +1265,164 @@ describe("buildAttributionBreakdown (pure)", () => {
 });
 
 describe("buildCourseBreakdownRows (pure)", () => {
+  it("withholds mixed-scale course means and retains scale-specific evidence", () => {
+    const course = { id: "mixed", code: "MIX", title: "Mixed scales" };
+    const rows = [4, 8].map((value, index) =>
+      courseBoundRatingRow({
+        value,
+        responseId: `r${index}`,
+        evaluationId: `eval${index}`,
+        deploymentName: "Course evidence",
+        course,
+        instrument: instrument(`iv${index}`, "Survey"),
+      })
+    );
+    const tenPoint = [
+      {
+        key: "sec-1",
+        title: "Ratings",
+        items: [
+          {
+            key: "item-1",
+            kind: "quantitative",
+            prompt: "Rate.",
+            scale: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+          },
+        ],
+      },
+    ];
+    const result = buildCourseBreakdownRows(
+      rows,
+      [],
+      new Map([
+        ["iv0", SCALE_SNAPSHOT],
+        ["iv1", tenPoint],
+      ])
+    );
+    expect(result[0].meanRating).toBeNull();
+    expect(result[0].ratingCount).toBe(2);
+    expect(result[0].scaleGroups).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          meanRating: 4,
+          scaleLabel: "1–5 (5-point)",
+          ratingCount: 1,
+          submittedResponseCount: 1,
+        }),
+        expect.objectContaining({
+          meanRating: 8,
+          scaleLabel: "1–10 (10-point)",
+          ratingCount: 1,
+          submittedResponseCount: 1,
+        }),
+      ])
+    );
+  });
+  it("pools compatible frozen scales by raw rating count and deduplicates submissions", () => {
+    const course = { id: "same", code: "SAME", title: "Compatible scales" };
+    const rows = [4, 2, 5, 99].map((value, index) =>
+      courseBoundRatingRow({
+        value,
+        responseId: index < 2 ? "r1" : "r2",
+        evaluationId: "eval",
+        deploymentName: "Course evidence",
+        course,
+        instrument: instrument(index < 2 ? "iv1" : "iv2", "Survey"),
+      })
+    );
+    const responses = [
+      responseRow({
+        id: "unrated",
+        courseBound: {
+          id: "eval",
+          deploymentName: "Course evidence",
+          course,
+          instrument: instrument("iv1", "Survey"),
+        },
+      }),
+    ];
+    const [result] = buildCourseBreakdownRows(rows, responses, snapshotsFor(rows));
+    expect(result.meanRating).toBeCloseTo(11 / 3);
+    expect(result.ratingCount).toBe(3);
+    expect(result.submittedResponseCount).toBe(3);
+    expect(result.scaleGroups).toHaveLength(1);
+    expect(result.scaleGroups[0]).toMatchObject({
+      meanRating: 11 / 3,
+      ratingCount: 3,
+      submittedResponseCount: 2,
+    });
+  });
+
+  it("keeps identical numeric ranges with different frozen meanings separate", () => {
+    const course = { id: "labels", code: "LABELS", title: "Different semantics" };
+    const rows = [4, 5].map((value, index) =>
+      courseBoundRatingRow({
+        value,
+        responseId: `r${index}`,
+        evaluationId: `eval${index}`,
+        deploymentName: "Course evidence",
+        course,
+        instrument: instrument(`iv${index}`, "Survey"),
+      })
+    );
+    const labeled = (prefix: string) => [
+      {
+        key: "sec-1",
+        title: "Ratings",
+        items: [
+          {
+            key: "item-1",
+            kind: "quantitative",
+            likertDescriptors: [1, 2, 3, 4, 5].map((value) => ({
+              value,
+              label: `${prefix} ${value}`,
+            })),
+          },
+        ],
+      },
+    ];
+    const [result] = buildCourseBreakdownRows(
+      rows,
+      [],
+      new Map([
+        ["iv0", labeled("Achievement")],
+        ["iv1", labeled("Agreement")],
+      ])
+    );
+    expect(result.meanRating).toBeNull();
+    expect(result.scaleGroups).toHaveLength(2);
+    expect(new Set(result.scaleGroups.map((group) => group.scaleKey)).size).toBe(2);
+    expect(result.scaleGroups.map((group) => group.scaleLabel)).toEqual([
+      "1–5 (5-point)",
+      "1–5 (5-point)",
+    ]);
+  });
+
+  it("retains unrated submissions without inventing a scale or mean", () => {
+    const course = { id: "unrated", code: "NONE", title: "No valid ratings" };
+    const [result] = buildCourseBreakdownRows(
+      [],
+      [
+        responseRow({
+          id: "r1",
+          courseBound: {
+            id: "eval",
+            deploymentName: "Course evidence",
+            course,
+            instrument: instrument("iv", "Survey"),
+          },
+        }),
+      ],
+      new Map()
+    );
+    expect(result).toMatchObject({
+      meanRating: null,
+      ratingCount: 0,
+      submittedResponseCount: 1,
+      scaleGroups: [],
+    });
+  });
+
   it("sorts rows by course code and skips central ratings", () => {
     const rows = [
       courseBoundRatingRow({

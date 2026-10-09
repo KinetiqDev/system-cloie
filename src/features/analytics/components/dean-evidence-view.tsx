@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -236,22 +236,8 @@ function ProgramLink({
   );
 }
 
-function DeanCollegeView({
-  evidence,
-  filters,
-}: {
-  evidence: EvidenceKind<"college">;
-  filters: DeanAnalyticsFilters;
-}) {
-  const { college } = evidence;
-  const targetView = filters.view === "college" ? "outcomes" : filters.view;
-  const hrefFor = (programId: string) =>
-    deanAnalyticsUrl({ view: targetView, programId, termInstanceId: filters.termInstanceId });
-  const withActivity = college.programRows.filter((program) => program.deployments > 0);
-  const withoutActivity = college.programRows.filter((program) => program.deployments === 0);
-  const ranked = [...withActivity].sort((left, right) => right.submitted - left.submitted);
-
-  const sourceRows = Object.entries(
+function collegeSourceRows(college: CollegeData) {
+  return Object.entries(
     college.evidence.reduce<Record<string, { part: number; total: number }>>((acc, row) => {
       const current = acc[row.source] ?? { part: 0, total: 0 };
       acc[row.source] = {
@@ -266,18 +252,92 @@ function DeanCollegeView({
     fullLabel: DEAN_SOURCE_LABELS[source as keyof typeof DEAN_SOURCE_LABELS],
     ...counts,
   }));
+}
 
-  const periodRows = filters.termInstanceId
-    ? []
-    : [...college.periods]
-        .reverse()
-        .map((period) => {
-          const rows = college.evidence.filter((row) => row.periodId === period.id);
-          const submitted = rows.reduce((sum, row) => sum + row.submitted, 0);
-          const opportunities = rows.reduce((sum, row) => sum + row.opportunities, 0);
-          return { period, submitted, opportunities };
-        })
-        .filter((row) => row.opportunities > 0);
+function collegePeriodRows(college: CollegeData, filters: DeanAnalyticsFilters) {
+  if (filters.termInstanceId) return [];
+  return [...college.periods]
+    .reverse()
+    .map((period) => {
+      const rows = college.evidence.filter((row) => row.periodId === period.id);
+      return {
+        period,
+        submitted: rows.reduce((sum, row) => sum + row.submitted, 0),
+        opportunities: rows.reduce((sum, row) => sum + row.opportunities, 0),
+      };
+    })
+    .filter((row) => row.opportunities > 0);
+}
+
+function DeanProgramChoices({
+  college,
+  filters,
+}: {
+  college: CollegeData;
+  filters: DeanAnalyticsFilters;
+}) {
+  const targetView = filters.view === "college" ? "outcomes" : filters.view;
+  const hrefFor = (programId: string) =>
+    deanAnalyticsUrl({ view: targetView, programId, termInstanceId: filters.termInstanceId });
+  const withActivity = college.programRows.filter((program) => program.deployments > 0);
+  const withoutActivity = college.programRows.filter((program) => program.deployments === 0);
+  const ranked = [...withActivity].sort((left, right) => right.submitted - left.submitted);
+  return (
+    <Section
+      title={filters.view === "college" ? "Programs" : "Choose a program"}
+      intro={
+        filters.view === "college"
+          ? "Open a program to see its outcomes. Counts show activity, not scores, so programs are not ranked."
+          : "Pick a program to continue."
+      }
+    >
+      {ranked.length > 0 ? (
+        <ul className="bg-card flex flex-col divide-y rounded-xl border p-1">
+          {ranked.map((program) => (
+            <ProgramLink key={program.id} program={program} href={hrefFor(program.id)} />
+          ))}
+        </ul>
+      ) : (
+        <Note>No program has an evaluation in this period yet.</Note>
+      )}
+      {withoutActivity.length > 0 && (
+        <Disclosure>
+          <DisclosureTrigger variant="chip">
+            {withoutActivity.length} programs with no evaluations yet
+          </DisclosureTrigger>
+          <DisclosureContent>
+            <ul className="flex flex-wrap gap-2">
+              {withoutActivity.map((program) => (
+                <li key={program.id}>
+                  <Link
+                    href={hrefFor(program.id)}
+                    aria-label={`Inspect ${program.code} evidence`}
+                    className="text-body-sm hover:bg-muted focus-visible:outline-ring inline-flex min-h-9 items-center rounded-lg border px-3 focus-visible:outline-2 pointer-coarse:min-h-11"
+                  >
+                    {program.code}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </DisclosureContent>
+        </Disclosure>
+      )}
+    </Section>
+  );
+}
+
+function DeanCollegeView({
+  evidence,
+  filters,
+}: {
+  evidence: EvidenceKind<"college">;
+  filters: DeanAnalyticsFilters;
+}) {
+  const { college } = evidence;
+  const withActivity = college.programRows.filter((program) => program.deployments > 0);
+
+  const sourceRows = collegeSourceRows(college);
+  const periodRows = collegePeriodRows(college, filters);
 
   return (
     <div className="flex min-w-0 flex-col gap-8">
@@ -299,46 +359,7 @@ function DeanCollegeView({
           ]}
         />
       )}
-      <Section
-        title={filters.view === "college" ? "Programs" : "Choose a program"}
-        intro={
-          filters.view === "college"
-            ? "Open a program to see its outcomes. Counts show activity, not scores, so programs are not ranked."
-            : "Pick a program to continue."
-        }
-      >
-        {ranked.length > 0 ? (
-          <ul className="bg-card flex flex-col divide-y rounded-xl border p-1">
-            {ranked.map((program) => (
-              <ProgramLink key={program.id} program={program} href={hrefFor(program.id)} />
-            ))}
-          </ul>
-        ) : (
-          <Note>No program has an evaluation in this period yet.</Note>
-        )}
-        {withoutActivity.length > 0 && (
-          <Disclosure>
-            <DisclosureTrigger variant="chip">
-              {withoutActivity.length} programs with no evaluations yet
-            </DisclosureTrigger>
-            <DisclosureContent>
-              <ul className="flex flex-wrap gap-2">
-                {withoutActivity.map((program) => (
-                  <li key={program.id}>
-                    <Link
-                      href={hrefFor(program.id)}
-                      aria-label={`Inspect ${program.code} evidence`}
-                      className="text-body-sm hover:bg-muted focus-visible:outline-ring inline-flex min-h-9 items-center rounded-lg border px-3 focus-visible:outline-2 pointer-coarse:min-h-11"
-                    >
-                      {program.code}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </DisclosureContent>
-          </Disclosure>
-        )}
-      </Section>
+      <DeanProgramChoices college={college} filters={filters} />
       {filters.view === "college" && (
         <>
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">
@@ -413,45 +434,132 @@ function DeanCollegeView({
   );
 }
 
+type CourseScaleRow = {
+  key: string;
+  label: string;
+  fullLabel: string;
+  scaleGroups: Array<{
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number | null;
+    ratingCount: number;
+    submittedResponseCount: number;
+  }>;
+};
+
+function DeanCourseMeanCharts({ courses }: { courses: CourseScaleRow[] }) {
+  const coursesByScale = new Map<
+    string,
+    { label: string; rows: ComponentProps<typeof LazyDeanValueChart>["rows"] }
+  >();
+  for (const course of courses) {
+    for (const scale of course.scaleGroups) {
+      if (scale.meanRating === null) continue;
+      const group = coursesByScale.get(scale.scaleKey) ?? { label: scale.scaleLabel, rows: [] };
+      group.rows.push({
+        key: course.key,
+        label: course.label,
+        fullLabel: course.fullLabel,
+        value: scale.meanRating,
+        detail: `${scale.ratingCount} ratings · ${scale.submittedResponseCount} rated submissions`,
+      });
+      coursesByScale.set(scale.scaleKey, group);
+    }
+  }
+  if (coursesByScale.size === 0) return <Note>No rated courses in this scope.</Note>;
+  return [...coursesByScale.entries()].map(([key, group], index) => (
+    <LazyDeanValueChart
+      key={key}
+      title={`Average rating by course · ${group.label}${coursesByScale.size > 1 ? ` · scale group ${index + 1}` : ""}`}
+      description="Only ratings with identical frozen values and descriptions are compared in this chart."
+      valueLabel="Average rating"
+      format="mean"
+      rows={group.rows}
+      emptyText="No rated courses in this scope."
+    />
+  ));
+}
+
+function DeanInstitutionalHistory({ trends }: { trends: EvidenceKind<"institutional">["trends"] }) {
+  if (!trends || trends.periods.length === 0) return null;
+  return (
+    <Section title="Over time">
+      <LazyDeanTrendChart
+        title="Average rating by period"
+        domain={trendDomain(trends.periods.map((period) => period.scaleDomain))}
+        periods={trends.periods.map((period) => ({
+          label: shortPeriod(period.periodLabel),
+          meanRating: period.meanRating,
+          comparableWithPrevious: period.comparableWithPrevious,
+        }))}
+        breakBefore={trends.breaks.map((item) => shortPeriod(item.toPeriodLabel))}
+      />
+      <Disclosure>
+        <DisclosureTrigger variant="chip">Period ratings and participation</DisclosureTrigger>
+        <DisclosureContent>
+          <ul className="text-body-sm flex flex-col gap-2">
+            {trends.periods.map((period) => (
+              <li key={period.termInstanceId}>
+                {period.periodLabel} · {period.submittedResponseCount} submissions · average{" "}
+                {deanMean(period.meanRating)} ·{" "}
+                {period.comparableWithPrevious
+                  ? "Comparable with previous period"
+                  : "No comparable previous period"}
+              </li>
+            ))}
+          </ul>
+        </DisclosureContent>
+      </Disclosure>
+    </Section>
+  );
+}
+
+function DeanInstitutionalOutcomes({ data }: { data: EvidenceKind<"institutional">["outcomes"] }) {
+  const outcomes = data?.outcomes ?? [];
+  const unlinkedCount = data
+    ? data.unlinkedRatings.generalItems + data.unlinkedRatings.unmappedCilos
+    : null;
+  return (
+    <Section
+      title="General Education"
+      intro="General Education course ratings grouped by Institutional Learning Outcome (ILO). ILOs are not classified as attainment and do not roll up into Program Outcomes."
+    >
+      <LazyOutcomeMeanBarChart
+        title="Average rating by ILO"
+        outcomes={outcomes}
+        labels={INSTITUTIONAL_OUTCOME_LABELS}
+        preserveOrder
+      />
+      <Note>
+        One rating can count toward several ILOs, so rows do not add up.
+        {unlinkedCount !== null ? ` ${unlinkedCount} ratings reach no ILO and are left out.` : ""}
+      </Note>
+      {outcomes.length > 0 && (
+        <Disclosure>
+          <DisclosureTrigger variant="chip">Evidence behind each ILO</DisclosureTrigger>
+          <DisclosureContent>
+            <DeanOutcomeRows rows={outcomes} institutional />
+          </DisclosureContent>
+        </Disclosure>
+      )}
+      {data && (
+        <Disclosure>
+          <DisclosureTrigger variant="chip">How historical ratings are grouped</DisclosureTrigger>
+          <DisclosureContent>
+            <Note>{data.currentMappingDisclosure}</Note>
+          </DisclosureContent>
+        </Disclosure>
+      )}
+    </Section>
+  );
+}
+
 function DeanInstitutionalView({ evidence }: { evidence: EvidenceKind<"institutional"> }) {
-  const outcomes = evidence.outcomes?.outcomes ?? [];
   const courses = evidence.courses?.rows ?? [];
   const trends = evidence.trends;
   return (
     <div className="flex min-w-0 flex-col gap-8">
-      <Section
-        title="General Education"
-        intro="General Education course ratings grouped by Institutional Learning Outcome (ILO). ILOs are not classified as attainment and do not roll up into Program Outcomes."
-      >
-        <LazyOutcomeMeanBarChart
-          title="Average rating by ILO"
-          outcomes={outcomes}
-          labels={INSTITUTIONAL_OUTCOME_LABELS}
-          preserveOrder
-        />
-        <Note>
-          One rating can count toward several ILOs, so rows do not add up.
-          {evidence.outcomes
-            ? ` ${evidence.outcomes.unlinkedRatings.generalItems + evidence.outcomes.unlinkedRatings.unmappedCilos} ratings reach no ILO and are left out.`
-            : ""}
-        </Note>
-        {outcomes.length > 0 && (
-          <Disclosure>
-            <DisclosureTrigger variant="chip">Evidence behind each ILO</DisclosureTrigger>
-            <DisclosureContent>
-              <DeanOutcomeRows rows={outcomes} institutional />
-            </DisclosureContent>
-          </Disclosure>
-        )}
-        {evidence.outcomes && (
-          <Disclosure>
-            <DisclosureTrigger variant="chip">How historical ratings are grouped</DisclosureTrigger>
-            <DisclosureContent>
-              <Note>{evidence.outcomes.currentMappingDisclosure}</Note>
-            </DisclosureContent>
-          </Disclosure>
-        )}
-      </Section>
+      <DeanInstitutionalOutcomes data={evidence.outcomes} />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <LazyDeanShareChart
           title="Response rate by course"
@@ -467,20 +575,13 @@ function DeanInstitutionalView({ evidence }: { evidence: EvidenceKind<"instituti
           }))}
           emptyText="No General Education evaluations have been assigned in this period."
         />
-        <LazyDeanValueChart
-          title="Average rating by course"
-          valueLabel="Average rating"
-          format="mean"
-          rows={courses
-            .filter((row) => row.meanRating !== null)
-            .map((row) => ({
-              key: row.courseId,
-              label: row.courseCode,
-              fullLabel: `${row.courseCode} · ${row.courseTitle}`,
-              value: row.meanRating ?? 0,
-              detail: `${row.ratingCount} ratings`,
-            }))}
-          emptyText="No ratings yet."
+        <DeanCourseMeanCharts
+          courses={courses.map((row) => ({
+            key: row.courseId,
+            label: row.courseCode,
+            fullLabel: `${row.courseCode} · ${row.courseTitle}`,
+            scaleGroups: row.scaleGroups,
+          }))}
         />
       </div>
       {courses.length > 0 && (
@@ -498,42 +599,35 @@ function DeanInstitutionalView({ evidence }: { evidence: EvidenceKind<"instituti
           </DisclosureContent>
         </Disclosure>
       )}
-      {trends && trends.periods.length > 0 && (
-        <Section title="Over time">
-          <LazyDeanTrendChart
-            title="Average rating by period"
-            domain={trendDomain(trends.periods.map((period) => period.scaleDomain))}
-            periods={trends.periods.map((period) => ({
-              label: shortPeriod(period.periodLabel),
-              meanRating: period.meanRating,
-              comparableWithPrevious: period.comparableWithPrevious,
-            }))}
-            breakBefore={trends.breaks.map((item) => shortPeriod(item.toPeriodLabel))}
-          />
-          <Disclosure>
-            <DisclosureTrigger variant="chip">Period ratings and participation</DisclosureTrigger>
-            <DisclosureContent>
-              <ul className="text-body-sm flex flex-col gap-2">
-                {trends.periods.map((period) => (
-                  <li key={period.termInstanceId}>
-                    {period.periodLabel} · {period.submittedResponseCount} submissions · average{" "}
-                    {deanMean(period.meanRating)} ·{" "}
-                    {period.comparableWithPrevious
-                      ? "Comparable with previous period"
-                      : "No comparable previous period"}
-                  </li>
-                ))}
-              </ul>
-            </DisclosureContent>
-          </Disclosure>
-        </Section>
-      )}
+      <DeanInstitutionalHistory trends={trends} />
       <Section title="Written feedback">
         <RepeatedTermsCloud
           tokens={evidence.feedback?.tokens ?? []}
           answerCount={evidence.feedback?.qualitativeItemCount ?? 0}
         />
       </Section>
+    </div>
+  );
+}
+
+function DeanPoCatalog({ evidence }: { evidence: EvidenceKind<"outcomes"> }) {
+  if (!evidence.data || evidence.catalog.length === 0) return null;
+  const ratedIds = new Set([
+    ...evidence.data.outcomes.filter((row) => row.ratingCount > 0).map((row) => row.outcomeId),
+    ...evidence.data.programWideOutcomes
+      .filter((row) => row.ratingCount > 0)
+      .map((row) => row.poId),
+  ]);
+  const missingPos = evidence.catalog.filter((po) => !ratedIds.has(po.id));
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-title-md">PO catalog and evidence availability</h3>
+      <Note>
+        {evidence.catalog.length - missingPos.length} of {evidence.catalog.length} POs have ratings
+        {missingPos.length > 0
+          ? `. No ratings yet for: ${missingPos.map((po) => `${po.code}${po.is_active ? "" : " (archived)"}`).join(", ")}.`
+          : "."}
+      </Note>
     </div>
   );
 }
@@ -549,11 +643,6 @@ function DeanOutcomesView({
   if (!data) return null;
   const central = data.programWideOutcomes.filter((row) => row.meanRating !== null);
   const hasClassified = central.some((row) => row.attainment?.status === "classified");
-  const missingPos = evidence.catalog.filter(
-    (po) =>
-      !data.outcomes.some((row) => row.outcomeId === po.id && row.ratingCount > 0) &&
-      !data.programWideOutcomes.some((row) => row.poId === po.id && row.ratingCount > 0)
-  );
   return (
     <div className="flex min-w-0 flex-col gap-8">
       <ProgramSnapshot
@@ -577,18 +666,7 @@ function DeanOutcomesView({
             <Note>{data.currentMappingDisclosure}</Note>
           </DisclosureContent>
         </Disclosure>
-        {evidence.catalog.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <h3 className="text-title-md">PO catalog and evidence availability</h3>
-            <Note>
-              {evidence.catalog.length - missingPos.length} of {evidence.catalog.length} POs have
-              ratings
-              {missingPos.length > 0
-                ? `. No ratings yet for: ${missingPos.map((po) => `${po.code}${po.is_active ? "" : " (archived)"}`).join(", ")}.`
-                : "."}
-            </Note>
-          </div>
-        )}
+        <DeanPoCatalog evidence={evidence} />
         {data.outcomes.length > 0 && (
           <Disclosure>
             <DisclosureTrigger variant="chip">Evidence behind each outcome</DisclosureTrigger>
@@ -685,23 +763,16 @@ function DeanCoursesView({
       />
       <Section
         title="Courses"
-        intro="Averages describe ratings, not attainment. A course can use more than one instrument."
+        intro="Averages describe ratings, not attainment. Incompatible frozen scales are shown separately and never combined or ranked against each other."
       >
         <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-          <LazyDeanValueChart
-            title="Average rating by course"
-            valueLabel="Average rating"
-            format="mean"
-            rows={data.courseRows
-              .filter((row) => row.meanRating !== null)
-              .map((row) => ({
-                key: row.key,
-                label: row.courseCode,
-                fullLabel: row.label,
-                value: row.meanRating ?? 0,
-                detail: `${row.submittedResponseCount} submissions`,
-              }))}
-            emptyText="No rated courses in this scope."
+          <DeanCourseMeanCharts
+            courses={data.courseRows.map((row) => ({
+              key: row.key,
+              label: row.courseCode,
+              fullLabel: row.label,
+              scaleGroups: row.scaleGroups,
+            }))}
           />
           <LazyDeanValueChart
             title="Submissions by course"

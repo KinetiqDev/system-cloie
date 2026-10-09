@@ -229,6 +229,14 @@ export type ProgramHeadBreakdownRowDTO = {
 /** Course breakdown row: course-bound student evidence only. */
 export type ProgramHeadCourseBreakdownRowDTO = ProgramHeadBreakdownRowDTO & {
   courseCode: string;
+  /** Frozen descriptor identities keep incompatible course ratings separate. */
+  scaleGroups: Array<{
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number;
+    ratingCount: number;
+    submittedResponseCount: number;
+  }>;
   /** Distinct instrument labels behind the course; null when none. */
   instrumentContext: string | null;
   /**
