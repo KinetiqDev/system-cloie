@@ -328,6 +328,36 @@ describe("buildNeedsAttentionItems", () => {
     ).toEqual(["deployment:course:d-closing"]);
   });
 
+  it("breaks equal deadlines by name instead of database row order", () => {
+    const sameDeadline = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const result = items({
+      deployments: [
+        {
+          id: "d-zeta",
+          kind: "course",
+          name: "Zeta Post-Term CILO Evaluation",
+          status: DeploymentStatus.ACTIVE,
+          deadlineAt: sameDeadline,
+        },
+        {
+          id: "d-alpha",
+          kind: "course",
+          name: "Alpha Post-Term CILO Evaluation",
+          status: DeploymentStatus.ACTIVE,
+          deadlineAt: sameDeadline,
+        },
+      ],
+      submittedCountsByDeployment: new Map([
+        ["d-zeta", 0],
+        ["d-alpha", 0],
+      ]),
+    });
+    expect(result.map((item) => item.id)).toEqual([
+      "deployment:course:d-alpha",
+      "deployment:course:d-zeta",
+    ]);
+  });
+
   it("flags ACTIVE deployments with zero submissions regardless of deadline", () => {
     expect(
       items()

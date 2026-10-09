@@ -131,7 +131,7 @@ function EmptyFrame({
   );
 }
 
-export type DeanShareRow = {
+type DeanShareRow = {
   key: string;
   label: string;
   fullLabel?: string;
@@ -288,7 +288,7 @@ export function DeanShareChart({
   );
 }
 
-export type DeanValueRow = {
+type DeanValueRow = {
   key: string;
   label: string;
   fullLabel?: string;
@@ -329,6 +329,196 @@ function PeriodTick({
  * periods (kept in the order given, oldest first). Means and counts share a
  * zero baseline so bar length stays proportional.
  */
+function DeanValueExactTable({
+  title,
+  valueLabel,
+  rows,
+  format,
+}: {
+  title: string;
+  valueLabel: string;
+  rows: DeanValueRow[];
+  format: (value: number) => string;
+}) {
+  const showStatus = rows.some((row) => row.status);
+  return (
+    <ExactTable
+      label={title}
+      headers={["Group", valueLabel, ...(showStatus ? ["Reading"] : []), "Detail"]}
+      rows={rows.map((row) => [
+        row.fullLabel ?? row.label,
+        format(row.value),
+        ...(showStatus ? [row.status ?? "—"] : []),
+        row.detail ?? "—",
+      ])}
+    />
+  );
+}
+
+function valueFormatter(format: "count" | "percent" | "mean") {
+  if (format === "percent") return (value: number) => `${value.toFixed(1)}%`;
+  if (format === "mean") return (value: number) => value.toFixed(2);
+  return (value: number) => value.toLocaleString();
+}
+
+function valueInsight(rows: DeanValueRow[], format: (value: number) => string) {
+  const ranked = [...rows].sort((left, right) => right.value - left.value);
+  const highest = ranked[0];
+  const lowest = ranked[ranked.length - 1];
+  if (ranked.length === 1) return `${highest.label}: ${format(highest.value)}.`;
+  if (highest.value === lowest.value) return `All groups: ${format(highest.value)}.`;
+  return `Highest: ${highest.label} ${format(highest.value)}. Lowest: ${lowest.label} ${format(lowest.value)}.`;
+}
+
+function valueTooltip(
+  row: DeanValueRow | undefined,
+  format: (value: number) => string,
+  label: string
+) {
+  if (!row) return ["", label];
+  return [`${format(row.value)}${row.detail ? ` · ${row.detail}` : ""}`, label];
+}
+
+function directValue(row: DeanValueRow, format: (value: number) => string, showDetail: boolean) {
+  return showDetail && row.detail ? `${format(row.value)} · ${row.detail}` : format(row.value);
+}
+
+function benchmarkLine(benchmark?: number) {
+  if (!benchmark) return null;
+  return (
+    <ReferenceLine
+      x={benchmark}
+      stroke="var(--text-muted)"
+      strokeDasharray="6 4"
+      strokeWidth={2}
+      label={{
+        value: `Target ${benchmark.toFixed(2)}`,
+        position: "top",
+        fill: "var(--foreground)",
+        fontSize: 12,
+      }}
+    />
+  );
+}
+
+function deanValuePlot({
+  data,
+  vertical,
+  wide,
+  axisMax,
+  benchmark,
+  format,
+  fmt,
+  valueLabel,
+}: {
+  data: Array<DeanValueRow & { direct: string }>;
+  vertical: boolean;
+  wide: boolean;
+  axisMax?: number;
+  benchmark?: number;
+  format: "count" | "percent" | "mean";
+  fmt: (value: number) => string;
+  valueLabel: string;
+}) {
+  const cells = data.map((row) => <Cell key={row.key} fill={row.color ?? PART_FILL} />);
+  const domain: [number, number | "auto"] = [0, axisMax ?? "auto"];
+  const percentTick = format === "percent" ? (value: number) => `${value}%` : undefined;
+  const labelWidth = wide ? 150 : 112;
+  const labelLength = wide ? 24 : 17;
+  const marginRight = wide ? 160 : 48;
+  const label = (
+    <LabelList
+      dataKey="direct"
+      position={vertical ? "top" : "right"}
+      offset={8}
+      fill="var(--foreground)"
+      fontSize={12}
+      fontVariant="tabular-nums"
+    />
+  );
+  const numberAxis = (
+    <XAxis
+      type="number"
+      domain={domain}
+      allowDecimals={format === "mean"}
+      tickFormatter={percentTick}
+      tickLine={false}
+      axisLine={false}
+    />
+  );
+
+  return vertical ? (
+    <BarChart data={data} margin={{ top: 24, right: 8, bottom: 8, left: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+      <XAxis
+        dataKey="label"
+        interval={0}
+        height={52}
+        tickLine={false}
+        axisLine={false}
+        tick={(props) => <PeriodTick {...props} />}
+      />
+      <YAxis
+        domain={domain}
+        allowDecimals={false}
+        width={40}
+        tickLine={false}
+        axisLine={false}
+        tickFormatter={percentTick}
+      />
+      <ChartTooltip
+        formatter={(_value, _name, item) =>
+          valueTooltip(item?.payload as DeanValueRow | undefined, fmt, valueLabel)
+        }
+      />
+      <Bar
+        dataKey="value"
+        name={valueLabel}
+        maxBarSize={56}
+        radius={[6, 6, 0, 0]}
+        isAnimationActive={false}
+      >
+        {cells}
+        {label}
+      </Bar>
+    </BarChart>
+  ) : (
+    <BarChart
+      data={data}
+      layout="vertical"
+      margin={{ top: benchmark ? 24 : 4, right: marginRight, bottom: 4, left: 4 }}
+      barCategoryGap={8}
+    >
+      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+      {numberAxis}
+      <YAxis
+        type="category"
+        dataKey="label"
+        width={labelWidth}
+        tickLine={false}
+        axisLine={false}
+        tickFormatter={(text: string) => truncate(text, labelLength)}
+      />
+      <ChartTooltip
+        formatter={(_value, _name, item) =>
+          valueTooltip(item?.payload as DeanValueRow | undefined, fmt, valueLabel)
+        }
+      />
+      {benchmarkLine(benchmark)}
+      <Bar
+        dataKey="value"
+        name={valueLabel}
+        maxBarSize={32}
+        radius={[0, 6, 6, 0]}
+        isAnimationActive={false}
+      >
+        {cells}
+        {label}
+      </Bar>
+    </BarChart>
+  );
+}
+
 export function DeanValueChart({
   title,
   description,
@@ -355,18 +545,10 @@ export function DeanValueChart({
   const instanceId = useId().replace(/[:]/g, "");
   const chartId = `dean-value-${instanceId}`;
   const wide = useMediaQuery("(min-width: 640px)");
-  const fmt = (value: number) =>
-    format === "percent"
-      ? `${value.toFixed(1)}%`
-      : format === "mean"
-        ? value.toFixed(2)
-        : value.toLocaleString();
+  const fmt = valueFormatter(format);
   const data = rows.map((row) => ({
     ...row,
-    direct:
-      wide && row.detail && orientation === "horizontal"
-        ? `${fmt(row.value)} · ${row.detail}`
-        : fmt(row.value),
+    direct: directValue(row, fmt, wide && orientation === "horizontal"),
   }));
   if (orientation === "horizontal" && !keepOrder)
     data.sort((left, right) => right.value - left.value);
@@ -377,37 +559,9 @@ export function DeanValueChart({
     );
 
   const insightId = `${chartId}-insight`;
-  const ranked = [...data].sort((left, right) => right.value - left.value);
-  const insight =
-    ranked.length === 1
-      ? `${ranked[0].label}: ${fmt(ranked[0].value)}.`
-      : ranked[0].value === ranked[ranked.length - 1].value
-        ? `All groups: ${fmt(ranked[0].value)}.`
-        : `Highest: ${ranked[0].label} ${fmt(ranked[0].value)}. Lowest: ${ranked[ranked.length - 1].label} ${fmt(ranked[ranked.length - 1].value)}.`;
+  const insight = valueInsight(data, fmt);
   const axisMax = format === "percent" ? 100 : (max ?? undefined);
   const vertical = orientation === "vertical";
-  const cells = data.map((row) => <Cell key={row.key} fill={row.color ?? PART_FILL} />);
-  const label = (
-    <LabelList
-      dataKey="direct"
-      position={vertical ? "top" : "right"}
-      offset={8}
-      fill="var(--foreground)"
-      fontSize={12}
-      fontVariant="tabular-nums"
-    />
-  );
-  const numberAxis = (
-    <XAxis
-      type="number"
-      domain={axisMax ? [0, axisMax] : [0, "auto"]}
-      allowDecimals={format === "mean"}
-      tickFormatter={format === "percent" ? (value: number) => `${value}%` : undefined}
-      tickLine={false}
-      axisLine={false}
-    />
-  );
-  const showStatus = data.some((row) => row.status);
 
   return (
     <ChartFrame chartId={chartId} title={title} description={description}>
@@ -419,116 +573,17 @@ export function DeanValueChart({
         className="aspect-auto w-full"
         style={{ height: vertical ? 280 : data.length * 44 + 48 }}
       >
-        {vertical ? (
-          <BarChart data={data} margin={{ top: 24, right: 8, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="label"
-              interval={0}
-              height={52}
-              tickLine={false}
-              axisLine={false}
-              tick={(props) => <PeriodTick {...props} />}
-            />
-            <YAxis
-              domain={axisMax ? [0, axisMax] : [0, "auto"]}
-              allowDecimals={false}
-              width={40}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={format === "percent" ? (value: number) => `${value}%` : undefined}
-            />
-            <ChartTooltip
-              formatter={(_value, _name, item) => {
-                const row = item?.payload as (typeof data)[number] | undefined;
-                return [
-                  row ? `${fmt(row.value)}${row.detail ? ` · ${row.detail}` : ""}` : "",
-                  valueLabel,
-                ];
-              }}
-            />
-            <Bar
-              dataKey="value"
-              name={valueLabel}
-              maxBarSize={56}
-              radius={[6, 6, 0, 0]}
-              isAnimationActive={false}
-            >
-              {cells}
-              {label}
-            </Bar>
-          </BarChart>
-        ) : (
-          <BarChart
-            data={data}
-            layout="vertical"
-            margin={{ top: benchmark ? 24 : 4, right: wide ? 160 : 48, bottom: 4, left: 4 }}
-            barCategoryGap={8}
-          >
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-            {numberAxis}
-            <YAxis
-              type="category"
-              dataKey="label"
-              width={wide ? 150 : 112}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(text: string) => truncate(text, wide ? 24 : 17)}
-            />
-            <ChartTooltip
-              formatter={(_value, _name, item) => {
-                const row = item?.payload as (typeof data)[number] | undefined;
-                return [
-                  row ? `${fmt(row.value)}${row.detail ? ` · ${row.detail}` : ""}` : "",
-                  valueLabel,
-                ];
-              }}
-            />
-            {benchmark ? (
-              <ReferenceLine
-                x={benchmark}
-                stroke="var(--text-muted)"
-                strokeDasharray="6 4"
-                strokeWidth={2}
-                label={{
-                  value: `Target ${benchmark.toFixed(2)}`,
-                  position: "top",
-                  fill: "var(--foreground)",
-                  fontSize: 12,
-                }}
-              />
-            ) : null}
-            <Bar
-              dataKey="value"
-              name={valueLabel}
-              maxBarSize={32}
-              radius={[0, 6, 6, 0]}
-              isAnimationActive={false}
-            >
-              {cells}
-              {label}
-            </Bar>
-          </BarChart>
-        )}
+        {deanValuePlot({ data, vertical, wide, axisMax, benchmark, format, fmt, valueLabel })}
       </ChartContainer>
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
-      <ExactTable
-        label={title}
-        headers={["Group", valueLabel, ...(showStatus ? ["Reading"] : []), "Detail"]}
-        rows={data.map((row) => [
-          row.fullLabel ?? row.label,
-          fmt(row.value),
-          ...(showStatus ? [row.status ?? "—"] : []),
-          row.detail ?? "—",
-        ])}
-      />
+      <DeanValueExactTable title={title} valueLabel={valueLabel} rows={data} format={fmt} />
     </ChartFrame>
   );
 }
 
-export type DeanTrendPeriod = {
+type DeanTrendPeriod = {
   label: string;
   meanRating: number | null;
   comparableWithPrevious: boolean;

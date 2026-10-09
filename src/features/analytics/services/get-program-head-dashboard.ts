@@ -341,7 +341,11 @@ export function buildNeedsAttentionItems(input: {
       (a, b) =>
         Number(b.rules.includes("closing-soon")) - Number(a.rules.includes("closing-soon")) ||
         (a.deployment.deadlineAt?.getTime() ?? Infinity) -
-          (b.deployment.deadlineAt?.getTime() ?? Infinity)
+          (b.deployment.deadlineAt?.getTime() ?? Infinity) ||
+        // Deadline ties are broken by name, not by database row order: equal
+        // deadlines are common in seeded demo scopes, and an unordered read
+        // makes the ranked list differ between deployments.
+        a.deployment.name.localeCompare(b.deployment.name)
     )
     .map(
       ({ deployment, rules }): NeedsAttentionItem => ({
