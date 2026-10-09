@@ -47,26 +47,26 @@ describe("Pagination", () => {
 
   it("renders prev/next with accessible labels and marks the active page", () => {
     render(<Pagination currentPage={2} totalPages={5} onPageChange={() => {}} />);
-    expect(screen.getByLabelText("Po to previous page")).toBeInTheDocument();
-    expect(screen.getByLabelText("Po to next page")).toBeInTheDocument();
-    expect(screen.getByLabelText("Po to page 2")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByLabelText("Go to previous page")).toBeInTheDocument();
+    expect(screen.getByLabelText("Go to next page")).toBeInTheDocument();
+    expect(screen.getByLabelText("Go to page 2")).toHaveAttribute("aria-current", "page");
   });
 
   it("calls onPageChange with the clicked page", () => {
     const onPageChange = vi.fn();
     render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
-    screen.getByLabelText("Po to page 3").click();
+    screen.getByLabelText("Go to page 3").click();
     expect(onPageChange).toHaveBeenCalledWith(3);
   });
 
   it("shows a narrower window on mobile (coarse matchMedia = false)", () => {
     mockMatchMedia(false); // mobile: siblingCount = 0
     render(<Pagination currentPage={10} totalPages={20} onPageChange={() => {}} />);
-    expect(screen.getByLabelText("Po to page 1")).toBeInTheDocument();
-    expect(screen.getByLabelText("Po to page 10")).toBeInTheDocument();
-    expect(screen.getByLabelText("Po to page 20")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Po to page 9")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Po to page 11")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Go to page 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Go to page 10")).toBeInTheDocument();
+    expect(screen.getByLabelText("Go to page 20")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Go to page 9")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Go to page 11")).not.toBeInTheDocument();
   });
 
   it("wraps the page window so narrow viewports do not clip controls", () => {

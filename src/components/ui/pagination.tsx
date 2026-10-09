@@ -90,7 +90,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       <Button
         variant="outline"
         size="sm"
-        aria-label="Po to previous page"
+        aria-label="Go to previous page"
         disabled={currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
       >
@@ -111,7 +111,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
             key={item}
             variant={item === currentPage ? "default" : "outline"}
             size="sm"
-            aria-label={`Po to page ${item}`}
+            aria-label={`Go to page ${item}`}
             aria-current={item === currentPage ? "page" : undefined}
             onClick={() => onPageChange(item)}
           >
@@ -123,7 +123,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       <Button
         variant="outline"
         size="sm"
-        aria-label="Po to next page"
+        aria-label="Go to next page"
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
       >

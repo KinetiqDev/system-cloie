@@ -54,7 +54,7 @@ export default async function NewSelectedProgramToolPage({
       emptySourcesTitle="No institutional baselines available"
       eyebrow={`${program.code} — ${program.name}`}
       heading="New Evaluation Template"
-      intro="Choose a starting point. Everything stays editable, so you can adjust it as you po."
+      intro="Choose a starting point. Everything stays editable, so you can adjust it as you go."
       sources={sources}
       sourcesDescription={`College-standard templates maintained by the Dean's office. Using one gives your program its own copy; the baseline itself is never changed.`}
       sourcesHeading="Start from an institutional baseline"

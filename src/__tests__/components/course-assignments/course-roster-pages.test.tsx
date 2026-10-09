@@ -554,7 +554,7 @@ describe("course roster pages", () => {
       { total: 60, page: 1 }
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Po to next page" }));
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }));
 
     expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?page=3&period=all&view=card");
   });

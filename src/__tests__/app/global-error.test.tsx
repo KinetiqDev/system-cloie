@@ -40,7 +40,7 @@ describe("GlobalError", () => {
 
     // global-error replaces the root layout, so the recovery is a plain
     // anchor: no router context, full reload home.
-    expect(screen.getByRole("link", { name: "Po Home" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Go Home" })).toHaveAttribute("href", "/");
     expect(screen.queryByText(/secret internals/)).not.toBeInTheDocument();
   });
 });

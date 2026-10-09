@@ -56,7 +56,7 @@ export default async function FacultyNewTemplateRoute() {
       emptySourcesTitle="No shared templates available"
       eyebrow={`${program.code} — ${program.name}`}
       heading="New Evaluation Template"
-      intro="Choose a starting point. Everything stays editable, so you can adjust it as you po."
+      intro="Choose a starting point. Everything stays editable, so you can adjust it as you go."
       sources={sources}
       sourcesDescription="Course-bound templates your Program Head shared with faculty. Using one gives you your own copy; the shared template is never changed."
       sourcesHeading="Start from a shared template"

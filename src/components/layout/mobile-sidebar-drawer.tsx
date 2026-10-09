@@ -194,6 +194,7 @@ export function MobileSidebarDrawer({
           aria-modal="true"
           aria-label="Navigation menu"
           aria-hidden={!visible}
+          inert={!visible}
           className={cn(
             "bg-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(22rem,88vw)] flex-col shadow-xl",
             dean ? "md:hidden" : "lg:hidden",
