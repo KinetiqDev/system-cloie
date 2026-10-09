@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Topbar } from "@/components/layout/topbar";
 import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
@@ -81,7 +81,9 @@ describe("Topbar appearance integration", () => {
     expect(
       screen.queryByRole("menuitem", { name: /Appearance settings/i })
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/Appearance/i)).not.toBeInTheDocument();
+    // Scoped to the profile menu: appearance is a standalone topbar control,
+    // so nothing about it may reappear here as text or as a menu entry.
+    expect(within(screen.getByRole("menu")).queryByText(/Appearance/i)).not.toBeInTheDocument();
   });
 
   it("asks for confirmation before logging out instead of signing out immediately", async () => {
