@@ -10,6 +10,9 @@ const { notFoundMock, dashboardMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
+vi.mock("@isoterik/react-word-cloud", () => ({
+  WordCloud: () => <div />,
+}));
 vi.mock("@/features/analytics/services/get-program-head-dashboard", async (importOriginal) => ({
   ...(await importOriginal<typeof DashboardService>()),
   getProgramHeadDashboard: dashboardMock,
@@ -234,12 +237,12 @@ describe("selected Program dashboard route", () => {
     expect(links[1]).toHaveTextContent("No ratings from Alumni");
   });
 
-  it("summarizes written feedback with top terms and links to qualitative analysis", async () => {
+  it("summarizes written feedback as an interactive word cloud and links to qualitative analysis", async () => {
     await loadPage();
     expect(screen.getByText("15 answers from 12 respondents")).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("list", { name: "Most-mentioned terms" })).getAllByRole("listitem")
-    ).toHaveLength(12);
+    expect(await screen.findByText("40 terms from 15 qualitative answers")).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: /Words shown in the cloud/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ranked" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open qualitative analysis" })).toHaveAttribute(
       "href",
       "/program-head/programs/p1/analytics?tab=qualitative"
