@@ -134,7 +134,7 @@ The period identity that permits adjacent mean-rating points to join only when i
 _Avoid_: Unrelated source and instrument sets, all-submitted source mix, cross-population trend, raw-count equality
 
 **Qualitative pulse**:
-The dashboard's compact Written feedback card shows non-empty answer and distinct respondent counts plus the twelve most-mentioned identifier-redacted terms with their mention counts. The server caps the available token list at `QUALITATIVE_TOKEN_CAP = 60`; only the twelve rendered terms reach this server-rendered card. The interactive word cloud, prompt/source breakdowns, and exact qualitative values live in Analytics > Qualitative. Raw comments remain in Responses.
+The dashboard's Written feedback section shows non-empty answer and distinct respondent counts alongside an interactive visual word cloud with a word-count slider and a ranked view for exact mention counts. The server caps the identifier-redacted token list at `QUALITATIVE_TOKEN_CAP = 60`; the full capped list reaches the shared client visualization. Prompt/source breakdowns live in Analytics > Qualitative. Raw comments remain in Responses.
 _Avoid_: Raw comment text on the dashboard
 
 ## Outcome evidence

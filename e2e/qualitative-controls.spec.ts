@@ -46,7 +46,7 @@ test.describe("Qualitative analytics controls", () => {
     await loginAs(page, "ph-bshm@cloie.test");
 
     await page.goto("/program-head/dashboard");
-    await expect(page.getByRole("list", { name: "Most-mentioned terms" })).toBeVisible();
+    await expectQualitativeControlsToWork(page);
 
     await page.getByRole("link", { name: "Open qualitative analysis" }).click();
     await expect(page.getByRole("region", { name: "Qualitative evidence" })).toBeVisible();
