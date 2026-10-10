@@ -51,6 +51,26 @@ function readAmrMethods(claims: unknown): string[] {
 }
 
 /**
+ * Whether the identity's server-managed linked provider set contains Google.
+ * `app_metadata.providers` is written by GoTrue; nothing user-editable is read.
+ */
+function hasGoogleLinkedProvider(claims: unknown): boolean {
+  const appMetadata =
+    claims && typeof claims === "object" && "app_metadata" in claims ? claims.app_metadata : null;
+  const linkedProviders =
+    appMetadata && typeof appMetadata === "object" && "providers" in appMetadata
+      ? appMetadata.providers
+      : null;
+  return (
+    Array.isArray(linkedProviders) &&
+    linkedProviders.some(
+      (provider) =>
+        typeof provider === "string" && provider.trim().toLowerCase() === GOOGLE_PROVIDER
+    )
+  );
+}
+
+/**
  * Resolves the current session's authentication method from verified access
  * token claims only.
  *
@@ -78,19 +98,9 @@ export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null 
   if (methods.includes(AMR_PASSWORD) || methods.includes(EMAIL_PROVIDER)) return "password";
 
   if (methods.includes(AMR_OAUTH)) {
-    const appMetadata =
-      claims && typeof claims === "object" && "app_metadata" in claims ? claims.app_metadata : null;
-    const linkedProviders =
-      appMetadata && typeof appMetadata === "object" && "providers" in appMetadata
-        ? appMetadata.providers
-        : null;
-    const googleLinked =
-      Array.isArray(linkedProviders) &&
-      linkedProviders.some(
-        (provider) =>
-          typeof provider === "string" && provider.trim().toLowerCase() === GOOGLE_PROVIDER
-      );
-    return methods.every((method) => method === AMR_OAUTH) && googleLinked ? "google" : null;
+    return methods.every((method) => method === AMR_OAUTH) && hasGoogleLinkedProvider(claims)
+      ? "google"
+      : null;
   }
   return null;
 }

@@ -39,7 +39,7 @@ const ROLE_LANDING: Record<Role, string> = {
 /** Shown when neither an exact mapping nor a role is available. */
 export const ROLE_CHOOSER_PATH = "/start/choose-your-role/";
 
-export type HelpRoute = {
+type HelpRoute = {
   /** Static application path, with `:param` placeholders for dynamic segments. */
   appRoute: string;
   /** Help Center path, without a trailing slash on the segment root. */
@@ -282,7 +282,7 @@ function matches(pattern: string[], actual: string[]): boolean {
   return pattern.every((part, index) => part.startsWith(":") || part === actual[index]);
 }
 
-export type HelpResolution =
+type HelpResolution =
   | { kind: "exact"; helpPath: string }
   | { kind: "role-fallback"; helpPath: string }
   | { kind: "role-chooser"; helpPath: string };
