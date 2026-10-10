@@ -79,9 +79,12 @@ export function AudienceLanding({
               href={guideHref}
               aria-label="User guide &amp; docs"
               // Below `sm` the visible label is dropped, leaving the icon-only
-              // 44 px target. The header must hold one row down to 320 px, so the
-              // label lives from `sm` up rather than at a shortened "Guide".
-              className={`${textLink} max-sm:min-w-11 max-sm:justify-center`}
+              // form. The header must hold one row down to 320 px, and a bare
+              // glyph beside the bordered appearance control reads as
+              // decoration; it takes the icon-button treatment that control and
+              // the topbar Help link already use. From `sm` up the labelled
+              // link keeps the plain text treatment.
+              className={`${textLink} max-sm:border-border max-sm:bg-background max-sm:aspect-square max-sm:min-w-11 max-sm:justify-center max-sm:border max-sm:shadow-2xs`}
               {...externalLinkAttributes(guideHref)}
             >
               <span className="hidden sm:inline">User guide &amp; docs</span>

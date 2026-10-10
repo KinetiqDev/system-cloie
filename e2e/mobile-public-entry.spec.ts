@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { E2E_CONTRACT } from "./support/contract";
-import { expectNoAxeViolations, expectNoHorizontalOverflow } from "./support/helpers";
+import {
+  expectNoAxeViolations,
+  expectNoHorizontalOverflow,
+  waitForAnimationsToSettle,
+} from "./support/helpers";
 import { gotoStable } from "./support/visual";
 
 /**
@@ -11,11 +15,17 @@ import { gotoStable } from "./support/visual";
  */
 for (const entrance of E2E_CONTRACT.publicEntrances) {
   test(`mobile ${entrance.audience} header holds one row at 320 px`, async ({ page }) => {
+    // 320 CSS px is the narrowest the header must hold. The Pixel 7 project's
+    // `isMobile` stays on, so this exercises the mobile viewport path.
     await page.setViewportSize({ width: 320, height: 720 });
     await gotoStable(page, entrance.landing);
 
-    const brand = page.getByRole("banner").getByText("System CLOIE", { exact: true });
+    const banner = page.getByRole("banner");
+    const brand = banner.locator("p").filter({ hasText: "System CLOIE" }).first();
     await expect(brand).toBeVisible();
+    // Fonts load with `display: "swap"`, so measure only after the real face
+    // has replaced the fallback — the wrap this test guards depends on it.
+    await brand.evaluate(() => document.fonts.ready.then(() => undefined));
     // One line box means the brand did not wrap; a wrapped brand reports two.
     expect(
       await brand.evaluate((element) => {
@@ -26,6 +36,7 @@ for (const entrance of E2E_CONTRACT.publicEntrances) {
     ).toBe(1);
 
     const guideLink = page.getByRole("link", { name: "User guide & docs" });
+    await waitForAnimationsToSettle(guideLink);
     const guideBox = (await guideLink.boundingBox())!;
     expect(guideBox.width).toBeGreaterThanOrEqual(44);
     expect(guideBox.height).toBeGreaterThanOrEqual(44);
