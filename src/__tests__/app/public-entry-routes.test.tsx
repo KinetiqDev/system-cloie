@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import StudentLandingPage from "@/app/(public)/entry/student/page";
-import StaffLandingPage from "@/app/(public)/entry/staff/page";
-import ExternalLandingPage from "@/app/(public)/entry/external/page";
+import { AppearanceProvider } from "@/features/design-system/components/appearance-provider";
+import StudentLandingPage from "@/app/(landing)/entry/student/page";
+import StaffLandingPage from "@/app/(landing)/entry/staff/page";
+import ExternalLandingPage from "@/app/(landing)/entry/external/page";
 import StudentLoginPage from "@/app/(public)/login/student/page";
 import StaffLoginPage from "@/app/(public)/login/staff/page";
 import FacultyRegisterPage from "@/app/(public)/register/faculty/page";
@@ -60,15 +61,26 @@ describe("Public entry routes", () => {
   });
 
   it("student landing offers only student sign-in and no registration", () => {
-    render(<StudentLandingPage />);
+    render(
+      <AppearanceProvider enabled={true}>
+        <StudentLandingPage />
+      </AppearanceProvider>
+    );
     expect(screen.getByRole("heading", { level: 1, name: "Students" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Student sign in" })).toHaveAttribute(
       "href",
       "/login/student"
     );
-    expect(screen.getByRole("link", { name: "Choose another audience" })).toHaveAttribute(
+    expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "From your first answer to your final submission" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
       "href",
-      "/"
+      "https://help.system-cloie.app/student/"
     );
     expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(
@@ -114,8 +126,20 @@ describe("Public entry routes", () => {
   ])(
     "$heading landing keeps sign-in and registration within its audience",
     ({ Page, heading, action, login, registration, registerLabel }) => {
-      render(<Page />);
+      render(
+        <AppearanceProvider enabled={true}>
+          <Page />
+        </AppearanceProvider>
+      );
       expect(screen.getByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
+      expect(screen.getByRole("banner")).toBeInTheDocument();
+      expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
+        "href",
+        "https://help.system-cloie.app/"
+      );
+      expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
       expect(screen.getByRole("link", { name: action })).toHaveAttribute("href", login);
       expect(screen.getByRole("link", { name: registerLabel })).toHaveAttribute(
         "href",

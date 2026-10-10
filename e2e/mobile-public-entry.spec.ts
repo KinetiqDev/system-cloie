@@ -13,6 +13,15 @@ for (const entrance of E2E_CONTRACT.publicEntrances) {
     await expect(page.locator('a[href^="/login/"]')).toHaveCount(1);
     const box = await signIn.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
+      "href",
+      /^https:\/\/help\.system-cloie\.app\//
+    );
+    await expect(
+      page.getByRole("link", { name: /Choose another audience|All sign-in options/ })
+    ).toHaveCount(0);
+    await expect(page.locator("form")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);
     await signIn.click();

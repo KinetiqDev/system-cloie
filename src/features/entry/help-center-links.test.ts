@@ -26,6 +26,12 @@ describe("resolveHelpPath", () => {
     expect(resolveHelpPath("/student/evaluations").helpPath).toBe("/student/evaluations/");
   });
 
+  it("sends audience landing pages to the appropriate public guides", () => {
+    expect(resolveHelpUrl("/entry/student")).toBe("https://help.system-cloie.app/student/");
+    expect(resolveHelpUrl("/entry/staff")).toBe("https://help.system-cloie.app/");
+    expect(resolveHelpUrl("/entry/external")).toBe("https://help.system-cloie.app/");
+  });
+
   it("never leaks dynamic ids into a Help Center URL", () => {
     const resolved = resolveHelpPath("/program-head/programs/abc-123/responses/program-wide/dep-9");
     expect(resolved.helpPath).toBe("/program-head/responses/");

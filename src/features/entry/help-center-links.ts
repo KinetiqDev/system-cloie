@@ -55,6 +55,9 @@ export type HelpRoute = {
  * no id leakage) rather than only through the resolver.
  */
 export const HELP_ROUTES: readonly HelpRoute[] = [
+  { appRoute: "/entry/student", helpPath: "/student/" },
+  { appRoute: "/entry/staff", helpPath: "/" },
+  { appRoute: "/entry/external", helpPath: "/" },
   // ---------------------------------------------------------------- Secretary
   { appRoute: "/secretary/users/new", helpPath: "/secretary/create-user/" },
   { appRoute: "/secretary/faculty-requests", helpPath: "/secretary/faculty-requests/" },

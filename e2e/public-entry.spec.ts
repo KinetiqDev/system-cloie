@@ -75,8 +75,16 @@ test.describe("public entry (signed-out)", () => {
         await page.getByRole("link", { name: entrance.audience, exact: true }).click();
         await expect(page).toHaveURL(entrance.landing);
       }
-      await page.getByRole("link", { name: "Choose another audience" }).click();
-      await expect(page).toHaveURL("/");
+      await expect(page.getByRole("banner")).toBeVisible();
+      await expect(page.getByRole("contentinfo")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Before you sign in" })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: /Choose another audience|All sign-in options/ })
+      ).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
+        "href",
+        /^https:\/\/help\.system-cloie\.app\//
+      );
     });
   }
 

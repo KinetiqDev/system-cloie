@@ -88,7 +88,7 @@ One of the audience-separated public entry points where a person chooses how the
 _Avoid_: Role selection portal, one shared role card grid
 
 **Audience landing page**:
-A public page at `/entry/student`, `/entry/staff`, or `/entry/external` that identifies its audience and offers one primary sign-in action into the existing scoped entrance. Student has no registration link; staff offers a secondary Faculty request link; external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
+A complete public landing page at `/entry/student`, `/entry/staff`, or `/entry/external` with a branded header, audience-specific introduction and workflow sections, one primary sign-in action into the existing scoped entrance, contextual Help Center links, and a legal footer. Audience landing pages have no back button, audience-switching control, login fields, or sibling-audience navigation. Student has no registration link; staff offers a secondary Faculty request link; external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
 _Avoid_: Authentication gate, audience detection, workspace
 
 **Public entry**:
