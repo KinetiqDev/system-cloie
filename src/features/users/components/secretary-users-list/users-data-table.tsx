@@ -133,15 +133,11 @@ function UserActionMenu({
         <span className="sr-only">Actions for {user.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={() => onViewUser(user)}
-        >
+        <DropdownMenuItem onClick={() => onViewUser(user)}>
           <Eye className="text-muted-foreground" aria-hidden="true" />
           <span>View details</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => onEditUser(user)}
-        >
+        <DropdownMenuItem onClick={() => onEditUser(user)}>
           <Pencil className="text-muted-foreground" aria-hidden="true" />
           <span>Edit user</span>
         </DropdownMenuItem>

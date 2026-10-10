@@ -260,15 +260,11 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => setEditDialogProgram(program)}
-          >
+          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>
             <Pencil className="text-muted-foreground" aria-hidden="true" />
             <span>Edit</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setMajorsDialogProgram(program)}
-          >
+          <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
             <GraduationCap className="text-muted-foreground" aria-hidden="true" />
             <span>Manage Majors</span>
           </DropdownMenuItem>

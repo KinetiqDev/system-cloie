@@ -21,7 +21,10 @@ function installLocalStorage() {
 }
 
 function stubMatchMedia(initialMatches: boolean) {
-  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: initialMatches })));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: initialMatches }))
+  );
 }
 
 function renderTrigger(enabled: boolean, preference?: string) {
@@ -82,9 +85,7 @@ describe("AppearanceMenuTrigger", () => {
 
     fireEvent.click(screen.getByRole("menuitemradio", { name: "Dark" }));
 
-    await waitFor(() =>
-      expect(window.localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe("dark")
-    );
+    await waitFor(() => expect(window.localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe("dark"));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 });

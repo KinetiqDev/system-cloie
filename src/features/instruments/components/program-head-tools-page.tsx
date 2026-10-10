@@ -191,10 +191,7 @@ export function ProgramHeadToolsPage({
                 ),
                 renderOverflowMenu: (item) => (
                   <>
-                    <DropdownMenuItem
-                      disabled={isPending}
-                      onClick={() => handleToggleActive(item)}
-                    >
+                    <DropdownMenuItem disabled={isPending} onClick={() => handleToggleActive(item)}>
                       <Power aria-hidden="true" className="text-muted-foreground" />
                       {item.statusActive ? "Deactivate" : "Activate"}
                     </DropdownMenuItem>

@@ -73,11 +73,11 @@ export function ActiveRoleSwitcher({
             disabled={isPending}
             loading={isPending}
           >
-            <ArrowLeftRight className="size-3.5 text-muted-foreground" aria-hidden="true" />
+            <ArrowLeftRight className="text-muted-foreground size-3.5" aria-hidden="true" />
             <span className="max-w-28 truncate text-xs font-semibold sm:max-w-36 md:max-w-44">
               {activeRole ? formatRole(activeRole) : "Select role"}
             </span>
-            <ChevronsUpDown className="size-3 text-muted-foreground shrink-0" aria-hidden="true" />
+            <ChevronsUpDown className="text-muted-foreground size-3 shrink-0" aria-hidden="true" />
           </Button>
         }
       />

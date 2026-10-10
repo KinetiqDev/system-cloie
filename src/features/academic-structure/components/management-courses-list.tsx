@@ -578,9 +578,7 @@ export function ManagementCoursesList({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {editInModal ? (
-                          <DropdownMenuItem
-                            onClick={() => setCourseToEdit(course)}
-                          >
+                          <DropdownMenuItem onClick={() => setCourseToEdit(course)}>
                             <Pencil className="text-muted-foreground" aria-hidden="true" />
                             Edit
                           </DropdownMenuItem>
