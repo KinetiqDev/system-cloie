@@ -5,6 +5,18 @@ supersedes: none
 
 # Prove the current sign-in method before internal authorization
 
+## Amendment — the linked-provider set, not the first-provider field (2026-10-10)
+
+Decision 1's provider check was implemented against `app_metadata.provider`, and that implementation signed out the exact flow this ADR exists to serve. GoTrue sets `provider` to the **first-created identity's** provider and never advances it (see `UpdateAppMetaDataProviders` in the Auth server, verified on Gotrue v2.196.0): an external account registered with email and password gets `provider: "email"`, and the later Google link joins `app_metadata.providers` while `provider` stays `"email"`. The pre-fix predicate therefore resolved that Google OAuth session to null, and both the OAuth callback and the session boundary refused it with `AUTH_METHOD_MISMATCH` — the person could not continue with Google on the account they had already registered. Only the identity's _first_ provider equalled Google by accident, so all Google-first accounts worked and the defect stayed invisible.
+
+Decision 1's provider clause now reads: the verified claims' `app_metadata.providers` list contains `google`. `app_metadata.provider` is never consulted. This is still corroboration, never proof of the session's method: `providers` is not session-scoped, so it proves the identity owns a Google link while `amr` proves the current session came from OAuth — and because System CLOIE enables Google as its only OAuth provider (decision 4), an `oauth` session on a Google-linked identity is a Google session. An identity whose linked set lacks Google resolves to no proved method, exactly as before.
+
+The clause cannot fail closed for an older identity whose `app_metadata` predates the `providers` key: every OAuth sign-in rewrites `providers` from the identity rows (`UpdateAppMetaDataProviders`, called in the account-exists and link branches and at signup) before the access token is minted, so the claims an OAuth session carries always include the recomputed set. Password sign-ins are unaffected — their `amr` resolves before the provider branch is reached.
+
+Bypassing System CLOIE's own callback remains impossible under this clause: personal-Google OAuth still enters through the entrance's Google action, the legal ticket still gates the callback before the code exchange, and GoTrue's automatic identity linking keys on the verified email of the same Auth identity, so a different Auth identity presenting one of the account's email addresses still reaches the `auth_user_id`/email-owner conflict checks and fails closed.
+
+`src/features/auth/services/resolve-auth-method.ts` carries the corrected predicate; `src/__tests__/features/auth/faculty-approval-and-method-gate.test.ts` and `src/__tests__/app/auth-callback-route.test.ts` pin the password-first-then-Google claim shape.
+
 ## Context
 
 Alumni and Industry Partner may authenticate with an email address and a password, verified by a six-digit code, or by a recovery code ([ADR 0001](../adr/0001-complete-secretary-created-accounts.md) records the pre-existing Google-only assumption this change relaxes). Supabase Auth now owns several credential kinds on one Auth identity, and ADR 0022 authorizes from one server-resolved active role. That combination creates a decision ADR 0022 does not make: which sign-in method established the session that produced the active role.
@@ -13,7 +25,7 @@ Two facts about GoTrue make the obvious implementation wrong.
 
 First, `amr` does not name the provider. GoTrue reports **every** OAuth provider sign-in as the single method `oauth`; the supported values are `oauth`, `password`, `otp`, `recovery`, `totp`, `sso/saml`, `magiclink`, `anonymous`, and similar. A resolver that matches `google` in `amr` therefore never matches a real Google sign-in, and every internal role fails closed for all legitimate internal users.
 
-Second, the only provider field is `app_metadata.provider`, which is **not session-scoped**. A password identity that once signed in through Google keeps `provider: google` indefinitely, so `app_metadata` alone cannot establish the method of the current session. `user_metadata` is worse: the account holder can edit it, so it is never evidence.
+Second, the provider field is **not session-scoped** and not even current: `app_metadata.provider` is set from the identity created first and never advanced, while `app_metadata.providers` is the full linked set. So neither field names the provider that opened the current session — and a predicate that reads `provider` treats a password-first identity as non-Google even when its current session is Google OAuth. `user_metadata` is worse: the account holder can edit it, so it is never evidence.
 
 The same gap exists at the OAuth callback. GoTrue serves every OAuth provider through one PKCE code exchange, so a code presented at `/api/auth/callback` may have come from any enabled provider, or from a magic-link code, while the callback previously assumed Google before binding an account or replacing a provisional name.
 
@@ -21,7 +33,7 @@ The same gap exists at the OAuth callback. GoTrue serves every OAuth provider th
 
 System CLOIE treats the current sign-in method as a **proved, server-verified fact** and refuses internal authorization without it.
 
-1. A session is a **proved Google session** only when all of the following hold: the verified access-token claims resolve `amr` to `oauth`; the recorded `app_metadata.provider` is `google`; no proved `password`, `otp`, or `recovery` method is present in `amr`; and no other method is present. Anything else resolves to no proved method, or to a proved non-Google method. Both deny every internal role.
+1. A session is a **proved Google session** only when all of the following hold: the verified access-token claims resolve `amr` to `oauth`; the identity's linked `app_metadata.providers` set contains `google`; no proved `password`, `otp`, or `recovery` method is present in `amr`; and no other method is present. Anything else resolves to no proved method, or to a proved non-Google method. Both deny every internal role.
 2. A proved credential method **outranks** OAuth when a claim carries both. Recovery and ambiguous OTP outrank password, so a mixed claim cannot turn a code session into normal workspace authority.
 3. `user_metadata` is never consulted as evidence of a method or a provider. `app_metadata` is only corroboration for an `oauth` session, never a session method on its own.
 4. System CLOIE enables **Google as its only OAuth provider** on every target (see `[auth.external.google]` in `supabase/config.toml`; every other external provider is disabled). Adding an OAuth provider requires revisiting this ADR, because the single-`amr` `oauth` value would then be ambiguous.
@@ -33,7 +45,8 @@ System CLOIE treats the current sign-in method as a **proved, server-verified fa
 ## Considered options
 
 - **Match `google` in `amr`** — rejected: no real Google session carries that value, so every internal role would fail closed.
-- **Trust `app_metadata.provider` as the session method** — rejected: it is not session-scoped, so a Google-then-password identity would keep a Google method for a password session.
+- **Trust `app_metadata.provider` as the session method** — rejected: it is not session-scoped, so a Google-then-password identity would keep a Google method for a password session. Reading it as the provider predicate is rejected for the mirror-image defect the 2026-10-10 amendment records: it reflects only the first-created identity, so password-first identities are refused their own Google sign-in.
+- **Trust the linked `app_metadata.providers` set as the session method** — rejected: it is not session-scoped either; it corroborates that the identity owns a Google link, while `amr` establishes the session came from OAuth. Both are required together.
 - **Trust `user_metadata`** — rejected: the account holder can write it.
 - **Record the method in a System CLOIE column at callback time** — deferred: it would add a second source of truth for a fact the verified claims already carry, and it is unnecessary while Google is the only OAuth provider. Revisit if a second provider is enabled.
 - **Rely on the initiate endpoint being Google-only** — rejected: the callback is a public HTTP endpoint and the code exchange does not carry the originating provider, so the callback must prove the provider itself.

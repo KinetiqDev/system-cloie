@@ -39,7 +39,7 @@ const ROLE_LANDING: Record<Role, string> = {
 /** Shown when neither an exact mapping nor a role is available. */
 export const ROLE_CHOOSER_PATH = "/start/choose-your-role/";
 
-export type HelpRoute = {
+type HelpRoute = {
   /** Static application path, with `:param` placeholders for dynamic segments. */
   appRoute: string;
   /** Help Center path, without a trailing slash on the segment root. */
@@ -55,6 +55,9 @@ export type HelpRoute = {
  * no id leakage) rather than only through the resolver.
  */
 export const HELP_ROUTES: readonly HelpRoute[] = [
+  { appRoute: "/entry/student", helpPath: "/student/" },
+  { appRoute: "/entry/staff", helpPath: "/" },
+  { appRoute: "/entry/external", helpPath: "/" },
   // ---------------------------------------------------------------- Secretary
   { appRoute: "/secretary/users/new", helpPath: "/secretary/create-user/" },
   { appRoute: "/secretary/faculty-requests", helpPath: "/secretary/faculty-requests/" },
@@ -223,6 +226,10 @@ export const HELP_ROUTES: readonly HelpRoute[] = [
   // ------------------------------------------------------- Respondent roles
   { appRoute: "/student/evaluations/:id/submitted", helpPath: "/student/history/" },
   { appRoute: "/student/evaluations/:id", helpPath: "/student/complete-evaluation/" },
+  // Logical key, not a live pathname: the drafts a student resumes are opened
+  // from the evaluations list and the dashboard, so the saved-response article
+  // is reachable only through this name.
+  { appRoute: "/student/saved-responses", helpPath: "/student/save-draft/" },
   { appRoute: "/student/evaluations", helpPath: "/student/evaluations/" },
   { appRoute: "/student/history/:responseId", helpPath: "/student/history/" },
   { appRoute: "/student/history", helpPath: "/student/history/" },
@@ -275,7 +282,7 @@ function matches(pattern: string[], actual: string[]): boolean {
   return pattern.every((part, index) => part.startsWith(":") || part === actual[index]);
 }
 
-export type HelpResolution =
+type HelpResolution =
   | { kind: "exact"; helpPath: string }
   | { kind: "role-fallback"; helpPath: string }
   | { kind: "role-chooser"; helpPath: string };

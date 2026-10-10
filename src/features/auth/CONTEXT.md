@@ -87,8 +87,12 @@ _Avoid_: Guest role, public role
 One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), Faculty registration, or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
 _Avoid_: Role selection portal, one shared role card grid
 
+**Audience landing page**:
+A complete public landing page at `/entry/student`, `/entry/staff`, or `/entry/external` with a branded header, audience-specific introduction and workflow sections, one primary sign-in action into the existing scoped entrance, contextual Help Center links, and a legal footer. Audience landing pages have no back button, audience-switching control, login fields, or sibling-audience navigation. Student has no registration link; staff offers a secondary Faculty request link; external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
+_Avoid_: Authentication gate, audience detection, workspace
+
 **Public entry**:
-The scoped entrances plus the System CLOIE landing page are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
+The audience landing pages, scoped entrances, and System CLOIE homepage are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account. The homepage links to the three audience landing pages rather than presenting competing sign-in actions.
 _Avoid_: Role-less login as the main entry point, retired portal selection
 
 **Entry intent**:
@@ -100,8 +104,8 @@ An internal role — Student, Faculty, Secretary, Dean, Program Head, or General
 _Avoid_: Any authenticated session, user_metadata provider claim
 
 **Proved Google session**:
-A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the recorded `app_metadata.provider` is `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. `user_metadata` is never consulted because the person can edit it.
-_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider
+A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the identity's linked `app_metadata.providers` set contains `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. The set proves the identity owns a Google link and `amr` proves the session came from OAuth; `app_metadata.provider` is never consulted, because GoTrue sets it from the first-created identity and never advances it, so a password-registered account that later links Google keeps `provider: email`. `user_metadata` is never consulted because the person can edit it.
+_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider, reading app_metadata.provider as the provider predicate
 
 **Recovery-confined session**:
 A verified recovery-code session that may change the password but cannot enter any internal or external workspace. Raw code sessions are not workspace-authorized. A verified signup may continue external onboarding only when the server has proved its signup purpose for that exact session. Both successful and failed password updates end the recovery session before normal sign-in resumes.

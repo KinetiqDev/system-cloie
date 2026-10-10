@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations, expectNoHorizontalOverflow } from "./support/helpers";
 import { gotoStable } from "./support/visual";
+import { E2E_CONTRACT } from "./support/contract";
 
 /**
  * Public entry journeys (issue #649): the scoped entrances are reachable
@@ -11,27 +12,26 @@ import { gotoStable } from "./support/visual";
  * without touching seeded fixtures.
  */
 test.describe("public entry (signed-out)", () => {
-  test("landing explains the purpose with three scoped entrances", async ({ page }) => {
+  test("homepage explains the purpose and links audience landing pages", async ({ page }) => {
     await gotoStable(page, "/");
     await expect(
       page.getByRole("heading", { level: 1, name: "Welcome to System CLOIE" })
     ).toBeVisible();
     await expect(page.getByRole("link", { name: /Students/ })).toHaveAttribute(
       "href",
-      "/login/student"
+      "/entry/student"
     );
     await expect(page.getByRole("link", { name: /Staff & Faculty/ })).toHaveAttribute(
       "href",
-      "/login/staff"
+      "/entry/staff"
     );
     await expect(page.getByRole("link", { name: /Alumni & Partners/ })).toHaveAttribute(
       "href",
-      "/login/external"
+      "/entry/external"
     );
-    await expect(page.getByRole("link", { name: /Submit a Faculty request/ })).toHaveAttribute(
-      "href",
-      "/register/faculty"
-    );
+    await expect(page.getByRole("navigation", { name: "Choose your audience" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /sign in/i })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Submit a Faculty request/ })).toHaveCount(0);
     await expect(page.getByText("What System CLOIE is")).toBeVisible();
     await expect(page.getByText("What it is not")).toBeVisible();
     await expect(page.getByText("Help and frequently asked questions")).toBeVisible();
@@ -39,6 +39,54 @@ test.describe("public entry (signed-out)", () => {
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);
   });
+
+  for (const entrance of E2E_CONTRACT.publicEntrances) {
+    test(`${entrance.audience} landing keeps one primary sign-in and scoped navigation`, async ({
+      page,
+    }) => {
+      await gotoStable(page, entrance.landing);
+      await expect(
+        page.getByRole("heading", { level: 1, name: entrance.audience, exact: true })
+      ).toBeVisible();
+      await expect(page.locator("h1")).toHaveCount(1);
+      await expect(page).toHaveTitle(`${entrance.audience} | System CLOIE`);
+      const signIn = page.getByRole("link", { name: entrance.action, exact: true });
+      await expect(page.locator('a[href^="/login/"]')).toHaveCount(1);
+      await expect(signIn).toHaveAttribute("href", entrance.login);
+      if (entrance.registration) {
+        await expect(page.locator('a[href^="/register/"]')).toHaveCount(1);
+        await expect(
+          page.getByRole("link", { name: entrance.registrationLabel!, exact: true })
+        ).toHaveAttribute("href", entrance.registration);
+      } else {
+        await expect(page.locator('a[href^="/register/"]')).toHaveCount(0);
+      }
+      await expectNoHorizontalOverflow(page);
+      await expectNoAxeViolations(page);
+      await signIn.focus();
+      await expect(signIn).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(entrance.login);
+      await page.getByRole("link", { name: entrance.audience, exact: true }).click();
+      await expect(page).toHaveURL(entrance.landing);
+      if (entrance.registration) {
+        await page.getByRole("link", { name: entrance.registrationLabel!, exact: true }).click();
+        await expect(page).toHaveURL(entrance.registration);
+        await page.getByRole("link", { name: entrance.audience, exact: true }).click();
+        await expect(page).toHaveURL(entrance.landing);
+      }
+      await expect(page.getByRole("banner")).toBeVisible();
+      await expect(page.getByRole("contentinfo")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Before you sign in" })).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: /Choose another audience|All sign-in options/ })
+      ).toHaveCount(0);
+      const guideLink = page.getByRole("link", { name: "User guide & docs" });
+      await expect(guideLink).toHaveAttribute("href", /^https:\/\/help\.system-cloie\.app\//);
+      await expect(guideLink).toHaveAttribute("target", "_blank");
+      await expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
+    });
+  }
 
   test("student entrance offers a single ACD Google action", async ({ page }) => {
     await gotoStable(page, "/login/student");

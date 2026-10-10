@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EntryShell, ExternalEmailForm } from "@/features/entry";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
@@ -34,19 +33,9 @@ export default async function ExternalLoginPage({
 
   return (
     <EntryShell
+      backLink={{ href: "/entry/external", label: "Alumni & Industry Partners" }}
       title="Alumni & partner sign in"
       description="Sign in with your email and password, or choose Google."
-      footer={
-        <p className="text-body-sm text-muted-foreground">
-          Internal ACD member?{" "}
-          <Link
-            href="/login/staff"
-            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
-          >
-            Use staff sign-in
-          </Link>
-        </p>
-      }
     >
       <ExternalEmailForm prefilledEmail={prefilledEmail} />
     </EntryShell>

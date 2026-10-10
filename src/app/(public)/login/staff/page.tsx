@@ -26,6 +26,7 @@ export default async function StaffLoginPage() {
 
   return (
     <EntryShell
+      backLink={{ href: "/entry/staff", label: "Staff & Faculty" }}
       title="Staff sign in"
       description="Use your ACD Google account to open your assigned workspace."
       footer={

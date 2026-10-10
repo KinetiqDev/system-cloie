@@ -336,14 +336,16 @@ body {
  * Typography Utility Classes
  * ======================================== */
 
-.text-display-lg {
+/* Registered as Tailwind utilities so responsive variants such as
+ * `lg:text-display-lg` resolve. Plain class rules cannot carry a variant. */
+@utility text-display-lg {
   font-size: var(--font-size-display-lg);
   line-height: var(--line-height-display-lg);
   font-weight: 700;
   font-family: var(--font-heading);
 }
 
-.text-display-md {
+@utility text-display-md {
   font-size: var(--font-size-display-md);
   line-height: var(--line-height-display-md);
   font-weight: 700;
