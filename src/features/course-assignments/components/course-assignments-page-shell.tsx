@@ -46,6 +46,8 @@ export interface CourseAssignmentsPageShellProps {
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  /** Periods offered by the creation wizard; defaults to every period. */
+  assignableTermInstances?: TermInstanceItem[];
   activeTermInstanceId?: string | null;
   initialData: ListCourseAssignmentsResult | null;
   initialFilters: AssignmentFiltersState;
@@ -93,6 +95,7 @@ export function CourseAssignmentsPageShell({
   availablePrograms,
   availableFaculty,
   termInstances,
+  assignableTermInstances = termInstances,
   activeTermInstanceId,
   initialData,
   initialFilters,
@@ -228,7 +231,7 @@ export function CourseAssignmentsPageShell({
           onOpenChange={setCreateOpen}
           availableCourses={availableCourses}
           availablePrograms={availablePrograms}
-          termInstances={termInstances}
+          termInstances={assignableTermInstances}
           defaultTermInstanceId={activeTermInstanceId}
           mode={mode}
           onSuccess={refreshAssignments}

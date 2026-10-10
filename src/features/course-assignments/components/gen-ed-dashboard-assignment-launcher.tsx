@@ -31,7 +31,7 @@ export function GenEdDashboardAssignmentLauncher({
         onOpenChange={setOpen}
         availableCourses={assignmentOptions.availableCourses}
         availablePrograms={assignmentOptions.availablePrograms}
-        termInstances={assignmentOptions.termInstances}
+        termInstances={assignmentOptions.assignableTermInstances}
         defaultTermInstanceId={assignmentOptions.activeTermInstanceId}
         mode="general-education"
         onSuccess={() => router.refresh()}

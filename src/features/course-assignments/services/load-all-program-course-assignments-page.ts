@@ -24,6 +24,8 @@ export type AllProgramCourseAssignmentsPageData = {
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  /** Periods the creation rule accepts: PLANNED or ACTIVE in an active School Year. */
+  assignableTermInstances: TermInstanceItem[];
   activeTermInstanceId: string | null;
 };
 
@@ -97,8 +99,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
       .sort(),
   }));
 
-  // fallow-ignore-next-line code-duplication
-  const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
+  const toTermInstanceItems = (sy: (typeof schoolYears)[number]): TermInstanceItem[] =>
     sy.term_instances.map((ti) => ({
       id: ti.id,
       schoolYearId: ti.school_year_id,
@@ -110,8 +111,12 @@ export async function loadAllProgramCourseAssignmentsPageData(
       status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
-    }))
-  );
+    }));
+  const termInstances = schoolYears.flatMap(toTermInstanceItems);
+  const assignableTermInstances = schoolYears
+    .filter((sy) => sy.is_active)
+    .flatMap(toTermInstanceItems)
+    .filter((ti) => ti.status === "PLANNED" || ti.status === "ACTIVE");
 
   const availableCourses: AssignableCourse[] = courses.map((c) => ({
     id: c.id,
@@ -129,6 +134,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     availablePrograms: programs,
     availableFaculty,
     termInstances,
+    assignableTermInstances,
     activeTermInstanceId,
   };
 }
