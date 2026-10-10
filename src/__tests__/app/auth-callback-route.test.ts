@@ -99,6 +99,7 @@ vi.mock("@/lib/db/prisma", () => ({
 }));
 
 import { GET } from "@/app/api/auth/callback/route";
+import { clearActiveRoleCookie } from "@/features/auth/services/active-role-cookie";
 
 const VALID_UUID_1 = "00000000-0000-0000-0000-000000000001";
 const VALID_UUID_2 = "00000000-0000-0000-0000-000000000002";
@@ -1696,6 +1697,32 @@ describe("auth callback route", () => {
 
       expect(signOutMock).not.toHaveBeenCalled();
       expect(response.headers.get("location")).toBe("https://cloie.test/select-role");
+    });
+
+    it("asks a returning Dean who is also Faculty to choose again instead of reusing the remembered role", async () => {
+      entryExchange("dean@acd.edu.ph");
+      findUniqueUserMock.mockResolvedValue({
+        id: "linked-user-id",
+        email: "dean@acd.edu.ph",
+        auth_user_id: VALID_UUID_1,
+        is_active: true,
+        name: "Dean Faculty",
+        roles: [{ role: SystemRole.DEAN }, { role: SystemRole.FACULTY }],
+      });
+      resolveAuthSessionFromUserMock.mockResolvedValue({
+        userId: "linked-user-id",
+        activeRole: "DEAN",
+        roles: ["DEAN", "FACULTY"],
+        profileGate: { status: "COMPLETE" },
+      });
+      resolvePostLoginDestinationMock.mockReturnValue("/dean/dashboard");
+
+      const response = await GET(
+        callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=staff", "staff")
+      );
+
+      expect(response.headers.get("location")).toBe("https://cloie.test/select-role");
+      expect(clearActiveRoleCookie).toHaveBeenCalledTimes(1);
     });
   });
 });
