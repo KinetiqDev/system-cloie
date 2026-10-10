@@ -73,7 +73,12 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://cloie.test");
   vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
   getClaims.mockResolvedValue({
-    data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
+    data: {
+      claims: {
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "google", providers: ["google"] },
+      },
+    },
     error: null,
   });
   exchangeCode.mockResolvedValue({

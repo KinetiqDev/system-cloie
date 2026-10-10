@@ -35,7 +35,10 @@ vi.mock("@/lib/supabase/server", () => ({
       // The callback proves the exchanged session is Google before linking.
       getClaims: vi.fn(async () => ({
         data: {
-          claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } },
+          claims: {
+            amr: [{ method: "oauth" }],
+            app_metadata: { provider: "google", providers: ["google"] },
+          },
         },
         error: null,
       })),

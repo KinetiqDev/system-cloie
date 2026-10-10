@@ -77,9 +77,9 @@ describe("Faculty approval state (issue #649)", () => {
 });
 
 describe("auth method enforcement", () => {
-  it("resolves a Google OAuth session from amr oauth plus the recorded provider", () => {
+  it("resolves a Google OAuth session from amr oauth plus the linked provider set", () => {
     // GoTrue reports every OAuth provider as the single method "oauth"; the
-    // provider is only in app_metadata.
+    // provider identity set is only in app_metadata.providers.
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }],
@@ -89,6 +89,19 @@ describe("auth method enforcement", () => {
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "password" }] })).toBe("password");
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "otp" }] })).toBe("otp");
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "recovery" }] })).toBe("recovery");
+  });
+
+  it("accepts Google sign-in after a password-first registration linked Google later", () => {
+    // The exact claim shape GoTrue records for the reported flow: the email
+    // identity is created first and the Google link is added later, so
+    // `provider` stays "email" while `providers` gains "google". Reading
+    // `provider` instead signs this person out of their own account.
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "email", providers: ["email", "google"] },
+      })
+    ).toBe("google");
   });
 
   it("keeps recovery confinement when recovery appears with another method", () => {
@@ -109,7 +122,7 @@ describe("auth method enforcement", () => {
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }, { method: "unknown" }],
-        app_metadata: { provider: "google" },
+        app_metadata: { provider: "google", providers: ["google"] },
       })
     ).toBeNull();
   });
@@ -120,18 +133,18 @@ describe("auth method enforcement", () => {
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }],
-        app_metadata: { provider: "github" },
+        app_metadata: { provider: "github", providers: ["github"] },
       })
     ).toBeNull();
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }],
-        app_metadata: { provider: "apple" },
+        app_metadata: { provider: "apple", providers: ["apple"] },
       })
     ).toBeNull();
   });
 
-  it("refuses an oauth session with no recorded provider, and never trusts user_metadata", () => {
+  it("refuses an oauth session with no Google-linked identity, and never trusts user_metadata", () => {
     expect(resolveAuthMethodFromClaims({ amr: [{ method: "oauth" }] })).toBeNull();
     expect(
       resolveAuthMethodFromClaims({
@@ -139,18 +152,30 @@ describe("auth method enforcement", () => {
         app_metadata: {},
       })
     ).toBeNull();
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "google", providers: ["email"] },
+      })
+    ).toBeNull();
+    expect(
+      resolveAuthMethodFromClaims({
+        amr: [{ method: "oauth" }],
+        app_metadata: { providers: [] },
+      })
+    ).toBeNull();
     // user_metadata is user-editable and must never prove a provider.
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "password" }],
         user_metadata: { provider: "google", sub: "forged" },
-        app_metadata: { provider: "google" },
+        app_metadata: { provider: "email", providers: ["email"] },
       })
     ).toBe("password");
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }],
-        user_metadata: { provider: "google" },
+        user_metadata: { provider: "google", providers: ["google"] },
       })
     ).toBeNull();
   });
@@ -159,7 +184,7 @@ describe("auth method enforcement", () => {
     expect(
       resolveAuthMethodFromClaims({
         amr: [{ method: "oauth" }, { method: "password" }],
-        app_metadata: { provider: "google" },
+        app_metadata: { provider: "google", providers: ["google"] },
       })
     ).toBe("password");
   });

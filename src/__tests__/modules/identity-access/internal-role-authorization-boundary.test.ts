@@ -121,7 +121,10 @@ describe("internal role authorization boundary (issue #649)", () => {
   function claimsFor(method: "oauth" | "password" | "otp" | "recovery", proved: boolean) {
     if (!proved) return {};
     if (method === "oauth") {
-      return { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } };
+      return {
+        amr: [{ method: "oauth" }],
+        app_metadata: { provider: "google", providers: ["google"] },
+      };
     }
     if (method === "recovery") {
       return { amr: [{ method: "recovery" }, { method: "password" }] };

@@ -112,7 +112,12 @@ describe("auth callback route", () => {
     vi.stubEnv("CLOIE_LEGAL_TICKET_SECRET", "legal-ticket-test-secret-012345678901");
     // The callback proves the exchanged session is Google before any link.
     getClaimsMock.mockResolvedValue({
-      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "google" } } },
+      data: {
+        claims: {
+          amr: [{ method: "oauth" }],
+          app_metadata: { provider: "google", providers: ["google"] },
+        },
+      },
       error: null,
     });
     resolvePostLoginDestinationMock.mockReturnValue("/student/dashboard");
@@ -821,7 +826,12 @@ describe("auth callback route", () => {
     // Google proof, and this must be refused before any account is linked,
     // claimed, or created.
     getClaimsMock.mockResolvedValue({
-      data: { claims: { amr: [{ method: "oauth" }], app_metadata: { provider: "github" } } },
+      data: {
+        claims: {
+          amr: [{ method: "oauth" }],
+          app_metadata: { provider: "github", providers: ["github"] },
+        },
+      },
       error: null,
     });
     findUniqueUserMock.mockResolvedValue({
@@ -843,6 +853,55 @@ describe("auth callback route", () => {
     expect(createUserMock).not.toHaveBeenCalled();
     expect(createUserRoleMock).not.toHaveBeenCalled();
     expect(upsertUserRoleMock).not.toHaveBeenCalled();
+  });
+
+  it("lets a password-registered external account continue with Google on the same linked identity", async () => {
+    exchangeCodeForSessionMock.mockResolvedValue({
+      error: null,
+      data: {
+        user: {
+          id: VALID_UUID_1,
+          email: "alum@example.com",
+          user_metadata: { name: "Amara Reyes" },
+        },
+      },
+    });
+    // The reported flow: the external account was registered with email and
+    // password, so GoTrue created the email identity and wrote
+    // `provider: email`; the later Google link joins `providers` without
+    // advancing `provider`. The callback must accept this as a Google
+    // sign-in and must not sign the person out of their own account.
+    getClaimsMock.mockResolvedValue({
+      data: {
+        claims: {
+          amr: [{ method: "oauth" }],
+          app_metadata: { provider: "email", providers: ["email", "google"] },
+        },
+      },
+      error: null,
+    });
+    findUniqueUserMock.mockResolvedValue({
+      id: "domain-user-1",
+      auth_user_id: VALID_UUID_1,
+      email: "alum@example.com",
+      name: "Amara Reyes",
+      is_active: true,
+      roles: [{ role: SystemRole.ALUMNI }],
+    });
+    resolveAuthSessionFromUserMock.mockResolvedValue({
+      activeRole: "ALUMNI",
+      roles: ["ALUMNI"],
+      profileGate: { status: "COMPLETE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/alumni/dashboard");
+
+    const response = await GET(
+      callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=alumni", "alumni")
+    );
+
+    expect(signOutMock).not.toHaveBeenCalled();
+    expect(updateManyUserMock).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://cloie.test/alumni/dashboard");
   });
 
   it("resolves a fresh Faculty claim to the pending gate, never COMPLETE", async () => {

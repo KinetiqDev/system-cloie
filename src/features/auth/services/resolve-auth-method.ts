@@ -17,9 +17,10 @@ type SessionKind = "oauth" | "dev" | "dedicated-demo" | "ci-test";
  * GoTrue reports every OAuth provider sign-in as the single method `oauth`
  * (see the AMR method list in @supabase/auth-js and the Supabase JWT claims
  * reference). The `amr` claim therefore proves *that* the current session came
- * from an OAuth provider, never *which* one. The provider is only available in
- * `app_metadata.provider`, which is not session-scoped: a password identity that
- * once signed in through Google keeps that provider value forever.
+ * from an OAuth provider, never *which* one. Nor is the provider field
+ * session-scoped: `app_metadata.provider` is the identity's first-created
+ * provider and `app_metadata.providers` is the full linked set, so neither
+ * names the provider that opened the current session.
  */
 const AMR_OAUTH = "oauth";
 const AMR_PASSWORD = "password";
@@ -30,8 +31,8 @@ const EMAIL_PROVIDER = "email";
 /**
  * System CLOIE enables exactly one OAuth provider (Google) on every target —
  * see `[auth.external.google]` in supabase/config.toml, where every other
- * external provider is disabled. Under that invariant, an `oauth` session whose
- * verified `app_metadata.provider` is `google` is a Google session.
+ * external provider is disabled. Under that invariant, `amr: oauth` plus a
+ * linked provider set containing Google is a Google session.
  */
 const GOOGLE_PROVIDER = "google";
 
@@ -50,29 +51,20 @@ function readAmrMethods(claims: unknown): string[] {
 }
 
 /**
- * The provider GoTrue recorded for the Auth identity. It is only trustworthy
- * as corroboration for an `oauth` session: it is server-managed, and it is not
- * session-scoped, so it can never on its own prove how the current session was
- * established.
- */
-function readRecordedProvider(claims: unknown): string | null {
-  if (!claims || typeof claims !== "object" || !("app_metadata" in claims)) return null;
-  const appMetadata = claims.app_metadata;
-  if (!appMetadata || typeof appMetadata !== "object" || !("provider" in appMetadata)) {
-    return null;
-  }
-  const provider = appMetadata.provider;
-  return typeof provider === "string" ? provider.trim().toLowerCase() : null;
-}
-
-/**
  * Resolves the current session's authentication method from verified access
  * token claims only.
  *
- * An OAuth session is accepted as `google` only when the recorded provider is
- * Google; any other provider, an unrecorded provider, or a missing claim
- * resolves to null, which the profile gate treats as unproved and refuses for
- * every internal role. `user_metadata` is never consulted: it is user-editable.
+ * An OAuth session is accepted as `google` only when the identity's linked
+ * provider set contains Google; a provider set without Google, a missing
+ * claim, or any claim shape GoTrue never emits resolves to null, which the
+ * profile gate treats as unproved and refuses for every internal role.
+ * `user_metadata` is never consulted: it is user-editable.
+ *
+ * The linked set is read from the server-managed `app_metadata.providers`
+ * list, never from `app_metadata.provider`: that field is not session-scoped,
+ * and GoTrue sets it to the first-created identity's provider and never
+ * advances it, so a password-first identity that later links Google keeps
+ * `provider: email` while `providers` carries the Google link.
  */
 export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null {
   const methods = readAmrMethods(claims);
@@ -86,10 +78,19 @@ export function resolveAuthMethodFromClaims(claims: unknown): AuthMethod | null 
   if (methods.includes(AMR_PASSWORD) || methods.includes(EMAIL_PROVIDER)) return "password";
 
   if (methods.includes(AMR_OAUTH)) {
-    return methods.every((method) => method === AMR_OAUTH) &&
-      readRecordedProvider(claims) === GOOGLE_PROVIDER
-      ? "google"
-      : null;
+    const appMetadata =
+      claims && typeof claims === "object" && "app_metadata" in claims ? claims.app_metadata : null;
+    const linkedProviders =
+      appMetadata && typeof appMetadata === "object" && "providers" in appMetadata
+        ? appMetadata.providers
+        : null;
+    const googleLinked =
+      Array.isArray(linkedProviders) &&
+      linkedProviders.some(
+        (provider) =>
+          typeof provider === "string" && provider.trim().toLowerCase() === GOOGLE_PROVIDER
+      );
+    return methods.every((method) => method === AMR_OAUTH) && googleLinked ? "google" : null;
   }
   return null;
 }

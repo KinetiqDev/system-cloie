@@ -257,6 +257,18 @@ describe("external entry against real Supabase Auth (649)", () => {
         "a credential sign-in must record a password method, the claim the internal-role gate refuses"
       ).toContain("password");
       createdUserIds.push(String(readClaims(passwordToken).sub));
+
+      // The claim shape the Google-proof predicate reads (issue #649 follow-up):
+      // an email-first identity records `provider: email` and, until it links a
+      // federated identity, exactly one linked provider. The provider predicate
+      // must therefore accept a linked Google entry appearing later in this
+      // list, not the first-provider field, or the person's own Google sign-in
+      // is refused after they link it.
+      const passwordClaims = readClaims(passwordToken);
+      expect(passwordClaims.app_metadata).toMatchObject({
+        provider: "email",
+        providers: ["email"],
+      });
     });
 
     it("rejects a reused verification code and a duplicate signup for the same address", async () => {

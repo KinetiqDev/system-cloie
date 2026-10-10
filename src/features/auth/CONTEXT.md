@@ -104,8 +104,8 @@ An internal role — Student, Faculty, Secretary, Dean, Program Head, or General
 _Avoid_: Any authenticated session, user_metadata provider claim
 
 **Proved Google session**:
-A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the recorded `app_metadata.provider` is `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. `user_metadata` is never consulted because the person can edit it.
-_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider
+A session whose verified access-token claims resolve to Google. GoTrue reports every OAuth provider as the single `amr` method `oauth`, so OAuth alone is not Google proof: the session is accepted only when the identity's linked `app_metadata.providers` set contains `google`, System CLOIE enables Google as its only OAuth provider, and no proved password, one-time-code, or recovery method is present. The set proves the identity owns a Google link and `amr` proves the session came from OAuth; `app_metadata.provider` is never consulted, because GoTrue sets it from the first-created identity and never advances it, so a password-registered account that later links Google keeps `provider: email`. `user_metadata` is never consulted because the person can edit it.
+_Avoid_: Trusting app_metadata alone as a session method, assuming amr names the provider, reading app_metadata.provider as the provider predicate
 
 **Recovery-confined session**:
 A verified recovery-code session that may change the password but cannot enter any internal or external workspace. Raw code sessions are not workspace-authorized. A verified signup may continue external onboarding only when the server has proved its signup purpose for that exact session. Both successful and failed password updates end the recovery session before normal sign-in resumes.
