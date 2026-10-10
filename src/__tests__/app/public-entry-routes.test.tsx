@@ -75,13 +75,13 @@ describe("Public entry routes", () => {
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "From your first answer to your final submission" })
+      screen.getByRole("heading", { name: "What you do in System CLOIE" })
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
-      "href",
-      "https://help.system-cloie.app/student/"
-    );
+    const guideLink = screen.getByRole("link", { name: "User guide & docs" });
+    expect(guideLink).toHaveAttribute("href", "https://help.system-cloie.app/student/");
+    expect(guideLink).toHaveAttribute("target", "_blank");
+    expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(
       screen.queryByRole("link", {
@@ -135,10 +135,10 @@ describe("Public entry routes", () => {
       expect(screen.getByRole("banner")).toBeInTheDocument();
       expect(screen.getByRole("contentinfo")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
-        "href",
-        "https://help.system-cloie.app/"
-      );
+      const guideLink = screen.getByRole("link", { name: "User guide & docs" });
+      expect(guideLink).toHaveAttribute("href", "https://help.system-cloie.app/");
+      expect(guideLink).toHaveAttribute("target", "_blank");
+      expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
       expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
       expect(screen.getByRole("link", { name: action })).toHaveAttribute("href", login);
       expect(screen.getByRole("link", { name: registerLabel })).toHaveAttribute(
@@ -149,6 +149,25 @@ describe("Public entry routes", () => {
         .getAllByRole("link")
         .filter((link) => /^\/(login|register)\//.test(link.getAttribute("href") ?? ""));
       expect(entryLinks.map((link) => link.getAttribute("href"))).toEqual([login, registration]);
+    }
+  );
+
+  it.each([StudentLandingPage, StaffLandingPage, ExternalLandingPage])(
+    "every Help Center destination leaves the current tab alone",
+    (Page) => {
+      render(
+        <AppearanceProvider enabled={true}>
+          <Page />
+        </AppearanceProvider>
+      );
+      const helpLinks = screen
+        .getAllByRole("link")
+        .filter((link) => (link.getAttribute("href") ?? "").startsWith("https://help."));
+      expect(helpLinks.length).toBeGreaterThan(0);
+      for (const link of helpLinks) {
+        expect(link).toHaveAttribute("target", "_blank");
+        expect(link).toHaveAttribute("rel", "noopener noreferrer");
+      }
     }
   );
 

@@ -1,8 +1,8 @@
-import Link from "next/link";
 import {
   AudienceLanding,
+  LandingItems,
+  LandingLinks,
   LandingSection,
-  LandingTopics,
 } from "@/features/entry/components/audience-landing";
 import { resolveHelpUrl } from "@/features/entry/help-center-links";
 import { buildPageTitle } from "@/lib/page-title";
@@ -17,81 +17,53 @@ export default function StaffLandingPage() {
   return (
     <AudienceLanding
       audience="Staff & Faculty"
-      introduction="Connect academic work to learning-outcome evidence. System CLOIE brings evaluation setup, stakeholder responses, and attainment review into your assigned workspace."
+      scope="For Secretary, Dean, Program Head, Gen Ed Coordinator, and Faculty"
+      statement="Sign in to set up and run your part of the evaluation cycle, and to review the evidence your role is responsible for."
       loginHref="/login/staff"
       signInLabel="Staff & faculty sign in"
+      secondaryAction={{ href: "/register/faculty", label: "Submit a Faculty request" }}
+      prerequisites={[
+        "Use your @acd.edu.ph or @acdeducation.com Google account.",
+        "If your account holds more than one role, you choose the workspace you want after signing in.",
+        "Faculty access needs an approved request. Other staff access is provisioned by the Secretary.",
+      ]}
       guideHref={resolveHelpUrl("/entry/staff")}
     >
-      <LandingSection id="academic-work" title="Support the evaluation cycle">
-        <LandingTopics
+      <LandingSection id="academic-work" title="What you do in System CLOIE">
+        <LandingItems
           items={[
             {
               title: "Prepare the academic context",
               description:
-                "Manage the academic structures, outcomes, course assignments, and rosters your role is responsible for. Access follows your assigned scope.",
+                "Set up the academic structures, outcomes, course assignments, and rosters your role is responsible for.",
             },
             {
               title: "Prepare and run evaluations",
               description:
-                "Build evaluation tools and publish evaluations where your role permits. Keep learning outcomes and stakeholder questions connected.",
+                "Build evaluation tools and publish evaluations where your role permits, keeping outcomes and stakeholder questions connected.",
             },
             {
               title: "Review the evidence",
               description:
-                "Follow submitted responses into review and attainment analytics. Use the evidence available to your role to support quality assurance and improvement.",
+                "Follow submitted responses into review and attainment analytics, and use that evidence for quality assurance and improvement.",
             },
           ]}
         />
       </LandingSection>
-      <LandingSection id="getting-started" title="Before you sign in">
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-          <div>
-            <h3 className="text-heading-md font-semibold">One sign-in, your assigned workspace</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Use your @acd.edu.ph or @acdeducation.com Google account. Secretary, Dean, Program
-              Head, General Education Coordinator, and Faculty accounts sign in here. If you have
-              more than one role, choose a workspace after sign-in.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-heading-md font-semibold">New faculty member?</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Submit a Faculty request with your ACD Google account. The institution reviews your
-              request before Faculty workspace access is granted. Other staff access is provisioned
-              by the Secretary.
-            </p>
-            <Link
-              href="/register/faculty"
-              className="text-link focus-visible:ring-ring mt-3 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Submit a Faculty request
-            </Link>
-          </div>
-        </div>
-      </LandingSection>
-      <LandingSection id="guides" title="Guidance for your role">
-        <p className="text-body-md text-muted-foreground max-w-3xl leading-relaxed">
-          The Help Center explains each workspace, the actions available to your role, and what to
-          do when an account, course, or permission is missing.
-        </p>
-        <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2">
-          {[
-            { label: "Secretary guide", role: "SECRETARY" as const },
-            { label: "Dean guide", role: "DEAN" as const },
-            { label: "Program Head guide", role: "PROGRAM_HEAD" as const },
-            { label: "General Education Coordinator guide", role: "GEN_ED_COORDINATOR" as const },
-            { label: "Faculty guide", role: "FACULTY" as const },
-          ].map(({ label, role }) => (
-            <li key={role}>
-              <a
-                href={resolveHelpUrl("/", role)}
-                className="text-link focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-              >
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
+      <LandingSection id="getting-started" title="Guidance for your role">
+        <LandingLinks
+          lead="Each workspace has its own guide. Open the one that matches the role you sign in with; the Help Center covers accounts, courses, and permissions that look missing."
+          items={[
+            { label: "Secretary guide", href: resolveHelpUrl("/", "SECRETARY") },
+            { label: "Dean guide", href: resolveHelpUrl("/", "DEAN") },
+            { label: "Program Head guide", href: resolveHelpUrl("/", "PROGRAM_HEAD") },
+            {
+              label: "General Education Coordinator guide",
+              href: resolveHelpUrl("/", "GEN_ED_COORDINATOR"),
+            },
+            { label: "Faculty guide", href: resolveHelpUrl("/", "FACULTY") },
+          ]}
+        />
       </LandingSection>
     </AudienceLanding>
   );

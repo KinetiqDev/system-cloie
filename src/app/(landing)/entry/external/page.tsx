@@ -1,8 +1,8 @@
-import Link from "next/link";
 import {
   AudienceLanding,
+  LandingColumns,
+  LandingLinks,
   LandingSection,
-  LandingTopics,
 } from "@/features/entry/components/audience-landing";
 import { resolveHelpUrl } from "@/features/entry/help-center-links";
 import { buildPageTitle } from "@/lib/page-title";
@@ -17,84 +17,71 @@ export default function ExternalLandingPage() {
   return (
     <AudienceLanding
       audience="Alumni & Industry Partners"
-      introduction="Help connect learning to life beyond college. Share graduate and industry feedback that supports Assumption College of Davao’s learning-outcome review and continuous improvement."
+      scope="For ACD graduates and partner organizations"
+      statement="Sign in to answer the graduate and industry evaluations open to you, and to see what you have already submitted."
       loginHref="/login/external"
       signInLabel="Alumni & partner sign in"
+      secondaryAction={{ href: "/register/external", label: "Create an account" }}
+      prerequisites={[
+        "Use your email address and password, or a Google account. An ACD email is not required.",
+        "When you register, choose Alumni or Industry Partner. The choice sets up your profile.",
+        "Your workspace lists the evaluations you are eligible to answer, and what you have submitted.",
+      ]}
       guideHref={resolveHelpUrl("/entry/external")}
     >
-      <LandingSection id="participation" title="Your perspective adds to the evidence">
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-          <div>
-            <h3 className="text-heading-md font-semibold">For alumni</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Reflect on your graduate experience and the learning outcomes you carry into further
-              study, work, and everyday life. Complete alumni evaluations available to your account.
-            </p>
-            <a
-              href={resolveHelpUrl("/alumni/dashboard")}
-              className="text-link focus-visible:ring-ring mt-3 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Read the alumni guide
-            </a>
-          </div>
-          <div>
-            <h3 className="text-heading-md font-semibold">For industry partners</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Share your organization&apos;s perspective on graduates and their capabilities.
-              Complete partner evaluations available to your account and program affiliations.
-            </p>
-            <a
-              href={resolveHelpUrl("/industry-partner/dashboard")}
-              className="text-link focus-visible:ring-ring mt-3 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Read the industry partner guide
-            </a>
-          </div>
-        </div>
-      </LandingSection>
-      <LandingSection id="getting-started" title="Before you sign in">
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-          <div>
-            <h3 className="text-heading-md font-semibold">Already have an account?</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Use your email and password or Google account. An ACD email address is not required.
-              Your workspace shows evaluations you are eligible to answer and your submitted
-              history.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-heading-md font-semibold">New to System CLOIE?</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Choose Alumni or Industry Partner when you register, verify your identity, then
-              complete the appropriate profile. Verification of your email is separate from
-              institutional account review.
-            </p>
-            <Link
-              href="/register/external"
-              className="text-link focus-visible:ring-ring mt-3 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Create an account
-            </Link>
-          </div>
-        </div>
-      </LandingSection>
-      <LandingSection id="evaluations" title="Take part at your own pace">
-        <LandingTopics
+      <LandingSection id="participation" title="What your answer contributes">
+        <LandingColumns
           items={[
             {
-              title: "Complete your profile",
+              title: "Alumni",
               description:
-                "Provide your graduate or organization details so System CLOIE can establish the context for your participation.",
+                "Reflect on your graduate experience and the learning outcomes you have carried into further study, work, and daily life.",
+              action: {
+                href: resolveHelpUrl("/alumni/dashboard"),
+                label: "Read the alumni guide",
+              },
             },
             {
-              title: "Answer available evaluations",
+              title: "Industry partners",
               description:
-                "Open the evaluations in your workspace. Save a draft when you need more time, and submit when your response is ready.",
+                "Share how your organization sees the graduates it works with, and the capabilities that matter in practice.",
+              action: {
+                href: resolveHelpUrl("/industry-partner/dashboard"),
+                label: "Read the industry partner guide",
+              },
+            },
+          ]}
+        />
+      </LandingSection>
+      <LandingSection id="getting-started" title="Getting in">
+        <LandingColumns
+          items={[
+            {
+              title: "Already have an account?",
+              description:
+                "Sign in with the email address and password you registered, or with Google. Your account already knows which evaluations are yours.",
             },
             {
-              title: "Find help and track participation",
+              title: "New to System CLOIE?",
               description:
-                "Review your submitted history and use the Help Center for account, evaluation, and verification guidance.",
+                "Choose Alumni or Industry Partner, verify your email address, then complete that profile. Verifying your email is not institutional approval.",
+            },
+          ]}
+        />
+      </LandingSection>
+      <LandingSection id="evaluations" title="Take part at your own pace">
+        <LandingLinks
+          lead="You can complete a profile, answer what is open to you, and come back to a draft later. These guides cover each step."
+          items={[
+            { label: "Complete your profile", href: resolveHelpUrl("/alumni/profile") },
+            {
+              label: "Answer an evaluation",
+              href: resolveHelpUrl("/alumni/evaluations"),
+            },
+            { label: "Your submitted history", href: resolveHelpUrl("/alumni/history") },
+            {
+              label: "Industry partner guide",
+              href: resolveHelpUrl("/industry-partner/dashboard"),
             },
           ]}
         />

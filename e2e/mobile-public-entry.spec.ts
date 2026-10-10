@@ -13,11 +13,28 @@ for (const entrance of E2E_CONTRACT.publicEntrances) {
     await expect(page.locator('a[href^="/login/"]')).toHaveCount(1);
     const box = await signIn.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(44);
+    // The hero action group stacks below `sm`: a full-width primary with the
+    // secondary centered under it, never a wrapped flex row stranded left.
+    const actionRow = signIn.locator("..");
+    const rowBox = (await actionRow.boundingBox())!;
+    expect(box?.width).toBeCloseTo(rowBox.width, 0);
+    if (entrance.registration) {
+      const registration = page.getByRole("link", {
+        name: entrance.registrationLabel!,
+        exact: true,
+      });
+      const registrationBox = (await registration.boundingBox())!;
+      expect(registrationBox.y).toBeGreaterThanOrEqual(box!.y + box!.height);
+      expect(registrationBox.x + registrationBox.width / 2).toBeCloseTo(
+        rowBox.x + rowBox.width / 2,
+        0
+      );
+    }
     await expect(page.getByRole("banner")).toBeVisible();
-    await expect(page.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
-      "href",
-      /^https:\/\/help\.system-cloie\.app\//
-    );
+    const guideLink = page.getByRole("link", { name: "User guide & docs" });
+    await expect(guideLink).toHaveAttribute("href", /^https:\/\/help\.system-cloie\.app\//);
+    await expect(guideLink).toHaveAttribute("target", "_blank");
+    await expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
     await expect(
       page.getByRole("link", { name: /Choose another audience|All sign-in options/ })
     ).toHaveCount(0);

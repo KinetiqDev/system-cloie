@@ -38,10 +38,21 @@ export function PageHelpLink({ activeRole = null }: PageHelpLinkProps) {
       rel="noopener noreferrer"
       className={cn(
         buttonVariants({ variant: "ghost", size: "sm" }),
+        // The `sm` recipe already floors this control at 44 px on touch; what was
+        // missing is weight. Below `sm` the control is icon-only, and as a
+        // borderless ghost with a 14 px glyph it read as far smaller than the
+        // bordered controls beside it. It takes the icon-button treatment those
+        // siblings already use — a visible boundary, a surface, the elevation
+        // the appearance trigger carries, and square proportions — so it reads
+        // as a peer control rather than decoration. The labelled form keeps the
+        // plain ghost treatment.
+        "max-sm:border-border max-sm:bg-background max-sm:aspect-square max-sm:px-0 max-sm:shadow-2xs",
         "text-text-secondary hover:text-text-primary"
       )}
     >
-      <CircleHelp aria-hidden="true" />
+      {/* Icon-only below `sm`: the glyph takes the 20 px icon scale the bordered
+          topbar controls use, not the 14 px scale the labelled button sets. */}
+      <CircleHelp aria-hidden="true" className="size-3.5 max-sm:size-5" />
       {/* Label on roomier viewports; on mobile the utility row is tight, so the
           visible label is hidden and the accessible name is kept for readers. */}
       <span className="hidden sm:inline">Help with this page</span>

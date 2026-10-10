@@ -1,7 +1,8 @@
 import {
   AudienceLanding,
+  LandingItems,
+  LandingLinks,
   LandingSection,
-  LandingTopics,
 } from "@/features/entry/components/audience-landing";
 import { resolveHelpUrl } from "@/features/entry/help-center-links";
 import { buildPageTitle } from "@/lib/page-title";
@@ -16,58 +17,59 @@ export default function StudentLandingPage() {
   return (
     <AudienceLanding
       audience="Students"
-      introduction="Your experience helps improve learning. Use System CLOIE to answer course evaluations and share feedback on the learning outcomes you have achieved."
+      scope="For current students"
+      statement="Sign in to answer the course evaluations open to you, and to check the ones you have already submitted."
       loginHref="/login/student"
       signInLabel="Student sign in"
+      prerequisites={[
+        "Have your ACD Google account ready — @acd.edu.ph or @acdeducation.com.",
+        "The Secretary's office sets up your account and academic placement. There is no student self-registration.",
+        "A saved response stays unsubmitted until you finish and submit it.",
+      ]}
       guideHref={resolveHelpUrl("/entry/student")}
     >
-      <LandingSection id="evaluations" title="From your first answer to your final submission">
-        <LandingTopics
+      <LandingSection id="evaluations" title="What you do in System CLOIE">
+        <LandingItems
           items={[
             {
-              title: "Find your evaluations",
+              title: "Answer your evaluations",
               description:
-                "Your dashboard shows evaluations available to your account. Open an evaluation to see what you need to answer.",
-              href: resolveHelpUrl("/student/evaluations"),
+                "Your dashboard lists the evaluations available to your account. Open one to see what it asks you to answer.",
+              link: {
+                href: resolveHelpUrl("/student/evaluations"),
+                label: "Guide: answering an evaluation",
+              },
             },
             {
-              title: "Continue a saved response",
+              title: "Save and come back",
               description:
-                "Return to a draft when you need more time. Saved answers are not submitted until you finish and submit the evaluation.",
-              href: resolveHelpUrl("/student/evaluations/example"),
+                "Keep a draft when you need more time. Nothing is submitted until you finish and submit the evaluation yourself.",
+              link: {
+                href: resolveHelpUrl("/student/saved-responses"),
+                label: "Guide: saved responses",
+              },
             },
             {
-              title: "Check your submitted work",
+              title: "See what you submitted",
               description:
-                "Use your history to review evaluations you have already submitted and keep track of completed participation.",
-              href: resolveHelpUrl("/student/history"),
+                "Your history lists the evaluations you have completed, so you can keep track of your participation.",
+              link: {
+                href: resolveHelpUrl("/student/history"),
+                label: "Guide: submitted history",
+              },
             },
           ]}
         />
       </LandingSection>
-      <LandingSection id="getting-started" title="Before you sign in">
-        <div className="grid gap-8 md:grid-cols-2 md:gap-16">
-          <div>
-            <h3 className="text-heading-md font-semibold">Have your ACD Google account ready</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              Use your @acd.edu.ph or @acdeducation.com account. The Secretary&apos;s office sets up
-              your account and academic placement; there is no student self-registration.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-heading-md font-semibold">Need help getting in?</h3>
-            <p className="text-body-md text-muted-foreground mt-3 leading-relaxed">
-              If your account has not been set up, contact the Secretary&apos;s office. The student
-              user guide explains sign-in, evaluations, and submitted-response history.
-            </p>
-            <a
-              href={resolveHelpUrl("/entry/student")}
-              className="text-link focus-visible:ring-ring mt-3 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Read the student guide
-            </a>
-          </div>
-        </div>
+      <LandingSection id="getting-started" title="If something is missing">
+        <LandingLinks
+          lead="An account that has not been set up yet cannot open a workspace, and there is no self-registration to fall back on. If your account or academic placement is missing, contact the Secretary's office. These guides cover the rest."
+          items={[
+            { label: "Student guide: signing in", href: resolveHelpUrl("/entry/student") },
+            { label: "Student guide: evaluations", href: resolveHelpUrl("/student/evaluations") },
+            { label: "Student guide: submitted history", href: resolveHelpUrl("/student/history") },
+          ]}
+        />
       </LandingSection>
     </AudienceLanding>
   );

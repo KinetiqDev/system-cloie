@@ -226,6 +226,10 @@ export const HELP_ROUTES: readonly HelpRoute[] = [
   // ------------------------------------------------------- Respondent roles
   { appRoute: "/student/evaluations/:id/submitted", helpPath: "/student/history/" },
   { appRoute: "/student/evaluations/:id", helpPath: "/student/complete-evaluation/" },
+  // Logical key, not a live pathname: the drafts a student resumes are opened
+  // from the evaluations list and the dashboard, so the saved-response article
+  // is reachable only through this name.
+  { appRoute: "/student/saved-responses", helpPath: "/student/save-draft/" },
   { appRoute: "/student/evaluations", helpPath: "/student/evaluations/" },
   { appRoute: "/student/history/:responseId", helpPath: "/student/history/" },
   { appRoute: "/student/history", helpPath: "/student/history/" },

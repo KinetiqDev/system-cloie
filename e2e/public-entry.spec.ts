@@ -81,10 +81,10 @@ test.describe("public entry (signed-out)", () => {
       await expect(
         page.getByRole("link", { name: /Choose another audience|All sign-in options/ })
       ).toHaveCount(0);
-      await expect(page.getByRole("link", { name: "User guide & docs" })).toHaveAttribute(
-        "href",
-        /^https:\/\/help\.system-cloie\.app\//
-      );
+      const guideLink = page.getByRole("link", { name: "User guide & docs" });
+      await expect(guideLink).toHaveAttribute("href", /^https:\/\/help\.system-cloie\.app\//);
+      await expect(guideLink).toHaveAttribute("target", "_blank");
+      await expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
     });
   }
 
