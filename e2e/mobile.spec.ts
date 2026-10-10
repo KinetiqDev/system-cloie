@@ -477,3 +477,16 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expectNoHorizontalOverflow(page);
   await expectNoAxeViolations(page);
 });
+
+test("mobile Secretary can open the cross-program assignment drawer", async ({ page }) => {
+  const fx = fixture();
+  await loginAs(page, fx.demoSecretary.email);
+  await page.goto("/secretary/course-assignments");
+  await expect(page.getByRole("button", { name: "Assign Faculty", exact: true })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Assign Faculty", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Assign Faculty to Course" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Assign Faculty to Course" })).toHaveCount(0);
+});

@@ -34,9 +34,9 @@ export default async function SecretaryCourseAssignmentsPage({
     <CourseAssignmentsPageShell
       key={JSON.stringify(listPage.state)}
       pageTitle="Course Assignments"
-      pageDescription="View faculty assignments across all programs. Assignment stewardship belongs to the General Education Coordinator and Program Heads."
+      pageDescription="Assign faculty to Program-specific and General Education courses across all programs."
       mode="all-program"
-      canManageAssignments={false}
+      canManageAssignments={true}
       initialData={listPage.result.success ? listPage.result.data : null}
       initialFilters={listPage.initialFilters}
       initialPage={listPage.state.page}

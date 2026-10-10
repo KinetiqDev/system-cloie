@@ -1,3 +1,6 @@
+vi.mock("@/features/course-assignments/components/program-assignment-summary", () => ({
+  ProgramAssignmentSummary: () => <div>Course assignments</div>,
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import type * as DashboardService from "@/features/analytics/services/get-program-head-dashboard";

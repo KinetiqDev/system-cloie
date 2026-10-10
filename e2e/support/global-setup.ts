@@ -606,6 +606,22 @@ async function verifyPoEvidenceLink(programId: string): Promise<string> {
 export default async function globalSetup(): Promise<void> {
   await Promise.all(E2E_CONTRACT.deanAnalytics.programCodes.map(findProgramByCode));
   await verifyIdentities();
+  const assignmentContract = E2E_CONTRACT.secretaryAssignments;
+  await verifySeededIdentity(assignmentContract.faculty, "FACULTY");
+  for (const code of assignmentContract.courseCodes) {
+    const course = await prisma.course.findUnique({ where: { code } });
+    assertContract(course?.is_active, `Secretary assignment fixture Course ${code} must be active`);
+    const existing = await prisma.courseAssignment.count({
+      where: {
+        course: { code },
+        program: { code: assignmentContract.programCode },
+        term_instance: { status: "ACTIVE" },
+        year_level: assignmentContract.yearLevel as YearLevel,
+        section: assignmentContract.section as StudentSection,
+      },
+    });
+    assertContract(existing === 0, `Secretary assignment target ${code} must be unused`);
+  }
   const [deployments, academicPeriods] = await Promise.all([
     verifyDeployments(),
     verifyAcademicPeriods(),

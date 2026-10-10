@@ -82,6 +82,11 @@ describe("course-assignment actions revalidate all role routes on success", () =
       `/program-head/programs/${PROGRAM_ID}/course-assignments`
     );
     expect(revalidatePathSpy).toHaveBeenCalledWith("/dean/academic-structure/course-assignments");
+    expect(revalidatePathSpy).toHaveBeenCalledWith(
+      `/program-head/programs/${PROGRAM_ID}/dashboard`
+    );
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/faculty/dashboard");
+    expect(revalidatePathSpy).toHaveBeenCalledWith("/gen-ed-coordinator/dashboard");
   });
 
   it("updateCourseAssignmentAction revalidates /program-head and /dean course-assignment routes", async () => {

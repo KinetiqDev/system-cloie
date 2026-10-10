@@ -1,3 +1,4 @@
+import { assignableFacultyWhere } from "./assignable-faculty";
 import { prisma } from "@/lib/db/prisma";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { AssignableCourse } from "@/features/course-assignments/types";
@@ -72,38 +73,29 @@ export async function loadAllProgramCourseAssignmentsPageData(
       },
       orderBy: { code: "asc" },
     }),
-    prisma.facultyProgramAffiliation.findMany({
-      where: { is_active: true },
+    prisma.user.findMany({
+      where: assignableFacultyWhere,
       select: {
-        program: { select: { code: true } },
-        faculty: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+        id: true,
+        name: true,
+        email: true,
+        faculty_program_affiliations: {
+          where: { is_active: true },
+          select: { program: { select: { code: true } } },
         },
       },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
   ]);
 
-  const facultyById = new Map<string, FacultyOption>();
-  for (const affiliation of faculty) {
-    const current = facultyById.get(affiliation.faculty.id);
-    if (current) {
-      current.programCodes.push(affiliation.program.code);
-    } else {
-      facultyById.set(affiliation.faculty.id, {
-        id: affiliation.faculty.id,
-        name: affiliation.faculty.name,
-        email: affiliation.faculty.email,
-        programCodes: [affiliation.program.code],
-      });
-    }
-  }
-  const availableFaculty = [...facultyById.values()]
-    .map((option) => ({ ...option, programCodes: option.programCodes.sort() }))
-    .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  const availableFaculty: FacultyOption[] = faculty.map((account) => ({
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    programCodes: account.faculty_program_affiliations
+      .map((affiliation) => affiliation.program.code)
+      .sort(),
+  }));
 
   // fallow-ignore-next-line code-duplication
   const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>

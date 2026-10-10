@@ -9,8 +9,8 @@ Shared institutional Courses where `course.course_scope == GENERAL_EDUCATION`. E
 _Avoid_: Deriving Course scope from nullable program_id, Program-owned General Education Course
 
 **Course assignment authority — approved matrix (server-enforced)**:
-Secretary: no Course assignment mutation; read-only visibility only. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation. Secretary retains all-program read visibility only.
-_Avoid_: Client-provided course_scope, Secretary assignment mutation, Coordinator Program-specific mutation
+Secretary: college-wide read and guarded mutation of both Course scopes. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation. Secretary retains all-program stewardship.
+_Avoid_: Client-provided course_scope, Coordinator Program-specific mutation
 
 **Coordinator assignment UX mode**:
 `general-education` — a concrete Coordinator mode that reuses the assignment shell with Course scope fixed to General Education, allows any active target Program, and performs cross-Program Faculty search. Roster management and on-behalf evaluation publication are not granted to the Coordinator.
@@ -36,7 +36,7 @@ A Course owned by one academic program. Its course assignments are created for t
 _Avoid_: Department subject, program offering
 
 **General Education Course**:
-A shared institutional Course that is not owned by a single academic program. The General Education Coordinator stewards the college-wide General Education catalog and General Education course assignments; Deans retain all-program authority over them; Program Heads and Secretaries are read-only.
+A shared institutional Course that is not owned by a single academic program. The General Education Coordinator stewards the college-wide General Education catalog and General Education course assignments; Deans retain all-program authority over them; Program Heads are read-only; Secretaries retain all-program assignment stewardship.
 _Avoid_: Shared program course, merged course
 
 **Catalog default**:
@@ -120,19 +120,19 @@ The exact safe business reason a roster manager sees when a selected account can
 _Avoid_: Raw account state, server error explanation
 
 **Secretary course assignment operations**:
-All-program read visibility of Course assignments for a Secretary. The Secretary holds no Course assignment mutation: General Education stewardship belongs to the Coordinator and Program-specific stewardship to the owning program's Program Head.
-_Avoid_: Secretary stewardship, all-program Secretary mutations
+All-program read and guarded mutation of Course assignments for a Secretary. Secretary and Dean stewardship coexists with General Education Coordinator stewardship of General Education and Program Head stewardship of Program-specific Courses within their authorized Programs. Creation requires an active Program, a planned or active period in an active school year, and an active Faculty account with no self-request or an approved self-request. Faculty affiliation never restricts assignment.
+_Avoid_: Faculty affiliation as assignment authority, pending Faculty assignment
 
 **Dean course assignment operations**:
 All-program stewardship of Course assignments by a Dean: General Education and Program-specific mutation across every academic program.
 _Avoid_: Separate Dean assignment model, analytics-only Dean mode
 
 **All-program Course assignment manager**:
-A Dean user with all-program Course assignment scope across every academic program, managing both General Education and Program-specific assignments.
-_Avoid_: Secretary manager mode, role impersonation
+A Secretary or Dean user with all-program Course assignment scope across every academic program, managing both General Education and Program-specific assignments.
+_Avoid_: role impersonation
 
 **Course assignment list mode** (`CourseAssignmentListRole`):
-The role-scoped mode of the Course assignment list: `all-program` for the Dean, `program-head` for the Program Head, and `general-education` for the Coordinator.
+The role-scoped mode of the Course assignment list: `all-program` for the Secretary and Dean, `program-head` for the Program Head, and `general-education` for the Coordinator.
 _Avoid_: Free-form list filter, role-agnostic assignment list
 
 **GenEd dashboard**:
@@ -140,7 +140,7 @@ The Coordinator dashboard whose KPIs are scoped to active General Education cour
 _Avoid_: Dashboard mirroring the management list, all-course KPI scope
 
 **Role-owned route**:
-A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Dean, Coordinator, Program Head, and Secretary Course assignment routes remain separate role-owned routes; the Secretary route is a read-only view.
+A dashboard URL owned by one role even when the underlying operation capability is shared with another role. Dean, Coordinator, Program Head, and Secretary Course assignment routes remain separate role-owned routes; the Secretary route supports guarded all-program management.
 _Avoid_: Role impersonation route, shared dashboard route
 
 **Faculty affiliation**:

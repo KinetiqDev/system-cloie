@@ -2929,6 +2929,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/course-assignments/components/program-assignment-summary.tsx",
+    disposition: "task",
+    taskId: 15,
+    category: "feature_component",
+  },
+  {
     path: "src/features/course-assignments/components/course-assignments-table.tsx",
     disposition: "task",
     taskId: 15,

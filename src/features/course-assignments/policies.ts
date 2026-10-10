@@ -94,7 +94,7 @@ export function canMutateCourseRoster(context: CourseRosterMutabilityContext):
 /**
  * Check if user can manage course assignments.
  * Secretary, Dean, Coordinator, and Program Head boundaries are derived from
- * Course.course_scope. Approved matrix: Secretary read-only for GE, Dean
+ * Course.course_scope. Approved matrix: Secretary and Dean
  * all-program, Coordinator GE-only college-wide, Program Head read-only for GE.
  */
 export function canManageCourseAssignment(
@@ -111,10 +111,6 @@ export function canManageCourseAssignment(
 
   switch (session.activeRole) {
     case ROLES.SECRETARY:
-      return {
-        allowed: false,
-        reason: "Secretary cannot manage course assignments.",
-      };
     case ROLES.DEAN:
       return { allowed: true };
     case ROLES.GEN_ED_COORDINATOR:

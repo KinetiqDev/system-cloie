@@ -1,3 +1,4 @@
+import { assignableFacultyWhere } from "./assignable-faculty";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -33,12 +34,7 @@ export async function searchFacultyPool(
   try {
     // Search faculty by name or email
     const where = {
-      is_active: true,
-      roles: {
-        some: {
-          role: ROLES.FACULTY,
-        },
-      },
+      AND: [assignableFacultyWhere],
       OR: [
         { name: { contains: query, mode: "insensitive" as const } },
         { email: { contains: query, mode: "insensitive" as const } },

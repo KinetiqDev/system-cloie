@@ -224,7 +224,7 @@ describe("Secretary Course Assignments route", () => {
     ).rejects.toThrow(`${REDIRECT_ERROR}:/unauthorized`);
   });
 
-  it("renders a read-only list for the authorized Secretary", async () => {
+  it("renders all-program management for the authorized Secretary", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "secretary-1",
       email: "secretary@example.com",
@@ -260,7 +260,7 @@ describe("Secretary Course Assignments route", () => {
       rawSearchParams: {},
       role: "all-program",
     });
-    expect(page.props.canManageAssignments).toBe(false);
+    expect(page.props.canManageAssignments).toBe(true);
     expect(page.props.initialError).toBeNull();
   });
 });
