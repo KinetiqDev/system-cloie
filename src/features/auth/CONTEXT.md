@@ -84,11 +84,11 @@ A System CLOIE role for people participating from outside the current institutio
 _Avoid_: Guest role, public role
 
 **Scoped entrance**:
-One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), Faculty registration, or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
+One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
 _Avoid_: Role selection portal, one shared role card grid
 
 **Audience landing page**:
-A complete public landing page at `/entry/student`, `/entry/staff`, or `/entry/external` with a branded header, audience-specific introduction and workflow sections, one primary sign-in action into the existing scoped entrance, contextual Help Center links, and a legal footer. Audience landing pages have no back button, audience-switching control, login fields, or sibling-audience navigation. Student has no registration link; staff offers a secondary Faculty request link; external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
+A complete public landing page at `/entry/student`, `/entry/staff`, or `/entry/external` with a branded header, audience-specific introduction and workflow sections, one primary sign-in action into the existing scoped entrance, contextual Help Center links, and a legal footer. Audience landing pages have no back button, audience-switching control, login fields, or sibling-audience navigation. Student and staff entrances have no registration link (faculty register automatically on first sign-in and onboarding); external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
 _Avoid_: Authentication gate, audience detection, workspace
 
 **Public entry**:
@@ -96,9 +96,8 @@ The audience landing pages, scoped entrances, and System CLOIE homepage are the 
 _Avoid_: Role-less login as the main entry point, retired portal selection
 
 **Entry intent**:
-The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a role; the callback resolves the existing account, requires provisioning for an unknown staff address, and sends an unknown external address to external registration. External registration binds the chosen role's intent (`alumni` or `industry-partner`) to its Google action, so a new Google holder claims that role and enters its onboarding instead of returning to registration; the external sign-in entrance keeps the role-less intent because returning holders resolve through their existing session.
+The entrance binding carried by the legal acknowledgement ticket: one of the eight role intents, or the role-less `staff` and `external` entrance intents. A role-less entry intent never claims or creates a pre-provisioned role; the callback resolves the existing account, auto-provisions an unknown ACD institutional staff address as a new Faculty member routed to onboarding, requires pre-provisioning for other staff roles, and sends an unknown external address to external registration. External registration binds the chosen role's intent (`alumni` or `industry-partner`) to its Google action, so a new Google holder claims that role and enters its onboarding instead of returning to registration; the external sign-in entrance keeps the role-less intent because returning holders resolve through their existing session.
 _Avoid_: Role claim, authorization decision
-
 **Google-only internal role**:
 An internal role — Student, Faculty, Secretary, Dean, Program Head, or General Education Coordinator — that may only be used from a current Google sign-in. A password, one-time-code, or recovery session for the same Auth identity is refused at the centralized session boundary and at internal Server Actions, and Alumni and Industry Partner are the only roles that may use email-password alongside Google.
 _Avoid_: Any authenticated session, user_metadata provider claim

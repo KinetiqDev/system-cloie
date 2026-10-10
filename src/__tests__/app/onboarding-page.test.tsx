@@ -52,6 +52,14 @@ vi.mock("@/features/users/components/industry-partner-onboarding-form", () => ({
     </div>
   ),
 }));
+vi.mock("@/features/users/components/faculty-onboarding-form", () => ({
+  FacultyOnboardingForm: ({ email, name }: { email: string; name: string }) => (
+    <div data-testid="faculty-form">
+      Faculty form for {email} ({name})
+    </div>
+  ),
+}));
+
 
 import OnboardingPage from "@/app/(public)/onboarding/page";
 
@@ -150,7 +158,7 @@ describe("OnboardingPage", () => {
     });
   });
 
-  it("routes an affiliation-less Faculty session to faculty registration, not a form", async () => {
+  it("renders the faculty onboarding form when the gate matches the session intent", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-1",
       email: "teacher@acd.edu.ph",
@@ -159,12 +167,17 @@ describe("OnboardingPage", () => {
       activeRole: "FACULTY",
       profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/register/faculty");
+    programFindManyMock.mockResolvedValue([
+      { id: "p1", code: "BSIT", name: "BS Information Technology", majors: [] },
+    ]);
 
-    await expect(
-      OnboardingPage({ searchParams: Promise.resolve({ intent: "faculty" }) })
-    ).rejects.toThrow(`${REDIRECT_ERROR}:/register/faculty`);
-    expect(programFindManyMock).not.toHaveBeenCalled();
+    const page = await OnboardingPage({ searchParams: Promise.resolve({ intent: "faculty" }) });
+    render(page);
+
+    expect(screen.getByTestId("faculty-form")).toHaveTextContent(
+      "Faculty form for teacher@acd.edu.ph (Jamie Cruz)"
+    );
+    expect(programFindManyMock).toHaveBeenCalled();
   });
 
   it.each([

@@ -6,7 +6,6 @@ import StaffLandingPage from "@/app/(landing)/entry/staff/page";
 import ExternalLandingPage from "@/app/(landing)/entry/external/page";
 import StudentLoginPage from "@/app/(public)/login/student/page";
 import StaffLoginPage from "@/app/(public)/login/staff/page";
-import FacultyRegisterPage from "@/app/(public)/register/faculty/page";
 import ExternalLoginPage from "@/app/(public)/login/external/page";
 import ExternalRegisterPage from "@/app/(public)/register/external/page";
 import VerifyEmailPage from "@/app/(public)/verify-email/page";
@@ -67,10 +66,12 @@ describe("Public entry routes", () => {
       </AppearanceProvider>
     );
     expect(screen.getByRole("heading", { level: 1, name: "Students" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Student sign in" })).toHaveAttribute(
-      "href",
-      "/login/student"
-    );
+    const signInCta = screen.getByRole("link", { name: "Student sign in" });
+    expect(signInCta).toHaveAttribute("href", "/login/student");
+    expect(signInCta).toHaveClass("min-h-12", "text-base");
+    expect(screen.getByAltText("Assumption College of Davao seal")).toBeInTheDocument();
+    expect(screen.getByAltText("System CLOIE")).toBeInTheDocument();
+    expect(screen.getByText("System CLOIE")).toHaveClass("font-bold", "text-primary");
     expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
@@ -105,52 +106,56 @@ describe("Public entry routes", () => {
     expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /faculty/i })).toBeNull();
   });
+  it("staff landing keeps sign-in within its audience with no registration button", () => {
+    render(
+      <AppearanceProvider enabled={true}>
+        <StaffLandingPage />
+      </AppearanceProvider>
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Staff & Faculty" })).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
+    const signInCta = screen.getByRole("link", { name: "Staff & faculty sign in" });
+    expect(signInCta).toHaveAttribute("href", "/login/staff");
+    expect(signInCta).toHaveClass("min-h-12", "text-base");
+    expect(screen.queryByRole("link", { name: /Submit a Faculty request/i })).toBeNull();
+  });
 
-  it.each([
-    {
-      Page: StaffLandingPage,
-      heading: "Staff & Faculty",
-      action: "Staff & faculty sign in",
-      login: "/login/staff",
-      registration: "/register/faculty",
-      registerLabel: "Submit a Faculty request",
-    },
-    {
-      Page: ExternalLandingPage,
-      heading: "Alumni & Industry Partners",
-      action: "Alumni & partner sign in",
-      login: "/login/external",
-      registration: "/register/external",
-      registerLabel: "Create an account",
-    },
-  ])(
-    "$heading landing keeps sign-in and registration within its audience",
-    ({ Page, heading, action, login, registration, registerLabel }) => {
-      render(
-        <AppearanceProvider enabled={true}>
-          <Page />
-        </AppearanceProvider>
-      );
-      expect(screen.getByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
-      expect(screen.getByRole("banner")).toBeInTheDocument();
-      expect(screen.getByRole("contentinfo")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
-      const guideLink = screen.getByRole("link", { name: "User guide & docs" });
-      expect(guideLink).toHaveAttribute("href", "https://help.system-cloie.app/");
-      expect(guideLink).toHaveAttribute("target", "_blank");
-      expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
-      expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
-      expect(screen.getByRole("link", { name: action })).toHaveAttribute("href", login);
-      expect(screen.getByRole("link", { name: registerLabel })).toHaveAttribute(
-        "href",
-        registration
-      );
-      const entryLinks = screen
-        .getAllByRole("link")
-        .filter((link) => /^\/(login|register)\//.test(link.getAttribute("href") ?? ""));
-      expect(entryLinks.map((link) => link.getAttribute("href"))).toEqual([login, registration]);
-    }
-  );
+  it("external landing keeps sign-in and registration within its audience", () => {
+    render(
+      <AppearanceProvider enabled={true}>
+        <ExternalLandingPage />
+      </AppearanceProvider>
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Alumni & Industry Partners" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Before you sign in" })).toBeInTheDocument();
+    const guideLink = screen.getByRole("link", { name: "User guide & docs" });
+    expect(guideLink).toHaveAttribute("href", "https://help.system-cloie.app/");
+    expect(guideLink).toHaveAttribute("target", "_blank");
+    expect(guideLink).toHaveAttribute("rel", "noopener noreferrer");
+    expect(screen.queryByRole("link", { name: /choose another audience|back/i })).toBeNull();
+    const signInCta = screen.getByRole("link", { name: "Alumni & partner sign in" });
+    expect(signInCta).toHaveAttribute("href", "/login/external");
+    expect(signInCta).toHaveClass("min-h-12", "text-base");
+    const secondaryCta = screen.getByRole("link", { name: "Create an account" });
+    expect(secondaryCta).toHaveAttribute("href", "/register/external");
+    expect(secondaryCta).toHaveClass("min-h-12", "text-base");
+    expect(screen.getByAltText("Assumption College of Davao seal")).toBeInTheDocument();
+    expect(screen.getByAltText("System CLOIE")).toBeInTheDocument();
+    expect(screen.getByText("System CLOIE")).toHaveClass("font-bold", "text-primary");
+    const entryLinks = screen
+      .getAllByRole("link")
+      .filter((link) => /^\/(login|register)\//.test(link.getAttribute("href") ?? ""));
+    expect(entryLinks.map((link) => link.getAttribute("href"))).toEqual([
+      "/login/external",
+      "/register/external",
+    ]);
+  });
 
   it.each([StudentLandingPage, StaffLandingPage, ExternalLandingPage])(
     "every Help Center destination leaves the current tab alone",
@@ -171,11 +176,13 @@ describe("Public entry routes", () => {
     }
   );
 
-  it("staff entrance offers one Google action for all internal roles", async () => {
+  it("staff entrance offers one Google action for all internal roles with no request or help links", async () => {
     render(await StaffLoginPage());
     expect(screen.getByRole("heading", { level: 1, name: "Staff sign in" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
     expect(screen.getByText(/choose a workspace after sign-in/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Submit a Faculty request/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Visit help and FAQs/i })).toBeNull();
     const seal = screen.getByRole("img", { name: "Assumption College of Davao seal" });
     const mark = screen.getByRole("img", { name: "System CLOIE" });
     for (const logo of [seal, mark]) {
@@ -185,14 +192,6 @@ describe("Public entry routes", () => {
     expect(mark).toHaveClass("h-[78%]", "w-auto");
   });
 
-  it("faculty registration starts signed-out users with Google before any form", async () => {
-    render(await FacultyRegisterPage());
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Faculty registration" })
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Continue with ACD Google/i })).toBeInTheDocument();
-    expect(screen.getByText(/grants no Faculty access/i)).toBeInTheDocument();
-  });
 
   it("external entrance is email-first with a Google alternative", async () => {
     render(await ExternalLoginPage({ searchParams: emptyParams }));
@@ -217,7 +216,6 @@ describe("Public entry routes", () => {
   it.each([
     { Page: StudentLoginPage, label: "Students", href: "/entry/student" },
     { Page: StaffLoginPage, label: "Staff & Faculty", href: "/entry/staff" },
-    { Page: FacultyRegisterPage, label: "Staff & Faculty", href: "/entry/staff" },
     { Page: ExternalRegisterPage, label: "Alumni & Industry Partners", href: "/entry/external" },
   ])(
     "$label entry back navigation returns to its audience landing",

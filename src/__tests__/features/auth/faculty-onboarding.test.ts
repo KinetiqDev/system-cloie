@@ -1,36 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { resolveProfileGate } from "@/features/users/services/resolve-profile-gate";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
+import { createFacultyProfile } from "@/lib/actions/faculty-actions";
 import { facultyProfileSchema } from "@/lib/schemas/faculty-profile";
-import { requestFacultyAccess } from "@/lib/actions/faculty-actions";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
 
-const { resolveAuthSessionMock, requireLegalAcknowledgementMock } = vi.hoisted(() => ({
+const { resolveAuthSessionMock } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
-  requireLegalAcknowledgementMock: vi.fn(),
 }));
 
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
 }));
-
-vi.mock("@/features/legal/services/require-legal-acknowledgement", () => ({
-  requireLegalAcknowledgement: requireLegalAcknowledgementMock,
-}));
-
 const {
   findUniqueUserMock,
+  facultyAccessRequestFindUniqueMock,
+  facultyAccessRequestUpdateMock,
   facultyAccessRequestUpsertMock,
   findUniqueProgramMock,
   findFirstAffiliationMock,
+  upsertAffiliationMock,
   upsertUserRoleMock,
   transactionMock,
 } = vi.hoisted(() => ({
   findUniqueUserMock: vi.fn(),
+  facultyAccessRequestFindUniqueMock: vi.fn(),
+  facultyAccessRequestUpdateMock: vi.fn(),
   facultyAccessRequestUpsertMock: vi.fn(),
   findUniqueProgramMock: vi.fn(),
   findFirstAffiliationMock: vi.fn(),
+  upsertAffiliationMock: vi.fn(),
   upsertUserRoleMock: vi.fn(),
   transactionMock: vi.fn(),
 }));
@@ -38,7 +38,8 @@ const {
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     facultyAccessRequest: {
-      findUnique: vi.fn(),
+      findUnique: facultyAccessRequestFindUniqueMock,
+      update: facultyAccessRequestUpdateMock,
       upsert: facultyAccessRequestUpsertMock,
     },
     $transaction: transactionMock,
@@ -50,6 +51,7 @@ vi.mock("@/lib/db/prisma", () => ({
     },
     facultyProgramAffiliation: {
       findFirst: findFirstAffiliationMock,
+      upsert: upsertAffiliationMock,
     },
     program: {
       findUnique: findUniqueProgramMock,
@@ -84,16 +86,14 @@ describe("resolveProfileGate — Faculty", () => {
 });
 
 describe("resolvePostLoginDestination — Faculty", () => {
-  it("routes FACULTY_ONBOARDING_REQUIRED to faculty registration", () => {
+  it("routes FACULTY_ONBOARDING_REQUIRED to faculty onboarding", () => {
     const destination = resolvePostLoginDestination({
       requestedPath: "/portal/respondents",
       intent: null,
       activeRole: ROLES.FACULTY,
       profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
-    // Faculty scope is institutional (issue #649): the only self-service step
-    // is the explicit registration request, never a placement form.
-    expect(destination).toBe("/register/faculty");
+    expect(destination).toBe("/onboarding?intent=faculty");
   });
 });
 
@@ -128,7 +128,7 @@ describe("facultyProfileSchema", () => {
   });
 });
 
-describe("requestFacultyAccess Server Action", () => {
+describe("createFacultyProfile Server Action", () => {
   const validPayload = {
     program_id: "550e8400-e29b-41d4-a716-446655440000",
   };
@@ -147,13 +147,14 @@ describe("requestFacultyAccess Server Action", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    requireLegalAcknowledgementMock.mockResolvedValue({ acknowledged: true });
     findUniqueProgramMock.mockResolvedValue({
       id: validPayload.program_id,
       is_active: true,
     });
     findFirstAffiliationMock.mockResolvedValue(null);
-    facultyAccessRequestUpsertMock.mockResolvedValue({ status: "PENDING" });
+    facultyAccessRequestFindUniqueMock.mockResolvedValue({ id: "req-1" });
+    facultyAccessRequestUpdateMock.mockResolvedValue({ status: "APPROVED" });
+    upsertAffiliationMock.mockResolvedValue({});
     upsertUserRoleMock.mockResolvedValue({});
     transactionMock.mockImplementation((callback: (tx: unknown) => Promise<unknown>) =>
       callback(prisma)
@@ -161,44 +162,42 @@ describe("requestFacultyAccess Server Action", () => {
     findUniqueUserMock.mockResolvedValue({ id: "faculty-123", is_active: true });
   });
 
-  it("files a pending request and grants no affiliation of its own", async () => {
+  it("creates active program affiliation and approves any existing request", async () => {
     session();
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(true);
-    // The role and the PENDING row are written; the affiliation belongs to the
-    // approval transaction and is never a self-service write.
     expect(upsertUserRoleMock).toHaveBeenCalledWith({
       where: { user_id_role: { user_id: "faculty-123", role: ROLES.FACULTY } },
       update: {},
       create: { user_id: "faculty-123", role: ROLES.FACULTY },
     });
-    expect(facultyAccessRequestUpsertMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { user_id: "faculty-123" },
-        update: expect.objectContaining({ status: "PENDING" }),
-      })
-    );
-  });
-
-  it("refuses without a legal acknowledgement", async () => {
-    requireLegalAcknowledgementMock.mockResolvedValue({ acknowledged: false });
-    session();
-
-    const result = await requestFacultyAccess(validPayload);
-
-    expect(result).toEqual({
-      success: false,
-      error: "A current legal acknowledgement is required.",
+    expect(upsertAffiliationMock).toHaveBeenCalledWith({
+      where: {
+        faculty_id_program_id: {
+          faculty_id: "faculty-123",
+          program_id: validPayload.program_id,
+        },
+      },
+      update: { is_primary: true, is_active: true },
+      create: {
+        faculty_id: "faculty-123",
+        program_id: validPayload.program_id,
+        is_primary: true,
+        is_active: true,
+      },
     });
-    expect(prisma.userRole.upsert).not.toHaveBeenCalled();
+    expect(facultyAccessRequestUpdateMock).toHaveBeenCalledWith({
+      where: { user_id: "faculty-123" },
+      data: { status: "APPROVED" },
+    });
   });
 
   it("refuses an unauthenticated session", async () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result).toEqual({ success: false, error: "Authentication session invalid or missing." });
     expect(prisma.userRole.upsert).not.toHaveBeenCalled();
@@ -207,7 +206,7 @@ describe("requestFacultyAccess Server Action", () => {
   it("refuses a non-Google session before any write", async () => {
     session({ authMethod: "password" });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("current ACD Google sign-in");
@@ -218,7 +217,7 @@ describe("requestFacultyAccess Server Action", () => {
   it("refuses a verified-signup session: Faculty is an internal Google-only role", async () => {
     session({ authMethod: "verified-signup" });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(prisma.userRole.upsert).not.toHaveBeenCalled();
@@ -227,7 +226,7 @@ describe("requestFacultyAccess Server Action", () => {
   it("refuses a non-institutional address before any write", async () => {
     session({ email: "someone@example.com" });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("institutional");
@@ -238,7 +237,7 @@ describe("requestFacultyAccess Server Action", () => {
     session();
     findUniqueUserMock.mockResolvedValue({ id: "faculty-123", is_active: false });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result.success).toBe(false);
     expect(result.error).toContain("inactive");
@@ -252,7 +251,7 @@ describe("requestFacultyAccess Server Action", () => {
       is_active: false,
     });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result).toEqual({
       success: false,
@@ -261,15 +260,14 @@ describe("requestFacultyAccess Server Action", () => {
     expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });
 
-  it("reports an already-active Faculty account instead of re-requesting", async () => {
-    session();
-    findFirstAffiliationMock.mockResolvedValue({ id: "affiliation-1" });
+  it("refuses a session that is not in FACULTY_ONBOARDING_REQUIRED gate", async () => {
+    session({ profileGate: { status: "COMPLETE" } });
 
-    const result = await requestFacultyAccess(validPayload);
+    const result = await createFacultyProfile(validPayload);
 
     expect(result).toEqual({
       success: false,
-      error: "Your account already has Faculty access.",
+      error: "This session cannot complete Faculty onboarding. Sign in again and continue.",
     });
     expect(prisma.userRole.upsert).not.toHaveBeenCalled();
   });

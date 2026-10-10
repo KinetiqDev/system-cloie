@@ -1,6 +1,4 @@
 import { redirect } from "next/navigation";
-import { listFacultyAccessRequests } from "@/features/users/services/list-faculty-access-requests";
-import { FacultyRequestReviewList } from "@/features/users/components/faculty-request-review-list";
 import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { buildPageTitle } from "@/lib/page-title";
@@ -8,9 +6,9 @@ import { buildPageTitle } from "@/lib/page-title";
 export const metadata = { title: buildPageTitle("Faculty Requests", "Secretary") };
 
 /**
- * Secretary review of self-submitted Faculty requests. Faculty is internal, so
- * a decision requires a current Google sign-in as Secretary; the session guard
- * below rejects anything else before the read is issued.
+ * Deprecated: Secretary approval of self-submitted Faculty requests is removed.
+ * Faculty register automatically upon completing onboarding. This route redirects
+ * authorized Secretary sessions to the users directory.
  */
 export default async function SecretaryFacultyRequestsPage() {
   const session = await resolveAuthSession();
@@ -18,16 +16,5 @@ export default async function SecretaryFacultyRequestsPage() {
     redirect("/unauthorized");
   }
 
-  const result = await listFacultyAccessRequests();
-  if (!result.success) {
-    redirect("/unauthorized");
-  }
-
-  return (
-    <FacultyRequestReviewList
-      requests={result.data.requests}
-      pendingCount={result.data.pendingCount}
-      currentUserId={session.userId}
-    />
-  );
+  redirect("/secretary/users");
 }

@@ -60,7 +60,6 @@ export const HELP_ROUTES: readonly HelpRoute[] = [
   { appRoute: "/entry/external", helpPath: "/" },
   // ---------------------------------------------------------------- Secretary
   { appRoute: "/secretary/users/new", helpPath: "/secretary/create-user/" },
-  { appRoute: "/secretary/faculty-requests", helpPath: "/secretary/faculty-requests/" },
   { appRoute: "/secretary/users", helpPath: "/secretary/users/" },
   { appRoute: "/secretary/school-years/:id/rollover", helpPath: "/secretary/term-rollover/" },
   { appRoute: "/secretary/school-years/:id", helpPath: "/secretary/academic-calendar/" },

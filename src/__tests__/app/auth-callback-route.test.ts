@@ -1703,8 +1703,44 @@ describe("auth callback route", () => {
       });
     }
 
-    it("sends unmatched staff entrants to provisioning guidance without creating anything", async () => {
+    it("automatically registers unmatched institutional staff entrants as faculty and routes to onboarding", async () => {
       entryExchange("new-staff@acd.edu.ph");
+      findUniqueUserMock.mockResolvedValue(null);
+      createUserMock.mockResolvedValue({
+        id: "new-user-id",
+        email: "new-staff@acd.edu.ph",
+        name: "Entry User",
+        roles: [{ role: SystemRole.FACULTY }],
+      });
+      resolveAuthSessionFromUserMock.mockResolvedValue({
+        userId: "new-user-id",
+        roles: ["FACULTY"],
+        activeRole: "FACULTY",
+        hasFacultyAffiliation: false,
+        profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
+      });
+      resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=faculty");
+
+      const response = await GET(
+        callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=staff", "staff")
+      );
+
+      expect(signOutMock).not.toHaveBeenCalled();
+      expect(createUserMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: "new-staff@acd.edu.ph",
+            roles: { create: { role: SystemRole.FACULTY } },
+          }),
+        })
+      );
+      expect(response.headers.get("location")).toBe(
+        "https://cloie.test/onboarding?intent=faculty"
+      );
+    });
+
+    it("rejects unmatched non-institutional staff entrants with invalid-domain status", async () => {
+      entryExchange("new-staff@gmail.com");
       findUniqueUserMock.mockResolvedValue(null);
 
       const response = await GET(
@@ -1713,9 +1749,8 @@ describe("auth callback route", () => {
 
       expect(signOutMock).toHaveBeenCalledTimes(1);
       expect(createUserMock).not.toHaveBeenCalled();
-      expect(createUserRoleMock).not.toHaveBeenCalled();
       expect(response.headers.get("location")).toBe(
-        "https://cloie.test/status/pre-provisioning-required"
+        "https://cloie.test/status/invalid-domain"
       );
     });
 

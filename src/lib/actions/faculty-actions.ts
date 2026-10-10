@@ -1,30 +1,22 @@
 "use server";
 
-import { prisma } from "@/lib/db/prisma";
+import { FacultyApprovalStatus } from "@prisma/client";
+import { ROLES } from "@/lib/constants/roles";
 import { facultyProfileSchema, type FacultyProfileInput } from "@/lib/schemas/faculty-profile";
-import { createFacultyAccessRequest } from "@/features/users/services/manage-faculty-access-requests";
-import { requireLegalAcknowledgement } from "@/features/legal/services/require-legal-acknowledgement";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
-
+import { prisma } from "@/lib/db/prisma";
 const ACADEMIC_DOMAIN_FAILURE = "An institutional ACD email is required for Faculty access.";
 
 const NOT_GOOGLE_SESSION_FAILURE =
   "Faculty access requires your current ACD Google sign-in. Sign out and sign in with Google again.";
 
 /**
- * Explicit Faculty registration. The request is self-submitted but not
- * self-authorized (issue #649): it creates a PENDING review row and no
- * program affiliation, so the Faculty workspace stays closed until a
- * Secretary approves. Legal acknowledgement is enforced server-side before
- * any identity or role write, and Faculty is an internal role, so only a
- * current Google sign-in may request it.
+ * Automatic Faculty registration onboarding. Creates the primary active program
+ * affiliation immediately upon completing the onboarding form without requiring
+ * Secretary approval.
  */
-export async function requestFacultyAccess(data: FacultyProfileInput) {
+export async function createFacultyProfile(data: FacultyProfileInput) {
   try {
-    const legal = await requireLegalAcknowledgement("faculty");
-    if (!legal.acknowledged) {
-      return { success: false, error: "A current legal acknowledgement is required." };
-    }
     // The centralized session boundary is the identity source: it covers real
     // Google sessions and the development, dedicated-demo, and CI test
     // sessions that Supabase alone does not describe. Every non-Google regime
@@ -68,15 +60,61 @@ export async function requestFacultyAccess(data: FacultyProfileInput) {
     if (!email.endsWith("@acd.edu.ph") && !email.endsWith("@acdeducation.com")) {
       return { success: false, error: ACADEMIC_DOMAIN_FAILURE };
     }
-
-    const result = await createFacultyAccessRequest({
-      userId: domainUser.id,
-      programId: validatedData.program_id,
+    if (
+      authSession.activeRole !== ROLES.FACULTY ||
+      authSession.profileGate.status !== "FACULTY_ONBOARDING_REQUIRED"
+    ) {
+      return {
+        success: false,
+        error: "This session cannot complete Faculty onboarding. Sign in again and continue.",
+      };
+    }
+    const program = await prisma.program.findUnique({
+      where: { id: validatedData.program_id },
+      select: { id: true, is_active: true },
     });
 
-    if (!result.success) {
-      return { success: false, error: result.error };
+    if (!program) {
+      return { success: false, error: "The selected program does not exist." };
     }
+
+    if (!program.is_active) {
+      return { success: false, error: "The selected program is archived or inactive." };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.userRole.upsert({
+        where: { user_id_role: { user_id: domainUser.id, role: ROLES.FACULTY } },
+        update: {},
+        create: { user_id: domainUser.id, role: ROLES.FACULTY },
+      });
+
+      await tx.facultyProgramAffiliation.upsert({
+        where: {
+          faculty_id_program_id: {
+            faculty_id: domainUser.id,
+            program_id: validatedData.program_id,
+          },
+        },
+        update: { is_primary: true, is_active: true },
+        create: {
+          faculty_id: domainUser.id,
+          program_id: validatedData.program_id,
+          is_primary: true,
+          is_active: true,
+        },
+      });
+
+      const existingRequest = await tx.facultyAccessRequest.findUnique({
+        where: { user_id: domainUser.id },
+      });
+      if (existingRequest) {
+        await tx.facultyAccessRequest.update({
+          where: { user_id: domainUser.id },
+          data: { status: FacultyApprovalStatus.APPROVED },
+        });
+      }
+    });
 
     return { success: true };
   } catch (error: unknown) {

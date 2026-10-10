@@ -1883,18 +1883,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "route",
   },
   {
-    path: "src/app/(public)/register/faculty/page.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "route",
-  },
-  {
-    path: "src/app/(public)/register/faculty/loading.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "route",
-  },
-  {
     path: "src/app/(public)/register/external/page.tsx",
     disposition: "task",
     taskId: 23,
@@ -1992,12 +1980,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/entry/components/password-recovery-forms.tsx",
-    disposition: "task",
-    taskId: 23,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/entry/components/faculty-register-form.tsx",
     disposition: "task",
     taskId: 23,
     category: "feature_component",
@@ -2396,6 +2378,34 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     disposition: "task",
     taskId: 5,
     category: "ui_primitive",
+  },
+  {
+    path: "src/components/data-table/column-filter.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Column funnel and its facet popover: applies on change, names itself by column and current value, and returns focus to the trigger on close.",
+  },
+  {
+    path: "src/components/data-table/facet-field.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "The one facet control both the desktop popover and the mobile sheet render, so the two surfaces cannot drift.",
+  },
+  {
+    path: "src/components/data-table/filterable-head.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Column heading that carries its own funnel and sort control while pinning the column's accessible name to its label.",
+  },
+  {
+    path: "src/components/data-table/table-toolbar.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Spanning search, removable applied-filter chips, and the mobile filter sheet built from the same facet definitions.",
   },
   {
     path: "src/components/ui/tabs.tsx",
@@ -3029,16 +3039,31 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/shared/filter-bar.tsx",
+    path: "src/features/course-assignments/components/shared/result-summary-strip.tsx",
     disposition: "task",
     taskId: 15,
     category: "feature_component",
   },
   {
-    path: "src/features/course-assignments/components/shared/result-summary-strip.tsx",
-    disposition: "task",
-    taskId: 15,
+    path: "src/features/course-assignments/components/shared/assignment-facets.tsx",
+    disposition: "already_compliant",
     category: "feature_component",
+    notes:
+      "Course-assignment facets declared once: the column funnels, the toolbar chips, and the mobile sheet all read from this set.",
+  },
+  {
+    path: "src/features/course-assignments/components/course-roster-facets.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Roster discovery facets, including the active-period scope as the list's own default rather than an applied filter.",
+  },
+  {
+    path: "src/features/academic-structure/components/course-catalog-facets.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Composable facet helpers shared by the Secretary, Dean, Program Head, and General Education course catalogs.",
   },
   {
     path: "src/features/course-assignments/components/shared/assignment-summary-block.tsx",
@@ -3108,12 +3133,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/features/evaluations/components/faculty-published-evaluations.tsx",
-    disposition: "task",
-    taskId: 22,
-    category: "feature_component",
-  },
-  {
-    path: "src/features/evaluations/components/published-evaluation-filter-bar.tsx",
     disposition: "task",
     taskId: 22,
     category: "feature_component",
@@ -3372,6 +3391,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/users/components/faculty-onboarding-form.tsx",
+    disposition: "task",
+    taskId: 23,
+    category: "feature_component",
+  },
+  {
     path: "src/features/users/components/evaluation-list-card.tsx",
     disposition: "task",
     taskId: 24,
@@ -3425,13 +3450,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
-    path: "src/features/users/components/secretary-users-list/users-filter-bar.tsx",
+    path: "src/features/users/components/secretary-users-list/users-kpi.tsx",
     disposition: "task",
     taskId: 12,
     category: "feature_component",
   },
   {
-    path: "src/features/users/components/secretary-users-list/users-kpi.tsx",
+    path: "src/features/users/components/secretary-users-list/users-facets.tsx",
     disposition: "task",
     taskId: 12,
     category: "feature_component",
@@ -3572,7 +3597,8 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     path: "src/features/response-review/components/responses-filters.tsx",
     disposition: "already_compliant",
     category: "feature_component",
-    notes: "Shared role-adapted response filters preserve authorization and URL scope",
+    notes:
+      "Shared response-review facet vocabulary and instant-apply toolbar: column funnels, the toolbar popover for columnless facets, and the mobile sheet all read one facet set; role adapters own URL scope",
   },
 ];
 

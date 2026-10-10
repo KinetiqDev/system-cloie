@@ -31,8 +31,8 @@ export const E2E_CONTRACT = {
       landing: "/entry/staff",
       login: "/login/staff",
       action: "Staff & faculty sign in",
-      registration: "/register/faculty",
-      registrationLabel: "Submit a Faculty request",
+      registration: null,
+      registrationLabel: null,
     },
     {
       audience: "Alumni & Industry Partners",

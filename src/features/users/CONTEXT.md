@@ -41,11 +41,10 @@ The Secretary Users list's year level and section filters read the Student's enr
 _Avoid_: Year level over enrollment history, section from the academic profile, placement filters without an active Academic Period
 
 **Faculty approval state**:
-The role-scoped PENDING / APPROVED / REJECTED review state on a self-submitted Faculty request. A self-request writes the FACULTY role together with a PENDING request and no program affiliation, so the profile gate resolves it to FACULTY_APPROVAL_PENDING and the Faculty workspace stays closed; approval creates the primary active affiliation in the same transaction. It never deactivates the account globally and never reuses external VerificationStatus. A rejected request revokes only the affiliation that approval granted — a Secretary-provisioned primary or additional program is never touched, and revocation deactivates rather than deletes so the affiliation history stays on the account. Secretary-provisioned Faculty has no request row and is complete at creation.
+The role-scoped review state on legacy self-submitted Faculty requests. Self-service Faculty registration no longer requires Secretary approval; completing the faculty onboarding form automatically provisions the primary active affiliation and registers the account. Legacy request rows are marked APPROVED upon completing onboarding.
 _Avoid_: Account deactivation, external verification status, deleting affiliations
 
-Approval revalidates both account activity and the requested Program's activity inside the decision transaction. A Program archived while the request awaits review cannot receive an active Faculty affiliation.
-
+A Program archived while an applicant attempts onboarding cannot receive an active Faculty affiliation.
 ## Provisioning and invitations
 
 **Institutional email rule**:

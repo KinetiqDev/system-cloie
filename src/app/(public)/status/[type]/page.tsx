@@ -103,7 +103,7 @@ const STATUS_CONFIGS = {
     title: "Student Account Not Set Up Yet",
     description: "Your ACD Google account is not linked to a Student record yet.",
     details:
-      "Student accounts are created by the Secretary's office before first sign-in. Please contact the Secretary's office or IT support to have your Student account provisioned. Do not use Faculty registration — it cannot create a Student account.",
+      "Student accounts are created by the Secretary's office before first sign-in. Please contact the Secretary's office or IT support to have your Student account provisioned.",
     icon: GraduationCap,
     color: "warning",
     showRetry: true,
@@ -121,7 +121,7 @@ const STATUS_CONFIGS = {
     title: "Faculty Request Not Approved",
     description: "Your Faculty request was not approved following institutional review.",
     details:
-      "You do not have Faculty workspace access. You may submit a new Faculty request with corrected details from Faculty registration, or contact the Secretary's office for guidance.",
+      "You do not have Faculty workspace access. Contact the Secretary's office for guidance.",
     icon: XCircle,
     color: "danger",
     showRetry: false,
