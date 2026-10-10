@@ -347,13 +347,13 @@ function CourseIloMatrix({
                     {cell.aligned ? (
                       <span className="flex flex-col items-end gap-0.5">
                         <span className="font-medium">{formatMean(cell.meanRating)}</span>
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-caption text-muted-foreground">
                           {cell.ratingCount} rating{cell.ratingCount === 1 ? "" : "s"}
                           {cell.spansMultipleScales ? " · mixed scales" : ""}
                         </span>
                       </span>
                     ) : (
-                      <span className="text-text-secondary text-xs">No alignment</span>
+                      <span className="text-caption text-text-secondary">No alignment</span>
                     )}
                   </TableCell>
                 ))}
@@ -377,12 +377,12 @@ function OutcomeCatalogLabel({ outcome }: { outcome: GeneralEducationIloEvidence
       </div>
       <span className="text-text-secondary whitespace-normal">{outcome.name}</span>
       {!outcome.isActive ? (
-        <span className="text-muted-foreground text-xs">
+        <span className="text-caption text-muted-foreground">
           Archived: kept for historical evidence, no longer assignable to new mappings.
         </span>
       ) : null}
       {outcome.ratingCount === 0 ? (
-        <span className="text-text-secondary text-xs">
+        <span className="text-caption text-text-secondary">
           No evidence in this scope — listed from the ILO catalog, not from responses.
         </span>
       ) : null}
@@ -435,7 +435,7 @@ function OutcomesExactValueTable({
                 <TableCell className="text-right align-top tabular-nums">
                   {outcome.ratingCount}
                   {outcome.excludedRatingCount > 0 ? (
-                    <span className="text-muted-foreground block text-xs">
+                    <span className="text-caption text-muted-foreground block">
                       {outcome.excludedRatingCount} excluded
                     </span>
                   ) : null}
@@ -447,12 +447,15 @@ function OutcomesExactValueTable({
                   {outcome.distributions.length > 0 ? (
                     <ul className="flex flex-col gap-0.5">
                       {outcome.distributions.map((distribution) => (
-                        <li key={distribution.scaleLabel} className="text-xs whitespace-nowrap">
+                        <li
+                          key={distribution.scaleLabel}
+                          className="text-caption whitespace-nowrap"
+                        >
                           {distribution.scaleLabel}
                         </li>
                       ))}
                       {outcome.spansMultipleScales ? (
-                        <li className="text-warning text-xs font-medium">Mixed scales</li>
+                        <li className="text-label-sm text-warning">Mixed scales</li>
                       ) : null}
                     </ul>
                   ) : (
@@ -470,13 +473,16 @@ function OutcomesExactValueTable({
                     {outcome.evidenceEvaluations.length > 0 ? (
                       <ul className="flex flex-col gap-0.5">
                         {outcome.evidenceEvaluations.map((evaluation) => (
-                          <li key={evaluation.evaluationId} className="text-xs whitespace-nowrap">
+                          <li
+                            key={evaluation.evaluationId}
+                            className="text-caption whitespace-nowrap"
+                          >
                             {evaluation.deploymentName}
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-caption text-muted-foreground">
                         No evaluation contributed ratings
                       </span>
                     )}

@@ -33,9 +33,9 @@ export type FacultyTemplateItem = {
     sectionKey: string;
   }>;
   templateGoQuestionBindings: Array<{
-    goId: string | null;
-    goCodeSnapshot: string;
-    goDescriptionSnapshot: string;
+    poId: string | null;
+    poCodeSnapshot: string;
+    poDescriptionSnapshot: string;
     itemKey: string;
     questionPromptSnapshot: string;
     sectionKey: string;
@@ -104,7 +104,7 @@ export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult
       bound_course: { select: { code: true, title: true } },
       program: { select: { code: true, name: true } },
       template_cilo_question_bindings: true,
-      template_go_question_bindings: true,
+      template_po_question_bindings: true,
       _count: { select: { versions: true } },
     },
     orderBy: { updated_at: "desc" },
@@ -134,10 +134,10 @@ export async function listFacultyTemplates(): Promise<ListFacultyTemplatesResult
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,
     })),
-    templateGoQuestionBindings: t.template_go_question_bindings.map((binding) => ({
-      goCodeSnapshot: binding.go_code_snapshot,
-      goDescriptionSnapshot: binding.go_description_snapshot,
-      goId: binding.go_id,
+    templateGoQuestionBindings: t.template_po_question_bindings.map((binding) => ({
+      poCodeSnapshot: binding.po_code_snapshot,
+      poDescriptionSnapshot: binding.po_description_snapshot,
+      poId: binding.po_id,
       itemKey: binding.item_key,
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,
@@ -196,7 +196,7 @@ export async function getFacultyTemplate(
       source_template_id: true,
       program: { select: { id: true, code: true, name: true } },
       template_cilo_question_bindings: true,
-      template_go_question_bindings: true,
+      template_po_question_bindings: true,
     },
   });
 
@@ -228,10 +228,10 @@ export async function getFacultyTemplate(
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,
     })),
-    templateGoQuestionBindings: template.template_go_question_bindings.map((binding) => ({
-      goCodeSnapshot: binding.go_code_snapshot,
-      goDescriptionSnapshot: binding.go_description_snapshot,
-      goId: binding.go_id,
+    templateGoQuestionBindings: template.template_po_question_bindings.map((binding) => ({
+      poCodeSnapshot: binding.po_code_snapshot,
+      poDescriptionSnapshot: binding.po_description_snapshot,
+      poId: binding.po_id,
       itemKey: binding.item_key,
       questionPromptSnapshot: binding.question_prompt_snapshot,
       sectionKey: binding.section_key,

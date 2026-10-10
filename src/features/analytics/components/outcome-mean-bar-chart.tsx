@@ -1,14 +1,17 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartPatternDefs,
-  ChartSwatch,
-  chartFill,
-} from "@/components/ui/chart";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartSwatch } from "@/components/ui/chart";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -24,6 +27,9 @@ import type {
   OutcomeEvidenceDTO,
   OutcomeLayerLabels,
 } from "@/features/analytics/outcome-evidence-types";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "@/features/analytics/aggregators/outcome-attainment";
+import { AttainmentBadge, getAttainmentColor } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
 
 type MeanBarDatum = {
   code: string;
@@ -31,6 +37,7 @@ type MeanBarDatum = {
   value: number;
   ratingCount: number;
   submittedResponseCount: number;
+  outcomeId: string;
 };
 
 type OutcomeMeanBarChartProps = {
@@ -68,6 +75,7 @@ export function OutcomeMeanBarChart({
       value: outcome.meanRating,
       ratingCount: outcome.ratingCount,
       submittedResponseCount: outcome.submittedResponseCount,
+      outcomeId: outcome.outcomeId,
     })
   );
   if (!preserveOrder) bars.sort((left, right) => right.value - left.value);
@@ -80,6 +88,11 @@ export function OutcomeMeanBarChart({
     rated.flatMap((outcome) => outcome.distributions.map((scale) => scale.scaleLabel))
   );
 
+  const hasAttainment =
+    labels.short === "PO" ||
+    labels.short === "CILO" ||
+    outcomes.some((outcome) => outcome.attainment !== undefined);
+
   if (bars.length === 0) {
     return (
       <div className="flex flex-col gap-3">
@@ -90,6 +103,7 @@ export function OutcomeMeanBarChart({
           <EmptyTitle>No rated outcome evidence yet</EmptyTitle>
           <EmptyDescription>No valid ratings are available for these outcomes.</EmptyDescription>
         </Empty>
+        {hasAttainment && <AttainmentLegend />}
       </div>
     );
   }
@@ -100,6 +114,9 @@ export function OutcomeMeanBarChart({
       : `Highest mean: ${ranked[0].code} (${ranked[0].value.toFixed(2)}). Lowest mean: ${ranked[ranked.length - 1].code} (${ranked[ranked.length - 1].value.toFixed(2)}).`;
   const scaleCaption =
     mixedScales.size === 1 ? `Scale ${[...mixedScales][0]}` : `Axis 0–${axisMax}, scales vary`;
+  const byOutcomeId = new Map(rated.map((outcome) => [outcome.outcomeId, outcome]));
+  const hasClassified = rated.some((outcome) => outcome.attainment?.status === "classified");
+  const showBenchmark = hasClassified && OUTCOME_ATTAINMENT_BENCHMARK <= axisMax;
 
   return (
     <Card className="min-w-0">
@@ -122,9 +139,8 @@ export function OutcomeMeanBarChart({
             <BarChart
               data={bars}
               layout="vertical"
-              margin={{ bottom: 8, left: 8, right: 48, top: 8 }}
+              margin={{ top: 28, right: 48, bottom: 8, left: 8 }}
             >
-              <ChartPatternDefs chartId={chartId} categoryCount={bars.length} />
               <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis
                 type="number"
@@ -150,10 +166,28 @@ export function OutcomeMeanBarChart({
                   return [original == null ? "N/A" : original.toFixed(2), "Mean Rating"];
                 }}
               />
+              {showBenchmark ? (
+                <ReferenceLine
+                  x={OUTCOME_ATTAINMENT_BENCHMARK}
+                  stroke="var(--text-muted)"
+                  strokeDasharray="6 4"
+                  strokeWidth={2}
+                  label={{
+                    value: `Benchmark ${OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)}`,
+                    position: "top",
+                    fill: "var(--foreground)",
+                    fontSize: 12,
+                  }}
+                />
+              ) : null}
               <Bar dataKey="value" maxBarSize={32} radius={[0, 6, 6, 0]} isAnimationActive={false}>
-                {bars.map((entry, index) => (
-                  <Cell key={entry.code} fill={chartFill(chartId, index)} />
-                ))}
+                {bars.map((entry) => {
+                  const outcome = byOutcomeId.get(entry.outcomeId);
+                  const fill = hasAttainment
+                    ? getAttainmentColor(outcome?.attainment)
+                    : "var(--chart-1)";
+                  return <Cell key={entry.code} fill={fill} />;
+                })}
                 <LabelList
                   dataKey="value"
                   position="right"
@@ -167,20 +201,27 @@ export function OutcomeMeanBarChart({
             </BarChart>
           </ChartContainer>
         </div>
-        <div
-          role="list"
-          className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
-          aria-label="Chart legend"
-        >
-          {bars.map((entry, index) => (
-            <span role="listitem" key={entry.code} className="flex items-center gap-1.5">
-              <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-label-sm text-muted-foreground">{entry.label}</span>
-            </span>
-          ))}
-        </div>
+        {hasAttainment ? (
+          <AttainmentLegend />
+        ) : (
+          <div
+            role="list"
+            className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
+            aria-label="Chart legend"
+          >
+            {bars.map((entry) => (
+              <span role="listitem" key={entry.code} className="flex items-center gap-1.5">
+                <ChartSwatch fill="var(--chart-1)" />
+                <span className="text-label-sm text-muted-foreground">{entry.label}</span>
+              </span>
+            ))}
+          </div>
+        )}
         <p id={insightId} className="text-body-sm text-text-secondary">
-          {insight}
+          {insight}{" "}
+          {showBenchmark
+            ? `Benchmark ${OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)} marks the primary attainment threshold; classification uses full-precision means.`
+            : null}
         </p>
         <Disclosure>
           <DisclosureTrigger variant="chip">View exact values</DisclosureTrigger>
@@ -191,18 +232,25 @@ export function OutcomeMeanBarChart({
                   <TableRow>
                     <TableHead>{labels.singular}</TableHead>
                     <TableHead className="text-right">Mean Rating</TableHead>
+                    {hasAttainment && <TableHead>Attainment</TableHead>}
                     <TableHead className="text-right">Rating Count</TableHead>
                     <TableHead className="text-right">Submitted Responses</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {bars.map((entry) => {
+                    const outcome = byOutcomeId.get(entry.outcomeId);
                     return (
                       <TableRow key={entry.code}>
                         <TableCell className="font-medium">{entry.label}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           {entry.value.toFixed(2)}
                         </TableCell>
+                        {hasAttainment && (
+                          <TableCell>
+                            <AttainmentBadge attainment={outcome?.attainment} />
+                          </TableCell>
+                        )}
                         <TableCell className="text-right tabular-nums">
                           {entry.ratingCount}
                         </TableCell>

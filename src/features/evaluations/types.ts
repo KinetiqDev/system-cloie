@@ -292,7 +292,7 @@ export type PreviewCentralDeploymentRespondent = {
 export type PreviewCentralDeploymentResult = ServiceResult<PreviewCentralDeploymentRespondent[]>;
 
 /**
- * Publication-time GO binding readiness for one PROGRAM_WIDE template, shown
+ * Publication-time PO binding readiness for one PROGRAM_WIDE template, shown
  * on the Program Head publish step. Unbound Likert questions do not block
  * publication; `blockingError` carries a binding problem that does.
  */

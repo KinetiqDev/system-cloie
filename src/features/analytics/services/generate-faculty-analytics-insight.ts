@@ -138,6 +138,7 @@ Shape per section: {"observation": string, "evidence": string[], "connection": s
 
 How to read this evidence:
 - Rating means sit on the scale named in the evidence (for example 1-5, where 5 carries the most favorable descriptor). Judge a mean against its scale range, never against an absolute standard, and say the scale when you cite the number.
+- CILO attainment classifications (Fully Attained, Attained, Partially Attained, Slightly Attained, Not Attained) and CQI benchmark statuses (Meets Benchmark, Needs Attention, Below Benchmark) are deterministically calculated by System CLOIE before this request under policy CLOIE_OUTCOME_MEAN_V1 (benchmark 3.50). Never recalculate attainment, never invent your own thresholds, and never override or contradict the provided classification. You may explain established results and discuss question contributions relative to the CILO.
 - A small response pool limits what results can prove: with few respondents, say that the picture may not represent everyone.
 - Distribution shape matters as much as the mean: the same mean can come from consistent ratings or from sharply divided ones; describe which pattern appears.
 - Compare trend periods only when the evidence marks them comparable; when a period has a break reason, say the periods cannot be directly compared.
@@ -407,6 +408,14 @@ function buildFacultyInsightPacket(
       courseTitle: clampLabel(metric.courseTitle),
       evaluationName: clampLabel(metric.evaluationName),
       description: clampLabel(metric.description),
+      attainment: metric.attainment
+        ? {
+            status: metric.attainment.status,
+            interpretation: metric.attainment.interpretation,
+            cqi: metric.attainment.cqi,
+            meetsBenchmark: metric.attainment.meetsBenchmark,
+          }
+        : null,
       scaleGroups: toPacketScaleGroups(metric.scaleGroups),
     }));
   const questionRows = [...data.questionMetrics]

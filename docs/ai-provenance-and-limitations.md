@@ -111,11 +111,12 @@
 ## 3. Deterministic vs AI Roles
 
 - **System CLOIE calculates everything deterministically.** All metrics, means, rating
-  distributions, CILO contributor matrices, trend comparability breaks
-  (instrument-fingerprint matching), word-cloud tokens, term prevalence with
-  distinct-response counts, per-prompt structure, and tone bands are computed by
-  tested deterministic services. Charts render from these values and never wait
-  on AI.
+  distributions, deterministic outcome attainment classifications under proposed
+  policy `CLOIE_OUTCOME_MEAN_V1` (benchmark 3.50; ADR 0037), CILO contributor matrices,
+  trend comparability breaks (instrument-fingerprint matching), word-cloud tokens,
+  term prevalence with distinct-response counts, per-prompt structure, and tone bands
+  are computed by tested deterministic services. Charts render from these values and
+  never wait on AI.
 - **Themes are the AI's reading of that structure, not a stored artifact.** System
   CLOIE does not cluster, label, or persist a theme; the model names what the
   per-prompt terms and counts show, inside one validated observation. Nothing about
@@ -123,10 +124,11 @@
 - **The AI's sole role is interpretation of grounded evidence.** Given one bounded
   packet, it surfaces a single evidence-bound observation per section: what pattern
   the numbers show, the exact figures behind it, how it relates to other figures in
-  the packet, what the evidence cannot prove, and one checkable question a human
-  could look into.
+  the packet (including explaining established CILO/PO attainment classifications),
+  what the evidence cannot prove, and one checkable question a human could look into.
 - **What the AI never does:**
-  - Never calculates attainment, means, or distributions.
+  - Never calculates attainment, means, or distributions, and never overrides or
+    contradicts deterministic attainment classifications.
   - Never makes academic or curriculum decisions (no CQI directives, no grade or
     mastery claims, no causation, no blame of individuals).
   - Never suggests executing actions, changing records, or using tools — it has no
@@ -222,12 +224,12 @@
 ## 7. Known Limitations and Capstone Boundaries
 
 1. **Deferred `cilo_go_mappings_snapshot` migration (accepted boundary).**
-   Course-derived GO metrics (`buildCourseDerivedGoMetrics`) join
+   Course-derived PO metrics (`buildCourseDerivedPoMetrics`) join
    publication-time question-to-CILO bindings with the **current, live**
-   `CILOMapping` table. If a Program Head edits a CILO-to-GO mapping today,
+   `CILOMapping` table. If a Program Head edits a CILO-to-PO mapping today,
    historical course evidence is reinterpreted under the new mapping — historical
-   GO analytics are technically mutable. Program-wide central deployments are
-   unaffected (they correctly use `CentralDeploymentGoSnapshot`). The schema fix
+   PO analytics are technically mutable. Program-wide central deployments are
+   unaffected (they correctly use `CentralDeploymentPoSnapshot`). The schema fix
    (a `cilo_go_mappings_snapshot` JSON column on `CourseBoundEvaluation` plus
    backfill) was deferred as high-migration-risk for this phase; the UI carries the
    "Publication-time mapping snapshots are not yet available" disclosure, and this

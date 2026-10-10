@@ -3,13 +3,7 @@
 import { useId } from "react";
 import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartPatternDefs,
-  ChartSwatch,
-  chartFill,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartPatternDefs, ChartSwatch } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import {
@@ -239,7 +233,7 @@ function ScaleMeanChartPanel({
           <CardTitle id={headingId} className="text-title-md font-semibold">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">Ranked comparison</span>
+          <span className="text-label-sm text-muted-foreground">Ranked comparison</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -282,8 +276,8 @@ function ScaleMeanChartPanel({
                 radius={[0, 6, 6, 0]}
                 isAnimationActive={false}
               >
-                {ranked.map((row, index) => (
-                  <Cell key={row.key} fill={chartFill(chartId, index)} />
+                {ranked.map((row) => (
+                  <Cell key={row.key} fill="var(--chart-1)" />
                 ))}
                 <LabelList
                   dataKey="meanRating"
@@ -304,10 +298,10 @@ function ScaleMeanChartPanel({
           className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
           aria-label={`Chart legend for ${series.scaleLabel}`}
         >
-          {ranked.map((row, index) => (
+          {ranked.map((row) => (
             <span role="listitem" key={row.key} className="flex items-center gap-1.5">
-              <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-muted-foreground text-xs">
+              <ChartSwatch fill="var(--chart-1)" />
+              <span className="text-caption text-muted-foreground">
                 {row.label} ({countedNoun(row.submittedResponseCount, "response")})
               </span>
             </span>

@@ -152,7 +152,7 @@ function ratingRow(opts: {
   instrumentVersionId: string;
   value: number;
   responseId: string;
-  goCodes?: string[];
+  poCodes?: string[];
 }) {
   const courseBound = {
     term_instance_id: opts.termInstanceId,
@@ -163,7 +163,7 @@ function ratingRow(opts: {
     response_id: opts.responseId,
     cilo_question_binding: {
       cilo: {
-        cilo_mappings: (opts.goCodes ?? []).map((code) => ({ go: { code } })),
+        cilo_mappings: (opts.poCodes ?? []).map((code) => ({ po: { code } })),
       },
     },
     response: {
@@ -181,7 +181,7 @@ function centralRatingRow(opts: {
   instrumentVersionId: string;
   value: number;
   responseId: string;
-  goCodes?: string[];
+  poCodes?: string[];
   stakeholder?: string;
 }) {
   const central = {
@@ -194,7 +194,7 @@ function centralRatingRow(opts: {
     response_id: opts.responseId,
     cilo_question_binding: {
       cilo: {
-        cilo_mappings: (opts.goCodes ?? []).map((code) => ({ go: { code } })),
+        cilo_mappings: (opts.poCodes ?? []).map((code) => ({ po: { code } })),
       },
     },
     response: {
@@ -352,7 +352,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-1",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -420,21 +420,21 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-1",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-2",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-2nd",
         instrumentVersionId: "iv-cilo-v2",
         value: 3,
         responseId: "resp-3",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -457,7 +457,7 @@ describe("getProgramHeadTrends", () => {
     expect(first.ratingCount).toBe(2); // only quant items
     expect(first.instrumentContext).toBe("CILO Evaluation v2");
     expect(first.scaleContext).toBe("1–5 (5-point)");
-    expect(first.outcomeCodes).toEqual(["GO-1"]);
+    expect(first.outcomeCodes).toEqual(["PO-1"]);
     expect(first.comparableWithPrevious).toBe(false); // first period
 
     expect(second.periodLabel).toBe("2025-2026 · 2nd Semester");
@@ -513,14 +513,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v1",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-b",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -548,14 +548,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-exit-v1",
         value: 4,
         responseId: "resp-b",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -580,14 +580,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-b",
-        goCodes: ["GO-2"],
+        poCodes: ["PO-2"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -609,14 +609,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 3,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-b",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -640,7 +640,7 @@ describe("getProgramHeadTrends", () => {
           instrumentVersionId: "iv-cilo-v2",
           value,
           responseId: `${prefix}-c${index}`,
-          goCodes: ["GO-1"],
+          poCodes: ["PO-1"],
         })
       );
     const courseRows = (termInstanceId: string, prefix: string, count: number, value: number) =>
@@ -650,7 +650,7 @@ describe("getProgramHeadTrends", () => {
           instrumentVersionId: "iv-cilo-v2",
           value,
           responseId: `${prefix}-b${index}`,
-          goCodes: ["GO-1"],
+          poCodes: ["PO-1"],
         })
       );
     const responseRows = (
@@ -692,28 +692,28 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 2,
         responseId: "first-central",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2024-1st",
         instrumentVersionId: "iv-exit-v1",
         value: 2,
         responseId: "first-course",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       centralRatingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-exit-v1",
         value: 5,
         responseId: "second-central",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "second-course",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -741,7 +741,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 3,
         responseId: "first-alumni",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
         stakeholder: "ALUMNI",
       }),
       centralRatingRow({
@@ -749,7 +749,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "second-student",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
         stakeholder: "STUDENT",
       }),
     ]);
@@ -781,7 +781,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 3,
         responseId: "first-alumni",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
         stakeholder: "ALUMNI",
       }),
       centralRatingRow({
@@ -789,7 +789,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "second-alumni",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
         stakeholder: "ALUMNI",
       }),
     ]);
@@ -820,14 +820,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 3,
         responseId: "first-central-rated",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "second-course-rated",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -852,14 +852,14 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-collide-a",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-collide-b",
         value: 4,
         responseId: "resp-b",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -886,21 +886,21 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-1st",
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-b",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
       ratingRow({
         termInstanceId: "term-2025-2nd",
         instrumentVersionId: "iv-exit-v1",
         value: 3,
         responseId: "resp-c",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -991,7 +991,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 5,
         responseId: "resp-a",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -1053,7 +1053,7 @@ describe("getProgramHeadTrends", () => {
         instrumentVersionId: "iv-cilo-v2",
         value: 4,
         responseId: "resp-1",
-        goCodes: ["GO-1"],
+        poCodes: ["PO-1"],
       }),
     ]);
     prismaMock.response.findMany.mockResolvedValue([
@@ -1270,14 +1270,14 @@ describe("trend comparability aggregators", () => {
     const fpX: TrendComparabilityFingerprint = {
       instrumentVersions: ["CILO Evaluation v2"],
       scaleIdentities: ["s1"],
-      outcomeCodes: ["GO-1"],
+      outcomeCodes: ["PO-1"],
       sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
       sourceInstrumentComposition: ["CENTRAL:iv-a:0.38", "COURSE_BOUND:iv-b:0.63"],
     };
     const fpY: TrendComparabilityFingerprint = {
       instrumentVersions: ["Exit Survey v1"],
       scaleIdentities: ["s2"],
-      outcomeCodes: ["GO-1"],
+      outcomeCodes: ["PO-1"],
       sourceComposition: ["CENTRAL:0.38", "COURSE_BOUND:0.63"],
       sourceInstrumentComposition: ["CENTRAL:iv-c:0.38", "COURSE_BOUND:iv-d:0.63"],
     };
@@ -1412,7 +1412,7 @@ describe("trend comparability aggregators", () => {
       const base: TrendComparabilityFingerprint = {
         instrumentVersions: ["a"],
         scaleIdentities: ["s"],
-        outcomeCodes: ["GO-1"],
+        outcomeCodes: ["PO-1"],
         sourceComposition: ["CENTRAL:1.00"],
         sourceInstrumentComposition: ["CENTRAL:a:1.00"],
       };

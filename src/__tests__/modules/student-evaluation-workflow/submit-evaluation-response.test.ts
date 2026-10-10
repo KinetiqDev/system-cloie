@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { submitEvaluationResponse } from "@/features/responses/services/submit-evaluation-response";
-import { buildCourseDerivedGoMetrics } from "@/features/analytics/aggregators/go";
+import { buildCourseDerivedPoMetrics } from "@/features/analytics/aggregators/po";
 import { resolveItemScaleIdentity } from "@/features/analytics/aggregators/scale-identity";
 
 const {
@@ -395,7 +395,7 @@ describe("submitEvaluationResponse", () => {
     expect(createManyQuantMock.mock.calls[0]![0].data[0].cilo_question_binding_id).toBeNull();
   });
 
-  it("attributes a submitted rating to the GO its bound CILO maps to", async () => {
+  it("attributes a submitted rating to the PO its bound CILO maps to", async () => {
     findAssignmentMock.mockResolvedValue(
       courseBoundAssignment({
         cilo_question_bindings: [
@@ -417,21 +417,21 @@ describe("submitEvaluationResponse", () => {
       assignmentId: "assignment-1",
     });
 
-    // GO analytics read submitted ratings through this binding relation, so an
+    // PO analytics read submitted ratings through this binding relation, so an
     // unattributed rating drops out of every mapped outcome for its course.
     const storedRating = createManyQuantMock.mock.calls[0]![0].data[0];
     expect(storedRating.cilo_question_binding_id).toBe("binding-clarity");
 
     const [likertItem] = structureSnapshot[0]!.items.filter((item) => item.kind === "quantitative");
-    const outcomeRows = buildCourseDerivedGoMetrics([
+    const outcomeRows = buildCourseDerivedPoMetrics([
       {
         cilo: { description: "Apply methods", id: "cilo-1", label: "CILO 1" },
         evaluationId: "course-bound-1",
-        goMappings: [
+        poMappings: [
           {
-            goCode: "GO-1",
-            goDescription: "Graduate Outcome 1",
-            goId: "go-1",
+            poCode: "PO-1",
+            poDescription: "Program Outcome 1",
+            poId: "po-1",
             manifestation: "LEARNING",
           },
         ],
@@ -444,7 +444,7 @@ describe("submitEvaluationResponse", () => {
       },
     ]);
     expect(outcomeRows).toHaveLength(1);
-    expect(outcomeRows[0]).toEqual(expect.objectContaining({ goCode: "GO-1", mean: 5 }));
+    expect(outcomeRows[0]).toEqual(expect.objectContaining({ poCode: "PO-1", mean: 5 }));
   });
 
   it("attributes each rating to its own binding, never a prefix-sharing neighbour", async () => {

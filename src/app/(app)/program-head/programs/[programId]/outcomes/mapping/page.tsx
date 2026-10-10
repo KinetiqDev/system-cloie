@@ -33,9 +33,9 @@ function manifestationLabel(value: CILOMappingManifestation | null): string {
 
 function manifestationFor(
   cilo: CourseCILOMappings["cilos"][number],
-  goId: string
+  poId: string
 ): CILOMappingManifestation | null {
-  return cilo.manifestations.find((m) => m.goId === goId)?.manifestation ?? null;
+  return cilo.manifestations.find((m) => m.poId === poId)?.manifestation ?? null;
 }
 
 export default async function SelectedProgramOutcomeMappingPage({
@@ -51,9 +51,7 @@ export default async function SelectedProgramOutcomeMappingPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="max-w-3xl">
-        <BackLink href={buildProgramHeadOutcomesPath(programId)}>
-          Back to Graduate Outcomes
-        </BackLink>
+        <BackLink href={buildProgramHeadOutcomesPath(programId)}>Back to Program Outcomes</BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
         <p className="text-body-md text-muted-foreground mt-2 text-pretty">
           Review how Course Intended Learning Outcomes manifest across this program&apos;s Graduate
@@ -70,7 +68,7 @@ export default async function SelectedProgramOutcomeMappingPage({
             </EmptyMedia>
             <EmptyTitle>No CILO mappings found</EmptyTitle>
             <EmptyDescription>
-              Faculty classify CILO-to-GO manifestations through Course alignment. Classified CILOs
+              Faculty classify CILO-to-PO manifestations through Course alignment. Classified CILOs
               appear here for readiness review.
             </EmptyDescription>
           </EmptyHeader>
@@ -78,7 +76,7 @@ export default async function SelectedProgramOutcomeMappingPage({
             render={<Link href={buildProgramHeadOutcomesPath(programId)} />}
             variant="outline"
           >
-            Review Graduate Outcomes
+            Review Program Outcomes
           </Button>
         </Empty>
       ) : (
@@ -103,15 +101,15 @@ export default async function SelectedProgramOutcomeMappingPage({
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-4">
-                  {course.gos.length === 0 && (
+                  {course.pos.length === 0 && (
                     <Alert>
                       <AlertDescription>
-                        No Graduate Outcomes have been defined for this program. A Program Head must
-                        create GOs before Course alignment can be completed.
+                        No Program Outcomes have been defined for this program. A Program Head must
+                        create POs before Course alignment can be completed.
                       </AlertDescription>
                     </Alert>
                   )}
-                  {course.gos.length > 0 && (
+                  {course.pos.length > 0 && (
                     <div className="hidden md:block">
                       <div className="border-border overflow-x-auto rounded-lg border">
                         <table className="w-full min-w-[38rem] border-collapse">
@@ -123,20 +121,20 @@ export default async function SelectedProgramOutcomeMappingPage({
                               >
                                 CILO
                               </th>
-                              {course.gos.map((go) => (
+                              {course.pos.map((po) => (
                                 <th
-                                  key={go.id}
+                                  key={po.id}
                                   scope="col"
                                   className="text-text-primary py-3 pr-4 pl-4 text-left"
                                 >
                                   <span className="text-label-sm block font-semibold">
-                                    {go.code}
+                                    {po.code}
                                   </span>
                                   <span
                                     className="text-text-muted text-caption block max-w-44 truncate font-normal"
-                                    title={go.description}
+                                    title={po.description}
                                   >
-                                    {go.description}
+                                    {po.description}
                                   </span>
                                 </th>
                               ))}
@@ -162,10 +160,10 @@ export default async function SelectedProgramOutcomeMappingPage({
                                     {cilo.description}
                                   </span>
                                 </th>
-                                {course.gos.map((go) => (
-                                  <td key={go.id} className="text-text-primary py-3 pr-4 pl-4">
+                                {course.pos.map((po) => (
+                                  <td key={po.id} className="text-text-primary py-3 pr-4 pl-4">
                                     <span className="text-label-sm">
-                                      {manifestationLabel(manifestationFor(cilo, go.id))}
+                                      {manifestationLabel(manifestationFor(cilo, po.id))}
                                     </span>
                                   </td>
                                 ))}
@@ -178,7 +176,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                   )}
                   <div
                     className={
-                      course.gos.length > 0
+                      course.pos.length > 0
                         ? "flex flex-col gap-4 md:hidden"
                         : "flex flex-col gap-4"
                     }
@@ -207,19 +205,19 @@ export default async function SelectedProgramOutcomeMappingPage({
                           </Badge>
                         </div>
                         <p className="text-body-md text-text-primary mt-1">{cilo.description}</p>
-                        {course.gos.length > 0 && (
+                        {course.pos.length > 0 && (
                           <ul className="mt-3 flex flex-col gap-2">
-                            {course.gos.map((go) => {
-                              const manifestation = manifestationFor(cilo, go.id);
+                            {course.pos.map((po) => {
+                              const manifestation = manifestationFor(cilo, po.id);
                               return (
                                 <li
-                                  key={go.id}
+                                  key={po.id}
                                   className="border-border bg-card flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5"
                                 >
                                   <span className="flex min-w-0 flex-col gap-0.5">
-                                    <span className="text-label-sm font-semibold">{go.code}</span>
+                                    <span className="text-label-sm font-semibold">{po.code}</span>
                                     <span className="text-text-muted text-body-sm">
-                                      {go.description}
+                                      {po.description}
                                     </span>
                                   </span>
                                   <span className="text-label-sm shrink-0">
@@ -237,30 +235,30 @@ export default async function SelectedProgramOutcomeMappingPage({
                     <div
                       className="border-border bg-muted/30 rounded-lg border border-dashed p-4"
                       role="region"
-                      aria-label="Archived Graduate Outcome manifestations, read-only"
+                      aria-label="Archived Program Outcome manifestations, read-only"
                       data-testid="archived-mapping-rows"
                     >
-                      <p className="text-label-sm font-semibold">Archived Graduate Outcomes</p>
+                      <p className="text-label-sm font-semibold">Archived Program Outcomes</p>
                       <p className="text-text-muted text-body-sm">
-                        Historical manifestations on archived GOs are read-only and do not count
+                        Historical manifestations on archived POs are read-only and do not count
                         toward completeness.
                       </p>
                       <ul className="mt-3 flex flex-col gap-2">
                         {course.cilos.flatMap((cilo, index) =>
                           cilo.archivedManifestations.map((mapping) => {
                             const archivedGo = course.archivedGos.find(
-                              (go) => go.id === mapping.goId
+                              (po) => po.id === mapping.poId
                             );
                             return (
                               <li
-                                key={`${cilo.id}:${mapping.goId}`}
+                                key={`${cilo.id}:${mapping.poId}`}
                                 className="flex flex-wrap items-center gap-2"
                               >
                                 <span className="text-label-sm font-semibold">
                                   CILO {index + 1}
                                 </span>
                                 <span className="text-body-sm">
-                                  {archivedGo?.code ?? mapping.goId}
+                                  {archivedGo?.code ?? mapping.poId}
                                 </span>
                                 <Badge variant="outline" className="text-text-muted">
                                   Archived

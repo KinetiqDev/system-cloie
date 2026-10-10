@@ -56,7 +56,7 @@ function responseDetail(): IdentifiedSubmittedResponseDetail {
             scale: [1, 2, 3, 4, 5],
             descriptorLabels: [null, null, null, null, null],
             // General Education CILOs align to Institutional Learning
-            // Outcomes, so the binding carries ILO rows and no GO data.
+            // Outcomes, so the binding carries ILO rows and no PO data.
             binding: {
               type: "CILO",
               layer: "INSTITUTIONAL_OUTCOME",

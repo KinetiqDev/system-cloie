@@ -1,8 +1,8 @@
 # Graduate Outcome canonical terminology
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 0036](0036-program-outcome-canonical-terminology.md)
 
-System CLOIE uses **Graduate Outcome (GO)** as the canonical name for the program-level learning-outcome concept in current application code and user-facing copy. ADR 0017 remains historical context for the earlier GO-to-PLO rename and its compatibility boundaries.
+This ADR records the superseded Graduate Outcome terminology decision. It remains as historical context for the prior GO-to-PLO cutover and its compatibility boundaries.
 
 ## Context
 

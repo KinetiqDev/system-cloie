@@ -14,17 +14,17 @@ import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 type WriterRole = (typeof ROLES)[keyof typeof ROLES];
 
 export type OutcomeWriteInput =
-  | { kind: "GO"; action: "create"; programId: string; code: string; description: string }
+  | { kind: "PO"; action: "create"; programId: string; code: string; description: string }
   | {
-      kind: "GO";
+      kind: "PO";
       action: "update";
       programId: string;
       id: string;
       code: string;
       description: string;
     }
-  | { kind: "GO"; action: "archive" | "restore"; programId: string; id: string }
-  | { kind: "GO"; action: "reorder"; programId: string; orderedIds: string[] }
+  | { kind: "PO"; action: "archive" | "restore"; programId: string; id: string }
+  | { kind: "PO"; action: "reorder"; programId: string; orderedIds: string[] }
   | { kind: "ILO"; action: "create"; code: string; description: string }
   | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
   | { kind: "ILO"; action: "archive" | "restore"; id: string }
@@ -33,7 +33,7 @@ export type OutcomeWriteInput =
   | { kind: "CILO"; action: "update"; id: string; description: string }
   | { kind: "CILO"; action: "archive" | "restore"; id: string };
 
-type GOWriteInput = Extract<OutcomeWriteInput, { kind: "GO" }>;
+type POWriteInput = Extract<OutcomeWriteInput, { kind: "PO" }>;
 
 type ILOWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 
@@ -81,15 +81,15 @@ async function scopeAllowsILO(input: ILOWriteInput, role: WriterRole): Promise<b
   return role === ROLES.GEN_ED_COORDINATOR;
 }
 
-async function scopeAllowsGO(
-  input: GOWriteInput,
+async function scopeAllowsPO(
+  input: POWriteInput,
   role: WriterRole,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<boolean> {
   if (role !== ROLES.PROGRAM_HEAD) return false;
   if (input.action === "create" || input.action === "reorder") return true;
-  const go = await db.gO.findUnique({ where: { id: input.id }, select: { program_id: true } });
-  return go?.program_id === input.programId;
+  const po = await db.pO.findUnique({ where: { id: input.id }, select: { program_id: true } });
+  return po?.program_id === input.programId;
 }
 
 async function scopeAllowsCilo(
@@ -127,8 +127,8 @@ async function scopeAllows(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<boolean> {
   switch (input.kind) {
-    case "GO":
-      return scopeAllowsGO(input, role, db);
+    case "PO":
+      return scopeAllowsPO(input, role, db);
     case "ILO":
       return scopeAllowsILO(input, role);
     case "CILO":
@@ -136,23 +136,23 @@ async function scopeAllows(
   }
 }
 
-async function readGOState(
-  input: GOWriteInput,
+async function readPOState(
+  input: POWriteInput,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<ReviewValue> {
   if (input.action === "create")
-    return db.gO.findMany({
+    return db.pO.findMany({
       where: { program_id: input.programId },
       select: { code: true, description: true, order: true, program_id: true, is_active: true },
       orderBy: { order: "asc" },
     });
   if (input.action === "reorder")
-    return db.gO.findMany({
+    return db.pO.findMany({
       where: { program_id: input.programId },
       select: { id: true, order: true },
       orderBy: { order: "asc" },
     });
-  return db.gO.findUnique({
+  return db.pO.findUnique({
     where: { id: input.id },
     select: {
       id: true,
@@ -206,8 +206,8 @@ async function readState(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<ReviewValue> {
   switch (input.kind) {
-    case "GO":
-      return readGOState(input, db);
+    case "PO":
+      return readPOState(input, db);
     case "ILO":
       return readILOState(input, db);
     case "CILO":
@@ -215,7 +215,7 @@ async function readState(
   }
 }
 
-function nextGOState(input: GOWriteInput, before: ReviewValue): ReviewValue {
+function nextPOState(input: POWriteInput, before: ReviewValue): ReviewValue {
   if (input.action === "create") {
     const existing = before as Array<Record<string, unknown>>;
     return [
@@ -296,8 +296,8 @@ function nextCiloState(input: CiloWriteInput, before: ReviewValue, userId: strin
 
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
   switch (input.kind) {
-    case "GO":
-      return nextGOState(input, before);
+    case "PO":
+      return nextPOState(input, before);
     case "ILO":
       return nextILOState(input, before);
     case "CILO":
@@ -311,11 +311,11 @@ export async function prepareOutcomeWrite(
   const session = await resolveAuthSession();
   const role = session?.activeRole;
   const allowed =
-    (role === ROLES.PROGRAM_HEAD && input.kind === "GO") ||
+    (role === ROLES.PROGRAM_HEAD && input.kind === "PO") ||
     (role === ROLES.GEN_ED_COORDINATOR && input.kind === "ILO") ||
     (role === ROLES.FACULTY && input.kind === "CILO");
   if (!session || !allowed) return failure("You do not have permission to modify this outcome.");
-  if (role === ROLES.PROGRAM_HEAD && input.kind === "GO") {
+  if (role === ROLES.PROGRAM_HEAD && input.kind === "PO") {
     const contextResult = await resolveProgramHeadContext(input.programId);
     if (!contextResult.success || !(await scopeAllows(input, session.userId, role)))
       return failure("You do not have permission to modify this outcome.");
@@ -385,9 +385,9 @@ async function writeILO(
   };
 }
 
-async function writeGO(
+async function writePO(
   tx: Prisma.TransactionClient,
-  input: GOWriteInput,
+  input: POWriteInput,
   current: ReviewValue
 ): Promise<ServiceResult<{ id?: string }>> {
   if (input.action === "create") {
@@ -400,7 +400,7 @@ async function writeGO(
       success: true,
       data: {
         id: (
-          await tx.gO.create({
+          await tx.pO.create({
             data: {
               code: input.code.trim().toUpperCase(),
               description: input.description.trim(),
@@ -413,16 +413,16 @@ async function writeGO(
     };
   }
   if (input.action === "reorder") {
-    const gos = current as Array<{ id: string; order: number }>;
+    const pos = current as Array<{ id: string; order: number }>;
     if (
       new Set(input.orderedIds).size !== input.orderedIds.length ||
-      gos.length !== input.orderedIds.length ||
-      gos.some((go) => !input.orderedIds.includes(go.id))
+      pos.length !== input.orderedIds.length ||
+      pos.some((po) => !input.orderedIds.includes(po.id))
     )
-      return failure("Graduate Outcomes must be a complete unique program order.");
+      return failure("Program Outcomes must be a complete unique program order.");
     await Promise.all(
       // fallow-ignore-next-line code-duplication
-      input.orderedIds.map((id, order) => tx.gO.update({ where: { id }, data: { order } }))
+      input.orderedIds.map((id, order) => tx.pO.update({ where: { id }, data: { order } }))
     );
     return { success: true, data: {} };
   }
@@ -432,7 +432,7 @@ async function writeGO(
       : { is_active: input.action === "restore" };
   return {
     success: true,
-    data: { id: (await tx.gO.update({ where: { id: input.id }, data })).id },
+    data: { id: (await tx.pO.update({ where: { id: input.id }, data })).id },
   };
 }
 
@@ -478,7 +478,7 @@ async function programHeadAssignmentIsCurrent(
   userId: string,
   role: WriterRole
 ): Promise<boolean> {
-  if (role !== ROLES.PROGRAM_HEAD || input.kind !== "GO") return true;
+  if (role !== ROLES.PROGRAM_HEAD || input.kind !== "PO") return true;
   return Boolean(
     await revalidateProgramHeadAssignment(tx, {
       userId,
@@ -505,8 +505,8 @@ function writeReviewedOutcome(
   userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   switch (input.kind) {
-    case "GO":
-      return writeGO(tx, input, current);
+    case "PO":
+      return writePO(tx, input, current);
     case "ILO":
       return writeILO(tx, input, current);
     case "CILO":
@@ -551,7 +551,7 @@ export async function commitOutcomeWrite(
       if (review.input.kind === "ILO") {
         return failure("Institutional Outcome code already exists.");
       }
-      return failure("Graduate Outcome code already exists.");
+      return failure("Program Outcome code already exists.");
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
       return failure("Outcome changed; prepare a new review.");

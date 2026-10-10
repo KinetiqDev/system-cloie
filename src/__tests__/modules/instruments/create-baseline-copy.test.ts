@@ -13,7 +13,7 @@ function copyInput(overrides: Partial<CreateBaselineCopyInput> = {}): CreateBase
     baselineId: "baseline-1",
     customName: "BSED Copy",
     structure: [],
-    goBindings: [],
+    poBindings: [],
     ...overrides,
   };
 }
@@ -25,7 +25,7 @@ const {
   templateCreateMock,
   versionCreateMock,
   programMock,
-  goFindManyMock,
+  poFindManyMock,
   bindingDeleteManyMock,
   bindingCreateManyMock,
   templateFindUniqueMock,
@@ -37,7 +37,7 @@ const {
   templateCreateMock: vi.fn(),
   versionCreateMock: vi.fn(),
   programMock: vi.fn(),
-  goFindManyMock: vi.fn(),
+  poFindManyMock: vi.fn(),
   bindingDeleteManyMock: vi.fn(),
   bindingCreateManyMock: vi.fn(),
   templateFindUniqueMock: vi.fn(),
@@ -68,7 +68,7 @@ vi.mock("@/lib/db/prisma", () => ({
       findFirst: templateFindFirstMock,
     },
     program: { findUnique: programMock },
-    gO: { findMany: goFindManyMock },
+    pO: { findMany: poFindManyMock },
     $transaction: transactionMock,
   },
 }));
@@ -98,7 +98,7 @@ describe("createBaselineCopy", () => {
       callback({
         instrumentTemplate: { create: templateCreateMock.mockResolvedValue({ id: "copy-1" }) },
         instrumentVersion: { create: versionCreateMock.mockResolvedValue({ id: "version-1" }) },
-        instrumentTemplateGoQuestionBinding: {
+        instrumentTemplatePoQuestionBinding: {
           deleteMany: bindingDeleteManyMock.mockResolvedValue({ count: 0 }),
           createMany: bindingCreateManyMock.mockResolvedValue({ count: 0 }),
         },
@@ -112,7 +112,7 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "BSED Copy",
       structure: REORDERED_STRUCTURE,
-      goBindings: [],
+      poBindings: [],
     });
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
@@ -141,7 +141,7 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "Copy",
       structure: [],
-      goBindings: [],
+      poBindings: [],
     });
 
     expect(result.success).toBe(false);
@@ -204,9 +204,9 @@ describe("createBaselineCopy", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
-  it("persists GO bindings as snapshots on the copied template", async () => {
-    goFindManyMock.mockResolvedValue([
-      { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+  it("persists PO bindings as snapshots on the copied template", async () => {
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
     ]);
     const structure = [
       {
@@ -238,7 +238,7 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "BSED Copy",
       structure,
-      goBindings: [{ goId: "go-1", itemKey: "question-b", sectionKey: "section-b" }],
+      poBindings: [{ poId: "po-1", itemKey: "question-b", sectionKey: "section-b" }],
     });
 
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
@@ -248,9 +248,9 @@ describe("createBaselineCopy", () => {
     expect(bindingCreateManyMock).toHaveBeenCalledWith({
       data: [
         expect.objectContaining({
-          go_id: "go-1",
-          go_code_snapshot: "GO-1",
-          go_description_snapshot: "Apply discipline knowledge",
+          po_id: "po-1",
+          po_code_snapshot: "PO-1",
+          po_description_snapshot: "Apply discipline knowledge",
           section_key: "section-b",
           item_key: "question-b",
           question_prompt_snapshot: "Question B",
@@ -259,9 +259,9 @@ describe("createBaselineCopy", () => {
     });
   });
 
-  it("rejects invalid GO IDs in the baseline copy bindings", async () => {
-    goFindManyMock.mockResolvedValue([
-      { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+  it("rejects invalid PO IDs in the baseline copy bindings", async () => {
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
     ]);
     const structure = [
       {
@@ -280,20 +280,20 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "Copy",
       structure,
-      goBindings: [{ goId: "go-999", itemKey: "question-1", sectionKey: "section-1" }],
+      poBindings: [{ poId: "po-999", itemKey: "question-1", sectionKey: "section-1" }],
     });
 
     expect(result.success).toBe(false);
     expect(result).toEqual({
       success: false,
-      error: "One or more selected GOs are invalid or no longer active.",
+      error: "One or more selected POs are invalid or no longer active.",
     });
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
   it("rejects bindings that target a non-Likert question", async () => {
-    goFindManyMock.mockResolvedValue([
-      { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
     ]);
     const structure = [
       {
@@ -318,13 +318,13 @@ describe("createBaselineCopy", () => {
       baselineId: "baseline-1",
       customName: "Copy",
       structure,
-      goBindings: [{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }],
+      poBindings: [{ poId: "po-1", itemKey: "question-1", sectionKey: "section-1" }],
     });
 
     expect(result.success).toBe(false);
     expect(result).toEqual({
       success: false,
-      error: "GOs can only be assigned to Likert questions.",
+      error: "POs can only be assigned to Likert questions.",
     });
     expect(transactionMock).not.toHaveBeenCalled();
   });
@@ -374,7 +374,7 @@ describe("createBaselineCopy", () => {
   it("persists the template settings the author edited before saving", async () => {
     const result = await createBaselineCopy(
       copyInput({
-        goBindings: [{ goId: "go-1", itemKey: "question-b", sectionKey: "section-b" }],
+        poBindings: [{ poId: "po-1", itemKey: "question-b", sectionKey: "section-b" }],
         settings: {
           description: "Program-specific instrument",
           is_active: false,
@@ -393,9 +393,9 @@ describe("createBaselineCopy", () => {
         template_type: "COURSE_BOUND",
       }),
     });
-    // GO bindings belong to Program-wide templates only, so a copy the author
+    // PO bindings belong to Program-wide templates only, so a copy the author
     // retyped as course-bound carries none.
-    expect(goFindManyMock).not.toHaveBeenCalled();
+    expect(poFindManyMock).not.toHaveBeenCalled();
     expect(bindingCreateManyMock).not.toHaveBeenCalled();
   });
 

@@ -22,18 +22,18 @@ function revalidateTools(programId: string) {
 
 type TemplateFormJson =
   | { error: string }
-  | { structure: unknown; programQuestionGoBindings: unknown };
+  | { structure: unknown; programQuestionPoBindings: unknown };
 
 /**
- * The builder submits the template structure and the program-wide GO
+ * The builder submits the template structure and the program-wide PO
  * question bindings as JSON strings. Both are read here so create and update
  * report the same parse failure before the schema runs.
  */
 function readTemplateFormJson(formData: FormData): TemplateFormJson {
   const rawStructure = formData.get("structure");
-  const rawGoBindings = formData.get("program_question_go_bindings");
+  const rawPoBindings = formData.get("program_question_go_bindings");
   let structure: unknown = [];
-  let programQuestionGoBindings: unknown = [];
+  let programQuestionPoBindings: unknown = [];
 
   try {
     structure = typeof rawStructure === "string" ? JSON.parse(rawStructure) : [];
@@ -42,12 +42,12 @@ function readTemplateFormJson(formData: FormData): TemplateFormJson {
   }
 
   try {
-    programQuestionGoBindings = typeof rawGoBindings === "string" ? JSON.parse(rawGoBindings) : [];
+    programQuestionPoBindings = typeof rawPoBindings === "string" ? JSON.parse(rawPoBindings) : [];
   } catch {
-    return { error: "Invalid GO question bindings." } as const;
+    return { error: "Invalid PO question bindings." } as const;
   }
 
-  return { structure, programQuestionGoBindings } as const;
+  return { structure, programQuestionPoBindings } as const;
 }
 
 export async function createProgramHeadTemplateAction(formData: FormData): Promise<ActionResult> {
@@ -63,7 +63,7 @@ export async function createProgramHeadTemplateAction(formData: FormData): Promi
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure: json.structure,
-    __KEEP_program_question_go_bindings__: json.programQuestionGoBindings,
+    __KEEP_program_question_go_bindings__: json.programQuestionPoBindings,
   });
 
   if (!parsed.success) {
@@ -97,7 +97,7 @@ export async function updateProgramHeadTemplateAction(formData: FormData): Promi
     template_type: formData.get("template_type"),
     is_faculty_accessible: formData.get("is_faculty_accessible"),
     structure: json.structure,
-    __KEEP_program_question_go_bindings__: json.programQuestionGoBindings,
+    __KEEP_program_question_go_bindings__: json.programQuestionPoBindings,
   });
 
   if (!parsed.success) {

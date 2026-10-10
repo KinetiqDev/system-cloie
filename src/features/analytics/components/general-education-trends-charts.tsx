@@ -142,7 +142,7 @@ export function GeneralEducationTrendChart({
           <CardTitle id={titleId} className="text-heading-lg">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">Comparable runs</span>
+          <span className="text-label-sm text-muted-foreground">Comparable runs</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -225,7 +225,7 @@ export function GeneralEducationTrendChart({
             return (
               <span role="listitem" key={index} className="flex items-center gap-1.5">
                 <ChartSwatch fill={fill} />
-                <span className="text-muted-foreground text-xs">
+                <span className="text-caption text-muted-foreground">
                   {label} · {scaleContextByLabel.get(run[0].periodLabel)}
                 </span>
               </span>
@@ -312,9 +312,7 @@ export function GeneralEducationResponseRateTrendChart({
           <CardTitle id={titleId} className="text-heading-lg">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">
-            Submitted ÷ opportunities
-          </span>
+          <span className="text-label-sm text-muted-foreground">Submitted ÷ opportunities</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -387,7 +385,7 @@ export function GeneralEducationResponseRateTrendChart({
           {data.map((row, index) => (
             <span role="listitem" key={row.periodLabel} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-muted-foreground text-xs tabular-nums">
+              <span className="text-caption text-muted-foreground tabular-nums">
                 {row.periodLabel} · {row.submittedResponseCount}/{row.evaluationOpportunityCount} (
                 {row.rate.toFixed(1)}%)
               </span>
@@ -546,7 +544,7 @@ export function GeneralEducationAlignmentChart({
           {ALIGNMENT_SERIES.map((entry, index) => (
             <span role="listitem" key={entry.key} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-muted-foreground text-xs">{entry.label}</span>
+              <span className="text-caption text-muted-foreground">{entry.label}</span>
             </span>
           ))}
         </div>

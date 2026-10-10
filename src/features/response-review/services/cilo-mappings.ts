@@ -6,10 +6,10 @@ import { prisma } from "@/lib/db/prisma";
 // Typed CILO→outcome alignment reads (ADR 0035)
 //
 // The two alignment layers are different tables, never one polymorphic read:
-// `CILOMapping` names a Program's Graduate Outcome and `CILOInstitutional
+// `CILOMapping` names a Program's Program Outcome and `CILOInstitutional
 // OutcomeMapping` names a college-wide Institutional Learning Outcome. A
-// General Education CILO carries the latter only, so reading GO mappings there
-// would either return Program-specific noise or, worse, attribute GO
+// General Education CILO carries the latter only, so reading PO mappings there
+// would either return Program-specific noise or, worse, attribute PO
 // semantics to college-wide evidence. Each loader below therefore has one
 // caller layer and one table.
 // ---------------------------------------------------------------------------
@@ -23,7 +23,7 @@ export type CiloIloMapping = {
 };
 
 /**
- * Load the selected Program's current CILO→GO mappings for the given CILO
+ * Load the selected Program's current CILO→PO mappings for the given CILO
  * ids, in the canonical CiloGoMapping shape. Rows without a manifestation
  * are degenerate and skipped.
  */
@@ -33,7 +33,7 @@ export async function loadCiloMappings(ciloIds: string[]): Promise<Map<string, C
   }
   const rows = await prisma.cILOMapping.findMany({
     where: { cilo_id: { in: ciloIds } },
-    include: { go: { select: { id: true, code: true, description: true } } },
+    include: { po: { select: { id: true, code: true, description: true } } },
   });
   const byCilo = new Map<string, CiloGoMapping[]>();
   for (const row of rows) {
@@ -41,9 +41,9 @@ export async function loadCiloMappings(ciloIds: string[]): Promise<Map<string, C
       continue;
     }
     const entry: CiloGoMapping = {
-      goId: row.go.id,
-      goCode: row.go.code,
-      goDescription: row.go.description,
+      poId: row.po.id,
+      poCode: row.po.code,
+      poDescription: row.po.description,
       manifestation: row.manifestation,
     };
     const group = byCilo.get(row.cilo_id);

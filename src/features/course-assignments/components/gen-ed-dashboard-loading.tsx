@@ -54,7 +54,7 @@ export function GenEdDashboardLoading() {
               <CardContent className="grid grid-cols-2 gap-4">
                 {Array.from({ length: 4 }, (_, itemIndex) => (
                   <div key={itemIndex} className="flex flex-col gap-2">
-                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-5 w-24" />
                     <Skeleton className="h-6 w-20" />
                   </div>
                 ))}

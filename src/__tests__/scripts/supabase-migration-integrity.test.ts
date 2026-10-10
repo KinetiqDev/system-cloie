@@ -27,7 +27,7 @@ const supersededMigrations = [
 ] as const;
 
 describe("Supabase migration integrity", () => {
-  it("keeps the legacy GO order migration safe after the initial schema creates the column", () => {
+  it("keeps the legacy PO order migration safe after the initial schema creates the column", () => {
     const migration = readFileSync("supabase/migrations/20260430095333_name.sql", "utf8");
 
     expect(migration).toContain('ADD COLUMN IF NOT EXISTS "order" integer NOT NULL DEFAULT 0');
@@ -121,9 +121,7 @@ describe("Supabase migration integrity", () => {
     expect(migration).toContain(
       'CREATE UNIQUE INDEX "cilo_institutional_outcome_mappings_cilo_id_institutional_outcome_id_key"'
     );
-    expect(migration).toMatch(
-      /CREATE INDEX "cilo_institutional_outcome_mappings_cilo_id_idx"/
-    );
+    expect(migration).toMatch(/CREATE INDEX "cilo_institutional_outcome_mappings_cilo_id_idx"/);
     expect(migration).toMatch(
       /CREATE INDEX "cilo_institutional_outcome_mappings_institutional_outcome_id_idx"/
     );
@@ -136,9 +134,7 @@ describe("Supabase migration integrity", () => {
     // Database integrity backstops reject wrong-layer writes on both relations.
     expect(migration).toContain("enforce_cilo_institutional_outcome_mapping_scope");
     expect(migration).toContain("enforce_cilo_mapping_program_scope");
-    expect(migration).toContain(
-      "CREATE TRIGGER cilo_institutional_outcome_mappings_scope_check"
-    );
+    expect(migration).toContain("CREATE TRIGGER cilo_institutional_outcome_mappings_scope_check");
     expect(migration).toContain("CREATE TRIGGER cilo_mappings_scope_check");
     // Server-only access.
     expect(migration).toContain(
@@ -149,7 +145,7 @@ describe("Supabase migration integrity", () => {
     );
   });
 
-  it("hardens CILO-to-GO integrity with ownership backstops and actor provenance", () => {
+  it("hardens CILO-to-PO integrity with ownership backstops and actor provenance", () => {
     const migration = readFileSync(
       "supabase/migrations/20260814110000_harden_cilo_mapping_integrity.sql",
       "utf8"
@@ -160,13 +156,9 @@ describe("Supabase migration integrity", () => {
     // Cross-Program ownership backstop on the Program-specific relation.
     expect(migration).toContain("enforce_cilo_mapping_program_scope");
     expect(migration).toMatch(/go_program_id <> course_program_id/);
-    expect(migration).toContain(
-      "General Education CILOs map only to Institutional Outcomes"
-    );
+    expect(migration).toContain("General Education CILOs map only to Institutional Outcomes");
     expect(migration).toContain("DROP TRIGGER cilo_mappings_scope_check ON cilo_mappings");
-    expect(migration).toContain(
-      "BEFORE INSERT OR UPDATE OF cilo_id, go_id"
-    );
+    expect(migration).toContain("BEFORE INSERT OR UPDATE OF cilo_id, go_id");
     // Legacy rows stay unattributed; new writes record actors.
     expect(migration).toContain('ADD COLUMN "created_by" UUID');
     expect(migration).toContain('ADD COLUMN "updated_by" UUID');
@@ -184,9 +176,7 @@ describe("Supabase migration integrity", () => {
     expect(migration).toContain("BEGIN;");
     expect(migration).toContain("COMMIT;");
     expect(migration).toContain("CREATE OR REPLACE FUNCTION enforce_cilo_mapping_program_scope()");
-    expect(migration).toContain(
-      "Program-specific Courses must belong to an Academic Program"
-    );
+    expect(migration).toContain("Program-specific Courses must belong to an Academic Program");
     expect(migration).toContain("go_program_id IS DISTINCT FROM course_program_id");
     expect(migration).not.toContain("go_program_id <> course_program_id");
     // Function replacement only; the trigger binding is untouched.
@@ -203,14 +193,47 @@ describe("Supabase migration integrity", () => {
     expect(migration).toContain("BEGIN;");
     expect(migration).toContain("COMMIT;");
     // Existing rows keep the legacy version through the column default.
-    expect(migration).toContain(
-      'ALTER TABLE "academic_period_readiness_snapshots"'
+    expect(migration).toContain('ALTER TABLE "academic_period_readiness_snapshots"');
+    expect(migration).toMatch(
+      /ADD COLUMN IF NOT EXISTS "schema_version" INTEGER NOT NULL DEFAULT 1/
     );
-    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS "schema_version" INTEGER NOT NULL DEFAULT 1/);
     // The immutable UPDATE/DELETE trigger stays in force.
     expect(migration).not.toMatch(/DROP TRIGGER/i);
     expect(migration).not.toMatch(/CREATE TRIGGER/i);
     expect(migration).not.toMatch(/UPDATE "academic_period_readiness_snapshots"/);
     expect(migration).not.toMatch(/DELETE FROM "academic_period_readiness_snapshots"/);
+  });
+
+  it("renames the CILOMapping Program Outcome column without rebuilding it", () => {
+    const migration = readFileSync(
+      "supabase/migrations/20261006160000_rename_cilo_mappings_go_id_to_po_id.sql",
+      "utf8"
+    );
+
+    // In-place rename only. A drop/add would fail on a non-empty table and
+    // silently discard the stored Program Outcome mapping. The assertions are
+    // anchored to statement starts so the rationale comment, which quotes the
+    // differ's drop/add output, is not mistaken for executable SQL.
+    expect(migration).toContain("ALTER TABLE cilo_mappings RENAME COLUMN go_id TO po_id");
+    expect(migration).not.toMatch(/^\s*DROP COLUMN/imu);
+    expect(migration).not.toMatch(/^\s*ALTER TABLE cilo_mappings RENAME TO/imu);
+
+    // Constraint and unique index follow the column rather than being recreated.
+    expect(migration).toContain("RENAME CONSTRAINT cilo_mappings_go_id_fkey");
+    expect(migration).toContain("TO cilo_mappings_po_id_fkey");
+    expect(migration).toContain("RENAME TO cilo_mappings_cilo_id_po_id_key");
+
+    // The scope-check trigger is dropped before the rename and reinstalled
+    // against `po_id`, so it never fires mid-migration on a stale column.
+    expect(migration).toContain("DROP TRIGGER IF EXISTS cilo_mappings_scope_check");
+    expect(migration).toContain("BEFORE INSERT OR UPDATE OF cilo_id, po_id");
+    expect(migration).toContain("NEW.po_id");
+
+    // Every step is guarded so a database that already carries `po_id` — where
+    // the rename was applied out of band — still replays this file cleanly.
+    expect(migration).toContain("information_schema.columns");
+    expect(migration).toContain("AND column_name = 'go_id'");
+    expect(migration).toContain("pg_constraint");
+    expect(migration).toContain("pg_indexes");
   });
 });

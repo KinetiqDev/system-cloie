@@ -8,7 +8,7 @@ import {
   saveFacultyTemplateDraft,
   deleteFacultyTemplate,
 } from "@/features/instruments/services/manage-faculty-templates";
-import { listFacultyCourseGoOptions } from "@/features/instruments/services/list-faculty-course-go-options";
+import { listFacultyCourseGoOptions } from "@/features/instruments/services/list-faculty-course-po-options";
 
 type ActionResult<T = void> = { success: true; data: T } | { success: false; error: string };
 
@@ -25,12 +25,12 @@ export async function saveFacultyTemplateDraftAction(
 ): Promise<ActionResult<{ id: string }>> {
   let structure: unknown = [];
   let ciloQuestionBindings: unknown = [];
-  let goQuestionBindings: unknown = [];
+  let poQuestionBindings: unknown = [];
 
   try {
     structure = parseJsonField(formData.get("structure"), []);
     ciloQuestionBindings = parseJsonField(formData.get("cilo_question_bindings"), []);
-    goQuestionBindings = parseJsonField(formData.get("go_question_bindings"), []);
+    poQuestionBindings = parseJsonField(formData.get("po_question_bindings"), []);
   } catch {
     return { success: false, error: "Invalid template structure." };
   }
@@ -41,7 +41,7 @@ export async function saveFacultyTemplateDraftAction(
     bound_program_id: formData.get("bound_program_id") || null,
     cilo_question_bindings: ciloQuestionBindings,
     description: formData.get("description"),
-    go_question_bindings: goQuestionBindings,
+    po_question_bindings: poQuestionBindings,
     id: formData.get("id") ?? undefined,
     is_active: formData.get("is_active"),
     name: formData.get("name"),
@@ -104,7 +104,7 @@ export async function validateFacultyTemplatePublishReadinessAction(
 }
 
 /**
- * Loads the Graduate Outcome catalog for one Faculty Course context. The
+ * Loads the Program Outcome catalog for one Faculty Course context. The
  * builder calls this when the bound Course changes, exactly as it loads the
  * saved CILOs, and the server resolves the owning Program from the Course.
  */

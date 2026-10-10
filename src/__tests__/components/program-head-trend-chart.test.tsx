@@ -30,13 +30,35 @@ const instrumentBreak: ProgramHeadTrendBreakDTO = {
 };
 
 describe("ProgramHeadTrendChart", () => {
+  it("does not infer attainment from PO codes and a numeric five-point scale", () => {
+    const { container } = render(
+      <ProgramHeadTrendChart
+        title="Mean Rating by Academic Period"
+        periods={[
+          period({ periodLabel: "A", outcomeCodes: ["PO1"] }),
+          period({ periodLabel: "B", outcomeCodes: ["PO1"], comparableWithPrevious: true }),
+        ]}
+        breaks={[]}
+      />
+    );
+    expect(container.querySelectorAll(".recharts-reference-line")).toHaveLength(0);
+    expect(screen.queryByText("Benchmark 3.50")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Colors identify comparable period runs, not attainment classifications/)
+    ).toBeInTheDocument();
+  });
+
   it("renders a separate line per comparable run and never joins unlike periods", () => {
     const { container } = render(
       <ProgramHeadTrendChart
         title="Mean Rating by Academic Period"
         periods={[
           period({ periodLabel: "2024-2025 · 1st Semester", meanRating: 4.4 }),
-          period({ periodLabel: "2024-2025 · 2nd Semester", meanRating: 4.2, comparableWithPrevious: true }),
+          period({
+            periodLabel: "2024-2025 · 2nd Semester",
+            meanRating: 4.2,
+            comparableWithPrevious: true,
+          }),
           period({ periodLabel: "2025-2026 · 1st Semester", meanRating: 3.9 }),
         ]}
         breaks={[instrumentBreak]}
@@ -111,7 +133,11 @@ describe("ProgramHeadTrendChart", () => {
         title="Mean Rating by Academic Period"
         periods={[
           period({ periodLabel: "2024-2025 · 1st Semester", meanRating: 4.4 }),
-          period({ periodLabel: "2024-2025 · 2nd Semester", meanRating: 4.2, comparableWithPrevious: true }),
+          period({
+            periodLabel: "2024-2025 · 2nd Semester",
+            meanRating: 4.2,
+            comparableWithPrevious: true,
+          }),
           period({ periodLabel: "2025-2026 · 1st Semester", meanRating: 3.9 }),
         ]}
         breaks={[instrumentBreak]}
@@ -153,7 +179,13 @@ describe("splitComparableRuns", () => {
       { periodLabel: "C", meanRating: 4.1, comparableWithPrevious: true },
     ]);
 
-    expect(runs).toEqual([[{ periodLabel: "A", meanRating: 4 }, { periodLabel: "B", meanRating: 4.2 }, { periodLabel: "C", meanRating: 4.1 }]]);
+    expect(runs).toEqual([
+      [
+        { periodLabel: "A", meanRating: 4 },
+        { periodLabel: "B", meanRating: 4.2 },
+        { periodLabel: "C", meanRating: 4.1 },
+      ],
+    ]);
   });
 
   it("never merges unlike periods into one run", () => {

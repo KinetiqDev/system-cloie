@@ -232,13 +232,13 @@ async function verifyPublicationFixture(): Promise<{
 }
 
 /**
- * Relaxed GO binding gate fixtures (issue #625, ADR 0025): the BSIT-owned
+ * Relaxed PO binding gate fixtures (issue #625, ADR 0025): the BSIT-owned
  * alumni tool carries exactly one unbound Likert question, and the
  * institutional exit-survey baseline carries none at all. The publish
  * journeys assert that the publish step names those questions.
  */
 // fallow-ignore-next-line complexity
-async function verifyGoBindingGateFixtures(): Promise<void> {
+async function verifyPoBindingGateFixtures(): Promise<void> {
   const contract = E2E_CONTRACT;
 
   const partial = await prisma.instrumentTemplate.findUnique({
@@ -254,7 +254,7 @@ async function verifyGoBindingGateFixtures(): Promise<void> {
   });
   assertContract(
     partial?.name === contract.programWidePartialMapping.templateName,
-    `GO binding gate fixture name drift: expected "${contract.programWidePartialMapping.templateName}", got "${partial?.name}"`
+    `PO binding gate fixture name drift: expected "${contract.programWidePartialMapping.templateName}", got "${partial?.name}"`
   );
   assertContract(
     partial?.is_active === true &&
@@ -268,15 +268,15 @@ async function verifyGoBindingGateFixtures(): Promise<void> {
   );
   assertContract(
     likertQuestions.length === contract.programWidePartialMapping.likertCount,
-    `GO binding gate fixture Likert count drift: expected ${contract.programWidePartialMapping.likertCount}, got ${likertQuestions.length}`
+    `PO binding gate fixture Likert count drift: expected ${contract.programWidePartialMapping.likertCount}, got ${likertQuestions.length}`
   );
-  const bindings = await prisma.instrumentTemplateGoQuestionBinding.findMany({
+  const bindings = await prisma.instrumentTemplatePoQuestionBinding.findMany({
     where: { template_id: partial!.id },
     select: { section_key: true, item_key: true },
   });
   assertContract(
     bindings.length === contract.programWidePartialMapping.boundQuestionCount,
-    `GO binding gate fixture binding drift: expected ${contract.programWidePartialMapping.boundQuestionCount}, got ${bindings.length}`
+    `PO binding gate fixture binding drift: expected ${contract.programWidePartialMapping.boundQuestionCount}, got ${bindings.length}`
   );
   const unbound = likertQuestions.filter(
     (question) =>
@@ -287,7 +287,7 @@ async function verifyGoBindingGateFixtures(): Promise<void> {
   );
   assertContract(
     unbound.length === 1 && unbound[0]!.prompt === contract.programWidePartialMapping.unboundPrompt,
-    `GO binding gate fixture must leave exactly "${contract.programWidePartialMapping.unboundPrompt}" unbound, got ${unbound.length} unbound question(s)`
+    `PO binding gate fixture must leave exactly "${contract.programWidePartialMapping.unboundPrompt}" unbound, got ${unbound.length} unbound question(s)`
   );
 
   const baseline = await prisma.instrumentTemplate.findUnique({
@@ -316,12 +316,12 @@ async function verifyGoBindingGateFixtures(): Promise<void> {
     baselineLikertQuestions.length === contract.programWideUnboundBaseline.likertCount,
     `Unbound baseline Likert count drift: expected ${contract.programWideUnboundBaseline.likertCount}, got ${baselineLikertQuestions.length}`
   );
-  const baselineBindings = await prisma.instrumentTemplateGoQuestionBinding.count({
+  const baselineBindings = await prisma.instrumentTemplatePoQuestionBinding.count({
     where: { template_id: baseline!.id },
   });
   assertContract(
     baselineBindings === 0,
-    `"${contract.programWideUnboundBaseline.templateName}" must carry no GO bindings, got ${baselineBindings}`
+    `"${contract.programWideUnboundBaseline.templateName}" must carry no PO bindings, got ${baselineBindings}`
   );
 }
 
@@ -571,39 +571,40 @@ async function verifyResponseExpectations(
   );
 }
 
-async function verifyGoEvidenceLink(programId: string): Promise<string> {
+async function verifyPoEvidenceLink(programId: string): Promise<string> {
   const contract = E2E_CONTRACT;
-  const goLinkContract = contract.bottomUpResponse.goLinks[0];
+  const poLinkContract = contract.bottomUpResponse.poLinks[0];
   const firstBinding = await prisma.courseBoundCiloQuestionBinding.findFirst({
     where: { course_bound_evaluation_id: contract.deployments.bottomUpEvaluation.id },
     orderBy: { item_key: "asc" },
     select: { cilo: { select: { id: true, description: true } } },
   });
   assertContract(
-    firstBinding?.cilo?.description === goLinkContract.ciloLabel,
-    `ITRES1 bottom-up CILO label drift: expected "${goLinkContract.ciloLabel}", got "${firstBinding?.cilo?.description}"`
+    firstBinding?.cilo?.description === poLinkContract.ciloLabel,
+    `ITRES1 bottom-up CILO label drift: expected "${poLinkContract.ciloLabel}", got "${firstBinding?.cilo?.description}"`
   );
-  const goMapping = firstBinding?.cilo
+  const poMapping = firstBinding?.cilo
     ? await prisma.cILOMapping.findFirst({
-        where: { cilo_id: firstBinding.cilo.id, go: { code: goLinkContract.goCode } },
+        where: { cilo_id: firstBinding.cilo.id, po: { code: poLinkContract.poCode } },
       })
     : null;
   assertContract(
-    goMapping,
-    `missing bottom-up GO evidence link: "${goLinkContract.goCode}" not mapped for "${contract.deployments.bottomUpEvaluation.title}"`
+    poMapping,
+    `missing bottom-up PO evidence link: "${poLinkContract.poCode}" not mapped for "${contract.deployments.bottomUpEvaluation.title}"`
   );
 
-  // Discover the reviewed GO's runtime handle so the journey can assert the
-  // exact evidence link without deriving the expected goId from the read
-  // under test. The goCode is the reviewed contract; goId is the handle.
-  const go = await prisma.gO.findUnique({
-    where: { program_id_code: { program_id: programId, code: goLinkContract.goCode } },
+  // Discover the reviewed PO's runtime handle so the journey can assert the
+  // exact evidence link without deriving the expected poId from the read
+  // under test. The poCode is the reviewed contract; poId is the handle.
+  const po = await prisma.pO.findUnique({
+    where: { program_id_code: { program_id: programId, code: poLinkContract.poCode } },
   });
-  assertContract(go, `missing seeded GO "${goLinkContract.goCode}"`);
-  return go.id;
+  assertContract(po, `missing seeded PO "${poLinkContract.poCode}"`);
+  return po.id;
 }
 
 export default async function globalSetup(): Promise<void> {
+  await Promise.all(E2E_CONTRACT.deanAnalytics.programCodes.map(findProgramByCode));
   await verifyIdentities();
   const [deployments, academicPeriods] = await Promise.all([
     verifyDeployments(),
@@ -699,10 +700,10 @@ export default async function globalSetup(): Promise<void> {
   ]);
 
   await verifyResponseExpectations(courseResponse, bottomUpResponse);
-  const goId = await verifyGoEvidenceLink(bsit.id);
+  const poId = await verifyPoEvidenceLink(bsit.id);
   const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
   const { publicationTemplate, publicationTarget } = await verifyPublicationFixture();
-  await verifyGoBindingGateFixtures();
+  await verifyPoBindingGateFixtures();
   const geContract = E2E_CONTRACT.generalEducationReview;
   const geEvaluation = await prisma.courseBoundEvaluation.findUnique({
     where: { id: geContract.evaluationId },
@@ -897,9 +898,9 @@ export default async function globalSetup(): Promise<void> {
     bottomUpResponse: {
       id: bottomUpResponse.id,
       respondentName: contract.bottomUpResponse.respondentName,
-      goLinks: contract.bottomUpResponse.goLinks.map((p) => ({
-        goId,
-        goCode: p.goCode,
+      poLinks: contract.bottomUpResponse.poLinks.map((p) => ({
+        poId,
+        poCode: p.poCode,
         ciloLabel: p.ciloLabel,
       })),
     },

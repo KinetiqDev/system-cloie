@@ -15,8 +15,8 @@ export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mappi
  * - General Education CILOs require at least one active Institutional Outcome
  *   mapping with a non-null manifestation ("at-least-one" rule).
  * - Program-specific CILOs require a non-null manifestation for EVERY active
- *   Graduate Outcome owned by the Course's owning Academic Program.
- *   A Program with zero active GOs alongside active CILOs is incomplete, not
+ *   Program Outcome owned by the Course's owning Academic Program.
+ *   A Program with zero active POs alongside active CILOs is incomplete, not
  *   vacuously ready.
  *
  * Archived targets, wrong-program targets, and rows without a manifestation
@@ -25,7 +25,7 @@ export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mappi
 type CiloAlignmentRow = {
   cilo_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
-    go: { id: string; program_id: string | null; is_active: boolean };
+    po: { id: string; program_id: string | null; is_active: boolean };
   }>;
   cilo_institutional_outcome_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
@@ -47,17 +47,17 @@ export function ciloIsAligned(
   return hasExhaustiveGoCoverage(
     cilo.cilo_mappings
       .filter(
-        ({ manifestation, go }) =>
-          manifestation !== null && go.is_active && go.program_id === owningProgramId
+        ({ manifestation, po }) =>
+          manifestation !== null && po.is_active && po.program_id === owningProgramId
       )
-      .map(({ go }) => go.id),
+      .map(({ po }) => po.id),
     activeGoIds
   );
 }
 /**
- * Exhaustive GO coverage rule shared by live readiness, the publication
- * gate, and snapshot-derived Dean oversight: every active owning-Program GO
- * id must be classified. Zero active GOs is NOT vacuously complete — active
+ * Exhaustive PO coverage rule shared by live readiness, the publication
+ * gate, and snapshot-derived Dean oversight: every active owning-Program PO
+ * id must be classified. Zero active POs is NOT vacuously complete — active
  * CILOs require targets, so an empty active set is incomplete.
  */
 export function hasExhaustiveGoCoverage(
@@ -66,7 +66,7 @@ export function hasExhaustiveGoCoverage(
 ): boolean {
   if (activeGoIds.length === 0) return false;
   const classified = new Set(classifiedGoIds);
-  return activeGoIds.every((goId) => classified.has(goId));
+  return activeGoIds.every((poId) => classified.has(poId));
 }
 export function classifyCourseAlignment(
   cilos: CiloAlignmentRow[],

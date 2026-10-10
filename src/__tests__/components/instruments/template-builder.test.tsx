@@ -83,7 +83,7 @@ describe("TemplateBuilder", () => {
     pushMock.mockClear();
     dndCapture.handlers.clear();
     sortableCapture.contexts.clear();
-    // GoMultiSelect chooses Popover vs Drawer via useMediaQuery; jsdom has no
+    // PoMultiSelect chooses Popover vs Drawer via useMediaQuery; jsdom has no
     // matchMedia, so stub a desktop viewport (matches: true) by default.
     vi.stubGlobal(
       "matchMedia",
@@ -1115,18 +1115,18 @@ describe("TemplateBuilder", () => {
     expect(keyboardTarget).toEqual({ x: 0, y: 20 });
   });
 
-  test("binds GOs to a program-wide likert question and persists them on save", async () => {
+  test("binds POs to a program-wide likert question and persists them on save", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
-    const goOptions = [
-      { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
-      { id: "go-2", code: "GO-2", description: "Demonstrate professional skills" },
+    const poOptions = [
+      { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
+      { id: "po-2", code: "PO-2", description: "Demonstrate professional skills" },
     ];
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        goOptions={goOptions}
+        poOptions={poOptions}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1162,26 +1162,26 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("GO Binding")).toBeInTheDocument();
-    expect(screen.getByText("Select GOs…")).toBeInTheDocument();
+    expect(screen.getByText("PO Binding")).toBeInTheDocument();
+    expect(screen.getByText("Select POs…")).toBeInTheDocument();
     expect(
-      screen.getByText(/publishes as a general evaluation item and gives no GO evidence/i)
+      screen.getByText(/publishes as a general evaluation item and gives no PO evidence/i)
     ).toBeInTheDocument();
 
-    // The trigger button is labelled by the "GO Binding" label
-    const trigger = screen.getByRole("button", { name: "GO Binding" });
+    // The trigger button is labelled by the "PO Binding" label
+    const trigger = screen.getByRole("button", { name: "PO Binding" });
     fireEvent.click(trigger);
     const checkbox = await screen.findByRole("checkbox", {
-      name: /GO-1: Apply discipline knowledge/,
+      name: /PO-1: Apply discipline knowledge/,
     });
     fireEvent.click(checkbox);
     fireEvent.click(trigger); // close the picker
 
     // Chip appears; warning clears
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
-    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 PO selected")).toBeInTheDocument();
     expect(
-      screen.queryByText(/publishes as a general evaluation item and gives no GO evidence/i)
+      screen.queryByText(/publishes as a general evaluation item and gives no PO evidence/i)
     ).not.toBeInTheDocument();
 
     // Save payload carries the binding keyed to the likert question
@@ -1189,26 +1189,26 @@ describe("TemplateBuilder", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const formData = onSave.mock.calls[0][0] as FormData;
     expect(formData.get("program_question_go_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }])
+      JSON.stringify([{ itemKey: "question-1", poId: "po-1", sectionKey: "section-1" }])
     );
 
     // Clear action empties the selection
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     fireEvent.click(trigger);
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
-    expect(screen.getByText("Select GOs…")).toBeInTheDocument();
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
+    expect(screen.getByText("Select POs…")).toBeInTheDocument();
   });
 
-  test("loads existing GO bindings as removable chips on edit", async () => {
+  test("loads existing PO bindings as removable chips on edit", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
-        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        poOptions={[{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }]}
+        initialPoBindings={[{ poId: "po-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1244,34 +1244,34 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
-    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
+    expect(screen.getByText("1 PO selected")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     const formData = onSave.mock.calls[0][0] as FormData;
     expect(formData.get("program_question_go_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }])
+      JSON.stringify([{ itemKey: "question-1", poId: "po-1", sectionKey: "section-1" }])
     );
 
     // Chip removal drops the binding from the next save
-    fireEvent.click(screen.getByRole("button", { name: "Remove GO-1" }));
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove PO-1" }));
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
     expect((onSave.mock.calls[1][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
-  test("drops GO bindings when a likert question becomes guided open-ended", async () => {
+  test("drops PO bindings when a likert question becomes guided open-ended", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
-        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        poOptions={[{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }]}
+        initialPoBindings={[{ poId: "po-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1307,7 +1307,7 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
 
     // Switch the question type to guided open-ended
     fireEvent.click(screen.getByRole("combobox", { name: "Question type" }));
@@ -1316,23 +1316,23 @@ describe("TemplateBuilder", () => {
     fireEvent.click(guidedOption);
 
     // Binding UI and chips disappear for the non-likert question
-    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect((onSave.mock.calls[0][0] as FormData).get("program_question_go_bindings")).toBe("[]");
   });
 
-  test("drops GO bindings when the bound question is deleted", async () => {
+  test("drops PO bindings when the bound question is deleted", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
-        initialGoBindings={[{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }]}
+        poOptions={[{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }]}
+        initialPoBindings={[{ poId: "po-1", itemKey: "question-1", sectionKey: "section-1" }]}
         initialData={{
           id: "template-1",
           name: "Program Tool",
@@ -1384,7 +1384,7 @@ describe("TemplateBuilder", () => {
 
     // Delete the bound question (first question card's delete action)
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /save template/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -1548,7 +1548,7 @@ describe("TemplateBuilder", () => {
     expect((onSave.mock.calls[0]![0] as FormData).get("cilo_question_bindings")).toBe("[]");
   });
 
-  test("drops Course-bound GO bindings when their question is deleted", async () => {
+  test("drops Course-bound PO bindings when their question is deleted", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
 
     render(
@@ -1621,20 +1621,20 @@ describe("TemplateBuilder", () => {
             },
           ],
           initialBindings: [],
-          initialGoBindings: [
+          initialPoBindings: [
             {
-              goId: "go-1",
+              poId: "po-1",
               itemKey: "question-1",
               sectionKey: "section-1",
-              goCodeSnapshot: "GO-1",
-              goDescriptionSnapshot: "Apply discipline knowledge",
+              poCodeSnapshot: "PO-1",
+              poDescriptionSnapshot: "Apply discipline knowledge",
             },
             {
-              goId: "go-2",
+              poId: "po-2",
               itemKey: "question-2",
               sectionKey: "section-1",
-              goCodeSnapshot: "GO-2",
-              goDescriptionSnapshot: "Communicate effectively",
+              poCodeSnapshot: "PO-2",
+              poDescriptionSnapshot: "Communicate effectively",
             },
           ],
           loadManagedCilosAction: vi.fn().mockResolvedValue({
@@ -1646,32 +1646,32 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
 
-    // Delete the first question, leaving the second question's GO binding.
+    // Delete the first question, leaving the second question's PO binding.
     fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]!);
 
     fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect((onSave.mock.calls[0]![0] as FormData).get("go_question_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-2", goId: "go-2", sectionKey: "section-1" }])
+    expect((onSave.mock.calls[0]![0] as FormData).get("po_question_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-2", poId: "po-2", sectionKey: "section-1" }])
     );
   });
 
-  test("renders archived GO bindings as removable archived chips", () => {
+  test("renders archived PO bindings as removable archived chips", () => {
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={vi.fn().mockResolvedValue({ success: true })}
-        goOptions={[{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }]}
-        initialGoBindings={[
-          { goId: "go-1", itemKey: "question-1", sectionKey: "section-1" },
+        poOptions={[{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }]}
+        initialPoBindings={[
+          { poId: "po-1", itemKey: "question-1", sectionKey: "section-1" },
           {
-            goId: "go-archived",
+            poId: "po-archived",
             itemKey: "question-1",
             sectionKey: "section-1",
-            goCodeSnapshot: "GO-OLD",
-            goDescriptionSnapshot: "Retired outcome",
+            poCodeSnapshot: "PO-OLD",
+            poDescriptionSnapshot: "Retired outcome",
           },
         ]}
         initialData={{
@@ -1710,17 +1710,17 @@ describe("TemplateBuilder", () => {
     );
 
     // Active chip renders normally; archived chip is visible with a label.
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
-    expect(screen.getByText("GO-OLD")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
+    expect(screen.getByText("PO-OLD")).toBeInTheDocument();
     expect(screen.getByText("Archived")).toBeInTheDocument();
 
     // Removing the archived chip keeps the active selection.
-    fireEvent.click(screen.getByRole("button", { name: "Remove GO-OLD" }));
-    expect(screen.queryByText("GO-OLD")).not.toBeInTheDocument();
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove PO-OLD" }));
+    expect(screen.queryByText("PO-OLD")).not.toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
   });
 
-  test("hides GO binding UI in course-bound and faculty modes", () => {
+  test("hides PO binding UI in course-bound and faculty modes", () => {
     const facultyConfig = {
       courseContexts: [],
       initialBindings: [],
@@ -1773,7 +1773,7 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO Binding")).not.toBeInTheDocument();
     unmount();
 
     render(
@@ -1816,13 +1816,13 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("Select GOs…")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select POs…")).not.toBeInTheDocument();
   });
 
-  test("shows the GO picker when program heads copy an institutional baseline", async () => {
+  test("shows the PO picker when program heads copy an institutional baseline", async () => {
     const onSaveAsCopy = vi.fn().mockResolvedValue({ success: true, data: { id: "copy-1" } });
-    const goOptions = [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }];
+    const poOptions = [{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }];
 
     const { unmount } = render(
       <TemplateBuilder
@@ -1830,7 +1830,7 @@ describe("TemplateBuilder", () => {
         isInstitutionalBaseline
         onSaveAsCopy={onSaveAsCopy}
         onSave={vi.fn()}
-        goOptions={goOptions}
+        poOptions={poOptions}
         initialData={{
           id: "baseline-1",
           name: "Institutional Baseline",
@@ -1874,13 +1874,13 @@ describe("TemplateBuilder", () => {
     );
 
     // Likert question gets the picker; the guided-open-ended question does not.
-    expect(screen.getAllByText("GO Binding")).toHaveLength(1);
+    expect(screen.getAllByText("PO Binding")).toHaveLength(1);
 
-    // Select a GO, then save via the copy dialog.
-    const trigger = screen.getByRole("button", { name: "GO Binding" });
+    // Select a PO, then save via the copy dialog.
+    const trigger = screen.getByRole("button", { name: "PO Binding" });
     fireEvent.click(trigger);
     fireEvent.click(
-      await screen.findByRole("checkbox", { name: /GO-1: Apply discipline knowledge/ })
+      await screen.findByRole("checkbox", { name: /PO-1: Apply discipline knowledge/ })
     );
     fireEvent.click(trigger); // close the picker
 
@@ -1891,7 +1891,7 @@ describe("TemplateBuilder", () => {
       "baseline-1",
       "Institutional Baseline",
       expect.any(Array),
-      [{ itemKey: "question-1", goId: "go-1", sectionKey: "section-1" }],
+      [{ itemKey: "question-1", poId: "po-1", sectionKey: "section-1" }],
       {
         description: "",
         is_active: true,
@@ -1902,14 +1902,14 @@ describe("TemplateBuilder", () => {
 
     unmount();
 
-    // Course-bound baselines stay gated: no GO picker even with onSaveAsCopy.
+    // Course-bound baselines stay gated: no PO picker even with onSaveAsCopy.
     render(
       <TemplateBuilder
         programLabel="BSIT"
         isInstitutionalBaseline
         onSaveAsCopy={onSaveAsCopy}
         onSave={vi.fn()}
-        goOptions={goOptions}
+        poOptions={poOptions}
         initialData={{
           id: "baseline-2",
           name: "Course Baseline",
@@ -1945,11 +1945,11 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    expect(screen.queryByText("GO Binding")).not.toBeInTheDocument();
-    expect(screen.queryByText("Select GOs…")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO Binding")).not.toBeInTheDocument();
+    expect(screen.queryByText("Select POs…")).not.toBeInTheDocument();
   });
 
-  test("renders the GO picker as a mobile drawer with search and close action", async () => {
+  test("renders the PO picker as a mobile drawer with search and close action", async () => {
     vi.stubGlobal(
       "matchMedia",
       vi.fn((query: string) => ({
@@ -1968,9 +1968,9 @@ describe("TemplateBuilder", () => {
       <TemplateBuilder
         programLabel="BSIT"
         onSave={vi.fn().mockResolvedValue({ success: true })}
-        goOptions={[
-          { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
-          { id: "go-2", code: "GO-2", description: "Demonstrate professional skills" },
+        poOptions={[
+          { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
+          { id: "po-2", code: "PO-2", description: "Demonstrate professional skills" },
         ]}
         initialData={{
           id: "template-1",
@@ -2007,28 +2007,28 @@ describe("TemplateBuilder", () => {
       />
     );
 
-    // Drawer trigger (labelled "GO Binding") opens the mobile surface
-    fireEvent.click(screen.getByRole("button", { name: "GO Binding" }));
-    expect(await screen.findByRole("heading", { name: "GO Binding" })).toBeInTheDocument();
+    // Drawer trigger (labelled "PO Binding") opens the mobile surface
+    fireEvent.click(screen.getByRole("button", { name: "PO Binding" }));
+    expect(await screen.findByRole("heading", { name: "PO Binding" })).toBeInTheDocument();
 
     // Search narrows the checkbox list
-    fireEvent.change(screen.getByPlaceholderText(/search gos/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search pos/i), {
       target: { value: "skills" },
     });
     expect(
-      screen.getByRole("checkbox", { name: /GO-2: Demonstrate professional skills/ })
+      screen.getByRole("checkbox", { name: /PO-2: Demonstrate professional skills/ })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("checkbox", { name: /GO-1: Apply discipline knowledge/ })
+      screen.queryByRole("checkbox", { name: /PO-1: Apply discipline knowledge/ })
     ).not.toBeInTheDocument();
 
     // Selecting inside the drawer shows a chip after closing
     fireEvent.click(
-      screen.getByRole("checkbox", { name: /GO-2: Demonstrate professional skills/ })
+      screen.getByRole("checkbox", { name: /PO-2: Demonstrate professional skills/ })
     );
-    fireEvent.click(screen.getByRole("button", { name: "Close GO binding" }));
-    expect(screen.getByText("GO-2")).toBeInTheDocument();
-    expect(screen.getByText("1 GO selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close PO binding" }));
+    expect(screen.getByText("PO-2")).toBeInTheDocument();
+    expect(screen.getByText("1 PO selected")).toBeInTheDocument();
   });
   test("keeps a CILO bound to another question selectable and reports its reuse count", async () => {
     render(
@@ -2117,7 +2117,7 @@ describe("TemplateBuilder", () => {
     expect(option).not.toHaveAttribute("aria-disabled", "true");
   });
 
-  test("disables the GO axis on a CILO-bound question and explains the mapping path", async () => {
+  test("disables the PO axis on a CILO-bound question and explains the mapping path", async () => {
     render(
       <TemplateBuilder
         programLabel="BSIT"
@@ -2180,7 +2180,7 @@ describe("TemplateBuilder", () => {
           loadCourseGoOptionsAction: vi.fn().mockResolvedValue({
             success: true,
             data: {
-              items: [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }],
+              items: [{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }],
               unavailableReason: null,
             },
           }),
@@ -2191,20 +2191,20 @@ describe("TemplateBuilder", () => {
 
     expect(
       await screen.findByText(
-        /bound to a CILO and reaches Graduate Outcomes through the CILO mapping/i
+        /bound to a CILO and reaches Program Outcomes through the CILO mapping/i
       )
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "GO Binding" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "PO Binding" })).toBeDisabled();
   });
 
-  test("disables the CILO axis on a GO-bound question and explains the direct path", async () => {
+  test("disables the CILO axis on a PO-bound question and explains the direct path", async () => {
     render(
       <TemplateBuilder
         programLabel="BSIT"
         onSave={vi.fn().mockResolvedValue({ success: true })}
         initialData={{
           id: "template-1",
-          name: "GO Tool",
+          name: "PO Tool",
           description: "",
           template_type: "COURSE_BOUND",
           is_active: true,
@@ -2250,7 +2250,7 @@ describe("TemplateBuilder", () => {
             },
           ],
           initialBindings: [],
-          initialGoBindings: [{ goId: "go-1", itemKey: "question-1", sectionKey: "section-1" }],
+          initialPoBindings: [{ poId: "po-1", itemKey: "question-1", sectionKey: "section-1" }],
           loadManagedCilosAction: vi.fn().mockResolvedValue({
             success: true,
             data: {
@@ -2261,7 +2261,7 @@ describe("TemplateBuilder", () => {
           loadCourseGoOptionsAction: vi.fn().mockResolvedValue({
             success: true,
             data: {
-              items: [{ id: "go-1", code: "GO-1", description: "Apply discipline knowledge" }],
+              items: [{ id: "po-1", code: "PO-1", description: "Apply discipline knowledge" }],
               unavailableReason: null,
             },
           }),
@@ -2271,7 +2271,7 @@ describe("TemplateBuilder", () => {
     );
 
     expect(
-      await screen.findByText(/bound to Graduate Outcomes. Clear the GO binding to assign a CILO/i)
+      await screen.findByText(/bound to Program Outcomes. Clear the PO binding to assign a CILO/i)
     ).toBeInTheDocument();
     expect(screen.getByLabelText("CILO Binding")).toBeDisabled();
   });
@@ -2285,7 +2285,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         onSaveAsCopy={onSaveAsCopy}
-        goOptions={[]}
+        poOptions={[]}
         startingFrom={{
           id: "baseline-1",
           name: "CILO Evaluation",
@@ -2410,27 +2410,27 @@ describe("TemplateBuilder", () => {
             { ciloId: "cilo-2", itemKey: "question-2", sectionKey: "section-1" },
             { ciloId: "cilo-3", itemKey: "question-3", sectionKey: "section-1" },
           ],
-          initialGoBindings: [
+          initialPoBindings: [
             {
-              goId: "go-1",
+              poId: "po-1",
               itemKey: "question-1",
               sectionKey: "section-1",
-              goCodeSnapshot: "GO-1",
-              goDescriptionSnapshot: "Apply discipline knowledge",
+              poCodeSnapshot: "PO-1",
+              poDescriptionSnapshot: "Apply discipline knowledge",
             },
             {
-              goId: "go-2",
+              poId: "po-2",
               itemKey: "question-2",
               sectionKey: "section-1",
-              goCodeSnapshot: "GO-2",
-              goDescriptionSnapshot: "Communicate effectively",
+              poCodeSnapshot: "PO-2",
+              poDescriptionSnapshot: "Communicate effectively",
             },
             {
-              goId: "go-3",
+              poId: "po-3",
               itemKey: "question-3",
               sectionKey: "section-1",
-              goCodeSnapshot: "GO-3",
-              goDescriptionSnapshot: "Work in teams",
+              poCodeSnapshot: "PO-3",
+              poDescriptionSnapshot: "Work in teams",
             },
           ],
           loadManagedCilosAction: vi.fn().mockResolvedValue({
@@ -2443,7 +2443,7 @@ describe("TemplateBuilder", () => {
     );
 
     await waitFor(() => expect(screen.getAllByText("CILO Binding")).toHaveLength(3));
-    expect(screen.getByText("GO-3")).toBeInTheDocument();
+    expect(screen.getByText("PO-3")).toBeInTheDocument();
 
     // Two structural edits committed inside one batch: both must survive, and
     // every binding map must be pruned against the document they compose.
@@ -2464,17 +2464,17 @@ describe("TemplateBuilder", () => {
     expect(formData.get("cilo_question_bindings")).toBe(
       JSON.stringify([{ ciloId: "cilo-3", itemKey: "question-3", sectionKey: "section-1" }])
     );
-    expect(formData.get("go_question_bindings")).toBe(
-      JSON.stringify([{ itemKey: "question-3", goId: "go-3", sectionKey: "section-1" }])
+    expect(formData.get("po_question_bindings")).toBe(
+      JSON.stringify([{ itemKey: "question-3", poId: "po-3", sectionKey: "section-1" }])
     );
 
-    // The Course-bound GO map is pruned too, not just the payload projection.
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
-    expect(screen.queryByText("GO-2")).not.toBeInTheDocument();
-    expect(screen.getByText("GO-3")).toBeInTheDocument();
+    // The Course-bound PO map is pruned too, not just the payload projection.
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO-2")).not.toBeInTheDocument();
+    expect(screen.getByText("PO-3")).toBeInTheDocument();
   });
 
-  test("composes two structural edits in one batch and prunes the program-wide GO map", async () => {
+  test("composes two structural edits in one batch and prunes the program-wide PO map", async () => {
     const onSave = vi.fn().mockResolvedValue({ success: true, data: { id: "template-1" } });
     const likert = (key: string, order: number) => ({
       key,
@@ -2495,10 +2495,10 @@ describe("TemplateBuilder", () => {
       <TemplateBuilder
         programLabel="BSIT"
         onSave={onSave}
-        goOptions={[
-          { id: "go-1", code: "GO-1", description: "Apply discipline knowledge" },
-          { id: "go-2", code: "GO-2", description: "Communicate effectively" },
-          { id: "go-3", code: "GO-3", description: "Work in teams" },
+        poOptions={[
+          { id: "po-1", code: "PO-1", description: "Apply discipline knowledge" },
+          { id: "po-2", code: "PO-2", description: "Communicate effectively" },
+          { id: "po-3", code: "PO-3", description: "Work in teams" },
         ]}
         initialData={{
           id: "template-1",
@@ -2521,15 +2521,15 @@ describe("TemplateBuilder", () => {
             },
           ],
         }}
-        initialGoBindings={[
-          { goId: "go-1", itemKey: "question-1", sectionKey: "section-1" },
-          { goId: "go-2", itemKey: "question-2", sectionKey: "section-1" },
-          { goId: "go-3", itemKey: "question-3", sectionKey: "section-1" },
+        initialPoBindings={[
+          { poId: "po-1", itemKey: "question-1", sectionKey: "section-1" },
+          { poId: "po-2", itemKey: "question-2", sectionKey: "section-1" },
+          { poId: "po-3", itemKey: "question-3", sectionKey: "section-1" },
         ]}
       />
     );
 
-    expect(screen.getByText("GO-1")).toBeInTheDocument();
+    expect(screen.getByText("PO-1")).toBeInTheDocument();
 
     const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
     await act(async () => {
@@ -2546,15 +2546,15 @@ describe("TemplateBuilder", () => {
       JSON.parse((onSave.mock.calls[0]![0] as FormData).get("structure") as string)
     ).toMatchObject([{ key: "section-1", questions: [{ key: "question-3" }] }]);
 
-    // Only the surviving question's GO is published. Both removed questions'
+    // Only the surviving question's PO is published. Both removed questions'
     // bindings are gone from the map, not just from the payload projection.
     expect(
       JSON.parse(
         (onSave.mock.calls[0]![0] as FormData).get("program_question_go_bindings") as string
       )
-    ).toEqual([{ itemKey: "question-3", goId: "go-3", sectionKey: "section-1" }]);
-    expect(screen.queryByText("GO-1")).not.toBeInTheDocument();
-    expect(screen.queryByText("GO-2")).not.toBeInTheDocument();
+    ).toEqual([{ itemKey: "question-3", poId: "po-3", sectionKey: "section-1" }]);
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("PO-2")).not.toBeInTheDocument();
   });
 
   test("mints each new section and question identity once under StrictMode double invocation", async () => {
@@ -2566,7 +2566,7 @@ describe("TemplateBuilder", () => {
         <TemplateBuilder
           programLabel="BSIT"
           onSave={onSave}
-          goOptions={[]}
+          poOptions={[]}
           initialData={{
             id: "template-1",
             name: "Program Tool",
@@ -2684,7 +2684,7 @@ describe("TemplateBuilder", () => {
         programLabel="BSIT"
         onSave={onSave}
         onSaveAsCopy={onSaveAsCopy}
-        goOptions={[]}
+        poOptions={[]}
         startingFrom={{
           id: "baseline-1",
           name: "CILO Evaluation",

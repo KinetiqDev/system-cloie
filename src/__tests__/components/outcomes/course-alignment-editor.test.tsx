@@ -50,7 +50,7 @@ const pspAlignment: CourseAlignment = {
       mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }],
     },
   ],
-  targets: [{ id: GO_ID, code: "GO-1", description: "Think critically" }],
+  targets: [{ id: GO_ID, code: "PO-1", description: "Think critically" }],
   unavailableTargets: [],
   readiness: "ready",
   freshnessToken: "freshness",
@@ -175,13 +175,13 @@ describe("CourseAlignmentEditor", () => {
 
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 1, manifestation: Practice" })
     );
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(screen.getByText(/GO-1: Learning \(L\) \u2192 Practice \(P\)/)).toBeInTheDocument();
+    expect(screen.getByText(/PO-1: Learning \(L\) \u2192 Practice \(P\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm and save" }));
     await waitFor(() => expect(commitAction).toHaveBeenCalledWith(pspReview, true));
     await waitFor(() => {
@@ -193,7 +193,7 @@ describe("CourseAlignmentEditor", () => {
     expect(pushMock).toHaveBeenCalledWith("/faculty/cilos");
   });
 
-  it("shows archived GO manifestations read-only and keeps them out of draft saves", async () => {
+  it("shows archived PO manifestations read-only and keeps them out of draft saves", async () => {
     const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
     const archivedAlignment: CourseAlignment = {
       ...pspAlignment,
@@ -207,7 +207,7 @@ describe("CourseAlignmentEditor", () => {
           ],
         },
       ],
-      unavailableTargets: [{ id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" }],
+      unavailableTargets: [{ id: ARCHIVED_GO_ID, code: "PO-9", description: "Retired outcome" }],
     };
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
     render(
@@ -220,15 +220,15 @@ describe("CourseAlignmentEditor", () => {
 
     // Historical manifestation renders read-only at both viewports; no picker exists for it.
     const archivedBlock = screen.getByTestId("archived-manifestation-rows");
-    expect(within(archivedBlock).getByText("GO-9")).toBeInTheDocument();
+    expect(within(archivedBlock).getByText("PO-9")).toBeInTheDocument();
     expect(within(archivedBlock).getByText("Archived")).toBeInTheDocument();
     expect(within(archivedBlock).getByText("Practice (P)")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /GO-9/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /PO-9/i })).toBeNull();
 
     // Review submits only the active-pair state; the archived pair is never written.
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 1, manifestation: Practice" })
     );
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     await waitFor(() =>
@@ -240,7 +240,7 @@ describe("CourseAlignmentEditor", () => {
     );
   });
 
-  it("keeps archived GO manifestations visible when no active GOs exist", () => {
+  it("keeps archived PO manifestations visible when no active POs exist", () => {
     const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
     render(
       <CourseAlignmentEditor
@@ -255,7 +255,7 @@ describe("CourseAlignmentEditor", () => {
             },
           ],
           unavailableTargets: [
-            { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
+            { id: ARCHIVED_GO_ID, code: "PO-9", description: "Retired outcome" },
           ],
         }}
         prepareAction={vi.fn()}
@@ -264,16 +264,16 @@ describe("CourseAlignmentEditor", () => {
     );
 
     expect(
-      screen.getByText("No Graduate Outcomes have been defined for this program.")
+      screen.getByText("No Program Outcomes have been defined for this program.")
     ).toBeInTheDocument();
     // The historical read-only manifestation stays visible even though the active
-    // GO catalog is empty.
+    // PO catalog is empty.
     const archivedBlock = screen.getByTestId("archived-manifestation-rows");
-    expect(within(archivedBlock).getByText("GO-9")).toBeInTheDocument();
+    expect(within(archivedBlock).getByText("PO-9")).toBeInTheDocument();
     expect(within(archivedBlock).getByText("Opportunity (O)")).toBeInTheDocument();
   });
 
-  it("reports archived GO manifestations read-only in the review dialog", async () => {
+  it("reports archived PO manifestations read-only in the review dialog", async () => {
     const ARCHIVED_GO_ID = "77777777-7777-4777-8777-777777777777";
     const ARCHIVED_GO_2_ID = "88888888-8888-4888-8888-888888888888";
     const prepareAction = vi.fn().mockResolvedValue({ success: true, review: pspReview });
@@ -297,8 +297,8 @@ describe("CourseAlignmentEditor", () => {
             },
           ],
           unavailableTargets: [
-            { id: ARCHIVED_GO_ID, code: "GO-9", description: "Retired outcome" },
-            { id: ARCHIVED_GO_2_ID, code: "GO-8", description: "Retired outcome 2" },
+            { id: ARCHIVED_GO_ID, code: "PO-9", description: "Retired outcome" },
+            { id: ARCHIVED_GO_2_ID, code: "PO-8", description: "Retired outcome 2" },
           ],
         }}
         prepareAction={prepareAction}
@@ -308,18 +308,18 @@ describe("CourseAlignmentEditor", () => {
 
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 1, manifestation: Practice" })
     );
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 1, manifestation: Learning" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 1, manifestation: Learning" })
     );
     fireEvent.click(screen.getByRole("button", { name: /Review 2 changes/i }));
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(screen.getByText("GO-9 (archived): Practice (P) — read-only")).toBeInTheDocument();
+    expect(screen.getByText("PO-9 (archived): Practice (P) — read-only")).toBeInTheDocument();
     // A CILO with no staged changes still reports its archived context read-only.
-    expect(screen.getByText("GO-8 (archived): Opportunity (O) — read-only")).toBeInTheDocument();
+    expect(screen.getByText("PO-8 (archived): Opportunity (O) — read-only")).toBeInTheDocument();
   });
 
   it("reports a first-time assignment as Set to in the review dialog", async () => {
@@ -350,13 +350,13 @@ describe("CourseAlignmentEditor", () => {
 
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 1, manifestation: Opportunity" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 1, manifestation: Opportunity" })
     );
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
     expect(
       await screen.findByRole("heading", { name: "Review Course alignment changes" })
     ).toBeInTheDocument();
-    expect(screen.getByText(/GO-1: Set to Opportunity \(O\)/)).toBeInTheDocument();
+    expect(screen.getByText(/PO-1: Set to Opportunity \(O\)/)).toBeInTheDocument();
   });
 
   it("keeps the exact-diff review open while saving", async () => {
@@ -563,7 +563,7 @@ describe("CourseAlignmentEditor", () => {
         name: /ILO 1/,
       })
     ).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: /GO 1/ })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /PO 1/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
 
     stageTarget();
@@ -583,8 +583,8 @@ describe("CourseAlignmentEditor", () => {
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -597,14 +597,14 @@ describe("CourseAlignmentEditor", () => {
     );
 
     const matrix = screen.getByTestId("manifestation-matrix");
-    expect(within(matrix).getByRole("columnheader", { name: /GO 1/ })).toBeInTheDocument();
-    expect(within(matrix).getByRole("columnheader", { name: /GO 2/ })).toBeInTheDocument();
+    expect(within(matrix).getByRole("columnheader", { name: /PO 1/ })).toBeInTheDocument();
+    expect(within(matrix).getByRole("columnheader", { name: /PO 2/ })).toBeInTheDocument();
     expect(within(matrix).getByRole("rowheader", { name: /CILO 1/ })).toBeInTheDocument();
     expect(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 1, manifestation: Learning" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 1, manifestation: Learning" })
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 2, manifestation: Opportunity" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 2, manifestation: Opportunity" })
     ).toHaveAttribute("aria-pressed", "false");
 
     // The mobile cards render the same cells with letter-only buttons; the
@@ -615,13 +615,13 @@ describe("CourseAlignmentEditor", () => {
 
     // Changing a cell in the matrix updates the same draft the cards read.
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 2, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 2, manifestation: Practice" })
     );
     expect(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 2, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 2, manifestation: Practice" })
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      within(cards).getByRole("button", { name: "CILO 2, GO 2, manifestation: Practice" })
+      within(cards).getByRole("button", { name: "CILO 2, PO 2, manifestation: Practice" })
     ).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -641,8 +641,8 @@ describe("CourseAlignmentEditor", () => {
         },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -654,12 +654,12 @@ describe("CourseAlignmentEditor", () => {
       />
     );
 
-    // 4 pairs: CILO1/GO-1 classified, CILO2/GO-1 legacy-null unanswered, GO-2 pairs unanswered.
+    // 4 pairs: CILO1/PO-1 classified, CILO2/PO-1 legacy-null unanswered, PO-2 pairs unanswered.
     expect(screen.getByText(/1 of 4 relationships classified/)).toBeInTheDocument();
     expect(screen.getByText(/3 remaining/)).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Choose Learning, Practice, or Opportunity for every GO before reviewing this alignment."
+        "Choose Learning, Practice, or Opportunity for every PO before reviewing this alignment."
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
@@ -677,8 +677,8 @@ describe("CourseAlignmentEditor", () => {
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -694,13 +694,13 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByText(/1 of 4 relationships classified/)).toBeInTheDocument();
 
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 2, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 2, manifestation: Practice" })
     );
     expect(screen.getByText(/2 of 4 relationships classified/)).toBeInTheDocument();
     expect(screen.getByText(/2 remaining/)).toBeInTheDocument();
 
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "Clear CILO 2, GO 2 manifestation" })
+      within(matrix).getByRole("button", { name: "Clear CILO 2, PO 2 manifestation" })
     );
     expect(screen.getByText(/1 of 4 relationships classified/)).toBeInTheDocument();
     expect(screen.getByText(/3 remaining/)).toBeInTheDocument();
@@ -722,8 +722,8 @@ describe("CourseAlignmentEditor", () => {
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -737,7 +737,7 @@ describe("CourseAlignmentEditor", () => {
 
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 1, manifestation: Practice" })
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Review 1 change/i }));
@@ -769,8 +769,8 @@ describe("CourseAlignmentEditor", () => {
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -784,7 +784,7 @@ describe("CourseAlignmentEditor", () => {
 
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 1, manifestation: Practice" })
     );
     expect(screen.getByRole("button", { name: /Review 1 change/i })).toBeEnabled();
     expect(screen.getByText(/Publication stays blocked/)).toBeInTheDocument();
@@ -802,8 +802,8 @@ describe("CourseAlignmentEditor", () => {
         { id: CILO_2_ID, description: "Design systems", mappings: [] },
       ],
       targets: [
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: GO_2_ID, code: "GO-2", description: "Communicate clearly" },
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: GO_2_ID, code: "PO-2", description: "Communicate clearly" },
       ],
       readiness: "incomplete-mapping",
     };
@@ -816,19 +816,19 @@ describe("CourseAlignmentEditor", () => {
     );
     const matrix = screen.getByTestId("manifestation-matrix");
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 1, GO 2, manifestation: Opportunity" })
+      within(matrix).getByRole("button", { name: "CILO 1, PO 2, manifestation: Opportunity" })
     );
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 1, manifestation: Practice" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 1, manifestation: Practice" })
     );
     fireEvent.click(
-      within(matrix).getByRole("button", { name: "CILO 2, GO 2, manifestation: Learning" })
+      within(matrix).getByRole("button", { name: "CILO 2, PO 2, manifestation: Learning" })
     );
 
     expect(screen.getByRole("button", { name: /Review 3 changes/i })).toBeEnabled();
     expect(
       screen.queryByText(
-        "Choose Learning, Practice, or Opportunity for all GOs before reviewing this alignment."
+        "Choose Learning, Practice, or Opportunity for all POs before reviewing this alignment."
       )
     ).toBeNull();
 
@@ -858,7 +858,7 @@ describe("CourseAlignmentEditor", () => {
     });
   });
 
-  it("shows an explicit empty state when the Program has no active GOs", () => {
+  it("shows an explicit empty state when the Program has no active POs", () => {
     render(
       <CourseAlignmentEditor
         alignment={{ ...pspAlignment, targets: [], readiness: "incomplete-mapping" }}
@@ -868,10 +868,10 @@ describe("CourseAlignmentEditor", () => {
     );
 
     expect(
-      screen.getByText("No Graduate Outcomes have been defined for this program.")
+      screen.getByText("No Program Outcomes have been defined for this program.")
     ).toBeInTheDocument();
     expect(
-      screen.getByText("A Program Head must create GOs before Course alignment can be completed.")
+      screen.getByText("A Program Head must create POs before Course alignment can be completed.")
     ).toBeInTheDocument();
     expect(screen.queryByTestId("manifestation-matrix")).toBeNull();
     expect(screen.queryByTestId("manifestation-cards")).toBeNull();

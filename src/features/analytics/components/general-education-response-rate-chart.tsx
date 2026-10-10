@@ -138,7 +138,7 @@ export function GeneralEducationResponseRateChart({
           <CardTitle id={titleId} className="text-heading-lg">
             {title}
           </CardTitle>
-          <span className="text-muted-foreground text-xs font-medium">
+          <span className="text-label-sm text-muted-foreground">
             Submitted ÷ evaluation opportunities
           </span>
         </div>
@@ -224,7 +224,7 @@ export function GeneralEducationResponseRateChart({
           {ranked.map((row, index) => (
             <span role="listitem" key={row.key} className="flex items-center gap-1.5">
               <ChartSwatch fill={chartFill(chartId, index)} />
-              <span className="text-muted-foreground text-xs">
+              <span className="text-caption text-muted-foreground">
                 {row.label} · {row.submittedResponseCount}/{row.evaluationOpportunityCount}
               </span>
             </span>

@@ -36,28 +36,28 @@ export type TemplateCiloQuestionBinding = {
 };
 
 /**
- * An active Graduate Outcome offered to a template editor: the Program-wide
+ * An active Program Outcome offered to a template editor: the Program-wide
  * editor gets the template Program's catalog, and a Course-bound editor gets
  * the bound Course's owning Program catalog. The list is server-prepared in
- * canonical GO order.
+ * canonical PO order.
  */
-export type ProgramGoOption = {
+export type ProgramPoOption = {
   id: string;
   code: string;
   description: string;
 };
 
 /**
- * A draft question–GO binding. A Program-wide template serializes its bindings
+ * A draft question–PO binding. A Program-wide template serializes its bindings
  * as `program_question_go_bindings` and a Course-bound template as
- * `go_question_bindings` in template FormData; both persist here.
+ * `po_question_bindings` in template FormData; both persist here.
  */
 export type TemplateGoQuestionBinding = {
-  goId: string;
+  poId: string;
   itemKey: string;
   sectionKey: string;
-  goCodeSnapshot?: string;
-  goDescriptionSnapshot?: string;
+  poCodeSnapshot?: string;
+  poDescriptionSnapshot?: string;
 };
 
 export type TemplateLikertQuestionOption = {
@@ -74,7 +74,7 @@ export type TemplateLikertQuestionOption = {
  * `type: "likert"` is canonical: it is the `QuestionType` union, what the
  * template schema accepts, and the only spelling production writes. The
  * uppercase `type`/`question_type` spellings are tolerated so legacy stored
- * JSON still resolves its CILO and GO bindings at publication; nothing writes
+ * JSON still resolves its CILO and PO bindings at publication; nothing writes
  * them. `type` decides whenever it carries a string, so a leftover legacy key
  * can never override the current shape. Resolving a kind through this predicate
  * rather than a string comparison is what keeps the two publication context

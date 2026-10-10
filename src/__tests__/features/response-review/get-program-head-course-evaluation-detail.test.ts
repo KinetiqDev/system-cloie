@@ -113,7 +113,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     ciloMappingFindManyMock.mockResolvedValue([
       {
         cilo_id: "cilo-1",
-        go: { id: "plo-1", code: "GO-1", description: "Communicate" },
+        po: { id: "po-1", code: "PO-1", description: "Communicate" },
         manifestation: "LEARNING",
       },
     ]);
@@ -288,7 +288,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(result!.evaluation.yearLevel).toBe("THIRD_YEAR");
     expect(result!.evaluation.section).toBe("MORNING");
     expect(result!.ciloResults[0].quantitative?.mean).toBe(4);
-    expect(result!.ciloResults[0].mappings[0].goCode).toBe("GO-1");
+    expect(result!.ciloResults[0].mappings[0].poCode).toBe("PO-1");
     // Question metric
     expect(result!.questionResults).toHaveLength(1);
     expect(result!.questionResults[0].binding.type).toBe("CILO");
@@ -355,7 +355,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
   it("keeps separator-bearing section and item keys on distinct questions", async () => {
     // Section/item keys are arbitrary nonempty strings, so ("a", "b|c") and
     // ("a|b", "c") are two questions. A separator-joined lookup merges them:
-    // one question serves the other's prompt, binding, and GO evidence.
+    // one question serves the other's prompt, binding, and PO evidence.
     const likertDescriptors = [
       { value: 1, label: "Not Achieved" },
       { value: 2, label: "Slightly Achieved" },

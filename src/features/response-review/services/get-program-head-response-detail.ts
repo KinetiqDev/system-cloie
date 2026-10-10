@@ -12,7 +12,7 @@ import {
   respondentIdentityFragment,
   submittedResponseMean,
   type CourseBoundCiloBinding,
-  type GoQuestionBindingSnapshot,
+  type PoQuestionBindingSnapshot,
 } from "./submitted-response-projection";
 import type {
   CourseBoundResponseContext,
@@ -28,7 +28,7 @@ import type {
 // answer body is returned. Faculty/Dean keep the anonymized flow.
 // ---------------------------------------------------------------------------
 
-type CourseBoundGoBinding = GoQuestionBindingSnapshot;
+type CourseBoundPoBinding = PoQuestionBindingSnapshot;
 
 type CourseBoundEvalShape = {
   id: string;
@@ -48,10 +48,10 @@ type CourseBoundEvalShape = {
     };
   };
   cilo_question_bindings: CourseBoundCiloBinding[];
-  go_question_bindings: CourseBoundGoBinding[];
+  po_question_bindings: CourseBoundPoBinding[];
 };
 
-type GoSnapshotShape = GoQuestionBindingSnapshot;
+type PoSnapshotShape = PoQuestionBindingSnapshot;
 
 type CentralEvalShape = {
   id: string;
@@ -67,7 +67,7 @@ type CentralEvalShape = {
     semester: string;
     term: string | null;
   };
-  go_snapshots: GoSnapshotShape[];
+  po_snapshots: PoSnapshotShape[];
 };
 
 type EvaluationProjectionBase = {
@@ -77,7 +77,7 @@ type EvaluationProjectionBase = {
   bindings: CourseBoundCiloBinding[];
   stakeholder: TargetStakeholder;
   termInstanceId: string;
-  goSnapshots: GoSnapshotShape[];
+  poSnapshots: PoSnapshotShape[];
 };
 
 type EvaluationProjection = EvaluationProjectionBase &
@@ -135,7 +135,7 @@ export async function getProgramHeadResponseDetail(
                 },
               },
               cilo_question_bindings: true,
-              go_question_bindings: true,
+              po_question_bindings: true,
             },
           },
           central_deployment: {
@@ -144,7 +144,7 @@ export async function getProgramHeadResponseDetail(
               program: { select: { name: true } },
               major: { select: { name: true } },
               term_instance: { include: { school_year: true } },
-              go_snapshots: true,
+              po_snapshots: true,
             },
           },
         },
@@ -164,7 +164,7 @@ export async function getProgramHeadResponseDetail(
 
   const evaluation = projectEvaluation(response);
 
-  const [identityContexts, goMappings] = await Promise.all([
+  const [identityContexts, poMappings] = await Promise.all([
     loadRespondentIdentityContexts(
       [response.respondent.id],
       evaluation.stakeholder,
@@ -175,17 +175,17 @@ export async function getProgramHeadResponseDetail(
       : Promise.resolve(new Map<string, CiloGoMapping[]>()),
   ]);
 
-  // Program-specific and Central evidence reach Graduate Outcomes only, so
-  // the ILO map stays empty and the projection runs on the GO layer.
+  // Program-specific and Central evidence reach Program Outcomes only, so
+  // the ILO map stays empty and the projection runs on the PO layer.
   const sections = buildSubmittedResponseSections(
     response,
     {
       snapshot: evaluation.snapshot,
       ciloBindings: evaluation.bindings,
-      goSnapshots: evaluation.goSnapshots,
+      poSnapshots: evaluation.poSnapshots,
       layer: "GRADUATE_OUTCOME",
     },
-    { goMappings, iloMappings: new Map() }
+    { poMappings, iloMappings: new Map() }
   );
   const quantitativeMean = submittedResponseMean(sections, evaluation.snapshot);
 
@@ -269,7 +269,7 @@ function projectEvaluation(response: {
       bindings: courseBound.cilo_question_bindings,
       stakeholder: TargetStakeholder.STUDENT,
       termInstanceId: courseBound.course_assignment.term_instance.id,
-      goSnapshots: courseBound.go_question_bindings,
+      poSnapshots: courseBound.po_question_bindings,
     };
   }
   const deployment = response.assignment.central_deployment!;
@@ -282,6 +282,6 @@ function projectEvaluation(response: {
     bindings: [],
     stakeholder: deployment.target_stakeholder,
     termInstanceId: deployment.term_instance.id,
-    goSnapshots: deployment.go_snapshots,
+    poSnapshots: deployment.po_snapshots,
   };
 }

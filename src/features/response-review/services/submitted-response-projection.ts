@@ -19,7 +19,7 @@ import type {
 //
 // Authorization and scope are decided by each caller before these pure
 // projections run: only SUBMITTED response rows ever reach them. A Program-wide
-// response passes empty `ciloBindings`, which yields direct GO bindings or
+// response passes empty `ciloBindings`, which yields direct PO bindings or
 // GENERAL items instead of a CILO binding. The alignment layer is supplied by
 // the caller from Course scope, never inferred from the loaded rows.
 // ---------------------------------------------------------------------------
@@ -32,10 +32,10 @@ export type CourseBoundCiloBinding = {
   item_key: string;
 };
 
-export type GoQuestionBindingSnapshot = {
-  go_id: string | null;
-  go_code_snapshot: string;
-  go_description_snapshot: string;
+export type PoQuestionBindingSnapshot = {
+  po_id: string | null;
+  po_code_snapshot: string;
+  po_description_snapshot: string;
   section_key: string;
   item_key: string;
 };
@@ -43,11 +43,11 @@ export type GoQuestionBindingSnapshot = {
 type SubmittedResponseBindingScope = {
   snapshot: unknown;
   ciloBindings: CourseBoundCiloBinding[];
-  goSnapshots: GoQuestionBindingSnapshot[];
+  poSnapshots: PoQuestionBindingSnapshot[];
   /**
    * Typed alignment layer for the owning Course (ADR 0035). It is decided
    * by Course scope before the projection runs, so a General Education answer
-   * can never receive GO rows and a Program-specific answer can never
+   * can never receive PO rows and a Program-specific answer can never
    * receive ILO rows, whatever the caller happened to load.
    */
   layer: ReviewAlignmentLayer;
@@ -57,21 +57,21 @@ function resolveSubmittedAnswerBinding(
   scope: SubmittedResponseBindingScope,
   entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
   alignments: {
-    goMappings: Map<string, CiloGoMapping[]>;
+    poMappings: Map<string, CiloGoMapping[]>;
     iloMappings: Map<string, CiloIloMapping[]>;
   }
 ): SubmittedAnswerBinding {
-  const directBindings = scope.goSnapshots
+  const directBindings = scope.poSnapshots
     .filter(
       (snapshot) =>
         snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
     )
     .map((snapshot) => ({
       key:
-        snapshot.go_id ??
-        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
-      code: snapshot.go_code_snapshot,
-      description: snapshot.go_description_snapshot,
+        snapshot.po_id ??
+        `snapshot:${snapshot.po_code_snapshot}:${snapshot.po_description_snapshot}`,
+      code: snapshot.po_code_snapshot,
+      description: snapshot.po_description_snapshot,
     }));
 
   const binding = scope.ciloBindings.find(
@@ -83,7 +83,7 @@ function resolveSubmittedAnswerBinding(
   );
   if (!binding) {
     return directBindings.length > 0
-      ? { type: "GO", goBindings: directBindings }
+      ? { type: "PO", poBindings: directBindings }
       : { type: "GENERAL" };
   }
   if (scope.layer === "INSTITUTIONAL_OUTCOME") {
@@ -100,8 +100,8 @@ function resolveSubmittedAnswerBinding(
     layer: "GRADUATE_OUTCOME",
     ciloId: binding.cilo_id,
     ciloLabel: binding.cilo_description_snapshot,
-    goMappings: alignments.goMappings.get(binding.cilo_id ?? "") ?? [],
-    directGoBindings: directBindings,
+    poMappings: alignments.poMappings.get(binding.cilo_id ?? "") ?? [],
+    directPoBindings: directBindings,
   };
 }
 export function buildSubmittedResponseSections(
@@ -116,7 +116,7 @@ export function buildSubmittedResponseSections(
   },
   scope: SubmittedResponseBindingScope,
   alignments: {
-    goMappings: Map<string, CiloGoMapping[]>;
+    poMappings: Map<string, CiloGoMapping[]>;
     iloMappings: Map<string, CiloIloMapping[]>;
   }
 ): IdentifiedSubmittedResponseDetail["sections"] {

@@ -9,7 +9,7 @@ const {
   assignmentCreateManyMock,
   centralDeploymentCreateMock,
   centralDeploymentFindFirstMock,
-  centralDeploymentGoSnapshotCreateManyMock,
+  centralDeploymentPoSnapshotCreateManyMock,
   academicTermInstanceFindUniqueMock,
   alumniProfileFindManyMock,
   externalStakeholderInviteFindManyMock,
@@ -17,7 +17,7 @@ const {
   instrumentTemplateFindFirstMock,
   instrumentVersionFindFirstMock,
   listStudentsForClassMock,
-  goFindManyMock,
+  poFindManyMock,
   programHeadAssignmentFindFirstMock,
   resolveAuthSessionMock,
   studentAcademicProfileFindManyMock,
@@ -32,7 +32,7 @@ const {
   assignmentCreateManyMock: vi.fn(),
   centralDeploymentCreateMock: vi.fn(),
   centralDeploymentFindFirstMock: vi.fn(),
-  centralDeploymentGoSnapshotCreateManyMock: vi.fn(),
+  centralDeploymentPoSnapshotCreateManyMock: vi.fn(),
   academicTermInstanceFindUniqueMock: vi.fn(),
   alumniProfileFindManyMock: vi.fn(),
   externalStakeholderInviteFindManyMock: vi.fn(),
@@ -40,7 +40,7 @@ const {
   instrumentTemplateFindFirstMock: vi.fn(),
   instrumentVersionFindFirstMock: vi.fn(),
   listStudentsForClassMock: vi.fn(),
-  goFindManyMock: vi.fn(),
+  poFindManyMock: vi.fn(),
   programHeadAssignmentFindFirstMock: vi.fn(),
   resolveAuthSessionMock: vi.fn(),
   studentAcademicProfileFindManyMock: vi.fn(),
@@ -68,8 +68,8 @@ vi.mock("@/lib/db/prisma", () => ({
     instrumentVersion: {
       findFirst: instrumentVersionFindFirstMock,
     },
-    gO: {
-      findMany: goFindManyMock,
+    pO: {
+      findMany: poFindManyMock,
     },
     programHeadAssignment: {
       findFirst: programHeadAssignmentFindFirstMock,
@@ -112,7 +112,7 @@ function mockTemplate(overrides: Record<string, unknown> = {}) {
     program_id: "program-1",
     template_type: "PROGRAM_WIDE",
     structure: [],
-    template_go_question_bindings: [],
+    template_po_question_bindings: [],
     ...overrides,
   });
 }
@@ -152,8 +152,8 @@ function setupTransaction() {
           template_type: "PROGRAM_WIDE",
         }),
       },
-      centralDeploymentGoSnapshot: {
-        createMany: centralDeploymentGoSnapshotCreateManyMock,
+      centralDeploymentPoSnapshot: {
+        createMany: centralDeploymentPoSnapshotCreateManyMock,
       },
       major: {
         findUnique: vi.fn().mockResolvedValue({ program_id: "program-1", is_active: true }),
@@ -291,7 +291,7 @@ describe("publishCentralDeployment", () => {
         program_id: true,
         template_type: true,
         structure: true,
-        template_go_question_bindings: true,
+        template_po_question_bindings: true,
       },
     });
   });
@@ -628,7 +628,7 @@ describe("publishCentralDeployment", () => {
     });
   });
 
-  // ─── Question–GO Binding Validation ────────────────────────────────────
+  // ─── Question–PO Binding Validation ────────────────────────────────────
 
   const LIKERT_STRUCTURE = [
     {
@@ -682,10 +682,10 @@ describe("publishCentralDeployment", () => {
     mockPHAssignment();
     mockTemplate({
       structure: PARTIAL_LIKERT_STRUCTURE,
-      template_go_question_bindings: [{ go_id: "plo-1", section_key: "sec-1", item_key: "q-1" }],
+      template_po_question_bindings: [{ po_id: "po-1", section_key: "sec-1", item_key: "q-1" }],
     });
-    goFindManyMock.mockResolvedValue([
-      { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "BSIT-GO1", description: "Communicate effectively" },
     ]);
     mockVersion();
     mockNoDuplicate();
@@ -699,13 +699,13 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-partial", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentGoSnapshotCreateManyMock).toHaveBeenCalledWith({
+    expect(centralDeploymentPoSnapshotCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
           central_deployment_id: "deployment-partial",
-          go_id: "plo-1",
-          go_code_snapshot: "BSIT-GO1",
-          go_description_snapshot: "Communicate effectively",
+          po_id: "po-1",
+          po_code_snapshot: "BSIT-GO1",
+          po_description_snapshot: "Communicate effectively",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",
@@ -714,10 +714,10 @@ describe("publishCentralDeployment", () => {
     });
   });
 
-  it("publishes a template whose Likert questions have no GO bindings and writes no snapshot rows", async () => {
+  it("publishes a template whose Likert questions have no PO bindings and writes no snapshot rows", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
-    mockTemplate({ structure: LIKERT_STRUCTURE, template_go_question_bindings: [] });
+    mockTemplate({ structure: LIKERT_STRUCTURE, template_po_question_bindings: [] });
     mockVersion();
     mockNoDuplicate();
     mockTermInstance();
@@ -730,7 +730,7 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-unbound", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentGoSnapshotCreateManyMock).not.toHaveBeenCalled();
+    expect(centralDeploymentPoSnapshotCreateManyMock).not.toHaveBeenCalled();
   });
 
   it("rejects publication when a binding no longer matches the template structure", async () => {
@@ -738,12 +738,12 @@ describe("publishCentralDeployment", () => {
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_go_question_bindings: [
-        { go_id: "plo-1", section_key: "sec-1", item_key: "q-deleted" },
+      template_po_question_bindings: [
+        { po_id: "po-1", section_key: "sec-1", item_key: "q-deleted" },
       ],
     });
-    goFindManyMock.mockResolvedValue([
-      { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "BSIT-GO1", description: "Communicate effectively" },
     ]);
     mockVersion();
 
@@ -751,25 +751,25 @@ describe("publishCentralDeployment", () => {
 
     expect(result).toEqual({
       success: false,
-      error: "One or more question–GO bindings no longer match the template structure.",
+      error: "One or more question–PO bindings no longer match the template structure.",
     });
     expect(centralDeploymentCreateMock).not.toHaveBeenCalled();
   });
 
-  it("rejects publication when a bound GO is archived or not program-owned", async () => {
+  it("rejects publication when a bound PO is archived or not program-owned", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_go_question_bindings: [
+      template_po_question_bindings: [
         {
-          go_id: "plo-archived",
+          po_id: "po-archived",
           section_key: "sec-1",
           item_key: "q-1",
         },
       ],
     });
-    goFindManyMock.mockResolvedValue([]);
+    poFindManyMock.mockResolvedValue([]);
     mockVersion();
 
     const result = await publishCentralDeployment(baseInput);
@@ -777,28 +777,28 @@ describe("publishCentralDeployment", () => {
     expect(result).toEqual({
       success: false,
       error:
-        "One or more bound GOs are archived or no longer available. Update the template before publishing.",
+        "One or more bound POs are archived or no longer available. Update the template before publishing.",
     });
-    expect(goFindManyMock).toHaveBeenCalledWith(
+    expect(poFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ program_id: "program-1", is_active: true }),
       })
     );
   });
 
-  it("creates immutable GO snapshot rows when publishing bound Likert questions", async () => {
+  it("creates immutable PO snapshot rows when publishing bound Likert questions", async () => {
     mockAuthenticatedPH();
     mockPHAssignment();
     mockTemplate({
       structure: LIKERT_STRUCTURE,
-      template_go_question_bindings: [
-        { go_id: "plo-1", section_key: "sec-1", item_key: "q-1" },
-        { go_id: "plo-2", section_key: "sec-1", item_key: "q-1" },
+      template_po_question_bindings: [
+        { po_id: "po-1", section_key: "sec-1", item_key: "q-1" },
+        { po_id: "po-2", section_key: "sec-1", item_key: "q-1" },
       ],
     });
-    goFindManyMock.mockResolvedValue([
-      { id: "plo-1", code: "BSIT-GO1", description: "Communicate effectively" },
-      { id: "plo-2", code: "BSIT-GO2", description: "Apply technical skills" },
+    poFindManyMock.mockResolvedValue([
+      { id: "po-1", code: "BSIT-GO1", description: "Communicate effectively" },
+      { id: "po-2", code: "BSIT-GO2", description: "Apply technical skills" },
     ]);
     mockVersion();
     mockNoDuplicate();
@@ -812,22 +812,22 @@ describe("publishCentralDeployment", () => {
       success: true,
       data: { deploymentId: "deployment-bound", assignmentCount: 0, status: "ACTIVE" },
     });
-    expect(centralDeploymentGoSnapshotCreateManyMock).toHaveBeenCalledWith({
+    expect(centralDeploymentPoSnapshotCreateManyMock).toHaveBeenCalledWith({
       data: [
         {
           central_deployment_id: "deployment-bound",
-          go_id: "plo-1",
-          go_code_snapshot: "BSIT-GO1",
-          go_description_snapshot: "Communicate effectively",
+          po_id: "po-1",
+          po_code_snapshot: "BSIT-GO1",
+          po_description_snapshot: "Communicate effectively",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",
         },
         {
           central_deployment_id: "deployment-bound",
-          go_id: "plo-2",
-          go_code_snapshot: "BSIT-GO2",
-          go_description_snapshot: "Apply technical skills",
+          po_id: "po-2",
+          po_code_snapshot: "BSIT-GO2",
+          po_description_snapshot: "Apply technical skills",
           section_key: "sec-1",
           item_key: "q-1",
           question_prompt_snapshot: "The program prepared me for employment",

@@ -7,13 +7,13 @@ const {
   getInstitutionalBaselineMock,
   listFacultyTemplatesMock,
   listInstitutionalBaselinesMock,
-  listProgramGoOptionsMock,
+  listProgramPoOptionsMock,
   resolveProgramHeadContextMock,
 } = vi.hoisted(() => ({
   getInstitutionalBaselineMock: vi.fn(),
   listFacultyTemplatesMock: vi.fn(),
   listInstitutionalBaselinesMock: vi.fn(),
-  listProgramGoOptionsMock: vi.fn(),
+  listProgramPoOptionsMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock("@/features/instruments/services/list-institutional-baselines", () => ({
   listInstitutionalBaselines: listInstitutionalBaselinesMock,
 }));
 vi.mock("@/features/instruments/services/manage-program-head-templates", () => ({
-  listProgramGoOptions: listProgramGoOptionsMock,
+  listProgramPoOptions: listProgramPoOptionsMock,
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
@@ -158,7 +158,7 @@ describe("Program Head baseline prefill route", () => {
         },
       },
     });
-    listProgramGoOptionsMock.mockResolvedValue({ success: true, data: { gos: [] } });
+    listProgramPoOptionsMock.mockResolvedValue({ success: true, data: { pos: [] } });
     getInstitutionalBaselineMock.mockResolvedValue({
       code: "CILO_EVAL",
       created_at: new Date("2026-01-01"),

@@ -47,7 +47,7 @@ export function CentralEvaluationDetail({
     evaluation,
     summary,
     participation,
-    goResults,
+    poResults,
     questionResults,
     qualitative,
     respondents,
@@ -106,7 +106,7 @@ export function CentralEvaluationDetail({
                   : "Raw mean of all valid quantitative ratings from submitted responses; general items are included and qualitative answers are excluded.",
           }}
         />
-        <SummaryStat label="GOs" value={`${goResults.length}`} />
+        <SummaryStat label="POs" value={`${poResults.length}`} />
         <SummaryStat label="Qualitative answers" value={`${summary.qualitativeAnswerCount}`} />
         <SummaryStat
           label="Qualitative respondents"
@@ -135,17 +135,17 @@ export function CentralEvaluationDetail({
         )}
       />
 
-      {/* Direct GO results (§26) */}
+      {/* Direct PO results (§26) */}
       <Card>
         <CardHeader>
-          <CardTitle>Direct GO results</CardTitle>
+          <CardTitle>Direct PO results</CardTitle>
           <CardDescription>Publication-time outcome evidence for this deployment.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>GO</TableHead>
+                <TableHead>PO</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
@@ -153,37 +153,37 @@ export function CentralEvaluationDetail({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {goResults.length === 0 ? (
+              {poResults.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-text-muted text-center">
-                    No GO-bound ratings yet.
+                    No PO-bound ratings yet.
                   </TableCell>
                 </TableRow>
               ) : (
-                goResults.map((go) => {
+                poResults.map((po) => {
                   const evidence = {
-                    ratingCount: go.ratingCount,
-                    responseCount: go.responseCount,
-                    evaluationCount: go.evaluationCount,
-                    questionCount: go.questionCount,
+                    ratingCount: po.ratingCount,
+                    responseCount: po.responseCount,
+                    evaluationCount: po.evaluationCount,
+                    questionCount: po.questionCount,
                     scaleLabel:
-                      go.scaleGroups.length === 1 && go.scaleGroups[0].scale
-                        ? describeScale(go.scaleGroups[0].scale.descriptors)
+                      po.scaleGroups.length === 1 && po.scaleGroups[0].scale
+                        ? describeScale(po.scaleGroups[0].scale.descriptors)
                         : undefined,
-                    explanation: `Mean of ${go.ratingCount} valid ratings from ${go.questionCount} bound question(s); unbound items are excluded.`,
+                    explanation: `Mean of ${po.ratingCount} valid ratings from ${po.questionCount} bound question(s); unbound items are excluded.`,
                   };
                   return (
-                    <TableRow key={go.goId}>
-                      <TableCell className="font-medium">{go.goCode}</TableCell>
+                    <TableRow key={po.poId}>
+                      <TableCell className="font-medium">{po.poCode}</TableCell>
                       <TableCell className="min-w-72 break-words whitespace-normal">
-                        {go.goDescription}
+                        {po.poDescription}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{go.ratingCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{go.responseCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{po.ratingCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{po.responseCount}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         <span className="inline-flex items-center gap-1">
-                          {formatMean(go.mean)}
-                          <HowCalculatedPopover metric={evidence} label={`${go.goCode} mean`} />
+                          {formatMean(po.mean)}
+                          <HowCalculatedPopover metric={evidence} label={`${po.poCode} mean`} />
                         </span>
                       </TableCell>
                     </TableRow>
@@ -232,8 +232,8 @@ export function CentralEvaluationDetail({
                         {question.prompt}
                       </TableCell>
                       <TableCell className="whitespace-normal">
-                        {question.goBindings.length > 0
-                          ? question.goBindings.map((binding) => binding.code).join(", ")
+                        {question.poBindings.length > 0
+                          ? question.poBindings.map((binding) => binding.code).join(", ")
                           : "General evaluation item"}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">

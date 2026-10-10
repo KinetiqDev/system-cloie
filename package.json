@@ -52,7 +52,8 @@
     "supabase:types:local": "tsx scripts/generate-supabase-types.ts local",
     "supabase:types": "tsx scripts/generate-supabase-types.ts remote",
     "supabase:push:dry-run": "tsx scripts/run-supabase-command.ts remote push --dry-run",
-    "supabase:push": "tsx scripts/run-supabase-command.ts remote push"
+    "supabase:push": "tsx scripts/run-supabase-command.ts remote push",
+    "verify:po-schema-parity": "tsx scripts/verify-po-schema-parity.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

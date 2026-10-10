@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
+import { AttainmentBadge } from "./outcome-attainment-badge";
 import type {
   OutcomeContributorDTO,
   OutcomeEvidenceDTO,
@@ -97,7 +98,7 @@ function ContributorRow({
         <ContributorBinding contributor={contributor} />
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">
-        {contributor.meanRating.toFixed(2)}
+        <div>{contributor.meanRating.toFixed(2)}</div>
       </TableCell>
       <TableCell className="text-right align-top tabular-nums">{contributor.ratingCount}</TableCell>
     </TableRow>
@@ -142,9 +143,14 @@ export function OutcomeContributorMatrix({
                   {outcome.code}
                   <span className="text-text-secondary font-normal"> — {outcome.name}</span>
                 </span>
-                <span className="text-text-secondary text-xs font-medium tabular-nums">
-                  {outcome.contributors.length} contributor
-                  {outcome.contributors.length === 1 ? "" : "s"}
+                <span className="flex items-center gap-2">
+                  {outcome.attainment !== undefined && (
+                    <AttainmentBadge attainment={outcome.attainment} compact />
+                  )}
+                  <span className="text-text-secondary text-xs font-medium tabular-nums">
+                    {outcome.contributors.length} contributor
+                    {outcome.contributors.length === 1 ? "" : "s"}
+                  </span>
                 </span>
               </DisclosureTrigger>
               <DisclosureContent>

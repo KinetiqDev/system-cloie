@@ -14,7 +14,7 @@ export function SelectedOutcomeScrollTarget({ outcomeId }: { outcomeId?: string 
     const row = [...document.querySelectorAll("[data-outcome-row]")].find(
       (element) => element.getAttribute("data-outcome-row") === outcomeId
     );
-    row?.scrollIntoView?.({ block: "center" });
+    row?.scrollIntoView?.({ block: "center", inline: "nearest" });
   }, [outcomeId]);
   return null;
 }

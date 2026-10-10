@@ -22,27 +22,23 @@ import {
   getActiveTermId,
   resolveActiveTerm,
 } from "@/features/academic-calendar/services/resolve-active-term";
-import { FEEDBACK_SOURCE_LABELS, buildRedactedWordCloudTokens } from "./qualitative-analytics";
+import { buildRedactedWordCloudTokens } from "./qualitative-analytics";
 import { buildParticipationSummary, type ParticipationRow } from "../aggregators/participation";
-import { groupRatingsByScale } from "../aggregators/quantitative";
+import { resolveItemScaleIdentity, type ScaleIdentity } from "../aggregators/scale-identity";
 import {
-  describeSingleScaleGroup,
-  describeScale,
-  resolveItemScaleIdentity,
-  type ScaleIdentity,
-} from "../aggregators/scale-identity";
-import {
-  buildCourseDerivedGoMetrics,
-  buildProgramWideGoMetrics,
-  type CentralGoRatingRow,
-  type GoMetric,
-} from "../aggregators/go";
+  buildCourseDerivedPoMetrics,
+  buildProgramWidePoMetrics,
+  type CentralPoRatingRow,
+  type PoMetric,
+} from "../aggregators/po";
 import type { OutcomeItemRatingRow } from "../aggregators/cilo";
 import {
   encodeBindingKey as encodeCourseBindingKey,
   encodeQuestionKey,
 } from "../aggregators/question-identity";
-import type { MetricEvidenceSummary, ParticipationSummary } from "../aggregators/types";
+import type { ParticipationSummary } from "../aggregators/types";
+import type { OutcomeAttainment } from "../aggregators/outcome-attainment";
+import { classifyOutcomeMean } from "../aggregators/outcome-attainment";
 import type { WordCloudToken } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -58,79 +54,60 @@ import {
 export { QUALITATIVE_TOKEN_CAP };
 import type { DashboardSourceKey } from "../program-head-dashboard-labels";
 
-export type DashboardSourceMean = {
-  sourceKey: DashboardSourceKey;
-  label: string;
-  /** Single compatible scale-group mean; null without evidence or mixed scales. */
-  mean: number | null;
-  ratingCount: number;
-  spansMultipleScales: boolean;
-  /** Max of the single compatible scale group; null when mixed scales. */
-  scaleMax: number | null;
-  /** Presentation metadata for the "How calculated" disclosure (§41). */
-  evidenceSummary: MetricEvidenceSummary;
-};
-
-export type DashboardGoSummaryRow = {
-  goId: string;
-  goCode: string;
+/** One PO's mean for one evidence source; rows link into Analytics > Outcomes (§13.8). */
+export type DashboardPoRow = {
+  poId: string;
+  poCode: string;
   /** Single compatible scale-group mean; null when mixed or without evidence. */
   mean: number | null;
-  ratingCount: number;
-  responseCount: number;
-  evaluationCount: number;
-  /** CILO count for course-derived evidence; bound question count otherwise (§13.8). */
-  contributorCount: number;
-  contributorKind: "cilos" | "questions";
   spansMultipleScales: boolean;
   /** Max of the single compatible scale; null when mixed scales or no evidence. */
   scaleMax: number | null;
   hasEvidence: boolean;
-  /** Presentation metadata for the "How calculated" disclosure (§41). */
-  evidenceSummary: MetricEvidenceSummary;
+  /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
+  attainment: OutcomeAttainment;
 };
-export type NeedsAttentionRule = "closing-soon" | "zero-submissions" | "zero-go-ratings";
 
+export type NeedsAttentionRule = "closing-soon" | "zero-submissions" | "zero-po-ratings";
+
+/**
+ * One actionable line: a deployment carries every rule it trips, and PO
+ * rating gaps collapse into one item per evidence source.
+ */
 export type NeedsAttentionItem = {
   id: string;
-  rule: NeedsAttentionRule;
+  rules: NeedsAttentionRule[];
   title: string;
-  note: string | null;
+  note: string;
   href: string;
 };
 
 export type QualitativePulse = {
   respondentCount: number;
   answerCount: number;
-  evaluationCount: number;
-  sourceCounts: Array<{ sourceKey: DashboardSourceKey; label: string; count: number }>;
   tokens: WordCloudToken[];
 };
 
-/** Cross-surface destinations every dashboard card links into (§13, §12). */
+/** Cross-surface destinations the dashboard links into (§13, §12). */
 type DashboardLinks = {
   responses: string;
   responsesActiveCourse: string;
-  responsesActiveProgramWide: string;
   analyticsOutcomes: string;
   analyticsStakeholders: string;
   analyticsFeedback: string;
 };
 
-/** Active live GOs of the selected Program, for zero-evidence rows (§50). */
-export type GoCatalogEntry = { id: string; code: string };
+/** Active live POs of the selected Program, for zero-evidence rows (§50). */
+export type PoCatalogEntry = { id: string; code: string };
 
 export type ProgramHeadDashboardData = {
   programLabel: string;
   programCode: string;
   periodLabel: string | null;
   participation: ParticipationSummary;
-  /** In-progress + not-started assignments over the same raw rows as completion. */
-  pendingResponses: number;
   activeEvaluations: { total: number; closingWithin7Days: number };
-  sourceMeans: DashboardSourceMean[];
-  goSources: Record<DashboardSourceKey, DashboardGoSummaryRow[]>;
-  goCatalog: GoCatalogEntry[];
+  poSources: Record<DashboardSourceKey, DashboardPoRow[]>;
+  poCatalog: PoCatalogEntry[];
   needsAttention: NeedsAttentionItem[];
   qualitative: QualitativePulse;
   links: DashboardLinks;
@@ -194,137 +171,21 @@ function ratingRowScale(
   );
 }
 
-/**
- * Source-separated quantitative summary (§13.5): each source pools only its
- * own valid ratings per compatible scale identity (§9). A source spanning
- * incompatible scales reports `spansMultipleScales` instead of one invalid
- * combined mean; a source without evidence reports an unavailable mean.
- */
-export function buildDashboardSourceMeans(
-  rows: DashboardRatingRow[],
-  snapshotById: Map<string, unknown>,
-  programId: string,
-  periodFilters: DashboardPeriodFilters = {}
-): DashboardSourceMean[] {
-  return DASHBOARD_SOURCE_ORDER.map((sourceKey) => {
-    const sourceScope = DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey];
-    const evidenceHref = buildAnalyticsUrl(programId, {
-      ...periodFilters,
-      tab: "outcomes",
-      ...sourceScope,
-    });
-    const sourceRows = rows.filter((row) => ratingRowSourceKey(row) === sourceKey);
-    const groups = groupRatingsByScale(
-      sourceRows.map((row) => ({
-        rating: { value: row.rating_value, responseId: row.response_id },
-        scale: ratingRowScale(row, snapshotById),
-      }))
-    );
-
-    if (groups.length === 0 || (groups.length === 1 && groups[0].metric.ratingCount === 0)) {
-      return {
-        sourceKey,
-        label: SOURCE_CARD_LABELS[sourceKey],
-        mean: null,
-        ratingCount: 0,
-        spansMultipleScales: false,
-        scaleMax: null,
-        evidenceSummary: {
-          explanation: `No valid ratings from this evidence source in the selected scope.`,
-          evidenceHref,
-        },
-      };
-    }
-
-    if (groups.length > 1) {
-      const ratingCount = groups.reduce((sum, group) => sum + group.metric.ratingCount, 0);
-      return {
-        sourceKey,
-        label: SOURCE_CARD_LABELS[sourceKey],
-        mean: null,
-        ratingCount,
-        spansMultipleScales: true,
-        scaleMax: null,
-        evidenceSummary: {
-          ratingCount,
-          explanation: `Ratings span ${groups.length} incompatible scales; each scale is reported separately with no combined mean.`,
-          evidenceHref,
-        },
-      };
-    }
-
-    const scale = groups[0].scale;
-    return {
-      sourceKey,
-      label: SOURCE_CARD_LABELS[sourceKey],
-      mean: groups[0].metric.mean,
-      ratingCount: groups[0].metric.ratingCount,
-      spansMultipleScales: false,
-      scaleMax: scale?.max ?? null,
-      evidenceSummary: {
-        ratingCount: groups[0].metric.ratingCount,
-        responseCount: groups[0].metric.responseCount,
-        scaleLabel: scale ? describeScale(scale.descriptors) : undefined,
-        explanation: `Raw mean of ${groups[0].metric.ratingCount} valid ratings from submitted responses of this evidence source; sources are never pooled.`,
-        evidenceHref,
-      },
-    };
-  });
-}
-
-/** Project GO metrics into the compact summary row shape (§13.8). */
-function toGoSummaryRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string,
-  exclusionClause: string
-): DashboardGoSummaryRow[] {
+/** Project PO metrics into the dashboard row shape (§13.8). */
+export function toDashboardPoRows(metrics: PoMetric[]): DashboardPoRow[] {
   return metrics.map((metric) => ({
-    goId: metric.goId,
-    goCode: metric.goCode,
+    poId: metric.poId,
+    poCode: metric.poCode,
     mean: metric.mean,
-    ratingCount: metric.ratingCount,
-    responseCount: metric.responseCount,
-    evaluationCount: metric.evaluationCount,
-    contributorCount: metric.questionCount,
-    contributorKind: "questions" as const,
     spansMultipleScales: metric.spansMultipleScales,
-    scaleMax: singleScaleMax(metric),
+    scaleMax: metric.scaleGroups.length === 1 ? (metric.scaleGroups[0].scale?.max ?? null) : null,
     hasEvidence: metric.ratingCount > 0,
-    evidenceSummary: {
-      ratingCount: metric.ratingCount,
-      responseCount: metric.responseCount,
-      evaluationCount: metric.evaluationCount,
-      questionCount: metric.questionCount,
-      scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-      explanation: `Raw mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s); ${exclusionClause}`,
-      evidenceHref: evidenceHrefFor(metric.goId),
-    },
+    attainment: classifyOutcomeMean(
+      metric.mean,
+      metric.scaleGroups.length === 1 ? metric.scaleGroups[0].scale : null,
+      { spansMultipleScales: metric.spansMultipleScales }
+    ),
   }));
-}
-
-/**
- * Project course-derived GO metrics into the compact summary row shape (§13.8).
- * Course evidence additionally excludes general items, which carry no GO binding.
- */
-export function toDashboardGoRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string
-): DashboardGoSummaryRow[] {
-  return toGoSummaryRows(metrics, evidenceHrefFor, "unbound and general items are excluded.");
-}
-
-/** Max of the single compatible scale group; null when mixed or unresolved. */
-function singleScaleMax(metric: GoMetric): number | null {
-  if (metric.scaleGroups.length !== 1) return null;
-  return metric.scaleGroups[0].scale?.max ?? null;
-}
-
-/** Project program-wide GO metrics into the compact summary row shape (§13.8). */
-export function toCentralDashboardGoRows(
-  metrics: GoMetric[],
-  evidenceHrefFor: (goId: string) => string
-): DashboardGoSummaryRow[] {
-  return toGoSummaryRows(metrics, evidenceHrefFor, "unbound items are excluded.");
 }
 
 /** Course question bindings keyed by evaluation plus section/item identity. */
@@ -337,17 +198,17 @@ export type CourseBindingRow = {
     description: string;
     cilo_mappings: Array<{
       manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      go: { id: string; code: string; description: string };
+      po: { id: string; code: string; description: string };
     }>;
   } | null;
-  directGoMappings?: Array<{
-    goId: string;
-    goCode: string;
-    goDescription: string;
+  directPoMappings?: Array<{
+    poId: string;
+    poCode: string;
+    poDescription: string;
   }>;
 };
 
-/** Normalize course-bound ratings through CILO and direct GO bindings. */
+/** Normalize course-bound ratings through CILO and direct PO bindings. */
 export function buildCourseGoRatingRows(
   rows: DashboardRatingRow[],
   bindingByKey: Map<string, CourseBindingRow>,
@@ -361,8 +222,8 @@ export function buildCourseGoRatingRows(
       encodeCourseBindingKey(courseBoundId, row.section_key, row.item_key)
     );
     const cilo = binding?.cilo;
-    const directGoMappings = binding?.directGoMappings ?? [];
-    if ((!cilo || cilo.cilo_mappings.length === 0) && directGoMappings.length === 0) continue;
+    const directPoMappings = binding?.directPoMappings ?? [];
+    if ((!cilo || cilo.cilo_mappings.length === 0) && directPoMappings.length === 0) continue;
     normalized.push({
       sectionKey: row.section_key,
       itemKey: row.item_key,
@@ -372,14 +233,14 @@ export function buildCourseGoRatingRows(
       evaluationId: courseBoundId,
       scale: ratingRowScale(row, snapshotById),
       cilo: cilo ? { id: cilo.id, label: cilo.description, description: cilo.description } : null,
-      goMappings:
+      poMappings:
         cilo?.cilo_mappings.map((mapping) => ({
-          goId: mapping.go.id,
-          goCode: mapping.go.code,
-          goDescription: mapping.go.description,
+          poId: mapping.po.id,
+          poCode: mapping.po.code,
+          poDescription: mapping.po.description,
           manifestation: mapping.manifestation,
         })) ?? [],
-      directGoMappings: directGoMappings.map((mapping) => ({
+      directPoMappings: directPoMappings.map((mapping) => ({
         ...mapping,
         manifestation: null,
       })),
@@ -388,23 +249,23 @@ export function buildCourseGoRatingRows(
   return normalized;
 }
 
-/** Snapshot GO bindings keyed by deployment then section/item identity. */
+/** Snapshot PO bindings keyed by deployment then section/item identity. */
 export type CentralBindingsByDeployment = Map<
   string,
-  Map<string, Array<{ goId: string; goCode: string; goDescription: string }>>
+  Map<string, Array<{ poId: string; poCode: string; poDescription: string }>>
 >;
 
 /**
  * Normalize central-deployment ratings into shared-aggregator rows through
- * the published CentralDeploymentGoSnapshot bindings (§5.9). Questions the
- * deployment never bound to a live GO contribute no GO evidence.
+ * the published CentralDeploymentPoSnapshot bindings (§5.9). Questions the
+ * deployment never bound to a live PO contribute no PO evidence.
  */
-export function buildCentralGoRatingRows(
+export function buildCentralPoRatingRows(
   rows: DashboardRatingRow[],
   bindingsByDeployment: CentralBindingsByDeployment,
   snapshotById: Map<string, unknown>
-): CentralGoRatingRow[] {
-  const normalized: CentralGoRatingRow[] = [];
+): CentralPoRatingRow[] {
+  const normalized: CentralPoRatingRow[] = [];
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     if (!deployment) continue;
@@ -419,7 +280,7 @@ export function buildCentralGoRatingRows(
       responseId: row.response_id,
       evaluationId: deployment.id,
       scale: ratingRowScale(row, snapshotById),
-      goBindings: bindings,
+      poBindings: bindings,
     });
   }
   return normalized;
@@ -451,9 +312,10 @@ export function isClosingWithinSevenDays(deployment: AttentionDeployment, now: D
 /**
  * The three concrete needs-attention rules, period-scoped to the selected
  * Program: an ACTIVE deployment whose deadline is within 7 days, an ACTIVE
- * deployment with zero submitted responses, and a live GO with zero ratings
+ * deployment with zero submitted responses, and a live PO with zero ratings
  * for an evidence source. Operational facts only — no attainment or
- * performance classification (resolved §13.9).
+ * performance classification (resolved §13.9). A deployment tripping both
+ * deployment rules is one item; PO gaps collapse into one item per source.
  */
 export function buildNeedsAttentionItems(input: {
   programId: string;
@@ -461,56 +323,69 @@ export function buildNeedsAttentionItems(input: {
   deployments: AttentionDeployment[];
   submittedCountsByDeployment: Map<string, number>;
   programGos: Array<{ id: string; code: string }>;
-  goRowsBySource: Partial<Record<DashboardSourceKey, DashboardGoSummaryRow[]>>;
-  analyticsOutcomesHref: string;
+  poRowsBySource: Partial<Record<DashboardSourceKey, DashboardPoRow[]>>;
   periodFilters?: DashboardPeriodFilters;
 }): NeedsAttentionItem[] {
-  const items: NeedsAttentionItem[] = [];
-  const activeDeployments = input.deployments.filter(
-    (deployment) => deployment.status === DeploymentStatus.ACTIVE
-  );
-
-  for (const deployment of activeDeployments) {
-    if (!isClosingWithinSevenDays(deployment, input.now)) continue;
-    items.push({
-      id: `closing-soon:${deployment.kind}:${deployment.id}`,
-      rule: "closing-soon",
-      title: `${deployment.name} closes soon`,
-      note: "Deadline within 7 days",
-      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
-    });
-  }
-
-  for (const deployment of activeDeployments) {
-    if ((input.submittedCountsByDeployment.get(deployment.id) ?? 0) > 0) continue;
-    items.push({
-      id: `zero-submissions:${deployment.kind}:${deployment.id}`,
-      rule: "zero-submissions",
-      title: `${deployment.name} has no submissions yet`,
-      note: "No submitted responses so far",
-      href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
-    });
-  }
-
-  for (const sourceKey of DASHBOARD_SOURCE_ORDER) {
-    const evidenceGoIds = new Set(
-      (input.goRowsBySource[sourceKey] ?? [])
-        .filter((row) => row.hasEvidence)
-        .map((row) => row.goId)
+  const deploymentItems = input.deployments
+    .filter((deployment) => deployment.status === DeploymentStatus.ACTIVE)
+    .map((deployment) => {
+      const rules: NeedsAttentionRule[] = [];
+      if (isClosingWithinSevenDays(deployment, input.now)) rules.push("closing-soon");
+      if ((input.submittedCountsByDeployment.get(deployment.id) ?? 0) === 0) {
+        rules.push("zero-submissions");
+      }
+      return { deployment, rules };
+    })
+    .filter(({ rules }) => rules.length > 0)
+    .sort(
+      (a, b) =>
+        Number(b.rules.includes("closing-soon")) - Number(a.rules.includes("closing-soon")) ||
+        (a.deployment.deadlineAt?.getTime() ?? Infinity) -
+          (b.deployment.deadlineAt?.getTime() ?? Infinity) ||
+        // Deadline ties are broken by name, not by database row order: equal
+        // deadlines are common in seeded demo scopes, and an unordered read
+        // makes the ranked list differ between deployments.
+        a.deployment.name.localeCompare(b.deployment.name)
+    )
+    .map(
+      ({ deployment, rules }): NeedsAttentionItem => ({
+        id: `deployment:${deployment.kind}:${deployment.id}`,
+        rules,
+        title: deployment.name,
+        note: rules
+          .map((rule) => (rule === "closing-soon" ? "Closes within 7 days" : "No submissions yet"))
+          .join(" · "),
+        href: buildAttentionDeploymentHref(input.programId, deployment, input.periodFilters),
+      })
     );
-    for (const go of input.programGos) {
-      if (evidenceGoIds.has(go.id)) continue;
-      items.push({
-        id: `zero-go-ratings:${sourceKey}:${go.id}`,
-        rule: "zero-go-ratings",
-        title: `${go.code} has no ratings yet`,
-        note: `No ${SOURCE_CARD_LABELS[sourceKey]} ratings in this period`,
-        href: input.analyticsOutcomesHref,
-      });
-    }
-  }
 
-  return items;
+  const poGapItems = DASHBOARD_SOURCE_ORDER.flatMap((sourceKey): NeedsAttentionItem[] => {
+    const evidencePoIds = new Set(
+      (input.poRowsBySource[sourceKey] ?? [])
+        .filter((row) => row.hasEvidence)
+        .map((row) => row.poId)
+    );
+    const missing = input.programGos.filter((po) => !evidencePoIds.has(po.id));
+    if (missing.length === 0) return [];
+    return [
+      {
+        id: `zero-po-ratings:${sourceKey}`,
+        rules: ["zero-po-ratings"],
+        title: `No ratings from ${SOURCE_CARD_LABELS[sourceKey]}`,
+        note:
+          missing.length === input.programGos.length && missing.length > 1
+            ? `All ${missing.length} POs`
+            : missing.map((po) => po.code).join(", "),
+        href: buildAnalyticsUrl(input.programId, {
+          ...input.periodFilters,
+          tab: "outcomes",
+          ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
+        }),
+      },
+    ];
+  });
+
+  return [...deploymentItems, ...poGapItems];
 }
 
 function buildAttentionDeploymentHref(
@@ -538,63 +413,19 @@ function buildAttentionDeploymentHref(
 
 type QualitativeRow = {
   text_content: string;
-  response: {
-    id: string;
-    respondent_id: string;
-    assignment: {
-      course_bound: { id: string } | null;
-      central_deployment: { id: string; target_stakeholder: TargetStakeholder } | null;
-    };
-  };
+  response: { respondent_id: string };
 };
 
 /**
- * Aggregate the qualitative pulse counts over non-empty submitted answers.
- * Tokens are identifier-redacted server-side and capped at
- * QUALITATIVE_TOKEN_CAP (§13.10).
+ * Aggregate the qualitative pulse over non-empty submitted answers. Tokens
+ * are identifier-redacted server-side and capped at QUALITATIVE_TOKEN_CAP.
  */
 export function summarizeQualitativePulse(rows: QualitativeRow[]): QualitativePulse {
   const contributing = rows.filter((row) => row.text_content.trim().length > 0);
-  // Person-level respondent count across every deployment kind (§13.3): one
-  // person answering several evaluations counts once.
-  const respondentIds = new Set<string>();
-  const evaluationIds = new Set<string>();
-  const sourceBuckets = new Map<DashboardSourceKey, number>();
-
-  for (const row of contributing) {
-    respondentIds.add(row.response.respondent_id);
-    const courseBound = row.response.assignment.course_bound;
-    const central = row.response.assignment.central_deployment;
-    if (courseBound) {
-      evaluationIds.add(courseBound.id);
-    } else if (central) {
-      evaluationIds.add(central.id);
-    }
-    const sourceKey: DashboardSourceKey = courseBound
-      ? "COURSE_STUDENT"
-      : central?.target_stakeholder === TargetStakeholder.ALUMNI
-        ? "ALUMNI"
-        : central?.target_stakeholder === TargetStakeholder.INDUSTRY_PARTNER
-          ? "INDUSTRY_PARTNER"
-          : "CENTRAL_STUDENT";
-    sourceBuckets.set(sourceKey, (sourceBuckets.get(sourceKey) ?? 0) + 1);
-  }
-
   return {
-    respondentCount: respondentIds.size,
+    // Person-level: one person answering several evaluations counts once.
+    respondentCount: new Set(contributing.map((row) => row.response.respondent_id)).size,
     answerCount: contributing.length,
-    evaluationCount: evaluationIds.size,
-    sourceCounts: DASHBOARD_SOURCE_ORDER.flatMap((sourceKey) =>
-      sourceBuckets.has(sourceKey)
-        ? [
-            {
-              sourceKey,
-              label: FEEDBACK_SOURCE_LABELS[sourceKey],
-              count: sourceBuckets.get(sourceKey)!,
-            },
-          ]
-        : []
-    ),
     tokens: buildRedactedWordCloudTokens(contributing.map((row) => row.text_content)).slice(
       0,
       QUALITATIVE_TOKEN_CAP
@@ -692,23 +523,9 @@ export async function getProgramHeadDashboard(
     }),
     prisma.qualitativeResponseItem.findMany({
       where: { response: { status: ResponseStatus.SUBMITTED, ...programResponseScope } },
-      select: {
-        text_content: true,
-        response: {
-          select: {
-            id: true,
-            respondent_id: true,
-            assignment: {
-              select: {
-                course_bound: { select: { id: true } },
-                central_deployment: { select: { id: true, target_stakeholder: true } },
-              },
-            },
-          },
-        },
-      },
+      select: { text_content: true, response: { select: { respondent_id: true } } },
     }),
-    prisma.gO.findMany({
+    prisma.pO.findMany({
       where: { program_id: scope.programId, is_active: true },
       select: { id: true, code: true },
       orderBy: { code: "asc" },
@@ -727,39 +544,21 @@ export async function getProgramHeadDashboard(
 
   const snapshotById = await loadInstrumentSnapshots(ratingRows);
 
-  // ── Source-separated quantitative results (§13.5) ────────────────────────
-
-  const sourceMeans = buildDashboardSourceMeans(
-    ratingRows,
-    snapshotById,
-    scope.programId,
-    effectiveFilters
-  );
-
-  // ── GO evidence per source (§13.8) ──────────────────────────────────────
+  // ── PO evidence per source (§13.8) ──────────────────────────────────────
 
   const courseBoundRows = ratingRows.filter((row) => row.response.assignment.course_bound);
   const centralRows = ratingRows.filter((row) => !row.response.assignment.course_bound);
 
   const [bindingByKey, centralBindings] = await Promise.all([
     loadCourseBindings(courseBoundRows, scope.programId),
-    loadCentralGoBindings(centralRows),
+    loadCentralPoBindings(centralRows),
   ]);
 
-  const goEvidenceHref = (sourceKey: DashboardSourceKey, goId: string): string =>
-    buildAnalyticsUrl(scope.programId, {
-      ...effectiveFilters,
-      tab: "outcomes",
-      goId,
-      ...DASHBOARD_SOURCE_TO_ANALYTICS_FILTER[sourceKey],
-    });
-
-  const goRowsBySource: Record<DashboardSourceKey, DashboardGoSummaryRow[]> = {
-    COURSE_STUDENT: toDashboardGoRows(
-      buildCourseDerivedGoMetrics(
+  const poRowsBySource: Record<DashboardSourceKey, DashboardPoRow[]> = {
+    COURSE_STUDENT: toDashboardPoRows(
+      buildCourseDerivedPoMetrics(
         buildCourseGoRatingRows(courseBoundRows, bindingByKey, snapshotById)
-      ),
-      (goId) => goEvidenceHref("COURSE_STUDENT", goId)
+      )
     ),
     CENTRAL_STUDENT: [],
     ALUMNI: [],
@@ -774,15 +573,14 @@ export async function getProgramHeadDashboard(
     centralBySource.set(sourceKey, bucket);
   }
   for (const sourceKey of ["CENTRAL_STUDENT", "ALUMNI", "INDUSTRY_PARTNER"] as const) {
-    goRowsBySource[sourceKey] = toCentralDashboardGoRows(
-      buildProgramWideGoMetrics(
-        buildCentralGoRatingRows(
+    poRowsBySource[sourceKey] = toDashboardPoRows(
+      buildProgramWidePoMetrics(
+        buildCentralPoRatingRows(
           centralBySource.get(sourceKey) ?? [],
           centralBindings,
           snapshotById
         )
-      ),
-      (goId) => goEvidenceHref(sourceKey, goId)
+      )
     );
   }
 
@@ -802,19 +600,13 @@ export async function getProgramHeadDashboard(
     submissionGroups.map((group) => [group.deployment_id, group._count._all])
   );
 
-  const analyticsOutcomesHref = buildAnalyticsUrl(scope.programId, {
-    ...effectiveFilters,
-    tab: "outcomes",
-  });
-
   const needsAttention = buildNeedsAttentionItems({
     programId: scope.programId,
     now,
     deployments: activeEvaluations.deployments,
     submittedCountsByDeployment,
     programGos,
-    goRowsBySource,
-    analyticsOutcomesHref,
+    poRowsBySource,
     periodFilters: effectiveFilters,
   });
 
@@ -823,16 +615,14 @@ export async function getProgramHeadDashboard(
     programCode: scope.programCode,
     periodLabel,
     participation,
-    pendingResponses: participation.inProgress + participation.notStarted,
     activeEvaluations: {
       total: activeEvaluations.deployments.length,
       closingWithin7Days: activeEvaluations.deployments.filter((deployment) =>
         isClosingWithinSevenDays(deployment, now)
       ).length,
     },
-    sourceMeans,
-    goSources: goRowsBySource,
-    goCatalog: programGos.map((go) => ({ id: go.id, code: go.code })),
+    poSources: poRowsBySource,
+    poCatalog: programGos.map((po) => ({ id: po.id, code: po.code })),
     needsAttention,
     qualitative: summarizeQualitativePulse(qualitativeRows),
     links: buildDashboardLinks(scope.programId, effectiveFilters),
@@ -920,7 +710,7 @@ async function loadInstrumentSnapshots(
   return new Map(versions.map((version) => [version.id, version.structure_snapshot]));
 }
 
-/** Load CILO and direct GO bindings keyed by evaluation plus question. */
+/** Load CILO and direct PO bindings keyed by evaluation plus question. */
 async function loadCourseBindings(
   courseBoundRows: DashboardRatingRow[],
   programId: string
@@ -945,25 +735,25 @@ async function loadCourseBindings(
             id: true,
             description: true,
             cilo_mappings: {
-              where: { go: { program_id: programId } },
+              where: { po: { program_id: programId } },
               select: {
                 manifestation: true,
-                go: { select: { id: true, code: true, description: true } },
+                po: { select: { id: true, code: true, description: true } },
               },
             },
           },
         },
       },
     }),
-    prisma.courseBoundGoQuestionBinding.findMany({
+    prisma.courseBoundPoQuestionBinding.findMany({
       where: { course_bound_evaluation_id: { in: evaluationIds } },
       select: {
         course_bound_evaluation_id: true,
         section_key: true,
         item_key: true,
-        go_id: true,
-        go_code_snapshot: true,
-        go_description_snapshot: true,
+        po_id: true,
+        po_code_snapshot: true,
+        po_description_snapshot: true,
       },
     }),
   ]);
@@ -977,7 +767,7 @@ async function loadCourseBindings(
       ),
       {
         ...binding,
-        directGoMappings: [],
+        directPoMappings: [],
       }
     );
   }
@@ -992,20 +782,20 @@ async function loadCourseBindings(
       section_key: binding.section_key,
       item_key: binding.item_key,
       cilo: null,
-      directGoMappings: [],
+      directPoMappings: [],
     };
-    existing.directGoMappings!.push({
-      goId:
-        binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
-      goCode: binding.go_code_snapshot,
-      goDescription: binding.go_description_snapshot,
+    existing.directPoMappings!.push({
+      poId:
+        binding.po_id ?? `snapshot:${binding.po_code_snapshot}:${binding.po_description_snapshot}`,
+      poCode: binding.po_code_snapshot,
+      poDescription: binding.po_description_snapshot,
     });
     byKey.set(key, existing);
   }
   return byKey;
 }
 
-async function loadCentralGoBindings(
+async function loadCentralPoBindings(
   centralRows: DashboardRatingRow[]
 ): Promise<CentralBindingsByDeployment> {
   const deploymentIds = [
@@ -1020,13 +810,13 @@ async function loadCentralGoBindings(
   if (deploymentIds.length === 0) {
     return new Map();
   }
-  const snapshots = await prisma.centralDeploymentGoSnapshot.findMany({
-    where: { central_deployment_id: { in: deploymentIds }, go_id: { not: null } },
+  const snapshots = await prisma.centralDeploymentPoSnapshot.findMany({
+    where: { central_deployment_id: { in: deploymentIds }, po_id: { not: null } },
     select: {
       central_deployment_id: true,
       section_key: true,
       item_key: true,
-      go: { select: { id: true, code: true, description: true } },
+      po: { select: { id: true, code: true, description: true } },
     },
   });
   const byDeployment: CentralBindingsByDeployment = new Map();
@@ -1039,9 +829,9 @@ async function loadCentralGoBindings(
     const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     bindings.push({
-      goId: snapshot.go!.id,
-      goCode: snapshot.go!.code,
-      goDescription: snapshot.go!.description,
+      poId: snapshot.po!.id,
+      poCode: snapshot.po!.code,
+      poDescription: snapshot.po!.description,
     });
     byQuestion.set(questionKey, bindings);
   }
@@ -1062,14 +852,6 @@ function buildDashboardLinks(programId: string, filters: DashboardPeriodFilters)
       schoolYearId: filters.schoolYearId,
       semester: filters.semester as AcademicSemester | undefined,
       tab: "course",
-      page: 1,
-      status: DeploymentStatus.ACTIVE,
-    }),
-    responsesActiveProgramWide: buildProgramHeadResponsesUrl(programId, {
-      termInstanceId: filters.termInstanceId,
-      schoolYearId: filters.schoolYearId,
-      semester: filters.semester as AcademicSemester | undefined,
-      tab: "program-wide",
       page: 1,
       status: DeploymentStatus.ACTIVE,
     }),

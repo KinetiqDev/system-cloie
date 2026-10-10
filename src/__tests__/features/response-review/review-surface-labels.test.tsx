@@ -109,7 +109,7 @@ function centralDetail(): ProgramHeadCentralEvaluationDetail {
       stakeholders: [],
       respondents: { total: 0, complete: 0, partial: 0, notStarted: 0 },
     },
-    goResults: [],
+    poResults: [],
     questionResults: [],
     qualitative: { answerCount: 0, respondentCount: 0, prompts: [], topTerms: [] },
     respondents: [],
@@ -185,7 +185,7 @@ describe("review surface academic-context labels", () => {
   });
 
   it("names the alignment layer the Course actually reaches", () => {
-    // Program-specific evidence shows GO mappings; General Education shows ILO
+    // Program-specific evidence shows PO mappings; General Education shows ILO
     // alignments. The header is the reader's only cue about which layer a row
     // is grouped through, so it must not be generic wording.
     const { unmount } = render(
@@ -195,7 +195,7 @@ describe("review surface academic-context labels", () => {
         analyticsHref="/a"
       />
     );
-    expect(screen.getByRole("columnheader", { name: "GO mappings" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "PO mappings" })).toBeInTheDocument();
     unmount();
 
     render(
@@ -220,7 +220,7 @@ describe("review surface academic-context labels", () => {
     );
 
     expect(screen.getByRole("columnheader", { name: "ILO alignments" })).toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "GO mappings" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "PO mappings" })).not.toBeInTheDocument();
     // An unclassified mapping is labelled rather than hidden, so a reader can
     // see the alignment exists and report it.
     expect(screen.getByText("ILO1 (LEARNING), ILO2 (Not classified)")).toBeInTheDocument();

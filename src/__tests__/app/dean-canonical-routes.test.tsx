@@ -10,7 +10,6 @@ import OldInstrumentEditPage from "../../app/(app)/dean/instruments/[id]/edit/pa
 import OldProgramNewPage from "../../app/(app)/dean/programs/new/page";
 import OldCourseNewPage from "../../app/(app)/dean/courses/new/page";
 import OldInstrumentNewPage from "../../app/(app)/dean/instruments/new/page";
-import AnalyticsPage from "../../app/(app)/dean/analytics/page";
 import ReportsPage from "../../app/(app)/dean/reports/page";
 import CiloReviewsPage from "../../app/(app)/dean/cilo-reviews/page";
 import AcademicStructurePage from "../../app/(app)/dean/academic-structure/page";
@@ -74,7 +73,6 @@ describe("Dean canonical routes", () => {
   });
 
   it("returns 404 for deferred routes", async () => {
-    await expect(async () => AnalyticsPage()).rejects.toThrow("NOT_FOUND");
     await expect(async () => ReportsPage()).rejects.toThrow("NOT_FOUND");
     await expect(async () => CiloReviewsPage()).rejects.toThrow("NOT_FOUND");
   });

@@ -39,7 +39,7 @@ function CiloMappingCard({ cilo, index }: { cilo: GECilo; index: number }) {
     >
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <span className="text-muted-foreground text-caption font-semibold tracking-wider uppercase">
+          <span className="text-label-sm text-muted-foreground tracking-wider uppercase">
             CILO {index + 1}
           </span>
           <p className="text-body-md text-foreground mt-1 text-pretty">{cilo.description}</p>
@@ -119,7 +119,7 @@ export default async function GenEdOutcomesMappingPage() {
       <div className="max-w-3xl">
         <BackLink href={buildGenEdOutcomesPath()}>Back to Institutional Learning Outcomes</BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
-        <p className="text-body-md text-muted-foreground mt-2 text-pretty">
+        <p className="text-body-sm text-muted-foreground mt-2 text-pretty">
           Review the college-wide alignment between General Education CILOs and Institutional
           Learning Outcomes. Faculty manage these classifications in Course alignment. This review
           is read-only.
@@ -155,9 +155,7 @@ export default async function GenEdOutcomesMappingPage() {
                     Shared General Education
                   </Badge>
                 </div>
-                <h2 className="font-heading text-title-lg font-semibold text-pretty">
-                  {course.courseTitle}
-                </h2>
+                <h2 className="text-heading-lg text-pretty">{course.courseTitle}</h2>
                 <CardDescription>
                   {course.cilos.length} {course.cilos.length === 1 ? "CILO" : "CILOs"} defined
                 </CardDescription>

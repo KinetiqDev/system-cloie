@@ -22,7 +22,7 @@ type ResponseDetailProps = {
   analyticsHref: string;
   /**
    * Outcome deep links (§27.6 reverse trace). The id is whichever typed
-   * alignment the answer actually carries: a GO id for Program-specific and
+   * alignment the answer actually carries: a PO id for Program-specific and
    * Central evidence, an ILO id for General Education. Each role resolves it
    * against its own Analytics workspace, so no href crosses role scopes.
    */
@@ -103,7 +103,7 @@ export function ResponseDetail({
                   <QuantitativeAnswerCard
                     key={item.itemKey}
                     item={item}
-                    outcomeHref={(goId) => outcomeHref(goId, response)}
+                    outcomeHref={(poId) => outcomeHref(poId, response)}
                   />
                 ) : (
                   <QualitativeAnswerCard key={item.promptKey} item={item} />
@@ -212,26 +212,26 @@ function CiloGoBadge({
       <CiloLabel label={binding.ciloLabel} />
       <OutcomeLinks
         className={ALIGNMENT_ROW_CLASS}
-        entries={binding.goMappings.map((mapping) => ({
-          key: mapping.goId,
-          label: mapping.goCode,
+        entries={binding.poMappings.map((mapping) => ({
+          key: mapping.poId,
+          label: mapping.poCode,
         }))}
         outcomeHref={outcomeHref}
       />
       <OutcomeLinks
         className={ALIGNMENT_ROW_CLASS}
-        entries={binding.directGoBindings.map((go) => ({ key: go.key, label: go.code }))}
+        entries={binding.directPoBindings.map((po) => ({ key: po.key, label: po.code }))}
         outcomeHref={outcomeHref}
       />
     </Badge>
   );
 }
 
-function GoBadge({
-  goBindings,
+function PoBadge({
+  poBindings,
   outcomeHref,
 }: {
-  goBindings: Extract<SubmittedAnswerBinding, { type: "GO" }>["goBindings"];
+  poBindings: Extract<SubmittedAnswerBinding, { type: "PO" }>["poBindings"];
   outcomeHref: (outcomeId: string) => string;
 }) {
   return (
@@ -240,10 +240,10 @@ function GoBadge({
       className={`border-success/30 bg-success-soft text-success ${BINDING_BADGE_CLASS}`}
     >
       <span>
-        <span className="font-semibold">GO:</span>{" "}
+        <span className="font-semibold">PO:</span>{" "}
         <OutcomeLinks
           className="inline-flex flex-wrap items-center gap-1"
-          entries={goBindings.map((go) => ({ key: go.key, label: go.code }))}
+          entries={poBindings.map((po) => ({ key: po.key, label: po.code }))}
           outcomeHref={outcomeHref}
         />
       </span>
@@ -254,7 +254,7 @@ function GoBadge({
 /**
  * Which alignment badge an answer carries. `binding.type`/`binding.layer`
  * discriminate the typed layer rather than inferring it from wording, so a
- * General Education answer can never render a GO link.
+ * General Education answer can never render a PO link.
  */
 function AnswerBindingBadges({
   binding,
@@ -270,8 +270,8 @@ function AnswerBindingBadges({
       </Badge>
     );
   }
-  if (binding.type === "GO") {
-    return <GoBadge goBindings={binding.goBindings} outcomeHref={outcomeHref} />;
+  if (binding.type === "PO") {
+    return <PoBadge poBindings={binding.poBindings} outcomeHref={outcomeHref} />;
   }
   return binding.layer === "INSTITUTIONAL_OUTCOME" ? (
     <IloAlignmentBadge binding={binding} outcomeHref={outcomeHref} />
@@ -285,7 +285,7 @@ function QuantitativeAnswerCard({
   outcomeHref,
 }: {
   item: QuantitativeSubmittedAnswer;
-  outcomeHref: (goId: string) => string;
+  outcomeHref: (poId: string) => string;
 }) {
   return (
     <div className="border-border/70 flex flex-col gap-2 border-b pb-4 last:border-b-0 last:pb-0">

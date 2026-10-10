@@ -542,7 +542,7 @@ describe("PublishCourseBoundEvaluationFormV2", () => {
     const publishAction = vi.fn().mockResolvedValue({
       success: false,
       error:
-        "Every active CILO must map to at least one active Graduate Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
+        "Every active CILO must map to at least one active Program Outcome from the Course's owning Academic Program before publishing. Complete the Course alignment to continue.",
       alignmentCourseId: "course-1",
     });
 

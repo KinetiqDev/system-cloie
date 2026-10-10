@@ -18,8 +18,8 @@ interface FacultyTemplateBuilderProps {
   initialData?: TemplateBuilderProps["initialData"];
   /** CILO bindings carried in from the template being edited or copied. */
   initialBindings?: TemplateCiloQuestionBinding[];
-  /** Direct question–GO bindings carried in from the template being edited or copied. */
-  initialGoBindings?: TemplateBuilderProps["initialGoBindings"];
+  /** Direct question–PO bindings carried in from the template being edited or copied. */
+  initialPoBindings?: TemplateBuilderProps["initialPoBindings"];
   startingFrom?: TemplateBuilderProps["startingFrom"];
   saveSuccessConfig?: TemplateBuilderProps["saveSuccessConfig"];
 }
@@ -32,7 +32,7 @@ interface FacultyTemplateBuilderProps {
 export function FacultyTemplateBuilder({
   courseContexts,
   initialBindings = [],
-  initialGoBindings,
+  initialPoBindings,
   programLabel,
   ...props
 }: FacultyTemplateBuilderProps) {
@@ -42,7 +42,7 @@ export function FacultyTemplateBuilder({
       facultyConfig={{
         courseContexts,
         initialBindings,
-        initialGoBindings: initialGoBindings ?? [],
+        initialPoBindings: initialPoBindings ?? [],
         loadManagedCilosAction: loadFacultyManagedCilosAction,
         loadCourseGoOptionsAction: loadFacultyCourseGoOptionsAction,
         validatePublishReadinessAction: validateFacultyTemplatePublishReadinessAction,

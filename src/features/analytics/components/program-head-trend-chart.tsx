@@ -167,7 +167,7 @@ export function ProgramHeadTrendChart({ title, periods, breaks }: ProgramHeadTre
         })}
       </div>
       <p id={insightId} className="text-body-sm text-text-secondary">
-        {insight}
+        {insight} Colors identify comparable period runs, not attainment classifications.
       </p>
       {breaks.length > 0 ? (
         <div className="rounded-lg border border-dashed p-3">

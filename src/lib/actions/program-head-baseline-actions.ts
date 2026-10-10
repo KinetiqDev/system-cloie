@@ -15,7 +15,7 @@ export async function createBaselineCopyAction(
   baselineId: string,
   customName: string,
   structure: TemplateStructure,
-  goBindings: TemplateGoQuestionBinding[],
+  poBindings: TemplateGoQuestionBinding[],
   settings?: TemplateSettingsInput
 ) {
   if (settings !== undefined) {
@@ -32,7 +32,7 @@ export async function createBaselineCopyAction(
     baselineId,
     customName,
     structure,
-    goBindings,
+    poBindings,
     settings,
   });
   if (result.success) revalidatePath(buildProgramHeadToolsPath(programId));

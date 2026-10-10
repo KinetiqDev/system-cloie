@@ -93,8 +93,8 @@ export const templateStructureSchema = z
 
 // ─── Create / Update Schemas ─────────────────────────────────────────────────
 
-const goQuestionBindingSchema = z.object({
-  goId: z.string().uuid(),
+const poQuestionBindingSchema = z.object({
+  poId: z.string().uuid(),
   itemKey: z.string().min(1, "Question key is required."),
   sectionKey: z.string().min(1, "Section key is required."),
 });
@@ -112,7 +112,7 @@ export const createProgramHeadTemplateSchema = z
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
-    __KEEP_program_question_go_bindings__: z.array(goQuestionBindingSchema).optional(),
+    __KEEP_program_question_go_bindings__: z.array(poQuestionBindingSchema).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -131,7 +131,7 @@ export const createProgramHeadTemplateSchema = z
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "GOs can only be assigned to questions in program-wide evaluations.",
+        message: "POs can only be assigned to questions in program-wide evaluations.",
         path: ["program_question_go_bindings"],
       });
     }
@@ -176,7 +176,7 @@ export const updateProgramHeadTemplateSchema = z
     template_type: z.nativeEnum(EvaluationTemplateType),
     is_faculty_accessible: checkboxBoolean,
     structure: templateStructureSchema,
-    __KEEP_program_question_go_bindings__: z.array(goQuestionBindingSchema).optional(),
+    __KEEP_program_question_go_bindings__: z.array(poQuestionBindingSchema).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -195,7 +195,7 @@ export const updateProgramHeadTemplateSchema = z
     ) {
       ctx.addIssue({
         code: "custom",
-        message: "GOs can only be assigned to questions in program-wide evaluations.",
+        message: "POs can only be assigned to questions in program-wide evaluations.",
         path: ["program_question_go_bindings"],
       });
     }
@@ -224,12 +224,12 @@ export const saveFacultyTemplateDraftSchema = z.object({
   bound_program_id: z.string().uuid().optional().nullable(),
   bound_major_id: z.string().uuid().optional().nullable(),
   cilo_question_bindings: z.array(ciloQuestionBindingSchema).default([]),
-  go_question_bindings: z.array(goQuestionBindingSchema).default([]),
+  po_question_bindings: z.array(poQuestionBindingSchema).default([]),
 });
 
 // ─── Inferred Types ──────────────────────────────────────────────────────────
 
-type ProgramGoQuestionBindingInput = z.infer<typeof goQuestionBindingSchema>;
+type ProgramGoQuestionBindingInput = z.infer<typeof poQuestionBindingSchema>;
 export type CreateProgramHeadTemplateInput = {
   programId: string;
   name: string;

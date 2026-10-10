@@ -161,6 +161,7 @@ export function getProgramHeadNav(
 
 const DEAN_PRIMARY_NAV: NavItem[] = [
   { name: "Dashboard", href: "/dean/dashboard", icon: LayoutDashboard },
+  { name: "Analytics", href: "/dean/analytics", icon: BarChart3 },
   { name: "Structure", href: "/dean/academic-structure", icon: Building2 },
   { name: "Oversight", href: "/dean/college-oversight", icon: Layers3 },
   { name: "Profile", href: "/dean/profile", icon: UserCircle },
@@ -187,6 +188,7 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
     href: "/dean/college-oversight",
     icon: ShieldCheck,
     items: [
+      { name: "Analytics", href: "/dean/analytics", icon: BarChart3 },
       {
         name: "Learning Outcomes",
         href: "/dean/college-oversight/learning-outcomes",

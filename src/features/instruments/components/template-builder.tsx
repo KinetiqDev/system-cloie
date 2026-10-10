@@ -91,7 +91,7 @@ import type {
   LikertDescriptor,
   EvaluationTemplateType,
   TemplateCiloQuestionBinding,
-  ProgramGoOption,
+  ProgramPoOption,
   TemplateGoQuestionBinding,
   TemplateSettingsInput,
 } from "../types";
@@ -99,7 +99,7 @@ import { DEFAULT_LIKERT_5_DESCRIPTORS } from "../types";
 import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import {
   collectCiloBindings,
-  collectGoBindings,
+  collectPoBindings,
   pruneDraftBindings,
 } from "../services/draft-bindings";
 
@@ -112,19 +112,19 @@ const EMPTY_FACULTY_COURSE_CONTEXTS: FacultyCourseContext[] = [];
 type FacultyBuilderCourseGoOptionsResult =
   | {
       success: true;
-      data: { items: ProgramGoOption[]; unavailableReason: "general-education" | null };
+      data: { items: ProgramPoOption[]; unavailableReason: "general-education" | null };
     }
   | { success: false; error: string };
 
 type FacultyBuilderConfig = {
   courseContexts: FacultyCourseContext[];
   initialBindings: TemplateCiloQuestionBinding[];
-  /** Direct question–GO bindings stored on the template, seeded into the editor. */
-  initialGoBindings?: TemplateGoQuestionBinding[];
+  /** Direct question–PO bindings stored on the template, seeded into the editor. */
+  initialPoBindings?: TemplateGoQuestionBinding[];
   loadManagedCilosAction: (
     payload: FacultyManagedCiloContext
   ) => Promise<FacultyManagedCiloLoadResult>;
-  /** Resolves the bound Course's GO catalog; absent when a flow offers none. */
+  /** Resolves the bound Course's PO catalog; absent when a flow offers none. */
   loadCourseGoOptionsAction?: (payload: {
     courseId: string;
     majorId: string | null;
@@ -161,7 +161,7 @@ export interface TemplateBuilderProps {
     baselineId: string,
     customName: string,
     structure: TemplateStructure,
-    goBindings: TemplateGoQuestionBinding[],
+    poBindings: TemplateGoQuestionBinding[],
     settings: TemplateSettingsInput
   ) => Promise<ActionResult<{ id: string }>>;
   /**
@@ -177,13 +177,13 @@ export interface TemplateBuilderProps {
   };
   onPublish?: (templateId: string) => void;
   /**
-   * Server-prepared active GOs (canonical order) offered to Program-wide
+   * Server-prepared active POs (canonical order) offered to Program-wide
    * templates. Absent in faculty/COURSE_BOUND mode: there the catalog is
    * resolved per bound Course through the faculty builder config.
    */
-  goOptions?: ProgramGoOption[];
-  /** Existing question–GO bindings loaded for this template. */
-  initialGoBindings?: TemplateGoQuestionBinding[];
+  poOptions?: ProgramPoOption[];
+  /** Existing question–PO bindings loaded for this template. */
+  initialPoBindings?: TemplateGoQuestionBinding[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -248,8 +248,8 @@ function normalizeTemplateStructure(structure: TemplateStructure): TemplateStruc
  */
 type DraftState = {
   ciloQuestionBindings: Record<string, string>;
-  courseGoBindings: Record<string, string[]>;
-  goQuestionBindings: Record<string, string[]>;
+  coursePoBindings: Record<string, string[]>;
+  poQuestionBindings: Record<string, string[]>;
   sections: TemplateStructure;
 };
 
@@ -261,11 +261,11 @@ type DraftAction =
       update: (bindings: Record<string, string>) => Record<string, string>;
     }
   | {
-      type: "updateGoBindings";
+      type: "updatePoBindings";
       update: (bindings: Record<string, string[]>) => Record<string, string[]>;
     }
   | {
-      type: "updateCourseGoBindings";
+      type: "updateCoursePoBindings";
       update: (bindings: Record<string, string[]>) => Record<string, string[]>;
     };
 
@@ -284,8 +284,8 @@ function draftReducer(state: DraftState, action: DraftAction): DraftState {
       return {
         sections,
         ciloQuestionBindings: pruneDraftBindings(state.ciloQuestionBindings, sections),
-        goQuestionBindings: pruneDraftBindings(state.goQuestionBindings, sections),
-        courseGoBindings: pruneDraftBindings(state.courseGoBindings, sections),
+        poQuestionBindings: pruneDraftBindings(state.poQuestionBindings, sections),
+        coursePoBindings: pruneDraftBindings(state.coursePoBindings, sections),
       };
     }
     case "updateCiloBindings": {
@@ -294,15 +294,15 @@ function draftReducer(state: DraftState, action: DraftAction): DraftState {
         ? state
         : { ...state, ciloQuestionBindings };
     }
-    case "updateGoBindings": {
-      const goQuestionBindings = action.update(state.goQuestionBindings);
-      return goQuestionBindings === state.goQuestionBindings
+    case "updatePoBindings": {
+      const poQuestionBindings = action.update(state.poQuestionBindings);
+      return poQuestionBindings === state.poQuestionBindings
         ? state
-        : { ...state, goQuestionBindings };
+        : { ...state, poQuestionBindings };
     }
-    case "updateCourseGoBindings": {
-      const courseGoBindings = action.update(state.courseGoBindings);
-      return courseGoBindings === state.courseGoBindings ? state : { ...state, courseGoBindings };
+    case "updateCoursePoBindings": {
+      const coursePoBindings = action.update(state.coursePoBindings);
+      return coursePoBindings === state.coursePoBindings ? state : { ...state, coursePoBindings };
     }
   }
 }
@@ -424,10 +424,10 @@ export const sameContainerKeyboardCoordinates: KeyboardCoordinateGetter = (event
   return { x: rect.left, y: rect.top - offset };
 };
 /**
- * Names why the Course-bound GO axis cannot offer a catalog right now. The
+ * Names why the Course-bound PO axis cannot offer a catalog right now. The
  * General Education case is a rule, not an empty state: those Courses have no
  * owning Program and align to Institutional Outcomes (ADR 0005). The
- * reason union is shared with the builder's GO catalog state below.
+ * reason union is shared with the builder's PO catalog state below.
  */
 type CourseGoCatalogReason =
   | "general-education"
@@ -441,20 +441,20 @@ function courseGoCatalogNote(
   isLoading: boolean,
   selectedCourseContext: FacultyCourseContext | null
 ): string | null {
-  if (isLoading) return "Loading Graduate Outcomes…";
+  if (isLoading) return "Loading Program Outcomes…";
   if (reason === "general-education" || selectedCourseContext?.courseType === "GENERAL_EDUCATION") {
-    return "Graduate Outcome binding applies to program-specific courses.";
+    return "Program Outcome binding applies to program-specific courses.";
   }
   if (reason === "unselected-course") {
     // A stale "no course" reason with a live selection means the catalog has
     // not resolved for this flow; there is nothing to explain yet.
-    return selectedCourseContext ? null : "Bind a course to this template to assign GOs.";
+    return selectedCourseContext ? null : "Bind a course to this template to assign POs.";
   }
   if (reason === "unresolved-course") {
-    return "The selected course is no longer available; re-select it to load Graduate Outcomes.";
+    return "The selected course is no longer available; re-select it to load Program Outcomes.";
   }
   if (reason === "empty-catalog") {
-    return "This program has no active Graduate Outcomes yet, so there is nothing to assign.";
+    return "This program has no active Program Outcomes yet, so there is nothing to assign.";
   }
   return null;
 }
@@ -521,19 +521,19 @@ function serializeBuilderDraft(draft: {
   boundMajorId: string;
   boundProgramId: string;
   ciloQuestionBindings: Record<string, string>;
-  /** Course-bound GO bindings, tracked only in faculty mode. */
-  courseGoBindings?: Record<string, string[]>;
+  /** Course-bound PO bindings, tracked only in faculty mode. */
+  coursePoBindings?: Record<string, string[]>;
   description: string;
   isActive: boolean;
   isFacultyAccessible: boolean;
   name: string;
-  goQuestionBindings: Record<string, string[]>;
+  poQuestionBindings: Record<string, string[]>;
   sections: TemplateStructure;
   templateType: EvaluationTemplateType;
 }) {
   return JSON.stringify({
     ...draft,
-    courseGoBindings: draft.courseGoBindings ?? undefined,
+    coursePoBindings: draft.coursePoBindings ?? undefined,
     sections: normalizeTemplateStructure(draft.sections),
   });
 }
@@ -557,8 +557,8 @@ export function TemplateBuilder({
   onSaveAsCopy,
   startingFrom,
   onPublish,
-  goOptions,
-  initialGoBindings,
+  poOptions,
+  initialPoBindings,
 }: TemplateBuilderProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -593,35 +593,35 @@ export function TemplateBuilder({
           binding.ciloId,
         ])
       ),
-      goQuestionBindings: (() => {
+      poQuestionBindings: (() => {
         const map: Record<string, string[]> = {};
-        for (const binding of initialGoBindings ?? []) {
+        for (const binding of initialPoBindings ?? []) {
           const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
           if (!map[key]) map[key] = [];
-          map[key].push(binding.goId);
+          map[key].push(binding.poId);
         }
         return map;
       })(),
       /**
-       * Course-bound GO bindings ask each Likert question for the Graduate
+       * Course-bound PO bindings ask each Likert question for the Graduate
        * Outcomes of the bound Course's owning Program. The catalog is loaded from
        * the server whenever the bound Course context changes, exactly like the
        * saved CILOs. The stored rows only seed the editor; the live catalog wins
        * on every save.
        */
-      courseGoBindings: (() => {
+      coursePoBindings: (() => {
         if (!facultyConfig) return {};
         const map: Record<string, string[]> = {};
-        for (const binding of facultyConfig.initialGoBindings ?? initialGoBindings ?? []) {
+        for (const binding of facultyConfig.initialPoBindings ?? initialPoBindings ?? []) {
           const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
           if (!map[key]) map[key] = [];
-          if (!map[key].includes(binding.goId)) map[key].push(binding.goId);
+          if (!map[key].includes(binding.poId)) map[key].push(binding.poId);
         }
         return map;
       })(),
     })
   );
-  const { ciloQuestionBindings, courseGoBindings, goQuestionBindings, sections } = draft;
+  const { ciloQuestionBindings, coursePoBindings, poQuestionBindings, sections } = draft;
   const setSections = useCallback(
     (update: (sections: TemplateStructure) => TemplateStructure) =>
       dispatchDraft({ type: "updateSections", update }),
@@ -634,12 +634,12 @@ export function TemplateBuilder({
   );
   const setGoQuestionBindings = useCallback(
     (update: (bindings: Record<string, string[]>) => Record<string, string[]>) =>
-      dispatchDraft({ type: "updateGoBindings", update }),
+      dispatchDraft({ type: "updatePoBindings", update }),
     []
   );
-  const setCourseGoBindings = useCallback(
+  const setCoursePoBindings = useCallback(
     (update: (bindings: Record<string, string[]>) => Record<string, string[]>) =>
-      dispatchDraft({ type: "updateCourseGoBindings", update }),
+      dispatchDraft({ type: "updateCoursePoBindings", update }),
     []
   );
 
@@ -658,39 +658,39 @@ export function TemplateBuilder({
 
   const facultyMode = Boolean(facultyConfig);
   const effectiveTemplateType: EvaluationTemplateType = facultyMode ? "COURSE_BOUND" : templateType;
-  /** GO question bindings belong to Program-owned templates. The owning
-   * Program Head flow supplies `goOptions`, including an empty catalog when
-   *  no active GOs exist. Institution-level builders do not supply it. */
+  /** PO question bindings belong to Program-owned templates. The owning
+   * Program Head flow supplies `poOptions`, including an empty catalog when
+   *  no active POs exist. Institution-level builders do not supply it. */
   const programWideMode =
-    goOptions !== undefined &&
+    poOptions !== undefined &&
     !facultyMode &&
     effectiveTemplateType === "PROGRAM_WIDE" &&
     (!isInstitutionalBaseline || Boolean(onSaveAsCopy));
-  const [courseGoOptions, setCourseGoOptions] = useState<ProgramGoOption[]>([]);
+  const [courseGoOptions, setCourseGoOptions] = useState<ProgramPoOption[]>([]);
   const [courseGoOptionsReason, setCourseGoOptionsReason] =
     useState<CourseGoCatalogReason>("unselected-course");
   const [isLoadingGoOptions, setIsLoadingGoOptions] = useState(false);
-  /** Archived GOs bound to questions: rendered as removable archived chips. */
-  const archivedGoLookup = useMemo(() => {
-    const lookup = new Map<string, ProgramGoOption>();
+  /** Archived POs bound to questions: rendered as removable archived chips. */
+  const archivedPoLookup = useMemo(() => {
+    const lookup = new Map<string, ProgramPoOption>();
     const seededBindings = [
-      ...(initialGoBindings ?? []),
-      ...(facultyConfig?.initialGoBindings ?? []),
+      ...(initialPoBindings ?? []),
+      ...(facultyConfig?.initialPoBindings ?? []),
     ];
     const activeIds = new Set([
-      ...(goOptions ?? []).map((go) => go.id),
-      ...courseGoOptions.map((go) => go.id),
+      ...(poOptions ?? []).map((po) => po.id),
+      ...courseGoOptions.map((po) => po.id),
     ]);
     for (const binding of seededBindings) {
-      if (activeIds.has(binding.goId)) continue;
-      lookup.set(binding.goId, {
-        id: binding.goId,
-        code: binding.goCodeSnapshot ?? "Archived GO",
-        description: binding.goDescriptionSnapshot ?? "",
+      if (activeIds.has(binding.poId)) continue;
+      lookup.set(binding.poId, {
+        id: binding.poId,
+        code: binding.poCodeSnapshot ?? "Archived PO",
+        description: binding.poDescriptionSnapshot ?? "",
       });
     }
     return lookup;
-  }, [initialGoBindings, facultyConfig?.initialGoBindings, goOptions, courseGoOptions]);
+  }, [initialPoBindings, facultyConfig?.initialPoBindings, poOptions, courseGoOptions]);
   const currentDraftSnapshot = useMemo(
     () =>
       serializeBuilderDraft({
@@ -698,12 +698,12 @@ export function TemplateBuilder({
         boundMajorId,
         boundProgramId,
         ciloQuestionBindings,
-        courseGoBindings: facultyMode ? courseGoBindings : undefined,
+        coursePoBindings: facultyMode ? coursePoBindings : undefined,
         description,
         isActive,
         isFacultyAccessible,
         name,
-        goQuestionBindings,
+        poQuestionBindings,
         sections,
         templateType: effectiveTemplateType,
       }),
@@ -712,14 +712,14 @@ export function TemplateBuilder({
       boundMajorId,
       boundProgramId,
       ciloQuestionBindings,
-      courseGoBindings,
+      coursePoBindings,
       description,
       effectiveTemplateType,
       facultyMode,
       isActive,
       isFacultyAccessible,
       name,
-      goQuestionBindings,
+      poQuestionBindings,
       sections,
     ]
   );
@@ -841,14 +841,14 @@ export function TemplateBuilder({
     setPendingNavigationHref(null);
     router.push(destination);
   }, [pendingNavigationHref, router, toolsHref]);
-  const programGoOptions = goOptions ?? [];
+  const programGoOptions = poOptions ?? [];
   const facultyCourseContexts = facultyConfig?.courseContexts ?? EMPTY_FACULTY_COURSE_CONTEXTS;
   const loadManagedCilosAction = facultyConfig?.loadManagedCilosAction;
   const loadCourseGoOptionsAction = facultyConfig?.loadCourseGoOptionsAction;
   const selectedCourseContext =
     facultyCourseContexts.find((context) => context.courseId === boundCourseId) ?? null;
   const selectedCourseType = selectedCourseContext?.courseType;
-  /** The Course-bound GO axis state and derived availability for rendering. */
+  /** The Course-bound PO axis state and derived availability for rendering. */
   const courseGoCatalog = useMemo(
     () => ({
       options: courseGoOptions,
@@ -977,7 +977,7 @@ export function TemplateBuilder({
     loadManagedCilosAction,
   ]);
 
-  // Mirrors the saved-CILO load above for the bound Course's Graduate Outcome
+  // Mirrors the saved-CILO load above for the bound Course's Program Outcome
   // catalog. The request intentionally carries only the Course context triple:
   // the server resolves the owning Program from the Course record.
   useEffect(() => {
@@ -1044,7 +1044,7 @@ export function TemplateBuilder({
         if (!isStale) {
           setCourseGoOptions([]);
           setCourseGoOptionsReason("unresolved-course");
-          showToast("Unable to load Graduate Outcomes for this course.", "error");
+          showToast("Unable to load Program Outcomes for this course.", "error");
         }
       })
       .finally(() => {
@@ -1087,8 +1087,8 @@ export function TemplateBuilder({
 
   /**
    * Commit a structure change and drop the bindings it invalidated. Every edit
-   * that removes or retypes a question goes through here, so the CILO, GO, and
-   * Course-bound GO maps stay coherent with the document they describe instead
+   * that removes or retypes a question goes through here, so the CILO, PO, and
+   * Course-bound PO maps stay coherent with the document they describe instead
    * of each edit path pruning whichever map it happened to remember.
    */
   const commitStructure = useCallback(
@@ -1388,7 +1388,7 @@ export function TemplateBuilder({
     if (programWideMode) {
       formData.set(
         "program_question_go_bindings",
-        JSON.stringify(collectGoBindings(sections, goQuestionBindings))
+        JSON.stringify(collectPoBindings(sections, poQuestionBindings))
       );
     }
 
@@ -1401,8 +1401,8 @@ export function TemplateBuilder({
         JSON.stringify(collectCiloBindings(ciloQuestionBindings, sections))
       );
       formData.set(
-        "go_question_bindings",
-        JSON.stringify(collectGoBindings(sections, courseGoBindings))
+        "po_question_bindings",
+        JSON.stringify(collectPoBindings(sections, coursePoBindings))
       );
     }
 
@@ -1412,14 +1412,14 @@ export function TemplateBuilder({
     boundMajorId,
     boundProgramId,
     ciloQuestionBindings,
-    courseGoBindings,
+    coursePoBindings,
     description,
     effectiveTemplateType,
     facultyMode,
     isActive,
     isFacultyAccessible,
     name,
-    goQuestionBindings,
+    poQuestionBindings,
     programWideMode,
     sections,
     startingFrom,
@@ -1450,8 +1450,8 @@ export function TemplateBuilder({
 
     setIsCopyPending(true);
     const structure = normalizeTemplateStructure(sections);
-    const goBindings = programWideMode ? collectGoBindings(structure, goQuestionBindings) : [];
-    const result = await onSaveAsCopy(templateId, copyName, structure, goBindings, {
+    const poBindings = programWideMode ? collectPoBindings(structure, poQuestionBindings) : [];
+    const result = await onSaveAsCopy(templateId, copyName, structure, poBindings, {
       description,
       is_active: isActive,
       is_faculty_accessible: isFacultyAccessible,
@@ -1478,7 +1478,7 @@ export function TemplateBuilder({
     router,
     onSaveResult,
     programWideMode,
-    goQuestionBindings,
+    poQuestionBindings,
     description,
     isActive,
     isFacultyAccessible,
@@ -1506,8 +1506,8 @@ export function TemplateBuilder({
 
       startTransition(async () => {
         const structure = normalizeTemplateStructure(sections);
-        const goBindings = programWideMode ? collectGoBindings(structure, goQuestionBindings) : [];
-        const result = await onSaveAsCopy(startingFrom.id, copyNameInput, structure, goBindings, {
+        const poBindings = programWideMode ? collectPoBindings(structure, poQuestionBindings) : [];
+        const result = await onSaveAsCopy(startingFrom.id, copyNameInput, structure, poBindings, {
           description,
           is_active: isActive,
           is_faculty_accessible: isFacultyAccessible,
@@ -1557,7 +1557,7 @@ export function TemplateBuilder({
     onSaveResult,
     startingFrom,
     programWideMode,
-    goQuestionBindings,
+    poQuestionBindings,
     sections,
   ]);
 
@@ -1807,7 +1807,7 @@ export function TemplateBuilder({
                   // selected Course, so bindings keyed to the previous Course
                   // never carry over.
                   setCiloQuestionBindings(() => ({}));
-                  setCourseGoBindings(() => ({}));
+                  setCoursePoBindings(() => ({}));
                 }}
                 filter={(ctx: FacultyCourseContext, query: string) =>
                   !query ||
@@ -2000,33 +2000,33 @@ export function TemplateBuilder({
                     [questionKey]: ciloId,
                   }))
                 }
-                goOptions={programGoOptions}
-                goQuestionBindings={goQuestionBindings}
+                poOptions={programGoOptions}
+                poQuestionBindings={poQuestionBindings}
                 programWideMode={programWideMode}
-                courseBoundGoBinding={
+                courseBoundPoBinding={
                   facultyMode
                     ? {
                         options: courseGoCatalog.options,
-                        questionBindings: courseGoBindings,
+                        questionBindings: coursePoBindings,
                         note: courseGoCatalogNote(
                           courseGoCatalog.reason,
                           courseGoCatalog.isLoading,
                           selectedCourseContext
                         ),
                         available: courseGoCatalog.available,
-                        onBindingsChange: (questionKey, goIds) =>
-                          setCourseGoBindings((current) => ({
+                        onBindingsChange: (questionKey, poIds) =>
+                          setCoursePoBindings((current) => ({
                             ...current,
-                            [questionKey]: goIds,
+                            [questionKey]: poIds,
                           })),
                       }
                     : undefined
                 }
-                archivedGoLookup={archivedGoLookup}
-                onGoBindingsChange={(questionKey, goIds) =>
+                archivedPoLookup={archivedPoLookup}
+                onPoBindingsChange={(questionKey, poIds) =>
                   setGoQuestionBindings((current) => ({
                     ...current,
-                    [questionKey]: goIds,
+                    [questionKey]: poIds,
                   }))
                 }
                 ciloQuestionCounts={ciloQuestionCounts}
@@ -2150,18 +2150,18 @@ interface SectionCardProps {
   ciloOptions: Array<{ description: string; id: string }>;
   ciloQuestionBindings: Record<string, string>;
   selectedCiloLabels: Map<string, string>;
-  goOptions: ProgramGoOption[];
-  goQuestionBindings: Record<string, string[]>;
+  poOptions: ProgramPoOption[];
+  poQuestionBindings: Record<string, string[]>;
   programWideMode: boolean;
-  /** Course-bound GO catalog and per-question binding state for faculty mode. */
-  courseBoundGoBinding?: {
-    options: ProgramGoOption[];
+  /** Course-bound PO catalog and per-question binding state for faculty mode. */
+  courseBoundPoBinding?: {
+    options: ProgramPoOption[];
     questionBindings: Record<string, string[]>;
     note: string | null;
     available: boolean;
-    onBindingsChange: (questionKey: string, goIds: string[]) => void;
+    onBindingsChange: (questionKey: string, poIds: string[]) => void;
   };
-  archivedGoLookup: Map<string, ProgramGoOption>;
+  archivedPoLookup: Map<string, ProgramPoOption>;
   section: TemplateSection;
   sectionIndex: number;
   sortableId: string;
@@ -2188,7 +2188,7 @@ interface SectionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
-  onGoBindingsChange: (questionKey: string, goIds: string[]) => void;
+  onPoBindingsChange: (questionKey: string, poIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
   ciloQuestionCounts: Map<string, number>;
   canRemove: boolean;
@@ -2198,11 +2198,11 @@ function SectionCard({
   ciloOptions,
   ciloQuestionBindings,
   selectedCiloLabels,
-  goOptions,
-  goQuestionBindings,
+  poOptions,
+  poQuestionBindings,
   programWideMode,
-  courseBoundGoBinding,
-  archivedGoLookup,
+  courseBoundPoBinding,
+  archivedPoLookup,
   section,
   sectionIndex,
   sortableId,
@@ -2217,7 +2217,7 @@ function SectionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
-  onGoBindingsChange,
+  onPoBindingsChange,
   onRemoveSuggestedResponse,
   ciloQuestionCounts,
   canRemove,
@@ -2319,22 +2319,22 @@ function SectionCard({
                 selectedCiloId={
                   ciloQuestionBindings[encodeQuestionKey(section.key, question.key)] ?? ""
                 }
-                goOptions={programWideMode ? goOptions : (courseBoundGoBinding?.options ?? [])}
+                poOptions={programWideMode ? poOptions : (courseBoundPoBinding?.options ?? [])}
                 selectedGoIds={
                   (programWideMode
-                    ? goQuestionBindings
-                    : (courseBoundGoBinding?.questionBindings ?? {}))[
+                    ? poQuestionBindings
+                    : (courseBoundPoBinding?.questionBindings ?? {}))[
                     encodeQuestionKey(section.key, question.key)
                   ] ?? []
                 }
                 programWideMode={programWideMode}
-                courseBoundGoBindingAvailable={courseBoundGoBinding?.available ?? false}
-                courseBoundGoBindingNote={courseBoundGoBinding?.note ?? null}
-                archivedGoLookup={archivedGoLookup}
-                onGoBindingsChange={(questionKey, goIds) =>
+                courseBoundPoBindingAvailable={courseBoundPoBinding?.available ?? false}
+                courseBoundPoBindingNote={courseBoundPoBinding?.note ?? null}
+                archivedPoLookup={archivedPoLookup}
+                onPoBindingsChange={(questionKey, poIds) =>
                   programWideMode
-                    ? onGoBindingsChange(questionKey, goIds)
-                    : courseBoundGoBinding?.onBindingsChange?.(questionKey, goIds)
+                    ? onPoBindingsChange(questionKey, poIds)
+                    : courseBoundPoBinding?.onBindingsChange?.(questionKey, poIds)
                 }
                 canRemove={section.questions.length > 1}
               />
@@ -2379,16 +2379,16 @@ interface QuestionCardProps {
   ) => void;
   onAddSuggestedResponse: (sectionKey: string, questionKey: string, response: string) => void;
   onCiloBindingChange: (questionKey: string, ciloId: string) => void;
-  onGoBindingsChange: (questionKey: string, goIds: string[]) => void;
+  onPoBindingsChange: (questionKey: string, poIds: string[]) => void;
   onRemoveSuggestedResponse: (sectionKey: string, questionKey: string, index: number) => void;
-  goOptions: ProgramGoOption[];
+  poOptions: ProgramPoOption[];
   selectedGoIds: string[];
   programWideMode: boolean;
-  /** True when the Course-bound GO axis can offer a catalog for this question. */
-  courseBoundGoBindingAvailable: boolean;
-  /** Why the Course-bound GO axis is unavailable; rendered when set. */
-  courseBoundGoBindingNote: string | null;
-  archivedGoLookup: Map<string, ProgramGoOption>;
+  /** True when the Course-bound PO axis can offer a catalog for this question. */
+  courseBoundPoBindingAvailable: boolean;
+  /** Why the Course-bound PO axis is unavailable; rendered when set. */
+  courseBoundPoBindingNote: string | null;
+  archivedPoLookup: Map<string, ProgramPoOption>;
   selectedCiloLabel?: string;
   selectedCiloId: string;
   ciloQuestionCounts: Map<string, number>;
@@ -2410,14 +2410,14 @@ function QuestionCard({
   onUpdateLikertDescriptor,
   onAddSuggestedResponse,
   onCiloBindingChange,
-  onGoBindingsChange,
+  onPoBindingsChange,
   onRemoveSuggestedResponse,
-  goOptions,
+  poOptions,
   selectedGoIds,
   programWideMode,
-  courseBoundGoBindingAvailable,
-  courseBoundGoBindingNote,
-  archivedGoLookup,
+  courseBoundPoBindingAvailable,
+  courseBoundPoBindingNote,
+  archivedPoLookup,
   selectedCiloLabel,
   selectedCiloId,
   ciloQuestionCounts,
@@ -2556,43 +2556,42 @@ function QuestionCard({
               </Select>
               {selectedGoIds.length > 0 && !selectedCiloId && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  This question is bound to Graduate Outcomes. Clear the GO binding to assign a
-                  CILO.
+                  This question is bound to Program Outcomes. Clear the PO binding to assign a CILO.
                 </p>
               )}
             </div>
           )}
 
-          {/* Course-bound GO axis: one question may cover several Graduate
+          {/* Course-bound PO axis: one question may cover several Graduate
             Outcomes of the bound Course's owning Program. The control is
             unavailable until a program-specific Course is bound; when the
             catalog itself cannot be offered, a note names the reason. */}
-          {facultyMode && question.type === "likert" && courseBoundGoBindingAvailable && (
+          {facultyMode && question.type === "likert" && courseBoundPoBindingAvailable && (
             <div className="space-y-2">
-              <span id={`go-binding-label-${question.key}`} className="text-sm font-medium">
-                GO Binding
+              <span id={`po-binding-label-${question.key}`} className="text-sm font-medium">
+                PO Binding
               </span>
-              <GoMultiSelect
-                options={goOptions}
+              <PoMultiSelect
+                options={poOptions}
                 selectedIds={selectedGoIds}
                 questionKey={question.key}
-                labelId={`go-binding-label-${question.key}`}
-                archivedGoLookup={archivedGoLookup}
+                labelId={`po-binding-label-${question.key}`}
+                archivedPoLookup={archivedPoLookup}
                 disabled={Boolean(selectedCiloId)}
-                onChange={(goIds) =>
-                  onGoBindingsChange(encodeQuestionKey(sectionKey, question.key), goIds)
+                onChange={(poIds) =>
+                  onPoBindingsChange(encodeQuestionKey(sectionKey, question.key), poIds)
                 }
               />
               {selectedCiloId ? (
                 <p role="status" className="text-muted-foreground text-xs">
-                  This question is bound to a CILO and reaches Graduate Outcomes through the CILO
-                  mapping. Clear the CILO binding to assign Graduate Outcomes directly.
+                  This question is bound to a CILO and reaches Program Outcomes through the CILO
+                  mapping. Clear the CILO binding to assign Program Outcomes directly.
                 </p>
               ) : (
                 selectedGoIds.length === 0 && (
                   <p role="status" className="text-muted-foreground text-xs">
-                    No GO assigned yet. This Likert question publishes as a general evaluation item
-                    and gives no direct GO evidence.
+                    No PO assigned yet. This Likert question publishes as a general evaluation item
+                    and gives no direct PO evidence.
                   </p>
                 )
               )}
@@ -2600,32 +2599,32 @@ function QuestionCard({
           )}
           {facultyMode &&
             question.type === "likert" &&
-            !courseBoundGoBindingAvailable &&
-            courseBoundGoBindingNote && (
+            !courseBoundPoBindingAvailable &&
+            courseBoundPoBindingNote && (
               <p role="status" className="text-muted-foreground text-xs">
-                {courseBoundGoBindingNote}
+                {courseBoundPoBindingNote}
               </p>
             )}
 
           {programWideMode && (
             <div className="space-y-2">
-              <span id={`go-binding-label-${question.key}`} className="text-sm font-medium">
-                GO Binding
+              <span id={`po-binding-label-${question.key}`} className="text-sm font-medium">
+                PO Binding
               </span>
-              <GoMultiSelect
-                options={goOptions}
+              <PoMultiSelect
+                options={poOptions}
                 selectedIds={selectedGoIds}
                 questionKey={question.key}
-                labelId={`go-binding-label-${question.key}`}
-                archivedGoLookup={archivedGoLookup}
-                onChange={(goIds) =>
-                  onGoBindingsChange(encodeQuestionKey(sectionKey, question.key), goIds)
+                labelId={`po-binding-label-${question.key}`}
+                archivedPoLookup={archivedPoLookup}
+                onChange={(poIds) =>
+                  onPoBindingsChange(encodeQuestionKey(sectionKey, question.key), poIds)
                 }
               />
               {selectedGoIds.length === 0 && (
                 <p role="status" className="text-muted-foreground text-xs">
-                  No GO assigned yet. This Likert question publishes as a general evaluation item
-                  and gives no GO evidence.
+                  No PO assigned yet. This Likert question publishes as a general evaluation item
+                  and gives no PO evidence.
                 </p>
               )}
             </div>
@@ -2789,54 +2788,54 @@ function LikertDescriptorsEditor({
   );
 }
 
-// ─── GO Multi-Select ─────────────────────────────────────────────────────────
+// ─── PO Multi-Select ─────────────────────────────────────────────────────────
 
-interface GoMultiSelectProps {
-  options: ProgramGoOption[];
+interface PoMultiSelectProps {
+  options: ProgramPoOption[];
   selectedIds: string[];
   questionKey: string;
   labelId: string;
-  archivedGoLookup: Map<string, ProgramGoOption>;
-  onChange: (goIds: string[]) => void;
+  archivedPoLookup: Map<string, ProgramPoOption>;
+  onChange: (poIds: string[]) => void;
   disabled?: boolean;
 }
 
 /**
- * Likert question GO multi-select. Desktop shows a searchable popover; mobile
+ * Likert question PO multi-select. Desktop shows a searchable popover; mobile
  * shows a bottom drawer surface. Selection is keyboard-accessible (real
  * checkboxes), chips are individually removable, and a Clear action empties
  * the selection. `disabled` gates the picker trigger when the question is
- * CILO-bound; chips stay removable so a stale GO binding can still be cleared.
+ * CILO-bound; chips stay removable so a stale PO binding can still be cleared.
  */
-function GoMultiSelect({
+function PoMultiSelect({
   options,
   selectedIds,
   questionKey,
   labelId,
-  archivedGoLookup,
+  archivedPoLookup,
   onChange,
   disabled = false,
-}: GoMultiSelectProps) {
+}: PoMultiSelectProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [query, setQuery] = useState("");
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const searchInputId = `go-search-${questionKey}`;
-  const listboxId = `go-listbox-${questionKey}`;
+  const searchInputId = `po-search-${questionKey}`;
+  const listboxId = `po-listbox-${questionKey}`;
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return options;
     return options.filter(
-      (go) =>
-        go.code.toLowerCase().includes(normalizedQuery) ||
-        go.description.toLowerCase().includes(normalizedQuery)
+      (po) =>
+        po.code.toLowerCase().includes(normalizedQuery) ||
+        po.description.toLowerCase().includes(normalizedQuery)
     );
   }, [options, query]);
 
   const toggle = useCallback(
-    (goId: string) => {
+    (poId: string) => {
       onChange(
-        selectedSet.has(goId) ? selectedIds.filter((id) => id !== goId) : [...selectedIds, goId]
+        selectedSet.has(poId) ? selectedIds.filter((id) => id !== poId) : [...selectedIds, poId]
       );
     },
     [onChange, selectedIds, selectedSet]
@@ -2845,24 +2844,24 @@ function GoMultiSelect({
   // Removing a chip unmounts its remove button; return focus to the trigger so
   // keyboard users are not left with focus on the document body.
   const removeChip = useCallback(
-    (goId: string) => {
-      toggle(goId);
-      document.getElementById(`go-binding-${questionKey}`)?.focus();
+    (poId: string) => {
+      toggle(poId);
+      document.getElementById(`po-binding-${questionKey}`)?.focus();
     },
     [questionKey, toggle]
   );
 
-  const selectedGos = useMemo(
+  const selectedPos = useMemo(
     () =>
       selectedIds
-        .map((id) => options.find((go) => go.id === id) ?? archivedGoLookup.get(id))
-        .filter((go): go is ProgramGoOption => Boolean(go)),
-    [archivedGoLookup, options, selectedIds]
+        .map((id) => options.find((po) => po.id === id) ?? archivedPoLookup.get(id))
+        .filter((po): po is ProgramPoOption => Boolean(po)),
+    [archivedPoLookup, options, selectedIds]
   );
 
   const trigger = (
     <Button
-      id={`go-binding-${questionKey}`}
+      id={`po-binding-${questionKey}`}
       type="button"
       variant="outline"
       disabled={disabled}
@@ -2873,8 +2872,8 @@ function GoMultiSelect({
     >
       <span className="min-w-0 flex-1 truncate">
         {selectedIds.length === 0
-          ? "Select GOs…"
-          : `${selectedIds.length} GO${selectedIds.length === 1 ? "" : "s"} selected`}
+          ? "Select POs…"
+          : `${selectedIds.length} PO${selectedIds.length === 1 ? "" : "s"} selected`}
       </span>
       <SearchIcon className="text-muted-foreground size-4 shrink-0" />
     </Button>
@@ -2886,8 +2885,8 @@ function GoMultiSelect({
         id={searchInputId}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search GOs by code or description…"
-        aria-label="Search GOs"
+        placeholder="Search POs by code or description…"
+        aria-label="Search POs"
       />
     </div>
   );
@@ -2895,24 +2894,24 @@ function GoMultiSelect({
     <div
       id={listboxId}
       role="listbox"
-      aria-label="Graduate Outcomes"
+      aria-label="Program Outcomes"
       className="h-64 overflow-y-auto"
     >
       {options.length === 0 ? (
         <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-          No active GOs available for this program.
+          No active POs available for this program.
         </p>
       ) : filteredOptions.length === 0 ? (
         <p className="text-muted-foreground px-3 py-4 text-center text-sm">
-          No GOs match your search.
+          No POs match your search.
         </p>
       ) : (
         <ul className="space-y-1.5">
-          {filteredOptions.map((go) => {
-            const isSelected = selectedSet.has(go.id);
+          {filteredOptions.map((po) => {
+            const isSelected = selectedSet.has(po.id);
             return (
               <li
-                key={go.id}
+                key={po.id}
                 data-state={isSelected ? "selected" : undefined}
                 className={`flex items-start gap-2 rounded-md border px-2 py-1.5 transition-colors motion-reduce:transition-none pointer-coarse:py-2.5 ${
                   isSelected
@@ -2924,20 +2923,20 @@ function GoMultiSelect({
                   <input
                     type="checkbox"
                     checked={isSelected}
-                    onChange={() => toggle(go.id)}
+                    onChange={() => toggle(po.id)}
                     className="accent-primary mt-0.5 size-5 shrink-0 cursor-pointer focus-visible:outline-none pointer-coarse:size-6"
-                    aria-label={`${go.code}: ${go.description}`}
+                    aria-label={`${po.code}: ${po.description}`}
                   />
                   <span className="min-w-0 flex-1">
                     <span
                       className={`text-sm font-semibold ${isSelected ? "text-selected-fg" : ""}`}
                     >
-                      {go.code}
+                      {po.code}
                     </span>
                     <span
                       className={`ml-2 text-sm ${isSelected ? "text-selected-fg/80" : "text-muted-foreground"}`}
                     >
-                      {go.description}
+                      {po.description}
                     </span>
                   </span>
                 </label>
@@ -2983,13 +2982,13 @@ function GoMultiSelect({
           <DrawerContent className="flex h-[85dvh] max-h-[85dvh] flex-col overflow-hidden">
             <DrawerHeader className="flex shrink-0 items-start justify-between gap-4 text-left">
               <div className="min-w-0 space-y-1">
-                <DrawerTitle>GO Binding</DrawerTitle>
+                <DrawerTitle>PO Binding</DrawerTitle>
                 <DrawerDescription>
-                  Choose one or more active Graduate Outcomes this Likert question covers.
+                  Choose one or more active Program Outcomes this Likert question covers.
                 </DrawerDescription>
               </div>
               <DrawerClose
-                render={<Button variant="ghost" size="icon-sm" aria-label="Close GO binding" />}
+                render={<Button variant="ghost" size="icon-sm" aria-label="Close PO binding" />}
               >
                 <XIcon aria-hidden="true" />
               </DrawerClose>
@@ -3003,22 +3002,22 @@ function GoMultiSelect({
         </Drawer>
       )}
 
-      {selectedGos.length > 0 && (
-        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected GOs">
-          {selectedGos.map((go) => {
-            const isArchived = archivedGoLookup.has(go.id);
+      {selectedPos.length > 0 && (
+        <ul className="flex flex-wrap items-center gap-1.5" aria-label="Selected POs">
+          {selectedPos.map((po) => {
+            const isArchived = archivedPoLookup.has(po.id);
             return (
               <li
-                key={go.id}
+                key={po.id}
                 className={`${isArchived ? "border-destructive/40 bg-destructive/10" : "bg-muted"} text-foreground inline-flex items-center gap-1 rounded-sm border px-2 py-1 text-xs font-medium`}
               >
-                <span className="font-semibold">{go.code}</span>
+                <span className="font-semibold">{po.code}</span>
                 {isArchived && <span className="text-destructive">Archived</span>}
                 <button
                   type="button"
-                  onClick={() => removeChip(go.id)}
+                  onClick={() => removeChip(po.id)}
                   className="text-muted-foreground hover:text-danger focus-visible:ring-ring rounded-sm p-0.5 transition-colors focus-visible:ring-3 focus-visible:outline-none"
-                  aria-label={`Remove ${go.code}`}
+                  aria-label={`Remove ${po.code}`}
                 >
                   <XIcon className="size-3" />
                 </button>

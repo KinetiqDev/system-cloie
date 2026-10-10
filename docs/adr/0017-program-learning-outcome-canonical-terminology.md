@@ -1,6 +1,6 @@
 # Program Learning Outcome Canonical Terminology
 
-**Status:** Superseded by [ADR 0030](0030-graduate-outcome-canonical-terminology.md)
+**Status:** Superseded by [ADR 0036](0036-program-outcome-canonical-terminology.md) (via ADR 0030)
 
 This ADR records the superseded PLO terminology decision. It remains as historical context for the prior GO-to-PLO cutover and its compatibility boundaries.
 

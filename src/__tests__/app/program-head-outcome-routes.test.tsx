@@ -2,17 +2,17 @@ import React from "react";
 import { renderToReadableStream } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { notFoundMock, listGOsMock, listMappingsMock } = vi.hoisted(() => ({
+const { notFoundMock, listPOsMock, listMappingsMock } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
   }),
-  listGOsMock: vi.fn(),
+  listPOsMock: vi.fn(),
   listMappingsMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@/features/outcomes/services/manage-program-head-outcomes", () => ({
-  listProgramGOs: listGOsMock,
+  listProgramPOs: listPOsMock,
   listCILOMappingsForProgram: listMappingsMock,
 }));
 
@@ -37,16 +37,16 @@ describe("selected Program Outcome routes", () => {
   });
 
   it("passes the route Program to the Outcome read", async () => {
-    listGOsMock.mockResolvedValue({
+    listPOsMock.mockResolvedValue({
       success: true,
-      data: { gos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
+      data: { pos: [], program: { id: PROGRAM_ID, code: "BSED", name: "Secondary Education" } },
     });
     const Page = (await import("@/app/(app)/program-head/programs/[programId]/outcomes/page"))
       .default;
 
     await Page({ params: Promise.resolve({ programId: PROGRAM_ID }) });
 
-    expect(listGOsMock).toHaveBeenCalledWith(PROGRAM_ID);
+    expect(listPOsMock).toHaveBeenCalledWith(PROGRAM_ID);
   });
 
   it("does not render mapping data when the selected route is unavailable", async () => {
@@ -64,7 +64,7 @@ describe("selected Program Outcome routes", () => {
     expect(notFoundMock).toHaveBeenCalled();
   });
 
-  it("renders a read-only manifestation review with every GO, full labels, and exhaustive readiness", async () => {
+  it("renders a read-only manifestation review with every PO, full labels, and exhaustive readiness", async () => {
     listMappingsMock.mockResolvedValue({
       success: true,
       data: [
@@ -72,28 +72,28 @@ describe("selected Program Outcome routes", () => {
           courseId: "course-ps",
           courseCode: "CS101",
           courseTitle: "Introduction to Computing",
-          gos: [
-            { id: "go-1", code: "GO-1", description: "Analyze problems" },
-            { id: "go-2", code: "GO-2", description: "Design solutions" },
+          pos: [
+            { id: "po-1", code: "PO-1", description: "Analyze problems" },
+            { id: "po-2", code: "PO-2", description: "Design solutions" },
           ],
-          archivedGos: [{ id: "go-9", code: "GO-9", description: "Retired outcome" }],
+          archivedGos: [{ id: "po-9", code: "PO-9", description: "Retired outcome" }],
           cilos: [
             {
               id: "cilo-complete",
               description: "Design a solution",
               manifestations: [
-                { goId: "go-1", manifestation: "LEARNING" },
-                { goId: "go-2", manifestation: "PRACTICE" },
+                { poId: "po-1", manifestation: "LEARNING" },
+                { poId: "po-2", manifestation: "PRACTICE" },
               ],
-              archivedManifestations: [{ goId: "go-9", manifestation: "OPPORTUNITY" }],
+              archivedManifestations: [{ poId: "po-9", manifestation: "OPPORTUNITY" }],
               readiness: "ready",
             },
             {
               id: "cilo-gap",
               description: "Evaluate outcomes",
               manifestations: [
-                { goId: "go-1", manifestation: null },
-                { goId: "go-2", manifestation: null },
+                { poId: "po-1", manifestation: null },
+                { poId: "po-2", manifestation: null },
               ],
               archivedManifestations: [],
               readiness: "incomplete-mapping",
@@ -111,12 +111,12 @@ describe("selected Program Outcome routes", () => {
     );
 
     expect(listMappingsMock).toHaveBeenCalledWith(PROGRAM_ID);
-    expect(listGOsMock).not.toHaveBeenCalled();
+    expect(listPOsMock).not.toHaveBeenCalled();
     expect(html).toContain("CILO Mapping Review");
     expect(html).not.toContain("Shared General Education");
     expect(html).not.toContain("ILO-1");
-    expect(html).toContain("GO-1");
-    expect(html).toContain("GO-2");
+    expect(html).toContain("PO-1");
+    expect(html).toContain("PO-2");
     expect(html).toContain("Analyze problems");
     expect(html).toContain("Design solutions");
     expect(html).toContain("Learning (L)");
@@ -126,8 +126,8 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("Needs mapping");
     expect(html).toContain("bg-success-soft");
     expect(html).toContain("bg-warning-soft");
-    expect(html).toContain("GO-9");
-    expect(html).toContain("Archived Graduate Outcomes");
+    expect(html).toContain("PO-9");
+    expect(html).toContain("Archived Program Outcomes");
     expect(html).toContain("Opportunity (O)");
     expect(html).toContain("This review is read-only.");
     expect(html).not.toContain("Secretary");

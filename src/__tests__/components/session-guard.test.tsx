@@ -92,22 +92,68 @@ describe("SessionGuard", () => {
     );
   });
 
-  it("redirects users with ROLE_SELECTION_REQUIRED status (where intent is absent) correctly", async () => {
+  it("preserves the entry destination for an authenticated account with no assigned roles", async () => {
     resolveAuthSessionMock.mockResolvedValue({
+      roles: [],
       activeRole: null,
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=student");
+    resolvePostLoginDestinationMock.mockReturnValue("/");
 
-    await expect(SessionGuard({ children: <div>Protected</div> })).rejects.toThrow(
-      `${REDIRECT_ERROR}:/onboarding?intent=student`
-    );
+    await expect(
+      SessionGuard({ children: <div>Protected</div>, allowRoleSelection: true })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/`);
     expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith({
       requestedPath: "/dashboard",
       intent: null,
       activeRole: null,
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
+  });
+
+  it("allows an unselected multi-role account only through the shared shell", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      roles: [ROLES.FACULTY, ROLES.GEN_ED_COORDINATOR],
+      activeRole: null,
+      profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+    });
+
+    render(await SessionGuard({ children: <div>Choose workspace</div>, allowRoleSelection: true }));
+    expect(screen.getByText("Choose workspace")).toBeInTheDocument();
+    expect(resolvePostLoginDestinationMock).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])(
+    "redirects unselected accounts away from role-owned routes even when shell allowance is %s",
+    async (allowRoleSelection) => {
+      resolveAuthSessionMock.mockResolvedValue({
+        roles: [ROLES.FACULTY, ROLES.GEN_ED_COORDINATOR],
+        activeRole: null,
+        profileGate: { status: "ROLE_SELECTION_REQUIRED" },
+      });
+
+      await expect(
+        SessionGuard({
+          children: <div>Coordinator workspace</div>,
+          allowedRoles: [ROLES.GEN_ED_COORDINATOR],
+          allowRoleSelection,
+        })
+      ).rejects.toThrow(`${REDIRECT_ERROR}:/select-role`);
+      expect(ensureRoleAccessMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("preserves an inactive multi-role account's status even with shell allowance", async () => {
+    resolveAuthSessionMock.mockResolvedValue({
+      roles: [ROLES.FACULTY, ROLES.GEN_ED_COORDINATOR],
+      activeRole: null,
+      profileGate: { status: "INACTIVE" },
+    });
+    resolvePostLoginDestinationMock.mockReturnValue("/status/inactive");
+
+    await expect(
+      SessionGuard({ children: <div>Choose workspace</div>, allowRoleSelection: true })
+    ).rejects.toThrow(`${REDIRECT_ERROR}:/status/inactive`);
   });
 
   it("redirects unauthorized roles to /unauthorized", async () => {

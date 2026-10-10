@@ -10,7 +10,10 @@ import {
 } from "@/features/analytics/services/program-head-ai-schema";
 import { buildAnalyticsFilterFingerprint } from "@/features/analytics/services/program-head-analytics-state";
 import type { AnalyticsInsightView } from "@/features/analytics/services/ai-insight-contract";
-import type { ProgramHeadFeedbackDTO } from "@/features/analytics/program-head-analytics-types";
+import type {
+  ProgramHeadBreakdownsDTO,
+  ProgramHeadFeedbackDTO,
+} from "@/features/analytics/program-head-analytics-types";
 
 const {
   getProgramHeadAnalyticsMock,
@@ -76,12 +79,12 @@ const outcomesDTO = () => ({
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
   programWideOutcomes: [],
-  currentMappingDisclosure: "Current CILO-to-GO mappings group historical ratings.",
+  currentMappingDisclosure: "Current CILO-to-PO mappings group historical ratings.",
   manyToManyDisclosure: false,
   outcomes: [
     {
       outcomeId: "outcome-1",
-      code: "GO-1",
+      code: "PO-1",
       name: "Effective communicator",
       meanRating: 4.25,
       ratingCount: 8,
@@ -133,7 +136,7 @@ const stakeholdersDTO = () => ({
   ],
 });
 
-const breakdownsDTO = () => ({
+const breakdownsDTO = (): ProgramHeadBreakdownsDTO => ({
   scope: SCOPE,
   periodOptions: PERIOD_OPTIONS,
   emptyReason: null,
@@ -146,6 +149,15 @@ const breakdownsDTO = () => ({
       meanRating: 4.3,
       ratingCount: 20,
       submittedResponseCount: 5,
+      scaleGroups: [
+        {
+          scaleKey: "five-point",
+          scaleLabel: "1–5 (5-point)",
+          meanRating: 4.3,
+          ratingCount: 20,
+          submittedResponseCount: 5,
+        },
+      ],
       instrumentContext: "CILO Evaluation v2",
       evidenceEvaluations: [],
     },
@@ -166,7 +178,7 @@ const trendsDTO = () => ({
       ratingCount: 40,
       instrumentContext: "CILO Evaluation v2",
       scaleContext: "1–5 (5-point)",
-      outcomeCodes: ["GO-1"],
+      outcomeCodes: ["PO-1"],
       comparableWithPrevious: false,
     },
   ],
@@ -372,6 +384,55 @@ describe("generateProgramHeadAnalyticsInsight", () => {
 
     expect(result).toEqual({ ok: false, state: "unauthorized" });
     expect(transport).not.toHaveBeenCalled();
+  });
+
+  it("projects course means into bounded compatible-scale rows without blending or exposing identities", async () => {
+    stubEnabledConfig();
+    const breakdowns = breakdownsDTO();
+    breakdowns.courseRows[0] = {
+      ...breakdowns.courseRows[0],
+      meanRating: null,
+      ratingCount: 2,
+      submittedResponseCount: 2,
+      scaleGroups: [
+        {
+          scaleKey: "five-point",
+          scaleLabel: "1–5 (5-point)",
+          meanRating: 4,
+          ratingCount: 1,
+          submittedResponseCount: 1,
+        },
+        {
+          scaleKey: "ten-point",
+          scaleLabel: "1–10 (10-point)",
+          meanRating: 8,
+          ratingCount: 1,
+          submittedResponseCount: 1,
+        },
+      ],
+    };
+    getProgramHeadBreakdownsMock.mockResolvedValue(breakdowns);
+    const transport = enabledTransport({ ok: true, content: JSON.stringify(VALID_SECTION) });
+    await service.generateProgramHeadAnalyticsInsight(
+      "program-bsed",
+      FILTERS,
+      "courses",
+      transport
+    );
+    const request = transport.mock.calls[0][0];
+    const packet = JSON.parse(
+      request.userMessage.slice(
+        request.userMessage.lastIndexOf(AI_EVIDENCE_START) + AI_EVIDENCE_START.length,
+        request.userMessage.lastIndexOf(AI_EVIDENCE_END)
+      )
+    );
+    expect(packet.breakdowns.courseRows).toMatchObject([
+      { scaleGroup: 1, scaleLabel: "1–5 (5-point)", meanRating: 4, ratingCount: 1 },
+      { scaleGroup: 2, scaleLabel: "1–10 (10-point)", meanRating: 8, ratingCount: 1 },
+    ]);
+    expect(request.systemInstruction).toContain("only within the same scaleGroup");
+    expect(request.userMessage).not.toContain("five-point");
+    expect(request.userMessage).not.toContain("course-1");
   });
 
   it("rebuilds only the deterministic read backing the requested view", async () => {

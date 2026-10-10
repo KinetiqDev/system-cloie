@@ -1,5 +1,6 @@
 import type { MetricEvidenceSummary } from "@/features/analytics/aggregators/types";
 import type { QualitativeToneShape } from "./types";
+import type { OutcomeAttainment } from "./aggregators/outcome-attainment";
 import type { OutcomeEvidenceDTO } from "./outcome-evidence-types";
 
 /** Readable scope summary for the current analytics view */
@@ -70,7 +71,7 @@ export type ProgramHeadTrendPeriodDTO = {
   instrumentContext: string | null;
   /** Readable scale context, e.g. "1–5 (5-point)"; null without ratings */
   scaleContext: string | null;
-  /** Graduate Outcome codes covered by the period's mapped evidence */
+  /** Program Outcome codes covered by the period's mapped evidence */
   outcomeCodes: string[];
   comparableWithPrevious: boolean;
 };
@@ -104,12 +105,12 @@ export type ProgramHeadTrendsDTO = {
 
 /**
  * One program-wide evidence row from a central deployment (student, alumni, or
- * industry-partner) — aggregated across all GOs in the selected Program. Mean
+ * industry-partner) — aggregated across all POs in the selected Program. Mean
  * retains full precision; rating count is distinct from submitted response count.
  */
 export type ProgramHeadProgramWideOutcomeDTO = {
   stakeholder: "STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
-  goId: string;
+  poId: string;
   code: string;
   name: string;
   /** Full-precision mean of valid ratings; null when the row has no valid ratings. */
@@ -120,6 +121,20 @@ export type ProgramHeadProgramWideOutcomeDTO = {
   evaluationCount: number;
   /** Number of distinct questions (items) that contributed to this row. */
   questionCount: number;
+  /**
+   * One entry per frozen scale identity behind this row's valid ratings.
+   * A row whose ratings span incompatible identities has no single mean, so
+   * each identity keeps its own mean and rating count and readers never
+   * rank one stakeholder's mean against another's.
+   */
+  scaleGroups: Array<{
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number | null;
+    ratingCount: number;
+  }>;
+  /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
+  attainment?: OutcomeAttainment;
   /** Presentation metadata for the "How calculated" disclosure (§41). */
   evidenceSummary: MetricEvidenceSummary;
 };
@@ -128,7 +143,7 @@ export type ProgramHeadProgramWideOutcomeDTO = {
  * Reasons the Outcomes view may show an empty state. The chain mirrors the
  * Overview: no assignments, no submissions, then no mapped outcome evidence.
  * `no-program-wide-evidence` is emitted when a central (program-wide) source
- * is selected but no central GO evidence exists.
+ * is selected but no central PO evidence exists.
  */
 export type ProgramHeadOutcomesEmptyReason =
   | "no-assignments"
@@ -144,14 +159,14 @@ export type ProgramHeadOutcomesDTO = {
   emptyReason: ProgramHeadOutcomesEmptyReason;
   /**
    * Disclosure that historical ratings are grouped by the Program's current
-   * CILO-to-GO mappings because publication-time mapping snapshots do not
+   * CILO-to-PO mappings because publication-time mapping snapshots do not
    * exist yet.
    */
   currentMappingDisclosure: string;
-  /** True when a contributing CILO maps to more than one selected-Program GO. */
+  /** True when a contributing CILO maps to more than one selected-Program PO. */
   manyToManyDisclosure: boolean;
   outcomes: OutcomeEvidenceDTO[];
-  /** Program-wide (central source) GO evidence rows, grouped by stakeholder. */
+  /** Program-wide (central source) PO evidence rows, grouped by stakeholder. */
   programWideOutcomes: ProgramHeadProgramWideOutcomeDTO[];
 };
 
@@ -226,6 +241,14 @@ export type ProgramHeadBreakdownRowDTO = {
 /** Course breakdown row: course-bound student evidence only. */
 export type ProgramHeadCourseBreakdownRowDTO = ProgramHeadBreakdownRowDTO & {
   courseCode: string;
+  /** Frozen descriptor identities keep incompatible course ratings separate. */
+  scaleGroups: Array<{
+    scaleKey: string;
+    scaleLabel: string;
+    meanRating: number;
+    ratingCount: number;
+    submittedResponseCount: number;
+  }>;
   /** Distinct instrument labels behind the course; null when none. */
   instrumentContext: string | null;
   /**

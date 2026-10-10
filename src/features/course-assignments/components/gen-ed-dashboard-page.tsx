@@ -141,7 +141,7 @@ function PageIntro({ periodLabel, action }: { periodLabel: string | null; action
     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-heading-lg tracking-tight text-balance">
+          <h1 className="text-heading-xl text-foreground text-balance">
             General Education overview
           </h1>
           <Badge variant="outline" className="max-w-full rounded-full px-2.5 py-1 font-medium">
@@ -149,10 +149,10 @@ function PageIntro({ periodLabel, action }: { periodLabel: string | null; action
             <span className="truncate">College-wide</span>
           </Badge>
         </div>
-        <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
+        <p className="text-body-sm text-text-secondary max-w-2xl text-pretty">
           Monitor course coverage, Institutional Outcome alignment, and Course-bound evidence.
         </p>
-        <p className="text-label-sm text-text-secondary tabular-nums">
+        <p className="text-body-sm text-text-secondary tabular-nums">
           {periodLabel ?? "No active Academic Period"}
         </p>
       </div>
@@ -172,7 +172,7 @@ function SectionHeading({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <h2 id={id} className="text-heading-md">
+      <h2 id={id} className="text-heading-lg">
         {title}
       </h2>
       <p className="text-body-sm text-text-secondary">{description}</p>
@@ -195,12 +195,10 @@ function Metric({
     <Card className="min-w-0">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardDescription className="text-label-sm font-semibold tracking-wider uppercase">
-            {label}
-          </CardDescription>
+          <CardDescription className="text-body-sm">{label}</CardDescription>
           <Icon aria-hidden={true} className="text-text-secondary size-4 shrink-0" />
         </div>
-        <CardTitle className="text-display-md break-words tabular-nums">{value}</CardTitle>
+        <CardTitle className="text-heading-xl break-words tabular-nums">{value}</CardTitle>
       </CardHeader>
       <CardContent className="text-text-secondary text-body-sm">{detail}</CardContent>
     </Card>
@@ -262,10 +260,8 @@ function AttentionSection({ data }: { data: GenEdDashboardData }) {
                 <CheckCircle2 aria-hidden="true" className="size-5" />
               </div>
               <div className="flex min-w-0 flex-col gap-1">
-                <h3 className="font-heading text-base font-semibold">
-                  No current General Education gaps
-                </h3>
-                <p className="text-text-secondary text-sm leading-relaxed">
+                <h3 className="text-title-md">No current General Education gaps</h3>
+                <p className="text-body-sm text-text-secondary">
                   Current coverage, mapping, and evidence checks require no action.
                 </p>
               </div>
@@ -280,8 +276,8 @@ function AttentionSection({ data }: { data: GenEdDashboardData }) {
                   >
                     <CircleAlert aria-hidden="true" className="text-warning size-5 shrink-0" />
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="font-medium text-pretty">{item.label}</span>
-                      <span className="text-text-secondary text-xs leading-relaxed text-pretty">
+                      <span className="text-title-md text-pretty">{item.label}</span>
+                      <span className="text-body-sm text-text-secondary text-pretty">
                         {item.detail}
                       </span>
                     </span>
@@ -322,9 +318,9 @@ function EvidenceSection({
       />
       <Card className="h-full">
         <CardHeader className="border-border border-b pb-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <BarChart3 aria-hidden="true" className="text-brand-accent size-5 shrink-0" />
-            <h3 className="font-heading min-w-0 truncate text-base font-semibold">
+          <div className="flex min-w-0 items-start gap-2">
+            <BarChart3 aria-hidden="true" className="text-brand-accent mt-0.5 size-5 shrink-0" />
+            <h3 className="text-title-md min-w-0 text-balance break-words">
               {period?.label ?? "Current Academic Period unavailable"}
             </h3>
           </div>
@@ -346,7 +342,7 @@ function EvidenceSection({
             />
             <EvidenceMetric label="Mean rating" value={meanRating} />
           </div>
-          <p className="text-text-secondary text-xs leading-relaxed">
+          <p className="text-body-sm text-text-secondary">
             {data.evidenceState === "read-failed"
               ? "Evidence could not be loaded. Refresh this page or open analytics to try again."
               : !period
@@ -382,8 +378,8 @@ function EvidenceSection({
 function EvidenceMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <p className="text-text-secondary text-xs">{label}</p>
-      <p className="font-heading text-title-lg break-words tabular-nums">{value}</p>
+      <p className="text-body-sm text-text-secondary">{label}</p>
+      <p className="text-title-lg break-words tabular-nums">{value}</p>
     </div>
   );
 }
@@ -426,6 +422,7 @@ function QuickActions() {
     <DashboardQuickActions
       description="Open the General Education workflows you own."
       actions={actions}
+      typography="comfortable"
     />
   );
 }
@@ -446,8 +443,8 @@ function StatusNotice({
     >
       <Icon aria-hidden={true} className="mt-0.5 size-5 shrink-0" />
       <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="font-heading text-base font-semibold">{title}</h2>
-        <p className="text-sm leading-relaxed">{description}</p>
+        <h2 className="text-title-md">{title}</h2>
+        <p className="text-body-sm">{description}</p>
       </div>
     </div>
   );
@@ -469,8 +466,8 @@ function StatusBlock({
       <div className="flex items-start gap-3">
         <CircleAlert aria-hidden="true" className="text-warning mt-0.5 size-5 shrink-0" />
         <div className="flex min-w-0 flex-col gap-1">
-          <h3 className="font-heading text-base font-semibold">{title}</h3>
-          <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
+          <h3 className="text-title-md">{title}</h3>
+          <p className="text-body-sm text-text-secondary">{description}</p>
         </div>
       </div>
       <Link

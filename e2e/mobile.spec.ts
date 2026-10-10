@@ -1,6 +1,11 @@
 // fallow-ignore-file code-duplication
 import { expect, test } from "@playwright/test";
 import { fixture } from "./support/fixture";
+import { verifyAttainmentGuide } from "./support/attainment";
+
+test("mobile Program Head attainment guide explains canonical chart colors", async ({ page }) => {
+  await verifyAttainmentGuide(page);
+});
 import {
   expectNoAxeViolations,
   expectNoHorizontalOverflow,
@@ -377,7 +382,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
     await rateQuestion(page, prompt, "Agree");
   }
   await page.getByRole("button", { name: "Next Section" }).click();
-  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Program Outcomes Attainment" })).toBeVisible();
 
   await page.reload();
   // Resume reopens the wizard on the first incomplete section (section 2);
@@ -385,7 +390,7 @@ test("mobile alumni lifecycle: no overflow, keyboard-safe, draft survives reload
   await expect(
     page.getByRole("heading", { name: "BSIT Alumni Evaluation (Mobile)", level: 1 })
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Graduate Outcomes Attainment" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Program Outcomes Attainment" })).toBeVisible();
   await page.getByRole("button", { name: "Previous" }).click();
   await expect(page.getByRole("heading", { name: "Program Learning Experience" })).toBeVisible();
   await expect(

@@ -45,7 +45,7 @@ async function enterDirtyAlignmentWorkspace(page: Page, courseCode: string) {
   // Stage one change so the draft is dirty.
   await page
     .getByTestId("manifestation-matrix")
-    .getByRole("button", { name: /CILO 1, GO 1, manifestation: Learning/ })
+    .getByRole("button", { name: /CILO 1, PO 1, manifestation: Learning/ })
     .click();
   await expect(page.getByRole("button", { name: /Review 1 change/ })).toBeEnabled();
 }
@@ -164,7 +164,7 @@ test("discarding a staged draft leaves no extra Back entries without the Navigat
     await page.getByRole("button", { name: "Discard draft" }).click();
     await expect(page.getByRole("button", { name: /Review 0 changes/ })).toBeDisabled();
     if (attempt === 0) {
-      await page.getByRole("button", { name: /CILO 1, GO 1, manifestation: Learning/ }).click();
+      await page.getByRole("button", { name: /CILO 1, PO 1, manifestation: Learning/ }).click();
       await expect(page.getByRole("button", { name: /Review 1 change/ })).toBeEnabled();
     }
   }

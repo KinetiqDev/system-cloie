@@ -1,5 +1,7 @@
 import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-types";
 import { LikertDistributionTable } from "./likert-distribution-table";
+import { AttainmentBadge } from "./outcome-attainment-badge";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 
 /** How many decimals the detail mean carries beyond the two-decimal summary. */
 const DETAIL_MEAN_DECIMALS = 4;
@@ -20,9 +22,12 @@ function formatBoundedMean(value: number, decimals: number): string {
  * aggregate.
  */
 export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO }) {
+  const benchmarkDelta =
+    outcome.meanRating !== null ? outcome.meanRating - OUTCOME_ATTAINMENT_BENCHMARK : null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="flex max-w-full flex-col gap-4 overflow-hidden">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex flex-col gap-1">
           <span className="text-label-sm text-text-secondary">Mean Rating (higher precision)</span>
           <span className="text-body-md text-foreground tabular-nums">
@@ -35,7 +40,31 @@ export function OutcomeEvidenceDetail({ outcome }: { outcome: OutcomeEvidenceDTO
           <span className="text-label-sm text-text-secondary">Rating Count</span>
           <span className="text-body-md text-foreground tabular-nums">{outcome.ratingCount}</span>
         </div>
+        {outcome.attainment !== undefined && (
+          <div className="flex flex-col gap-1">
+            <span className="text-label-sm text-text-secondary">Attainment Status</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <AttainmentBadge attainment={outcome.attainment} />
+              {benchmarkDelta !== null && outcome.attainment.status === "classified" && (
+                <span className="text-label-sm text-muted-foreground tabular-nums">
+                  (
+                  {benchmarkDelta >= 0
+                    ? `+${benchmarkDelta.toFixed(2)}`
+                    : benchmarkDelta.toFixed(2)}{" "}
+                  vs 3.50 benchmark)
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {outcome.attainment?.isIndirect && (
+        <p className="text-warning text-label-sm font-medium">
+          Note: This evidence originates from an indirect stakeholder survey (reflects perceived
+          attainment).
+        </p>
+      )}
 
       {outcome.distributions.length > 0 && (
         <div className="flex flex-col gap-4">

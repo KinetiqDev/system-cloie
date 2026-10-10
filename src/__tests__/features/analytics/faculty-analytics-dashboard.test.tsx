@@ -3,6 +3,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FacultyAnalyticsDashboard } from "@/features/analytics/components/faculty-analytics-dashboard";
 import type { FacultyAnalyticsData, FacultyAnalyticsOptions } from "@/features/analytics/types";
+import { classifyOutcomeDistributions } from "@/features/analytics/aggregators/outcome-attainment";
 
 const { pushMock, generateInsightMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -170,6 +171,62 @@ async function settleInsight() {
   });
 }
 
+describe("CILO attainment chart presentation", () => {
+  it.each([true, false])(
+    "uses validated status colors and gates the benchmark, classified=%s",
+    (classified) => {
+      const mean = 3;
+      const categories = [
+        "Not Achieved",
+        "Slightly Achieved",
+        "Moderately Achieved",
+        "Mostly Achieved",
+        "Fully Achieved",
+      ].map((label, index) => ({ value: index + 1, label, count: 1, percentage: 0.2 }));
+      const attainment = classifyOutcomeDistributions(
+        mean,
+        classified ? [{ categories }] : [],
+        false
+      );
+      const { container } = render(
+        <FacultyAnalyticsDashboard
+          options={options}
+          data={{
+            ...ratedScope,
+            filters: { view: "cilos" },
+            ciloMetrics: [
+              {
+                key: "cilo-1",
+                ciloId: "cilo-1",
+                label: "CILO 1",
+                courseId: "course-1",
+                courseCode: "IT201",
+                courseTitle: "Data Structures",
+                evaluationId: "evaluation-1",
+                evaluationName: "End-of-term evaluation",
+                description: "Apply data structures",
+                questions: [],
+                attainment,
+                scaleGroups: [{ ...ratedScope.ratingDistributions[0], mean, categories }],
+              },
+            ],
+          }}
+        />
+      );
+      expect(
+        screen.getByRole("region", { name: "Attainment interpretation guide" })
+      ).toBeInTheDocument();
+      expect(container.querySelector(".recharts-bar-rectangle path")).toHaveAttribute(
+        "fill",
+        classified ? "var(--color-warning)" : "var(--text-muted)"
+      );
+      expect(container.querySelectorAll(".recharts-reference-line")).toHaveLength(
+        classified ? 1 : 0
+      );
+    }
+  );
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   pushMock.mockReset();
@@ -179,6 +236,27 @@ afterEach(() => {
 });
 
 describe("FacultyAnalyticsDashboard", () => {
+  it.each(["overview", "cilos", "questions", "trends", "qualitative"] as const)(
+    "places view navigation before the evidence scope in the %s view",
+    (view) => {
+      render(<FacultyAnalyticsDashboard data={{ ...data, filters: { view } }} options={options} />);
+
+      const heading = screen.getByRole("heading", { level: 1 });
+      const navigation = screen.getByRole("navigation", { name: "Analytics view" });
+      const scope = screen.getByRole("region", { name: "Evidence scope" });
+      const mobileViewSelect = screen.getByRole("combobox", { name: "Analytics view" });
+      expect(
+        mobileViewSelect.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        heading.compareDocumentPosition(navigation) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+      expect(
+        navigation.compareDocumentPosition(scope) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    }
+  );
+
   it("renders the analytics views as link tabs that mark the active view", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

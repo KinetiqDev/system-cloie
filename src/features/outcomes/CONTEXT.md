@@ -6,23 +6,23 @@ Outcomes defines the institutional, program, and course learning outcome layers,
 
 **Institutional Learning Outcome (ILO)**:
 A college-wide learning outcome in the shared Institutional Outcome catalog, owned by the General Education Coordinator (college-wide) and applicable to every Academic Program. It has a stable unique code, statement, display order, active/archive state, and timestamps.
-_Avoid_: Graduate Outcome, college-level GO
+_Avoid_: Program Outcome, college-level PO, Graduate Outcome
 
-**Graduate Outcome (GO)**:
-A program-level learning outcome owned by exactly one Academic Program; Program Heads administer GOs within their assigned Program scope. The earlier term "Program Learning Outcome" is retained only in historical records and compatibility identifiers such as the `ploId` URL alias.
-_Avoid_: Program Learning Outcome, PLO, Institutional outcome, program-level template
+**Program Outcome (PO)**:
+A program-level learning outcome owned by exactly one Academic Program; Program Heads administer POs within their assigned Program scope. The earlier terms "Graduate Outcome" and "Program Learning Outcome" are retained only in historical records and compatibility identifiers such as the `goId` and `ploId` URL aliases.
+_Avoid_: Graduate Outcome, GO, Program Learning Outcome, PLO, Institutional outcome, program-level template
 
-**GO compatibility boundary**:
-Current prose uses Graduate Outcome (GO), GOs, GO mapping, GO binding, and GO evidence. Stored and historical coordinates remain unchanged: `go_id` and `gos`, physical PLO-named SQL table and column names, generated Supabase identifiers, the `ploId` read-only URL alias, `GRADUATE_OUTCOME` readiness values, and `graduate-outcomes` instrument keys. Historical ADR and migration references retain their original PLO wording; these identifiers are never treated as current user-facing terminology.
+**PO compatibility boundary**:
+Current prose uses Program Outcome (PO), POs, PO mapping, PO binding, and PO evidence. Stored and historical coordinates remain unchanged: the physical `gos` table, physical PLO-named binding and snapshot tables and columns, generated Supabase identifiers, the read-only `goId` and `ploId` URL aliases, `GRADUATE_OUTCOME` readiness values, persisted `GO-*` outcome codes, and `graduate-outcomes` instrument keys. The one physical column carrying GO-era wording, `cilo_mappings.go_id`, is renamed to `po_id` in place (ADR 0036), preserving every stored mapping row, the unique index, the foreign key, and the scope-check trigger. Historical ADR and migration references retain their original wording; these identifiers are never treated as current user-facing terminology.
 _Avoid_: Renaming persisted identifiers, rewriting historical records, surfacing compatibility names as canonical terminology
-The canonical terminology decision is [ADR 0030](../../../docs/adr/0030-graduate-outcome-canonical-terminology.md).
+The canonical terminology decision is [ADR 0036](../../../docs/adr/0036-program-outcome-canonical-terminology.md).
 
 **Course Intended Learning Outcome (CILO)**:
 A course-level learning outcome that belongs to a Course and is stable across assignment periods; it is never assignment-specific or faculty-owned. Faculty author CILOs for Courses they actively teach.
 _Avoid_: Assignment-specific CILO, faculty-owned CILO
 
 **Manifestation**:
-The way a CILO contributes to a GO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight, feed no attainment calculation, and never filter analytics contributions: ratings flow to every mapped GO or ILO regardless of manifestation.
+The way a CILO contributes to a PO or Institutional Outcome, carried by every typed mapping: `LEARNING` (displayed `L`), `PRACTICE` (displayed `P`), or `OPPORTUNITY` (displayed `O`). Manifestations carry no numeric value or weight, feed no attainment calculation, and never filter analytics contributions: ratings flow to every mapped PO or ILO regardless of manifestation.
 _Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping, manifestation-filtered evidence
 
 **General Education Course**:
@@ -30,31 +30,31 @@ A Course whose CILOs align to the shared Institutional Outcome catalog.
 _Avoid_: Program-scoped course, course without an owning program
 
 **Program-specific Course**:
-A Course owned by one Academic Program; its CILOs align only to GOs of that owning Program.
+A Course owned by one Academic Program; its CILOs align only to POs of that owning Program.
 _Avoid_: General Education course, cross-program course
 
-**CILO-to-GO mapping**:
-An alignment row between one CILO and one GO in the Course's owning Academic Program; every such relationship carries exactly one manifestation. Wrong-layer writes are rejected.
+**CILO-to-PO mapping**:
+An alignment row between one CILO and one PO in the Course's owning Academic Program; every such relationship carries exactly one manifestation. Wrong-layer writes are rejected.
 _Avoid_: Unqualified mapping, dual-layer mapping
 
 **CILO-to-ILO mapping**:
 An alignment row between one General Education CILO and one Institutional Outcome; every such relationship carries exactly one manifestation. The mapping set is Course-level and shared across assignments.
 _Avoid_: Per-program GE mapping, checkbox-only GE mapping, missing manifestation
 
-**Program evaluation question–GO binding**:
-An unweighted relationship declaring that a Likert question in a Program-wide evaluation covers one or more active Graduate Outcomes owned by the evaluation's Program. It is distinct from CILO-to-GO mapping and carries no manifestation, priority, percentage, or attainment aggregation rule.
-_Avoid_: CILO-to-GO mapping, weighted GO question, GO manifestation
+**Program evaluation question–PO binding**:
+An unweighted relationship declaring that a Likert question in a Program-wide evaluation covers one or more active Program Outcomes owned by the evaluation's Program. It is distinct from CILO-to-PO mapping and carries no manifestation, priority, percentage, or attainment aggregation rule.
+_Avoid_: CILO-to-PO mapping, weighted PO question, PO manifestation
 
 **Program-wide evaluation**:
-An evaluation template and deployment scoped to an Academic Program rather than to a Course Assignment; its question–GO bindings are program-owned configuration and are not CILO alignment rows.
+An evaluation template and deployment scoped to an Academic Program rather than to a Course Assignment; its question–PO bindings are program-owned configuration and are not CILO alignment rows.
 _Avoid_: Course-bound evaluation, program-wide CILO mapping
 
-**GO binding snapshot**:
-The immutable GO identity and descriptive snapshot captured when a Program-wide evaluation is published, preserving the deployment's historical interpretation after later GO catalog changes.
-_Avoid_: Live GO lookup, mutable deployment binding
+**PO binding snapshot**:
+The immutable PO identity and descriptive snapshot captured when a Program-wide evaluation is published, preserving the deployment's historical interpretation after later PO catalog changes.
+_Avoid_: Live PO lookup, mutable deployment binding
 
-**Unweighted GO coverage**:
-The intentionally unspecified future analytics relationship in which a question may cover multiple GOs and a GO may be covered by multiple questions, without implying question weights, priority, evidence multiplication, or aggregation behavior.
+**Unweighted PO coverage**:
+The intentionally unspecified future analytics relationship in which a question may cover multiple POs and a PO may be covered by multiple questions, without implying question weights, priority, evidence multiplication, or aggregation behavior.
 _Avoid_: Equal-weight attainment, weighted coverage, attainment formula
 
 
@@ -71,7 +71,7 @@ The staged, exact before/after diff of a Course's typed mapping set, confirmed b
 _Avoid_: Immediate write, silent save
 
 **Active mapping target**:
-An Institutional Outcome or Graduate Outcome that is active at the time of a new mapping write; archived targets remain queryable for history but never satisfy live readiness or new publication.
+An Institutional Outcome or Program Outcome that is active at the time of a new mapping write; archived targets remain queryable for history but never satisfy live readiness or new publication.
 _Avoid_: Archived target, inactive target, wrong-layer target
 
 **Mapping provenance**:
@@ -79,15 +79,15 @@ Actor and timestamp records for new or changed typed mapping rows; legacy rows w
 _Avoid_: Anonymous write, inferred actor
 
 **Outcome readiness**:
-The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active Institutional Outcome mapping with a non-null manifestation. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active GO of the Course's owning Academic Program; a Program with zero active GOs alongside active CILOs is incomplete, not ready.
-_Avoid_: GO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active GOs
+The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active Institutional Outcome mapping with a non-null manifestation. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PO of the Course's owning Academic Program; a Program with zero active POs alongside active CILOs is incomplete, not ready.
+_Avoid_: PO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active POs
 
 **Course alignment target layer**:
 The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `INSTITUTIONAL_OUTCOME` and `PROGRAM_SPECIFIC` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
 _Avoid_: Surfaced layer value, untyped course target catalog
 
 **Completed-period readiness snapshot**:
-An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. `GRADUATE_OUTCOME` persists as a stored target-layer value in legacy and schema_version-2 snapshots alike (every Program-specific context via `targetLayerForScope`, carried in Dean mapping-gap DTOs for both); it is stored data, always translated before display (e.g. "Incomplete Graduate Outcome mapping:"), never surfaced verbatim to users.
+An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. `GRADUATE_OUTCOME` persists as a stored target-layer value in legacy and schema_version-2 snapshots alike (every Program-specific context via `targetLayerForScope`, carried in Dean mapping-gap DTOs for both); it is stored data, always translated before display (e.g. "Incomplete Program Outcome mapping:"), never surfaced verbatim to users.
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
 
 **Readiness snapshot schema version**:
@@ -106,21 +106,21 @@ _Avoid_: Program-wide faculty mapping, role-only mapping access
 The General Education Coordinator college-wide owns the Institutional Learning Outcome catalog (college-wide `code @unique`, `order`, `is_active`) and holds correction authority for institutional outcomes (create, edit, reorder, archive, restore) via exact before/after review, explicit confirmation, freshness recheck, and atomic save. The Secretary has no ILO access; `/secretary/learning-outcomes/**` redirects to `/secretary/dashboard`. `GEN_ED_COORDINATOR college-wide owns ILO`.
 _Avoid_: Secretary as ILO owner, unconfirmed administrative write, Secretary ILO write
 
-**GO CSV import**:
-Program Heads may create up to 20 active GOs at once for the deliberately Selected Program from a two-column CSV (`GO Code`, `Description`). Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `PLO Code` header for compatibility. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active GO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-GO mappings before publication.
-_Avoid_: Spreadsheet overwrite, archived-GO restoration, cross-Program import, partial unexpected batch
+**PO CSV import**:
+Program Heads may create up to 20 active POs at once for the deliberately Selected Program from a two-column CSV (`PO Code`, `Description`). Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `GO Code` and `PLO Code` headers for compatibility. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-PO mappings before publication.
+_Avoid_: Spreadsheet overwrite, archived-PO restoration, cross-Program import, partial unexpected batch
 
 **Program Head read-only mapping review**:
-Program Heads retain GO ownership but may only inspect valid typed mappings and readiness gaps for their assigned Program; they cannot create or remove mapping rows through the UI or crafted server requests.
+Program Heads retain PO ownership but may only inspect valid typed mappings and readiness gaps for their assigned Program; they cannot create or remove mapping rows through the UI or crafted server requests.
 _Avoid_: Program Head mapping mutation, mapping bookmarks with edit controls
 
 **Dean outcome oversight**:
-College-wide, read-only, period-scoped, privacy-safe visibility into the Institutional Outcome catalog, Program GO coverage, and typed mapping gaps; General Education gaps are labeled as Institutional Outcome gaps, never as missing Program GOs, and reads are never cached.
-_Avoid_: Dean outcome editing, GO-only gap labels, roster or response data in oversight
+College-wide, read-only, period-scoped, privacy-safe visibility into the Institutional Outcome catalog, Program PO coverage, and typed mapping gaps; General Education gaps are labeled as Institutional Outcome gaps, never as missing Program POs, and reads are never cached.
+_Avoid_: Dean outcome editing, PO-only gap labels, roster or response data in oversight
 
-**ILO-to-GO crosswalk**:
-An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Graduate Outcomes; no reporting or attainment semantics exist for it yet. General Education ILO evidence (ADR 0035) groups ratings through CILO-to-ILO mappings only and never propagates to GOs.
-_Avoid_: ILO-to-GO mapping, automatic crosswalk, attainment rollup
+**ILO-to-PO crosswalk**:
+An explicitly deferred mapping or attainment propagation between Institutional Outcomes and Program Outcomes; no reporting or attainment semantics exist for it yet. General Education ILO evidence (ADR 0035) groups ratings through CILO-to-ILO mappings only and never propagates to POs.
+_Avoid_: ILO-to-PO mapping, automatic crosswalk, attainment rollup
 
 ## Institutional Learning Outcome catalog ownership (resolved, ADR 0018, issue #490)
 

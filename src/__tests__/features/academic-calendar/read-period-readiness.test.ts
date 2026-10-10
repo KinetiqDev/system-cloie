@@ -37,7 +37,7 @@ function assignment(overrides: Record<string, unknown> = {}) {
         },
       ],
     },
-    program: { id: "program-1", name: "Program A", is_active: true, gos: [] },
+    program: { id: "program-1", name: "Program A", is_active: true, pos: [] },
     ...overrides,
   };
 }
@@ -46,17 +46,17 @@ function generalEducationCourse() {
   return { ...assignment().course, course_scope: "GENERAL_EDUCATION", program_id: null };
 }
 
-function activeGoMapping(id = "go-1", programId = "program-1") {
+function activePoMapping(id = "po-1", programId = "program-1") {
   return {
     manifestation: "PRACTICE",
-    go: { id, program_id: programId, is_active: true },
+    po: { id, program_id: programId, is_active: true },
   };
 }
 
 function activeGos(ids: string[]) {
   return ids.map((id, index) => ({
     id,
-    code: `GO-${index + 1}`,
+    code: `PO-${index + 1}`,
     description: `Outcome ${index + 1}`,
     is_active: true,
     order: index,
@@ -81,7 +81,7 @@ describe("readPeriodReadiness", () => {
     vi.mocked(prisma.institutionalOutcome.findMany).mockResolvedValue([] as never);
   });
 
-  it("lists affected CILOs when no active Program GOs exist", async () => {
+  it("lists affected CILOs when no active Program POs exist", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -103,7 +103,7 @@ describe("readPeriodReadiness", () => {
     });
   });
 
-  it("classifies a Program-specific context ready when every active CILO classifies every owning-Program GO", async () => {
+  it("classifies a Program-specific context ready when every active CILO classifies every owning-Program PO", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -113,7 +113,7 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: activeGos(["go-1"]),
+          pos: activeGos(["po-1"]),
         },
         course: {
           ...assignment().course,
@@ -122,7 +122,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePoMapping("po-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -134,7 +134,7 @@ describe("readPeriodReadiness", () => {
 
     expect(readiness.contexts[0]).toMatchObject({ state: "ready", affectedCiloIds: [] });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
-      mappedTargets: [{ id: "go-1", isArchived: false }],
+      mappedTargets: [{ id: "po-1", isArchived: false }],
       missingGoIds: [],
     });
   });
@@ -149,7 +149,7 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: activeGos(["go-1"]),
+          pos: activeGos(["po-1"]),
         },
         course: {
           ...assignment().course,
@@ -161,7 +161,7 @@ describe("readPeriodReadiness", () => {
               cilo_mappings: [
                 {
                   manifestation: null,
-                  go: { id: "go-1", program_id: "program-1", is_active: true },
+                  po: { id: "po-1", program_id: "program-1", is_active: true },
                 },
               ],
               cilo_institutional_outcome_mappings: [],
@@ -176,15 +176,15 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]).toMatchObject({
       state: "incomplete-mapping",
       affectedCiloIds: ["cilo-1"],
-      affectedGoIds: ["go-1"],
+      affectedGoIds: ["po-1"],
     });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
       mappedTargets: [],
-      missingGoIds: ["go-1"],
+      missingGoIds: ["po-1"],
     });
   });
 
-  it("classifies incomplete when an active owning-Program GO is unclassified for one active CILO", async () => {
+  it("classifies incomplete when an active owning-Program PO is unclassified for one active CILO", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -194,7 +194,7 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: activeGos(["go-1", "go-2"]),
+          pos: activeGos(["po-1", "po-2"]),
         },
         course: {
           ...assignment().course,
@@ -204,8 +204,8 @@ describe("readPeriodReadiness", () => {
               description: "Apply knowledge",
               is_active: true,
               cilo_mappings: [
-                activeGoMapping("go-1", "program-1"),
-                activeGoMapping("go-2", "program-1"),
+                activePoMapping("po-1", "program-1"),
+                activePoMapping("po-2", "program-1"),
               ],
               cilo_institutional_outcome_mappings: [],
             },
@@ -213,7 +213,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-2",
               description: "Evaluate outcomes",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePoMapping("po-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -226,15 +226,15 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]).toMatchObject({
       state: "incomplete-mapping",
       affectedCiloIds: ["cilo-2"],
-      affectedGoIds: ["go-2"],
+      affectedGoIds: ["po-2"],
     });
     expect(readiness.contexts[0]?.cilos[1]).toMatchObject({
-      mappedTargets: [{ id: "go-1", isArchived: false }],
-      missingGoIds: ["go-2"],
+      mappedTargets: [{ id: "po-1", isArchived: false }],
+      missingGoIds: ["po-2"],
     });
   });
 
-  it("rejects Program-specific mappings to a GO outside the owning Program", async () => {
+  it("rejects Program-specific mappings to a PO outside the owning Program", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -247,7 +247,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-2", "program-2")],
+              cilo_mappings: [activePoMapping("po-2", "program-2")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -294,7 +294,7 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({ mappedTargets: [] });
   });
 
-  it("does not satisfy readiness with only an archived owning-Program GO", async () => {
+  it("does not satisfy readiness with only an archived owning-Program PO", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -310,7 +310,7 @@ describe("readPeriodReadiness", () => {
               cilo_mappings: [
                 {
                   manifestation: "PRACTICE",
-                  go: { id: "go-1", program_id: "program-1", is_active: false },
+                  po: { id: "po-1", program_id: "program-1", is_active: false },
                 },
               ],
               cilo_institutional_outcome_mappings: [],
@@ -327,11 +327,11 @@ describe("readPeriodReadiness", () => {
       affectedCiloIds: ["cilo-1"],
     });
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({
-      mappedTargets: [{ id: "go-1", isArchived: true }],
+      mappedTargets: [{ id: "po-1", isArchived: true }],
     });
   });
 
-  it("orders active GOs before archived GOs", async () => {
+  it("orders active POs before archived POs", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -341,9 +341,9 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: [
-            { id: "go-archived", code: "GO-1", description: "Old", is_active: false, order: 0 },
-            { id: "go-active", code: "GO-2", description: "Current", is_active: true, order: 1 },
+          pos: [
+            { id: "po-archived", code: "PO-1", description: "Old", is_active: false, order: 0 },
+            { id: "po-active", code: "PO-2", description: "Current", is_active: true, order: 1 },
           ],
         },
       }),
@@ -351,7 +351,7 @@ describe("readPeriodReadiness", () => {
 
     const readiness = await readPeriodReadiness("period-1");
 
-    expect(readiness.contexts[0]?.gos.map((go) => go.id)).toEqual(["go-active", "go-archived"]);
+    expect(readiness.contexts[0]?.pos.map((po) => po.id)).toEqual(["po-active", "po-archived"]);
   });
 
   it("groups sections into one Program-specific Course context", async () => {
@@ -364,7 +364,7 @@ describe("readPeriodReadiness", () => {
       assignment({
         id: "wrong-program",
         program_id: "program-2",
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, pos: [] },
       }),
     ] as never);
 
@@ -384,7 +384,7 @@ describe("readPeriodReadiness", () => {
         id: "assignment-2",
         program_id: "program-2",
         course: generalEducationCourse(),
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, pos: [] },
       }),
     ] as never);
 
@@ -455,7 +455,7 @@ describe("readPeriodReadiness", () => {
         id: "assignment-2",
         program_id: "program-2",
         course: sharedCourse,
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, pos: [] },
       }),
     ] as never);
 
@@ -468,7 +468,7 @@ describe("readPeriodReadiness", () => {
     }
   });
 
-  it("identifies Institutional Outcome gaps without labeling them as missing Program GOs", async () => {
+  it("identifies Institutional Outcome gaps without labeling them as missing Program POs", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -591,7 +591,7 @@ describe("readPeriodReadiness", () => {
           courseId: "historical-course",
           courseScope: "GENERAL_EDUCATION",
           cilos: [{ id: "cilo-1", description: "Legacy", isArchived: false }],
-          gos: [{ id: "go-1" }],
+          pos: [{ id: "po-1" }],
         },
       ],
       program_totals: [{ programId: "program-1" }],
@@ -623,7 +623,7 @@ describe("readPeriodReadiness", () => {
           id: "program-1",
           name: "Program A",
           is_active: true,
-          gos: activeGos(["go-1"]),
+          pos: activeGos(["po-1"]),
         },
         course: {
           ...assignment().course,
@@ -632,7 +632,7 @@ describe("readPeriodReadiness", () => {
               id: "ready-cilo",
               description: "Hidden from the totals projection",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePoMapping("po-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -647,7 +647,7 @@ describe("readPeriodReadiness", () => {
         id: "incomplete-assignment",
         course_id: "course-3",
         program_id: "program-2",
-        program: { id: "program-2", name: "Program B", is_active: true, gos: [] },
+        program: { id: "program-2", name: "Program B", is_active: true, pos: [] },
         course: {
           ...assignment().course,
           program_id: "program-2",
@@ -656,7 +656,7 @@ describe("readPeriodReadiness", () => {
               id: "incomplete-cilo",
               description: "Hidden from the totals projection",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePoMapping("po-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],
@@ -712,7 +712,7 @@ describe("readPeriodReadiness", () => {
               id: "cilo-1",
               description: "Apply knowledge",
               is_active: true,
-              cilo_mappings: [activeGoMapping("go-1", "program-1")],
+              cilo_mappings: [activePoMapping("po-1", "program-1")],
               cilo_institutional_outcome_mappings: [],
             },
           ],

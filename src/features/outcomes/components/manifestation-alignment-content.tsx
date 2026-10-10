@@ -63,17 +63,17 @@ function targetCopy(scope: CourseAlignment["course"]["scope"]): TargetCopy {
     };
   }
   return {
-    shortNoun: "GO",
-    header: "CILO / GO",
-    caption: "CILO to Graduate Outcome manifestation matrix.",
+    shortNoun: "PO",
+    header: "CILO / PO",
+    caption: "CILO to Program Outcome manifestation matrix.",
     incompleteMessage:
-      "Choose Learning, Practice, or Opportunity for every GO before reviewing this alignment.",
-    emptyTitle: "No Graduate Outcomes have been defined for this program.",
-    emptyDescription: "A Program Head must create GOs before Course alignment can be completed.",
-    archivedTitle: "Archived Graduate Outcomes",
+      "Choose Learning, Practice, or Opportunity for every PO before reviewing this alignment.",
+    emptyTitle: "No Program Outcomes have been defined for this program.",
+    emptyDescription: "A Program Head must create POs before Course alignment can be completed.",
+    archivedTitle: "Archived Program Outcomes",
     archivedDescription:
-      "Historical manifestations on archived GOs are read-only and do not count toward completeness.",
-    archivedLabel: "Archived Graduate Outcome manifestations, read-only",
+      "Historical manifestations on archived POs are read-only and do not count toward completeness.",
+    archivedLabel: "Archived Program Outcome manifestations, read-only",
   };
 }
 
@@ -98,7 +98,7 @@ function manifestLegend() {
 /**
  * Course alignment matrix: a desktop table (`hidden md:block`) and mobile CILO
  * cards (`md:hidden`), both driving the same draft state through `onChangeCell`.
- * Copy follows Course scope so Program-specific columns are GOs and General
+ * Copy follows Course scope so Program-specific columns are POs and General
  * Education columns are Institutional Outcomes.
  */
 export function ManifestationAlignmentContent({

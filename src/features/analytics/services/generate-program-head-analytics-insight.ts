@@ -165,6 +165,15 @@ function buildOutcomesPacket(
         submittedResponseCount: outcome.submittedResponseCount,
         spansMultipleScales: outcome.spansMultipleScales,
         excludedRatingCount: outcome.excludedRatingCount,
+        attainment: outcome.attainment
+          ? {
+              status: outcome.attainment.status,
+              interpretation: outcome.attainment.interpretation,
+              cqi: outcome.attainment.cqi,
+              meetsBenchmark: outcome.attainment.meetsBenchmark,
+              isIndirect: outcome.attainment.isIndirect,
+            }
+          : null,
         distributions: outcome.distributions.map((distribution) => ({
           scaleLabel: clampLabel(distribution.scaleLabel),
           categories: distribution.categories.map((category) => ({
@@ -175,7 +184,10 @@ function buildOutcomesPacket(
         })),
       })),
     },
-    limitations: [outcomes.currentMappingDisclosure].filter((limitation) => limitation.length > 0),
+    limitations: [
+      outcomes.currentMappingDisclosure,
+      "Program Outcome attainment follows the proposed institutional benchmark (3.50, policy CLOIE_OUTCOME_MEAN_V1). Classifications are predetermined and cannot be altered or recalculated.",
+    ].filter((limitation) => limitation.length > 0),
   };
 }
 
@@ -184,18 +196,50 @@ function buildCoursesPacket(
   breakdowns: ProgramHeadBreakdownsDTO,
   appliedFilters: AppliedAnalyticsFilters
 ) {
+  const scaleGroups = new Map<string, number>();
+  for (const course of breakdowns.courseRows) {
+    for (const scale of course.scaleGroups) {
+      if (!scaleGroups.has(scale.scaleKey)) scaleGroups.set(scale.scaleKey, scaleGroups.size + 1);
+    }
+  }
   return {
     view: "courses" as const,
     ...buildPacketBase(overview, appliedFilters),
     breakdowns: {
       courseRows: buildBreakdownRows(
-        breakdowns.courseRows.map((row) => ({
-          label: `${row.courseCode} ${row.label}`,
-          courseCode: row.courseCode,
-          meanRating: row.meanRating,
-          ratingCount: row.ratingCount,
-          submittedResponseCount: row.submittedResponseCount,
-        })),
+        breakdowns.courseRows.flatMap<{
+          label: string;
+          courseCode: string;
+          scaleGroup: number | null;
+          scaleLabel: string | null;
+          meanRating: number | null;
+          ratingCount: number;
+          submittedResponseCount: number;
+        }>((row) => {
+          const base = {
+            label: `${row.courseCode} ${row.label}`,
+            courseCode: row.courseCode,
+          };
+          return row.scaleGroups.length > 0
+            ? row.scaleGroups.map((scale) => ({
+                ...base,
+                scaleGroup: scaleGroups.get(scale.scaleKey) ?? null,
+                scaleLabel: clampLabel(scale.scaleLabel),
+                meanRating: scale.meanRating,
+                ratingCount: scale.ratingCount,
+                submittedResponseCount: scale.submittedResponseCount,
+              }))
+            : [
+                {
+                  ...base,
+                  scaleGroup: null,
+                  scaleLabel: null,
+                  meanRating: null,
+                  ratingCount: row.ratingCount,
+                  submittedResponseCount: row.submittedResponseCount,
+                },
+              ];
+        }),
         MAX_COURSE_ROWS
       ),
       instrumentRows: [...breakdowns.instrumentRows]
@@ -608,9 +652,11 @@ Shape: {"observation": string, "evidence": string[], "connection"?: string, "lim
 
 How to read this evidence:
 - Rating means sit on the scale named in the evidence (for example 1-5, where 5 carries the most favorable descriptor). Judge a mean against its scale range, never against an absolute standard, and say the scale when you cite the number.
+- Outcome attainment classifications (for example Fully Attained, Attained, Partially Attained, Slightly Attained, Not Attained) and Continuous Quality Improvement classifications (Meets Benchmark, Needs Attention, Below Benchmark) are deterministically calculated by System CLOIE before this request under policy CLOIE_OUTCOME_MEAN_V1 (benchmark 3.50). Never recalculate attainment, never invent your own thresholds or cutoffs, and never override or contradict the provided classification. You may explain established results, discuss how contributing CILOs or questions relate to the outcome, and note whether the evidence originates from direct course assessment or indirect stakeholder surveys.
 - A small response pool limits what results can prove: with few respondents, say that the picture may not represent everyone.
 - Distribution shape matters as much as the mean: the same mean can come from consistent ratings or from sharply divided ones; describe which pattern appears.
 - Compare trend periods only when the evidence marks them comparable; when a period has a break reason, say the periods cannot be directly compared.
+- Course means may be compared only within the same scaleGroup. A course can appear once per frozen scale; never blend these means or add their overlapping submitted-response counts. A null mean is unavailable, not zero.
 - Qualitative evidence is redacted term counts, per-prompt structure, and tone counts, not quotations. Never present a term as a quote or a complete thought.
 - appliedFilters names the filters the reviewer chose. Every figure in this packet already reflects them, so never describe evidence outside that scope, and name the scope when the reading depends on it.
 - promptEvidence groups written feedback by instrument prompt and instrument version, each with its own terms, tone counts, and instrumentLabel. Describe prompts separately; never merge different prompts or different instrument versions into one undifferentiated picture.
@@ -633,7 +679,7 @@ Writing rules:
  * responses, sessions, or authorization decisions. Process restart/deploy
  * clears every entry, preserving ADR 0016's non-persistence boundary.
  */
-const PH_AI_PROMPT_VERSION = "program-head-analytics-v3";
+const PH_AI_PROMPT_VERSION = "program-head-analytics-v4";
 const insightCache = new AiInsightCache<GenerateAIInsightResult>();
 
 // ---------------------------------------------------------------------------

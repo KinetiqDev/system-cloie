@@ -62,7 +62,7 @@ describe("Breadcrumbs", () => {
         items={[
           { label: "Analytics", href: "/analytics" },
           { label: "Outcomes", href: "/analytics?tab=outcomes" },
-          { label: "GO 2" },
+          { label: "PO 2" },
         ]}
       />
     );

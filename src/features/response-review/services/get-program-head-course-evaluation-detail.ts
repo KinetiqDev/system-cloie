@@ -307,6 +307,6 @@ function toCourseRatingRow(
           description: binding.cilo_description_snapshot,
         }
       : null,
-    goMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
+    poMappings: binding ? (ciloMappings.get(binding.cilo_id ?? "") ?? []) : [],
   };
 }

@@ -91,7 +91,7 @@ export function FacultyTemplateWorkspace({
             context?.majorId ?? (mode === "edit" ? seed.initialData.bound_major_id : null),
         }}
         initialBindings={changed ? [] : seed.initialBindings}
-        initialGoBindings={changed ? [] : seed.initialGoBindings}
+        initialPoBindings={changed ? [] : seed.initialPoBindings}
         {...(mode === "copy"
           ? {
               startingFrom: {

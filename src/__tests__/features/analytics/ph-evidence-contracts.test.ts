@@ -8,10 +8,10 @@ import {
 import { buildQuantitativeMetric } from "@/features/analytics/aggregators/quantitative";
 import { buildCiloMetrics, buildQuestionMetrics } from "@/features/analytics/aggregators/cilo";
 import {
-  buildCourseDerivedGoMetrics,
-  buildProgramWideGoMetrics,
-  type CentralGoRatingRow,
-} from "@/features/analytics/aggregators/go";
+  buildCourseDerivedPoMetrics,
+  buildProgramWidePoMetrics,
+  type CentralPoRatingRow,
+} from "@/features/analytics/aggregators/po";
 import { buildParticipationSummary } from "@/features/analytics/aggregators/participation";
 import {
   AGREEMENT5,
@@ -20,7 +20,7 @@ import {
   SCALE4,
   SCALE5,
   SNAPSHOTS,
-  centralGoRows,
+  centralPoRows,
   ciloRows,
   participationRows,
 } from "./ph-evidence-fixture";
@@ -243,15 +243,15 @@ describe("CILO metrics", () => {
     )!;
     expect(ciloA.mappings).toEqual([
       {
-        goId: "plo-1",
-        goCode: "GO1",
-        goDescription: "Communicate effectively.",
+        poId: "po-1",
+        poCode: "PO1",
+        poDescription: "Communicate effectively.",
         manifestation: "LEARNING",
       },
       {
-        goId: "plo-2",
-        goCode: "GO2",
-        goDescription: "Solve problems creatively.",
+        poId: "po-2",
+        poCode: "PO2",
+        poDescription: "Solve problems creatively.",
         manifestation: "OPPORTUNITY",
       },
     ]);
@@ -263,33 +263,33 @@ describe("CILO metrics", () => {
 });
 
 // ---------------------------------------------------------------------------
-// GO metrics (§5.8, §5.9, §7)
+// PO metrics (§5.8, §5.9, §7)
 // ---------------------------------------------------------------------------
 
-describe("course-derived GO metrics", () => {
-  it("contributes each mapped rating once to every mapped GO regardless of manifestation", () => {
-    const metrics = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
-    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
-    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
+describe("course-derived PO metrics", () => {
+  it("contributes each mapped rating once to every mapped PO regardless of manifestation", () => {
+    const metrics = buildCourseDerivedPoMetrics(ciloRows("e1", "e2"));
+    const po1 = metrics.find((metric) => metric.poId === "po-1")!;
+    const po2 = metrics.find((metric) => metric.poId === "po-2")!;
 
-    // Many-to-many: GO1 receives CILO-a (qA 5,4 + qA2 3 + e2's 2) and
-    // CILO-b (qB 3,4 + e2's 4); GO2 receives CILO-a's ratings only.
+    // Many-to-many: PO1 receives CILO-a (qA 5,4 + qA2 3 + e2's 2) and
+    // CILO-b (qB 3,4 + e2's 4); PO2 receives CILO-a's ratings only.
     // The OPPORTUNITY mapping filters nothing (§7).
-    expect(go1.ratingCount).toBe(7);
-    expect(go2.ratingCount).toBe(4);
-    expect(go1.contributingCilos.map((cilo) => cilo.id).sort()).toEqual(["cilo-a", "cilo-b"]);
-    expect(go2.contributingCilos.map((cilo) => cilo.id)).toEqual(["cilo-a"]);
+    expect(po1.ratingCount).toBe(7);
+    expect(po2.ratingCount).toBe(4);
+    expect(po1.contributingCilos.map((cilo) => cilo.id).sort()).toEqual(["cilo-a", "cilo-b"]);
+    expect(po2.contributingCilos.map((cilo) => cilo.id)).toEqual(["cilo-a"]);
   });
 
   it("keeps cross-period incompatible scales as separate groups with no combined mean", () => {
-    const go1 = buildCourseDerivedGoMetrics(ciloRows("e1", "e2")).find(
-      (metric) => metric.goId === "plo-1"
+    const po1 = buildCourseDerivedPoMetrics(ciloRows("e1", "e2")).find(
+      (metric) => metric.poId === "po-1"
     )!;
-    expect(go1.spansMultipleScales).toBe(true);
-    expect(go1.mean).toBeNull();
+    expect(po1.spansMultipleScales).toBe(true);
+    expect(po1.mean).toBeNull();
 
-    const scale5 = go1.scaleGroups.find((group) => group.scale?.max === 5)!;
-    const scale4 = go1.scaleGroups.find((group) => group.scale?.max === 4)!;
+    const scale5 = po1.scaleGroups.find((group) => group.scale?.max === 5)!;
+    const scale4 = po1.scaleGroups.find((group) => group.scale?.max === 4)!;
     // Raw pooled SCALE5: (5+4+3+3+4)/5 = 3.8; mean-of-means (4 + 3.5)/2 differs.
     expect(scale5.mean).toBeCloseTo(3.8, 12);
     expect(scale5.ratingCount).toBe(5);
@@ -309,40 +309,40 @@ describe("course-derived GO metrics", () => {
         responseId: "resp-corrupt",
         scale: resolveItemScaleIdentity(SNAPSHOTS.cbV1, "cilo-items", "q-cilo-a"),
         cilo: { id: "cilo-a", label: "CILO 1", description: "Apply computational thinking." },
-        goMappings: [
+        poMappings: [
           {
-            goId: "plo-1",
-            goCode: "GO1",
-            goDescription: "Communicate effectively.",
+            poId: "po-1",
+            poCode: "PO1",
+            poDescription: "Communicate effectively.",
             manifestation: "LEARNING" as const,
           },
         ],
       },
     ];
-    const go1 = buildCourseDerivedGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
-    expect(go1.excludedRatingCount).toBe(1);
-    expect(go1.scaleGroups.every((group) => group.ratingCount < 6)).toBe(true);
+    const po1 = buildCourseDerivedPoMetrics(rows).find((metric) => metric.poId === "po-1")!;
+    expect(po1.excludedRatingCount).toBe(1);
+    expect(po1.scaleGroups.every((group) => group.ratingCount < 6)).toBe(true);
   });
 });
 
-describe("program-wide GO metrics", () => {
-  it("aggregates through direct deployment GO snapshots, including multi-GO questions", () => {
-    const metrics = buildProgramWideGoMetrics(centralGoRows());
-    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
-    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
+describe("program-wide PO metrics", () => {
+  it("aggregates through direct deployment PO snapshots, including multi-PO questions", () => {
+    const metrics = buildProgramWidePoMetrics(centralPoRows());
+    const po1 = metrics.find((metric) => metric.poId === "po-1")!;
+    const po2 = metrics.find((metric) => metric.poId === "po-2")!;
 
-    // One response rated q-go-single=4 and q-go-multi=2; both reach GO1,
-    // only the multi item reaches GO2.
-    expect(go1.mean).toBeCloseTo(3, 12);
-    expect(go1.ratingCount).toBe(2);
-    expect(go1.responseCount).toBe(1);
-    expect(go2.ratingCount).toBe(1);
-    expect(go2.mean).toBeCloseTo(2, 12);
+    // One response rated q-po-single=4 and q-po-multi=2; both reach PO1,
+    // only the multi item reaches PO2.
+    expect(po1.mean).toBeCloseTo(3, 12);
+    expect(po1.ratingCount).toBe(2);
+    expect(po1.responseCount).toBe(1);
+    expect(po2.ratingCount).toBe(1);
+    expect(po2.mean).toBeCloseTo(2, 12);
   });
 
   it("keeps central evidence separate from course-derived evidence and scales labeled", () => {
-    const central = buildProgramWideGoMetrics(centralGoRows());
-    const courseDerived = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
+    const central = buildProgramWidePoMetrics(centralPoRows());
+    const courseDerived = buildCourseDerivedPoMetrics(ciloRows("e1", "e2"));
     // Agreement scale identity differs from the course instruments' scales.
     const centralScaleKeys = new Set(
       central.flatMap((metric) => metric.scaleGroups.map((group) => group.scale?.key))
@@ -356,68 +356,68 @@ describe("program-wide GO metrics", () => {
   });
 
   it("counts unresolvable-scale ratings diagnostically", () => {
-    const rows: CentralGoRatingRow[] = [
-      ...centralGoRows(),
+    const rows: CentralPoRatingRow[] = [
+      ...centralPoRows(),
       {
-        sectionKey: "plo-items",
-        itemKey: "q-plo-single",
+        sectionKey: "po-items",
+        itemKey: "q-po-single",
         ratingValue: 3,
         responseId: "resp-unresolved",
         scale: null,
-        goBindings: [{ goId: "plo-1", goCode: "GO1", goDescription: "Communicate effectively." }],
+        poBindings: [{ poId: "po-1", poCode: "PO1", poDescription: "Communicate effectively." }],
       },
     ];
-    const go1 = buildProgramWideGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
-    expect(go1.excludedRatingCount).toBe(1);
-    expect(go1.ratingCount).toBe(2);
+    const po1 = buildProgramWidePoMetrics(rows).find((metric) => metric.poId === "po-1")!;
+    expect(po1.excludedRatingCount).toBe(1);
+    expect(po1.ratingCount).toBe(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// GO provenance counts behind the dashboard's evidence details (§13.8)
+// PO provenance counts behind the dashboard's evidence details (§13.8)
 // ---------------------------------------------------------------------------
 
-describe("GO provenance counts", () => {
-  it("counts distinct evaluations and bound questions per course-derived GO", () => {
-    const metrics = buildCourseDerivedGoMetrics(ciloRows("e1", "e2"));
-    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
+describe("PO provenance counts", () => {
+  it("counts distinct evaluations and bound questions per course-derived PO", () => {
+    const metrics = buildCourseDerivedPoMetrics(ciloRows("e1", "e2"));
+    const po1 = metrics.find((metric) => metric.poId === "po-1")!;
     // Valid mapped ratings come from e1 (q-cilo-a ×2, q-cilo-a2, q-cilo-b ×2)
     // and e2 (q-cilo-a, q-cilo-b): two evaluations, three distinct questions.
-    expect(go1.evaluationCount).toBe(2);
-    expect(go1.questionCount).toBe(3);
-    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
-    // GO2 receives only CILO-a's ratings; CILO-a binds two questions
+    expect(po1.evaluationCount).toBe(2);
+    expect(po1.questionCount).toBe(3);
+    const po2 = metrics.find((metric) => metric.poId === "po-2")!;
+    // PO2 receives only CILO-a's ratings; CILO-a binds two questions
     // (q-cilo-a and q-cilo-a2) that both contribute valid ratings in e1.
-    expect(go2.evaluationCount).toBe(2);
-    expect(go2.questionCount).toBe(2);
+    expect(po2.evaluationCount).toBe(2);
+    expect(po2.questionCount).toBe(2);
   });
 
-  it("counts distinct deployments and directly bound questions per program-wide GO", () => {
-    const metrics = buildProgramWideGoMetrics(centralGoRows());
-    const go1 = metrics.find((metric) => metric.goId === "plo-1")!;
-    expect(go1.evaluationCount).toBe(1);
-    expect(go1.questionCount).toBe(2);
-    const go2 = metrics.find((metric) => metric.goId === "plo-2")!;
-    expect(go2.evaluationCount).toBe(1);
-    expect(go2.questionCount).toBe(1);
+  it("counts distinct deployments and directly bound questions per program-wide PO", () => {
+    const metrics = buildProgramWidePoMetrics(centralPoRows());
+    const po1 = metrics.find((metric) => metric.poId === "po-1")!;
+    expect(po1.evaluationCount).toBe(1);
+    expect(po1.questionCount).toBe(2);
+    const po2 = metrics.find((metric) => metric.poId === "po-2")!;
+    expect(po2.evaluationCount).toBe(1);
+    expect(po2.questionCount).toBe(1);
   });
 
   it("never counts evidence that was excluded as out-of-scale", () => {
-    const rows: CentralGoRatingRow[] = [
+    const rows: CentralPoRatingRow[] = [
       {
-        sectionKey: "plo-items",
-        itemKey: "q-plo-single",
+        sectionKey: "po-items",
+        itemKey: "q-po-single",
         ratingValue: 9,
         responseId: "resp-corrupt",
         evaluationId: "cd-x",
         scale: toScaleIdentity([...AGREEMENT5]),
-        goBindings: [{ goId: "plo-1", goCode: "GO1", goDescription: "Communicate effectively." }],
+        poBindings: [{ poId: "po-1", poCode: "PO1", poDescription: "Communicate effectively." }],
       },
     ];
-    const go1 = buildProgramWideGoMetrics(rows).find((metric) => metric.goId === "plo-1")!;
-    expect(go1.ratingCount).toBe(0);
-    expect(go1.evaluationCount).toBe(0);
-    expect(go1.questionCount).toBe(0);
+    const po1 = buildProgramWidePoMetrics(rows).find((metric) => metric.poId === "po-1")!;
+    expect(po1.ratingCount).toBe(0);
+    expect(po1.evaluationCount).toBe(0);
+    expect(po1.questionCount).toBe(0);
   });
 });
 
@@ -443,26 +443,26 @@ describe("question metrics across incompatible instrument versions", () => {
 });
 
 describe("duplicate contribution prevention", () => {
-  it("counts a rating once per GO when binding arrays repeat a goId", () => {
+  it("counts a rating once per PO when binding arrays repeat a poId", () => {
     const duplicated = ciloRows("e1").map((row) =>
-      row.goMappings.length > 0
-        ? { ...row, goMappings: [...row.goMappings, ...row.goMappings] }
+      row.poMappings.length > 0
+        ? { ...row, poMappings: [...row.poMappings, ...row.poMappings] }
         : row
     );
-    const clean = buildCourseDerivedGoMetrics(ciloRows("e1"));
-    const dirty = buildCourseDerivedGoMetrics(duplicated);
+    const clean = buildCourseDerivedPoMetrics(ciloRows("e1"));
+    const dirty = buildCourseDerivedPoMetrics(duplicated);
     expect(dirty.map((metric) => metric.ratingCount)).toEqual(
       clean.map((metric) => metric.ratingCount)
     );
   });
 
-  it("counts a central rating once per GO when snapshot bindings repeat a goId", () => {
-    const dirtyRows = centralGoRows().map((row) => ({
+  it("counts a central rating once per PO when snapshot bindings repeat a poId", () => {
+    const dirtyRows = centralPoRows().map((row) => ({
       ...row,
-      goBindings: [...row.goBindings, ...row.goBindings],
+      poBindings: [...row.poBindings, ...row.poBindings],
     }));
-    const clean = buildProgramWideGoMetrics(centralGoRows());
-    const dirty = buildProgramWideGoMetrics(dirtyRows);
+    const clean = buildProgramWidePoMetrics(centralPoRows());
+    const dirty = buildProgramWidePoMetrics(dirtyRows);
     expect(dirty.map((metric) => metric.ratingCount)).toEqual(
       clean.map((metric) => metric.ratingCount)
     );
@@ -478,12 +478,12 @@ describe("reconciliation invariants", () => {
   const allCiloGroups = buildCiloMetrics(ciloRows("e1", "e2")).flatMap(
     (metric) => metric.scaleGroups
   );
-  const allGoGroups = [
-    ...buildCourseDerivedGoMetrics(ciloRows("e1", "e2")),
-    ...buildProgramWideGoMetrics(centralGoRows()),
+  const allPoGroups = [
+    ...buildCourseDerivedPoMetrics(ciloRows("e1", "e2")),
+    ...buildProgramWidePoMetrics(centralPoRows()),
   ].flatMap((metric) => metric.scaleGroups);
   const allQuestionGroups = allQuestionMetrics.flatMap((question) => question.scaleGroups);
-  const everyMetric = [...allQuestionGroups, ...allCiloGroups, ...allGoGroups];
+  const everyMetric = [...allQuestionGroups, ...allCiloGroups, ...allPoGroups];
 
   it("every distribution sums to its ratingCount", () => {
     for (const metric of everyMetric) {

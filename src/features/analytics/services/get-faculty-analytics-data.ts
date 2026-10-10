@@ -18,6 +18,7 @@ import {
 } from "@/features/evaluations/services/course-info-snapshot";
 import { groupRatingsByScale } from "../aggregators/quantitative";
 import { resolveCiloLabels } from "../aggregators/cilo";
+import { classifyOutcomeMean } from "../aggregators/outcome-attainment";
 import { encodeBindingKey, encodeQuestionKey } from "../aggregators/question-identity";
 import {
   buildScaleIdentities,
@@ -590,25 +591,29 @@ function buildCiloMetrics(
       });
     }
 
-    return [...groups.entries()].map(([key, group]) => ({
-      key: `${evaluation.id}:${key}`,
-      ciloId: group.ciloId,
-      label: group.ciloId ? (ciloLabels.get(group.ciloId) ?? "CILO") : "Unassigned CILO",
-      courseId: evaluation.course_assignment.course.id,
-      courseCode: courseCode(evaluation),
-      courseTitle: courseTitle(evaluation),
-      evaluationId: evaluation.id,
-      evaluationName: evaluation.deployment_name,
-      description: group.description,
-      questions: group.questions,
-      scaleGroups: metricGroups(
+    return [...groups.entries()].map(([key, group]) => {
+      const scaleGroups = metricGroups(
         ratings.filter(
           (rating) =>
             rating.evaluation.id === evaluation.id &&
             group.questionKeys.has(encodeQuestionKey(rating.sectionKey, rating.itemKey))
         )
-      ),
-    }));
+      );
+      return {
+        key: `${evaluation.id}:${key}`,
+        ciloId: group.ciloId,
+        label: group.ciloId ? (ciloLabels.get(group.ciloId) ?? "CILO") : "Unassigned CILO",
+        courseId: evaluation.course_assignment.course.id,
+        courseCode: courseCode(evaluation),
+        courseTitle: courseTitle(evaluation),
+        evaluationId: evaluation.id,
+        evaluationName: evaluation.deployment_name,
+        description: group.description,
+        questions: group.questions,
+        scaleGroups,
+        attainment: classifyFacultyCiloGroups(scaleGroups),
+      };
+    });
   });
 }
 
@@ -687,6 +692,38 @@ function toScaleDistribution(
     excludedRatingCount,
     categories: metric.distribution,
   };
+}
+
+/**
+ * Deterministic CILO attainment for one Faculty (evaluation, CILO) group.
+ * Single compatible scale groups classify from full precision; multiple
+ * groups report mixed-scales, empty groups report no-evidence, and unknown
+ * descriptor sets report unsupported-scale — never non-attainment.
+ */
+function classifyFacultyCiloGroups(groups: FacultyScaleDistribution[]) {
+  if (groups.length > 1) {
+    return classifyOutcomeMean(null, null, { spansMultipleScales: true });
+  }
+  if (groups.length === 0) {
+    return classifyOutcomeMean(null, null);
+  }
+  const single = groups[0];
+  if (single.mean === null) {
+    return classifyOutcomeMean(null, null);
+  }
+  const scale: ScaleIdentity = {
+    key: JSON.stringify(
+      [...single.categories]
+        .sort((left, right) => left.value - right.value)
+        .map((category) => ({ value: category.value, label: category.label }))
+    ),
+    min: single.scaleMin,
+    max: single.scaleMax,
+    descriptors: [...single.categories]
+      .sort((left, right) => left.value - right.value)
+      .map((category) => ({ value: category.value, label: category.label })),
+  };
+  return classifyOutcomeMean(single.mean, scale);
 }
 
 function buildTrends(evaluations: EvaluationRow[]): FacultyTrendPoint[] {

@@ -1,6 +1,6 @@
 import { ProgramHeadTemplateBuilder } from "@/features/instruments/components/program-head-template-builder";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
-import { listProgramGoOptions } from "@/features/instruments/services/manage-program-head-templates";
+import { listProgramPoOptions } from "@/features/instruments/services/manage-program-head-templates";
 import { notFound } from "next/navigation";
 import { buildPageTitle } from "@/lib/page-title";
 
@@ -15,12 +15,12 @@ export default async function NewSelectedProgramBlankToolPage({
   const contextResult = await resolveProgramHeadContext(programId);
   if (!contextResult.success) notFound();
 
-  const goOptionsResult = await listProgramGoOptions(programId);
+  const poOptionsResult = await listProgramPoOptions(programId);
 
   return (
     <ProgramHeadTemplateBuilder
       programId={programId}
-      goOptions={goOptionsResult.success ? goOptionsResult.data.gos : []}
+      poOptions={poOptionsResult.success ? poOptionsResult.data.pos : []}
       programLabel={`${contextResult.data.selectedProgram.code} — ${contextResult.data.selectedProgram.name}`}
     />
   );

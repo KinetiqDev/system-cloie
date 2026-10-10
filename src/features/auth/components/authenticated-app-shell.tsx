@@ -46,7 +46,7 @@ export async function AuthenticatedAppShell({ children }: { children: ReactNode 
       : undefined;
 
   return (
-    <SessionGuard>
+    <SessionGuard allowRoleSelection>
       <AppShell
         user={user}
         roles={session?.roles}

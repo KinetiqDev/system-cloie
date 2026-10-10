@@ -8,7 +8,7 @@ import {
 } from "@/features/auth/services/resolve-program-head-context";
 import {
   getFacultyTemplatePublicationContext,
-  validateCourseBoundGoBindings,
+  validateCourseBoundPoBindings,
   type FacultyTemplatePublicationContext,
 } from "@/features/instruments/services/manage-faculty-templates";
 import { ROLES } from "@/lib/constants/roles";
@@ -45,7 +45,7 @@ function isTransactionWriteConflict(error: unknown) {
  * evaluation may be published. General Education follows the at-least-one
  * active Institutional Outcome rule with a non-null manifestation;
  * Program-specific Courses require a non-null manifestation for every active
- * GO of the Course's owning Academic Program (zero active GOs with active
+ * PO of the Course's owning Academic Program (zero active POs with active
  * CILOs is incomplete). Archived targets, wrong-program rows, and rows without
  * a manifestation never satisfy the gate.
  */
@@ -63,7 +63,7 @@ async function classifyPublicationAlignment(
         cilo_mappings: {
           select: {
             manifestation: true,
-            go: { select: { id: true, program_id: true, is_active: true } },
+            po: { select: { id: true, program_id: true, is_active: true } },
           },
         },
         cilo_institutional_outcome_mappings: {
@@ -76,7 +76,7 @@ async function classifyPublicationAlignment(
     }),
     courseScope === CourseScope.GENERAL_EDUCATION || owningProgramId === null
       ? []
-      : db.gO.findMany({
+      : db.pO.findMany({
           where: { program_id: owningProgramId, is_active: true },
           select: { id: true },
         }),
@@ -85,7 +85,7 @@ async function classifyPublicationAlignment(
     cilos,
     courseScope,
     owningProgramId,
-    activeGoIds.map((go) => go.id)
+    activeGoIds.map((po) => po.id)
   );
 }
 
@@ -111,7 +111,7 @@ export async function getOnBehalfTemplatePublicationContext(
         },
       },
       template_cilo_question_bindings: true,
-      template_go_question_bindings: true,
+      template_po_question_bindings: true,
     },
   });
 
@@ -147,23 +147,23 @@ export async function getOnBehalfTemplatePublicationContext(
   }
   const validatedBindings = ciloBindingValidation.bindings;
 
-  // Direct question-GO bindings stay optional: an unbound Likert question
-  // publishes as a general item. A null go_id means its GO was deleted
+  // Direct question-PO bindings stay optional: an unbound Likert question
+  // publishes as a general item. A null po_id means its PO was deleted
   // after the draft was saved (FK SET NULL). Block like an archived or
-  // foreign GO so the loss is explicit, matching the central publish
+  // foreign PO so the loss is explicit, matching the central publish
   // plan, instead of silently dropping the intended coverage. The next
   // draft save prunes the row.
-  if (template.template_go_question_bindings.some((binding) => !binding.go_id)) {
+  if (template.template_po_question_bindings.some((binding) => !binding.po_id)) {
     return {
       success: false,
-      error: "One or more selected Graduate Outcomes are not available to this course.",
+      error: "One or more selected Program Outcomes are not available to this course.",
     };
   }
-  const goBindingValidation = await validateCourseBoundGoBindings({
-    bindings: template.template_go_question_bindings
-      .filter((binding) => binding.go_id)
+  const poBindingValidation = await validateCourseBoundPoBindings({
+    bindings: template.template_po_question_bindings
+      .filter((binding) => binding.po_id)
       .map((binding) => ({
-        goId: binding.go_id!,
+        poId: binding.po_id!,
         itemKey: binding.item_key,
         sectionKey: binding.section_key,
       })),
@@ -173,8 +173,8 @@ export async function getOnBehalfTemplatePublicationContext(
     ciloBindings: validatedBindings,
   });
 
-  if (!goBindingValidation.success) {
-    return goBindingValidation;
+  if (!poBindingValidation.success) {
+    return poBindingValidation;
   }
 
   return {
@@ -182,7 +182,7 @@ export async function getOnBehalfTemplatePublicationContext(
     data: {
       bindings: validatedBindings,
       cilos,
-      goBindings: goBindingValidation.bindings,
+      poBindings: poBindingValidation.bindings,
       course: {
         code: template.bound_course.code,
         courseType: template.bound_course.course_scope,
@@ -404,7 +404,7 @@ export async function publishCourseBoundEvaluation({
               const requirement =
                 courseScope === CourseScope.GENERAL_EDUCATION
                   ? "map to at least one active Institutional Outcome"
-                  : "have a manifestation of every active Graduate Outcome of the Course's owning Academic Program";
+                  : "have a manifestation of every active Program Outcome of the Course's owning Academic Program";
               throw new PublicationValidationError(
                 isFacultyPublisher
                   ? `Every active CILO must ${requirement} before publishing. Complete the Course alignment to continue.`
@@ -495,17 +495,17 @@ export async function publishCourseBoundEvaluation({
               })),
             });
 
-            // Direct question–GO bindings are frozen here: evidence for the
-            // selected-Program GO rows must not change when the GO catalog is
+            // Direct question–PO bindings are frozen here: evidence for the
+            // selected-Program PO rows must not change when the PO catalog is
             // later edited. An unbound Likert question writes no row and
-            // contributes no GO evidence, exactly like the Program-wide path.
-            if (contextData.goBindings.length > 0) {
-              await tx.courseBoundGoQuestionBinding.createMany({
-                data: contextData.goBindings.map((binding) => ({
+            // contributes no PO evidence, exactly like the Program-wide path.
+            if (contextData.poBindings.length > 0) {
+              await tx.courseBoundPoQuestionBinding.createMany({
+                data: contextData.poBindings.map((binding) => ({
                   course_bound_evaluation_id: evaluation.id,
-                  go_code_snapshot: binding.goCodeSnapshot,
-                  go_description_snapshot: binding.goDescriptionSnapshot,
-                  go_id: binding.goId,
+                  po_code_snapshot: binding.poCodeSnapshot,
+                  po_description_snapshot: binding.poDescriptionSnapshot,
+                  po_id: binding.poId,
                   item_key: binding.itemKey,
                   question_prompt_snapshot: binding.questionPromptSnapshot,
                   section_key: binding.sectionKey,

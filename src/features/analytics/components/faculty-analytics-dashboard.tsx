@@ -13,7 +13,17 @@ import {
   Info,
   RotateCcw,
 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -56,6 +66,9 @@ import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { ViewTabs } from "@/components/layout/view-tabs";
 import { QualitativeWordCloud } from "./qualitative-word-cloud";
 import { QualitativeTermChips, QualitativeToneSummary } from "./qualitative-evidence";
+import { AttainmentBadge, getAttainmentColor } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
 import { encodeQuestionKey } from "../aggregators/question-identity";
 import {
   AnalyticsInsightCard,
@@ -145,8 +158,8 @@ export function FacultyAnalyticsDashboard({ data, options }: Props) {
         </Badge>
       </header>
 
-      <ScopeFilters filters={data.filters} options={options} scopeLabel={data.scopeLabel} />
       <ViewNavigation filters={data.filters} />
+      <ScopeFilters filters={data.filters} options={options} scopeLabel={data.scopeLabel} />
 
       {data.evaluations.length === 0 ? (
         <NoEvidence filters={data.filters} />
@@ -568,8 +581,65 @@ function OverviewView({
         <PlainSummary>{distributionSummary(data.ratingDistributions)}</PlainSummary>
         <AIOverview insight={ai?.overview ?? null} state={aiState} pending={pending} data={data} />
       </EvidenceCard>
+      <CiloBenchmarkOverviewCard metrics={data.ciloMetrics} filters={data.filters} />
       <ClassSummary data={data} />
     </div>
+  );
+}
+
+function CiloBenchmarkOverviewCard({
+  metrics,
+  filters,
+}: {
+  metrics: FacultyCiloMetric[];
+  filters: FacultyAnalyticsFilters;
+}) {
+  const classified = metrics.filter((m) => m.attainment?.status === "classified");
+  if (classified.length === 0) return null;
+  const meets = classified.filter((m) => m.attainment?.cqi === "Meets Benchmark").length;
+  const attention = classified.filter((m) => m.attainment?.cqi === "Needs Attention").length;
+  const below = classified.filter((m) => m.attainment?.cqi === "Below Benchmark").length;
+
+  return (
+    <EvidenceCard
+      title="CILO attainment benchmark summary"
+      description={`CILO results evaluated against the ${OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)} attainment benchmark.`}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+          <span className="text-title-sm text-foreground font-semibold">
+            {classified.length} classifiable {classified.length === 1 ? "outcome" : "outcomes"}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="border-success/30 bg-success-soft rounded-lg border p-3">
+            <span className="text-caption text-success font-medium">Meets Benchmark</span>
+            <span className="text-title-md text-success block font-bold tabular-nums">{meets}</span>
+            <span className="text-muted-foreground text-xs">Mean ≥ 3.50</span>
+          </div>
+          <div className="border-warning/30 bg-warning-soft rounded-lg border p-3">
+            <span className="text-caption text-warning font-medium">Needs Attention</span>
+            <span className="text-title-md text-warning block font-bold tabular-nums">
+              {attention}
+            </span>
+            <span className="text-muted-foreground text-xs">Mean 2.50–3.49</span>
+          </div>
+          <div className="border-danger/30 bg-danger-soft rounded-lg border p-3">
+            <span className="text-caption text-danger font-medium">Below Benchmark</span>
+            <span className="text-title-md text-danger block font-bold tabular-nums">{below}</span>
+            <span className="text-muted-foreground text-xs">Mean &lt; 2.50</span>
+          </div>
+        </div>
+        <div className="pt-1">
+          <Link
+            href={analyticsHref({ ...filters, view: "cilos" })}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit")}
+          >
+            Explore detailed CILO results
+          </Link>
+        </div>
+      </div>
+    </EvidenceCard>
   );
 }
 
@@ -584,17 +654,109 @@ function CiloView({
   aiState: GenerateFacultyAIInsightResult | null;
   pending: boolean;
 }) {
+  const [attainmentFilter, setAttainmentFilter] = useState<"all" | "meets" | "attention" | "below">(
+    "all"
+  );
   const metrics = data.ciloMetrics.filter((metric) => metric.scaleGroups.length > 0);
-  const courseGroups = groupCiloMetrics(metrics);
+
+  const attainmentCounts = {
+    all: metrics.length,
+    meets: metrics.filter((m) => m.attainment?.cqi === "Meets Benchmark").length,
+    attention: metrics.filter((m) => m.attainment?.cqi === "Needs Attention").length,
+    below: metrics.filter((m) => m.attainment?.cqi === "Below Benchmark").length,
+  };
+
+  const filteredMetrics = metrics.filter((metric) => {
+    if (attainmentFilter === "all") return true;
+    if (attainmentFilter === "meets") return metric.attainment?.cqi === "Meets Benchmark";
+    if (attainmentFilter === "attention") return metric.attainment?.cqi === "Needs Attention";
+    if (attainmentFilter === "below") return metric.attainment?.cqi === "Below Benchmark";
+    return true;
+  });
+
+  const courseGroups = groupCiloMetrics(filteredMetrics);
   return (
     <EvidenceCard
       title="CILO ratings"
       description="Student ratings for each Course Intended Learning Outcome, organized by course and evaluation. These are evaluation results, not mastery grades."
     >
-      <p className="text-body-sm text-text-secondary">
-        This view includes only questions bound to a CILO, so its rating totals may be lower than
-        the all-question KPI above.
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-body-sm text-text-secondary">
+          This view includes only questions bound to a CILO, so its rating totals may be lower than
+          the all-question KPI above.
+        </p>
+        <div className="border-border/80 bg-muted/20 rounded-xl border p-3.5 sm:p-4">
+          <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-2.5">
+            <div>
+              <span className="text-title-sm text-foreground font-semibold">
+                Attainment Status Filter
+              </span>
+              <span className="text-text-muted ml-2 text-xs">
+                (Benchmark: {OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)})
+              </span>
+            </div>
+          </div>
+          <div
+            role="group"
+            aria-label="Filter CILOs by attainment status"
+            className="mt-2.5 flex flex-wrap items-center gap-1.5"
+          >
+            <button
+              type="button"
+              aria-pressed={attainmentFilter === "all"}
+              onClick={() => setAttainmentFilter("all")}
+              className={cn(
+                "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                attainmentFilter === "all"
+                  ? "bg-primary-soft text-selected-fg"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              All CILOs ({attainmentCounts.all})
+            </button>
+            <button
+              type="button"
+              aria-pressed={attainmentFilter === "meets"}
+              onClick={() => setAttainmentFilter("meets")}
+              className={cn(
+                "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                attainmentFilter === "meets"
+                  ? "bg-success-soft text-success"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              Meets Benchmark ({attainmentCounts.meets})
+            </button>
+            <button
+              type="button"
+              aria-pressed={attainmentFilter === "attention"}
+              onClick={() => setAttainmentFilter("attention")}
+              className={cn(
+                "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                attainmentFilter === "attention"
+                  ? "bg-warning-soft text-warning"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              Needs Attention ({attainmentCounts.attention})
+            </button>
+            <button
+              type="button"
+              aria-pressed={attainmentFilter === "below"}
+              onClick={() => setAttainmentFilter("below")}
+              className={cn(
+                "text-label-sm focus-visible:ring-ring min-h-8 rounded-lg px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                attainmentFilter === "below"
+                  ? "bg-danger-soft text-danger"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              Below Benchmark ({attainmentCounts.below})
+            </button>
+          </div>
+        </div>
+      </div>
+      <AttainmentLegend />
       {courseGroups.length ? (
         <div className="flex flex-col gap-8">
           {courseGroups.map((courseGroup) => (
@@ -669,7 +831,15 @@ function CiloGroupChart({
   const rows = courseGroup.metrics.flatMap((metric) => {
     const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
     if (!group || group.mean === null) return [];
-    return [{ label: metric.label, mean: group.mean, ratingCount: group.ratingCount }];
+    return [
+      {
+        key: metric.key,
+        label: metric.label,
+        mean: group.mean,
+        ratingCount: group.ratingCount,
+        attainment: metric.attainment,
+      },
+    ];
   });
   if (!rows.length) {
     return (
@@ -686,7 +856,7 @@ function CiloGroupChart({
       className="aspect-auto w-full"
       style={{ height: Math.max(180, rows.length * 56 + 72) }}
     >
-      <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 16 }}>
+      <BarChart data={rows} layout="vertical" margin={{ top: 28, right: 16, bottom: 8, left: 8 }}>
         <CartesianGrid horizontal={false} />
         <XAxis
           type="number"
@@ -699,14 +869,31 @@ function CiloGroupChart({
         <ChartTooltip
           formatter={(value) => [typeof value === "number" ? value.toFixed(2) : value, "Mean"]}
         />
+        {rows.some((row) => row.attainment?.status === "classified") && (
+          <ReferenceLine
+            x={OUTCOME_ATTAINMENT_BENCHMARK}
+            stroke="var(--text-muted)"
+            strokeDasharray="6 4"
+            strokeWidth={2}
+            label={{
+              value: `Benchmark ${OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)}`,
+              position: "top",
+              fill: "var(--foreground)",
+              fontSize: 12,
+            }}
+          />
+        )}
         <Bar
           dataKey="mean"
           name="Mean"
-          fill="var(--chart-2)"
           radius={[0, 6, 6, 0]}
           barSize={22}
           isAnimationActive={false}
-        />
+        >
+          {rows.map((row) => (
+            <Cell key={row.key} fill={getAttainmentColor(row.attainment)} />
+          ))}
+        </Bar>
       </BarChart>
     </ChartContainer>
   );
@@ -714,19 +901,40 @@ function CiloGroupChart({
 
 function CiloEvidenceRow({ metric }: { metric: FacultyCiloMetric }) {
   const group = metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : null;
+  const benchmarkDelta =
+    group?.mean !== null && group?.mean !== undefined
+      ? group.mean - OUTCOME_ATTAINMENT_BENCHMARK
+      : null;
   return (
-    <div className="flex min-w-0 flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+    <div className="flex min-w-0 flex-col gap-2 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <p className="text-label-lg">{metric.label}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-label-lg font-semibold">{metric.label}</p>
+          <AttainmentBadge attainment={metric.attainment} compact />
+        </div>
         <p className="text-body-sm text-text-secondary mt-1 text-pretty break-words">
           {metric.description}
         </p>
+        <p className="text-caption text-text-muted mt-1">
+          {metric.questions.length} bound {metric.questions.length === 1 ? "question" : "questions"}
+        </p>
       </div>
-      <p className="text-body-sm text-text-secondary shrink-0 tabular-nums">
-        {group
-          ? `${group.mean?.toFixed(2) ?? "—"} mean · ${group.ratingCount} rating${group.ratingCount === 1 ? "" : "s"}`
-          : "Multiple rating scales"}
-      </p>
+      <div className="shrink-0 text-right tabular-nums">
+        <p className="text-body-md text-foreground font-semibold">
+          {group?.mean !== null && group?.mean !== undefined ? group.mean.toFixed(2) : "—"} mean
+        </p>
+        <p className="text-caption text-text-muted">
+          {group
+            ? `${group.ratingCount} rating${group.ratingCount === 1 ? "" : "s"}`
+            : "Multiple rating scales"}
+          {benchmarkDelta !== null && metric.attainment?.status === "classified" && (
+            <span className="block text-xs">
+              {benchmarkDelta >= 0 ? `+${benchmarkDelta.toFixed(2)}` : benchmarkDelta.toFixed(2)} vs
+              3.50 benchmark
+            </span>
+          )}
+        </p>
+      </div>
     </div>
   );
 }
@@ -1267,9 +1475,12 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-label-md tabular-nums">
-                  {metric.courseCode} · {metric.label}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-label-md tabular-nums">
+                    {metric.courseCode} · {metric.label}
+                  </p>
+                  <AttainmentBadge attainment={metric.attainment} compact />
+                </div>
                 <p className="text-body-sm text-text-secondary mt-1 break-words">
                   {metric.description}
                 </p>
@@ -1304,6 +1515,7 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
             <TableRow>
               <TableHead className="min-w-44">Course</TableHead>
               <TableHead className="min-w-64">CILO</TableHead>
+              <TableHead>Attainment</TableHead>
               <TableHead className="min-w-64">Bound questions</TableHead>
               <TableHead className="text-right">Mean</TableHead>
               <TableHead className="text-right">Ratings</TableHead>
@@ -1322,6 +1534,9 @@ function ExactCiloTable({ data }: { data: FacultyAnalyticsData }) {
                 <TableCell className="align-top whitespace-normal">
                   <span className="font-medium">{metric.label}</span>
                   <span className="text-text-secondary block text-sm">{metric.description}</span>
+                </TableCell>
+                <TableCell className="align-top">
+                  <AttainmentBadge attainment={metric.attainment} />
                 </TableCell>
                 <TableCell className="align-top whitespace-normal">
                   <ul className="flex flex-col gap-0.5">

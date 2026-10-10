@@ -2,6 +2,7 @@ import type { AcademicSemester, Prisma } from "@prisma/client";
 import { ResponseStatus, TargetStakeholder } from "@prisma/client";
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
+import { requireDeanAnalytics } from "./dean-analytics";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import {
   buildAttributionBreakdown,
@@ -28,14 +29,20 @@ import {
 } from "../aggregators/outcome-evidence";
 import {
   buildScaleIdentities,
+  ratingBelongsToScale,
+  describeScale,
   describeScales,
   describeSingleScaleGroup,
   extractDistinctScales,
   resolveItemScaleIdentity,
   type ScaleDescriptor,
 } from "../aggregators/scale-identity";
+import {
+  classifyOutcomeDistributions,
+  classifyOutcomeMean,
+} from "../aggregators/outcome-attainment";
 import { buildParticipationSummary } from "../aggregators/participation";
-import { buildProgramWideGoMetrics, type CentralGoRatingRow } from "../aggregators/go";
+import { buildProgramWidePoMetrics, type CentralPoRatingRow } from "../aggregators/po";
 import {
   FEEDBACK_SOURCE_LABELS,
   analyzeQualitativeCorpus,
@@ -331,12 +338,24 @@ export async function resolveTermInstanceFilter(
 const resolveProgramHeadAnalyticsReadContext = cache(
   async function resolveProgramHeadAnalyticsReadContext(
     programId: string,
-    filters: AnalyticsFilterState
+    filters: AnalyticsFilterState,
+    reader: "program-head" | "dean",
+    evaluationId?: string
   ): Promise<ProgramHeadAnalyticsReadContext | null> {
-    const contextResult = await resolveProgramHeadContext(programId);
-    if (!contextResult.success) return null;
-
-    const { selectedProgram } = contextResult.data;
+    let selectedProgram: { id: string; code: string; name: string };
+    if (reader === "dean") {
+      if (!(await requireDeanAnalytics())) return null;
+      const program = await prisma.program.findUnique({
+        where: { id: programId },
+        select: { id: true, code: true, name: true },
+      });
+      if (!program) return null;
+      selectedProgram = program;
+    } else {
+      const contextResult = await resolveProgramHeadContext(programId);
+      if (!contextResult.success) return null;
+      selectedProgram = contextResult.data.selectedProgram;
+    }
     const [{ where: termInstanceWhere, schoolYearLabel, instances }, periodInstances] =
       await Promise.all([
         resolveTermInstanceFilter(selectedProgram.id, filters),
@@ -356,28 +375,45 @@ const resolveProgramHeadAnalyticsReadContext = cache(
       termInstances: instances,
       periodInstances,
       sourceScope,
-      programResponseScope: buildProgramResponseScope(
-        selectedProgram.id,
-        termInstanceWhere,
-        sourceScope?.response
-      ),
-      programOpportunityScope: buildProgramOpportunityScope(
-        selectedProgram.id,
-        termInstanceWhere,
-        sourceScope?.assignment
-      ),
+      programResponseScope: {
+        ...(evaluationId ? { deployment_id: evaluationId } : {}),
+        ...buildProgramResponseScope(selectedProgram.id, termInstanceWhere, sourceScope?.response),
+      },
+      programOpportunityScope: {
+        ...(evaluationId
+          ? {
+              AND: [
+                {
+                  OR: [{ course_bound_id: evaluationId }, { central_deployment_id: evaluationId }],
+                },
+              ],
+            }
+          : {}),
+        ...buildProgramOpportunityScope(
+          selectedProgram.id,
+          termInstanceWhere,
+          sourceScope?.assignment
+        ),
+      },
     };
   }
 );
 
 export async function getProgramHeadAnalyticsFrame(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<{
   scope: ProgramHeadAnalyticsScopeSummary;
   periodOptions: ProgramHeadAnalyticsPeriodOptions;
 } | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
   const { selectedProgram, schoolYearLabel, termInstances, periodInstances } = context;
   return {
@@ -396,9 +432,16 @@ export async function getProgramHeadAnalyticsFrame(
 
 export async function getProgramHeadAnalytics(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadOverviewDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
   const {
@@ -486,7 +529,7 @@ type TrendRatingRow = Prisma.QuantitativeResponseItemGetPayload<{
         cilo: {
           select: {
             cilo_mappings: {
-              select: { go: { select: { code: true } } };
+              select: { po: { select: { code: true } } };
             };
           };
         };
@@ -640,7 +683,7 @@ function accumulateRatingRow(
   evidence.instrumentVersionIds.add(context.instrumentVersionId);
   trackRatedSourceResponse(evidence, context.source, context.instrumentVersionId, row.response_id);
   for (const mapping of row.cilo_question_binding?.cilo?.cilo_mappings ?? []) {
-    evidence.outcomeCodes.add(mapping.go.code);
+    evidence.outcomeCodes.add(mapping.po.code);
   }
 }
 
@@ -741,7 +784,7 @@ function buildCourseBoundResponseScope(
   };
 }
 
-/** Narrow projection of a course-bound rating row for GO evidence. */
+/** Narrow projection of a course-bound rating row for PO evidence. */
 type OutcomeRatingRow = {
   rating_value: number;
   response_id: string;
@@ -767,18 +810,18 @@ type OutcomeBindingRow = {
     course: { id: string; code: string; title: string; cilos: Array<{ id: string }> } | null;
     cilo_mappings: Array<{
       manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-      go: { id: string; code: string; description: string };
+      po: { id: string; code: string; description: string };
     }>;
   } | null;
 };
 
-type OutcomeDirectGoBindingRow = {
+type OutcomeDirectPoBindingRow = {
   section_key: string;
   item_key: string;
   course_bound_evaluation_id: string;
-  go_id: string | null;
-  go_code_snapshot: string;
-  go_description_snapshot: string;
+  po_id: string | null;
+  po_code_snapshot: string;
+  po_description_snapshot: string;
   question_prompt_snapshot: string;
   course_bound_evaluation: {
     deployment_name: string;
@@ -792,14 +835,14 @@ function ciloCodeFor(course: { cilos: Array<{ id: string }> } | null, ciloId: st
   return position < 0 ? "—" : `CILO ${position + 1}`;
 }
 
-function toGoMapping(mapping: {
+function toPoMapping(mapping: {
   manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY" | null;
-  go: { id: string; code: string; description: string };
+  po: { id: string; code: string; description: string };
 }) {
   return {
-    outcomeId: mapping.go.id,
-    code: mapping.go.code,
-    name: mapping.go.description,
+    outcomeId: mapping.po.id,
+    code: mapping.po.code,
+    name: mapping.po.description,
     manifestation: mapping.manifestation,
   };
 }
@@ -820,7 +863,7 @@ function resolveInstrumentSnapshot(
 /** Course behind one rating row: CILO course wins, else the direct binding's course. */
 function courseForOutcomeRow(
   cilo: OutcomeBindingRow["cilo"] | null | undefined,
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvidenceRow["course"] {
   if (cilo?.course) {
     return { id: cilo.course.id, code: cilo.course.code, title: cilo.course.title };
@@ -830,14 +873,14 @@ function courseForOutcomeRow(
 
 type OutcomeRowBindings = {
   ciloBinding: OutcomeBindingRow | undefined;
-  directBindings: OutcomeDirectGoBindingRow[];
+  directBindings: OutcomeDirectPoBindingRow[];
   cilo: OutcomeBindingRow["cilo"] | null | undefined;
 };
 
 function lookupOutcomeBindings(
   row: OutcomeRatingRow,
   ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
-  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>
+  directBindingsByItemKey: Map<string, OutcomeDirectPoBindingRow[]>
 ): OutcomeRowBindings {
   const key = encodeBindingKey(
     row.response.assignment.course_bound_id ?? "",
@@ -863,13 +906,13 @@ function ciloEvidenceFor(
 }
 
 function directEvidenceFor(
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvidenceRow["directBindings"] {
   return directBindings.map((binding) => ({
     outcomeId:
-      binding.go_id ?? `snapshot:${binding.go_code_snapshot}:${binding.go_description_snapshot}`,
-    code: binding.go_code_snapshot,
-    name: binding.go_description_snapshot,
+      binding.po_id ?? `snapshot:${binding.po_code_snapshot}:${binding.po_description_snapshot}`,
+    code: binding.po_code_snapshot,
+    name: binding.po_description_snapshot,
     questionPrompt: binding.question_prompt_snapshot,
   }));
 }
@@ -881,7 +924,7 @@ type OutcomeEvaluationIdentity = {
 
 function evaluationIdentityFor(
   ciloBinding: OutcomeBindingRow | undefined,
-  directBindings: OutcomeDirectGoBindingRow[]
+  directBindings: OutcomeDirectPoBindingRow[]
 ): OutcomeEvaluationIdentity {
   return {
     evaluationId:
@@ -892,11 +935,11 @@ function evaluationIdentityFor(
   };
 }
 
-/** Map one course-bound rating to its CILO and/or direct GO evidence. */
+/** Map one course-bound rating to its CILO and/or direct PO evidence. */
 function toOutcomeEvidenceRow(
   row: OutcomeRatingRow,
   ciloBindingByItemKey: Map<string, OutcomeBindingRow>,
-  directBindingsByItemKey: Map<string, OutcomeDirectGoBindingRow[]>,
+  directBindingsByItemKey: Map<string, OutcomeDirectPoBindingRow[]>,
   snapshotById: Map<string, unknown>
 ): OutcomeEvidenceRow | null {
   const { ciloBinding, directBindings, cilo } = lookupOutcomeBindings(
@@ -918,7 +961,7 @@ function toOutcomeEvidenceRow(
     ),
     course,
     cilo: ciloEvidenceFor(cilo, course),
-    outcomeMappings: cilo?.cilo_mappings.map(toGoMapping) ?? [],
+    outcomeMappings: cilo?.cilo_mappings.map(toPoMapping) ?? [],
     directBindings: directEvidenceFor(directBindings),
     evaluationId,
     deploymentName,
@@ -927,15 +970,15 @@ function toOutcomeEvidenceRow(
 
 /**
  * Disclosure that historical ratings are grouped by the Program's current
- * CILO-to-GO mappings. Publication-time mapping snapshots do not exist yet,
+ * CILO-to-PO mappings. Publication-time mapping snapshots do not exist yet,
  * so later mapping edits may reinterpret historical outcome rows.
  */
 const CURRENT_MAPPING_DISCLOSURE =
-  "Outcome rows group historical ratings using the Program's current CILO-to-GO mappings. " +
+  "Outcome rows group historical ratings using the Program's current CILO-to-PO mappings. " +
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
 /**
- * One central-deployment rating row narrowed for program-wide GO evidence.
+ * One central-deployment rating row narrowed for program-wide PO evidence.
  * The select mirrors the fields program-wide aggregation needs: deployment
  * identity, stakeholder, instrument version, and the rating coordinates.
  */
@@ -956,28 +999,30 @@ type CentralOutcomeRatingRow = {
   };
 };
 
-type CentralGoSnapshotBinding = { goId: string; goCode: string; goDescription: string };
-type CentralGoBindingsByDeployment = Map<string, Map<string, CentralGoSnapshotBinding[]>>;
+type CentralPoSnapshotBinding = { poId: string; poCode: string; poDescription: string };
+type CentralPoBindingsByDeployment = Map<string, Map<string, CentralPoSnapshotBinding[]>>;
 
-/** Published CentralDeploymentGoSnapshot bindings keyed by deployment then section:item. */
-async function loadCentralGoBindings(
+/** Published CentralDeploymentPoSnapshot bindings keyed by deployment then section:item. */
+const CENTRAL_PO_SNAPSHOT_SELECT = {
+  central_deployment_id: true,
+  po_id: true,
+  po_code_snapshot: true,
+  po_description_snapshot: true,
+  section_key: true,
+  item_key: true,
+} as const;
+
+async function loadCentralPoBindings(
   deploymentIds: string[]
-): Promise<CentralGoBindingsByDeployment> {
+): Promise<CentralPoBindingsByDeployment> {
   if (deploymentIds.length === 0) {
     return new Map();
   }
-  const snapshots = await prisma.centralDeploymentGoSnapshot.findMany({
+  const snapshots = await prisma.centralDeploymentPoSnapshot.findMany({
     where: { central_deployment_id: { in: deploymentIds } },
-    select: {
-      central_deployment_id: true,
-      go_id: true,
-      go_code_snapshot: true,
-      go_description_snapshot: true,
-      section_key: true,
-      item_key: true,
-    },
+    select: CENTRAL_PO_SNAPSHOT_SELECT,
   });
-  const byDeployment: CentralGoBindingsByDeployment = new Map();
+  const byDeployment: CentralPoBindingsByDeployment = new Map();
   for (const snapshot of snapshots) {
     let byQuestion = byDeployment.get(snapshot.central_deployment_id);
     if (!byQuestion) {
@@ -987,16 +1032,10 @@ async function loadCentralGoBindings(
     const questionKey = encodeQuestionKey(snapshot.section_key, snapshot.item_key);
     const bindings = byQuestion.get(questionKey) ?? [];
     // Identity and labels come from the immutable snapshot fields, never the
-    // live GO relation: renaming or deleting a GO must not rewrite or drop
-    // previously published analytics evidence. A deleted GO keeps its frozen
+    // live PO relation: renaming or deleting a PO must not rewrite or drop
+    // previously published analytics evidence. A deleted PO keeps its frozen
     // label under a stable snapshot-derived identity.
-    bindings.push({
-      goId:
-        snapshot.go_id ??
-        `snapshot:${snapshot.go_code_snapshot}:${snapshot.go_description_snapshot}`,
-      goCode: snapshot.go_code_snapshot,
-      goDescription: snapshot.go_description_snapshot,
-    });
+    bindings.push(frozenCentralPoIdentity(snapshot));
     byQuestion.set(questionKey, bindings);
   }
   return byDeployment;
@@ -1038,13 +1077,17 @@ type OutcomeScopedEvidence = {
 async function readOutcomeScopedEvidence(
   programId: string,
   termInstanceWhere: Record<string, unknown>,
-  sourceScope: SourceScope | null
+  sourceScope: SourceScope | null,
+  evaluationId?: string
 ): Promise<OutcomeScopedEvidence> {
   const isCourseOnlySource = sourceScope?.response.deployment_type === "COURSE_BOUND";
   const isCentralSource = sourceScope?.response.deployment_type === "CENTRAL";
   const wantsCourse = !isCentralSource;
   const wantsCentral = !isCourseOnlySource;
-  const courseBoundResponseScope = buildCourseBoundResponseScope(programId, termInstanceWhere);
+  const courseBoundResponseScope = narrowOutcomeEvaluation(
+    buildCourseBoundResponseScope(programId, termInstanceWhere),
+    evaluationId
+  );
   const centralScope =
     sourceScope && sourceScope.response.deployment_type !== "COURSE_BOUND"
       ? {
@@ -1053,7 +1096,10 @@ async function readOutcomeScopedEvidence(
         }
       : { deployment_type: "CENTRAL" as const };
   const centralResponseScope = wantsCentral
-    ? buildProgramResponseScope(programId, termInstanceWhere, centralScope)
+    ? narrowOutcomeEvaluation(
+        buildProgramResponseScope(programId, termInstanceWhere, centralScope),
+        evaluationId
+      )
     : null;
   const [ratingRows, courseBoundOpportunityCount, courseBoundSubmittedCount, centralRatingRows] =
     await Promise.all([
@@ -1087,6 +1133,7 @@ async function readOutcomeScopedEvidence(
                   course: { course_scope: "PROGRAM_SPECIFIC" },
                 },
                 ...termInstanceWhere,
+                ...(evaluationId ? { id: evaluationId } : {}),
               },
             },
           })
@@ -1151,9 +1198,9 @@ function outcomesEmptyReason(
   return "no-program-wide-evidence";
 }
 /**
- * Program-wide GO evidence through published deployment GO snapshots
+ * Program-wide PO evidence through published deployment PO snapshots
  * (§5.9, §16.6). Ratings are grouped by stakeholder so source populations are
- * never pooled; a question the deployment never bound to a live GO
+ * never pooled; a question the deployment never bound to a live PO
  * contributes nothing.
  */
 async function buildProgramWideOutcomeDtos(
@@ -1167,8 +1214,8 @@ async function buildProgramWideOutcomeDtos(
         .filter((id): id is string => Boolean(id))
     ),
   ];
-  const bindingsByDeployment = await loadCentralGoBindings(deploymentIds);
-  const byStakeholder = new Map<TargetStakeholder, CentralGoRatingRow[]>();
+  const bindingsByDeployment = await loadCentralPoBindings(deploymentIds);
+  const byStakeholder = new Map<TargetStakeholder, CentralPoRatingRow[]>();
   for (const row of rows) {
     const deployment = row.response.assignment.central_deployment;
     const bindings = deployment
@@ -1190,31 +1237,40 @@ async function buildProgramWideOutcomeDtos(
         row.item_key,
         snapshotById
       ),
-      goBindings: bindings,
+      poBindings: bindings,
     });
     byStakeholder.set(deployment.target_stakeholder, bucket);
   }
   const dtos: ProgramHeadProgramWideOutcomeDTO[] = [];
   for (const [stakeholder, ratingRows] of byStakeholder) {
-    for (const metric of buildProgramWideGoMetrics(ratingRows)) {
+    for (const metric of buildProgramWidePoMetrics(ratingRows)) {
       dtos.push({
         stakeholder,
-        goId: metric.goId,
-        code: metric.goCode,
-        name: metric.goDescription,
+        poId: metric.poId,
+        code: metric.poCode,
+        name: metric.poDescription,
         meanRating: metric.mean,
         ratingCount: metric.ratingCount,
         submittedResponseCount: metric.responseCount,
         evaluationCount: metric.evaluationCount,
         questionCount: metric.questionCount,
+        attainment: centralMetricAttainment(metric),
         evidenceSummary: {
           ratingCount: metric.ratingCount,
           responseCount: metric.responseCount,
           evaluationCount: metric.evaluationCount,
           questionCount: metric.questionCount,
           scaleLabel: describeSingleScaleGroup(metric.scaleGroups),
-          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Graduate Outcome; unbound items are excluded.`,
+          explanation: `Mean of ${metric.ratingCount} valid ratings from ${metric.questionCount} bound question(s) published to this Program Outcome; unbound items are excluded.`,
         },
+        scaleGroups: metric.scaleGroups
+          .map((group) => ({
+            scaleKey: group.scale?.key ?? "",
+            scaleLabel: group.scale ? describeScale(group.scale.descriptors) : "",
+            meanRating: group.mean,
+            ratingCount: group.ratingCount,
+          }))
+          .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey)),
       });
     }
   }
@@ -1222,10 +1278,10 @@ async function buildProgramWideOutcomeDtos(
 }
 
 /**
- * Authorized Program GO evidence read for the selected Program. Course-bound
+ * Authorized Program PO evidence read for the selected Program. Course-bound
  * quantitative items contribute through a publication-time CILO question
- * binding and a canonical selected-Program CILO-to-GO mapping; program-wide
- * evidence contributes through published CentralDeploymentGoSnapshot
+ * binding and a canonical selected-Program CILO-to-PO mapping; program-wide
+ * evidence contributes through published CentralDeploymentPoSnapshot
  * bindings (§16.6). Bindings are resolved by evaluation plus section/item
  * keys because the live student submission flow writes ratings without a
  * binding ID, mirroring the existing review evidence compensation.
@@ -1238,9 +1294,16 @@ async function buildProgramWideOutcomeDtos(
  */
 export async function getProgramHeadOutcomes(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadOutcomesDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
   const {
@@ -1252,8 +1315,8 @@ export async function getProgramHeadOutcomes(
     periodInstances,
   } = context;
 
-  // Course-bound GO evidence comes from CILO bindings; program-wide GO
-  // evidence comes from published CentralDeploymentGoSnapshot bindings
+  // Course-bound PO evidence comes from CILO bindings; program-wide PO
+  // evidence comes from published CentralDeploymentPoSnapshot bindings
   // (§5.9, §16.6). The evidence-source selection gates which read runs so one
   // source's evidence never leaks into the other section.
   const {
@@ -1262,9 +1325,14 @@ export async function getProgramHeadOutcomes(
     courseBoundSubmittedCount,
     centralRatingRows,
     wantsCourse,
-  } = await readOutcomeScopedEvidence(selectedProgram.id, termInstanceWhere, sourceScope);
+  } = await readOutcomeScopedEvidence(
+    selectedProgram.id,
+    termInstanceWhere,
+    sourceScope,
+    evaluationId
+  );
 
-  // Resolve both CILO bindings and frozen direct GO bindings by the same
+  // Resolve both CILO bindings and frozen direct PO bindings by the same
   // evaluation plus section/item identity written on submitted ratings.
   const evaluationIds = [
     ...new Set(
@@ -1296,25 +1364,25 @@ export async function getProgramHeadOutcomes(
                     },
                   },
                   cilo_mappings: {
-                    where: { go: { program_id: selectedProgram.id } },
+                    where: { po: { program_id: selectedProgram.id } },
                     select: {
                       manifestation: true,
-                      go: { select: { id: true, code: true, description: true } },
+                      po: { select: { id: true, code: true, description: true } },
                     },
                   },
                 },
               },
             },
           }),
-          prisma.courseBoundGoQuestionBinding.findMany({
+          prisma.courseBoundPoQuestionBinding.findMany({
             where: { course_bound_evaluation_id: { in: evaluationIds } },
             select: {
               section_key: true,
               item_key: true,
               course_bound_evaluation_id: true,
-              go_id: true,
-              go_code_snapshot: true,
-              go_description_snapshot: true,
+              po_id: true,
+              po_code_snapshot: true,
+              po_description_snapshot: true,
               question_prompt_snapshot: true,
               course_bound_evaluation: {
                 select: {
@@ -1337,7 +1405,7 @@ export async function getProgramHeadOutcomes(
     );
     if (!bindingByItemKey.has(key)) bindingByItemKey.set(key, binding);
   }
-  const directBindingsByItemKey = new Map<string, OutcomeDirectGoBindingRow[]>();
+  const directBindingsByItemKey = new Map<string, OutcomeDirectPoBindingRow[]>();
   for (const binding of directBindings) {
     const key = encodeBindingKey(
       binding.course_bound_evaluation_id,
@@ -1379,6 +1447,11 @@ export async function getProgramHeadOutcomes(
   const aggregation = aggregateOutcomeEvidence(evidenceRows);
   const outcomes = buildOutcomeEvidenceDtos(aggregation).map((outcome) => ({
     ...outcome,
+    attainment: classifyOutcomeDistributions(
+      outcome.meanRating,
+      outcome.distributions,
+      outcome.spansMultipleScales
+    ),
     evidenceSummary: {
       ...outcome.evidenceSummary,
       evidenceHref: buildProgramHeadResponsesPath(selectedProgram.id, "course"),
@@ -1432,9 +1505,16 @@ export async function getProgramHeadOutcomes(
  */
 export async function getProgramHeadTrends(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadTrendsDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
   const { selectedProgram, programResponseScope, schoolYearLabel, termInstances, periodInstances } =
@@ -1446,13 +1526,15 @@ export async function getProgramHeadTrends(
       select: {
         rating_value: true,
         response_id: true,
+        section_key: true,
+        item_key: true,
         cilo_question_binding: {
           select: {
             cilo: {
               select: {
                 cilo_mappings: {
-                  where: { go: { program_id: selectedProgram.id } },
-                  select: { go: { select: { code: true } } },
+                  where: { po: { program_id: selectedProgram.id } },
+                  select: { po: { select: { code: true } } },
                 },
               },
             },
@@ -1518,7 +1600,28 @@ export async function getProgramHeadTrends(
       : [];
   const versionById = new Map(instrumentVersions.map((version) => [version.id, version]));
 
-  const inputs = buildTrendSeriesInputs(periodEvidence, instancesById, versionById);
+  let inputs = buildTrendSeriesInputs(periodEvidence, instancesById, versionById);
+  if (reader === "dean") {
+    const validRows = ratingRows.filter((row) => {
+      const term = ratingRowTermContext(row);
+      const snapshot = term ? versionById.get(term.instrumentVersionId)?.structure_snapshot : null;
+      const scale = resolveItemScaleIdentity(snapshot ?? null, row.section_key, row.item_key);
+      return ratingBelongsToScale(scale, row.rating_value);
+    });
+    inputs = buildTrendSeriesInputs(
+      collectTrendPeriodEvidence(validRows, responseRows),
+      instancesById,
+      versionById
+    ).map((input) => ({
+      ...input,
+      meanRating:
+        input.fingerprint.instrumentVersions.length === 1 &&
+        input.fingerprint.scaleIdentities.length === 1 &&
+        input.fingerprint.sourceComposition.length === 1
+          ? input.meanRating
+          : null,
+    }));
+  }
 
   const { periods, breaks, emptyReason } = buildTrendSeries(inputs);
 
@@ -1679,6 +1782,14 @@ async function readStakeholderBreakdownEvidence(
   };
 }
 
+function readBreakdownForContext(context: ProgramHeadAnalyticsReadContext) {
+  return readStakeholderBreakdownEvidence(
+    context.selectedProgram.id,
+    context.programResponseScope,
+    context.programOpportunityScope
+  );
+}
+
 /** Scope empty-state precedence shared by the analytics reads: opportunities, then submissions. */
 function scopeEmptyReason(
   evaluationOpportunityCount: number,
@@ -1708,46 +1819,36 @@ const SOURCE_SEPARATION_DISCLOSURE =
  */
 export async function getProgramHeadStakeholders(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadStakeholdersDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
-  const {
-    selectedProgram,
-    programResponseScope,
-    programOpportunityScope,
-    schoolYearLabel,
-    termInstances,
-    periodInstances,
-  } = context;
-
-  const {
-    ratingRows,
-    responseRows,
-    evaluationOpportunityCount,
-    submittedResponseCount,
-    snapshotById,
-  } = await readStakeholderBreakdownEvidence(
-    selectedProgram.id,
-    programResponseScope,
-    programOpportunityScope
+  const evidence = await readBreakdownForContext(context);
+  const buckets = buildStakeholderBuckets(
+    evidence.ratingRows,
+    evidence.responseRows,
+    evidence.snapshotById
   );
-
-  const buckets = buildStakeholderBuckets(ratingRows, responseRows, snapshotById);
-
   const emptyReason: ProgramHeadStakeholdersEmptyReason = scopeEmptyReason(
-    evaluationOpportunityCount,
-    submittedResponseCount
+    evidence.evaluationOpportunityCount,
+    evidence.submittedResponseCount
   );
 
   return {
     scope: {
-      programCode: selectedProgram.code,
-      programName: selectedProgram.name,
-      periodLabel: buildPeriodLabel(filters, schoolYearLabel, termInstances),
+      programCode: context.selectedProgram.code,
+      programName: context.selectedProgram.name,
+      periodLabel: buildPeriodLabel(filters, context.schoolYearLabel, context.termInstances),
     },
-    periodOptions: buildPeriodOptions(periodInstances),
+    periodOptions: buildPeriodOptions(context.periodInstances),
     emptyReason,
     sourceSeparationDisclosure: SOURCE_SEPARATION_DISCLOSURE,
     buckets,
@@ -1798,31 +1899,26 @@ function buildContextualBreakdown(
  */
 export async function getProgramHeadBreakdowns(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadBreakdownsDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
-  const {
-    selectedProgram,
-    programResponseScope,
-    programOpportunityScope,
-    schoolYearLabel,
-    termInstances,
-    periodInstances,
-  } = context;
-
+  const { selectedProgram, schoolYearLabel, termInstances, periodInstances } = context;
   const {
     ratingRows,
     responseRows,
     evaluationOpportunityCount,
     submittedResponseCount,
     snapshotById,
-  } = await readStakeholderBreakdownEvidence(
-    selectedProgram.id,
-    programResponseScope,
-    programOpportunityScope
-  );
+  } = await readBreakdownForContext(context);
 
   const courseRows = buildCourseBreakdownRows(ratingRows, responseRows, snapshotById);
   const instrumentRows = buildInstrumentBreakdownRows(ratingRows, responseRows, snapshotById);
@@ -2002,9 +2098,16 @@ function aggregateFeedbackEvidence(rows: FeedbackQualitativeRow[]): {
  */
 export async function getProgramHeadFeedback(
   programId: string,
-  filters: AnalyticsFilterState
+  filters: AnalyticsFilterState,
+  reader: "program-head" | "dean" = "program-head",
+  evaluationId?: string
 ): Promise<ProgramHeadFeedbackDTO | null> {
-  const context = await resolveProgramHeadAnalyticsReadContext(programId, filters);
+  const context = await resolveProgramHeadAnalyticsReadContext(
+    programId,
+    filters,
+    reader,
+    evaluationId
+  );
   if (!context) return null;
 
   const {
@@ -2091,4 +2194,28 @@ export async function getProgramHeadFeedback(
     })),
     evidenceEvaluations: aggregated.evidenceEvaluations,
   };
+}
+
+function narrowOutcomeEvaluation(scope: Record<string, unknown>, evaluationId?: string) {
+  return evaluationId ? { ...scope, deployment_id: evaluationId } : scope;
+}
+
+function frozenCentralPoIdentity(snapshot: {
+  po_id: string | null;
+  po_code_snapshot: string;
+  po_description_snapshot: string;
+}) {
+  return {
+    poId:
+      snapshot.po_id ?? `snapshot:${snapshot.po_code_snapshot}:${snapshot.po_description_snapshot}`,
+    poCode: snapshot.po_code_snapshot,
+    poDescription: snapshot.po_description_snapshot,
+  };
+}
+
+function centralMetricAttainment(metric: ReturnType<typeof buildProgramWidePoMetrics>[number]) {
+  const scale = metric.scaleGroups.length === 1 ? metric.scaleGroups[0].scale : null;
+  return classifyOutcomeMean(metric.mean, scale, {
+    spansMultipleScales: metric.spansMultipleScales,
+  });
 }

@@ -1,19 +1,13 @@
 import { notFound } from "next/navigation";
-import { BarChart3, CalendarDays, ClipboardCheck, Layers3, ListChecks } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DashboardQuickActions } from "@/components/dashboard-quick-actions";
 import { getProgramHeadDashboard } from "@/features/analytics/services/get-program-head-dashboard";
 import { parseAnalyticsSearchParams } from "@/features/analytics/services/program-head-analytics-state";
-import {
-  buildProgramHeadCourseAssignmentsPath,
-  buildProgramHeadOutcomesPath,
-} from "@/lib/constants/program-head-routes";
-
-import { ProgramHeadDashboardKpiGrid } from "@/features/analytics/components/program-head-dashboard-kpis";
+import { ProgramHeadDashboardKpis } from "@/features/analytics/components/program-head-dashboard-kpis";
 import { ProgramHeadStakeholderProgress } from "@/features/analytics/components/program-head-stakeholder-progress";
-import { ProgramHeadGoSummary } from "@/features/analytics/components/program-head-go-summary";
+import { ProgramHeadGoSummary } from "@/features/analytics/components/program-head-po-summary";
 import { ProgramHeadNeedsAttention } from "@/features/analytics/components/program-head-needs-attention";
 import { ProgramHeadQualitativePulse } from "@/features/analytics/components/program-head-qualitative-pulse";
 import { buildPageTitle } from "@/lib/page-title";
@@ -46,103 +40,67 @@ export default async function SelectedProgramDashboardPage({
   const hasExplicitPeriodFilter = Boolean(
     periodFilters.schoolYearId || periodFilters.semester || periodFilters.termInstanceId
   );
-  const workflows = [
-    {
-      label: "Review responses",
-      detail: "Read submitted stakeholder evidence.",
-      href: dashboard.links.responses,
-      icon: ClipboardCheck,
-    },
-    {
-      label: "Explore analytics",
-      detail: "Compare outcomes, stakeholders, and feedback.",
-      href: dashboard.links.analyticsOutcomes,
-      icon: BarChart3,
-    },
-    {
-      label: "Manage course assignments",
-      detail: "Assign faculty to course offerings.",
-      href: buildProgramHeadCourseAssignmentsPath(programId),
-      icon: ListChecks,
-    },
-    {
-      label: "Manage learning outcomes",
-      detail: "Maintain the program GO catalog.",
-      href: buildProgramHeadOutcomesPath(programId),
-      icon: Layers3,
-    },
-  ];
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <header className="border-border flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-heading-xl text-balance">Dashboard</h1>
-          <Badge
-            variant="secondary"
-            className="text-body-sm h-auto max-w-full self-start px-3 py-1 text-pretty whitespace-normal"
-          >
-            {dashboard.programLabel}
-          </Badge>
-          <div className="text-text-secondary flex min-w-0 flex-wrap items-center gap-2 text-sm">
-            <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
-            <span className="text-text-primary font-medium">
-              {hasExplicitPeriodFilter ? "Selected Academic Period" : "Active Academic Period"}
-            </span>
-            <Badge variant="outline" className="max-w-full whitespace-normal">
-              {dashboard.periodLabel ?? "No active Academic Period"}
+          <div className="text-body-sm text-text-secondary flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
+            <Badge
+              variant="secondary"
+              className="text-body-sm h-auto max-w-full px-2.5 py-0.5 text-pretty whitespace-normal"
+            >
+              {dashboard.programLabel}
             </Badge>
+            <span>
+              <span className="sr-only">
+                {hasExplicitPeriodFilter ? "Selected Academic Period" : "Active Academic Period"}
+                :{" "}
+              </span>
+              {dashboard.periodLabel ?? "No active Academic Period"}
+            </span>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <div className="grid grid-cols-2 gap-2 sm:flex">
           <Link
             href={dashboard.links.responses}
-            className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}
+            className={cn(buttonVariants({ variant: "outline" }))}
           >
             View Responses
           </Link>
-          <Link
-            href={dashboard.links.analyticsOutcomes}
-            className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
-          >
+          <Link href={dashboard.links.analyticsOutcomes} className={buttonVariants()}>
             <BarChart3 data-icon="inline-start" aria-hidden="true" />
             Open Analytics
           </Link>
         </div>
       </header>
 
-      <ProgramHeadDashboardKpiGrid
+      <ProgramHeadDashboardKpis
         participation={dashboard.participation}
-        pendingResponses={dashboard.pendingResponses}
         activeEvaluations={dashboard.activeEvaluations}
-        sourceMeans={dashboard.sourceMeans}
-        responsesActiveCourseHref={dashboard.links.responsesActiveCourse}
-        responsesActiveProgramWideHref={dashboard.links.responsesActiveProgramWide}
-        responsesHref={dashboard.links.responses}
-      />
-
-      <ProgramHeadStakeholderProgress
-        participation={dashboard.participation}
         stakeholdersHref={dashboard.links.analyticsStakeholders}
+        activeEvaluationsHref={dashboard.links.responsesActiveCourse}
       />
 
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
-        <div className="flex min-w-0 flex-col gap-6">
+      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(19rem,1fr)]">
+        <div className="flex min-w-0 flex-col gap-6 lg:order-2">
+          <ProgramHeadStakeholderProgress
+            participation={dashboard.participation}
+            stakeholdersHref={dashboard.links.analyticsStakeholders}
+          />
+          <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6 lg:order-1">
           <ProgramHeadGoSummary
-            sources={dashboard.goSources}
-            goCatalog={dashboard.goCatalog}
+            sources={dashboard.poSources}
+            poCatalog={dashboard.poCatalog}
             programId={programId}
             periodFilters={periodFilters}
           />
           <ProgramHeadQualitativePulse
             pulse={dashboard.qualitative}
             feedbackHref={dashboard.links.analyticsFeedback}
-          />
-        </div>
-        <div className="grid min-w-0 gap-6">
-          <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
-          <DashboardQuickActions
-            description="Review evidence or continue program setup."
-            actions={workflows}
           />
         </div>
       </div>

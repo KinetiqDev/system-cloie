@@ -1,9 +1,20 @@
+import type { OutcomeAttainment } from "./aggregators/outcome-attainment";
+
 export type WordCloudToken = {
   text: string;
   value: number;
   /** Distinct responses containing the term; present only where the producer tracked answer identity. */
   responseCount?: number;
 };
+
+/**
+ * The one repeated-term threshold every qualitative surface applies. A term
+ * reaches a reader only when it was mentioned more than once by more than
+ * one distinct respondent, so no single answer can expose its own wording.
+ */
+export function isRepeatedTerm(token: WordCloudToken): boolean {
+  return token.value > 1 && (token.responseCount ?? 0) > 1;
+}
 
 /**
  * Deterministic tone distribution over scored answers (ADR 0023). Counts only:
@@ -84,6 +95,11 @@ export type FacultyCiloMetric = {
   /** Every Likert question evidencing this CILO, in binding order. */
   questions: Array<{ sectionKey: string; itemKey: string; prompt: string }>;
   scaleGroups: FacultyScaleDistribution[];
+  /**
+   * Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this CILO mean,
+   * based only on classifiable CILO evidence. Absent only for legacy payloads.
+   */
+  attainment?: OutcomeAttainment;
 };
 
 export type FacultyQuestionMetric = {

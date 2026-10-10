@@ -22,8 +22,8 @@ export default async function GenEdCoordinatorProfilePage() {
   return (
     <div className="motion-safe:animate-in motion-safe:fade-in max-w-4xl space-y-8 motion-safe:duration-500">
       <div>
-        <h1 className="text-heading-lg">Profile</h1>
-        <p className="text-text-muted text-sm">
+        <h1 className="text-heading-xl text-foreground text-pretty">Profile</h1>
+        <p className="text-body-sm text-muted-foreground">
           Review your account information and coordinator scope.
         </p>
       </div>
@@ -45,11 +45,11 @@ export default async function GenEdCoordinatorProfilePage() {
               <CardDescription>General Education stewardship</CardDescription>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4 pt-4 text-sm font-semibold">
+          <CardContent className="text-body-sm space-y-4 pt-4 font-semibold">
             <div className="space-y-1">
               <p className="text-label-sm text-muted-foreground tracking-wider uppercase">Scope</p>
               <p className="flex items-center gap-2">
-                <Building2 aria-hidden="true" className="text-text-muted size-4" />
+                <Building2 aria-hidden="true" className="text-muted-foreground size-4" />
                 College-Wide
               </p>
             </div>
@@ -59,7 +59,7 @@ export default async function GenEdCoordinatorProfilePage() {
               </p>
               <p>General Education CourseAssignments across all active programs</p>
             </div>
-            <p className="text-text-muted text-xs font-normal">
+            <p className="text-caption text-muted-foreground font-normal">
               College-wide General Education scope. No portfolio assignment.
             </p>
           </CardContent>

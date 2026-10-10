@@ -31,10 +31,13 @@ export function useGeneralEducationAnalyticsNavigation(): AnalyticsNavigation {
 export function GeneralEducationAnalyticsWorkspace({
   tab,
   filters,
+  summary,
   children,
 }: {
   tab: GeneralEducationAnalyticsTab;
   filters: ReactNode;
+  /** Frame-wide figures for the committed scope; dimmed while the scope changes. */
+  summary?: ReactNode;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -47,6 +50,15 @@ export function GeneralEducationAnalyticsWorkspace({
   return (
     <AnalyticsNavigationContext.Provider value={{ isPending, navigate }}>
       {filters}
+      {summary ? (
+        <div
+          aria-busy={isPending || undefined}
+          className="transition-opacity duration-150 data-[pending]:opacity-60 motion-reduce:transition-none"
+          data-pending={isPending ? "" : undefined}
+        >
+          {summary}
+        </div>
+      ) : null}
       <section
         aria-label={`${GENERAL_EDUCATION_ANALYTICS_TAB_LABELS[tab]} evidence`}
         aria-busy={isPending || undefined}

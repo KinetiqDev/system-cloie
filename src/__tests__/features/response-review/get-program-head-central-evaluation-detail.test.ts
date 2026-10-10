@@ -55,13 +55,13 @@ const MOCK_DEPLOYMENT = {
     version_number: 2,
     structure_snapshot: [
       {
-        key: "plo-items",
-        title: "GO Attainment",
+        key: "po-items",
+        title: "PO Attainment",
         items: [
           {
-            key: "q-plo-a",
+            key: "q-po-a",
             kind: "quantitative",
-            prompt: "GO A was achieved.",
+            prompt: "PO A was achieved.",
             likertDescriptors: [
               { value: 1, label: "Strongly Disagree" },
               { value: 2, label: "Disagree" },
@@ -71,9 +71,9 @@ const MOCK_DEPLOYMENT = {
             ],
           },
           {
-            key: "q-plo-b",
+            key: "q-po-b",
             kind: "quantitative",
-            prompt: "GO B was achieved.",
+            prompt: "PO B was achieved.",
             likertDescriptors: [
               { value: 1, label: "Strongly Disagree" },
               { value: 2, label: "Disagree" },
@@ -95,22 +95,22 @@ const MOCK_DEPLOYMENT = {
     semester: "FIRST",
     term: null,
   },
-  go_snapshots: [
-    // q-go-a → GO-1 (snapshotted with id)
+  po_snapshots: [
+    // q-po-a → PO-1 (snapshotted with id)
     {
-      go_id: "plo-1",
-      go_code_snapshot: "GO-1",
-      go_description_snapshot: "Communicate effectively",
-      section_key: "plo-items",
-      item_key: "q-plo-a",
+      po_id: "po-1",
+      po_code_snapshot: "PO-1",
+      po_description_snapshot: "Communicate effectively",
+      section_key: "po-items",
+      item_key: "q-po-a",
     },
-    // q-go-b → snapshot with null go_id, keyed by code
+    // q-po-b → snapshot with null po_id, keyed by code
     {
-      go_id: null,
-      go_code_snapshot: "GO-2",
-      go_description_snapshot: "Demonstrate leadership",
-      section_key: "plo-items",
-      item_key: "q-plo-b",
+      po_id: null,
+      po_code_snapshot: "PO-2",
+      po_description_snapshot: "Demonstrate leadership",
+      section_key: "po-items",
+      item_key: "q-po-b",
     },
   ],
 };
@@ -160,7 +160,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     );
   });
 
-  it("groups direct GO results by go_id ?? go_code_snapshot", async () => {
+  it("groups direct PO results by po_id ?? po_code_snapshot", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue(MOCK_DEPLOYMENT);
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {
@@ -184,14 +184,14 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
         quant_items: [
           {
             cilo_question_binding_id: null,
-            section_key: "plo-items",
-            item_key: "q-plo-a",
+            section_key: "po-items",
+            item_key: "q-po-a",
             rating_value: 4,
           },
           {
             cilo_question_binding_id: null,
-            section_key: "plo-items",
-            item_key: "q-plo-b",
+            section_key: "po-items",
+            item_key: "q-po-b",
             rating_value: 5,
           },
         ],
@@ -213,21 +213,21 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    // GO-1 from snapshotted go_id, GO-2 from go_code_snapshot fallback
-    expect(result!.goResults).toHaveLength(2);
-    const go1 = result!.goResults.find((go) => go.goCode === "GO-1");
-    const go2 = result!.goResults.find((go) => go.goCode === "GO-2");
+    // PO-1 from snapshotted po_id, PO-2 from po_code_snapshot fallback
+    expect(result!.poResults).toHaveLength(2);
+    const go1 = result!.poResults.find((po) => po.poCode === "PO-1");
+    const go2 = result!.poResults.find((po) => po.poCode === "PO-2");
     expect(go1).toBeDefined();
     expect(go1!.mean).toBe(4);
     expect(go2).toBeDefined();
     expect(go2!.mean).toBe(5);
     // Question results carry the binding badges
-    const questionA = result!.questionResults.find((q) => q.itemKey === "q-plo-a");
-    expect(questionA!.goBindings).toHaveLength(1);
-    expect(questionA!.goBindings[0].code).toBe("GO-1");
-    expect(questionA!.goBindings[0].key).toBe("plo-1");
-    const questionB = result!.questionResults.find((q) => q.itemKey === "q-plo-b");
-    expect(questionB!.goBindings[0].key).toBe("GO-2");
+    const questionA = result!.questionResults.find((q) => q.itemKey === "q-po-a");
+    expect(questionA!.poBindings).toHaveLength(1);
+    expect(questionA!.poBindings[0].code).toBe("PO-1");
+    expect(questionA!.poBindings[0].key).toBe("po-1");
+    const questionB = result!.questionResults.find((q) => q.itemKey === "q-po-b");
+    expect(questionB!.poBindings[0].key).toBe("PO-2");
     // Identified respondent
     expect(result!.respondents[0].name).toBe("Juan dela Cruz");
   });
@@ -297,9 +297,9 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     ]);
   });
 
-  it("binds GO snapshots to the question whose keys they name, even with separators", async () => {
+  it("binds PO snapshots to the question whose keys they name, even with separators", async () => {
     // ("a", "b|c") and ("a|b", "c") are distinct questions. A separator-joined
-    // lookup gives both the first question's GO binding and rating.
+    // lookup gives both the first question's PO binding and rating.
     const likertDescriptors = [
       { value: 1, label: "Strongly Disagree" },
       { value: 2, label: "Disagree" },
@@ -328,18 +328,18 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
           },
         ],
       },
-      go_snapshots: [
+      po_snapshots: [
         {
-          go_id: "plo-1",
-          go_code_snapshot: "GO-1",
-          go_description_snapshot: "Bound to a/b|c",
+          po_id: "po-1",
+          po_code_snapshot: "PO-1",
+          po_description_snapshot: "Bound to a/b|c",
           section_key: "a",
           item_key: "b|c",
         },
         {
-          go_id: "plo-2",
-          go_code_snapshot: "GO-2",
-          go_description_snapshot: "Bound to a|b/c",
+          po_id: "po-2",
+          po_code_snapshot: "PO-2",
+          po_description_snapshot: "Bound to a|b/c",
           section_key: "a|b",
           item_key: "c",
         },
@@ -375,24 +375,24 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
 
     expect(result).not.toBeNull();
 
-    // Each GO keeps only its own question's rating.
-    expect(result!.goResults).toHaveLength(2);
-    expect(result!.goResults.find((go) => go.goCode === "GO-1")!.mean).toBe(5);
-    expect(result!.goResults.find((go) => go.goCode === "GO-2")!.mean).toBe(2);
+    // Each PO keeps only its own question's rating.
+    expect(result!.poResults).toHaveLength(2);
+    expect(result!.poResults.find((po) => po.poCode === "PO-1")!.mean).toBe(5);
+    expect(result!.poResults.find((po) => po.poCode === "PO-2")!.mean).toBe(2);
 
-    // Each question carries only its own GO binding and prompt.
+    // Each question carries only its own PO binding and prompt.
     const first = result!.questionResults.find((q) => q.sectionKey === "a")!;
     const second = result!.questionResults.find((q) => q.sectionKey === "a|b")!;
     expect(first.prompt).toBe("Prompt of a/b|c");
-    expect(first.goBindings.map((binding) => binding.code)).toEqual(["GO-1"]);
+    expect(first.poBindings.map((binding) => binding.code)).toEqual(["PO-1"]);
     expect(second.prompt).toBe("Prompt of a|b/c");
-    expect(second.goBindings.map((binding) => binding.code)).toEqual(["GO-2"]);
+    expect(second.poBindings.map((binding) => binding.code)).toEqual(["PO-2"]);
   });
 
   it("labels unbound central questions as General evaluation items", async () => {
     const deploymentWithoutBindings = {
       ...MOCK_DEPLOYMENT,
-      go_snapshots: [],
+      po_snapshots: [],
     };
     centralDeploymentFindFirstMock.mockResolvedValue(deploymentWithoutBindings);
     evaluationAssignmentFindManyMock.mockResolvedValue([
@@ -417,8 +417,8 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
         quant_items: [
           {
             cilo_question_binding_id: null,
-            section_key: "plo-items",
-            item_key: "q-plo-a",
+            section_key: "po-items",
+            item_key: "q-po-a",
             rating_value: 4,
           },
         ],
@@ -429,17 +429,17 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    expect(result!.goResults).toEqual([]);
-    const questionA = result!.questionResults.find((q) => q.itemKey === "q-plo-a");
-    expect(questionA!.goBindings).toEqual([]);
+    expect(result!.poResults).toEqual([]);
+    const questionA = result!.questionResults.find((q) => q.itemKey === "q-po-a");
+    expect(questionA!.poBindings).toEqual([]);
     // buildQuestionMetrics gives GENERAL binding for unbound items
     expect(questionA!.binding.type).toBe("GENERAL");
   });
 
-  it("keeps an unbound question's ratings in the evaluation mean and out of GO evidence", async () => {
+  it("keeps an unbound question's ratings in the evaluation mean and out of PO evidence", async () => {
     centralDeploymentFindFirstMock.mockResolvedValue({
       ...MOCK_DEPLOYMENT,
-      go_snapshots: [MOCK_DEPLOYMENT.go_snapshots[0]],
+      po_snapshots: [MOCK_DEPLOYMENT.po_snapshots[0]],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {
@@ -463,14 +463,14 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
         quant_items: [
           {
             cilo_question_binding_id: null,
-            section_key: "plo-items",
-            item_key: "q-plo-a",
+            section_key: "po-items",
+            item_key: "q-po-a",
             rating_value: 4,
           },
           {
             cilo_question_binding_id: null,
-            section_key: "plo-items",
-            item_key: "q-plo-b",
+            section_key: "po-items",
+            item_key: "q-po-b",
             rating_value: 2,
           },
         ],
@@ -481,12 +481,12 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     const result = await getProgramHeadCentralEvaluationDetail("prog-beed", "central-1");
 
     expect(result).not.toBeNull();
-    // Only the bound question reaches GO evidence.
-    expect(result!.goResults).toEqual([
-      expect.objectContaining({ goId: "plo-1", goCode: "GO-1", ratingCount: 1, mean: 4 }),
+    // Only the bound question reaches PO evidence.
+    expect(result!.poResults).toEqual([
+      expect.objectContaining({ poId: "po-1", poCode: "PO-1", ratingCount: 1, mean: 4 }),
     ]);
-    const questionB = result!.questionResults.find((q) => q.itemKey === "q-plo-b");
-    expect(questionB!.goBindings).toEqual([]);
+    const questionB = result!.questionResults.find((q) => q.itemKey === "q-po-b");
+    expect(questionB!.poBindings).toEqual([]);
     expect(questionB!.binding.type).toBe("GENERAL");
     // The deployment mean keeps the unbound rating: (4 + 2) / 2.
     expect(result!.summary.evaluationMean).toBeCloseTo(3, 12);
@@ -497,7 +497,7 @@ describe("getProgramHeadCentralEvaluationDetail", () => {
     centralDeploymentFindFirstMock.mockResolvedValue({
       ...MOCK_DEPLOYMENT,
       target_stakeholder: "ALUMNI",
-      go_snapshots: [],
+      po_snapshots: [],
     });
     evaluationAssignmentFindManyMock.mockResolvedValue([
       {

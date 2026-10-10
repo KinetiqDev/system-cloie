@@ -59,10 +59,10 @@ export default async function CourseResponseDetailPage({
         evidenceSource: "COURSE",
         termInstanceId: response.evaluation.context.termInstanceId,
       })}
-      outcomeHref={(goId) =>
+      outcomeHref={(poId) =>
         buildAnalyticsUrl(programId, {
           tab: "outcomes",
-          goId,
+          poId,
           evidenceSource: "COURSE",
           termInstanceId: response.evaluation.context.termInstanceId,
         })

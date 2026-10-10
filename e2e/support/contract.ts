@@ -6,7 +6,7 @@ import { D, U } from "../../prisma/seed/constants/ids";
  * Every value below is a HUMAN-REVIEWED expectation, not a value read from the
  * database under test. The deterministic Prisma seed (`prisma/seed`) is the
  * source of these SystemRole identities and deployment identifiers; the
- * response values (ratings, qualitative answers, CILO→GO evidence links) are
+ * response values (ratings, qualitative answers, CILO→PO evidence links) are
  * reviewed against the seed fixtures and pinned here. If a seed row or a
  * query-under-test drifts, the contract check in `global-setup` (or a journey
  * assertion) fails before the browser journey completes, naming the affected
@@ -17,6 +17,7 @@ import { D, U } from "../../prisma/seed/constants/ids";
  * them separately because they are not identifiers under test.
  */
 export const E2E_CONTRACT = {
+  deanAnalytics: { programCodes: ["BSIT", "BEED", "BSBA"] },
   /** Deterministic SystemRole identities reused from the Prisma seed. */
   demoPh: { id: U.PH_BSIT, email: "demo-ph@cloie.test", name: "Demo Program Head" },
   beedPh: { id: U.PH_BEED, email: "ph-beed@cloie.test", name: "Maria Santos" },
@@ -124,9 +125,9 @@ export const E2E_CONTRACT = {
   demoIndustry: { id: U.IND_BSIT, email: "demo-industry@cloie.test", name: "Demo Industry" },
 
   /**
-   * Relaxed GO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
+   * Relaxed PO binding gate fixtures (issue #625, ADR 0025). The BSIT-owned
    * alumni tool leaves its general satisfaction item unbound, and the
-   * institutional exit-survey baseline carries no GO bindings at all. Both
+   * institutional exit-survey baseline carries no PO bindings at all. Both
    * still publish; the publish step names the unbound questions instead.
    */
   programWidePartialMapping: {
@@ -220,12 +221,29 @@ export const E2E_CONTRACT = {
     ],
   },
 
-  /** Reviewed expectations for the ITRES1 response and its bottom-up GO evidence link (journey B). */
+  /** ADR 0037 presentation expectations; no additional database fixture is required. */
+  attainmentGuide: {
+    interpretations: [
+      "Fully Attained",
+      "Attained",
+      "Partially Attained",
+      "Slightly Attained",
+      "Not Attained",
+    ],
+    fills: [
+      "var(--color-success)",
+      "var(--color-warning)",
+      "var(--color-danger)",
+      "var(--text-muted)",
+    ],
+  },
+
+  /** Reviewed expectations for the ITRES1 response and its bottom-up PO evidence link (journey B). */
   bottomUpResponse: {
     respondentName: "Demo Student",
-    goLinks: [
+    poLinks: [
       {
-        goCode: "BSIT-GO1",
+        poCode: "BSIT-GO1",
         ciloLabel: "Defend the proposed capstone scope and methodology.",
       },
     ],
@@ -276,7 +294,7 @@ export type FixtureData = {
   bottomUpResponse: {
     id: string;
     respondentName: string;
-    goLinks: Array<{ goId: string; goCode: string; ciloLabel: string }>;
+    poLinks: Array<{ poId: string; poCode: string; ciloLabel: string }>;
   };
   gestechEval: { id: string; title: string };
   generalEducationReview: {
@@ -296,7 +314,7 @@ export type FixtureData = {
   publicationTarget: { id: string; courseCode: string; programCode: string };
   publicationDeploymentName: string;
   publicationStudents: Array<{ id: string; name: string; email: string }>;
-  /** Issue #625 relaxed GO binding gate fixtures. */
+  /** Issue #625 relaxed PO binding gate fixtures. */
   programWidePartialMapping: {
     templateCode: string;
     templateName: string;

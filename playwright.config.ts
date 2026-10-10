@@ -120,6 +120,7 @@ export default defineConfig({
     env: {
       ...process.env,
       NODE_ENV: isCiTestProduction ? "production" : "development",
+      CLOIE_APPEARANCE_ENABLED: "true",
     },
   },
 });

@@ -1,0 +1,238 @@
+import { Prisma } from "@prisma/client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  previewMock,
+  resolveContextMock,
+  revalidateAssignmentMock,
+  transactionMock,
+  programFindMock,
+  poFindManyMock,
+  createManyMock,
+} = vi.hoisted(() => ({
+  previewMock: vi.fn(),
+  resolveContextMock: vi.fn(),
+  revalidateAssignmentMock: vi.fn(),
+  transactionMock: vi.fn(),
+  programFindMock: vi.fn(),
+  poFindManyMock: vi.fn(),
+  createManyMock: vi.fn(),
+}));
+
+vi.mock("@/features/outcomes/services/preview-po-import", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/outcomes/services/preview-po-import")>()),
+  previewPOImport: previewMock,
+}));
+vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
+  resolveProgramHeadContext: resolveContextMock,
+  revalidateProgramHeadAssignment: revalidateAssignmentMock,
+}));
+vi.mock("@/lib/db/prisma", () => ({ prisma: { $transaction: transactionMock } }));
+
+const PROGRAM_ID = "11111111-1111-4111-8111-111111111111";
+const request = {
+  programId: PROGRAM_ID,
+  rows: [
+    { sourceIndex: 2, input: { po_code: "PO-1", description: "First outcome" } },
+    { sourceIndex: 3, input: { po_code: "PO-2", description: "Second outcome" } },
+  ],
+};
+
+function readyRow(sourceIndex: number, poCode: string, description: string) {
+  return {
+    sourceIndex,
+    input: { po_code: poCode, description },
+    poCode,
+    description,
+    status: "READY" as const,
+    error: null,
+  };
+}
+
+describe("confirmPOImport", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resolveContextMock.mockResolvedValue({
+      success: true,
+      data: { userId: "ph-1", selectedProgram: { id: PROGRAM_ID } },
+    });
+    previewMock.mockResolvedValue({
+      success: true,
+      data: {
+        rows: [readyRow(2, "PO-1", "First outcome"), readyRow(3, "PO-2", "Second outcome")],
+        summary: {
+          total: 2,
+          ready: 2,
+          attention: 0,
+          existing: 0,
+          created: 0,
+          notCreated: 0,
+        },
+      },
+    });
+    revalidateAssignmentMock.mockResolvedValue({ id: PROGRAM_ID });
+    programFindMock.mockResolvedValue({ is_active: true });
+    poFindManyMock.mockResolvedValue([{ code: "OLD", order: 4, is_active: true }]);
+    createManyMock.mockResolvedValue({ count: 2 });
+    transactionMock.mockImplementation(async (callback) =>
+      callback({
+        programHeadAssignment: { findFirst: vi.fn() },
+        program: { findUnique: programFindMock },
+        pO: { findMany: poFindManyMock, createMany: createManyMock },
+      })
+    );
+  });
+
+  it("atomically appends ready POs in file order", async () => {
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport(request);
+
+    expect(createManyMock).toHaveBeenCalledWith({
+      data: [
+        { code: "PO-1", description: "First outcome", order: 5, program_id: PROGRAM_ID },
+        { code: "PO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID },
+      ],
+    });
+    expect(result).toEqual({
+      success: true,
+      data: {
+        rows: [
+          expect.objectContaining({ outcome: "CREATED", poCode: "PO-1" }),
+          expect.objectContaining({ outcome: "CREATED", poCode: "PO-2" }),
+        ],
+        summary: {
+          total: 2,
+          ready: 0,
+          attention: 0,
+          existing: 0,
+          created: 2,
+          notCreated: 0,
+        },
+      },
+    });
+  });
+
+  it("reclassifies a code created after preview without updating it", async () => {
+    poFindManyMock.mockResolvedValue([
+      { code: "OLD", order: 4, is_active: true },
+      { code: "PO-2", order: 5, is_active: false },
+    ]);
+    createManyMock.mockResolvedValue({ count: 1 });
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport(request);
+
+    expect(createManyMock).toHaveBeenCalledWith({
+      data: [{ code: "PO-1", description: "First outcome", order: 6, program_id: PROGRAM_ID }],
+    });
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [{ outcome: "CREATED" }, { outcome: "DUPLICATE_EXISTING_ARCHIVED" }],
+        summary: { created: 1, notCreated: 1 },
+      },
+    });
+  });
+
+  it("creates nothing when Program authority is lost before confirmation", async () => {
+    revalidateAssignmentMock.mockResolvedValue(null);
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    await expect(confirmPOImport(request)).resolves.toEqual({
+      success: false,
+      error: "You do not have permission to import Program Outcomes for this Program.",
+    });
+    expect(createManyMock).not.toHaveBeenCalled();
+  });
+  it("treats whitespace-equivalent codes created after preview as existing", async () => {
+    poFindManyMock.mockResolvedValue([{ code: "AB  C", order: 4, is_active: true }]);
+    previewMock.mockResolvedValue({
+      success: true,
+      data: {
+        rows: [readyRow(2, "AB C", "Collapsed code")],
+        summary: { total: 1, ready: 1, attention: 0, existing: 0, created: 0, notCreated: 0 },
+      },
+    });
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport({
+      programId: PROGRAM_ID,
+      rows: [{ sourceIndex: 2, input: { po_code: "AB C", description: "Collapsed code" } }],
+    });
+
+    expect(createManyMock).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [{ outcome: "DUPLICATE_EXISTING_ACTIVE" }],
+        summary: { created: 0, notCreated: 1 },
+      },
+    });
+  });
+
+  it("reports no not-processed rows because confirmation is atomic", async () => {
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport(request);
+    expect(result.success && result.data.summary).toEqual({
+      total: 2,
+      ready: 0,
+      attention: 0,
+      existing: 0,
+      created: 2,
+      notCreated: 0,
+    });
+  });
+
+  it("reports a concurrently created code as a duplicate instead of aborting the import", async () => {
+    transactionMock
+      .mockImplementationOnce(() => {
+        throw new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+          code: "P2002",
+          clientVersion: "test",
+        });
+      })
+      .mockImplementationOnce(async (callback) =>
+        callback({
+          programHeadAssignment: { findFirst: vi.fn() },
+          program: { findUnique: programFindMock },
+          pO: { findMany: poFindManyMock, createMany: createManyMock },
+        })
+      );
+    poFindManyMock.mockResolvedValue([
+      { code: "OLD", order: 4, is_active: true },
+      { code: "PO-1", order: 5, is_active: true },
+    ]);
+    createManyMock.mockResolvedValue({ count: 1 });
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport(request);
+
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+    expect(createManyMock).toHaveBeenCalledWith({
+      data: [{ code: "PO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID }],
+    });
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          { poCode: "PO-1", outcome: "DUPLICATE_EXISTING_ACTIVE" },
+          { poCode: "PO-2", outcome: "CREATED" },
+        ],
+        summary: { created: 1, notCreated: 1 },
+      },
+    });
+  });
+
+  it("gives up after one retry when the uniqueness conflict persists", async () => {
+    transactionMock.mockImplementation(() => {
+      throw new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+      });
+    });
+    const { confirmPOImport } = await import("@/features/outcomes/services/confirm-po-import");
+    const result = await confirmPOImport(request);
+
+    expect(transactionMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      success: false,
+      error: "Program Outcomes could not be imported. No POs were created. Try again.",
+    });
+  });
+});

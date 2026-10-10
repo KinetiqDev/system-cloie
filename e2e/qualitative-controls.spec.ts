@@ -40,7 +40,7 @@ async function expectQualitativeControlsToWork(page: Page) {
 }
 
 test.describe("Qualitative analytics controls", () => {
-  test("Program Head dashboard and qualitative analytics controls update their views", async ({
+  test("Program Head dashboard pulse leads to working qualitative analytics controls", async ({
     page,
   }) => {
     await loginAs(page, "ph-bshm@cloie.test");

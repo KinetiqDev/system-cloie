@@ -8,11 +8,11 @@ import type {
 } from "../outcome-evidence-types";
 
 // ---------------------------------------------------------------------------
-// Outcome evidence (Graduate Outcome and Institutional Learning Outcome)
+// Outcome evidence (Program Outcome and Institutional Learning Outcome)
 //
 // One engine for both typed alignment layers. A rating reaches an outcome
 // through its frozen CILO binding and that CILO's current mappings, or through
-// a frozen direct question binding (GO only). Each submitted response item
+// a frozen direct question binding (PO only). Each submitted response item
 // contributes once per (response, evaluation, question, outcome).
 // ---------------------------------------------------------------------------
 

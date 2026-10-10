@@ -1,104 +1,84 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { ChevronRight } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Disclosure, DisclosureContent, DisclosureTrigger } from "@/components/ui/disclosure";
-import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import type {
   NeedsAttentionItem,
   NeedsAttentionRule,
 } from "@/features/analytics/services/get-program-head-dashboard";
 
-const RULE_LABELS: Record<NeedsAttentionRule, string> = {
-  "closing-soon": "Closing soon",
-  "zero-submissions": "No submissions",
-  "zero-go-ratings": "No ratings",
+const RULE_DOT: Record<NeedsAttentionRule, string> = {
+  "closing-soon": "bg-warning",
+  "zero-submissions": "bg-info",
+  "zero-po-ratings": "bg-muted-foreground/60",
 };
 
-const MAX_VISIBLE_ITEMS = 6;
+const MAX_VISIBLE_ITEMS = 5;
+
+function AttentionRow({ item }: { item: NeedsAttentionItem }) {
+  return (
+    <li className="border-border/60 border-b last:border-b-0">
+      <Link
+        href={item.href}
+        className="group hover:bg-surface-hover focus-visible:ring-ring -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none pointer-coarse:min-h-12"
+      >
+        <span
+          aria-hidden="true"
+          className={`size-2 shrink-0 rounded-full ${RULE_DOT[item.rules[0]]}`}
+        />
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-title-sm text-text-primary text-pretty">{item.title}</span>
+          <span className="text-body-sm text-text-secondary">{item.note}</span>
+        </span>
+        <ChevronRight
+          aria-hidden="true"
+          className="text-text-secondary size-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+        />
+      </Link>
+    </li>
+  );
+}
 
 /**
- * Needs attention (spec §13.9): exactly the three resolved operational rules.
- * Status carries text labels, never color alone (§49).
+ * Needs attention (spec §13.9): the three operational rules, one line per
+ * deployment or evidence source. The note text names the rule, so status
+ * never relies on the dot color alone (§49).
  */
 export function ProgramHeadNeedsAttention({ items }: { items: NeedsAttentionItem[] }) {
-  const visible = items.slice(0, MAX_VISIBLE_ITEMS);
-  const remaining = items.length - visible.length;
+  const overflow = items.slice(MAX_VISIBLE_ITEMS);
   return (
-    <Card>
+    <Card className="gap-2">
       <CardHeader>
-        <h2 className="text-heading-lg">Needs attention</h2>
-        <CardDescription>Operational facts only; no performance thresholds.</CardDescription>
+        <h2 className="text-heading-lg">
+          Needs attention
+          {items.length > 0 && (
+            <span className="text-text-secondary ml-2 font-normal tabular-nums">
+              <span className="sr-only">: </span>
+              {items.length}
+            </span>
+          )}
+        </h2>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <Empty>
-            <EmptyTitle>Nothing needs attention</EmptyTitle>
-            <EmptyDescription>
-              No active evaluation is closing within 7 days, none is without submissions, and every
-              outcome has evidence for its sources.
-            </EmptyDescription>
-          </Empty>
+          <p className="text-body-sm text-text-secondary py-2">
+            Nothing is closing soon, every active evaluation has submissions, and every outcome has
+            ratings.
+          </p>
         ) : (
           <>
             <ul className="flex flex-col">
-              {visible.map((item) => (
-                <li key={item.id} className="border-border/60 border-b last:border-b-0">
-                  <Link
-                    href={item.href}
-                    className="focus-visible:ring-ring -mx-2 flex items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none pointer-coarse:min-h-11"
-                  >
-                    <span className="mt-0.5 shrink-0">
-                      <span
-                        aria-hidden="true"
-                        className={`inline-block size-2 rounded-full align-middle ${
-                          item.rule === "closing-soon"
-                            ? "bg-warning"
-                            : item.rule === "zero-submissions"
-                              ? "bg-info"
-                              : "bg-muted-foreground/50"
-                        }`}
-                      />
-                      <span className="sr-only">{RULE_LABELS[item.rule]}</span>
-                    </span>
-                    <span className="min-w-0">
-                      <span className="text-label-md block truncate font-bold" title={item.title}>
-                        {item.title}
-                      </span>
-                      <span className="text-muted-foreground text-label-sm mt-0.5 block">
-                        {RULE_LABELS[item.rule]}
-                        {item.note ? ` · ${item.note}` : ""}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
+              {items.slice(0, MAX_VISIBLE_ITEMS).map((item) => (
+                <AttentionRow key={item.id} item={item} />
               ))}
             </ul>
-            {remaining > 0 && (
-              <Disclosure className="mt-2">
-                <DisclosureTrigger variant="link" className="text-link hover:text-foreground">
-                  Show {remaining} more
-                </DisclosureTrigger>
+            {overflow.length > 0 && (
+              <Disclosure className="mt-1">
+                <DisclosureTrigger variant="link">Show {overflow.length} more</DisclosureTrigger>
                 <DisclosureContent className="pt-0">
-                  <ul className="flex flex-col border-t">
-                    {items.slice(MAX_VISIBLE_ITEMS).map((item) => (
-                      <li key={item.id} className="border-border/60 border-b last:border-b-0">
-                        <Link
-                          href={item.href}
-                          className="focus-visible:ring-ring -mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                          <span aria-hidden="true" className="text-muted-foreground mt-0.5">
-                            ·
-                          </span>
-                          <span className="min-w-0">
-                            <span className="text-label-md block font-bold break-words">
-                              {item.title}
-                            </span>
-                            <span className="text-muted-foreground text-label-sm mt-0.5 block">
-                              {RULE_LABELS[item.rule]}
-                              {item.note ? ` · ${item.note}` : ""}
-                            </span>
-                          </span>
-                        </Link>
-                      </li>
+                  <ul className="border-border/60 flex flex-col border-t">
+                    {overflow.map((item) => (
+                      <AttentionRow key={item.id} item={item} />
                     ))}
                   </ul>
                 </DisclosureContent>

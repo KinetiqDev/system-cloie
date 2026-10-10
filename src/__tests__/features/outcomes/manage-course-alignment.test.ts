@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   assignment: { findFirst: vi.fn() },
   course: { findFirst: vi.fn(), findMany: vi.fn() },
-  go: { count: vi.fn(), findMany: vi.fn() },
+  po: { count: vi.fn(), findMany: vi.fn() },
   ilo: { count: vi.fn(), findMany: vi.fn() },
   transaction: vi.fn(),
   ciloMapping: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
@@ -22,7 +22,7 @@ vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: mocks.assignment,
     course: mocks.course,
-    gO: mocks.go,
+    pO: mocks.po,
     institutionalOutcome: mocks.ilo,
     $transaction: mocks.transaction,
   },
@@ -56,8 +56,8 @@ function course(overrides: Record<string, unknown> = {}) {
         description: "Apply core concepts",
         cilo_mappings: [
           {
-            go_id: GO_ID,
-            go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+            po_id: GO_ID,
+            po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
           },
         ],
         cilo_institutional_outcome_mappings: [],
@@ -119,7 +119,7 @@ function emptyCourse(overrides: Record<string, unknown> = {}) {
 }
 
 function classifiedCourse(
-  goId: string,
+  poId: string,
   manifestation: "LEARNING" | "PRACTICE" | "OPPORTUNITY",
   overrides: Record<string, unknown> = {}
 ) {
@@ -130,11 +130,11 @@ function classifiedCourse(
         description: "Apply core concepts",
         cilo_mappings: [
           {
-            go_id: goId,
+            po_id: poId,
             manifestation,
-            go: {
-              id: goId,
-              code: "GO-1",
+            po: {
+              id: poId,
+              code: "PO-1",
               description: "Think critically",
               is_active: true,
             },
@@ -185,7 +185,7 @@ function pspTxMock(courseFixture: Record<string, unknown>) {
     callback({
       courseAssignment: mocks.assignment,
       course: { findFirst: vi.fn().mockResolvedValue(courseFixture) },
-      gO: mocks.go,
+      pO: mocks.po,
       institutionalOutcome: mocks.ilo,
       cILOMapping: mocks.ciloMapping,
       cILOInstitutionalOutcomeMapping: mocks.iloMapping,
@@ -199,10 +199,10 @@ describe("Course alignment service", () => {
     mocks.session.mockResolvedValue(FACULTY);
     mocks.assignment.findFirst.mockResolvedValue({ id: "assignment-1" });
     mocks.course.findFirst.mockResolvedValue(course());
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO-1", description: "Think critically" },
+    mocks.po.findMany.mockResolvedValue([
+      { id: GO_ID, code: "PO-1", description: "Think critically" },
     ]);
-    mocks.go.count.mockResolvedValue(1);
+    mocks.po.count.mockResolvedValue(1);
     mocks.ilo.findMany.mockResolvedValue([]);
     mocks.ilo.count.mockResolvedValue(0);
   });
@@ -219,7 +219,7 @@ describe("Course alignment service", () => {
         readiness: "incomplete-mapping",
       },
     });
-    expect(mocks.go.findMany).toHaveBeenCalledWith(
+    expect(mocks.po.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { program_id: PROGRAM_ID, is_active: true } })
     );
   });
@@ -235,10 +235,10 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: GO_ID,
-                go: {
+                po_id: GO_ID,
+                po: {
                   id: GO_ID,
-                  code: "GO-1",
+                  code: "PO-1",
                   description: "Think critically",
                   is_active: false,
                 },
@@ -248,14 +248,14 @@ describe("Course alignment service", () => {
         ],
       })
     );
-    mocks.go.findMany.mockResolvedValue([]);
+    mocks.po.findMany.mockResolvedValue([]);
 
     await expect(readCourseAlignment(COURSE_ID)).resolves.toMatchObject({
       success: true,
       data: {
         cilos: [{ id: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: null }] }],
         targets: [],
-        unavailableTargets: [{ id: GO_ID, code: "GO-1" }],
+        unavailableTargets: [{ id: GO_ID, code: "PO-1" }],
         readiness: "incomplete-mapping",
       },
     });
@@ -319,7 +319,7 @@ describe("Course alignment service", () => {
       success: false,
       error: "Course alignment changed. Reload and review the latest mappings.",
     });
-    expect(mocks.go.count).not.toHaveBeenCalled();
+    expect(mocks.po.count).not.toHaveBeenCalled();
   });
 
   it("prepares the exact manifestation diff and rejects targets outside the active Program catalog", async () => {
@@ -357,7 +357,7 @@ describe("Course alignment service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Submit manifestations only for active Graduate Outcomes of this Course's Program.",
+      error: "Submit manifestations only for active Program Outcomes of this Course's Program.",
     });
   });
 
@@ -388,7 +388,7 @@ describe("Course alignment service", () => {
       },
     });
     expect(mocks.ciloMapping.updateMany).toHaveBeenCalledWith({
-      where: { cilo_id: CILO_ID, go_id: GO_ID },
+      where: { cilo_id: CILO_ID, po_id: GO_ID },
       data: {
         manifestation: "OPPORTUNITY",
         updated_by: "faculty-1",
@@ -425,10 +425,10 @@ describe("Course alignment service", () => {
     expect(mocks.ilo.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { is_active: true } })
     );
-    expect(mocks.go.findMany).not.toHaveBeenCalled();
+    expect(mocks.po.findMany).not.toHaveBeenCalled();
   });
 
-  it("never mixes Graduate Outcomes into a General Education alignment read", async () => {
+  it("never mixes Program Outcomes into a General Education alignment read", async () => {
     const { readCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(
@@ -439,8 +439,8 @@ describe("Course alignment service", () => {
             description: "Analyze science and technology interactions",
             cilo_mappings: [
               {
-                go_id: GO_ID,
-                go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+                po_id: GO_ID,
+                po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -462,7 +462,7 @@ describe("Course alignment service", () => {
     });
   });
 
-  it("rejects a forged General Education mapping to a Graduate Outcome", async () => {
+  it("rejects a forged General Education mapping to a Program Outcome", async () => {
     const { prepareCourseAlignmentWrite } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(generalEducationCourse());
@@ -731,16 +731,16 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: GO_ID,
+                po_id: GO_ID,
                 manifestation: "LEARNING",
-                go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+                po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
               },
               {
-                go_id: SECOND_GO_ID,
+                po_id: SECOND_GO_ID,
                 manifestation: null,
-                go: {
+                po: {
                   id: SECOND_GO_ID,
-                  code: "GO-2",
+                  code: "PO-2",
                   description: "Communicate",
                   is_active: true,
                 },
@@ -751,9 +751,9 @@ describe("Course alignment service", () => {
         ],
       })
     );
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO-1", description: "Think critically" },
-      { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+    mocks.po.findMany.mockResolvedValue([
+      { id: GO_ID, code: "PO-1", description: "Think critically" },
+      { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
     ]);
 
     const { readCourseAlignment } =
@@ -796,9 +796,9 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: GO_ID,
+                po_id: GO_ID,
                 manifestation: "LEARNING",
-                go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+                po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -815,9 +815,9 @@ describe("Course alignment service", () => {
             id: CILO_ID,
             cilo_mappings: [
               {
-                go_id: GO_ID,
+                po_id: GO_ID,
                 manifestation: "PRACTICE",
-                go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+                po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
               },
             ],
             cilo_institutional_outcome_mappings: [],
@@ -837,9 +837,9 @@ describe("Course alignment service", () => {
     const { readCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(course());
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO-1", description: "Think critically" },
-      { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+    mocks.po.findMany.mockResolvedValue([
+      { id: GO_ID, code: "PO-1", description: "Think critically" },
+      { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
     ]);
     const before = await readCourseAlignment(COURSE_ID);
     mocks.course.findFirst.mockResolvedValue(
@@ -850,14 +850,14 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: GO_ID,
-                go: { id: GO_ID, code: "GO-1", description: "Think critically", is_active: true },
+                po_id: GO_ID,
+                po: { id: GO_ID, code: "PO-1", description: "Think critically", is_active: true },
               },
               {
-                go_id: SECOND_GO_ID,
-                go: {
+                po_id: SECOND_GO_ID,
+                po: {
                   id: SECOND_GO_ID,
-                  code: "GO-2",
+                  code: "PO-2",
                   description: "Communicate",
                   is_active: true,
                 },
@@ -881,9 +881,9 @@ describe("Course alignment service", () => {
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.course.findFirst.mockResolvedValue(course());
     const before = await readCourseAlignment(COURSE_ID);
-    mocks.go.findMany.mockResolvedValue([
-      { id: GO_ID, code: "GO-1", description: "Think critically" },
-      { id: NEW_GO_ID, code: "GO-3", description: "Collaborate" },
+    mocks.po.findMany.mockResolvedValue([
+      { id: GO_ID, code: "PO-1", description: "Think critically" },
+      { id: NEW_GO_ID, code: "PO-3", description: "Collaborate" },
     ]);
     const after = await readCourseAlignment(COURSE_ID);
     expect(before.success).toBe(true);
@@ -901,9 +901,9 @@ describe("Course alignment service", () => {
 
     it("prepares a review for partial Program-specific progress", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
-      mocks.go.findMany.mockResolvedValue([
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+      mocks.po.findMany.mockResolvedValue([
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
       ]);
       const { prepareCourseAlignmentWrite } =
         await import("@/features/outcomes/services/manage-course-alignment");
@@ -924,9 +924,9 @@ describe("Course alignment service", () => {
 
     it("commits partial progress through a signed review", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
-      mocks.go.findMany.mockResolvedValue([
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+      mocks.po.findMany.mockResolvedValue([
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
       ]);
       const { prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
         await import("@/features/outcomes/services/manage-course-alignment");
@@ -948,7 +948,7 @@ describe("Course alignment service", () => {
         data: [
           {
             cilo_id: CILO_ID,
-            go_id: GO_ID,
+            po_id: GO_ID,
             manifestation: "LEARNING",
             created_by: "faculty-1",
             updated_by: "faculty-1",
@@ -975,7 +975,7 @@ describe("Course alignment service", () => {
         })
       ).resolves.toEqual({
         success: false,
-        error: "Submit manifestations only for active Graduate Outcomes of this Course's Program.",
+        error: "Submit manifestations only for active Program Outcomes of this Course's Program.",
       });
     });
   });
@@ -983,9 +983,9 @@ describe("Course alignment service", () => {
   describe("exhaustive manifestation commit", () => {
     it("prepares a review for incomplete alignment progress", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
-      mocks.go.findMany.mockResolvedValue([
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+      mocks.po.findMany.mockResolvedValue([
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
       ]);
       const { prepareCourseAlignmentWrite } =
         await import("@/features/outcomes/services/manage-course-alignment");
@@ -1059,7 +1059,7 @@ describe("Course alignment service", () => {
         })
       ).resolves.toEqual({
         success: false,
-        error: "Submit manifestations only for active Graduate Outcomes of this Course's Program.",
+        error: "Submit manifestations only for active Program Outcomes of this Course's Program.",
       });
     });
 
@@ -1082,9 +1082,9 @@ describe("Course alignment service", () => {
 
     it("commits incomplete progress through a signed review", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
-      mocks.go.findMany.mockResolvedValue([
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+      mocks.po.findMany.mockResolvedValue([
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
       ]);
       const { commitCourseAlignmentWrite } =
         await import("@/features/outcomes/services/manage-course-alignment");
@@ -1160,7 +1160,7 @@ describe("Course alignment service", () => {
       );
       await expect(commitCourseAlignmentWrite(crossProgram, true)).resolves.toEqual({
         success: false,
-        error: "Submit manifestations only for active Graduate Outcomes of this Course's Program.",
+        error: "Submit manifestations only for active Program Outcomes of this Course's Program.",
       });
 
       const nullManifestation = signedReview(
@@ -1179,7 +1179,7 @@ describe("Course alignment service", () => {
       await expect(commitCourseAlignmentWrite(nullManifestation, true)).resolves.toEqual({
         success: false,
         error:
-          "Every required CILO-to-GO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.",
+          "Every required CILO-to-PO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.",
       });
 
       const foreignCilo = signedReview(
@@ -1225,7 +1225,7 @@ describe("Course alignment service", () => {
       );
       await expect(commitCourseAlignmentWrite(inactiveGo, true)).resolves.toEqual({
         success: false,
-        error: "Submit manifestations only for active Graduate Outcomes of this Course's Program.",
+        error: "Submit manifestations only for active Program Outcomes of this Course's Program.",
       });
     });
 
@@ -1249,9 +1249,9 @@ describe("Course alignment service", () => {
     });
 
     it("never touches archived rows when committing active-pair changes", async () => {
-      mocks.go.findMany.mockResolvedValue([
-        { id: GO_ID, code: "GO-1", description: "Think critically" },
-        { id: SECOND_GO_ID, code: "GO-2", description: "Communicate" },
+      mocks.po.findMany.mockResolvedValue([
+        { id: GO_ID, code: "PO-1", description: "Think critically" },
+        { id: SECOND_GO_ID, code: "PO-2", description: "Communicate" },
       ]);
       const archivedFixture = {
         cilos: [
@@ -1260,31 +1260,31 @@ describe("Course alignment service", () => {
             description: "Apply core concepts",
             cilo_mappings: [
               {
-                go_id: ARCHIVED_GO_ID,
+                po_id: ARCHIVED_GO_ID,
                 manifestation: "LEARNING",
-                go: {
+                po: {
                   id: ARCHIVED_GO_ID,
-                  code: "GO-9",
+                  code: "PO-9",
                   description: "Retired outcome",
                   is_active: false,
                 },
               },
               {
-                go_id: GO_ID,
+                po_id: GO_ID,
                 manifestation: "LEARNING",
-                go: {
+                po: {
                   id: GO_ID,
-                  code: "GO-1",
+                  code: "PO-1",
                   description: "Think critically",
                   is_active: true,
                 },
               },
               {
-                go_id: SECOND_GO_ID,
+                po_id: SECOND_GO_ID,
                 manifestation: "LEARNING",
-                go: {
+                po: {
                   id: SECOND_GO_ID,
-                  code: "GO-2",
+                  code: "PO-2",
                   description: "Communicate",
                   is_active: true,
                 },
@@ -1353,7 +1353,7 @@ describe("Course alignment service", () => {
         },
       });
       expect(mocks.ciloMapping.updateMany).toHaveBeenCalledWith({
-        where: { cilo_id: CILO_ID, go_id: GO_ID },
+        where: { cilo_id: CILO_ID, po_id: GO_ID },
         data: {
           manifestation: "PRACTICE",
           updated_by: "faculty-1",
