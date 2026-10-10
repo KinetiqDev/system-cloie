@@ -17,10 +17,11 @@ const HEADER_ALIASES: Record<string, ImportHeader> = {
   gocode: "po_code",
   plocode: "po_code",
   description: "description",
+  classification: "classification",
   error: "error",
 };
 const EXPECTED_COLUMNS =
-  "Use the Program Outcome import template. Expected columns: PO Code, Description.";
+  "Use the Program Outcome import template. Expected columns: PO Code, Description, with an optional Classification column.";
 
 function normalizedHeader(value: string): string {
   return value.normalize("NFKC").trim().toLowerCase().replaceAll("_", "").replaceAll(" ", "");
@@ -48,7 +49,7 @@ function mappedHeaderNames(cells: string[]): ImportHeader[] | null {
     uniqueHeaders.size === headers.length &&
     headers.includes("po_code") &&
     headers.includes("description") &&
-    (headers.length === 2 || (headers.length === 3 && headers.includes("error")));
+    headers.length <= 4;
   return valid ? headers : null;
 }
 

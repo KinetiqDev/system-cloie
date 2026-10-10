@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Prisma, type CILOMappingManifestation } from "@prisma/client";
-import type { CourseScope } from "@prisma/client";
+import type { CourseScope, GEAlignmentMode, POClassification } from "@prisma/client";
 import { z } from "zod";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -13,6 +13,7 @@ type CourseAlignmentTarget = {
   id: string;
   code: string;
   description: string;
+  classification?: POClassification;
 };
 
 type CourseAlignmentMapping = {
@@ -32,6 +33,7 @@ export type CourseAlignment = {
     code: string;
     title: string;
     scope: CourseScope;
+    geAlignmentMode?: GEAlignmentMode;
     program: { id: string; code: string; name: string } | null;
   };
   cilos: CourseAlignmentCilo[];
@@ -58,6 +60,7 @@ type ManifestationDraft = Array<{
 
 export type CourseAlignmentReview = {
   scope: CourseScope;
+  geAlignmentMode: GEAlignmentMode;
   courseId: string;
   before: ManifestationSnapshot;
   after: ManifestationSnapshot;
@@ -95,6 +98,11 @@ type AlignmentCiloRow = {
     manifestation: CILOMappingManifestation | null;
     po: { id: string; code: string; description: string; is_active: boolean };
   }>;
+  cilo_common_po_mappings?: Array<{
+    common_outcome_id: string;
+    manifestation: CILOMappingManifestation | null;
+    common_outcome: { id: string; code: string; description: string; is_active: boolean };
+  }>;
   cilo_institutional_outcome_mappings: Array<{
     institutional_outcome_id: string;
     manifestation: CILOMappingManifestation | null;
@@ -113,33 +121,44 @@ type FreshnessMapping = {
   manifestation: CILOMappingManifestation | null;
 };
 
+function targetMappings(cilo: AlignmentCiloRow, scope: CourseScope, mode: GEAlignmentMode) {
+  if (scope === "PROGRAM_SPECIFIC")
+    return cilo.cilo_mappings.map((m) => ({ target: m.po, manifestation: m.manifestation }));
+  if (mode === "COMMON_PO")
+    return (cilo.cilo_common_po_mappings ?? []).map((m) => ({
+      target: m.common_outcome,
+      manifestation: m.manifestation,
+    }));
+  return cilo.cilo_institutional_outcome_mappings.map((m) => ({
+    target: m.institutional_outcome,
+    manifestation: m.manifestation,
+  }));
+}
+
 function freshnessMappingsForScope(
   rows: AlignmentCiloRow[],
-  scope: CourseScope
+  scope: CourseScope,
+  mode: GEAlignmentMode
 ): FreshnessMapping[] {
-  return scope === "GENERAL_EDUCATION"
-    ? rows.flatMap((cilo) =>
-        cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
-          ciloId: cilo.id,
-          targetId: mapping.institutional_outcome_id,
-          manifestation: mapping.manifestation ?? null,
-        }))
-      )
-    : rows.flatMap((cilo) =>
-        cilo.cilo_mappings.map((mapping) => ({
-          ciloId: cilo.id,
-          targetId: mapping.po_id,
-          manifestation: mapping.manifestation ?? null,
-        }))
-      );
+  return rows.flatMap((cilo) =>
+    targetMappings(cilo, scope, mode).map((m) => ({
+      ciloId: cilo.id,
+      targetId: m.target.id,
+      manifestation: m.manifestation ?? null,
+    }))
+  );
 }
 
 function freshnessTokenValue(
   ciloIds: string[],
   catalogIds: string[],
-  mappings: FreshnessMapping[]
+  mappings: FreshnessMapping[],
+  mode: GEAlignmentMode,
+  content?: string
 ): string {
   return JSON.stringify({
+    mode,
+    ...(content ? { content } : {}),
     ciloIds: [...ciloIds].sort((left, right) => left.localeCompare(right)),
     catalogIds: [...catalogIds].sort((left, right) => left.localeCompare(right)),
     mappings: [...mappings].sort(
@@ -152,30 +171,49 @@ function freshnessTokenValue(
 function freshnessTokenOf(
   rows: AlignmentCiloRow[],
   scope: CourseScope,
-  catalogIds: string[]
+  catalogIds: string[],
+  mode: GEAlignmentMode,
+  content?: string
 ): string {
   return freshnessTokenValue(
     rows.map((cilo) => cilo.id),
     catalogIds,
-    freshnessMappingsForScope(rows, scope)
+    freshnessMappingsForScope(rows, scope, mode),
+    mode,
+    content
   );
+}
+
+function commonReviewContent(
+  course: AlignmentCourse,
+  targets: CourseAlignmentTarget[]
+): string | undefined {
+  if (course.ge_alignment_mode !== "COMMON_PO") return undefined;
+  return JSON.stringify({
+    cilos: course.cilos
+      .map((cilo) => [cilo.id, cilo.description])
+      .sort((a, b) => a[0].localeCompare(b[0])),
+    targets: targets
+      .map((target) => [target.id, target.code, target.description])
+      .sort((a, b) => a[0].localeCompare(b[0])),
+  });
 }
 
 function catalogError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
-    ? "Submit manifestations only for active Institutional Outcomes."
+    ? "Submit manifestations only for active targets of this GE alignment mode."
     : "Submit manifestations only for active Program Outcomes of this Course's Program.";
 }
 
 function completeError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
-    ? "Map every active CILO to at least one Institutional Outcome before publishing."
+    ? "Map every active CILO to at least one active GE outcome before publishing."
     : "Complete every required CILO-to-PO pair before publishing.";
 }
 
 function nullManifestationError(scope: CourseScope): string {
   return scope === "GENERAL_EDUCATION"
-    ? "Every mapped Institutional Outcome needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation."
+    ? "Every mapped GE outcome needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation."
     : "Every required CILO-to-PO pair needs a LEARNING, PRACTICE, or OPPORTUNITY manifestation.";
 }
 
@@ -236,29 +274,18 @@ function validateManifestationState(
 function existingManifestationState(
   rows: AlignmentCiloRow[],
   activeTargetIds: Set<string>,
-  scope: CourseScope
+  scope: CourseScope,
+  mode: GEAlignmentMode
 ): ManifestationSnapshot {
   return rows
     .map((cilo) => ({
       ciloId: cilo.id,
-      mappings:
-        scope === "GENERAL_EDUCATION"
-          ? cilo.cilo_institutional_outcome_mappings
-              .filter((mapping) => activeTargetIds.has(mapping.institutional_outcome_id))
-              .map((mapping) => ({
-                targetId: mapping.institutional_outcome_id,
-                manifestation: mapping.manifestation ?? null,
-              }))
-              .sort((left, right) => left.targetId.localeCompare(right.targetId))
-          : cilo.cilo_mappings
-              .filter((mapping) => activeTargetIds.has(mapping.po_id))
-              .map((mapping) => ({
-                targetId: mapping.po_id,
-                manifestation: mapping.manifestation ?? null,
-              }))
-              .sort((left, right) => left.targetId.localeCompare(right.targetId)),
+      mappings: targetMappings(cilo, scope, mode)
+        .filter((m) => activeTargetIds.has(m.target.id))
+        .map((m) => ({ targetId: m.target.id, manifestation: m.manifestation ?? null }))
+        .sort((a, b) => a.targetId.localeCompare(b.targetId)),
     }))
-    .sort((left, right) => left.ciloId.localeCompare(right.ciloId));
+    .sort((a, b) => a.ciloId.localeCompare(b.ciloId));
 }
 
 function manifestationDiff(
@@ -311,8 +338,36 @@ async function applyManifestationDiff(
   tx: Prisma.TransactionClient,
   diff: ManifestationDiff,
   userId: string,
-  scope: CourseScope
+  scope: CourseScope,
+  mode: GEAlignmentMode
 ): Promise<void> {
+  if (scope === "GENERAL_EDUCATION" && mode === "COMMON_PO") {
+    if (diff.additions.length)
+      await tx.cILOCommonPOMapping.createMany({
+        data: diff.additions.map((item) => ({
+          cilo_id: item.ciloId,
+          common_outcome_id: item.targetId,
+          manifestation: item.manifestation,
+          created_by: userId,
+          updated_by: userId,
+        })),
+      });
+    for (const item of diff.updates)
+      await tx.cILOCommonPOMapping.updateMany({
+        where: { cilo_id: item.ciloId, common_outcome_id: item.targetId },
+        data: { manifestation: item.to, updated_by: userId, updated_at: new Date() },
+      });
+    if (diff.removals.length)
+      await tx.cILOCommonPOMapping.deleteMany({
+        where: {
+          OR: diff.removals.map((item) => ({
+            cilo_id: item.ciloId,
+            common_outcome_id: item.targetId,
+          })),
+        },
+      });
+    return;
+  }
   if (scope === "GENERAL_EDUCATION") {
     if (diff.additions.length > 0) {
       await tx.cILOInstitutionalOutcomeMapping.createMany({
@@ -374,49 +429,18 @@ function postWriteMappings(
   after: ManifestationSnapshot,
   rows: AlignmentCiloRow[],
   activeTargetIds: Set<string>,
-  scope: CourseScope
+  scope: CourseScope,
+  mode: GEAlignmentMode
 ): FreshnessMapping[] {
   const written = after.flatMap((item) =>
-    item.mappings.map((mapping) => ({
-      ciloId: item.ciloId,
-      targetId: mapping.targetId,
-      manifestation: mapping.manifestation,
-    }))
+    item.mappings.map((mapping) => ({ ciloId: item.ciloId, ...mapping }))
   );
-  const writtenPairs = new Set(written.map((mapping) => `${mapping.ciloId}:${mapping.targetId}`));
-  const preserved =
-    scope === "GENERAL_EDUCATION"
-      ? rows.flatMap((cilo) =>
-          cilo.cilo_institutional_outcome_mappings
-            .filter((mapping) => {
-              const key = `${cilo.id}:${mapping.institutional_outcome_id}`;
-              return (
-                !writtenPairs.has(key) &&
-                (!activeTargetIds.has(mapping.institutional_outcome_id) ||
-                  mapping.manifestation === null)
-              );
-            })
-            .map((mapping) => ({
-              ciloId: cilo.id,
-              targetId: mapping.institutional_outcome_id,
-              manifestation: mapping.manifestation ?? null,
-            }))
-        )
-      : rows.flatMap((cilo) =>
-          cilo.cilo_mappings
-            .filter((mapping) => {
-              const key = `${cilo.id}:${mapping.po_id}`;
-              return (
-                !writtenPairs.has(key) &&
-                (!activeTargetIds.has(mapping.po_id) || mapping.manifestation === null)
-              );
-            })
-            .map((mapping) => ({
-              ciloId: cilo.id,
-              targetId: mapping.po_id,
-              manifestation: mapping.manifestation ?? null,
-            }))
-        );
+  const pairs = new Set(written.map((m) => `${m.ciloId}:${m.targetId}`));
+  const preserved = freshnessMappingsForScope(rows, scope, mode).filter(
+    (m) =>
+      !pairs.has(`${m.ciloId}:${m.targetId}`) &&
+      (!activeTargetIds.has(m.targetId) || m.manifestation === null)
+  );
   return [...written, ...preserved];
 }
 
@@ -481,6 +505,7 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
       title: true,
       program_id: true,
       course_scope: true,
+      ge_alignment_mode: true,
       program: { select: { id: true, code: true, name: true, is_active: true } },
       cilos: {
         where: { is_active: true },
@@ -492,6 +517,15 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
               po_id: true,
               manifestation: true,
               po: { select: { id: true, code: true, description: true, is_active: true } },
+            },
+          },
+          cilo_common_po_mappings: {
+            select: {
+              common_outcome_id: true,
+              manifestation: true,
+              common_outcome: {
+                select: { id: true, code: true, description: true, is_active: true },
+              },
             },
           },
           cilo_institutional_outcome_mappings: {
@@ -526,14 +560,20 @@ async function readValidTargets(
   course: AlignmentCourse
 ) {
   return courseScopeOf(course) === "GENERAL_EDUCATION"
-    ? db.institutionalOutcome.findMany({
-        where: { is_active: true },
-        select: { id: true, code: true, description: true },
-        orderBy: [{ order: "asc" }, { code: "asc" }],
-      })
+    ? course.ge_alignment_mode === "COMMON_PO"
+      ? db.commonProgramOutcome.findMany({
+          where: { is_active: true },
+          select: { id: true, code: true, description: true },
+          orderBy: [{ order: "asc" }, { code: "asc" }],
+        })
+      : db.institutionalOutcome.findMany({
+          where: { is_active: true },
+          select: { id: true, code: true, description: true },
+          orderBy: [{ order: "asc" }, { code: "asc" }],
+        })
     : db.pO.findMany({
         where: { program_id: course.program_id!, is_active: true },
-        select: { id: true, code: true, description: true },
+        select: { id: true, code: true, description: true, classification: true },
         orderBy: [{ order: "asc" }, { code: "asc" }],
       });
 }
@@ -541,9 +581,7 @@ async function readValidTargets(
 function unavailableTargetsFor(course: AlignmentCourse, validTargetIds: Set<string>) {
   const scope = courseScopeOf(course);
   const mappedTargets = course.cilos.flatMap((cilo) =>
-    scope === "GENERAL_EDUCATION"
-      ? cilo.cilo_institutional_outcome_mappings.map((mapping) => mapping.institutional_outcome)
-      : cilo.cilo_mappings.map((mapping) => mapping.po)
+    targetMappings(cilo, scope, course.ge_alignment_mode).map((m) => m.target)
   );
   return mappedTargets
     .filter((target) => !validTargetIds.has(target.id))
@@ -607,16 +645,10 @@ export async function readCourseAlignment(
   const cilos: CourseAlignmentCilo[] = course.cilos.map((cilo) => ({
     id: cilo.id,
     description: cilo.description,
-    mappings:
-      scope === "GENERAL_EDUCATION"
-        ? cilo.cilo_institutional_outcome_mappings.map((mapping) => ({
-            targetId: mapping.institutional_outcome_id,
-            manifestation: mapping.manifestation ?? null,
-          }))
-        : cilo.cilo_mappings.map((mapping) => ({
-            targetId: mapping.po_id,
-            manifestation: mapping.manifestation ?? null,
-          })),
+    mappings: targetMappings(cilo, scope, course.ge_alignment_mode).map((m) => ({
+      targetId: m.target.id,
+      manifestation: m.manifestation ?? null,
+    })),
   }));
   return {
     success: true,
@@ -626,6 +658,7 @@ export async function readCourseAlignment(
         code: course.code,
         title: course.title,
         scope,
+        geAlignmentMode: course.ge_alignment_mode,
         program: course.program
           ? { id: course.program.id, code: course.program.code, name: course.program.name }
           : null,
@@ -639,7 +672,9 @@ export async function readCourseAlignment(
       freshnessToken: freshnessTokenOf(
         course.cilos,
         scope,
-        targets.map((target) => target.id)
+        targets.map((target) => target.id),
+        course.ge_alignment_mode,
+        commonReviewContent(course, targets)
       ),
     },
   };
@@ -681,7 +716,13 @@ export async function prepareCourseAlignmentWrite(input: {
   const scope = courseScopeOf(course);
   const targets = await readValidTargets(prisma, course);
   const catalogIds = targets.map((target) => target.id);
-  const currentToken = freshnessTokenOf(course.cilos, scope, catalogIds);
+  const currentToken = freshnessTokenOf(
+    course.cilos,
+    scope,
+    catalogIds,
+    course.ge_alignment_mode,
+    commonReviewContent(course, targets)
+  );
   if (input.freshnessToken !== currentToken) {
     return {
       success: false,
@@ -701,10 +742,16 @@ export async function prepareCourseAlignmentWrite(input: {
   if (!validated.ok) {
     return { success: false, error: validated.error };
   }
-  const before = existingManifestationState(course.cilos, new Set(catalogIds), scope);
+  const before = existingManifestationState(
+    course.cilos,
+    new Set(catalogIds),
+    scope,
+    course.ge_alignment_mode
+  );
   const diff = manifestationDiff(before, validated.state);
   const unsigned = {
     scope,
+    geAlignmentMode: course.ge_alignment_mode,
     courseId: input.courseId,
     before,
     after: validated.state,
@@ -747,7 +794,7 @@ export async function commitCourseAlignmentWrite(
           return { success: false, error: SAFE_ACCESS_ERROR };
         }
         const scope = courseScopeOf(course);
-        if (review.scope !== scope) {
+        if (review.scope !== scope || review.geAlignmentMode !== course.ge_alignment_mode) {
           return {
             success: false,
             error: "Course alignment changed after review. Reload and review the latest mappings.",
@@ -755,7 +802,15 @@ export async function commitCourseAlignmentWrite(
         }
         const targets = await readValidTargets(tx, course);
         const catalogIds = targets.map((target) => target.id);
-        if (freshnessTokenOf(course.cilos, scope, catalogIds) !== review.freshnessToken) {
+        if (
+          freshnessTokenOf(
+            course.cilos,
+            scope,
+            catalogIds,
+            course.ge_alignment_mode,
+            commonReviewContent(course, targets)
+          ) !== review.freshnessToken
+        ) {
           return {
             success: false,
             error: "Course alignment changed after review. Reload and review the latest mappings.",
@@ -771,7 +826,12 @@ export async function commitCourseAlignmentWrite(
         if (!validated.ok) {
           return { success: false, error: validated.error };
         }
-        const before = existingManifestationState(course.cilos, new Set(catalogIds), scope);
+        const before = existingManifestationState(
+          course.cilos,
+          new Set(catalogIds),
+          scope,
+          course.ge_alignment_mode
+        );
         if (JSON.stringify(before) !== JSON.stringify(review.before)) {
           return {
             success: false,
@@ -779,7 +839,7 @@ export async function commitCourseAlignmentWrite(
           };
         }
         const diff = manifestationDiff(before, validated.state);
-        await applyManifestationDiff(tx, diff, session.userId, scope);
+        await applyManifestationDiff(tx, diff, session.userId, scope, course.ge_alignment_mode);
         return {
           success: true,
           data: {
@@ -787,7 +847,15 @@ export async function commitCourseAlignmentWrite(
             freshnessToken: freshnessTokenValue(
               validated.state.map((item) => item.ciloId),
               catalogIds,
-              postWriteMappings(validated.state, course.cilos, new Set(catalogIds), scope)
+              postWriteMappings(
+                validated.state,
+                course.cilos,
+                new Set(catalogIds),
+                scope,
+                course.ge_alignment_mode
+              ),
+              course.ge_alignment_mode,
+              commonReviewContent(course, targets)
             ),
           },
         };

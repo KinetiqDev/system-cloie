@@ -77,7 +77,7 @@ function CiloMappingCard({ cilo, index }: { cilo: GECilo; index: number }) {
       ) : (
         <Alert>
           <AlertDescription>
-            No mapped outcome. Faculty can align this CILO to Institutional Outcomes through Course
+            No mapped outcome. Faculty can align this CILO to its active GE targets through Course
             alignment.
           </AlertDescription>
         </Alert>
@@ -120,9 +120,9 @@ export default async function GenEdOutcomesMappingPage() {
         <BackLink href={buildGenEdOutcomesPath()}>Back to Institutional Learning Outcomes</BackLink>
         <h1 className="text-heading-xl text-foreground text-pretty">CILO Mapping Review</h1>
         <p className="text-body-sm text-muted-foreground mt-2 text-pretty">
-          Review the college-wide alignment between General Education CILOs and Institutional
-          Learning Outcomes. Faculty manage these classifications in Course alignment. This review
-          is read-only.
+          Review the college-wide alignment between General Education CILOs and their shared Common
+          POs or historical ILO targets. Faculty manage these classifications in Course alignment.
+          This review is read-only.
         </p>
       </div>
 
@@ -134,7 +134,7 @@ export default async function GenEdOutcomesMappingPage() {
             </EmptyMedia>
             <EmptyTitle>No CILO mappings found</EmptyTitle>
             <EmptyDescription>
-              Faculty classify CILO-to-ILO manifestations through Course alignment. Classified CILOs
+              Faculty classify shared GE manifestations through Course alignment. Classified CILOs
               appear here for readiness review.
             </EmptyDescription>
           </EmptyHeader>
@@ -152,7 +152,8 @@ export default async function GenEdOutcomesMappingPage() {
                     <span className="text-label-sm">{course.courseCode}</span>
                   </Badge>
                   <Badge variant="information" className="text-label-sm">
-                    Shared General Education
+                    Shared General Education ·{" "}
+                    {course.targetType === "COMMON_PROGRAM_OUTCOME" ? "Common POs" : "ILOs"}
                   </Badge>
                 </div>
                 <h2 className="text-heading-lg text-pretty">{course.courseTitle}</h2>

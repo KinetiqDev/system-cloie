@@ -55,6 +55,9 @@ async function classifyPublicationAlignment(
   courseScope: CourseScope,
   owningProgramId: string | null
 ): Promise<CourseAlignmentState> {
+  const mode =
+    (await db.course.findUnique({ where: { id: courseId }, select: { ge_alignment_mode: true } }))
+      ?.ge_alignment_mode ?? "ILO";
   const [cilos, activeGoIds] = await Promise.all([
     db.cILO.findMany({
       where: { course_id: courseId, is_active: true },
@@ -65,6 +68,9 @@ async function classifyPublicationAlignment(
             manifestation: true,
             po: { select: { id: true, program_id: true, is_active: true } },
           },
+        },
+        cilo_common_po_mappings: {
+          select: { manifestation: true, common_outcome: { select: { is_active: true } } },
         },
         cilo_institutional_outcome_mappings: {
           select: {
@@ -85,7 +91,8 @@ async function classifyPublicationAlignment(
     cilos,
     courseScope,
     owningProgramId,
-    activeGoIds.map((po) => po.id)
+    activeGoIds.map((po) => po.id),
+    mode
   );
 }
 

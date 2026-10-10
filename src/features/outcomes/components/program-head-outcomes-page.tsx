@@ -52,6 +52,13 @@ import { POImportDialog } from "./po-import-dialog";
 import type { ProgramPOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 import { cn } from "@/lib/utils";
+import {
+  isProgramHeadCategory,
+  matchesPOCategory,
+  type POCategoryFilter,
+  PO_CLASSIFICATION_LABELS,
+} from "../po-classification";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type ProgramHeadOutcomesPageProps = {
   pos: ProgramPOItem[];
@@ -63,14 +70,17 @@ function SortablePORow({
   onEdit,
   onDelete,
   onRestore,
+  canReorder,
 }: {
   po: ProgramPOItem;
+  canReorder: boolean;
   onEdit: (po: ProgramPOItem) => void;
   onDelete: (po: ProgramPOItem) => void;
   onRestore: (po: ProgramPOItem) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: po.id,
+    disabled: !canReorder,
   });
 
   const style = {
@@ -91,6 +101,8 @@ function SortablePORow({
       <button
         type="button"
         className="text-muted-foreground hover:text-foreground inline-flex size-8 shrink-0 cursor-grab touch-manipulation touch-none items-center justify-center active:cursor-grabbing pointer-coarse:size-11"
+        hidden={!canReorder}
+        disabled={!canReorder}
         aria-label="Drag to reorder"
         {...attributes}
         {...listeners}
@@ -104,6 +116,8 @@ function SortablePORow({
             <Badge variant="default" className="shrink-0 font-semibold">
               {po.code}
             </Badge>
+            <Badge variant="secondary">{PO_CLASSIFICATION_LABELS[po.classification]}</Badge>
+            {po.common_outcome_id && <Badge variant="outline">Shared statement</Badge>}
             {!po.is_active && (
               <Badge variant="outline" className="text-muted-foreground shrink-0">
                 Archived
@@ -119,39 +133,43 @@ function SortablePORow({
               </Badge>
             )}
           </div>
-          <div className="flex shrink-0 items-center">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Edit ${po.code}`}
-              title="Edit"
-              onClick={() => onEdit(po)}
-            >
-              <Edit className="size-4" aria-hidden="true" />
-            </Button>
-            {po.is_active ? (
+          {isProgramHeadCategory(po.classification) || po.classification === "UNCLASSIFIED" ? (
+            <div className="flex shrink-0 items-center">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-destructive"
-                aria-label={`Archive ${po.code}`}
-                title="Archive"
-                onClick={() => onDelete(po)}
+                aria-label={`Edit ${po.code}`}
+                title="Edit"
+                onClick={() => onEdit(po)}
               >
-                <Trash2 className="size-4" aria-hidden="true" />
+                <Edit className="size-4" aria-hidden="true" />
               </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Restore ${po.code}`}
-                title="Restore"
-                onClick={() => onRestore(po)}
-              >
-                <RotateCcw className="size-4" aria-hidden="true" />
-              </Button>
-            )}
-          </div>
+              {po.is_active ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={`Archive ${po.code}`}
+                  title="Archive"
+                  onClick={() => onDelete(po)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Restore ${po.code}`}
+                  title="Restore"
+                  onClick={() => onRestore(po)}
+                >
+                  <RotateCcw className="size-4" aria-hidden="true" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            <span className="text-body-sm text-muted-foreground">Managed by Secretary / Dean</span>
+          )}
         </div>
         <p className="text-body-md text-muted-foreground mt-2 leading-relaxed text-pretty break-words">
           {po.description}
@@ -168,6 +186,7 @@ export function ProgramHeadOutcomesPage({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [orderedPOs, setOrderedPOs] = useState<ProgramPOItem[]>(initialPOs);
+  const [category, setCategory] = useState<POCategoryFilter>("ALL");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingPO, setEditingPO] = useState<ProgramPOItem | null>(null);
@@ -210,7 +229,7 @@ export function ProgramHeadOutcomesPage({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || active.id === over.id) return;
+      if (category !== "ALL" || !over || active.id === over.id) return;
 
       const oldIndex = orderedPOs.findIndex((g) => g.id === active.id);
       const newIndex = orderedPOs.findIndex((g) => g.id === over.id);
@@ -240,7 +259,7 @@ export function ProgramHeadOutcomesPage({
         });
       }, 600);
     },
-    [orderedPOs, program.id, router]
+    [orderedPOs, program.id, router, category]
   );
 
   function handleDelete(po: ProgramPOItem) {
@@ -283,8 +302,8 @@ export function ProgramHeadOutcomesPage({
         <div className="min-w-0">
           <h1 className="text-heading-xl text-foreground text-pretty">Program Outcomes</h1>
           <p className="text-body-sm text-muted-foreground mt-1">
-            Define this Program&apos;s Program Outcomes and map them to Course Intended Learning
-            Outcomes.
+            Manage Core and Professional POs. Common and Institution-specific POs are managed by the
+            Secretary or Dean.
           </p>
         </div>
         <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -318,62 +337,88 @@ export function ProgramHeadOutcomesPage({
       {totalPOs > 0 && (
         <div className="flex flex-col gap-2">
           <OutcomeKpiGrid items={mappingStats} />
-          <p className="text-caption text-muted-foreground">Drag rows to reorder</p>
+          <p className="text-caption text-muted-foreground">
+            {category === "ALL"
+              ? "Drag rows to reorder the complete catalog"
+              : "Return to All to reorder"}
+          </p>
         </div>
       )}
 
-      {reorderError && (
-        <Alert variant="destructive">
-          <AlertDescription>{reorderError}</AlertDescription>
-        </Alert>
-      )}
-      {orderedPOs.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <ListChecks className="size-6" aria-hidden="true" />
-            </EmptyMedia>
-            <EmptyTitle>No Program Outcomes yet</EmptyTitle>
-            <EmptyDescription>
-              Add your first PO to start tracking program outcomes.
-            </EmptyDescription>
-          </EmptyHeader>
-          <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="size-4" aria-hidden="true" />
-            Add PO
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
-            <FileUp className="size-4" aria-hidden="true" />
-            Import CSV
-          </Button>
-        </Empty>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={orderedPOs.map((g) => g.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="flex flex-col gap-3">
-              {orderedPOs.map((po) => (
-                <SortablePORow
-                  key={po.id}
-                  po={po}
-                  onEdit={setEditingPO}
-                  onDelete={(g) => {
-                    setDeleteError(null);
-                    setDeletingPO(g);
-                  }}
-                  onRestore={(g) => {
-                    setRestoreError(null);
-                    setRestoringPO(g);
-                  }}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
-
+      <Tabs value={category} onValueChange={(value) => setCategory(value as POCategoryFilter)}>
+        <TabsList aria-label="PO classification">
+          {(["ALL", "COMMON", "CORE", "PROFESSIONAL", "OTHER"] as const).map((value) => (
+            <TabsTrigger key={value} value={value}>
+              {value === "ALL"
+                ? "All"
+                : value === "OTHER"
+                  ? "Other"
+                  : PO_CLASSIFICATION_LABELS[value as "COMMON" | "CORE" | "PROFESSIONAL"]}{" "}
+              ({orderedPOs.filter((po) => matchesPOCategory(po.classification, value)).length})
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value={category}>
+          {reorderError && (
+            <Alert variant="destructive">
+              <AlertDescription>{reorderError}</AlertDescription>
+            </Alert>
+          )}
+          {orderedPOs.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ListChecks className="size-6" aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>No Program Outcomes yet</EmptyTitle>
+                <EmptyDescription>
+                  Add your first PO to start tracking program outcomes.
+                </EmptyDescription>
+              </EmptyHeader>
+              <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="size-4" aria-hidden="true" />
+                Add PO
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => setImportDialogOpen(true)}>
+                <FileUp className="size-4" aria-hidden="true" />
+                Import CSV
+              </Button>
+            </Empty>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={orderedPOs.map((g) => g.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-3">
+                  {orderedPOs
+                    .filter((po) => matchesPOCategory(po.classification, category))
+                    .map((po) => (
+                      <SortablePORow
+                        key={po.id}
+                        po={po}
+                        canReorder={category === "ALL"}
+                        onEdit={setEditingPO}
+                        onDelete={(g) => {
+                          setDeleteError(null);
+                          setDeletingPO(g);
+                        }}
+                        onRestore={(g) => {
+                          setRestoreError(null);
+                          setRestoringPO(g);
+                        }}
+                      />
+                    ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </TabsContent>
+      </Tabs>
       <POFormDialog
         mode="create"
         programId={program.id}

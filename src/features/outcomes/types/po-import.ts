@@ -2,7 +2,7 @@ export const PO_IMPORT_MAX_ROWS = 20;
 
 export type POImportSourceRow = {
   sourceIndex: number;
-  input: { po_code: string; description: string };
+  input: { po_code: string; description: string; classification?: string };
 };
 
 export type POImportRowStatus =
@@ -16,6 +16,7 @@ export type POImportOutcome = Exclude<POImportRowStatus, "READY"> | "CREATED";
 export type POImportPreviewRow = {
   sourceIndex: number;
   input: POImportSourceRow["input"];
+  classification?: "CORE" | "PROFESSIONAL";
   poCode: string;
   description: string;
   status: POImportRowStatus;

@@ -28,7 +28,7 @@ import {
   resolveSnapshotNullableText,
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
-import { loadCiloIloMappings, type CiloIloMapping } from "./cilo-mappings";
+import { loadCiloCommonMappings, loadCiloIloMappings, type CiloIloMapping } from "./cilo-mappings";
 import { buildQualitativeSummary } from "./qualitative-summary";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
@@ -120,11 +120,21 @@ export async function getGenEdCourseEvaluationDetail(
     });
   }
 
-  const iloMappings = await loadCiloIloMappings(
-    evaluation.cilo_question_bindings
-      .map((binding) => binding.cilo_id)
-      .filter((ciloId): ciloId is string => ciloId !== null)
-  );
+  const isCommon = evaluation.course_assignment.course.ge_alignment_mode === "COMMON_PO";
+  const commonMappings = isCommon
+    ? await loadCiloCommonMappings(
+        evaluation.cilo_question_bindings
+          .map((binding) => binding.cilo_id)
+          .filter((id): id is string => id !== null)
+      )
+    : new Map();
+  const iloMappings = isCommon
+    ? new Map()
+    : await loadCiloIloMappings(
+        evaluation.cilo_question_bindings
+          .map((binding) => binding.cilo_id)
+          .filter((ciloId): ciloId is string => ciloId !== null)
+      );
 
   const { ratingRows, meanByResponse, iloMappingsByCilo } = buildCourseRatingRows(
     submittedResponses,
@@ -230,7 +240,8 @@ export async function getGenEdCourseEvaluationDetail(
     },
     participation,
     ciloResults,
-    alignmentLayer: "INSTITUTIONAL_OUTCOME",
+    alignmentLayer: isCommon ? "COMMON_PROGRAM_OUTCOME" : "INSTITUTIONAL_OUTCOME",
+    commonMappingsByCilo: Object.fromEntries(commonMappings),
     iloMappingsByCilo: Object.fromEntries(iloMappingsByCilo),
     iloResults,
     questionResults,

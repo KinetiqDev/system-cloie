@@ -70,6 +70,10 @@ describe("POImportDialog", () => {
       },
     });
     await uploadCsv("PO Code,Description\nPO-20,Apply computing knowledge");
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Classification for rows without a category" })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(await screen.findByRole("heading", { name: "Review POs" })).toBeInTheDocument();
     expect(screen.getByText(/may show incomplete CILO mappings/i)).toBeInTheDocument();
@@ -82,6 +86,10 @@ describe("POImportDialog", () => {
 
   it("keeps parser errors beside the file step", async () => {
     await uploadCsv("wrong,headers\na,b", "bad.csv");
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Classification for rows without a category" })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(await screen.findByText(/Use the Program Outcome import template/i)).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Review POs" })).not.toBeInTheDocument();
@@ -114,6 +122,10 @@ describe("POImportDialog", () => {
       },
     });
     await uploadCsv("PO Code,Description\nPO-20,Apply computing knowledge\nPO-21,Nope");
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Classification for rows without a category" })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     const createButton = await screen.findByRole("button", { name: "Create 1 PO" });
     await waitFor(() => expect(createButton).toBeEnabled());

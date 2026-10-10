@@ -25,3 +25,8 @@ The period-status-dependent visibility of archived outcomes in the Dean's learni
 _Avoid_: Live catalog view, uniform archive filtering
 
 The Learning Outcomes academic-period control uses the shared Base UI Select with wrapped, scrollable options. It preserves the ACTIVE/COMPLETED eligible-period list, submits the `period` query parameter through View period, and retains the risk filter.
+
+
+**Central outcome stewardship**:
+The Dean and Secretary jointly manage the central Common PO catalog and program-local Common and Institution-specific POs. This separate write capability does not make the period-scoped oversight projection editable or grant ILO/Core/Professional authoring. Common-mode GE gaps carry Common target labels, while completed historical ILO snapshots keep their captured labels.
+_Avoid_: Blanket outcome write access, editable historical snapshot, Dean ILO author

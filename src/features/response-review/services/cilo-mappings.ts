@@ -96,3 +96,32 @@ export async function loadCiloIloMappings(
   }
   return byCilo;
 }
+
+export type CiloCommonMapping = {
+  commonId: string;
+  code: string;
+  description: string;
+  manifestation: CILOMappingManifestation | null;
+};
+
+export async function loadCiloCommonMappings(
+  ciloIds: string[]
+): Promise<Map<string, CiloCommonMapping[]>> {
+  if (!ciloIds.length) return new Map();
+  const rows = await prisma.cILOCommonPOMapping.findMany({
+    where: { cilo_id: { in: ciloIds } },
+    include: { common_outcome: true },
+  });
+  const result = new Map<string, CiloCommonMapping[]>();
+  for (const row of rows)
+    result.set(row.cilo_id, [
+      ...(result.get(row.cilo_id) ?? []),
+      {
+        commonId: row.common_outcome.id,
+        code: row.common_outcome.code,
+        description: row.common_outcome.description,
+        manifestation: row.manifestation,
+      },
+    ]);
+  return result;
+}

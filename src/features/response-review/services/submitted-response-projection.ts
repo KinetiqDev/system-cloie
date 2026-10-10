@@ -5,7 +5,7 @@ import {
   getSnapshotSectionItems,
   isSnapshotSection,
 } from "@/features/analytics/services/snapshot-structure";
-import type { CiloIloMapping } from "./cilo-mappings";
+import type { CiloIloMapping, CiloCommonMapping } from "./cilo-mappings";
 import type { RespondentIdentityContext } from "./respondent-context";
 import type {
   IdentifiedSubmittedResponseDetail,
@@ -59,6 +59,7 @@ function resolveSubmittedAnswerBinding(
   alignments: {
     poMappings: Map<string, CiloGoMapping[]>;
     iloMappings: Map<string, CiloIloMapping[]>;
+    commonMappings?: Map<string, CiloCommonMapping[]>;
   }
 ): SubmittedAnswerBinding {
   const directBindings = scope.poSnapshots
@@ -86,6 +87,14 @@ function resolveSubmittedAnswerBinding(
       ? { type: "PO", poBindings: directBindings }
       : { type: "GENERAL" };
   }
+  if (scope.layer === "COMMON_PROGRAM_OUTCOME")
+    return {
+      type: "CILO",
+      layer: "COMMON_PROGRAM_OUTCOME",
+      ciloId: binding.cilo_id,
+      ciloLabel: binding.cilo_description_snapshot,
+      commonMappings: alignments.commonMappings?.get(binding.cilo_id ?? "") ?? [],
+    };
   if (scope.layer === "INSTITUTIONAL_OUTCOME") {
     return {
       type: "CILO",
@@ -118,6 +127,7 @@ export function buildSubmittedResponseSections(
   alignments: {
     poMappings: Map<string, CiloGoMapping[]>;
     iloMappings: Map<string, CiloIloMapping[]>;
+    commonMappings?: Map<string, CiloCommonMapping[]>;
   }
 ): IdentifiedSubmittedResponseDetail["sections"] {
   return (Array.isArray(scope.snapshot) ? scope.snapshot : [])

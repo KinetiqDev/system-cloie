@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
@@ -48,6 +56,7 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
   const [isPending, startTransition] = useTransition();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
     reset,
@@ -63,6 +72,7 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
       formData.set("programId", data.programId);
       formData.set("code", data.code);
       formData.set("description", data.description);
+      formData.set("classification", data.classification);
       const result = await createPOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
@@ -77,12 +87,39 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       {errors.root && (
         <Alert variant="destructive">
           <AlertDescription>{errors.root.message}</AlertDescription>
         </Alert>
       )}
+      <Field data-invalid={!!errors.classification}>
+        <FieldLabel htmlFor="create-po-classification">Classification</FieldLabel>
+        <Controller
+          name="classification"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value ?? null} onValueChange={(value) => field.onChange(value)}>
+              <SelectTrigger
+                id="create-po-classification"
+                className="w-full"
+                onBlur={field.onBlur}
+                ref={field.ref}
+                aria-invalid={!!errors.classification}
+              >
+                <SelectValue placeholder="Select a classification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="CORE">Core</SelectItem>
+                  <SelectItem value="PROFESSIONAL">Professional</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={[errors.classification]} />
+      </Field>
       <Field data-invalid={errors.code ? true : undefined}>
         <FieldLabel htmlFor="create-go-code">PO Code</FieldLabel>
         <FieldContent>
@@ -142,13 +179,23 @@ function EditForm({
   const [isPending, startTransition] = useTransition();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
     reset,
     setError,
   } = useForm<UpdatePOInput>({
     resolver: customZodResolver(updatePOSchema),
-    defaultValues: { programId, id: po.id, code: po.code, description: po.description },
+    defaultValues: {
+      programId,
+      id: po.id,
+      code: po.code,
+      description: po.description,
+      classification:
+        po.classification === "CORE" || po.classification === "PROFESSIONAL"
+          ? po.classification
+          : undefined,
+    },
   });
 
   function onSubmit(data: UpdatePOInput) {
@@ -158,6 +205,7 @@ function EditForm({
       formData.set("id", data.id);
       formData.set("code", data.code);
       formData.set("description", data.description);
+      formData.set("classification", data.classification);
       const result = await updatePOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
@@ -172,7 +220,7 @@ function EditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <input type="hidden" {...register("programId")} />
       <input type="hidden" {...register("id")} />
       {errors.root && (
@@ -180,6 +228,33 @@ function EditForm({
           <AlertDescription>{errors.root.message}</AlertDescription>
         </Alert>
       )}
+      <Field data-invalid={!!errors.classification}>
+        <FieldLabel htmlFor="edit-po-classification">Classification</FieldLabel>
+        <Controller
+          name="classification"
+          control={control}
+          render={({ field }) => (
+            <Select value={field.value ?? null} onValueChange={(value) => field.onChange(value)}>
+              <SelectTrigger
+                id="edit-po-classification"
+                className="w-full"
+                onBlur={field.onBlur}
+                ref={field.ref}
+                aria-invalid={!!errors.classification}
+              >
+                <SelectValue placeholder="Select a classification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="CORE">Core</SelectItem>
+                  <SelectItem value="PROFESSIONAL">Professional</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+        />
+        <FieldError errors={[errors.classification]} />
+      </Field>
       <Field data-invalid={errors.code ? true : undefined}>
         <FieldLabel htmlFor="edit-go-code">PO Code</FieldLabel>
         <FieldContent>

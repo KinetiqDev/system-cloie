@@ -473,6 +473,85 @@ async function verifyStudentLifecycleFixture(): Promise<{
   };
 }
 
+/**
+ * ADR 0040 shared GE Common PO alignment fixture: GESTECH is Common-mode with
+ * exactly the reviewed CILO→Common mappings, and holds active assignments in
+ * two programs this term so the sharing journey can prove one course-owned
+ * mapping set. Read-only; the journey never mutates these rows.
+ */
+async function verifyGeCommonAlignmentFixture(): Promise<{
+  courseId: string;
+  commonOutcomeCodes: string[];
+}> {
+  const contract = E2E_CONTRACT.geCommonAlignment;
+  const course = await prisma.course.findUnique({
+    where: { code: contract.courseCode },
+    select: {
+      id: true,
+      ge_alignment_mode: true,
+      cilos: {
+        where: { is_active: true },
+        orderBy: [{ created_at: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          cilo_common_po_mappings: {
+            select: {
+              manifestation: true,
+              common_outcome: { select: { code: true, is_active: true } },
+            },
+          },
+        },
+      },
+      course_assignments: {
+        where: { is_active: true, term_instance: { status: "ACTIVE" } },
+        select: { program: { select: { code: true } }, faculty: { select: { email: true } } },
+      },
+    },
+  });
+  assertContract(course, `missing seeded GE Common course "${contract.courseCode}"`);
+  assertContract(
+    course!.ge_alignment_mode === "COMMON_PO",
+    `GE course ${contract.courseCode} must be Common PO aligned for the sharing journey`
+  );
+  assertContract(
+    course!.cilos.length === contract.ciloCount,
+    `GE course ${contract.courseCode} must keep exactly ${contract.ciloCount} active CILOs`
+  );
+  for (const expected of contract.mappings) {
+    const cilo = course!.cilos[expected.ciloOrder - 1];
+    const mapping = cilo?.cilo_common_po_mappings.find(
+      (entry) =>
+        entry.common_outcome.code === expected.commonOutcomeCode &&
+        entry.common_outcome.is_active &&
+        entry.manifestation === expected.manifestation
+    );
+    assertContract(
+      mapping,
+      `GE ${contract.courseCode} CILO ${expected.ciloOrder} must map to ${expected.commonOutcomeCode} with ${expected.manifestation}`
+    );
+  }
+  for (const reader of contract.readers) {
+    const assignment = course!.course_assignments.find(
+      (entry) =>
+        entry.program.code === reader.programCode && entry.faculty.email === reader.facultyEmail
+    );
+    assertContract(
+      assignment,
+      `GE ${contract.courseCode} must keep an active ${reader.programCode} assignment for ${reader.facultyEmail}`
+    );
+  }
+  return {
+    courseId: course!.id,
+    commonOutcomeCodes: [
+      ...new Set(
+        course!.cilos.flatMap((cilo) =>
+          cilo.cilo_common_po_mappings.map((entry) => entry.common_outcome.code)
+        )
+      ),
+    ].sort(),
+  };
+}
+
 async function verifyDeployments(): Promise<{
   courseEvaluation: { id: string; deployment_name: string };
   bottomUpEvaluation: { id: string; deployment_name: string };
@@ -724,6 +803,7 @@ export default async function globalSetup(): Promise<void> {
   const { gestechAssignment, gestechMobileAssignment } = await verifyStudentLifecycleFixture();
   const { publicationTemplate, publicationTarget } = await verifyPublicationFixture();
   await verifyPoBindingGateFixtures();
+  const geCommon = await verifyGeCommonAlignmentFixture();
   const geContract = E2E_CONTRACT.generalEducationReview;
   const geEvaluation = await prisma.courseBoundEvaluation.findUnique({
     where: { id: geContract.evaluationId },
@@ -927,6 +1007,7 @@ export default async function globalSetup(): Promise<void> {
     gestechEval: { id: contract.gestechEval.id, title: contract.gestechEval.title },
     gestechAssignment,
     gestechMobileAssignment,
+    geCommonAlignment: geCommon,
     generalEducationReview: {
       evaluationId: geContract.evaluationId,
       title: geContract.title,

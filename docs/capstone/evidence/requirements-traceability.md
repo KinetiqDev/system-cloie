@@ -93,3 +93,14 @@ Per [Appendix F §G](../guide/appendix-f-requirements-traceability-matrix-templa
 | **Team Leader / Proponent:**         | pending | **Signature:** | pending |
 | **Reviewed by Adviser:**             | pending | **Date:**      | pending |
 | **Verified at Defense / Review by:** | pending | **Date:**      | pending |
+
+## Outcome classification change evidence
+
+User-approved design changes are recorded in [ADR 0040](../../adr/0040-program-outcome-classification-and-shared-ge-common-alignment.md). The original proposed plan is superseded for role ownership and demo fixture rollout.
+
+| Requirement                                                                                        | Implementation                                                            | Verification                                                                                 | Status                                            |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Program Heads author only Core/Professional; Secretary/Dean handle Common and Institution-specific | PO schema, protected outcome gateway, central role-owned routes           | `po-classification.test.ts`, `manage-central-outcomes.test.ts`, Program Head component tests | In Development; release gates pending             |
+| One GE course shares central Common PO mappings across assignments                                 | Dedicated mapping relation and the existing Faculty review/commit gateway | `manage-course-alignment.test.ts` cross-program Faculty test; classifier Common-mode tests   | Unit coverage present; DB and browser E2E pending |
+| Common corrections synchronize local statements and preserve historical snapshots                  | Serializable protected write and outcome change audit; snapshot version 3 | Central write tests; existing v1/v2 readiness compatibility tests                            | DB verification pending                           |
+| Common alignment does not become ILO evidence or attainment                                        | Mode-aware analytics and identified response review                       | Existing GE evidence regressions plus mode-specific coverage                                 | Full release verification pending                 |

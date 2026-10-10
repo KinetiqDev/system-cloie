@@ -40,6 +40,21 @@ const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
 
 export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
+    path: "src/features/outcomes/components/central-outcomes-page.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+  },
+  {
+    path: "src/app/(app)/secretary/common-outcomes/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
+    path: "src/app/(app)/dean/common-outcomes/page.tsx",
+    disposition: "already_compliant",
+    category: "route",
+  },
+  {
     path: "src/features/entry/components/audience-landing.tsx",
     disposition: "already_compliant",
     category: "feature_component",

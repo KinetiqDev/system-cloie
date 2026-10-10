@@ -1,4 +1,6 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type POClassification } from "@prisma/client";
+import { isAdministrativeCategory, isProgramHeadCategory } from "../po-classification";
+import { poDetailsSchema } from "../schemas/po";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import {
@@ -14,7 +16,15 @@ import { getConfirmationSecret } from "@/lib/utils/confirmation-secret";
 type WriterRole = (typeof ROLES)[keyof typeof ROLES];
 
 export type OutcomeWriteInput =
-  | { kind: "PO"; action: "create"; programId: string; code: string; description: string }
+  | {
+      kind: "PO";
+      action: "create";
+      programId: string;
+      code: string;
+      description: string;
+      classification: POClassification;
+      commonOutcomeId?: string | null;
+    }
   | {
       kind: "PO";
       action: "update";
@@ -22,9 +32,28 @@ export type OutcomeWriteInput =
       id: string;
       code: string;
       description: string;
+      classification: POClassification;
+      commonOutcomeId?: string | null;
     }
   | { kind: "PO"; action: "archive" | "restore"; programId: string; id: string }
   | { kind: "PO"; action: "reorder"; programId: string; orderedIds: string[] }
+  | {
+      kind: "COMMON_PO";
+      action: "create";
+      code: string;
+      description: string;
+      sourceRef?: string | null;
+    }
+  | {
+      kind: "COMMON_PO";
+      action: "update";
+      id: string;
+      code: string;
+      description: string;
+      sourceRef?: string | null;
+    }
+  | { kind: "COMMON_PO"; action: "archive" | "restore"; id: string }
+  | { kind: "COMMON_PO"; action: "reorder"; orderedIds: string[] }
   | { kind: "ILO"; action: "create"; code: string; description: string }
   | { kind: "ILO"; action: "update"; id: string; code: string; description: string }
   | { kind: "ILO"; action: "archive" | "restore"; id: string }
@@ -34,6 +63,8 @@ export type OutcomeWriteInput =
   | { kind: "CILO"; action: "archive" | "restore"; id: string };
 
 type POWriteInput = Extract<OutcomeWriteInput, { kind: "PO" }>;
+
+type CommonWriteInput = Extract<OutcomeWriteInput, { kind: "COMMON_PO" }>;
 
 type ILOWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 
@@ -86,10 +117,35 @@ async function scopeAllowsPO(
   role: WriterRole,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<boolean> {
-  if (role !== ROLES.PROGRAM_HEAD) return false;
+  const admin = role === ROLES.SECRETARY || role === ROLES.DEAN;
+  if (!admin && role !== ROLES.PROGRAM_HEAD) return false;
+  if (input.action === "create" || input.action === "update") {
+    if (!poDetailsSchema.safeParse(input).success) return false;
+    const permitted = admin
+      ? isAdministrativeCategory(input.classification)
+      : isProgramHeadCategory(input.classification);
+    if (!permitted) return false;
+    if (input.classification === "COMMON") {
+      if (!input.commonOutcomeId) return false;
+      const common = await db.commonProgramOutcome.findUnique({
+        where: { id: input.commonOutcomeId },
+      });
+      if (!common?.is_active || common.description !== input.description.trim()) return false;
+    } else if (input.commonOutcomeId) return false;
+  }
   if (input.action === "create" || input.action === "reorder") return true;
-  const po = await db.pO.findUnique({ where: { id: input.id }, select: { program_id: true } });
-  return po?.program_id === input.programId;
+  const po = await db.pO.findUnique({
+    where: { id: input.id },
+    select: { program_id: true, classification: true },
+  });
+  if (po?.program_id !== input.programId) return false;
+  const current = po.classification;
+  // UNCLASSIFIED is the migration-only legacy state (ADR 0040): it has no
+  // owner category, so either authorized role may claim the row by saving a
+  // real classification; PH also keeps program-local archive/restore so a
+  // legacy row is never locked by classification metadata alone.
+  if (current === "UNCLASSIFIED") return true;
+  return admin ? isAdministrativeCategory(current) : isProgramHeadCategory(current);
 }
 
 async function scopeAllowsCilo(
@@ -127,6 +183,12 @@ async function scopeAllows(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<boolean> {
   switch (input.kind) {
+    case "COMMON_PO":
+      return (
+        (role === ROLES.SECRETARY || role === ROLES.DEAN) &&
+        (!(input.action === "create" || input.action === "update") ||
+          poDetailsSchema.safeParse(input).success)
+      );
     case "PO":
       return scopeAllowsPO(input, role, db);
     case "ILO":
@@ -143,7 +205,15 @@ async function readPOState(
   if (input.action === "create")
     return db.pO.findMany({
       where: { program_id: input.programId },
-      select: { code: true, description: true, order: true, program_id: true, is_active: true },
+      select: {
+        code: true,
+        description: true,
+        order: true,
+        program_id: true,
+        is_active: true,
+        classification: true,
+        common_outcome_id: true,
+      },
       orderBy: { order: "asc" },
     });
   if (input.action === "reorder")
@@ -161,6 +231,15 @@ async function readPOState(
       order: true,
       program_id: true,
       is_active: true,
+      classification: true,
+      common_outcome_id: true,
+      _count: {
+        select: {
+          cilo_mappings: true,
+          central_deployment_snapshots: true,
+          course_bound_question_bindings: true,
+        },
+      },
     },
   });
 }
@@ -206,6 +285,13 @@ async function readState(
   db: Prisma.TransactionClient | typeof prisma = prisma
 ): Promise<ReviewValue> {
   switch (input.kind) {
+    case "COMMON_PO":
+      return input.action === "create" || input.action === "reorder"
+        ? db.commonProgramOutcome.findMany({ orderBy: [{ order: "asc" }, { id: "asc" }] })
+        : db.commonProgramOutcome.findUnique({
+            where: { id: input.id },
+            include: { _count: { select: { program_pos: true, ge_mappings: true } } },
+          });
     case "PO":
       return readPOState(input, db);
     case "ILO":
@@ -225,6 +311,8 @@ function nextPOState(input: POWriteInput, before: ReviewValue): ReviewValue {
         description: input.description.trim(),
         order: existing.length,
         program_id: input.programId,
+        classification: input.classification,
+        common_outcome_id: input.commonOutcomeId ?? null,
         is_active: true,
       },
     ];
@@ -241,12 +329,17 @@ function nextPOState(input: POWriteInput, before: ReviewValue): ReviewValue {
       ...record,
       code: input.code.trim().toUpperCase(),
       description: input.description.trim(),
+      classification: input.classification,
+      common_outcome_id: input.commonOutcomeId ?? null,
     };
   return record;
 }
 
 // fallow-ignore-next-line code-duplication
-function nextILOState(input: ILOWriteInput, before: ReviewValue): ReviewValue {
+function nextCatalogState(
+  input: ILOWriteInput | CommonWriteInput,
+  before: ReviewValue
+): ReviewValue {
   if (input.action === "create") {
     const existing = before as Array<Record<string, unknown>>;
     return [
@@ -256,11 +349,11 @@ function nextILOState(input: ILOWriteInput, before: ReviewValue): ReviewValue {
         description: input.description.trim(),
         order: existing.length,
         is_active: true,
+        ...(input.kind === "COMMON_PO" ? { source_ref: input.sourceRef?.trim() || null } : {}),
       },
     ];
   }
   if (input.action === "reorder") return input.orderedIds.map((id, order) => ({ id, order }));
-  // fallow-ignore-next-line code-duplication
   if (!before) return null;
   const record = before as Record<string, unknown>;
   if (input.action === "archive" || input.action === "restore")
@@ -270,6 +363,7 @@ function nextILOState(input: ILOWriteInput, before: ReviewValue): ReviewValue {
       ...record,
       code: input.code.trim().toUpperCase(),
       description: input.description.trim(),
+      ...(input.kind === "COMMON_PO" ? { source_ref: input.sourceRef?.trim() || null } : {}),
     };
   return record;
 }
@@ -296,10 +390,12 @@ function nextCiloState(input: CiloWriteInput, before: ReviewValue, userId: strin
 
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
   switch (input.kind) {
+    case "COMMON_PO":
+      return nextCatalogState(input, before);
     case "PO":
       return nextPOState(input, before);
     case "ILO":
-      return nextILOState(input, before);
+      return nextCatalogState(input, before);
     case "CILO":
       return nextCiloState(input, before, userId);
   }
@@ -311,6 +407,8 @@ export async function prepareOutcomeWrite(
   const session = await resolveAuthSession();
   const role = session?.activeRole;
   const allowed =
+    ((role === ROLES.SECRETARY || role === ROLES.DEAN) &&
+      (input.kind === "COMMON_PO" || input.kind === "PO")) ||
     (role === ROLES.PROGRAM_HEAD && input.kind === "PO") ||
     (role === ROLES.GEN_ED_COORDINATOR && input.kind === "ILO") ||
     (role === ROLES.FACULTY && input.kind === "CILO");
@@ -385,6 +483,56 @@ async function writeILO(
   };
 }
 
+async function writeCommonPO(
+  tx: Prisma.TransactionClient,
+  input: CommonWriteInput,
+  current: ReviewValue
+): Promise<ServiceResult<{ id?: string }>> {
+  if (input.action === "reorder") {
+    const rows = current as Array<{ id: string }>;
+    if (
+      new Set(input.orderedIds).size !== rows.length ||
+      input.orderedIds.length !== rows.length ||
+      rows.some((row) => !input.orderedIds.includes(row.id))
+    )
+      return failure("Submit the complete Common PO order.");
+    await Promise.all(
+      input.orderedIds.map((id, order) =>
+        tx.commonProgramOutcome.update({ where: { id }, data: { order } })
+      )
+    );
+    return { success: true, data: {} };
+  }
+  if (input.action === "create") {
+    const row = await tx.commonProgramOutcome.create({
+      data: {
+        code: input.code.trim().toUpperCase(),
+        description: input.description.trim(),
+        source_ref: input.sourceRef?.trim() || null,
+        order: (current as unknown[]).length,
+      },
+    });
+    return { success: true, data: { id: row.id } };
+  }
+  const row = await tx.commonProgramOutcome.update({
+    where: { id: input.id },
+    data:
+      input.action === "update"
+        ? {
+            code: input.code.trim().toUpperCase(),
+            description: input.description.trim(),
+            source_ref: input.sourceRef?.trim() || null,
+          }
+        : { is_active: input.action === "restore" },
+  });
+  if (input.action === "update")
+    await tx.pO.updateMany({
+      where: { common_outcome_id: row.id },
+      data: { description: row.description },
+    });
+  return { success: true, data: { id: row.id } };
+}
+
 async function writePO(
   tx: Prisma.TransactionClient,
   input: POWriteInput,
@@ -406,6 +554,8 @@ async function writePO(
               description: input.description.trim(),
               order: (current as unknown[]).length,
               program_id: input.programId,
+              classification: input.classification,
+              common_outcome_id: input.commonOutcomeId ?? null,
             },
           })
         ).id,
@@ -428,7 +578,12 @@ async function writePO(
   }
   const data =
     input.action === "update"
-      ? { code: input.code.trim().toUpperCase(), description: input.description.trim() }
+      ? {
+          code: input.code.trim().toUpperCase(),
+          description: input.description.trim(),
+          classification: input.classification,
+          common_outcome_id: input.commonOutcomeId ?? null,
+        }
       : { is_active: input.action === "restore" };
   return {
     success: true,
@@ -505,6 +660,8 @@ function writeReviewedOutcome(
   userId: string
 ): Promise<ServiceResult<{ id?: string }>> {
   switch (input.kind) {
+    case "COMMON_PO":
+      return writeCommonPO(tx, input, current);
     case "PO":
       return writePO(tx, input, current);
     case "ILO":
@@ -529,7 +686,21 @@ async function commitReviewedOutcome(
     return failure("Outcome changed after review. Prepare a new review.");
   if (!reviewMatchesCurrentState(review, current, userId))
     return failure("Outcome review does not match requested write.");
-  return writeReviewedOutcome(tx, review.input, current, userId);
+  const result = await writeReviewedOutcome(tx, review.input, current, userId);
+  if (
+    result.success &&
+    (review.input.kind === "COMMON_PO" || role === ROLES.SECRETARY || role === ROLES.DEAN)
+  ) {
+    await tx.outcomeChange.create({
+      data: {
+        actor_id: userId,
+        input: JSON.parse(token(review.input)),
+        before: JSON.parse(token(current)) ?? Prisma.JsonNull,
+        after: JSON.parse(token(review.after)) ?? Prisma.JsonNull,
+      },
+    });
+  }
+  return result;
 }
 
 export async function commitOutcomeWrite(
@@ -551,6 +722,7 @@ export async function commitOutcomeWrite(
       if (review.input.kind === "ILO") {
         return failure("Institutional Outcome code already exists.");
       }
+      if (review.input.kind === "COMMON_PO") return failure("Common PO code already exists.");
       return failure("Program Outcome code already exists.");
     }
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")

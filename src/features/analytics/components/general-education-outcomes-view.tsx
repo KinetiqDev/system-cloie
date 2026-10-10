@@ -116,6 +116,20 @@ export function GeneralEducationOutcomesView({
     courseMatrix,
   } = data;
 
+  if (data.iloEvidenceApplicable === false) {
+    return (
+      <Alert variant="information">
+        <AlertTitle>ILO evidence is not applicable to this alignment mode</AlertTitle>
+        <AlertDescription>
+          These General Education courses align to shared Common POs. Their{" "}
+          {countedNoun(data.commonModeRatingCount ?? 0, "valid rating")} remain available in Course
+          and CILO evidence. Common PO mappings report alignment only, not ILO evidence or Common PO
+          attainment.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   const ordered = catalogOrder(outcomes);
   const hasOutcomes = ordered.length > 0;
   const crossScaleOutcomes = ordered.filter((outcome) => outcome.spansMultipleScales);
@@ -131,6 +145,16 @@ export function GeneralEducationOutcomesView({
 
   return (
     <div className="flex flex-col gap-6">
+      {(data.commonModeCourseCount ?? 0) > 0 && (
+        <Alert variant="information">
+          <AlertTitle>Common PO courses are separate from ILO evidence</AlertTitle>
+          <AlertDescription>
+            {countedNoun(data.commonModeCourseCount ?? 0, "course")} use Common PO alignment. Their{" "}
+            {countedNoun(data.commonModeRatingCount ?? 0, "valid rating")} are not missing ILO
+            mappings and do not enter the ILO results below.
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Unlinked valid ratings are reported whenever they exist, including in a
           scope whose ratings reach no ILO row at all — otherwise the counts a
           reader most needs would disappear exactly when mapping is broken. */}

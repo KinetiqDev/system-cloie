@@ -125,7 +125,12 @@ type GeCiloBindingRow = {
   cilo: {
     id: string;
     description: string;
-    course: { id: string; code: string; title: string } | null;
+    course: {
+      id: string;
+      code: string;
+      title: string;
+      ge_alignment_mode?: import("@prisma/client").GEAlignmentMode;
+    } | null;
     cilo_institutional_outcome_mappings: GeIloMappingRow[];
   } | null;
   course_bound_evaluation: {
@@ -322,7 +327,12 @@ function indexEvidenceBindings(
         resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds)
       );
     }
-    outcomeIdsByQuestion.set(key, binding.cilo?.cilo_institutional_outcome_mappings ?? []);
+    outcomeIdsByQuestion.set(
+      key,
+      binding.cilo?.course?.ge_alignment_mode === "COMMON_PO"
+        ? []
+        : (binding.cilo?.cilo_institutional_outcome_mappings ?? [])
+    );
   }
   return { bindingByQuestion, outcomeIdsByQuestion, ciloIdsByEvaluation, ciloLabelsByEvaluation };
 }
@@ -421,7 +431,7 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
               select: {
                 id: true,
                 description: true,
-                course: { select: { id: true, code: true, title: true } },
+                course: { select: { id: true, code: true, title: true, ge_alignment_mode: true } },
                 cilo_institutional_outcome_mappings: {
                   select: {
                     manifestation: true,
@@ -692,6 +702,7 @@ const readGeneralEducationAlignments = cache(async function readGeneralEducation
         is_active: true,
         course: {
           course_scope: "GENERAL_EDUCATION",
+          ge_alignment_mode: "ILO",
           course_assignments: { some: scope.courseAssignmentScope },
         },
       },
@@ -839,13 +850,26 @@ export async function getGeneralEducationOutcomes(
         id: true,
         code: true,
         title: true,
+        ge_alignment_mode: true,
         cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
       },
     }),
   ]);
   const outcomeIdsOf = geOutcomeIdResolverFor(evidence);
+  const commonCourseIds = new Set(
+    scopedCourses
+      .filter((course) => course.ge_alignment_mode === "COMMON_PO")
+      .map((course) => course.id)
+  );
+  const iloEvidenceApplicable =
+    scopedCourses.length === 0 ||
+    scopedCourses.some((course) => course.ge_alignment_mode !== "COMMON_PO");
+  const iloRatingRows = evidence.ratingRows.filter((row) => !commonCourseIds.has(row.course.id));
+  const commonModeRatingCount = evidence.ratingRows.filter(
+    (row) => commonCourseIds.has(row.course.id) && isValidGeRating(row, evidence.snapshotById)
+  ).length;
 
-  const outcomeRows: OutcomeEvidenceRow[] = evidence.ratingRows.flatMap((row) => {
+  const outcomeRows: OutcomeEvidenceRow[] = iloRatingRows.flatMap((row) => {
     const mappings = geOutcomeMappingsFor(evidence, row);
     if (mappings.length === 0) return [];
     const ciloLabel =
@@ -888,14 +912,16 @@ export async function getGeneralEducationOutcomes(
   const aggregation = aggregateOutcomeEvidence(outcomeRows);
   const outcomes = mergeGeIloRows(iloCatalog, buildOutcomeEvidenceDtos(aggregation));
   const courseOutcomeEvidence = collectGeCourseOutcomeEvidence(
-    evidence.ratingRows,
+    iloRatingRows,
     outcomeIdsOf,
     evidence.snapshotById
   );
   const courses = new Map<string, GeCourseRef>();
-  for (const row of evidence.ratingRows) courses.set(row.course.id, row.course);
-  for (const row of evidence.assignments) courses.set(row.course.id, row.course);
-  for (const course of scopedCourses) courses.set(course.id, course);
+  for (const row of iloRatingRows) courses.set(row.course.id, row.course);
+  for (const row of evidence.assignments)
+    if (!commonCourseIds.has(row.course.id)) courses.set(row.course.id, row.course);
+  for (const course of scopedCourses)
+    if (!commonCourseIds.has(course.id)) courses.set(course.id, course);
 
   const scopeEmptyReason = geScopeEmptyReason(
     evidence.evaluationOpportunityCount,
@@ -903,6 +929,9 @@ export async function getGeneralEducationOutcomes(
   );
 
   return {
+    iloEvidenceApplicable,
+    commonModeCourseCount: commonCourseIds.size,
+    commonModeRatingCount,
     emptyReason:
       scopeEmptyReason ??
       (outcomes.some((outcome) => outcome.ratingCount > 0) ? null : "no-mapped-outcomes"),
@@ -910,7 +939,7 @@ export async function getGeneralEducationOutcomes(
     currentMappingDisclosure: GE_CURRENT_MAPPING_DISCLOSURE,
     manyToManyDisclosure: aggregation.hasMultiMappedCilo,
     unlinkedRatings: summarizeUnlinkedRatings({
-      ratingRows: evidence.ratingRows,
+      ratingRows: iloRatingRows,
       outcomeIdsOf,
       isValidRating: (row) => isValidGeRating(row, evidence.snapshotById),
     }),

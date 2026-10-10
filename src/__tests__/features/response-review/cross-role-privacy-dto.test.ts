@@ -167,7 +167,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
     // POs and holds no ILO fields. One shape with both lists renamed would let
     // ILO rows ride in a PO field, so the variants are structurally distinct.
     expectTypeOf<SubmittedCiloAnswerBinding["layer"]>().toEqualTypeOf<
-      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME"
+      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME" | "COMMON_PROGRAM_OUTCOME"
     >();
 
     const institutional: SubmittedCiloAnswerBinding = {
@@ -201,7 +201,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
 
   it("a course evaluation detail declares which alignment layer its surfaces use", () => {
     expectTypeOf<IdentifiedCourseEvaluationDetail["alignmentLayer"]>().toEqualTypeOf<
-      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME"
+      "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME" | "COMMON_PROGRAM_OUTCOME"
     >();
     // Identified review stays identified: the layer and ILO evidence rows add
     // no respondent identity of their own and no raw answer text.

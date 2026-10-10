@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import type { CILOMappingManifestation } from "@prisma/client";
+import type { CILOMappingManifestation, POClassification } from "@prisma/client";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import type { CreatePOInput, UpdatePOInput } from "../schemas/po";
 
@@ -21,6 +21,8 @@ export type ProgramPOItem = {
   id: string;
   code: string;
   description: string;
+  classification: POClassification;
+  common_outcome_id: string | null;
   order: number;
   is_active: boolean;
   program_id: string;
@@ -57,7 +59,7 @@ export async function listProgramPOs(
         select: { cilo_mappings: true },
       },
     },
-    orderBy: [{ order: "asc" }, { code: "asc" }],
+    orderBy: [{ order: "asc" }, { code: "asc" }, { id: "asc" }],
   });
 
   return {

@@ -29,6 +29,7 @@ describe("Program Head Outcome actions", () => {
     const formData = new FormData();
     formData.set("programId", PROGRAM_ID);
     formData.set("code", "PO-1");
+    formData.set("classification", "CORE");
     formData.set("description", "Critical thinking");
 
     await expect(createPOAction(formData)).resolves.toEqual({ success: true });
@@ -42,6 +43,7 @@ describe("Program Head Outcome actions", () => {
     const { createPOAction } = await import("@/lib/actions/program-head-outcome-actions");
     const formData = new FormData();
     formData.set("code", "PO-1");
+    formData.set("classification", "CORE");
     formData.set("description", "Critical thinking");
 
     await expect(createPOAction(formData)).resolves.toMatchObject({ success: false });

@@ -76,6 +76,7 @@ function baseCreateInput(
     code: row.courseCode,
     title: row.courseTitle,
     course_scope: row.courseScope ?? CourseScope.PROGRAM_SPECIFIC,
+    ge_alignment_mode: row.courseScope === CourseScope.GENERAL_EDUCATION ? "COMMON_PO" : "ILO",
     program_id: programId,
     major_id: majorId,
     default_year_level: row.yearLevel ?? undefined,

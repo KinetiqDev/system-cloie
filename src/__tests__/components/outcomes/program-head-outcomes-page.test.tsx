@@ -58,6 +58,8 @@ function makePO(overrides: Partial<ProgramPOItem> = {}): ProgramPOItem {
   return {
     id: "po-1",
     code: "PO-1",
+    classification: "CORE",
+    common_outcome_id: null,
     description: "Program Outcome one",
     order: 0,
     is_active: true,
@@ -75,6 +77,40 @@ describe("ProgramHeadOutcomesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     deletePOActionMock.mockResolvedValue({ success: true });
+  });
+
+  it("shows administrative categories read-only and never reorders a filtered list", async () => {
+    render(
+      <ProgramHeadOutcomesPage
+        program={program}
+        pos={[
+          makePO(),
+          makePO({
+            id: "po-common",
+            code: "LOCAL-COMMON",
+            classification: "COMMON",
+            common_outcome_id: "common-1",
+            order: 4,
+          }),
+          makePO({
+            id: "po-acd",
+            code: "ACD-PO",
+            classification: "INSTITUTION_SPECIFIC",
+            order: 7,
+          }),
+        ]}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Edit LOCAL-COMMON" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archive ACD-PO" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Common (1)" }));
+    expect(screen.getByText("LOCAL-COMMON")).toBeInTheDocument();
+    expect(screen.queryByText("PO-1")).not.toBeInTheDocument();
+    await act(async () => {
+      dndState.onDragEnd?.({ active: { id: "po-common" }, over: { id: "po-1" } });
+    });
+    expect(reorderPOsActionMock).not.toHaveBeenCalled();
+    expect(screen.getByText("Return to All to reorder")).toBeInTheDocument();
   });
 
   it("shows the empty state and opens the create dialog from it", () => {
@@ -117,7 +153,7 @@ describe("ProgramHeadOutcomesPage", () => {
       "href",
       "/program-head/programs/program-1/outcomes/mapping"
     );
-    expect(screen.getByText("Drag rows to reorder")).toBeInTheDocument();
+    expect(screen.getByText("Drag rows to reorder the complete catalog")).toBeInTheDocument();
   });
 
   it("archives a PO only through the confirmation dialog", async () => {

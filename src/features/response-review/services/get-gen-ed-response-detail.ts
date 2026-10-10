@@ -1,8 +1,8 @@
-import { StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
+import { type GEAlignmentMode, StudentSection, TargetStakeholder, YearLevel } from "@prisma/client";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
 import { prisma } from "@/lib/db/prisma";
-import { loadCiloIloMappings } from "./cilo-mappings";
+import { loadCiloIloMappings, loadCiloCommonMappings } from "./cilo-mappings";
 import { loadRespondentIdentityContexts } from "./respondent-context";
 import { buildPeriodLabel } from "./period-label";
 import {
@@ -26,7 +26,12 @@ type GeneralEducationCourseBoundEvaluation = {
   deployment_name: string;
   instrument: { structure_snapshot: unknown };
   course_assignment: {
-    course: { code: string; title: string; major: { name: string } | null };
+    course: {
+      ge_alignment_mode?: GEAlignmentMode;
+      code: string;
+      title: string;
+      major: { name: string } | null;
+    };
     faculty: { name: string } | null;
     year_level: YearLevel;
     section: StudentSection;
@@ -92,17 +97,24 @@ export async function getGenEdResponseDetail(
   const evaluation: GeneralEducationCourseBoundEvaluation = response.assignment.course_bound;
   const ca = evaluation.course_assignment;
 
+  const isCommon = ca.course.ge_alignment_mode === "COMMON_PO";
+  const ids = evaluation.cilo_question_bindings
+    .map((binding) => binding.cilo_id)
+    .filter((id): id is string => id !== null);
+  const commonMappings = isCommon ? await loadCiloCommonMappings(ids) : new Map();
   const [identityContexts, iloMappings] = await Promise.all([
     loadRespondentIdentityContexts(
       [response.respondent.id],
       TargetStakeholder.STUDENT,
       ca.term_instance.id
     ),
-    loadCiloIloMappings(
-      evaluation.cilo_question_bindings
-        .map((binding) => binding.cilo_id)
-        .filter((ciloId): ciloId is string => ciloId !== null)
-    ),
+    isCommon
+      ? Promise.resolve(new Map())
+      : loadCiloIloMappings(
+          evaluation.cilo_question_bindings
+            .map((binding) => binding.cilo_id)
+            .filter((ciloId): ciloId is string => ciloId !== null)
+        ),
   ]);
 
   // General Education answers reach Institutional Learning Outcomes only, so
@@ -114,9 +126,9 @@ export async function getGenEdResponseDetail(
       snapshot: evaluation.instrument.structure_snapshot,
       ciloBindings: evaluation.cilo_question_bindings,
       poSnapshots: [],
-      layer: "INSTITUTIONAL_OUTCOME",
+      layer: isCommon ? "COMMON_PROGRAM_OUTCOME" : "INSTITUTIONAL_OUTCOME",
     },
-    { poMappings: new Map(), iloMappings }
+    { poMappings: new Map(), iloMappings, commonMappings }
   );
 
   return {
