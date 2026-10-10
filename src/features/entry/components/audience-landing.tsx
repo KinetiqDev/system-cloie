@@ -61,8 +61,8 @@ export function AudienceLanding({
         Skip to content
       </a>
       <header className="border-border border-b">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-x-4 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-x-2 px-4 py-3 sm:gap-x-4 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <CloieLogoMark className="h-9" />
             <div className="min-w-0">
               <p className="text-title-md font-bold">System CLOIE</p>
@@ -78,12 +78,14 @@ export function AudienceLanding({
             <a
               href={guideHref}
               aria-label="User guide &amp; docs"
-              className={textLink}
+              // Below `sm` the visible label is dropped, leaving the icon-only
+              // 44 px target. The header must hold one row down to 320 px, so the
+              // label lives from `sm` up rather than at a shortened "Guide".
+              className={`${textLink} max-sm:min-w-11 max-sm:justify-center`}
               {...externalLinkAttributes(guideHref)}
             >
               <span className="hidden sm:inline">User guide &amp; docs</span>
-              <span className="sm:hidden">Guide</span>
-              <BookOpen className="size-4" aria-hidden="true" />
+              <BookOpen className="size-4 shrink-0" aria-hidden="true" />
             </a>
             <AppearanceMenuTrigger enabled={resolveAppearanceAvailability()} />
           </nav>

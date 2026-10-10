@@ -3,6 +3,36 @@ import { E2E_CONTRACT } from "./support/contract";
 import { expectNoAxeViolations, expectNoHorizontalOverflow } from "./support/helpers";
 import { gotoStable } from "./support/visual";
 
+/**
+ * The audience header carries the product name, the guide shortcut, and the
+ * appearance control. `docs/design.md` requires a page header to hold one
+ * visual row down to 320 px; a wrapped product name doubles the header and
+ * spends the first screen the visitor needs for content.
+ */
+for (const entrance of E2E_CONTRACT.publicEntrances) {
+  test(`mobile ${entrance.audience} header holds one row at 320 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await gotoStable(page, entrance.landing);
+
+    const brand = page.getByRole("banner").getByText("System CLOIE", { exact: true });
+    await expect(brand).toBeVisible();
+    // One line box means the brand did not wrap; a wrapped brand reports two.
+    expect(
+      await brand.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return range.getClientRects().length;
+      })
+    ).toBe(1);
+
+    const guideLink = page.getByRole("link", { name: "User guide & docs" });
+    const guideBox = (await guideLink.boundingBox())!;
+    expect(guideBox.width).toBeGreaterThanOrEqual(44);
+    expect(guideBox.height).toBeGreaterThanOrEqual(44);
+    await expectNoHorizontalOverflow(page);
+  });
+}
+
 for (const entrance of E2E_CONTRACT.publicEntrances) {
   test(`mobile ${entrance.audience} entrance keeps a focused sign-in journey`, async ({ page }) => {
     await gotoStable(page, entrance.landing);

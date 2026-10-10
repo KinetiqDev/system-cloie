@@ -45,7 +45,7 @@ export function ProgramHeadSelector({ programs }: { programs: ProgramHeadProgram
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 py-10">
       <div className="flex flex-col gap-2 text-center">
         <p className="text-link text-label-sm tracking-wider uppercase">Program Head workspace</p>
-        <h1 className="text-title-lg text-foreground font-bold tracking-tight">Choose a Program</h1>
+        <h1 className="text-heading-xl text-foreground tracking-tight">Choose a Program</h1>
         <p className="text-body-md text-muted-foreground">
           Select the Program you want to manage. Each workspace opens one explicit Program context;
           no Program is selected on your behalf.
