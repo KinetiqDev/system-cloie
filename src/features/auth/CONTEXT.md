@@ -87,8 +87,12 @@ _Avoid_: Guest role, public role
 One of the audience-separated public entry points where a person chooses how they enter System CLOIE: the Student entrance, the staff entrance (Secretary, Dean, Program Head, General Education Coordinator, Faculty), Faculty registration, or the email-first external entrance for Alumni and Industry Partner. Every entrance issues a legal acknowledgement ticket bound to that entrance before any authentication contact.
 _Avoid_: Role selection portal, one shared role card grid
 
+**Audience landing page**:
+A public page at `/entry/student`, `/entry/staff`, or `/entry/external` that identifies its audience and offers one primary sign-in action into the existing scoped entrance. Student has no registration link; staff offers a secondary Faculty request link; external offers a secondary account-creation link. These pages choose a navigation destination, never claim a role or grant access. Login and audience-specific registration back navigation returns to the corresponding audience landing page.
+_Avoid_: Authentication gate, audience detection, workspace
+
 **Public entry**:
-The scoped entrances plus the System CLOIE landing page are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account.
+The audience landing pages, scoped entrances, and System CLOIE homepage are the way people enter System CLOIE, whether they are registering for the first time or returning to an existing account. The homepage links to the three audience landing pages rather than presenting competing sign-in actions.
 _Avoid_: Role-less login as the main entry point, retired portal selection
 
 **Entry intent**:

@@ -15,16 +15,18 @@ export function EntryShell({
   description,
   children,
   footer,
+  backLink = { href: "/", label: "All sign-in options" },
 }: {
   title: string;
   description: string;
   children: ReactNode;
   footer?: ReactNode;
+  backLink?: { href: string; label: string };
 }) {
   return (
     <div className="entry-links mx-auto flex w-full max-w-lg min-w-0 flex-col px-4 py-6 sm:py-12">
-      <BackLink href="/" size="default" className="mb-5 self-start">
-        All sign-in options
+      <BackLink href={backLink.href} size="default" className="mb-5 self-start">
+        {backLink.label}
       </BackLink>
       <div className="mb-7 flex flex-col items-center text-center">
         <div className="mb-5 flex items-center gap-3">

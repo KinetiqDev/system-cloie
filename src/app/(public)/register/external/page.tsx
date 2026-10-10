@@ -25,6 +25,7 @@ export default async function ExternalRegisterPage() {
 
   return (
     <EntryShell
+      backLink={{ href: "/entry/external", label: "Alumni & Industry Partners" }}
       title="Create an external account"
       description="Choose Alumni or Industry Partner, then verify your inbox. Verification never implies institutional approval."
       footer={

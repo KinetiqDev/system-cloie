@@ -25,7 +25,7 @@ function renderHome() {
 }
 
 describe("Landing page", () => {
-  it("renders the three scoped audience entrances with correct hrefs", () => {
+  it("links the audience directory to dedicated landing pages", () => {
     renderHome();
 
     expect(screen.getByText("Welcome to System CLOIE")).toBeInTheDocument();
@@ -34,17 +34,16 @@ describe("Landing page", () => {
     const studentCard = screen.getByRole("link", { name: /Students/i });
     const staffCard = screen.getByRole("link", { name: /Staff & Faculty/i });
     const externalCard = screen.getByRole("link", { name: /Alumni & Partners/i });
-    expect(studentCard.getAttribute("href")).toBe("/login/student");
-    expect(staffCard.getAttribute("href")).toBe("/login/staff");
-    expect(externalCard.getAttribute("href")).toBe("/login/external");
+    expect(studentCard.getAttribute("href")).toBe("/entry/student");
+    expect(staffCard.getAttribute("href")).toBe("/entry/staff");
+    expect(externalCard.getAttribute("href")).toBe("/entry/external");
   });
 
-  it("keeps each audience card a single link", () => {
+  it("offers audience navigation rather than competing sign-in actions", () => {
     renderHome();
-    for (const name of ["Students", "Staff & Faculty", "Alumni & Partners"]) {
-      const card = screen.getByRole("link", { name: `Sign in: ${name}` });
-      expect(card.querySelector("button, a")).toBeNull();
-    }
+    expect(screen.getByRole("navigation", { name: "Choose your audience" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /sign in/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Submit a Faculty request/i })).toBeNull();
   });
 
   it("explains what System CLOIE is and is not, without testimonials", () => {
@@ -56,13 +55,9 @@ describe("Landing page", () => {
     expect(screen.queryByText(/testimonial/i)).toBeNull();
   });
 
-  it("links Faculty registration, help, and legal documents", () => {
+  it("preserves help and legal documents", () => {
     renderHome();
 
-    expect(screen.getByRole("link", { name: /Submit a Faculty request/i })).toHaveAttribute(
-      "href",
-      "/register/faculty"
-    );
     expect(screen.getByText("Help and frequently asked questions")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Privacy Notice" })).toHaveAttribute(
       "href",

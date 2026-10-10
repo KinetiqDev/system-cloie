@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
-import { Building2, CheckCircle2, GraduationCap, Users, XCircle } from "lucide-react";
-import { PortalChoiceCard, InstallAppButton } from "@/features/portals";
+import { ArrowRight, CheckCircle2, XCircle } from "lucide-react";
+import { InstallAppButton } from "@/features/portals";
 import { EntryHelpFaq } from "@/features/entry";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
@@ -75,40 +75,46 @@ export default function Home() {
             of Davao.
           </p>
 
-          {/* Audience entry cards */}
-          <div className="mt-9 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-3 lg:gap-6">
-            <PortalChoiceCard
-              icon={<GraduationCap className="size-7" />}
-              title="Students"
-              description="Answer course evaluations with your ACD Google account."
-              href="/login/student"
-              badge="ACD email required"
-            />
-            <PortalChoiceCard
-              icon={<Building2 className="size-7" />}
-              title="Staff & Faculty"
-              description="Manage evaluations and academic work with your ACD Google account."
-              href="/login/staff"
-              badge="ACD email required"
-            />
-            <PortalChoiceCard
-              icon={<Users className="size-7" />}
-              title="Alumni & Partners"
-              description="Share graduate or industry feedback with email or Google."
-              href="/login/external"
-              badge="Email or Google"
-            />
-          </div>
-
-          <p className="text-body-sm text-muted-foreground mt-6">
-            New Faculty member?{" "}
-            <Link
-              href="/register/faculty"
-              className="text-link hover:text-primary-hover focus-visible:ring-ring inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Submit a Faculty request
-            </Link>
-          </p>
+          <nav aria-label="Choose your audience" className="mt-9 w-full max-w-2xl text-left">
+            <h2 className="text-title-md text-foreground mb-3">Choose your audience</h2>
+            <ul className="border-border divide-border divide-y border-y">
+              {[
+                {
+                  title: "Students",
+                  description: "Answer your course evaluations",
+                  href: "/entry/student",
+                },
+                {
+                  title: "Staff & Faculty",
+                  description: "Manage evaluations and academic work",
+                  href: "/entry/staff",
+                },
+                {
+                  title: "Alumni & Partners",
+                  description: "Share graduate and industry feedback",
+                  href: "/entry/external",
+                },
+              ].map(({ title, description, href }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="hover:bg-muted focus-visible:ring-ring flex items-center justify-between gap-4 rounded-sm px-3 py-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <span className="min-w-0">
+                      <span className="text-title-md text-foreground block">{title}</span>
+                      <span className="text-body-sm text-muted-foreground mt-1 block">
+                        {description}
+                      </span>
+                    </span>
+                    <ArrowRight
+                      className="text-muted-foreground size-5 shrink-0"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </section>
 
         {/* What it is / what it is not */}

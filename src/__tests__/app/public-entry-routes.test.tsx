@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import StudentLandingPage from "@/app/(public)/entry/student/page";
+import StaffLandingPage from "@/app/(public)/entry/staff/page";
+import ExternalLandingPage from "@/app/(public)/entry/external/page";
 import StudentLoginPage from "@/app/(public)/login/student/page";
 import StaffLoginPage from "@/app/(public)/login/staff/page";
 import FacultyRegisterPage from "@/app/(public)/register/faculty/page";
@@ -56,6 +59,25 @@ describe("Public entry routes", () => {
     });
   });
 
+  it("student landing offers only student sign-in and no registration", () => {
+    render(<StudentLandingPage />);
+    expect(screen.getByRole("heading", { level: 1, name: "Students" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Student sign in" })).toHaveAttribute(
+      "href",
+      "/login/student"
+    );
+    expect(screen.getByRole("link", { name: "Choose another audience" })).toHaveAttribute(
+      "href",
+      "/"
+    );
+    expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", {
+        name: /staff|faculty|alumni|partner|register|create an account/i,
+      })
+    ).toBeNull();
+  });
+
   it("student entrance offers a single ACD Google action with Secretary guidance", async () => {
     render(await StudentLoginPage());
     expect(screen.getByRole("heading", { level: 1, name: "Student sign in" })).toBeInTheDocument();
@@ -64,13 +86,47 @@ describe("Public entry routes", () => {
       "text-sm",
       "pointer-coarse:h-11"
     );
-    expect(screen.getByRole("link", { name: "All sign-in options" })).toHaveClass(
+    expect(screen.getByRole("link", { name: "Students" })).toHaveClass(
       "h-10",
       "pointer-coarse:h-11"
     );
     expect(screen.getByText(/Secretary's office sets up your account/i)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /faculty/i })).toBeNull();
   });
+
+  it.each([
+    {
+      Page: StaffLandingPage,
+      heading: "Staff & Faculty",
+      action: "Staff & faculty sign in",
+      login: "/login/staff",
+      registration: "/register/faculty",
+      registerLabel: "Submit a Faculty request",
+    },
+    {
+      Page: ExternalLandingPage,
+      heading: "Alumni & Industry Partners",
+      action: "Alumni & partner sign in",
+      login: "/login/external",
+      registration: "/register/external",
+      registerLabel: "Create an account",
+    },
+  ])(
+    "$heading landing keeps sign-in and registration within its audience",
+    ({ Page, heading, action, login, registration, registerLabel }) => {
+      render(<Page />);
+      expect(screen.getByRole("heading", { level: 1, name: heading })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: action })).toHaveAttribute("href", login);
+      expect(screen.getByRole("link", { name: registerLabel })).toHaveAttribute(
+        "href",
+        registration
+      );
+      const entryLinks = screen
+        .getAllByRole("link")
+        .filter((link) => /^\/(login|register)\//.test(link.getAttribute("href") ?? ""));
+      expect(entryLinks.map((link) => link.getAttribute("href"))).toEqual([login, registration]);
+    }
+  );
 
   it("staff entrance offers one Google action for all internal roles", async () => {
     render(await StaffLoginPage());
@@ -113,6 +169,29 @@ describe("Public entry routes", () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue with Google/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    { Page: StudentLoginPage, label: "Students", href: "/entry/student" },
+    { Page: StaffLoginPage, label: "Staff & Faculty", href: "/entry/staff" },
+    { Page: FacultyRegisterPage, label: "Staff & Faculty", href: "/entry/staff" },
+    { Page: ExternalRegisterPage, label: "Alumni & Industry Partners", href: "/entry/external" },
+  ])(
+    "$label entry back navigation returns to its audience landing",
+    async ({ Page, label, href }) => {
+      render(await Page());
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute("href", href);
+      expect(screen.queryByRole("link", { name: "All sign-in options" })).toBeNull();
+    }
+  );
+
+  it("external login returns to its audience rather than linking staff sign-in", async () => {
+    render(await ExternalLoginPage({ searchParams: emptyParams }));
+    expect(screen.getByRole("link", { name: "Alumni & Industry Partners" })).toHaveAttribute(
+      "href",
+      "/entry/external"
+    );
+    expect(screen.queryByRole("link", { name: /staff sign-in/i })).toBeNull();
   });
 
   it("external registration collects a name and the Alumni/Industry choice", async () => {

@@ -16,6 +16,7 @@ export default async function FacultyRegisterPage() {
   if (!email) {
     return (
       <EntryShell
+        backLink={{ href: "/entry/staff", label: "Staff & Faculty" }}
         title="Faculty registration"
         description="Faculty access starts with your ACD Google account, then an explicit request the institution reviews."
         footer={
@@ -58,6 +59,7 @@ export default async function FacultyRegisterPage() {
 
   return (
     <EntryShell
+      backLink={{ href: "/entry/staff", label: "Staff & Faculty" }}
       title="Faculty registration"
       description="Submit your details and program affiliation. Your request waits for review — it grants nothing until confirmed."
       footer={

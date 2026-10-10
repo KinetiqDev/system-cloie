@@ -25,6 +25,7 @@ export default async function StudentLoginPage() {
 
   return (
     <EntryShell
+      backLink={{ href: "/entry/student", label: "Students" }}
       title="Student sign in"
       description="Answer course evaluations with your ACD Google account."
     >

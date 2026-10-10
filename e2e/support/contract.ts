@@ -17,6 +17,32 @@ import { D, U } from "../../prisma/seed/constants/ids";
  * them separately because they are not identifiers under test.
  */
 export const E2E_CONTRACT = {
+  publicEntrances: [
+    {
+      audience: "Students",
+      landing: "/entry/student",
+      login: "/login/student",
+      action: "Student sign in",
+      registration: null,
+      registrationLabel: null,
+    },
+    {
+      audience: "Staff & Faculty",
+      landing: "/entry/staff",
+      login: "/login/staff",
+      action: "Staff & faculty sign in",
+      registration: "/register/faculty",
+      registrationLabel: "Submit a Faculty request",
+    },
+    {
+      audience: "Alumni & Industry Partners",
+      landing: "/entry/external",
+      login: "/login/external",
+      action: "Alumni & partner sign in",
+      registration: "/register/external",
+      registrationLabel: "Create an account",
+    },
+  ],
   secretaryAssignments: {
     courseCodes: ["GEUS", "IT201"],
     faculty: { id: U.FAC_BSBA, email: "faculty-bsba@cloie.test", name: "Marco Villanueva" },
