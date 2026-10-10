@@ -124,13 +124,16 @@ function UserActionMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn(
-          "hover:bg-muted text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors",
-          triggerClassName
-        )}
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${user.name}`}
+            className={cn("text-muted-foreground hover:text-foreground", triggerClassName)}
+          />
+        }
       >
-        <MoreVertical className="size-4" />
-        <span className="sr-only">Actions for {user.name}</span>
+        <MoreVertical className="size-4" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onViewUser(user)}>
