@@ -318,7 +318,7 @@ function FilterSelect({
       <Select key={value} name={name} defaultValue={value} items={allOptions}>
         <SelectTrigger
           id={id}
-          className="bg-background border-input/80 hover:border-input focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
+          className="bg-background focus-visible:ring-ring min-h-10 w-full focus-visible:ring-2 sm:min-h-8"
         >
           <SelectValue placeholder={blankLabel} />
         </SelectTrigger>

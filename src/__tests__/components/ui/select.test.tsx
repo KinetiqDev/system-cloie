@@ -34,7 +34,8 @@ describe("Select", () => {
       renderBasicSelect();
       const trigger = screen.getByLabelText("Role");
       expect(trigger).toHaveClass("bg-surface-input");
-      expect(trigger).toHaveClass("border-input");
+      expect(trigger).toHaveClass("border-border-strong", "border-2");
+      expect(trigger).not.toHaveClass("outline-2", "outline-offset-2");
     });
 
     it("does not retain raw-theme dark palette selectors that bypass the semantic tokens", () => {
