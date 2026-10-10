@@ -66,7 +66,7 @@ export default function Home() {
 
           <h1
             id="landing-hero-heading"
-            className="text-display-md text-foreground sm:text-display-lg font-extrabold tracking-tight"
+            className="text-display-md text-foreground sm:text-display-lg tracking-tight"
           >
             Welcome to System CLOIE
           </h1>

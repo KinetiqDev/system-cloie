@@ -105,7 +105,9 @@ Theme-adaptive:
 - Dark: use a light brand-safe plate (`#FFFFFF` or `#F8FAFC`) with a subtle border.
 - **The product mark's plate is circular, never rectangular.** The mark rides a white coin — `rounded-full` with a hairline `border-border` ring — in every surface: headers, sidebars, drawers, public entry pages, and the favicon/PWA icons. Size the coin from the outside (height-driven, e.g. `h-9`) and let the artwork keep the mark's native 442 × 500 aspect centered at ~78% of the plate. Use `CloieLogoMark` (`src/components/brand/cloie-logo-mark.tsx`) rather than hand-rolling the plate.
 - Warm colors inside logos are not general UI tokens.
-- Public entry logo pairs use equal 64 px coins on phones and 72 px coins from `sm`. The general homepage hero pair uses 80/96 px coins. Audience-specific landing heroes use equal 112 px coins on phones, 128 px from `sm`, and 160 px from `lg`, with 16/24/32 px gaps. Their ACD seal artwork uses 80/96/120 px and the System CLOIE artwork retains its native aspect at approximately 78% of the plate. Preserve each asset's native aspect ratio and center it without cropping. Both marks sit on white plates in either theme; this is the existing brand-safe color exception. The landing header keeps its compact 36 px product coin.
+- Public entry logo pairs use equal 64 px coins on phones and 72 px coins from `sm`. The general homepage hero pair uses 80/96 px coins. Their ACD seal artwork uses 80/96/120 px and the System CLOIE artwork retains its native aspect at approximately 78% of the plate. Preserve each asset's native aspect ratio and center it without cropping. Both marks sit on white plates in either theme; this is the existing brand-safe color exception. The landing header keeps its compact 36 px product coin.
+- **Audience landing heroes carry no logo pair.** Identity lives in the header, and the first screen belongs to the audience, what signing in does, the single action, and the prerequisites beside it; a second pair of marks at hero scale competes with the decision instead of supporting it. The audience landing routes (`/entry/student`, `/entry/staff`, `/entry/external`) therefore render no hero marks.
+- Page headers must hold one visual row down to 320 px. Secondary chrome — the submark line, an in-page anchor link — is the first thing to drop as width narrows; never let the header wrap to two rows, because wrapped chrome consumes the first screen the visitor needs for content.
 - The System CLOIE source mark is `assets/cloie-logo.svg`, served as `public/logos/cloie-logo.svg` with its native 442 × 500 aspect ratio.
 - Run `pnpm brand:icons` after replacing the source mark. This requires ImageMagick and generates the public SVG copy, circular SVG tab icon, multi-size ICO fallback, 180 × 180 Apple touch icon, and 192/512 px PNG install icons. Icon artwork retains its colors on the circular white plate at ~78% of the tile; the maskable variant keeps the full mark inside the central 80% safe circle. The generator accepts root-attribute reordering, validates the expected viewBox, and completes every conversion before publishing files. A differently sized source mark requires updating the UI dimensions and generator contract together.
 
@@ -205,9 +207,11 @@ Five categorical chart series (`--chart-1` … `--chart-5`), theme-resolved in `
 | Label   | `.text-label-lg`, `md`, `sm`           |
 | Caption | `.text-caption`                        |
 
-Exact sizes live in `globals.css`.
+Exact sizes live in `globals.css`. The display steps are registered as Tailwind utilities, because a plain class rule emits no responsive variant and `lg:text-display-lg` must resolve. Registration puts them in the utilities layer, so a `font-*` or `leading-*` utility on the same element wins and replaces the step's own value — see the rule below.
 
 - Use token utilities, not ad hoc type scales.
+- Compose one token step per element for size, line height, and weight. A `font-*` or `leading-*` utility beside a step replaces that step's own value rather than adjusting it, and inherited call sites must be re-checked when the step's registration changes. The suites assert size and spacing, not weight, so a stray `font-*` can change rendered weight without failing a test.
+- The heading steps remain plain class rules, so a heading step must not be given a responsive variant; the variant would emit no rule and the element would silently keep its base step at every width.
 - Body copy stays at least `0.875rem`; no text below `0.75rem`.
 - Decision text (KPI labels, status, nav labels, auth constraints, action links, chart axes) targets at least `0.875rem` as surfaces migrate; `0.75rem` (`text-label-sm`, `text-caption`) is reserved for tertiary metadata, timestamps, and non-decision annotations. New surfaces MUST meet the target; existing 12px decision text is queued for the typeset pass. The General Education Coordinator dashboard has completed it: KPI values use `.text-heading-xl`, KPI labels and details use `.text-body-sm`, and list-item titles use `.text-title-md`. `DashboardQuickActions` takes `typography="comfortable"` to opt into the same row scale; its default `compact` scale is unchanged until the other dashboards migrate.
 - Headings use primary foreground, not cyan decoration.
@@ -230,6 +234,7 @@ Exact sizes live in `globals.css`.
 - Dashboard stakeholder progress rows use a full-width bar beneath their label/count line. Every bar has the same available width so differing assignment-count lengths cannot distort visual comparisons.
 - Standard desktop controls are 40 px tall; compact table/toolbar controls are 32 px. Density comes from grouping and spacing, not undersized primary actions.
 - Large actions use a 48 px minimum height, 16 px labels, and wrapping for long copy. Landing and public entry actions use the standard `default` button size: 40 px on desktop, 44 px on touch-capable devices, and 14 px labels. Public entry inputs, selects, and grouped controls match those heights through `entry-controls`; input text stays 16 px to avoid mobile browser zoom.
+- An audience landing hero has one primary action and at most one secondary text action. Below `sm` they stack: the primary spans the content column and the secondary centers beneath it, because a wrapped flex row would leave the secondary adrift under a full-width button. From `sm` up they return to one row, primary first.
 - `pointer-coarse:` resolves `(any-pointer: coarse)` so touch-capable hybrid devices also receive ≥44 × 44 px targets. Large actions remain at least 48 px. Viewport width alone does not identify an input method.
 
 | Context         | Layout                                              |
@@ -262,7 +267,7 @@ Use `lucide-react` only, normally 16–24 px, with one outline stroke. Icon-only
 
 | Page type             | Density     | Structure                      | Emphasize                    | Avoid                  |
 | --------------------- | ----------- | ------------------------------ | ---------------------------- | ---------------------- |
-| Landing / portal      | low         | brand header, role cards       | trust, role paths            | admin density          |
+| Landing / portal      | low         | brand header, scoped paths     | trust, one clear path        | admin density          |
 | Auth / onboarding     | low         | focused centered form          | minimal distraction          | app chrome             |
 | Operational dashboard | medium      | shell, KPIs, tools, tables     | scanability                  | hero styling           |
 | Respondent flow       | low         | single-column wizard           | progress, mobile comfort     | sidebars/admin actions |
@@ -400,6 +405,7 @@ Navigation is centralized in `src/lib/constants/navigation.ts`.
 - Active states use selected/primary tokens.
 - Theme does not change route grouping or navigation priority.
 - Dark navigation uses light logo plates.
+- A destination on another origin opens beside the page — `target="_blank" rel="noopener noreferrer"` — so the visitor keeps their place, including a half-finished evaluation or form; same-origin destinations keep normal navigation. The Help Center links (audience landing header/footer and the in-app page Help link) carry this contract.
 - Do not add per-page navigation or expose dev/demo switching in production.
 
 ### 8.5 Cards
