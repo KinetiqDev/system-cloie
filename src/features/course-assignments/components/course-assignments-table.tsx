@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import type { FacetDef } from "@/components/data-table/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -64,9 +66,6 @@ import {
   BookOpen,
   CalendarDays,
   ExternalLink,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { showToast } from "@/components/ui/toast";
@@ -108,6 +107,8 @@ interface CourseAssignmentsTableProps {
   mode?: CourseAssignmentsTableMode;
   availableCourses?: AssignableCourse[];
   availablePrograms?: Program[];
+  /** One filter set per filterable column heading, keyed by the column. */
+  facets?: Record<string, FacetDef[]>;
   onPageChange: (page: number) => void;
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
@@ -483,6 +484,7 @@ function CourseAssignmentsRow({
 function SortableColumnHeader({
   field,
   label,
+  facets,
   activeSort,
   activeDir,
   isPending,
@@ -490,6 +492,7 @@ function SortableColumnHeader({
 }: {
   field: CourseAssignmentSortField;
   label: string;
+  facets?: FacetDef[];
   activeSort: CourseAssignmentSortField | null;
   activeDir: "asc" | "desc";
   isPending: boolean;
@@ -497,29 +500,16 @@ function SortableColumnHeader({
 }) {
   const isActive = activeSort === field;
   return (
-    <TableHead
-      aria-sort={isActive ? (activeDir === "asc" ? "ascending" : "descending") : "none"}
-      className="text-xs font-semibold tracking-widest uppercase"
-    >
-      <button
-        type="button"
-        onClick={() => onSort(field)}
-        aria-label={`Sort by ${label}, currently ${isActive ? activeDir : "unsorted"}`}
-        aria-busy={isPending || undefined}
-        className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold uppercase focus-visible:ring-3 focus-visible:outline-none"
-      >
-        {label}
-        {isActive ? (
-          activeDir === "asc" ? (
-            <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
-          ) : (
-            <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
-          )
-        ) : (
-          <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />
-        )}
-      </button>
-    </TableHead>
+    <FilterableHead
+      label={label}
+      facets={facets}
+      sort={{
+        isActive,
+        direction: activeDir,
+        isPending,
+        onSort: () => onSort(field),
+      }}
+    />
   );
 }
 
@@ -534,6 +524,7 @@ export function CourseAssignmentsTable({
   loading = false,
   availableCourses = [],
   availablePrograms = [],
+  facets,
   onPageChange,
   onAssignmentUpdated,
   onAssignFaculty,
@@ -586,7 +577,23 @@ export function CourseAssignmentsTable({
   );
   const selection = useTableSelection(
     manageableAssignments.map((assignment) => assignment.id),
-    `${page}:${mode}:${selectedProgramId ?? ""}`
+    // Every narrowing value is part of the scope, so a filter change can never
+    // leave a hidden row selected for a later bulk mutation.
+    [
+      page,
+      mode,
+      selectedProgramId ?? "",
+      searchParams.get("termInstanceId") ?? "",
+      searchParams.get("courseId") ?? "",
+      searchParams.get("facultyId") ?? "",
+      searchParams.get("programId") ?? "",
+      searchParams.get("yearLevel") ?? "",
+      searchParams.get("section") ?? "",
+      searchParams.get("isActive") ?? "",
+      searchParams.get("courseScope") ?? "",
+      searchParams.get("roster") ?? "",
+      searchParams.get("q") ?? "",
+    ].join(":")
   );
 
   const handleActivate = async (assignmentId: string) => {
@@ -946,9 +953,9 @@ export function CourseAssignmentsTable({
         </div>
       ) : (
         <div className="bg-card overflow-x-auto rounded-xl border shadow-xs">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow className="hover:bg-transparent">
+          <Table label="Course assignments">
+            <TableHeader>
+              <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
                     aria-label="Select all manageable assignments on this page"
@@ -961,6 +968,7 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="course"
                   label="Course"
+                  facets={facets?.course}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
@@ -969,6 +977,7 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="faculty"
                   label="Faculty"
+                  facets={facets?.faculty}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
@@ -978,6 +987,7 @@ export function CourseAssignmentsTable({
                   <SortableColumnHeader
                     field="program"
                     label="Program"
+                    facets={facets?.program}
                     activeSort={activeSort}
                     activeDir={activeDir}
                     isPending={isSortPending}
@@ -987,6 +997,7 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="class"
                   label="Class"
+                  facets={facets?.class}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
@@ -995,6 +1006,7 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="term"
                   label="Term"
+                  facets={facets?.term}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
@@ -1003,6 +1015,7 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="scope"
                   label="Scope"
+                  facets={facets?.scope}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
@@ -1011,14 +1024,13 @@ export function CourseAssignmentsTable({
                 <SortableColumnHeader
                   field="status"
                   label="Status"
+                  facets={facets?.status}
                   activeSort={activeSort}
                   activeDir={activeDir}
                   isPending={isSortPending}
                   onSort={handleSort}
                 />
-                <TableHead className="text-xs font-semibold tracking-widest uppercase">
-                  Roster
-                </TableHead>
+                <FilterableHead label="Roster" facets={facets?.roster} />
                 <TableHead className="w-[48px]">
                   <span className="sr-only">Actions</span>
                 </TableHead>

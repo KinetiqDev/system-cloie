@@ -26,7 +26,10 @@ import {
   formatResponseYearLevel,
   responseStatusVariant,
 } from "@/features/response-review/components/response-review-labels";
-import type { ResponseDeploymentList } from "@/features/analytics/services/list-program-head-response-deployments";
+import type {
+  ResponseDeploymentList,
+  ResponseFilterOptions,
+} from "@/features/analytics/services/list-program-head-response-deployments";
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
 import {
   buildProgramHeadResponsesTabUrl,
@@ -38,7 +41,10 @@ import {
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import { ViewTabs } from "@/components/layout/view-tabs";
-import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
+import {
+  ProgramHeadResponsesFilters,
+  ProgramHeadResponsesTableHead,
+} from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
 
@@ -169,6 +175,7 @@ function EvaluationEvidence({
                 programId={programId}
                 isCourse={isCourse}
                 state={state}
+                options={data.options}
               />
             </div>
           </>
@@ -288,23 +295,25 @@ function ResponseTable({
   programId,
   isCourse,
   state,
+  options,
 }: {
   items: Deployment[];
   programId: string;
   isCourse: boolean;
   state: ProgramHeadResponsesFilterState;
+  options: ResponseFilterOptions;
 }) {
   return (
-    <Table className="table-fixed">
+    <Table className="table-fixed" label="Evaluation evidence">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[24%]">Evaluation</TableHead>
-          <TableHead className="w-[15%]">{isCourse ? "Class" : "Stakeholder"}</TableHead>
-          <TableHead className="w-[16%]">{isCourse ? "Faculty" : "Target"}</TableHead>
-          <TableHead className="w-[17%]">Period</TableHead>
-          <TableHead className="w-[9%]">Status</TableHead>
-          <TableHead className="w-[9%] text-right">Submitted</TableHead>
-          <TableHead className="w-[10%] text-right">Mean / scale</TableHead>
+          <ProgramHeadResponsesTableHead
+            programId={programId}
+            state={state}
+            options={options}
+            isCourse={isCourse}
+          />
+          <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

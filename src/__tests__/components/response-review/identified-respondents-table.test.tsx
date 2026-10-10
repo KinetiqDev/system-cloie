@@ -82,7 +82,15 @@ describe("IdentifiedRespondentsTable", () => {
     expect(screen.getAllByText("Cara Lim")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("button", { name: "Clear Filters" }));
-    fireEvent.click(screen.getByRole("button", { name: "In Progress" }));
+    // Status narrows through its own column heading, like every other list.
+    fireEvent.click(screen.getByRole("button", { name: "Filter Status" }));
+    const popover = document.querySelector('[data-slot="popover-content"]');
+    const inProgress = Array.from(popover?.querySelectorAll("label") ?? []).find(
+      (label) => (label.textContent ?? "").trim() === "In Progress"
+    );
+    const control = inProgress?.querySelector('[data-slot="radio-group-item"]');
+    expect(control).toBeTruthy();
+    fireEvent.click(control!);
     expect(screen.getAllByTestId("respondent-row")).toHaveLength(1);
     expect(screen.getAllByText("Bob Cruz")).toHaveLength(2);
   });

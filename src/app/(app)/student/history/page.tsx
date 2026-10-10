@@ -54,20 +54,12 @@ async function SubmissionHistory({
     <>
       <div className="border-border bg-surface hidden overflow-hidden rounded-xl border md:block">
         <Table>
-          <TableHeader className="bg-surface-muted/50">
+          <TableHeader>
             <TableRow>
-              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
-                Evaluation Form
-              </TableHead>
-              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
-                Submission Date
-              </TableHead>
-              <TableHead className="text-label-sm font-bold tracking-wider uppercase">
-                Status
-              </TableHead>
-              <TableHead className="text-label-sm text-right font-bold tracking-wider uppercase">
-                Actions
-              </TableHead>
+              <TableHead>Evaluation Form</TableHead>
+              <TableHead>Submission Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

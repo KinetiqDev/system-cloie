@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
-import { AssignmentFilters } from "./shared/assignment-filters";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
+import { buildAssignmentFacets } from "./shared/assignment-facets";
 import { ResultSummaryStrip } from "./shared/result-summary-strip";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { AssignmentFiltersState } from "./shared/assignment-filters";
@@ -56,6 +58,13 @@ export interface CourseAssignmentsPageShellProps {
   selectedProgramId?: string;
   /** False renders a read-only list: no create entry points or form dialog. */
   canManageAssignments?: boolean;
+  /**
+   * The period the list itself falls back to when no period is chosen. Only a
+   * role whose loader applies one (Program Head) supplies it; every other role
+   * lists every period, and `activeTermInstanceId` is then just the creation
+   * form's default.
+   */
+  listDefaultTermInstanceId?: string | null;
 }
 
 function CourseAssignmentsHeader({
@@ -103,12 +112,14 @@ export function CourseAssignmentsPageShell({
   initialError = null,
   selectedProgramId,
   canManageAssignments = true,
+  listDefaultTermInstanceId = null,
 }: CourseAssignmentsPageShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [filters, setFilters] = useState<AssignmentFiltersState>(initialFilters);
+  const [searchDraft, setSearchDraft] = useState(initialFilters.searchQuery);
   const role: CourseAssignmentListRole = mode;
   // Sorting is owned by the table's column headers via URL params; filter and
   // page navigations carry the active sort so it survives those transitions.
@@ -160,13 +171,57 @@ export function CourseAssignmentsPageShell({
     [activeDir, activeSort, pathname, role, router]
   );
 
-  const handleFiltersChange = useCallback(
-    (next: AssignmentFiltersState, navigation: "push" | "replace" = "push") => {
-      setFilters(next);
-      navigateWithState(next, 0, navigation);
+  const searchTimer = useRef<number | null>(null);
+  const handleSearchDraftChange = useCallback(
+    (value: string) => {
+      setSearchDraft(value);
+      if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+      searchTimer.current = window.setTimeout(() => {
+        searchTimer.current = null;
+        setFilters((current) => {
+          const next = { ...current, searchQuery: value };
+          navigateWithState(next, 0, "replace");
+          return next;
+        });
+      }, 300);
     },
     [navigateWithState]
   );
+
+  const updateFilter = useCallback(
+    <K extends keyof AssignmentFiltersState>(key: K, value: AssignmentFiltersState[K]) =>
+      setFilters((current) => {
+        const next = { ...current, [key]: value };
+        navigateWithState(next, 0, "push");
+        return next;
+      }),
+    [navigateWithState]
+  );
+
+  const { byColumn: facets, all: allFacets } = buildAssignmentFacets(filters, updateFilter, {
+    availableCourses,
+    availablePrograms,
+    availableFaculty,
+    termInstances,
+    showProgramFilter: mode === "all-program" || mode === "general-education",
+    hideCourseScopeFilter: mode === "general-education",
+    defaultTermInstanceId: listDefaultTermInstanceId ?? null,
+  });
+
+  const handleClearAll = useCallback(() => {
+    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    setSearchDraft("");
+    updateFilter("termInstanceId", listDefaultTermInstanceId ?? null);
+    updateFilter("courseId", null);
+    updateFilter("facultyId", null);
+    updateFilter("programId", null);
+    updateFilter("yearLevel", null);
+    updateFilter("section", null);
+    updateFilter("isActive", null);
+    updateFilter("courseScope", null);
+    updateFilter("hasActiveRosterMembers", undefined);
+    updateFilter("searchQuery", "");
+  }, [listDefaultTermInstanceId, updateFilter]);
 
   const selectedTerm = termInstances.find((term) => term.id === filters.termInstanceId);
   const periodLabel = selectedTerm
@@ -182,17 +237,35 @@ export function CourseAssignmentsPageShell({
         onCreate={() => setCreateOpen(true)}
       />
 
-      <AssignmentFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        availableCourses={availableCourses}
-        availablePrograms={availablePrograms}
-        availableFaculty={availableFaculty}
-        termInstances={termInstances}
-        showProgramFilter={mode === "all-program" || mode === "general-education"}
-        hideCourseScopeFilter={mode === "general-education"}
-        defaultTermInstanceId={activeTermInstanceId}
-      />
+      <TableToolbar
+        search={{
+          id: "assignment-search",
+          label: "Search assignments",
+          placeholder:
+            mode === "program-head"
+              ? "Search course or faculty"
+              : "Search course, faculty, or program",
+          value: searchDraft,
+          onChange: handleSearchDraftChange,
+        }}
+        facets={allFacets}
+        onClearAll={handleClearAll}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{total}</span>{" "}
+            {total === 1 ? "assignment" : "assignments"}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={handleClearAll}
+            summary="Show results"
+          />
+        </div>
+      </TableToolbar>
 
       <ResultSummaryStrip
         total={total}
@@ -218,6 +291,7 @@ export function CourseAssignmentsPageShell({
         mode={mode}
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
+        facets={facets}
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={canManageAssignments ? () => setCreateOpen(true) : undefined}

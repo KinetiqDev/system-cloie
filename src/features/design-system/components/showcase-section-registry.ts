@@ -8,6 +8,7 @@ import { NavigationShowcase } from "./navigation-showcase";
 import { OverlayAndFeedbackShowcase } from "./overlay-and-feedback-showcase";
 import { ResponsiveShowcase } from "./responsive-showcase";
 import { TableSelectionShowcase } from "./table-selection-showcase";
+import { TableFiltersShowcase } from "./table-filters-showcase";
 import { TokenReference } from "./token-reference";
 
 interface ShowcaseSectionEntry {
@@ -59,6 +60,13 @@ export const SHOWCASE_SECTIONS: readonly ShowcaseSectionEntry[] = [
     description:
       "Selectable table rows using local static state only — selection is reference state and performs no database mutation.",
     component: TableSelectionShowcase,
+  },
+  {
+    id: "table-filters",
+    title: "Table column filters",
+    description:
+      "The shaded header band with a funnel in each column heading, applied filters as removable chips, and spanning search in the toolbar — local static state only.",
+    component: TableFiltersShowcase,
   },
   {
     id: "charts",

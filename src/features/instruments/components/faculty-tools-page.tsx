@@ -154,6 +154,7 @@ export function FacultyToolsPage({
             sections={[
               {
                 heading: "My Templates",
+                filterKey: "my-templates",
                 items: ownedTemplates,
                 renderFooterActions: (item) => <FacultyTemplateActions item={item} />,
                 renderOverflowMenu: (item) => (
@@ -172,6 +173,7 @@ export function FacultyToolsPage({
               },
               {
                 heading: "Available Templates",
+                filterKey: "available-templates",
                 items: availableTemplates,
                 renderFooterActions: (item) => <FacultyTemplateActions item={item} />,
               },

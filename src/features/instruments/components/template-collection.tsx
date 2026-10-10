@@ -1,9 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { BookOpen, MoreVertical } from "lucide-react";
 
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
+import {
+  buildTemplateFacets,
+  DEFAULT_TEMPLATE_FILTERS,
+  filterTemplates,
+  type TemplateFacetColumn,
+  type TemplateFilters,
+} from "./template-facets";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -54,11 +66,18 @@ export type TemplateCollectionItem = {
 type TemplateSection = {
   heading?: string;
   items: TemplateCollectionItem[];
+  /**
+   * Names this section's own filter state. Two sections on one page share the
+   * column headings' vocabulary but never each other's selections.
+   */
+  filterKey: string;
   /** Role-specific action buttons (Edit, Duplicate, Publish, ...). */
   renderFooterActions: (item: TemplateCollectionItem) => ReactNode;
   /** Role-specific overflow menu items (Activate, Delete, ...). */
   renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
 };
+
+export type { TemplateFilters };
 
 function templateTypeLabel(item: TemplateCollectionItem): string {
   return item.templateType === "PROGRAM_WIDE" ? "Program-wide" : "Course-bound";
@@ -140,37 +159,183 @@ function CourseBadge({ item }: { item: TemplateCollectionItem }) {
 export function TemplateCollection({ view, sections, empty }: TemplateCollectionProps) {
   const filledSections = sections.filter((section) => section.items.length > 0);
 
+  // One page, one search. Two sections would otherwise show two identical
+  // search boxes; the facets still narrow per section, because "Status: Active"
+  // means something different for a Program template than for an institutional
+  // baseline.
+  const [query, setQuery] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [sectionFilters, setSectionFilters] = useState<Record<string, TemplateFilters>>({});
+  const pendingQuery = useRef<number | null>(null);
+  const instanceId = useId();
+
+  useEffect(() => {
+    if (searchDraft === query) return;
+    pendingQuery.current = window.setTimeout(() => {
+      pendingQuery.current = null;
+      setQuery(searchDraft);
+    }, 300);
+    return () => {
+      if (pendingQuery.current !== null) window.clearTimeout(pendingQuery.current);
+    };
+  }, [searchDraft, query]);
+
   if (filledSections.length === 0) return <>{empty}</>;
+
+  const filtersFor = (filterKey: string) => sectionFilters[filterKey] ?? DEFAULT_TEMPLATE_FILTERS;
+  const setFiltersFor = (filterKey: string, next: TemplateFilters) =>
+    setSectionFilters((current) => ({ ...current, [filterKey]: next }));
+
+  const totalVisible = filledSections.reduce(
+    (sum, section) =>
+      sum + filterTemplates(section.items, { ...filtersFor(section.filterKey), query }).length,
+    0
+  );
+  const totalItems = filledSections.reduce((sum, section) => sum + section.items.length, 0);
+
+  // Each section keeps its own facet state, so the chips carry the section's
+  // name. Clearing all of them restores the page's opening state.
+  const appliedChips: FacetDef[] = filledSections.flatMap((section) =>
+    buildTemplateFacets(
+      filtersFor(section.filterKey),
+      () => undefined,
+      section.items,
+      section.filterKey
+    ).all.filter(facetIsApplied)
+  );
+  const clearAllFacets = () => {
+    setSearchDraft("");
+    setQuery("");
+    setSectionFilters({});
+  };
 
   return (
     <div className={view === "card" ? "space-y-8" : "space-y-6"}>
+      <TableToolbar
+        search={{
+          id: `${instanceId}-search`,
+          label: "Search templates",
+          placeholder: "Search by name or course…",
+          value: searchDraft,
+          onChange: setSearchDraft,
+        }}
+        facets={appliedChips}
+        onClearAll={clearAllFacets}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{totalVisible}</span> of {totalItems}{" "}
+            template{totalItems === 1 ? "" : "s"}
+          </p>
+        }
+      />
       {filledSections.map((section) => (
-        <section key={section.heading ?? "templates"} className="space-y-4">
-          {section.heading && (
-            <h2 className="text-heading-lg text-foreground text-pretty">{section.heading}</h2>
-          )}
-          {view === "card" ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {section.items.map((item) => (
-                <TemplateCard
-                  key={item.id}
-                  item={item}
-                  renderFooterActions={section.renderFooterActions}
-                  renderOverflowMenu={section.renderOverflowMenu}
-                />
-              ))}
-            </div>
-          ) : (
-            <TemplateTable
-              items={section.items}
-              renderFooterActions={section.renderFooterActions}
-              renderOverflowMenu={section.renderOverflowMenu}
-              sectionHeading={section.heading}
-            />
-          )}
-        </section>
+        <TemplateSectionView
+          key={section.filterKey}
+          view={view}
+          section={section}
+          query={query}
+          filters={filtersFor(section.filterKey)}
+          onFiltersChange={(next) => setFiltersFor(section.filterKey, next)}
+        />
       ))}
     </div>
+  );
+}
+
+/**
+ * One section's rows. The page owns search, because two sections on one page
+ * must not present two identical boxes; the section owns its own facets, so
+ * narrowing one section's Status never hides rows from its sibling.
+ */
+function TemplateSectionView({
+  view,
+  section,
+  query,
+  filters,
+  onFiltersChange,
+}: {
+  view: ToolsViewMode;
+  section: TemplateSection;
+  query: string;
+  filters: TemplateFilters;
+  onFiltersChange: (next: TemplateFilters) => void;
+}) {
+  const instanceId = useId();
+
+  const update = useMemo(
+    () =>
+      <K extends keyof TemplateFilters>(key: K, value: TemplateFilters[K]) =>
+        onFiltersChange({ ...filters, [key]: value }),
+    [filters, onFiltersChange]
+  );
+
+  const enabledFacets = useMemo(() => ({ ...filters, query }), [filters, query]);
+  const visibleItems = useMemo(
+    () => filterTemplates(section.items, enabledFacets),
+    [section.items, enabledFacets]
+  );
+  const facetDefs = useMemo(
+    () => buildTemplateFacets(filters, update, section.items, instanceId),
+    [filters, update, section.items, instanceId]
+  );
+  const clearFilters = () => onFiltersChange(DEFAULT_TEMPLATE_FILTERS);
+
+  return (
+    <section aria-label={section.heading} className="space-y-4">
+      {section.heading && (
+        <h2 className="text-heading-lg text-foreground text-pretty">{section.heading}</h2>
+      )}
+      {view === "card" ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-muted-foreground shrink-0 text-xs tabular-nums">
+            <span className="text-foreground font-medium">{visibleItems.length}</span> of{" "}
+            {section.items.length}
+          </p>
+          <MobileFilterSheet
+            facets={facetDefs.all}
+            activeCount={facetDefs.all.filter(facetIsApplied).length}
+            label="Filters"
+            onClearAll={clearFilters}
+            summary="Show results"
+            triggerClassName="w-auto shrink-0"
+          />
+        </div>
+      ) : null}
+
+      {visibleItems.length === 0 ? (
+        <div className="rounded-lg border border-dashed py-10 text-center">
+          <p className="text-muted-foreground text-sm">
+            No {section.heading ? section.heading.toLowerCase() : "templates"} match these filters.
+          </p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={clearFilters}>
+            Clear these filters
+          </Button>
+        </div>
+      ) : view === "card" ? (
+        <>
+          {/* Cards have no heading row to hang funnels on, so the section's
+              facets open in the sheet above instead. */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleItems.map((item) => (
+              <TemplateCard
+                key={item.id}
+                item={item}
+                renderFooterActions={section.renderFooterActions}
+                renderOverflowMenu={section.renderOverflowMenu}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <TemplateTable
+          items={visibleItems}
+          renderFooterActions={section.renderFooterActions}
+          renderOverflowMenu={section.renderOverflowMenu}
+          sectionHeading={section.heading}
+          facets={facetDefs.byColumn}
+        />
+      )}
+    </section>
   );
 }
 
@@ -235,21 +400,23 @@ function TemplateTable({
   renderFooterActions,
   renderOverflowMenu,
   sectionHeading,
+  facets,
 }: {
   items: TemplateCollectionItem[];
   renderFooterActions: (item: TemplateCollectionItem) => ReactNode;
   renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
   sectionHeading?: string;
+  facets: Record<TemplateFacetColumn, FacetDef[]>;
 }) {
   return (
     <div className="bg-card max-h-[70dvh] overflow-y-auto rounded-lg border sm:max-h-none sm:overflow-y-visible">
       <Table aria-label={sectionHeading ?? "Evaluation templates"} className="min-w-[44rem]">
-        <TableHeader className="bg-card sticky top-0 z-10">
+        <TableHeader className="sticky top-0 z-10">
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Source</TableHead>
+            <FilterableHead label="Type" facets={facets.type} />
+            <FilterableHead label="Status" facets={facets.status} />
+            <FilterableHead label="Source" facets={facets.source} />
             <TableHead>Versions</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>

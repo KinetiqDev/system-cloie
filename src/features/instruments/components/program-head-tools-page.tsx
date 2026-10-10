@@ -44,7 +44,8 @@ import {
   formatTargetStakeholder,
   hasActivePublishedFilters,
 } from "@/features/evaluations/components/filter-published-evaluations";
-import { PublishedEvaluationFilterBar } from "@/features/evaluations/components/published-evaluation-filter-bar";
+import { buildPublishedFacets } from "@/features/evaluations/components/published-evaluation-facets";
+import { usePublishedSearch } from "@/features/evaluations/components/use-published-search";
 import {
   DEFAULT_PUBLISHED_FILTERS,
   normalizePublishedQuery,
@@ -185,6 +186,7 @@ export function ProgramHeadToolsPage({
             sections={[
               {
                 heading: "Program Templates",
+                filterKey: "program-templates",
                 items: templates.map(toTemplateItem),
                 renderFooterActions: (item) => (
                   <ProgramHeadTemplateActions item={item} programId={program.id} />
@@ -212,6 +214,7 @@ export function ProgramHeadToolsPage({
               },
               {
                 heading: "Institutional Baselines",
+                filterKey: "institutional-baselines",
                 items: baselines.map(toBaselineItem),
                 renderFooterActions: (item) => (
                   <BaselineActions item={item} programId={program.id} />
@@ -487,6 +490,19 @@ function ProgramHeadPublishedDeployments({
     [filterableDeployments, filters]
   );
 
+  const facets = useMemo(
+    () =>
+      buildPublishedFacets(filters, handleFiltersChange, {
+        periods: periodOptions,
+        targets: targetOptions,
+      }),
+    [filters, periodOptions, targetOptions]
+  );
+  const search = usePublishedSearch(filters.query, (query) =>
+    handleFiltersChange({ ...filters, query }, "replace")
+  );
+  const clearFilters = () => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS);
+
   const items: PublishedDeploymentItem[] = optimisticDeployments
     .filter((deployment) => visibleIds.has(deployment.id))
     .map((deployment) => ({
@@ -504,19 +520,19 @@ function ProgramHeadPublishedDeployments({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-4">
-        {deployments.length > 0 && (
-          <PublishedEvaluationFilterBar
-            filters={filters}
-            periods={periodOptions}
-            record="deployment"
-            targets={targetOptions}
-            onFiltersChange={handleFiltersChange}
-          />
-        )}
         <PublishedDeploymentsCollection
           view={view}
           items={items}
           label="Published deployments"
+          facets={facets}
+          search={{
+            id: "program-head-published-search",
+            label: "Search deployments",
+            placeholder: "Search published deployments",
+            value: search.value,
+            onChange: search.onChange,
+          }}
+          onClearFilters={clearFilters}
           statusFilter={filters.status}
           onStatusFilterChange={handleStatusChange}
           empty={

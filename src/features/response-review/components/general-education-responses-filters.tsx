@@ -1,31 +1,31 @@
 "use client";
 
-import {
-  RESPONSE_SECTION_OPTIONS,
-  RESPONSE_YEAR_LEVEL_OPTIONS,
-} from "@/features/response-review/components/response-review-labels";
-import type { GeneralEducationEvaluationFilterOptions } from "@/features/response-review/services/list-general-education-evaluations";
+import { FilterableHead } from "@/components/data-table/filterable-head";
 import {
   buildGeneralEducationResponsesUrl,
-  parseGeneralEducationResponsesSearchParams,
   type GeneralEducationResponsesFilterState,
 } from "@/features/response-review/services/general-education-responses-state";
+import type { GeneralEducationEvaluationFilterOptions } from "@/features/response-review/services/list-general-education-evaluations";
 import {
-  ResponseComboboxField,
-  ResponseSelectField,
+  buildResponseFacets,
   ResponsesFilters,
-  type AdvancedResponseFilterField,
-  type RawResponseFilters,
+  withResponseFacet,
+  type ResponseFacetValues,
 } from "./responses-filters";
+import { useResponsesNavigation } from "./responses-workspace";
 
 // ---------------------------------------------------------------------------
-// Coordinator filter panel (ADR 0034, ADR 0035)
+// Coordinator toolbar and evidence column headings (ADR 0034, ADR 0035)
 //
-// Role adapter over the shared panel: the primary row is search, academic
-// period, status, and response progress. The advanced row is the class
-// context — Course, Program, ILO, Faculty, year level, section. There is no
-// view tab and no stakeholder dimension because the Coordinator owns General
-// Education Course-bound evidence only.
+// Role adapter over the shared review toolbar: it owns the URL contract and
+// nothing else. Every facet writes the current state back with only its own key
+// changed, so school year, semester, and ILO scope — which arrive from upward
+// navigation and have no control of their own — survive every other change
+// instead of silently widening the scope.
+//
+// The Coordinator has no view tab and no stakeholder dimension: she owns General
+// Education Course-bound evidence only. The ILO filter belongs to no column, so
+// it opens from the toolbar rather than disappearing.
 // ---------------------------------------------------------------------------
 
 type Props = {
@@ -33,165 +33,95 @@ type Props = {
   options: GeneralEducationEvaluationFilterOptions;
 };
 
+/**
+ * The Coordinator's facets, each already bound to the canonical URL its change
+ * should navigate to. The toolbar and the evidence column headings read the
+ * same set, so a funnel can never offer a choice the toolbar would not.
+ */
+function useGeneralEducationFacets(
+  state: GeneralEducationResponsesFilterState,
+  options: GeneralEducationEvaluationFilterOptions
+) {
+  const { navigate } = useResponsesNavigation();
+
+  return buildResponseFacets(
+    "coordinator",
+    state as ResponseFacetValues,
+    (key, value) => navigate(facetHref(state, key, value)),
+    {
+      termInstances: options.periodOptions.termInstances,
+      courses: options.courses,
+      faculty: options.faculty,
+      programs: options.programs,
+      ilos: options.ilos,
+      majors: [],
+      instruments: [],
+    }
+  );
+}
+
 export function GeneralEducationResponsesFilters({ state, options }: Props) {
-  const fields = advancedFields(options, state);
+  const { navigate } = useResponsesNavigation();
+  const facets = useGeneralEducationFacets(state, options);
+
   return (
     <ResponsesFilters
-      activeCount={countActiveFilters(state)}
-      advancedCount={fields.filter((entry) => state[entry.name] !== undefined).length}
-      advancedFields={fields}
-      primaryFields={(idPrefix) => periodField(options, state, idPrefix)}
-      status={state.status}
-      completion={state.completion}
-      searchPlaceholder="Evaluation, course, or faculty"
-      description="Search General Education evaluations or narrow them by academic period and response state."
-      clearHref={buildGeneralEducationResponsesUrl({ page: 1 })}
-      hiddenFields={carriedScope(state)}
-      buildSubmitHref={(raw: RawResponseFilters) => {
-        const parsed = parseGeneralEducationResponsesSearchParams(raw);
-        return buildGeneralEducationResponsesUrl({ ...parsed, page: 1 });
+      facets={facets.all}
+      overflowFacets={facets.overflow}
+      search={{
+        id: "gen-ed-responses-search",
+        label: "Search evaluations",
+        placeholder: "Evaluation, course, or faculty",
+        value: state.q,
+        onChange: (value) =>
+          navigate(buildGeneralEducationResponsesUrl({ ...state, page: 1, q: value || undefined })),
       }}
+      onClearAll={() => navigate(buildGeneralEducationResponsesUrl({ page: 1 }))}
     />
   );
 }
 
 /**
- * School year, semester, and ILO scope arrive on the URL from upward
- * navigation and have no visible control here. The form must carry them
- * forward or applying any other filter would silently widen the scope.
+ * The evidence table's filterable headings, one funnel per column. Renders
+ * inside the table's own `TableHeader`, so each funnel hangs off the column it
+ * narrows. The Class column carries three facts — year level, section, and the
+ * assignment's Program — so it opens all three under one heading.
  */
-function carriedScope(state: GeneralEducationResponsesFilterState) {
+export function GeneralEducationResponsesTableHead({ state, options }: Props) {
+  const facets = useGeneralEducationFacets(state, options).byColumn;
+
   return (
     <>
-      {state.schoolYearId ? (
-        <input type="hidden" name="schoolYearId" value={state.schoolYearId} />
-      ) : null}
-      {state.semester ? <input type="hidden" name="semester" value={state.semester} /> : null}
+      {/* Widths leave room for the label AND its funnel: at the 44 px heading
+          height a column whose label needs 82 px cannot also host a 28 px
+          control in a 12% cell, so the reading-heavy Evaluation column gives
+          the room up and the two right-aligned numeric columns take it. */}
+      <FilterableHead label="Evaluation" facets={facets.evaluation} className="w-[20%]" />
+      <FilterableHead label="Class" facets={facets.class} className="w-[15%]" />
+      <FilterableHead label="Faculty" facets={facets.faculty} className="w-[13%]" />
+      <FilterableHead label="Period" facets={facets.period} className="w-[13%]" />
+      <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />
+      {/* The funnel is pushed to the far edge of the cell, matching the numbers
+          below it, so a right-aligned column stays a single visual block. */}
+      <FilterableHead
+        label="Submitted"
+        facets={facets.submitted}
+        className="w-[14%] text-right [&>span]:justify-end"
+      />
     </>
   );
 }
 
-function periodField(
-  options: GeneralEducationEvaluationFilterOptions,
+/**
+ * The canonical href one facet change lands on: the committed state with only
+ * that key overridden and the page reset to the first.
+ */
+function facetHref(
   state: GeneralEducationResponsesFilterState,
-  idPrefix: string
-) {
-  return (
-    <ResponseComboboxField
-      id={`${idPrefix}-termInstanceId`}
-      name="termInstanceId"
-      label="Academic period"
-      options={options.periodOptions.termInstances}
-      value={state.termInstanceId}
-      placeholder="All academic periods"
-      emptyMessage="No academic periods match your search."
-    />
+  key: string,
+  value: string | null
+): string {
+  return buildGeneralEducationResponsesUrl(
+    withResponseFacet(state, key, value) as Partial<GeneralEducationResponsesFilterState>
   );
-}
-
-function advancedFields(
-  options: GeneralEducationEvaluationFilterOptions,
-  state: GeneralEducationResponsesFilterState
-): AdvancedResponseFilterField<GeneralEducationResponsesFilterState>[] {
-  return [
-    {
-      name: "courseId",
-      render: (idPrefix) => (
-        <ResponseComboboxField
-          id={`${idPrefix}-courseId`}
-          name="courseId"
-          value={state.courseId}
-          label="Course"
-          options={options.courses}
-          placeholder="All courses"
-          emptyMessage="No courses match your search."
-        />
-      ),
-    },
-    {
-      name: "programId",
-      render: (idPrefix) => (
-        <ResponseComboboxField
-          id={`${idPrefix}-programId`}
-          name="programId"
-          value={state.programId}
-          label="Class program"
-          options={options.programs}
-          placeholder="All class programs"
-          emptyMessage="No class programs match your search."
-        />
-      ),
-    },
-    {
-      name: "iloId",
-      render: (idPrefix) => (
-        <ResponseComboboxField
-          id={`${idPrefix}-iloId`}
-          name="iloId"
-          value={state.iloId}
-          label="Institutional Learning Outcome"
-          options={options.ilos}
-          placeholder="All institutional outcomes"
-          emptyMessage="No institutional outcomes match your search."
-        />
-      ),
-    },
-    {
-      name: "facultyId",
-      render: (idPrefix) => (
-        <ResponseComboboxField
-          id={`${idPrefix}-facultyId`}
-          name="facultyId"
-          value={state.facultyId}
-          label="Faculty"
-          options={options.faculty}
-          placeholder="All faculty"
-          emptyMessage="No faculty match your search."
-        />
-      ),
-    },
-    {
-      name: "yearLevel",
-      render: (idPrefix) => (
-        <ResponseSelectField
-          id={`${idPrefix}-yearLevel`}
-          name="yearLevel"
-          value={state.yearLevel}
-          label="Year level"
-          options={RESPONSE_YEAR_LEVEL_OPTIONS}
-          blank="All year levels"
-        />
-      ),
-    },
-    {
-      name: "section",
-      render: (idPrefix) => (
-        <ResponseSelectField
-          id={`${idPrefix}-section`}
-          name="section"
-          value={state.section}
-          label="Section"
-          options={RESPONSE_SECTION_OPTIONS}
-          blank="All sections"
-        />
-      ),
-    },
-  ];
-}
-
-function countActiveFilters(state: GeneralEducationResponsesFilterState): number {
-  return [
-    state.q,
-    state.termInstanceId,
-    state.schoolYearId,
-    state.semester,
-    state.courseId,
-    state.programId,
-    state.facultyId,
-    state.yearLevel,
-    state.section,
-    state.iloId,
-    state.status,
-    state.completion,
-  ].filter(Boolean).length;
 }

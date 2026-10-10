@@ -1,441 +1,435 @@
 "use client";
 
-import Link from "next/link";
-import { useId, useState, type FormEvent, type ReactNode } from "react";
-import { ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SlidersHorizontal } from "lucide-react";
+
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { FacetPopoverBody } from "@/components/data-table/column-filter";
+import { facetIsApplied, facetValueLabel, type FacetDef } from "@/components/data-table/types";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  RESPONSE_COMPLETION_OPTIONS,
+  RESPONSE_SECTION_OPTIONS,
+  RESPONSE_STAKEHOLDER_OPTIONS,
   RESPONSE_STATUS_OPTIONS,
+  RESPONSE_YEAR_LEVEL_OPTIONS,
   type ResponseFilterOption,
 } from "./response-review-labels";
-import { cn } from "@/lib/utils";
-import { useResponsesNavigation } from "./responses-workspace";
 
 // ---------------------------------------------------------------------------
-// Shared review filter panel (spec §25.2, §27.2)
+// Shared response-review narrowing (spec §25.2, §27.2)
 //
-// Program Heads and the General Education Coordinator filter the same
-// evaluation rosters, so the primary controls — search, academic period,
-// deployment status, response progress — and the responsive shell are one
-// component. Only the advanced field set is per-role, so it arrives as a
-// render prop: General Education adds Program and ILO, Program Head adds
-// Major and the Program-wide instrument/stakeholder dimensions.
+// Program Heads and the General Education Coordinator review the same kind of
+// evaluation roster, so they narrow it the same way: every facet applies the
+// moment it changes, and it hangs off the column it narrows. This module owns
+// that vocabulary — which facet belongs to which column, and what it is called
+// — while the role adapter owns URL parsing, serialization, and its canonical
+// href. Nothing here collects a form value or waits for a submit.
 //
-// The role adapters own URL parsing, serialization, and clear-href building;
-// this component only collects form values and hands them back as a raw map.
+// Search is deliberately not a facet: it spans columns, so it belongs to the
+// toolbar. A facet no column can own stays reachable through the toolbar's own
+// popover rather than disappearing.
 // ---------------------------------------------------------------------------
 
-/** One facet control the role adapter contributes to the advanced panel. */
-export type AdvancedResponseFilterField<State = Record<string, unknown>> = {
-  /** Form field name, which is also the URL parameter name. */
-  name: keyof State & string;
-  /**
-   * Builds the field for one mounted form. The desktop form and the mobile
-   * Drawer both render these, so the caller receives the prefix and must keep
-   * ids unique — duplicate ids would break label association and assistive
-   * lookup in the document.
-   */
-  render: (idPrefix: string) => ReactNode;
-};
+/** Columns the evaluation-evidence table can narrow through its own heading. */
+export type ResponseFacetColumn =
+  | "evaluation"
+  | "class"
+  | "faculty"
+  | "target"
+  | "stakeholder"
+  | "period"
+  | "status"
+  | "submitted";
 
-/** Raw filter state as a URL-facing key/value map, before role parsing. */
-export type RawResponseFilters = Record<string, string>;
+/**
+ * Which evidence a view shows. Program Heads switch between Course-bound and
+ * Program-wide evidence; the Coordinator has the single Course-bound view.
+ */
+export type ResponseFacetView = "course" | "program-wide" | "coordinator";
 
-type ResponsesFiltersProps<State = Record<string, unknown>> = {
-  /** Parsed current state, used for the active-filter count and defaults. */
-  activeCount: number;
-  advancedCount: number;
-  /** Advanced fields for the advanced-count badge and their rendering. */
-  advancedFields: AdvancedResponseFilterField<State>[];
-  /** Search placeholder wording for this review scope. */
-  searchPlaceholder: string;
-  /** Current deployment status facet; undefined means "All statuses". */
+/** The facets a role state can carry, in URL-key form. */
+export type ResponseFacetValues = {
+  courseId?: string;
+  facultyId?: string;
+  majorId?: string;
+  yearLevel?: string;
+  section?: string;
+  stakeholder?: string;
+  termInstanceId?: string;
   status?: string;
-  /** Current response-progress facet; undefined means "All progress states". */
   completion?: string;
-  /** Helper line under the panel heading. */
-  description: string;
-  /** URL with every facet cleared; the Coordinator has no view tabs. */
-  clearHref: string;
-  /** Room for hidden inputs carrying facets this form has no control for. */
-  hiddenFields?: ReactNode;
-  /**
-   * Primary-row fields rendered after search, before status and progress.
-   * A render function for the same uniqueness reason as `advancedFields`.
-   */
-  primaryFields?: (idPrefix: string) => ReactNode;
-  /**
-   * Parse the submitted form into this role's URL state and build the target
-   * href. Returning the href keeps every role's URL contract in one place.
-   */
-  buildSubmitHref: (raw: RawResponseFilters) => string;
+  instrumentTemplateId?: string;
+  programId?: string;
+  iloId?: string;
 };
 
-export function ResponsesFilters<State = Record<string, unknown>>({
-  activeCount,
-  advancedCount,
-  advancedFields,
-  primaryFields,
-  searchPlaceholder,
-  status,
-  completion,
-  description,
-  clearHref,
-  hiddenFields,
-  buildSubmitHref,
-}: ResponsesFiltersProps<State>) {
-  const { isPending, navigate } = useResponsesNavigation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const headingId = useId();
+type FacetChoice = { id: string; label: string };
 
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const raw: RawResponseFilters = {};
-    for (const [key, value] of new FormData(event.currentTarget).entries()) {
-      if (typeof value === "string") raw[key] = value;
-    }
-    setDrawerOpen(false);
-    navigate(buildSubmitHref(raw));
+export type ResponseFacetOptions = {
+  termInstances: readonly FacetChoice[];
+  courses: readonly FacetChoice[];
+  faculty: readonly FacetChoice[];
+  majors: readonly FacetChoice[];
+  instruments: readonly FacetChoice[];
+  /** Class-context Programs; the Coordinator view only. */
+  programs?: readonly FacetChoice[];
+  ilos?: readonly FacetChoice[];
+};
+
+/** Writes one URL key. A null value clears the facet. */
+export type ResponseFacetUpdate = (key: string, value: string | null) => void;
+
+export type ResponseFacetColumns = Partial<Record<ResponseFacetColumn, FacetDef[]>>;
+
+export type ResponseFacets = {
+  /** Facets grouped by the column heading they hang off. */
+  byColumn: ResponseFacetColumns;
+  /** Facets no column owns; the toolbar offers them in one popover. */
+  overflow: FacetDef[];
+  /** Every facet, so applied ones can show as removable chips. */
+  all: FacetDef[];
+};
+
+/**
+ * Response progress against the evaluation's real assignment opportunities.
+ * The wording names the count rather than a stage, because the filter compares
+ * "none / some / every" — "In progress" would read as a single mid-state.
+ */
+const RESPONSE_COMPLETION_FACETS: ResponseFilterOption[] = [
+  { id: "zero", label: "None submitted" },
+  { id: "partial", label: "Partly submitted" },
+  { id: "complete", label: "Fully submitted" },
+];
+
+function optionList(
+  choices: readonly FacetChoice[] | undefined,
+  searchPlaceholder: string,
+  emptyMessage: string
+) {
+  return {
+    options: (choices ?? []).map((choice) => ({ id: choice.id, label: choice.label })),
+    searchable: true,
+    searchPlaceholder,
+    emptyMessage,
+  };
+}
+
+/**
+ * Every narrowing control a review list offers, expressed once as facets. The
+ * column headings, the toolbar chips, the toolbar popover, and the mobile
+ * sheet all read from this, so no control can drift from its siblings.
+ */
+export function buildResponseFacets(
+  view: ResponseFacetView,
+  values: ResponseFacetValues,
+  update: ResponseFacetUpdate,
+  options: ResponseFacetOptions
+): ResponseFacets {
+  const course: FacetDef = {
+    id: "courseId",
+    label: "Course",
+    value: values.courseId ?? null,
+    onChange: (value) => update("courseId", value),
+    allLabel: "All courses",
+    ...optionList(options.courses, "Search courses…", "No courses match your search."),
+  };
+
+  const faculty: FacetDef = {
+    id: "facultyId",
+    label: "Faculty",
+    value: values.facultyId ?? null,
+    onChange: (value) => update("facultyId", value),
+    allLabel: "All faculty",
+    ...optionList(options.faculty, "Search faculty…", "No faculty match your search."),
+  };
+
+  const major: FacetDef = {
+    id: "majorId",
+    label: "Major",
+    value: values.majorId ?? null,
+    onChange: (value) => update("majorId", value),
+    allLabel: "All majors",
+    ...optionList(options.majors, "Search majors…", "No majors match your search."),
+  };
+
+  const instrument: FacetDef = {
+    id: "instrumentTemplateId",
+    label: "Evaluation instrument",
+    value: values.instrumentTemplateId ?? null,
+    onChange: (value) => update("instrumentTemplateId", value),
+    allLabel: "All instruments",
+    ...optionList(options.instruments, "Search instruments…", "No instruments match your search."),
+  };
+
+  // ADR 0035: this Program is the class the evaluation was assigned to, never
+  // the respondent's, so the label says so wherever the control appears.
+  const classProgram: FacetDef = {
+    id: "programId",
+    label: "Class program",
+    value: values.programId ?? null,
+    onChange: (value) => update("programId", value),
+    allLabel: "All class programs",
+    ...optionList(options.programs, "Search programs…", "No class programs match your search."),
+  };
+
+  const ilo: FacetDef = {
+    id: "iloId",
+    label: "Institutional Learning Outcome",
+    value: values.iloId ?? null,
+    onChange: (value) => update("iloId", value),
+    allLabel: "All institutional outcomes",
+    ...optionList(options.ilos, "Search outcomes…", "No institutional outcomes match your search."),
+  };
+
+  const yearLevel: FacetDef = {
+    id: "yearLevel",
+    label: "Year level",
+    value: values.yearLevel ?? null,
+    onChange: (value) => update("yearLevel", value),
+    allLabel: "All year levels",
+    options: RESPONSE_YEAR_LEVEL_OPTIONS,
+  };
+
+  const section: FacetDef = {
+    id: "section",
+    label: "Section",
+    value: values.section ?? null,
+    onChange: (value) => update("section", value),
+    allLabel: "All sections",
+    options: RESPONSE_SECTION_OPTIONS,
+  };
+
+  const stakeholder: FacetDef = {
+    id: "stakeholder",
+    label: "Stakeholder",
+    value: values.stakeholder ?? null,
+    onChange: (value) => update("stakeholder", value),
+    allLabel: "All stakeholders",
+    options: RESPONSE_STAKEHOLDER_OPTIONS,
+  };
+
+  const period: FacetDef = {
+    id: "termInstanceId",
+    label: "Academic period",
+    value: values.termInstanceId ?? null,
+    onChange: (value) => update("termInstanceId", value),
+    allLabel: "All academic periods",
+    ...optionList(
+      options.termInstances,
+      "Search academic periods…",
+      "No academic periods match your search."
+    ),
+  };
+
+  const status: FacetDef = {
+    id: "status",
+    label: "Status",
+    value: values.status ?? null,
+    onChange: (value) => update("status", value),
+    allLabel: "All statuses",
+    options: RESPONSE_STATUS_OPTIONS,
+  };
+  const submitted: FacetDef = {
+    id: "completion",
+    label: "Submitted",
+    value: values.completion ?? null,
+    onChange: (value) => update("completion", value),
+    allLabel: "All response counts",
+    options: RESPONSE_COMPLETION_FACETS,
+  };
+
+  const byColumn: ResponseFacetColumns =
+    view === "course"
+      ? {
+          evaluation: [course],
+          class: [yearLevel, section],
+          faculty: [faculty],
+          period: [period],
+          status: [status],
+          submitted: [submitted],
+        }
+      : view === "program-wide"
+        ? {
+            stakeholder: [stakeholder],
+            // Target is the joined major · year level, so both facts narrow it.
+            target: [major, yearLevel],
+            period: [period],
+            status: [status],
+            submitted: [submitted],
+          }
+        : {
+            evaluation: [course],
+            class: [yearLevel, section, classProgram],
+            faculty: [faculty],
+            period: [period],
+            status: [status],
+            submitted: [submitted],
+          };
+
+  // Course-bound evidence has no Major column and the Coordinator has no
+  // instrument column, so those facets stay reachable from the toolbar.
+  const overflow = view === "course" ? [major] : view === "program-wide" ? [instrument] : [ilo];
+
+  return { byColumn, overflow, all: [...Object.values(byColumn).flat(), ...overflow] };
+}
+
+/**
+ * The next state after one facet changes: start from the committed state so
+ * scope that has no control here survives, override only the changed key, and
+ * return to the first page because the current one may no longer exist.
+ */
+export function withResponseFacet<State extends object>(
+  state: State,
+  key: string,
+  value: string | null
+): State & { page: number } {
+  const next = { ...state, page: 1 } as Record<string, unknown>;
+  if (value === null) delete next[key];
+  else next[key] = value;
+  return next as State & { page: number };
+}
+
+/** Debounce window for the toolbar's cross-column search. */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * The toolbar search's draft, committed on a debounce so typing does not write
+ * a history entry per keystroke.
+ *
+ * A query that arrives from elsewhere (deep link, back/forward) replaces the
+ * draft, but never one the operator is still typing into: while the field has
+ * focus its text is theirs, and the incoming query waits for blur.
+ */
+function useResponseSearchDraft(committed: string | undefined, onCommit: (value: string) => void) {
+  const committedText = committed ?? "";
+  const [draft, setDraft] = useState(committedText);
+  const [shownCommit, setShownCommit] = useState(committedText);
+  const [focused, setFocused] = useState(false);
+  const timer = useRef<number | null>(null);
+  const latestCommit = useRef(onCommit);
+
+  useEffect(() => {
+    latestCommit.current = onCommit;
+  });
+
+  // Adjusting state during render is React's own answer for "the committed
+  // query changed while the field had focus": it re-renders before the DOM is
+  // touched, with no effect, no ref read, and no cascading pass.
+  if (shownCommit !== committedText) {
+    setShownCommit(committedText);
+    if (!focused) setDraft(committedText);
   }
 
-  return (
-    <section
-      aria-labelledby={headingId}
-      className="border-border bg-card rounded-xl border shadow-sm"
-    >
-      <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal aria-hidden="true" className="text-muted-foreground" />
-            <h2 id={headingId} className="text-title-sm font-semibold">
-              Find evaluations
-            </h2>
-            {activeCount > 0 ? <Badge variant="secondary">{activeCount} active</Badge> : null}
-          </div>
-          <p className="text-body-sm text-muted-foreground mt-1 hidden sm:block">{description}</p>
-        </div>
-        {activeCount > 0 ? (
-          <Link
-            href={clearHref}
-            className={cn(buttonVariants({ variant: "ghost" }), "hidden lg:inline-flex")}
-          >
-            <X data-icon="inline-start" aria-hidden="true" />
-            Clear filters
-          </Link>
-        ) : null}
-      </div>
-
-      <div className="border-border hidden border-t p-4 lg:block">
-        <FilterForm
-          formKey={`desktop:${clearHref}:${activeCount}:${advancedCount}`}
-          idPrefix="desktop"
-          isPending={isPending}
-          activeCount={activeCount}
-          advancedCount={advancedCount}
-          advancedFields={advancedFields}
-          primaryFields={primaryFields}
-          status={status}
-          completion={completion}
-          searchPlaceholder={searchPlaceholder}
-          hiddenFields={hiddenFields}
-          clearHref={clearHref}
-          onSubmit={applyFilters}
-        />
-      </div>
-
-      <div className="border-border border-t p-3 lg:hidden">
-        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} showSwipeHandle>
-          <DrawerTrigger render={<Button variant="outline" className="w-full justify-between" />}>
-            <span>Filters</span>
-            <span className="text-muted-foreground font-normal">
-              {activeCount > 0 ? `${activeCount} active` : "All evaluations"}
-            </span>
-          </DrawerTrigger>
-          {/* max-height plus a safe-area-aware bottom pad keeps the last control
-              and the sticky action row reachable above the home indicator. */}
-          <DrawerContent className="max-h-[88dvh]">
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Filter evaluations</DrawerTitle>
-              <DrawerDescription>
-                Choose an academic period, response state, or other details to narrow this view.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="overflow-y-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-              <FilterForm
-                formKey={`mobile:${clearHref}:${activeCount}:${advancedCount}`}
-                idPrefix="mobile"
-                isPending={isPending}
-                activeCount={activeCount}
-                advancedCount={advancedCount}
-                advancedFields={advancedFields}
-                primaryFields={primaryFields}
-                status={status}
-                completion={completion}
-                searchPlaceholder={searchPlaceholder}
-                hiddenFields={hiddenFields}
-                clearHref={clearHref}
-                onSubmit={applyFilters}
-                mobile
-              />
-            </div>
-          </DrawerContent>
-        </Drawer>
-      </div>
-    </section>
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    []
   );
+
+  const onChange = useCallback((value: string) => {
+    setDraft(value);
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      latestCommit.current(value);
+    }, SEARCH_DEBOUNCE_MS);
+  }, []);
+
+  return {
+    value: draft,
+    onChange,
+    onFocus: useCallback(() => setFocused(true), []),
+    onBlur: useCallback(() => setFocused(false), []),
+  };
 }
 
-function FilterForm<State = Record<string, unknown>>({
-  formKey,
-  idPrefix,
-  isPending,
-  activeCount,
-  advancedCount,
-  advancedFields,
-  primaryFields,
-  searchPlaceholder,
-  status,
-  completion,
-  hiddenFields,
-  clearHref,
-  onSubmit,
-  mobile = false,
-}: Omit<ResponsesFiltersProps<State>, "description" | "buildSubmitHref"> & {
-  formKey: string;
-  idPrefix: string;
-  isPending: boolean;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  mobile?: boolean;
-}) {
-  return (
-    // Remounting on the committed scope is what keeps the combobox selections
-    // and uncontrolled inputs from surviving a soft navigation that the URL
-    // has already replaced.
-    <form key={formKey} onSubmit={onSubmit} aria-busy={isPending || undefined}>
-      {hiddenFields}
-      <FieldGroup className="gap-4">
-        <div className={cn("grid gap-4", mobile ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4")}>
-          <Field>
-            <FieldLabel htmlFor={`${idPrefix}-response-search`}>Search</FieldLabel>
-            <div className="relative">
-              <Search
-                aria-hidden="true"
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-              />
-              <Input
-                id={`${idPrefix}-response-search`}
-                type="search"
-                name="q"
-                maxLength={100}
-                autoComplete="off"
-                placeholder={searchPlaceholder}
-                className="pl-9"
-              />
-            </div>
-          </Field>
-          {primaryFields?.(idPrefix)}
-          <ResponseSelectField
-            id={`${idPrefix}-status`}
-            name="status"
-            label="Status"
-            options={RESPONSE_STATUS_OPTIONS}
-            value={status}
-            blank="All statuses"
-          />
-          <ResponseSelectField
-            id={`${idPrefix}-completion`}
-            name="completion"
-            label="Response progress"
-            options={RESPONSE_COMPLETION_OPTIONS}
-            value={completion}
-            blank="All progress states"
-          />
-        </div>
-
-        <details className="group" open={mobile && advancedCount > 0}>
-          <summary className="focus-visible:ring-ring flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg text-sm font-semibold focus-visible:ring-3 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-            More filters
-            {advancedCount > 0 ? <Badge variant="secondary">{advancedCount}</Badge> : null}
-            <ChevronDown
-              aria-hidden="true"
-              className="text-muted-foreground ml-auto transition-transform group-open:rotate-180 motion-reduce:transition-none"
-            />
-          </summary>
-          <div
-            className={cn("grid gap-4 pt-3", mobile ? "grid-cols-1" : "grid-cols-2 xl:grid-cols-4")}
-          >
-            {advancedFields.map((entry) => (
-              <div key={entry.name}>{entry.render(idPrefix)}</div>
-            ))}
-          </div>
-        </details>
-
-        <FilterActions
-          isPending={isPending}
-          mobile={mobile}
-          activeCount={activeCount}
-          clearHref={clearHref}
-        />
-      </FieldGroup>
-    </form>
-  );
-}
-
-function FilterActions({
-  isPending,
-  mobile,
-  activeCount,
-  clearHref,
+/**
+ * The shared review toolbar: the one line above the evidence that holds the
+ * search spanning several columns, a removable chip per applied facet, the
+ * facets no column owns, and the mobile sheet that stands in for the heading
+ * row once the table collapses to cards.
+ */
+export function ResponsesFilters({
+  facets,
+  overflowFacets,
+  search,
+  onClearAll,
 }: {
-  isPending: boolean;
-  mobile: boolean;
-  activeCount: number;
-  clearHref: string;
+  /** Every facet this list offers, so applied ones show as removable chips. */
+  facets: FacetDef[];
+  /** Facets with no column of their own, opened from the toolbar itself. */
+  overflowFacets?: FacetDef[];
+  search: {
+    id: string;
+    label: string;
+    placeholder: string;
+    /** Query committed to the URL, or undefined when nothing is in force. */
+    value?: string;
+    onChange: (value: string) => void;
+  };
+  onClearAll: () => void;
 }) {
+  const draft = useResponseSearchDraft(search.value, search.onChange);
+  const activeCount = facets.filter(facetIsApplied).length;
+
   return (
-    <div
-      className={cn(
-        "flex items-center justify-end gap-2",
-        mobile && "bg-popover sticky bottom-0 -mx-1 py-2"
-      )}
+    <TableToolbar
+      search={{
+        id: search.id,
+        label: search.label,
+        placeholder: search.placeholder,
+        value: draft.value,
+        onChange: draft.onChange,
+        onFocus: draft.onFocus,
+        onBlur: draft.onBlur,
+      }}
+      facets={facets}
+      onClearAll={onClearAll}
     >
-      <Button type="submit" disabled={isPending} className={cn(mobile && "flex-1")}>
-        {isPending ? <Spinner data-icon="inline-start" /> : null}
-        {isPending ? "Applying filters" : "Apply filters"}
-      </Button>
-      {activeCount > 0 ? (
-        <Link
-          href={clearHref}
-          className={buttonVariants({ variant: mobile ? "outline" : "ghost" })}
-        >
-          <X data-icon="inline-start" aria-hidden="true" />
-          Clear
-        </Link>
+      {overflowFacets && overflowFacets.length > 0 ? (
+        <ResponseFacetMenu facets={overflowFacets} />
       ) : null}
-    </div>
+      <div className="lg:hidden">
+        <MobileFilterSheet
+          facets={facets}
+          activeCount={activeCount}
+          onClearAll={onClearAll}
+          summary="Show results"
+        />
+      </div>
+    </TableToolbar>
   );
 }
 
 /**
- * Searchable single-select. The current value arrives as a hidden input so a
- * cleared selection submits an empty string — dropping the facet instead of
- * re-submitting the previous one.
+ * The toolbar's home for the facets no column owns. It is the same control the
+ * heading funnels use, so a facet that has no column of its own is still
+ * reachable instead of silently dropped from the list.
  */
-export function ResponseComboboxField({
-  id,
-  name,
-  label,
-  options,
-  placeholder,
-  emptyMessage,
-  value,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  options: ResponseFilterOption[];
-  placeholder: string;
-  emptyMessage: string;
-  value?: string;
-}) {
-  const [selection, setSelection] = useState<ResponseFilterOption | null>(
-    options.find((option) => option.id === value) ?? null
-  );
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Combobox
-        items={options}
-        value={selection}
-        onValueChange={setSelection}
-        itemToStringLabel={(option: ResponseFilterOption) => option.label}
-        itemToStringValue={(option: ResponseFilterOption) => option.id}
-        autoHighlight
-      >
-        <input type="hidden" name={name} value={selection?.id ?? ""} />
-        <ComboboxInput id={id} placeholder={placeholder} showClear={Boolean(selection)} />
-        <ComboboxContent>
-          <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
-          <ComboboxList>
-            {(option: ResponseFilterOption) => (
-              <ComboboxItem key={option.id} value={option}>
-                {option.label}
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
-    </Field>
-  );
-}
+function ResponseFacetMenu({ facets }: { facets: FacetDef[] }) {
+  const active = facets.filter(facetIsApplied);
+  const summary = active.map(facetValueLabel).join(", ");
 
-/** Short enum select; the blank option means "no facet". */
-export function ResponseSelectField({
-  id,
-  name,
-  label,
-  options,
-  blank,
-  value,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  options: ResponseFilterOption[];
-  blank: string;
-  value?: string;
-}) {
-  const items = [{ id: "", label: blank }, ...options];
   return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select
-        name={name}
-        defaultValue={value ?? ""}
-        items={items.map((option) => ({ value: option.id, label: option.label }))}
+    <Popover>
+      <PopoverTrigger
+        openOnHover={false}
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-label={`More filters${active.length > 0 ? `: ${summary}` : ""}`}
+            className="shrink-0"
+          />
+        }
       >
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {items.map((option) => (
-              <SelectItem key={option.id || "all"} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </Field>
+        <SlidersHorizontal aria-hidden="true" className="size-4" />
+        More filters
+      </PopoverTrigger>
+      <FacetPopoverBody heading="More filters" facets={facets} />
+    </Popover>
   );
 }

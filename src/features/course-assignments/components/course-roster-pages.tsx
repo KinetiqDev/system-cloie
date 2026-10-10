@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -76,7 +76,11 @@ import {
   RestoreRosterMember,
 } from "./course-roster-management";
 import { CourseRosterRetry } from "./course-roster-retry";
-import { CourseRosterDiscoveryFilters, CourseRosterMemberFilters } from "./course-roster-filters";
+import { CourseRosterMemberFilters } from "./course-roster-filters";
+import { buildCourseRosterFacets, type CourseRosterFacetColumn } from "./course-roster-facets";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
 import { ResultSummaryStrip } from "./shared/result-summary-strip";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
@@ -257,6 +261,37 @@ function CourseRosterDiscoveryBody({
     [router, view]
   );
 
+  const [searchDraft, setSearchDraft] = useState(filters.search);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchTimer = useRef<number | null>(null);
+  // A keystroke marks the draft as a live edit; a server-driven change clears
+  // that flag so an armed debounce for a stale draft never navigates. A
+  // response echoing our own navigation is not a server-driven change.
+  const draftIsLive = useRef(false);
+  const lastServerSearch = useRef(filters.search);
+  const lastNavigatedSearch = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (lastServerSearch.current === filters.search) return;
+    lastServerSearch.current = filters.search;
+    if (filters.search !== lastNavigatedSearch.current) {
+      draftIsLive.current = false;
+    }
+  }, [filters.search]);
+
+  // A server-driven search change (deep link, back/forward, clearing search)
+  // resets the draft, but never overwrites an in-progress keystroke: the sync
+  // waits for blur so a focused field keeps the operator's text.
+  if (!searchFocused && searchDraft !== filters.search) {
+    setSearchDraft(filters.search);
+  }
+
+  const updateFacet = useCallback(
+    <K extends keyof CourseRosterFilterState>(key: K, value: CourseRosterFilterState[K]) =>
+      navigate({ ...filters, [key]: value }),
+    [filters, navigate]
+  );
+
   if (!data) {
     return (
       <CourseRosterDiscoveryError message={error ?? "The roster request could not be completed."} />
@@ -278,6 +313,31 @@ function CourseRosterDiscoveryBody({
   const activeCount = data.items.filter((assignment) => assignment.rosterState === "ACTIVE").length;
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
 
+  const { byColumn: facets, all: allFacets } = buildCourseRosterFacets(filters, updateFacet, {
+    termInstances,
+    courses,
+    programs,
+  });
+
+  const handleSearchChange = (value: string) => {
+    setSearchDraft(value);
+    draftIsLive.current = true;
+    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      searchTimer.current = null;
+      if (!draftIsLive.current) return;
+      lastNavigatedSearch.current = value;
+      updateFacet("search", value);
+    }, 300);
+  };
+
+  const clearAll = () => {
+    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    draftIsLive.current = false;
+    setSearchDraft("");
+    navigate({ ...DEFAULT_COURSE_ROSTER_FILTERS });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -288,14 +348,35 @@ function CourseRosterDiscoveryBody({
         </p>
       </div>
 
-      <CourseRosterDiscoveryFilters
-        filters={filters}
-        termInstances={termInstances}
-        courses={courses}
-        programs={programs}
-        pending={isPending}
-        onNavigate={navigate}
-      />
+      <TableToolbar
+        search={{
+          id: "roster-search",
+          label: "Search assignments",
+          placeholder: "Search courses or programs…",
+          value: searchDraft,
+          onChange: handleSearchChange,
+          onFocus: () => setSearchFocused(true),
+          onBlur: () => setSearchFocused(false),
+        }}
+        facets={allFacets}
+        onClearAll={clearAll}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{data.total}</span>{" "}
+            {data.total === 1 ? "assignment" : "assignments"}
+            {isPending ? " · updating…" : ""}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearAll}
+            summary="Show results"
+          />
+        </div>
+      </TableToolbar>
 
       <ResultSummaryStrip
         noun="roster"
@@ -330,7 +411,7 @@ function CourseRosterDiscoveryBody({
         ) : view === "card" ? (
           <CourseRosterCardGrid assignments={data.items} />
         ) : (
-          <CourseRosterList assignments={data.items} />
+          <CourseRosterList assignments={data.items} facets={facets} />
         )}
       </section>
 
@@ -345,7 +426,13 @@ function CourseRosterDiscoveryBody({
   );
 }
 
-function CourseRosterList({ assignments }: { assignments: CourseRosterAssignmentSummary[] }) {
+function CourseRosterList({
+  assignments,
+  facets,
+}: {
+  assignments: CourseRosterAssignmentSummary[];
+  facets: Record<CourseRosterFacetColumn, FacetDef[]>;
+}) {
   return (
     <Table
       aria-label="Course assignments"
@@ -358,10 +445,10 @@ function CourseRosterList({ assignments }: { assignments: CourseRosterAssignment
       </caption>
       <TableHeader>
         <TableRow>
-          <TableHead>Course</TableHead>
-          <TableHead>Program</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Academic Period</TableHead>
+          <FilterableHead label="Course" facets={facets.course} />
+          <FilterableHead label="Program" facets={facets.program} />
+          <FilterableHead label="Class" facets={facets.class} />
+          <FilterableHead label="Academic Period" facets={facets.period} />
           <TableHead>Roster</TableHead>
           <TableHead className="text-right">
             <span className="sr-only">Actions</span>
@@ -820,7 +907,7 @@ function RosterTable({
       className="min-w-[48rem]"
     >
       <caption className="sr-only">Course roster members and current eligibility</caption>
-      <TableHeader className="bg-muted/40">
+      <TableHeader>
         <TableRow>
           <TableHead aria-sort={sortDirection === "asc" ? "ascending" : "descending"}>
             <button

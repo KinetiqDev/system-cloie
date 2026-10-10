@@ -31,7 +31,8 @@ import {
   filterPublishedEvaluations,
   hasActivePublishedFilters,
 } from "./filter-published-evaluations";
-import { PublishedEvaluationFilterBar } from "./published-evaluation-filter-bar";
+import { buildPublishedFacets } from "./published-evaluation-facets";
+import { usePublishedSearch } from "./use-published-search";
 import {
   PublishedDeploymentsCollection,
   type PublishedDeploymentItem,
@@ -102,6 +103,19 @@ export function FacultyPublishedEvaluations({
     setFilters(normalized);
     updatePublishedFiltersUrl(normalized, navigation);
   }
+
+  const facets = useMemo(
+    () =>
+      buildPublishedFacets(filters, handleFiltersChange, {
+        periods: periodOptions,
+        courses: courseOptions,
+      }),
+    [filters, periodOptions, courseOptions]
+  );
+  const search = usePublishedSearch(filters.query, (query) =>
+    handleFiltersChange({ ...filters, query }, "replace")
+  );
+  const clearFilters = () => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS);
 
   function handleStatusChange(status: PublishedStatusFilter) {
     handleFiltersChange({ ...filters, status });
@@ -198,19 +212,19 @@ export function FacultyPublishedEvaluations({
 
   return (
     <div className="space-y-4">
-      {evaluations.length > 0 && (
-        <PublishedEvaluationFilterBar
-          filters={filters}
-          periods={periodOptions}
-          record="evaluation"
-          courses={courseOptions}
-          onFiltersChange={handleFiltersChange}
-        />
-      )}
       <PublishedDeploymentsCollection
         view={view}
         items={items}
         label="Published evaluations"
+        facets={facets}
+        search={{
+          id: "published-evaluation-search",
+          label: "Search evaluations",
+          placeholder: "Search published evaluations",
+          value: search.value,
+          onChange: search.onChange,
+        }}
+        onClearFilters={clearFilters}
         statusFilter={filters.status}
         onStatusFilterChange={handleStatusChange}
         empty={

@@ -6,14 +6,15 @@ const { pushMock, navState } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/features/response-review/components/responses-workspace", () => ({
-  useResponsesNavigation: () => ({
-    isPending: navState.isPending,
-    navigate: pushMock,
-  }),
+  useResponsesNavigation: () => ({ isPending: navState.isPending, navigate: pushMock }),
 }));
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { GeneralEducationResponsesFilters } from "@/features/response-review/components/general-education-responses-filters";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  GeneralEducationResponsesFilters,
+  GeneralEducationResponsesTableHead,
+} from "@/features/response-review/components/general-education-responses-filters";
 import type { GeneralEducationResponsesFilterState } from "@/features/response-review/services/general-education-responses-state";
 import type { GeneralEducationEvaluationFilterOptions } from "@/features/response-review/services/list-general-education-evaluations";
 
@@ -22,6 +23,7 @@ const COURSE = "22222222-2222-4222-8222-222222222222";
 const FACULTY = "33333333-3333-4333-8333-333333333333";
 const PROGRAM = "44444444-4444-4444-8444-444444444444";
 const ILO = "55555555-5555-4555-8555-555555555555";
+const SCHOOL_YEAR = "66666666-6666-4666-8666-666666666666";
 
 const options: GeneralEducationEvaluationFilterOptions = {
   periodOptions: {
@@ -30,7 +32,7 @@ const options: GeneralEducationEvaluationFilterOptions = {
     termInstances: [
       {
         id: TERM_INSTANCE,
-        schoolYearId: "44444444-4444-4444-8444-444444444444",
+        schoolYearId: SCHOOL_YEAR,
         schoolYearLabel: "2025-2026",
         semester: "SECOND",
         semesterLabel: "2nd Semester",
@@ -39,44 +41,52 @@ const options: GeneralEducationEvaluationFilterOptions = {
       },
     ],
   },
-  courses: [{ id: COURSE, label: "GE 1 — Understanding the Self" }],
+  courses: [{ id: COURSE, label: "GE 1 · Understanding the Self" }],
   programs: [{ id: PROGRAM, label: "BSIT · Information Technology" }],
   faculty: [{ id: FACULTY, label: "Dr. Santos" }],
   ilos: [{ id: ILO, label: "ILO1 — Think critically" }],
 };
 
-function renderFilters(state: GeneralEducationResponsesFilterState) {
-  return render(<GeneralEducationResponsesFilters state={state} options={options} />);
-}
-
 /**
- * The combobox trigger is the icon button inside the field's input group, and
- * the same field is mounted twice — once for the desktop form and once inside
- * the mobile Drawer — so every lookup takes the scope it should search.
+ * The surface as the landing composes it: the toolbar above the evidence, and
+ * the table's own filterable headings below it. Narrowing happens in the column
+ * heading, so a test that rendered only the toolbar would assert nothing about
+ * where a facet lives.
  */
-function openCombobox(label: string, scope: HTMLElement = document.body) {
-  const input = within(scope).getByRole("combobox", { name: label });
-  const trigger = input.closest('[data-slot="input-group"]')?.querySelector("button");
-  if (!trigger) throw new Error(`No options trigger for ${label}`);
-  fireEvent.click(trigger);
-  return input;
+function renderFilters(state: GeneralEducationResponsesFilterState) {
+  return render(
+    <>
+      <GeneralEducationResponsesFilters state={state} options={options} />
+      <Table label="Evaluation evidence">
+        <TableHeader>
+          <TableRow>
+            <GeneralEducationResponsesTableHead state={state} options={options} />
+            <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
+          </TableRow>
+        </TableHeader>
+      </Table>
+    </>
+  );
 }
 
-async function chooseComboboxOption(label: string, optionName: string) {
-  const input = openCombobox(label);
-  const option = await screen.findByRole("option", { name: optionName });
-  fireEvent.click(option);
-  await waitFor(() => expect(input).toHaveValue(optionName));
+/** Opens one column's funnel and picks a value from it, the way it is used. */
+async function chooseFacetOption(columnName: string, optionName: string) {
+  fireEvent.click(screen.getByRole("button", { name: `Filter ${columnName}` }));
+  fireEvent.click(await screen.findByRole("radio", { name: optionName }));
 }
 
-async function chooseSelectOption(label: string, optionName: string) {
-  fireEvent.click(screen.getByRole("combobox", { name: label }));
-  const option = await screen.findByRole("option", { name: optionName });
-  fireEvent.mouseMove(option);
-  fireEvent.click(option);
+/** The radio rows one open funnel offers, in the order it presents them. */
+async function openColumnOptions(columnName: string) {
+  fireEvent.click(screen.getByRole("button", { name: `Filter ${columnName}` }));
+  await screen.findAllByRole("radio");
+  return screen.getAllByRole("radio").map((row) => row.closest("label")?.textContent);
 }
 
-async function openMobileDrawer() {
+function search() {
+  return screen.getByRole("searchbox", { name: "Search evaluations" });
+}
+
+async function openMobileSheet() {
   fireEvent.click(screen.getByRole("button", { name: /Filters/ }));
   const dialog = await screen.findByRole("dialog");
   expect(dialog).toBeInTheDocument();
@@ -87,130 +97,166 @@ describe("GeneralEducationResponsesFilters", () => {
   beforeEach(() => {
     pushMock.mockReset();
     navState.isPending = false;
+    vi.useRealTimers();
   });
 
-  it("applies the picked period, course, faculty, class, and search text as one scoped navigation", async () => {
+  it("applies each facet from its column as it changes, with nothing to submit", async () => {
     renderFilters({ page: 3, termInstanceId: TERM_INSTANCE });
 
-    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "clarity" } });
-    await chooseComboboxOption("Academic period", "2025-2026 · 2nd Semester · 1st Term");
-    await chooseComboboxOption("Course", "GE 1 — Understanding the Self");
-    await chooseComboboxOption("Faculty", "Dr. Santos");
-    fireEvent.click(screen.getByText("More filters"));
-    await chooseSelectOption("Year level", "3rd Year");
-    await chooseSelectOption("Section", "Morning");
+    // The panel is no longer a form, so there is no Apply control anywhere.
+    expect(document.querySelector("form")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Apply/ })).toBeNull();
+    expect(screen.queryByText("Find evaluations")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+    await chooseFacetOption("Evaluation", "GE 1 · Understanding the Self");
 
-    // Applying filters returns to the first page of the same period scope.
+    // The facet lands on its own, keeps the period scope, and returns to page 1.
     expect(pushMock).toHaveBeenCalledTimes(1);
-    expect(pushMock).toHaveBeenCalledWith(
-      `/gen-ed-coordinator/responses?q=clarity&termInstanceId=${TERM_INSTANCE}&courseId=${COURSE}&facultyId=${FACULTY}&yearLevel=THIRD_YEAR&section=MORNING`
-    );
-  });
-
-  it("drops a cleared selection instead of resubmitting the previous scope", async () => {
-    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE, courseId: COURSE });
-
-    const courseField = screen
-      .getByRole("combobox", { name: "Course" })
-      .closest('[data-slot="input-group"]') as HTMLElement;
-    fireEvent.click(within(courseField).getByRole("button", { name: "Clear selection" }));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Course" })).toHaveValue(""));
-
-    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    expect(pushMock).toHaveBeenCalledWith(
-      `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}`
-    );
-  });
-
-  it("keeps the school year and semester scope that has no control on this form", () => {
-    const SCHOOL_YEAR = "44444444-4444-4444-8444-444444444444";
-    renderFilters({ page: 1, schoolYearId: SCHOOL_YEAR, semester: "SECOND" });
-
-    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "ethics" } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    expect(pushMock).toHaveBeenCalledWith(
-      `/gen-ed-coordinator/responses?q=ethics&schoolYearId=${SCHOOL_YEAR}&semester=SECOND`
-    );
-  });
-
-  it("counts applied filters and points the reset links at the unfiltered list", () => {
-    const view = renderFilters({ page: 1, q: "ethics", yearLevel: "SECOND_YEAR" });
-
-    expect(screen.getAllByText("2 active").length).toBeGreaterThan(0);
-    for (const reset of screen.getAllByRole("link", { name: /Clear/ })) {
-      expect(reset).toHaveAttribute("href", "/gen-ed-coordinator/responses");
-    }
-
-    view.rerender(<GeneralEducationResponsesFilters state={{ page: 1 }} options={options} />);
-    expect(screen.queryByText(/\d+ active/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Clear filters/ })).not.toBeInTheDocument();
-  });
-
-  it("applies the mobile drawer selection and closes the drawer", async () => {
-    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
-
-    const dialog = await openMobileDrawer();
-    fireEvent.click(within(dialog).getByText("More filters"));
-    const course = openCombobox("Course", dialog);
-    fireEvent.click(await screen.findByRole("option", { name: "GE 1 — Understanding the Self" }));
-    await waitFor(() => expect(course).toHaveValue("GE 1 — Understanding the Self"));
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filters" }));
-
     expect(pushMock).toHaveBeenCalledWith(
       `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}&courseId=${COURSE}`
     );
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("discards an unapplied mobile selection so the committed scope stays authoritative", async () => {
+  it("offers the class column's three facts under one heading", async () => {
     renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
 
-    const dialog = await openMobileDrawer();
-    fireEvent.click(within(dialog).getByText("More filters"));
-    const course = openCombobox("Course", dialog);
-    fireEvent.click(await screen.findByRole("option", { name: "GE 1 — Understanding the Self" }));
-    await waitFor(() => expect(course).toHaveValue("GE 1 — Understanding the Self"));
+    // Year level, section, and the assignment's Program all narrow the same
+    // Class cell, so they open together rather than as three hidden fields.
+    expect(await openColumnOptions("Class")).toEqual([
+      "All year levels",
+      "1st Year",
+      "2nd Year",
+      "3rd Year",
+      "4th Year",
+      "All sections",
+      "Morning",
+      "Afternoon",
+      "Evening",
+      // ADR 0035: the assignment's Program, never the respondent's.
+      "All class programs",
+      "BSIT · Information Technology",
+    ]);
+  });
 
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  it("narrows the class column without dropping the period scope", async () => {
+    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
+
+    await chooseFacetOption("Class", "3rd Year");
+
+    expect(pushMock).toHaveBeenLastCalledWith(
+      `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}&yearLevel=THIRD_YEAR`
+    );
+  });
+
+  it("narrows the class column by its class Program", async () => {
+    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
+
+    await chooseFacetOption("Class", "BSIT · Information Technology");
+
+    expect(pushMock).toHaveBeenLastCalledWith(
+      `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}&programId=${PROGRAM}`
+    );
+  });
+
+  it("narrows the faculty column", async () => {
+    renderFilters({ page: 1 });
+
+    await chooseFacetOption("Faculty", "Dr. Santos");
+
+    expect(pushMock).toHaveBeenCalledWith(`/gen-ed-coordinator/responses?facultyId=${FACULTY}`);
+  });
+
+  it("keeps the ILO filter reachable from the toolbar even though no column owns it", async () => {
+    renderFilters({ page: 1, iloId: ILO });
+
+    const trigger = screen.getByRole("button", { name: /^More filters/ });
+    expect(
+      screen.getByRole("button", {
+        name: "Remove filter Institutional Learning Outcome: ILO1 — Think critically",
+      })
+    ).toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    expect(
+      await screen.findByRole("radio", { name: "ILO1 — Think critically" })
+    ).toBeInTheDocument();
+  });
+
+  it("reads the submitted bucket as a count, not a lifecycle stage", async () => {
+    renderFilters({ page: 1 });
+
+    await chooseFacetOption("Submitted", "Partly submitted");
+
+    expect(pushMock).toHaveBeenCalledWith("/gen-ed-coordinator/responses?completion=partial");
+  });
+
+  it("keeps the school year and semester scope that has no control on this surface", async () => {
+    renderFilters({ page: 2, schoolYearId: SCHOOL_YEAR, semester: "SECOND" });
+
+    await chooseFacetOption("Evaluation", "GE 1 · Understanding the Self");
+
+    expect(pushMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/responses?schoolYearId=${SCHOOL_YEAR}&semester=SECOND&courseId=${COURSE}`
+    );
+  });
+
+  it("clears an applied facet from its removable chip", () => {
+    renderFilters({
+      page: 1,
+      termInstanceId: TERM_INSTANCE,
+      courseId: COURSE,
+      facultyId: FACULTY,
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove filter Course: GE 1 · Understanding the Self" })
+    );
+
+    expect(pushMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}&facultyId=${FACULTY}`
+    );
+  });
+
+  it("clears every applied facet at once", () => {
+    renderFilters({ page: 4, q: "ethics", yearLevel: "SECOND_YEAR", status: "CLOSED" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
+
+    expect(pushMock).toHaveBeenCalledWith("/gen-ed-coordinator/responses");
+  });
+
+  it("commits the spanning search on a debounce, resetting to the first page", async () => {
+    vi.useFakeTimers();
+    renderFilters({ page: 5, termInstanceId: TERM_INSTANCE });
+
+    fireEvent.change(search(), { target: { value: "clarity" } });
     expect(pushMock).not.toHaveBeenCalled();
 
-    const reopened = await openMobileDrawer();
-    expect(within(reopened).getByRole("combobox", { name: "Course" })).toHaveValue("");
-    expect(within(reopened).getByRole("combobox", { name: "Academic period" })).toHaveValue(
-      "2025-2026 · 2nd Semester · 1st Term"
-    );
-  });
+    await vi.advanceTimersByTimeAsync(300);
 
-  it("applies the Program Head review facets and the class Program and ILO context", async () => {
-    renderFilters({ page: 2 });
-
-    await chooseSelectOption("Status", "Closed");
-    await chooseSelectOption("Response progress", "Complete");
-    fireEvent.click(screen.getByText("More filters"));
-    await chooseComboboxOption("Class program", "BSIT · Information Technology");
-    await chooseComboboxOption("Institutional Learning Outcome", "ILO1 — Think critically");
-
-    fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
-
-    // Applying filters resets to the first page of the new scope.
     expect(pushMock).toHaveBeenCalledWith(
-      `/gen-ed-coordinator/responses?programId=${PROGRAM}&iloId=${ILO}&status=CLOSED&completion=complete`
+      `/gen-ed-coordinator/responses?q=clarity&termInstanceId=${TERM_INSTANCE}`
     );
   });
 
-  it("marks the filter form busy while the navigation is pending", () => {
-    navState.isPending = true;
-    const { container } = renderFilters({ page: 1 });
+  it("applies a facet from the mobile sheet, where the heading row is gone", async () => {
+    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
 
-    for (const apply of screen.getAllByRole("button", { name: /Applying filters/ })) {
-      expect(apply).toBeDisabled();
-    }
-    expect(container.querySelector("form")).toHaveAttribute("aria-busy", "true");
+    const dialog = await openMobileSheet();
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Dr. Santos" }));
+
+    expect(pushMock).toHaveBeenCalledWith(
+      `/gen-ed-coordinator/responses?termInstanceId=${TERM_INSTANCE}&facultyId=${FACULTY}`
+    );
+  });
+
+  it("names the in-force academic period on the column that owns it", () => {
+    renderFilters({ page: 1, termInstanceId: TERM_INSTANCE });
+
+    expect(
+      screen.getByRole("button", {
+        name: "Filter Period: 2025-2026 · 2nd Semester · 1st Term",
+      })
+    ).toBeInTheDocument();
   });
 });

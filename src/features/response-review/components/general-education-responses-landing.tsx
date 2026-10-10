@@ -18,7 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { GeneralEducationResponsesFilters } from "@/features/response-review/components/general-education-responses-filters";
+import {
+  GeneralEducationResponsesFilters,
+  GeneralEducationResponsesTableHead,
+} from "@/features/response-review/components/general-education-responses-filters";
 import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
 import { GeneralEducationResponsesPagination } from "./general-education-responses-pagination";
 import {
@@ -28,7 +31,10 @@ import {
   formatResponseYearLevel,
   responseStatusVariant,
 } from "@/features/response-review/components/response-review-labels";
-import type { GeneralEducationEvaluationList } from "@/features/response-review/services/list-general-education-evaluations";
+import type {
+  GeneralEducationEvaluationFilterOptions,
+  GeneralEducationEvaluationList,
+} from "@/features/response-review/services/list-general-education-evaluations";
 import {
   buildGeneralEducationResponsesUrl,
   type GeneralEducationResponsesFilterState,
@@ -159,7 +165,12 @@ function EvaluationEvidence({
               ))}
             </div>
             <div className="hidden lg:block">
-              <EvaluationTable items={data.items} upwardState={upwardState} />
+              <EvaluationTable
+                items={data.items}
+                upwardState={upwardState}
+                state={state}
+                options={data.options}
+              />
             </div>
           </>
         )}
@@ -173,18 +184,23 @@ function EvaluationEvidence({
   );
 }
 
-function EvaluationTable({ items, upwardState }: { items: Evaluation[]; upwardState: string }) {
+function EvaluationTable({
+  items,
+  upwardState,
+  state,
+  options,
+}: {
+  items: Evaluation[];
+  upwardState: string;
+  state: GeneralEducationResponsesFilterState;
+  options: GeneralEducationEvaluationFilterOptions;
+}) {
   return (
-    <Table className="table-fixed">
+    <Table className="table-fixed" label="Evaluation evidence">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[24%]">Evaluation</TableHead>
-          <TableHead className="w-[15%]">Class</TableHead>
-          <TableHead className="w-[16%]">Faculty</TableHead>
-          <TableHead className="w-[17%]">Period</TableHead>
-          <TableHead className="w-[9%]">Status</TableHead>
-          <TableHead className="w-[9%] text-right">Submitted</TableHead>
-          <TableHead className="w-[10%] text-right">Mean / scale</TableHead>
+          <GeneralEducationResponsesTableHead state={state} options={options} />
+          <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

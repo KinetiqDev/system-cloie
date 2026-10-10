@@ -138,7 +138,7 @@ function RankedValues({ tokens, frameHeight }: { tokens: WordCloudToken[]; frame
         aria-label="Exact word frequency values"
         containerClassName="min-h-0 flex-1 overflow-y-auto"
       >
-        <TableHeader className="bg-card sticky top-0 z-10">
+        <TableHeader className="sticky top-0 z-10">
           <TableRow>
             <TableHead>Term</TableHead>
             <TableHead className="w-20 sm:w-32">Distribution</TableHead>

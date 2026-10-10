@@ -172,6 +172,7 @@ export function ManagementToolsPage({
         view={view}
         sections={[
           {
+            filterKey: "institutional-templates",
             items: templates.map(toTemplateItem),
             renderFooterActions: (item) => (
               <>

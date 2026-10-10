@@ -11,10 +11,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("@/features/analytics/components/program-head-responses-filters", () => ({
-  ProgramHeadResponsesFilters: () => <div>Filters</div>,
-}));
-
 vi.mock("@/features/analytics/components/program-head-responses-pagination", () => ({
   ProgramHeadResponsesPagination: () => <div>Pagination</div>,
 }));
@@ -61,7 +57,7 @@ describe("ProgramHeadResponsesLanding", () => {
     expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1 of 2 submitted/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1–5 \(5-point\)/).length).toBeGreaterThan(0);
-    expect(screen.queryByText("INDUSTRY PARTNER")).not.toBeInTheDocument();
+    expect(screen.queryByText("INDUSTRY_PARTNER")).not.toBeInTheDocument();
   });
 
   it("renders archived deployment status as a friendly label", () => {
@@ -159,10 +155,56 @@ describe("ProgramHeadResponsesLanding", () => {
         data={{ total: 0, page: 1, pageSize: 20, options, items: [] }}
       />
     );
-
     expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute(
       "href",
       "/program-head/programs/program-1/responses"
     );
+  });
+
+  it("hangs each filter off the evidence column it narrows", () => {
+    render(
+      <ProgramHeadResponsesLanding
+        programId="program-1"
+        program={{ code: "BSHM", name: "Hospitality Management" }}
+        state={{ tab: "course", page: 1 }}
+        data={{
+          total: 1,
+          page: 1,
+          pageSize: 20,
+          options,
+          items: [
+            {
+              id: "deployment-1",
+              title: "Course evaluation",
+              period: "2026-2027 · 2nd Semester",
+              status: "ACTIVE",
+              assigned: 1,
+              submitted: 1,
+              mean: 4.2,
+              scaleLabel: "1–5 (5-point)",
+              course: { id: "c1", code: "EDUC 101", title: "Foundations", major: null },
+              faculty: "Dr. Santos",
+              yearLevel: "FIRST_YEAR",
+              section: "MORNING",
+            },
+          ],
+        }}
+      />
+    );
+
+    // The toolbar stays mounted above the evidence; nothing collects a form.
+    expect(screen.getByRole("searchbox", { name: "Search evaluations" })).toBeInTheDocument();
+    expect(document.querySelector("form")).toBeNull();
+
+    // Each column's accessible name stays exactly its label, funnel or not.
+    expect(
+      screen
+        .getAllByRole("columnheader")
+        .map((heading) => heading.getAttribute("aria-label") ?? heading.textContent)
+    ).toEqual(["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted", "Mean / scale"]);
+    for (const column of ["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted"]) {
+      expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: /^Filter Mean \/ scale/ })).not.toBeInTheDocument();
   });
 });

@@ -10,15 +10,14 @@ import {
   GraduationCap,
   Power,
   Users,
-  ArrowUp,
-  ArrowDown,
-  ArrowUpDown,
   Eye,
   Pencil,
   UserX,
   UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import type { FacetDef } from "@/components/data-table/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -63,7 +62,17 @@ interface UsersDataTableProps {
   onToggleAll: (checked: boolean) => void;
   onClearSelection: () => void;
   onBulkStatus: (isActive: boolean) => void;
+  /** One entry per filterable column, keyed by column. */
+  facets: UsersTableFacets;
 }
+
+export type UsersTableFacets = {
+  role: FacetDef[];
+  program: FacetDef[];
+  major: FacetDef[];
+  /** Year level and section, both shown under the Year & Section heading. */
+  placement: FacetDef[];
+};
 
 type MobileUserCardProps = Pick<
   UsersDataTableProps,
@@ -227,11 +236,12 @@ export function UsersDataTable({
   onToggleAll,
   onClearSelection,
   onBulkStatus,
+  facets,
 }: UsersDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [, startSortTransition] = useTransition();
+  const [isSortPending, startSortTransition] = useTransition();
 
   const rawSort = searchParams.get("sort");
   const activeSort: "name" | "email" | "isActive" =
@@ -261,23 +271,6 @@ export function UsersDataTable({
     });
   };
 
-  const renderSortIcon = (field: "name" | "email" | "isActive") => {
-    if (field !== activeSort) {
-      return <ArrowUpDown aria-hidden="true" className="text-muted-foreground/60 size-4" />;
-    }
-    return activeDir === "asc" ? (
-      <ArrowUp aria-hidden="true" className="size-4" />
-    ) : (
-      <ArrowDown aria-hidden="true" className="size-4" />
-    );
-  };
-
-  const ariaSortFor = (
-    field: "name" | "email" | "isActive"
-  ): "ascending" | "descending" | "none" => {
-    if (field !== activeSort) return "none";
-    return activeDir === "asc" ? "ascending" : "descending";
-  };
   if (users.length === 0) {
     return (
       <Empty className="py-12">
@@ -313,9 +306,9 @@ export function UsersDataTable({
       </BulkActionBar>
       {/* Desktop Table View */}
       <div className="hidden overflow-x-auto rounded-lg border md:block">
-        <Table className="min-w-[900px]">
+        <Table label="Users" className="min-w-[900px]">
           <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableRow>
               <TableHead className="w-12">
                 <Checkbox
                   aria-label="Select all users on this page"
@@ -324,43 +317,38 @@ export function UsersDataTable({
                   onCheckedChange={(checked) => onToggleAll(Boolean(checked))}
                 />
               </TableHead>
-              <TableHead aria-sort={ariaSortFor("name")} className="w-[200px]">
-                <button
-                  type="button"
-                  onClick={() => handleSort("name")}
-                  aria-label={`Sort by name, currently ${ariaSortFor("name") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                >
-                  Name
-                  {renderSortIcon("name")}
-                </button>
-              </TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Major</TableHead>
-              <TableHead>Year &amp; Section</TableHead>
-              <TableHead aria-sort={ariaSortFor("email")}>
-                <button
-                  type="button"
-                  onClick={() => handleSort("email")}
-                  aria-label={`Sort by email, currently ${ariaSortFor("email") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                >
-                  Email
-                  {renderSortIcon("email")}
-                </button>
-              </TableHead>
-              <TableHead aria-sort={ariaSortFor("isActive")}>
-                <button
-                  type="button"
-                  onClick={() => handleSort("isActive")}
-                  aria-label={`Sort by status, currently ${ariaSortFor("isActive") === "none" ? "unsorted" : activeDir === "asc" ? "ascending" : "descending"}`}
-                  className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1 rounded-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                >
-                  Status
-                  {renderSortIcon("isActive")}
-                </button>
-              </TableHead>
+              <FilterableHead
+                label="Name"
+                className="w-[200px]"
+                sort={{
+                  isActive: activeSort === "name",
+                  direction: activeDir,
+                  isPending: isSortPending,
+                  onSort: () => handleSort("name"),
+                }}
+              />
+              <FilterableHead label="Role" facets={facets.role} />
+              <FilterableHead label="Program" facets={facets.program} />
+              <FilterableHead label="Major" facets={facets.major} />
+              <FilterableHead label="Year & Section" facets={facets.placement} />
+              <FilterableHead
+                label="Email"
+                sort={{
+                  isActive: activeSort === "email",
+                  direction: activeDir,
+                  isPending: isSortPending,
+                  onSort: () => handleSort("email"),
+                }}
+              />
+              <FilterableHead
+                label="Status"
+                sort={{
+                  isActive: activeSort === "isActive",
+                  direction: activeDir,
+                  isPending: isSortPending,
+                  onSort: () => handleSort("isActive"),
+                }}
+              />
               <TableHead className="w-[60px]">Actions</TableHead>
             </TableRow>
           </TableHeader>

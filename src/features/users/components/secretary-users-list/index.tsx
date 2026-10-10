@@ -5,8 +5,10 @@ import { useCallback, useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { SystemRole, YearLevel } from "@prisma/client";
+import { YearLevel } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
 import type {
   SecretaryUserSummaryItem,
   SecretaryUsersActivePeriod,
@@ -15,7 +17,13 @@ import type {
 import type { SecretaryUsersListQuery } from "../../schemas/secretary-users-list";
 import { serializeSecretaryUsersListQuery } from "../../schemas/secretary-users-list";
 import { UsersKPI } from "./users-kpi";
-import { UsersFilterBar, type UsersSecondaryFilters } from "./users-filter-bar";
+import {
+  buildUsersFacets,
+  usersFacetPatch,
+  UsersToolbarFacetMenu,
+  type UsersFacetKey,
+  type UsersFacetState,
+} from "./users-facets";
 import { UsersDataTable } from "./users-data-table";
 import { Pagination } from "@/components/ui/pagination";
 import { UserDialogs, useToggleUserActive } from "./user-dialogs";
@@ -125,25 +133,39 @@ export function SecretaryUsersList({
     });
   };
 
+  const facetState: UsersFacetState = {
+    role: appliedQuery.role,
+    program: appliedQuery.program,
+    major: appliedQuery.major,
+    yearLevel: appliedQuery.yearLevel,
+    section: appliedQuery.section,
+    state: appliedQuery.state,
+    verification: appliedQuery.verification,
+  };
+
   /**
    * A role change swaps which records the list shows, so refinements that
    * describe the previous role's records are dropped with it. Program stays:
    * every role carries one.
    */
-  const handleRoleChange = (nextRole: SystemRole | undefined) => {
-    navigateWithQuery({
-      role: nextRole,
-      major: undefined,
-      yearLevel: undefined,
-      section: undefined,
-      state: undefined,
-      verification: undefined,
-      page: 1,
-    });
-  };
-
-  const handleFiltersChange = (next: UsersSecondaryFilters) => {
-    navigateWithQuery({ ...next, page: 1 });
+  const handleFacetChange = (key: UsersFacetKey, value: string | null) => {
+    const patch = usersFacetPatch(key, value);
+    navigateWithQuery(
+      key === "role"
+        ? {
+            ...patch,
+            // The server rejects refinements outside the new role's presentable
+            // context, so the client drops them with the role instead of
+            // offering a filter it would immediately canonicalize away.
+            major: undefined,
+            yearLevel: undefined,
+            section: undefined,
+            state: undefined,
+            verification: undefined,
+            page: 1,
+          }
+        : { ...patch, page: 1 }
+    );
   };
 
   const handleClearFilters = () => {
@@ -160,6 +182,13 @@ export function SecretaryUsersList({
       page: 1,
     });
   };
+
+  const {
+    byColumn: columnFacets,
+    account: accountFacets,
+    all: allFacets,
+    placementNote,
+  } = buildUsersFacets(facetState, handleFacetChange, { programs, activePeriod });
 
   return (
     <div className="flex flex-col gap-6">
@@ -190,24 +219,27 @@ export function SecretaryUsersList({
         </div>
       </div>
 
-      <UsersFilterBar
-        role={appliedQuery.role}
-        filters={{
-          program: appliedQuery.program,
-          major: appliedQuery.major,
-          yearLevel: appliedQuery.yearLevel,
-          section: appliedQuery.section,
-          state: appliedQuery.state,
-          verification: appliedQuery.verification,
+      <TableToolbar
+        search={{
+          id: "users-search",
+          label: "Search users",
+          placeholder: "Search by name or email...",
+          value: searchDraft,
+          onChange: setSearchDraft,
         }}
-        searchTerm={searchDraft}
-        activePeriod={activePeriod}
-        programs={programs}
-        onRoleChange={handleRoleChange}
-        onFiltersChange={handleFiltersChange}
-        onSearchChange={setSearchDraft}
-        onClearFilters={handleClearFilters}
-      />
+        facets={allFacets}
+        onClearAll={handleClearFilters}
+      >
+        <UsersToolbarFacetMenu facets={accountFacets} className="hidden shrink-0 sm:inline-flex" />
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={handleClearFilters}
+            summary="Show results"
+          />
+        </div>
+      </TableToolbar>
 
       <UsersDataTable
         users={users}
@@ -222,7 +254,12 @@ export function SecretaryUsersList({
         onToggleAll={selection.toggleAllVisible}
         onClearSelection={selection.clearSelection}
         onBulkStatus={handleBulkStatus}
+        facets={columnFacets}
       />
+
+      {placementNote ? (
+        <p className="text-muted-foreground -mt-4 text-xs leading-normal">{placementNote}</p>
+      ) : null}
 
       <Pagination
         currentPage={page}
@@ -257,6 +294,6 @@ export function SecretaryUsersList({
 }
 
 export * from "./users-kpi";
-export * from "./users-filter-bar";
+export * from "./users-facets";
 export * from "./users-data-table";
 export * from "./user-dialogs";

@@ -12,19 +12,23 @@ import {
   MoreVertical,
   Pencil,
   Plus,
-  Search,
   Library,
   Power,
-  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
+import { SCHEDULE_FILTER_ALL, matchesScheduleFilters } from "./course-schedule-filters";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
 import {
-  CourseScheduleFilterControls,
-  SCHEDULE_FILTER_ALL,
-  matchesScheduleFilters,
-} from "./course-schedule-filters";
+  courseArchiveStatusFacet,
+  courseMajorFacet,
+  courseProgramFacet,
+  courseScheduleFacets,
+  courseScopeFacet,
+} from "./course-catalog-facets";
 
 import { CourseImportDialog } from "@/features/academic-structure/components/course-import-dialog";
 
@@ -40,7 +44,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,13 +55,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -129,6 +125,7 @@ export function ManagementCoursesList({
   const [semesterFilter, setSemesterFilter] = useState<string>(SCHEDULE_FILTER_ALL);
   const [termFilter, setTermFilter] = useState<string>(SCHEDULE_FILTER_ALL);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState(SCHEDULE_FILTER_ALL);
   const [currentPage, setCurrentPage] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [courseToDelete, setCourseToDelete] = useState<{ id: string; code: string } | null>(null);
@@ -143,6 +140,12 @@ export function ManagementCoursesList({
   // ---- Filtered courses ----------------------------------------------------
   const filteredCourses = useMemo(() => {
     let result = courses;
+
+    if (statusFilter === "active") {
+      result = result.filter((c) => c.isActive);
+    } else if (statusFilter === "inactive") {
+      result = result.filter((c) => !c.isActive);
+    }
 
     if (scopeFilter === "general_education") {
       result = result.filter((c) => c.courseScope === CourseScope.GENERAL_EDUCATION);
@@ -186,6 +189,7 @@ export function ManagementCoursesList({
     yearLevelFilter,
     semesterFilter,
     termFilter,
+    statusFilter,
     searchTerm,
   ]);
 
@@ -195,7 +199,7 @@ export function ManagementCoursesList({
   const paginatedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const selection = useTableSelection(
     paginatedCourses.map((course) => course.id),
-    `${scopeFilter}:${programFilter}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${searchTerm}:${safePage}`
+    `${scopeFilter}:${programFilter}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${statusFilter}:${searchTerm}:${safePage}`
   );
 
   const handleScopeChange = (value: string | null) => {
@@ -218,6 +222,60 @@ export function ManagementCoursesList({
     setSearchTerm(value);
     setCurrentPage(1);
   };
+
+  const clearFilters = () => {
+    setScopeFilter(SCHEDULE_FILTER_ALL);
+    setProgramFilter(SCHEDULE_FILTER_ALL);
+    setMajorFilter(SCHEDULE_FILTER_ALL);
+    setYearLevelFilter(SCHEDULE_FILTER_ALL);
+    setSemesterFilter(SCHEDULE_FILTER_ALL);
+    setTermFilter(SCHEDULE_FILTER_ALL);
+    setStatusFilter(SCHEDULE_FILTER_ALL);
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const setScheduleFacet = (key: "yearLevel" | "semester" | "term", value: string | null) => {
+    const next = value ?? SCHEDULE_FILTER_ALL;
+    if (key === "yearLevel") setYearLevelFilter(next);
+    if (key === "semester") {
+      setSemesterFilter(next);
+      // Summer has no terms, so mirror the shared schedule predicate's rule.
+      if (next === "SUMMER") setTermFilter(SCHEDULE_FILTER_ALL);
+    }
+    if (key === "term") setTermFilter(next);
+    setCurrentPage(1);
+  };
+
+  const scheduleFacets = courseScheduleFacets(
+    {
+      yearLevel: yearLevelFilter,
+      semester: semesterFilter,
+      term: termFilter,
+    },
+    setScheduleFacet,
+    SCHEDULE_FILTER_ALL
+  );
+  const facets = {
+    course: [],
+    scope: [courseScopeFacet(scopeFilter, handleScopeChange, SCHEDULE_FILTER_ALL)],
+    program: [
+      courseProgramFacet(programFilter, handleProgramChange, SCHEDULE_FILTER_ALL, programs),
+    ],
+    major: [courseMajorFacet(majorFilter, handleMajorChange, SCHEDULE_FILTER_ALL, availableMajors)],
+    class: [scheduleFacets.yearLevel, scheduleFacets.semester, scheduleFacets.term],
+    status: [
+      courseArchiveStatusFacet(
+        statusFilter,
+        (value) => {
+          setStatusFilter(value ?? SCHEDULE_FILTER_ALL);
+          setCurrentPage(1);
+        },
+        SCHEDULE_FILTER_ALL
+      ),
+    ],
+  };
+  const allFacets = Object.values(facets).flat();
 
   // ---- Action handlers -----------------------------------------------------
   const handleToggleActive = (courseId: string, currentActive: boolean) => {
@@ -301,122 +359,32 @@ export function ManagementCoursesList({
         </Button>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        {/* Scope filter */}
-        <Select value={scopeFilter} onValueChange={handleScopeChange}>
-          <SelectTrigger aria-label="Filter by course scope" className="w-full md:w-[180px]">
-            <SelectValue>
-              {scopeFilter === SCHEDULE_FILTER_ALL
-                ? "All Scopes"
-                : scopeFilter === "general_education"
-                  ? "General Education"
-                  : "Program-Specific"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={SCHEDULE_FILTER_ALL}>All Scopes</SelectItem>
-            <SelectItem value="general_education">General Education</SelectItem>
-            <SelectItem value="program_specific">Program-Specific</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Program filter */}
-        <Select value={programFilter} onValueChange={handleProgramChange}>
-          <SelectTrigger aria-label="Filter by program" className="w-full md:w-[200px]">
-            <SelectValue>
-              {programFilter === SCHEDULE_FILTER_ALL
-                ? "All Programs"
-                : (programs.find((p) => p.id === programFilter)?.code ?? "All Programs")}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={SCHEDULE_FILTER_ALL}>All Programs</SelectItem>
-            {programs.map((program) => (
-              <SelectItem key={program.id} value={program.id}>
-                {program.code} – {program.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Major filter (conditional — only when selected program has majors) */}
-        {availableMajors.length > 0 && (
-          <Select value={majorFilter} onValueChange={handleMajorChange}>
-            <SelectTrigger aria-label="Filter by major" className="w-full md:w-[180px]">
-              <SelectValue>
-                {majorFilter === SCHEDULE_FILTER_ALL
-                  ? "All Majors"
-                  : (availableMajors.find((m) => m.id === majorFilter)?.name ?? "All Majors")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SCHEDULE_FILTER_ALL}>All Majors</SelectItem>
-              {availableMajors.map((major) => (
-                <SelectItem key={major.id} value={major.id}>
-                  {major.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        <CourseScheduleFilterControls
-          yearLevel={yearLevelFilter}
-          semester={semesterFilter}
-          term={termFilter}
-          onYearLevelChange={(v) => {
-            setYearLevelFilter(v);
-            setCurrentPage(1);
-          }}
-          onSemesterChange={(v) => {
-            setSemesterFilter(v);
-            setCurrentPage(1);
-          }}
-          onTermChange={(v) => {
-            setTermFilter(v);
-            setCurrentPage(1);
-          }}
-        />
-
-        {/* Search */}
-        <div className="relative w-full md:ml-auto md:max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            placeholder="Search by code or title..."
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-8"
+      <TableToolbar
+        search={{
+          id: "course-search",
+          label: "Search courses",
+          placeholder: "Search by code or title...",
+          value: searchTerm,
+          onChange: handleSearchChange,
+        }}
+        facets={allFacets}
+        onClearAll={clearFilters}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{filteredCourses.length}</span>{" "}
+            {filteredCourses.length === 1 ? "course" : "courses"}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearFilters}
+            summary="Show results"
           />
         </div>
-
-        {(scopeFilter !== SCHEDULE_FILTER_ALL ||
-          programFilter !== SCHEDULE_FILTER_ALL ||
-          majorFilter !== SCHEDULE_FILTER_ALL ||
-          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
-          semesterFilter !== SCHEDULE_FILTER_ALL ||
-          termFilter !== SCHEDULE_FILTER_ALL ||
-          searchTerm) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setScopeFilter(SCHEDULE_FILTER_ALL);
-              setProgramFilter(SCHEDULE_FILTER_ALL);
-              setMajorFilter(SCHEDULE_FILTER_ALL);
-              setYearLevelFilter(SCHEDULE_FILTER_ALL);
-              setSemesterFilter(SCHEDULE_FILTER_ALL);
-              setTermFilter(SCHEDULE_FILTER_ALL);
-              setSearchTerm("");
-              setCurrentPage(1);
-            }}
-          >
-            <RotateCcw aria-hidden="true" className="size-3.5" />
-            Reset
-          </Button>
-        )}
-      </div>
+      </TableToolbar>
 
       <BulkActionBar
         selectedCount={selection.selectedCount}
@@ -445,7 +413,7 @@ export function ManagementCoursesList({
 
       {/* Data table */}
       <div className="overflow-x-auto rounded-lg border">
-        <Table className="min-w-0 md:min-w-[900px]">
+        <Table label="Courses" className="min-w-0 md:min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -458,17 +426,45 @@ export function ManagementCoursesList({
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
-              <TableHead className="hidden md:table-cell">Scope</TableHead>
-              <TableHead className="hidden md:table-cell">Program</TableHead>
-              <TableHead className="hidden md:table-cell">Major</TableHead>
-              <TableHead className="hidden md:table-cell">Year Level</TableHead>
-              <TableHead className="hidden md:table-cell">Semester</TableHead>
-              <TableHead className="hidden md:table-cell">Term</TableHead>
+              <FilterableHead
+                label="Scope"
+                facets={facets.scope}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Program"
+                facets={facets.program}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Major"
+                facets={facets.major}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Year Level"
+                facets={facets.class.slice(0, 1)}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Semester"
+                facets={facets.class.slice(1, 2)}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Term"
+                facets={facets.class.slice(2, 3)}
+                className="hidden md:table-cell"
+              />
               <TableHead className="hidden text-right md:table-cell">CILOs</TableHead>
               {showEvaluationCount && (
                 <TableHead className="hidden text-right md:table-cell">Evaluations</TableHead>
               )}
-              <TableHead className="hidden md:table-cell">Status</TableHead>
+              <FilterableHead
+                label="Status"
+                facets={facets.status}
+                className="hidden md:table-cell"
+              />
               <TableHead className="w-12 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>

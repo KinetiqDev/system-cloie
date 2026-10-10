@@ -153,6 +153,9 @@
   --color-surface-secondary: var(--surface-secondary);
   --color-surface-tertiary: var(--surface-tertiary);
   --color-surface-muted: var(--surface-muted);
+  --color-table-header: var(--table-header-bg);
+  --color-table-header-fg: var(--table-header-fg);
+  --color-table-header-border: var(--table-header-border);
   --color-surface-hover: var(--surface-hover);
   --color-surface-input: var(--surface-input);
   --color-surface-popover: var(--surface-popover);
@@ -352,21 +355,21 @@ body {
   font-family: var(--font-heading);
 }
 
-.text-heading-xl {
+@utility text-heading-xl {
   font-size: var(--font-size-heading-xl);
   line-height: var(--line-height-heading-xl);
   font-weight: 700;
   font-family: var(--font-heading);
 }
 
-.text-heading-lg {
+@utility text-heading-lg {
   font-size: var(--font-size-heading-lg);
   line-height: var(--line-height-heading-lg);
   font-weight: 700;
   font-family: var(--font-heading);
 }
 
-.text-heading-md {
+@utility text-heading-md {
   font-size: var(--font-size-heading-md);
   line-height: var(--line-height-heading-md);
   font-weight: 600;

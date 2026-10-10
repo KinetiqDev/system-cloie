@@ -90,7 +90,8 @@ describe("Program Head Courses catalog", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Add Course" }));
     await waitFor(() => expect(screen.getByText("Add New Course")).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText(/^Major\b/));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("combobox", { name: /Major/ }));
     const englishOption = await screen.findByRole("option", { name: "English" });
     fireEvent.focus(englishOption);
     fireEvent.keyDown(englishOption, { key: "Enter" });
@@ -136,10 +137,11 @@ describe("Program Head Courses catalog", () => {
       />
     );
 
-    expect(screen.getByText("All Statuses")).toBeInTheDocument();
-    expect(screen.getByText("Year Level")).toBeInTheDocument();
-    expect(screen.getByText("Semester")).toBeInTheDocument();
-    expect(screen.getByText("Term")).toBeInTheDocument();
+    // Column headings keep their exact accessible names, each carrying its own funnel.
+    for (const column of ["Year Level", "Semester", "Term", "Status"]) {
+      expect(screen.getByRole("columnheader", { name: column })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
+    }
     expect(screen.getByText("1st Year")).toBeInTheDocument();
     expect(screen.getByText("1st Semester")).toBeInTheDocument();
     expect(screen.getByText("1st Term")).toBeInTheDocument();
