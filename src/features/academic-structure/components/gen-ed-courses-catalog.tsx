@@ -128,6 +128,43 @@ function StatCard({
   );
 }
 
+function CourseRowActions({
+  course,
+  disabled,
+  onEdit,
+  onToggleStatus,
+}: {
+  course: GenEdCourseItem;
+  disabled: boolean;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${course.code}`} />}
+      >
+        <MoreVertical className="size-4" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil aria-hidden="true" className="text-muted-foreground" />
+          Edit {course.code}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={disabled} onClick={onToggleStatus}>
+          {course.is_active ? (
+            <Archive aria-hidden="true" className="text-warning" />
+          ) : (
+            <Power aria-hidden="true" className="text-success" />
+          )}
+          {course.is_active ? "Archive course" : "Restore course"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogProps) {
   const [statusFilter, setStatusFilter] = useState(SCHEDULE_FILTER_ALL);
   const [search, setSearch] = useState("");
@@ -406,33 +443,12 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                     {formatDate(course.updated_at)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors"
-                        aria-label={`Actions for ${course.code}`}
-                      >
-                        <MoreVertical className="size-4" aria-hidden="true" />
-                        <span className="sr-only">Actions for {course.code}</span>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditingCourse(course)}>
-                          <Pencil aria-hidden="true" className="text-muted-foreground" />
-                          Edit {course.code}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          disabled={isPending}
-                          onClick={() => handleStatus(course.id, !course.is_active)}
-                        >
-                          {course.is_active ? (
-                            <Archive aria-hidden="true" className="text-warning" />
-                          ) : (
-                            <Power aria-hidden="true" className="text-success" />
-                          )}
-                          {course.is_active ? "Archive course" : "Restore course"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <CourseRowActions
+                      course={course}
+                      disabled={isPending}
+                      onEdit={() => setEditingCourse(course)}
+                      onToggleStatus={() => handleStatus(course.id, !course.is_active)}
+                    />
                   </TableCell>
                 </TableRow>
               ))

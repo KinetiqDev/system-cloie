@@ -902,11 +902,15 @@ export function ProgramHeadCoursesCatalog({
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors"
-                        aria-label={`Actions for ${course.code}`}
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Actions for ${course.code}`}
+                          />
+                        }
                       >
                         <MoreVertical className="size-4" aria-hidden="true" />
-                        <span className="sr-only">Actions for {course.code}</span>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setEditingCourse(course)}>
