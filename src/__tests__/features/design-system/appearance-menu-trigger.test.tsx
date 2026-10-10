@@ -49,6 +49,14 @@ describe("AppearanceMenuTrigger", () => {
     expect(screen.queryByRole("button", { name: "Appearance" })).not.toBeInTheDocument();
   });
 
+  it("renders as an icon-only button with screen-reader text and tooltip", () => {
+    renderTrigger(true);
+    const button = screen.getByRole("button", { name: "Appearance" });
+    expect(button).toHaveAttribute("title", "Appearance");
+    const srOnly = button.querySelector(".sr-only");
+    expect(srOnly).toHaveTextContent("Appearance");
+  });
+
   it("opens a larger dropdown with all three options", async () => {
     renderTrigger(true);
     fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
