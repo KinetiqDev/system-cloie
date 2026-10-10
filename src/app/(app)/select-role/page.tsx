@@ -49,9 +49,9 @@ function RoleSelectCard({ role, isActive }: { role: Role; isActive: boolean }) {
         <CardTitle>{formatRole(role)} workspace</CardTitle>
         <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="mt-auto">
         <form action={switchActiveRole.bind(null, role)}>
-          <Button type="submit" variant={copy.variant}>
+          <Button type="submit" variant={copy.variant} className="w-full">
             {copy.action}
           </Button>
         </form>
