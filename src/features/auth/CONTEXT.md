@@ -144,7 +144,7 @@ The state of an active role whose profile gate denies access: a Google-only role
 _Avoid_: Revoked role, unassigned role, inactive session
 
 **Active role selection**:
-A person's choice among their assigned account roles. Selection changes authorization context but does not create, revoke, or complete a role. An authenticated, active multi-role account without a valid selection may enter the shared app shell and `/select-role` without workspace authority. Role-owned guards and the generic dashboard redirect this state to `/select-role`; they never choose a role automatically. Role-less accounts and denied profile gates do not receive this allowance.
+A person's choice among their assigned account roles. Selection changes authorization context but does not create, revoke, or complete a role. An authenticated, active multi-role account without a valid selection may enter the shared app shell and `/select-role` without workspace authority. Role-owned guards and the generic dashboard redirect this state to `/select-role`; they never choose a role automatically. Every new sign-in starts in this state: the Google callback and logout both discard the remembered selection, so a multi-role account chooses its workspace at each sign-in and never inherits the previous one. Role-less accounts and denied profile gates do not receive this allowance.
 _Avoid_: Role impersonation, role assignment, role change
 
 **Role change**:

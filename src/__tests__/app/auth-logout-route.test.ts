@@ -46,6 +46,12 @@ describe("auth logout route", () => {
     expect(deleteCookieMock).toHaveBeenCalledWith("cloie_demo_auth");
   });
 
+  it("forgets the remembered workspace so the next sign-in chooses again", async () => {
+    await POST(new Request("http://localhost:3000/api/auth/logout", { method: "POST" }));
+
+    expect(deleteCookieMock).toHaveBeenCalledWith("cloie_active_role");
+  });
+
   it("falls back to the request origin when NEXT_PUBLIC_SITE_URL is not set", async () => {
     const response = await POST(
       new Request("https://request.example.com/api/auth/logout", { method: "POST" })

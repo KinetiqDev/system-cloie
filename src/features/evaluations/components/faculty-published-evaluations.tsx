@@ -253,14 +253,14 @@ export function FacultyPublishedEvaluations({
         renderMenuItems={(item) => (
           <>
             <DropdownMenuItem render={<Link href={`/faculty/tools/published/${item.id}`} />}>
-              <Eye className="mr-2 size-4" />
+              <Eye className="text-muted-foreground" aria-hidden="true" />
               View Details
             </DropdownMenuItem>
             {item.canClose && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive" onClick={() => handleRequestClose(item.id)}>
-                  <XCircle className="mr-2 size-4" />
+                  <XCircle aria-hidden="true" />
                   Close Evaluation
                 </DropdownMenuItem>
               </>
@@ -269,7 +269,7 @@ export function FacultyPublishedEvaluations({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleRequestReopen(item.id)}>
-                  <RotateCcw className="mr-2 size-4" />
+                  <RotateCcw className="text-muted-foreground" aria-hidden="true" />
                   Reopen Evaluation
                 </DropdownMenuItem>
               </>

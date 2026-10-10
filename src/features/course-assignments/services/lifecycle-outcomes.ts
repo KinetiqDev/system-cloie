@@ -23,6 +23,9 @@ import { randomUUID } from "node:crypto";
 
 /** Refusal codes a lifecycle command may throw inside its transaction. */
 export const LIFECYCLE_REFUSALS = {
+  PROGRAM_UNAVAILABLE: "PROGRAM_UNAVAILABLE",
+  PERIOD_UNAVAILABLE: "PERIOD_UNAVAILABLE",
+  FACULTY_UNAVAILABLE: "FACULTY_UNAVAILABLE",
   ASSIGNMENT_NOT_FOUND: "ASSIGNMENT_NOT_FOUND",
   COURSE_INACTIVE: "COURSE_INACTIVE",
   COURSE_NOT_FOUND: "COURSE_NOT_FOUND",
@@ -36,6 +39,9 @@ type LifecycleRefusal = (typeof LIFECYCLE_REFUSALS)[keyof typeof LIFECYCLE_REFUS
 
 /** The safe user-facing message for each refusal code. */
 const REFUSAL_MESSAGES: Record<LifecycleRefusal, string> = {
+  PROGRAM_UNAVAILABLE: "Selected Program is not available.",
+  PERIOD_UNAVAILABLE: "Choose a planned or active academic period in an active school year.",
+  FACULTY_UNAVAILABLE: "Selected Faculty account is not available.",
   ASSIGNMENT_NOT_FOUND: "Assignment not found.",
   COURSE_INACTIVE: "Inactive courses cannot receive new assignments.",
   COURSE_NOT_FOUND: "Course not found.",

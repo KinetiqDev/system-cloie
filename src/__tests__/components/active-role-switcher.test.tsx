@@ -16,7 +16,11 @@ describe("ActiveRoleSwitcher", () => {
   it("opens a labelled role menu for multi-role sessions without throwing", async () => {
     render(<ActiveRoleSwitcher roles={[ROLES.FACULTY, ROLES.ALUMNI]} activeRole={ROLES.FACULTY} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /switch role\. current role:/i }));
+    const button = screen.getByRole("button", { name: /switch role\. current role:/i });
+    expect(button).toHaveAttribute("title", "Switch role");
+    expect(button).toHaveTextContent("Faculty");
+
+    fireEvent.click(button);
 
     expect(await screen.findByText("Switch role")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /alumni/i })).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { assignableFacultyWhere } from "./assignable-faculty";
 import { prisma } from "@/lib/db/prisma";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { ROLES } from "@/lib/constants/roles";
@@ -146,6 +147,33 @@ async function resolveAssignmentCourse(
   return course;
 }
 
+async function validateAssignmentContext(
+  tx: Prisma.TransactionClient,
+  input: CreateCourseAssignmentInput
+) {
+  const [program, period] = await Promise.all([
+    tx.program.findFirst({ where: { id: input.programId, is_active: true }, select: { id: true } }),
+    tx.academicTermInstance.findFirst({
+      where: {
+        id: input.termInstanceId,
+        status: { in: ["PLANNED", "ACTIVE"] },
+        school_year: { is_active: true },
+      },
+      select: { id: true },
+    }),
+  ]);
+  if (!program) throw new Error(LIFECYCLE_REFUSALS.PROGRAM_UNAVAILABLE);
+  if (!period) throw new Error(LIFECYCLE_REFUSALS.PERIOD_UNAVAILABLE);
+}
+
+async function validateAssignmentFaculty(tx: Prisma.TransactionClient, facultyId: string) {
+  const faculty = await tx.user.findFirst({
+    where: { AND: [assignableFacultyWhere, { id: facultyId }] },
+    select: { id: true },
+  });
+  if (!faculty) throw new Error(LIFECYCLE_REFUSALS.FACULTY_UNAVAILABLE);
+}
+
 /**
  * Translate a creation failure into a safe message, or null when the failure is
  * unrecognized and should be reported generically.
@@ -195,6 +223,8 @@ export async function createCourseAssignment(
       );
       if (!permission.allowed) throw new Error(`${PERMISSION_REFUSAL_PREFIX}${permission.reason}`);
 
+      await validateAssignmentContext(tx, input);
+      await validateAssignmentFaculty(tx, input.facultyId);
       return tx.courseAssignment.create({
         data: {
           term_instance_id: input.termInstanceId,
@@ -300,17 +330,7 @@ export async function updateCourseAssignment(
           };
         }
 
-        const faculty = await tx.user.findFirst({
-          where: {
-            id: input.facultyId,
-            is_active: true,
-            roles: { some: { role: ROLES.FACULTY } },
-          },
-          select: { id: true },
-        });
-        if (!faculty) {
-          return { success: false, error: "Selected Faculty account is not available." };
-        }
+        await validateAssignmentFaculty(tx, input.facultyId);
       }
 
       await tx.courseAssignment.update({
@@ -335,6 +355,8 @@ export async function updateCourseAssignment(
       };
     });
   } catch (error) {
+    const refusal = lifecycleRefusalMessage(error);
+    if (refusal) return { success: false, error: refusal };
     return unexpectedLifecycleFailure(
       "update_assignment",
       authSession?.userId,
@@ -642,7 +664,12 @@ export async function bulkCreateCourseAssignments(
 ): Promise<BulkCreateResult> {
   const authSession = await resolveAuthSession();
 
-  const allowedRoles: SystemRole[] = [ROLES.DEAN, ROLES.PROGRAM_HEAD, ROLES.GEN_ED_COORDINATOR];
+  const allowedRoles: SystemRole[] = [
+    ROLES.SECRETARY,
+    ROLES.DEAN,
+    ROLES.PROGRAM_HEAD,
+    ROLES.GEN_ED_COORDINATOR,
+  ];
   if (!authSession?.activeRole || !allowedRoles.includes(authSession.activeRole)) {
     return {
       success: false,
@@ -692,6 +719,8 @@ export async function bulkCreateCourseAssignments(
         );
         if (!permission.allowed)
           throw new Error(`${PERMISSION_REFUSAL_PREFIX}${permission.reason}`);
+        await validateAssignmentContext(tx, input);
+        await validateAssignmentFaculty(tx, input.facultyId);
         await tx.courseAssignment.create({
           data: {
             term_instance_id: input.termInstanceId,

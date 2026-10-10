@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Copy, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -200,6 +200,7 @@ export function ManagementToolsPage({
                   disabled={isPending}
                   onClick={() => handleToggleActive(item.id, item.statusActive)}
                 >
+                  <Power aria-hidden="true" className="text-muted-foreground" />
                   {item.statusActive ? "Deactivate" : "Activate"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -210,7 +211,7 @@ export function ManagementToolsPage({
                   }
                   variant="destructive"
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 aria-hidden="true" />
                   Delete
                 </DropdownMenuItem>
               </>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Check } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,9 +19,10 @@ import type { Role } from "@/lib/constants/roles";
 import { isNextRedirectError } from "@/lib/utils/next-redirect";
 
 /**
- * Topbar dropdown for multi-role accounts. Renders nothing for single-role
- * sessions. Selecting a role invokes the `switchActiveRole` server action
- * (which redirects to that role's dashboard) and refreshes the router.
+ * Topbar outline dropdown button for multi-role accounts. Renders nothing for single-role
+ * sessions. Features a visible border, current role badge, and chevrons to clearly
+ * signal an interactive switcher at rest. Selecting a role invokes the `switchActiveRole`
+ * server action (which redirects to that role's dashboard) and refreshes the router.
  */
 export function ActiveRoleSwitcher({
   roles,
@@ -64,16 +65,19 @@ export function ActiveRoleSwitcher({
       <DropdownMenuTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             aria-label={`Switch role. Current role: ${activeRole ? formatRole(activeRole) : "none"}`}
-            className="hover:bg-sidebar-accent/40 hover:text-sidebar-foreground gap-1.5"
+            title="Switch role"
+            className="gap-1.5 shadow-2xs"
             disabled={isPending}
+            loading={isPending}
           >
-            <ArrowLeftRight className="size-3.5" data-icon="inline-start" aria-hidden="true" />
-            <span className="hidden max-w-32 truncate text-xs font-semibold md:inline">
+            <ArrowLeftRight className="text-muted-foreground size-3.5" aria-hidden="true" />
+            <span className="max-w-28 truncate text-xs font-semibold sm:max-w-36 md:max-w-44">
               {activeRole ? formatRole(activeRole) : "Select role"}
             </span>
+            <ChevronsUpDown className="text-muted-foreground size-3 shrink-0" aria-hidden="true" />
           </Button>
         }
       />

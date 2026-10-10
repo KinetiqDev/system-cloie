@@ -321,4 +321,23 @@ describe("SecretaryUsersList", () => {
     expect(screen.getByText("1 user selected")).toBeInTheDocument();
     expect(johnCheckboxes[1]).toBeChecked();
   });
+
+  it("renders user action kebab menu with icons and action items", () => {
+    renderList();
+
+    const actionButtons = screen.getAllByRole("button", { name: "Actions for John Doe" });
+    fireEvent.click(actionButtons[0]);
+
+    const viewItem = screen.getByRole("menuitem", { name: /View details/i });
+    const editItem = screen.getByRole("menuitem", { name: /Edit user/i });
+    const deactivateItem = screen.getByRole("menuitem", { name: /Deactivate/i });
+
+    expect(viewItem).toBeInTheDocument();
+    expect(editItem).toBeInTheDocument();
+    expect(deactivateItem).toBeInTheDocument();
+
+    expect(viewItem.querySelector(".lucide-eye")).not.toBeNull();
+    expect(editItem.querySelector(".lucide-pencil")).not.toBeNull();
+    expect(deactivateItem.querySelector(".lucide-user-x")).not.toBeNull();
+  });
 });

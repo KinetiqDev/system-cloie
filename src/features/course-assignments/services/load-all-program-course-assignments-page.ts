@@ -1,3 +1,4 @@
+import { assignableFacultyWhere } from "./assignable-faculty";
 import { prisma } from "@/lib/db/prisma";
 import type { TermInstanceItem } from "@/features/academic-calendar/types";
 import type { AssignableCourse } from "@/features/course-assignments/types";
@@ -23,6 +24,8 @@ export type AllProgramCourseAssignmentsPageData = {
   availablePrograms: ProgramOption[];
   availableFaculty: FacultyOption[];
   termInstances: TermInstanceItem[];
+  /** Periods the creation rule accepts: PLANNED or ACTIVE in an active School Year. */
+  assignableTermInstances: TermInstanceItem[];
   activeTermInstanceId: string | null;
 };
 
@@ -72,41 +75,31 @@ export async function loadAllProgramCourseAssignmentsPageData(
       },
       orderBy: { code: "asc" },
     }),
-    prisma.facultyProgramAffiliation.findMany({
-      where: { is_active: true },
+    prisma.user.findMany({
+      where: assignableFacultyWhere,
       select: {
-        program: { select: { code: true } },
-        faculty: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+        id: true,
+        name: true,
+        email: true,
+        faculty_program_affiliations: {
+          where: { is_active: true },
+          select: { program: { select: { code: true } } },
         },
       },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }),
   ]);
 
-  const facultyById = new Map<string, FacultyOption>();
-  for (const affiliation of faculty) {
-    const current = facultyById.get(affiliation.faculty.id);
-    if (current) {
-      current.programCodes.push(affiliation.program.code);
-    } else {
-      facultyById.set(affiliation.faculty.id, {
-        id: affiliation.faculty.id,
-        name: affiliation.faculty.name,
-        email: affiliation.faculty.email,
-        programCodes: [affiliation.program.code],
-      });
-    }
-  }
-  const availableFaculty = [...facultyById.values()]
-    .map((option) => ({ ...option, programCodes: option.programCodes.sort() }))
-    .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  const availableFaculty: FacultyOption[] = faculty.map((account) => ({
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    programCodes: account.faculty_program_affiliations
+      .map((affiliation) => affiliation.program.code)
+      .sort(),
+  }));
 
-  // fallow-ignore-next-line code-duplication
-  const termInstances: TermInstanceItem[] = schoolYears.flatMap((sy) =>
+  const toTermInstanceItems = (sy: (typeof schoolYears)[number]): TermInstanceItem[] =>
     sy.term_instances.map((ti) => ({
       id: ti.id,
       schoolYearId: ti.school_year_id,
@@ -118,8 +111,12 @@ export async function loadAllProgramCourseAssignmentsPageData(
       status: ti.status,
       createdAt: ti.created_at,
       updatedAt: ti.updated_at,
-    }))
-  );
+    }));
+  const termInstances = schoolYears.flatMap(toTermInstanceItems);
+  const assignableTermInstances = schoolYears
+    .filter((sy) => sy.is_active)
+    .flatMap(toTermInstanceItems)
+    .filter((ti) => ti.status === "PLANNED" || ti.status === "ACTIVE");
 
   const availableCourses: AssignableCourse[] = courses.map((c) => ({
     id: c.id,
@@ -137,6 +134,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     availablePrograms: programs,
     availableFaculty,
     termInstances,
+    assignableTermInstances,
     activeTermInstanceId,
   };
 }

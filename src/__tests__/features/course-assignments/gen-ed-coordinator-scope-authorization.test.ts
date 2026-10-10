@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/db/prisma";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CourseScope, StudentSection, YearLevel } from "@prisma/client";
 import { ROLES } from "@/lib/constants/roles";
@@ -46,6 +47,8 @@ vi.mock("@/lib/db/prisma", () => ({
     programHeadAssignment: {
       findMany: vi.fn(),
     },
+    program: { findFirst: vi.fn() },
+    academicTermInstance: { findFirst: vi.fn() },
     user: {
       findFirst: vi.fn(),
     },
@@ -92,6 +95,9 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.program.findFirst).mockResolvedValue({ id: "program-1" } as never);
+    vi.mocked(prisma.academicTermInstance.findFirst).mockResolvedValue({ id: "term-1" } as never);
+    vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "faculty-1" } as never);
   });
 
   describe("Pure Policy Checks (canManageCourseAssignment)", () => {
@@ -123,26 +129,20 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       });
     });
 
-    it("preserves Secretary denial for all course assignments", () => {
+    it("allows Secretary management for both course scopes", () => {
       const resultGE = canManageCourseAssignment(
         secretarySession,
         CourseScope.GENERAL_EDUCATION,
         "program-bsit"
       );
-      expect(resultGE).toEqual({
-        allowed: false,
-        reason: "Secretary cannot manage course assignments.",
-      });
+      expect(resultGE).toEqual({ allowed: true });
 
       const resultPS = canManageCourseAssignment(
         secretarySession,
         CourseScope.PROGRAM_SPECIFIC,
         "program-bsit"
       );
-      expect(resultPS).toEqual({
-        allowed: false,
-        reason: "Secretary cannot manage course assignments.",
-      });
+      expect(resultPS).toEqual({ allowed: true });
     });
 
     it("preserves Program Head permissions (allowed for PS in scope, denied for GE)", () => {
@@ -251,6 +251,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       // 2. PS course creation fails – no write should occur
       vi.clearAllMocks();
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "faculty-1" } as never);
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
         id: "course-ps",
@@ -301,6 +302,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       // 2. Update PS assignment fails – no write should occur
       vi.clearAllMocks();
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "faculty-1" } as never);
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
@@ -346,6 +348,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       // 2. Deactivate PS fails – no write should occur
       vi.clearAllMocks();
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "faculty-1" } as never);
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
@@ -380,6 +383,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       // 2. Activate PS fails – no write should occur
       vi.clearAllMocks();
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ id: "faculty-1" } as never);
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(coordinatorSession);
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",

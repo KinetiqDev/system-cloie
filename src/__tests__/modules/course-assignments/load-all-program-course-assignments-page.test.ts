@@ -13,7 +13,7 @@ vi.mock("@/lib/db/prisma", () => ({
     course: {
       findMany: vi.fn(),
     },
-    facultyProgramAffiliation: {
+    user: {
       findMany: vi.fn(),
     },
   },
@@ -27,7 +27,7 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
     prisma = (await import("@/lib/db/prisma")).prisma;
     vi.mocked(prisma.program.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.course.findMany).mockResolvedValue([] as never);
-    vi.mocked(prisma.facultyProgramAffiliation.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as never);
   });
 
   it("loads assignment periods from all school years, including archived ones", async () => {
@@ -98,14 +98,12 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
         program_id: "program-1",
       },
     ] as never);
-    vi.mocked(prisma.facultyProgramAffiliation.findMany).mockResolvedValue([
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
       {
-        program: { code: "BSCS" },
-        faculty: {
-          id: "faculty-1",
-          name: "Ada Lovelace",
-          email: "ada@example.com",
-        },
+        id: "faculty-1",
+        name: "Ada Lovelace",
+        email: "ada@example.com",
+        faculty_program_affiliations: [{ program: { code: "BSCS" } }],
       },
     ] as never);
 
@@ -132,5 +130,37 @@ describe("loadAllProgramCourseAssignmentsPageData", () => {
         programCodes: ["BSCS"],
       },
     ]);
+  });
+  it("includes eligible Faculty with no Program affiliation", async () => {
+    vi.mocked(prisma.schoolYear.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      {
+        id: "faculty-no-affiliation",
+        name: "Registered Faculty",
+        email: "faculty@acd.edu.ph",
+        faculty_program_affiliations: [],
+      },
+    ] as never);
+    const result = await loadAllProgramCourseAssignmentsPageData();
+    expect(result.availableFaculty).toEqual([
+      {
+        id: "faculty-no-affiliation",
+        name: "Registered Faculty",
+        email: "faculty@acd.edu.ph",
+        programCodes: [],
+      },
+    ]);
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          is_active: true,
+          roles: { some: { role: "FACULTY" } },
+          OR: [
+            { faculty_access_request_owned: { is: null } },
+            { faculty_access_request_owned: { is: { status: "APPROVED" } } },
+          ],
+        }),
+      })
+    );
   });
 });

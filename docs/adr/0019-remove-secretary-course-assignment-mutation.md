@@ -1,5 +1,7 @@
 # Removing Secretary Course Assignment Mutation
 
+Superseded by [ADR 0039](./0039-restore-secretary-course-assignment-stewardship.md).
+
 After ADR 0018 removed Secretary authority over General Education assignments,
 assignment mutation stayed split: Secretaries kept mutating Program-specific
 assignments while a server policy denied only the General Education half, and

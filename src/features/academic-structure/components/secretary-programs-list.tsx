@@ -9,9 +9,11 @@ import {
   GraduationCap,
   Layers,
   MoreVertical,
+  Pencil,
   Plus,
   Power,
   Search,
+  Trash2,
   Users,
 } from "lucide-react";
 
@@ -253,14 +255,18 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
               aria-label={`Actions for ${program.code}`}
               className="text-text-muted hover:text-text-primary rounded-full"
             >
-              <MoreVertical aria-hidden="true" />
+              <MoreVertical aria-hidden="true" className="size-4" />
             </Button>
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditDialogProgram(program)}>
+            <Pencil className="text-muted-foreground" aria-hidden="true" />
+            <span>Edit</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setMajorsDialogProgram(program)}>
-            Manage Majors
+            <GraduationCap className="text-muted-foreground" aria-hidden="true" />
+            <span>Manage Majors</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -275,14 +281,19 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
               }
             }}
           >
-            {program.isActive ? "Deactivate" : "Activate"}
+            <Power
+              className={`size-4 shrink-0 ${program.isActive ? "text-muted-foreground" : "text-success"}`}
+              aria-hidden="true"
+            />
+            <span>{program.isActive ? "Deactivate" : "Activate"}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            variant="destructive"
             disabled={isPending}
             onClick={() => openDeletionPreflight(program)}
           >
-            Delete program
+            <Trash2 className="size-4 shrink-0" aria-hidden="true" />
+            <span>Delete program</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

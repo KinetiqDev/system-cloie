@@ -2,7 +2,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, Edit, FileSpreadsheet, Plus, Power, RotateCcw, Search } from "lucide-react";
+import {
+  Archive,
+  Pencil,
+  FileSpreadsheet,
+  MoreVertical,
+  Plus,
+  Power,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
 import {
@@ -15,6 +24,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -109,6 +125,43 @@ function StatCard({
         </p>
       </CardHeader>
     </Card>
+  );
+}
+
+function CourseRowActions({
+  course,
+  disabled,
+  onEdit,
+  onToggleStatus,
+}: {
+  course: GenEdCourseItem;
+  disabled: boolean;
+  onEdit: () => void;
+  onToggleStatus: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${course.code}`} />}
+      >
+        <MoreVertical className="size-4" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={onEdit}>
+          <Pencil aria-hidden="true" className="text-muted-foreground" />
+          Edit {course.code}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={disabled} onClick={onToggleStatus}>
+          {course.is_active ? (
+            <Archive aria-hidden="true" className="text-warning" />
+          ) : (
+            <Power aria-hidden="true" className="text-success" />
+          )}
+          {course.is_active ? "Archive course" : "Restore course"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -390,25 +443,12 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
                     {formatDate(course.updated_at)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        aria-label={`Edit ${course.code}`}
-                        onClick={() => setEditingCourse(course)}
-                      >
-                        <Edit aria-hidden="true" className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        aria-label={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
-                        disabled={isPending}
-                        onClick={() => handleStatus(course.id, !course.is_active)}
-                      >
-                        <Archive aria-hidden="true" className="size-4" />
-                      </Button>
-                    </div>
+                    <CourseRowActions
+                      course={course}
+                      disabled={isPending}
+                      onEdit={() => setEditingCourse(course)}
+                      onToggleStatus={() => handleStatus(course.id, !course.is_active)}
+                    />
                   </TableCell>
                 </TableRow>
               ))

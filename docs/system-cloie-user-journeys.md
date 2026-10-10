@@ -148,7 +148,7 @@ The baseline catalog is the source from which Program Heads can create program-o
 
 ### 2.6 Course-assignment setup
 
-1. The Secretary holds no Course assignment management: General Education assignments are stewarded by the General Education Coordinator at `/gen-ed-coordinator/course-assignments`, and Program-specific assignments by each program's Program Head. The Dean retains all-program authority. The Secretary keeps read-only visibility.
+1. The Secretary and Dean manage Course assignments across all Programs and both Course scopes. The General Education Coordinator retains General Education stewardship at `/gen-ed-coordinator/course-assignments`, and each Program Head retains Program-specific stewardship within their authorized Programs. See ADR `0039`.
 2. The steward selects the academic assignment period, Course, program context, year level, section, and Faculty Member.
 3. Catalog defaults prefill advisory values, but the steward can apply the actual period and year-level context.
 4. The steward selects a required section: Morning, Afternoon, or Evening.
@@ -246,7 +246,7 @@ For Course assignments, the Program Head can:
 - Assign a Faculty Member to a Program-specific Course.
 - Use scoped teaching self-assignment when the Program Head is also teaching a Course in the managed program. This is teaching capability, not a second account role.
 - View General Education assignments for the program.
-- Not manage General Education assignments; Secretary and Dean steward those assignments.
+- Not manage General Education assignments; Secretary, Dean, and General Education Coordinator steward those assignments.
 - Open and manage authorized Program-specific rosters, subject to active assignment, active-period, roster-lock, and scope rules.
 
 ### 4.3 Program Outcomes and alignment
@@ -582,7 +582,7 @@ This is not complete. Program Head exports are stubbed, Dean Reports is unavaila
 | General Education and Program-specific Course catalog                                              | Implemented                                              | `manage-courses.ts`; catalog defaults are advisory                                                 |
 | Institutional baseline instruments and versioning                                                  | Implemented                                              | `manage-instruments.ts`; complete deployment/report coverage remains partial                       |
 | Secretary and Dean all-program Course assignments                                                  | Implemented                                              | ADR `0003`; role-owned routes                                                                      |
-| Program Head Program-specific assignment management                                                | Implemented                                              | General Education management remains Secretary/Dean-only                                           |
+| Program Head Program-specific assignment management                                                | Implemented                                              | General Education management belongs to Secretary, Dean, and General Education Coordinator         |
 | Faculty roster manual management                                                                   | Implemented                                              | Roster membership services; browser verification remains open                                      |
 | Faculty name-list roster reconciliation                                                            | Implemented; runtime desktop/mobile verification partial | Name CSV preview, scoped identity search, and `CourseAssignmentMembership` writes                  |
 | Program Outcome authoring                                                                          | Implemented for Program Head; Secretary authority exists | Secretary UI/protected-write coverage is partial                                                   |

@@ -54,16 +54,16 @@ export function ProgramHeadSelector({ programs }: { programs: ProgramHeadProgram
 
       <div className="grid gap-4 md:grid-cols-2" aria-label="Assigned Programs">
         {programs.map((program) => (
-          <Card key={program.id} className="transition-shadow hover:shadow-md">
+          <Card key={program.id} className="flex flex-col transition-shadow hover:shadow-md">
             <CardHeader>
               <CardTitle>{program.code}</CardTitle>
               <CardDescription>{program.name}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-auto">
               <Link
                 href={buildProgramHeadDashboardPath(program.id)}
                 className={buttonVariants({
-                  variant: "outline",
+                  variant: "default",
                   className: "w-full justify-between",
                 })}
               >

@@ -32,7 +32,10 @@ import type {
   CourseAssignmentDeletionPreflight,
   CourseAssignmentResult,
 } from "@/features/course-assignments/types";
-import { buildProgramHeadCourseAssignmentsPath } from "@/lib/constants/program-head-routes";
+import {
+  buildProgramHeadDashboardPath,
+  buildProgramHeadCourseAssignmentsPath,
+} from "@/lib/constants/program-head-routes";
 type BulkCourseAssignmentLifecycleResult = {
   succeeded: string[];
   failed: Array<{ id: string; error: string; referenceId?: string }>;
@@ -45,12 +48,14 @@ function revalidateCourseAssignmentRoutes(programIds?: string | string[]) {
       : [programIds]
     : []) {
     revalidatePath(buildProgramHeadCourseAssignmentsPath(programId));
+    revalidatePath(buildProgramHeadDashboardPath(programId));
   }
   revalidatePath("/secretary/course-assignments");
   revalidatePath("/dean/academic-structure/course-assignments");
   revalidatePath("/gen-ed-coordinator/course-assignments");
   revalidatePath("/gen-ed-coordinator/dashboard");
   revalidatePath("/faculty/course-rosters");
+  revalidatePath("/faculty/dashboard");
 }
 
 type CreateCourseAssignmentActionInput = CreateCourseAssignmentInput | FormData;

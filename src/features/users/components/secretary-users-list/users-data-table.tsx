@@ -13,7 +13,12 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Eye,
+  Pencil,
+  UserX,
+  UserCheck,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
@@ -101,6 +106,68 @@ function MobileUserAcademicContext({ user }: { user: SecretaryUserSummaryItem })
   );
 }
 
+function UserActionMenu({
+  user,
+  onViewUser,
+  onEditUser,
+  onToggleActive,
+  isPending,
+  triggerClassName,
+}: {
+  user: SecretaryUserSummaryItem;
+  onViewUser: (user: SecretaryUserSummaryItem) => void;
+  onEditUser: (user: SecretaryUserSummaryItem) => void;
+  onToggleActive: (id: string, currentState: boolean) => void;
+  isPending: boolean;
+  triggerClassName?: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${user.name}`}
+            className={cn("text-muted-foreground hover:text-foreground", triggerClassName)}
+          />
+        }
+      >
+        <MoreVertical className="size-4" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onViewUser(user)}>
+          <Eye className="text-muted-foreground" aria-hidden="true" />
+          <span>View details</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEditUser(user)}>
+          <Pencil className="text-muted-foreground" aria-hidden="true" />
+          <span>Edit user</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {user.isActive ? (
+          <DropdownMenuItem
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => onToggleActive(user.id, user.isActive)}
+          >
+            <UserX className="size-4 shrink-0" aria-hidden="true" />
+            <span>Deactivate</span>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            disabled={isPending}
+            onClick={() => onToggleActive(user.id, user.isActive)}
+          >
+            <UserCheck className="text-success" aria-hidden="true" />
+            <span>Activate</span>
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function MobileUserCard({
   user,
   selected,
@@ -126,24 +193,14 @@ function MobileUserCard({
             <h3 className="font-heading text-title-sm text-foreground">{user.name}</h3>
             <MobileUserBadges user={user} />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground -mr-2 inline-flex size-9 items-center justify-center rounded-md transition-colors">
-              <MoreVertical className="size-4" />
-              <span className="sr-only">User actions</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => onViewUser(user)}>View details</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEditUser(user)}>Edit user</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={isPending}
-                onClick={() => onToggleActive(user.id, user.isActive)}
-                className={user.isActive ? "text-destructive" : "text-success"}
-              >
-                {user.isActive ? "Deactivate" : "Activate"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserActionMenu
+            user={user}
+            onViewUser={onViewUser}
+            onEditUser={onEditUser}
+            onToggleActive={onToggleActive}
+            isPending={isPending}
+            triggerClassName="-mr-2"
+          />
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 pt-0">
@@ -345,28 +402,13 @@ export function UsersDataTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="hover:bg-muted text-muted-foreground hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors">
-                      <MoreVertical className="size-4" />
-                      <span className="sr-only">User actions</span>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => onViewUser(user)}>
-                        View details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEditUser(user)}>
-                        Edit user
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        disabled={isPending}
-                        onClick={() => onToggleActive(user.id, user.isActive)}
-                        className={user.isActive ? "text-destructive" : "text-success"}
-                      >
-                        {user.isActive ? "Deactivate" : "Activate"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <UserActionMenu
+                    user={user}
+                    onViewUser={onViewUser}
+                    onEditUser={onEditUser}
+                    onToggleActive={onToggleActive}
+                    isPending={isPending}
+                  />
                 </TableCell>
               </TableRow>
             ))}

@@ -12,7 +12,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveAuthMethodFromClaims } from "@/features/auth/services/resolve-auth-method";
 import { isEntryIntent, isTicketIntent, intentToRole } from "@/features/auth/services/role-intent";
 import {
-  readActiveRoleCookie,
+  clearActiveRoleCookie,
   setActiveRoleCookie,
 } from "@/features/auth/services/active-role-cookie";
 import {
@@ -477,8 +477,6 @@ export async function GET(request: Request) {
     claims: exchangeClaims,
   });
 
-  const activeRoleCookie = await readActiveRoleCookie();
-
   const claimedFreshRole =
     session &&
     claimedTargetRole &&
@@ -519,12 +517,9 @@ export async function GET(request: Request) {
       setActiveRoleCookie(response, claimedFreshRole);
       return response;
     }
-    if (
-      !activeRoleCookie ||
-      !session.roles.includes(activeRoleCookie as (typeof session.roles)[number])
-    ) {
-      return redirectWithClearedTicket(`${siteUrl}/select-role`);
-    }
+    const response = redirectWithClearedTicket(`${siteUrl}/select-role`);
+    clearActiveRoleCookie(response);
+    return response;
   }
 
   if (session && session.roles.length === 1) {

@@ -41,3 +41,8 @@ export function setActiveRoleCookie(response: NextResponse, role: string): void 
     getActiveRoleCookieOptions(ACTIVE_ROLE_COOKIE_MAX_AGE_SECONDS)
   );
 }
+
+/** A new sign-in never inherits the previous sign-in's workspace choice. */
+export function clearActiveRoleCookie(response: NextResponse): void {
+  response.cookies.set(ACTIVE_ROLE_COOKIE_NAME, "", getActiveRoleCookieOptions(0));
+}

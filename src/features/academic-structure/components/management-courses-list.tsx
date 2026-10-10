@@ -10,11 +10,13 @@ import {
   GraduationCap,
   Layers,
   MoreVertical,
+  Pencil,
   Plus,
   Search,
   Library,
   Power,
   RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
@@ -567,19 +569,24 @@ export function ManagementCoursesList({
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors">
+                      <DropdownMenuTrigger
+                        className="text-text-muted hover:bg-surface-muted hover:text-text-primary inline-flex size-9 items-center justify-center rounded-md transition-colors"
+                        aria-label={`Actions for ${course.code}`}
+                      >
                         <MoreVertical className="size-4" />
-                        <span className="sr-only">Actions</span>
+                        <span className="sr-only">Actions for {course.code}</span>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {editInModal ? (
                           <DropdownMenuItem onClick={() => setCourseToEdit(course)}>
+                            <Pencil className="text-muted-foreground" aria-hidden="true" />
                             Edit
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
                             render={<Link href={`${basePath}/${course.id}/edit`} />}
                           >
+                            <Pencil className="text-muted-foreground" aria-hidden="true" />
                             Edit
                           </DropdownMenuItem>
                         )}
@@ -588,13 +595,18 @@ export function ManagementCoursesList({
                           disabled={isPending}
                           onClick={() => handleToggleActive(course.id, course.isActive)}
                         >
+                          <Power
+                            className={`size-4 shrink-0 ${course.isActive ? "text-muted-foreground" : "text-success"}`}
+                            aria-hidden="true"
+                          />
                           {course.isActive ? "Deactivate" : "Activate"}
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          variant="destructive"
                           disabled={isPending}
                           onClick={() => setCourseToDelete({ id: course.id, code: course.code })}
-                          className="text-destructive focus:text-destructive"
                         >
+                          <Trash2 className="size-4 shrink-0" aria-hidden="true" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>

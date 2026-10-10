@@ -21,7 +21,10 @@ function installLocalStorage() {
 }
 
 function stubMatchMedia(initialMatches: boolean) {
-  vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: initialMatches })));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({ matches: initialMatches }))
+  );
 }
 
 function renderTrigger(enabled: boolean, preference?: string) {
@@ -49,6 +52,14 @@ describe("AppearanceMenuTrigger", () => {
     expect(screen.queryByRole("button", { name: "Appearance" })).not.toBeInTheDocument();
   });
 
+  it("renders as an icon-only button with screen-reader text and tooltip", () => {
+    renderTrigger(true);
+    const button = screen.getByRole("button", { name: "Appearance" });
+    expect(button).toHaveAttribute("title", "Appearance");
+    const srOnly = button.querySelector(".sr-only");
+    expect(srOnly).toHaveTextContent("Appearance");
+  });
+
   it("opens a larger dropdown with all three options", async () => {
     renderTrigger(true);
     fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
@@ -74,9 +85,7 @@ describe("AppearanceMenuTrigger", () => {
 
     fireEvent.click(screen.getByRole("menuitemradio", { name: "Dark" }));
 
-    await waitFor(() =>
-      expect(window.localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe("dark")
-    );
+    await waitFor(() => expect(window.localStorage.getItem(APPEARANCE_STORAGE_KEY)).toBe("dark"));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 });

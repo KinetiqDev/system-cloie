@@ -9,6 +9,9 @@ const { notFoundMock, dashboardMock } = vi.hoisted(() => ({
   dashboardMock: vi.fn(),
 }));
 
+vi.mock("@/features/course-assignments/components/program-assignment-summary", () => ({
+  ProgramAssignmentSummary: () => <div>Course assignments</div>,
+}));
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@isoterik/react-word-cloud", () => ({
   WordCloud: () => <div />,
