@@ -329,11 +329,11 @@ function AssignmentActions({
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="min-w-40">
+      <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           {/* Out-of-scope rows returned the read-only marker above. */}
           <DropdownMenuItem onClick={() => onEdit(assignment)} disabled={busy}>
-            <Pencil className="size-4" />
+            <Pencil className="text-muted-foreground" aria-hidden="true" />
             Edit
           </DropdownMenuItem>
           {assignment.isActive ? (
@@ -341,21 +341,21 @@ function AssignmentActions({
               onClick={() => onOpenConfirm("deactivate", assignment)}
               disabled={busy}
             >
-              <Power className="text-warning size-4" />
+              <Power className="text-warning" aria-hidden="true" />
               Deactivate
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem onClick={() => onActivate(assignment.id)} disabled={busy}>
-              <Power className="text-success size-4" />
+              <Power className="text-success" aria-hidden="true" />
               Activate
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
+            variant="destructive"
             onClick={() => onOpenConfirm("delete", assignment)}
             disabled={busy}
-            className="text-destructive focus:text-destructive"
           >
-            <Trash2 className="size-4" />
+            <Trash2 aria-hidden="true" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuGroup>

@@ -11,7 +11,7 @@ import {
   buildProgramHeadPublishToolPath,
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
-import { Copy, Eye, Pencil, Plus, RotateCcw, Send, Trash2, XCircle } from "lucide-react";
+import { Copy, Eye, Pencil, Plus, Power, RotateCcw, Send, Trash2, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -191,7 +191,11 @@ export function ProgramHeadToolsPage({
                 ),
                 renderOverflowMenu: (item) => (
                   <>
-                    <DropdownMenuItem disabled={isPending} onClick={() => handleToggleActive(item)}>
+                    <DropdownMenuItem
+                      disabled={isPending}
+                      onClick={() => handleToggleActive(item)}
+                    >
+                      <Power aria-hidden="true" className="text-muted-foreground" />
                       {item.statusActive ? "Deactivate" : "Activate"}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -203,7 +207,7 @@ export function ProgramHeadToolsPage({
                         setDeleteTarget(item);
                       }}
                     >
-                      <Trash2 className="size-4" />
+                      <Trash2 aria-hidden="true" />
                       Delete
                     </DropdownMenuItem>
                   </>
@@ -587,7 +591,7 @@ function ProgramHeadPublishedDeployments({
                 <>
                   {ctx.view === "list" && <DropdownMenuSeparator />}
                   <DropdownMenuItem variant="destructive" onClick={() => setCloseTargetId(item.id)}>
-                    <XCircle className="mr-2 size-4" />
+                    <XCircle aria-hidden="true" />
                     Close Deployment
                   </DropdownMenuItem>
                 </>
@@ -596,7 +600,7 @@ function ProgramHeadPublishedDeployments({
                 <>
                   {ctx.view === "list" && <DropdownMenuSeparator />}
                   <DropdownMenuItem onClick={() => setReopenTargetId(item.id)}>
-                    <RotateCcw className="mr-2 size-4" />
+                    <RotateCcw aria-hidden="true" />
                     Reopen Deployment
                   </DropdownMenuItem>
                 </>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -32,6 +32,12 @@ describe("Program Head Courses catalog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+
+  /** Row actions live in a kebab menu; open it and return the menu scope. */
+  async function openRowActionMenu(courseCode: string) {
+    fireEvent.click(screen.getByRole("button", { name: `Actions for ${courseCode}` }));
+    return await screen.findByRole("menu");
+  }
 
   it("keeps the selected Program as the form authority input", async () => {
     const { ProgramHeadCoursesCatalog } =
@@ -213,7 +219,8 @@ describe("Program Head Courses catalog", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive IT-101" }));
+    const menu = await openRowActionMenu("IT-101");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: /archive course/i }));
     expect(screen.getByRole("heading", { name: "Archive course?" })).toBeInTheDocument();
     expect(toggleActionMock).not.toHaveBeenCalled();
 
@@ -260,7 +267,8 @@ describe("Program Head Courses catalog", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit IT-101" }));
+    const menu = await openRowActionMenu("IT-101");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: /^Edit IT-101$/ }));
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
     await waitFor(() => expect(updateActionMock).toHaveBeenCalled());

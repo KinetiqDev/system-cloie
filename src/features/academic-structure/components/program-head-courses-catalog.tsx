@@ -20,9 +20,10 @@ import {
   AlertCircle,
   Archive,
   BookOpen,
-  Edit,
+  Pencil,
   FileSpreadsheet,
   Layers,
+  MoreVertical,
   Plus,
   Power,
   RotateCcw,
@@ -34,6 +35,13 @@ import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -892,31 +900,33 @@ export function ProgramHeadCoursesCatalog({
                     {formatDate(course.updated_at)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        aria-label={`Edit ${course.code}`}
-                        title={`Edit ${course.code}`}
-                        onClick={() => setEditingCourse(course)}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground inline-flex size-9 items-center justify-center rounded-md transition-colors"
+                        aria-label={`Actions for ${course.code}`}
                       >
-                        <Edit aria-hidden="true" className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        aria-label={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
-                        title={`${course.is_active ? "Archive" : "Restore"} ${course.code}`}
-                        disabled={isPending}
-                        onClick={() => requestSingleStatusChange(course)}
-                      >
-                        {course.is_active ? (
-                          <Archive aria-hidden="true" className="size-4" />
-                        ) : (
-                          <Power aria-hidden="true" className="size-4" />
-                        )}
-                      </Button>
-                    </div>
+                        <MoreVertical className="size-4" aria-hidden="true" />
+                        <span className="sr-only">Actions for {course.code}</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditingCourse(course)}>
+                          <Pencil aria-hidden="true" className="text-muted-foreground" />
+                          Edit {course.code}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          disabled={isPending}
+                          onClick={() => requestSingleStatusChange(course)}
+                        >
+                          {course.is_active ? (
+                            <Archive aria-hidden="true" className="text-warning" />
+                          ) : (
+                            <Power aria-hidden="true" className="text-success" />
+                          )}
+                          {course.is_active ? "Archive course" : "Restore course"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

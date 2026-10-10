@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type {
   GenEdCourseItem,
   GenEdCoursesSummary,
@@ -209,7 +209,7 @@ describe("GenEdCoursesCatalog", () => {
     }
   });
 
-  it("offers fixed-scope CRUD and page-bound bulk actions", () => {
+  it("offers fixed-scope CRUD and page-bound bulk actions", async () => {
     render(<GenEdCoursesCatalog courses={[course()]} summary={summary} />);
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select GEMATH" }));
@@ -217,7 +217,9 @@ describe("GenEdCoursesCatalog", () => {
     expect(screen.getByRole("button", { name: "Archive" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Restore" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit GEMATH" }));
+    fireEvent.click(screen.getByRole("button", { name: "Actions for GEMATH" }));
+    const menu = await screen.findByRole("menu");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: /^Edit GEMATH$/ }));
     expect(screen.getByText("Edit General Education Course")).toBeInTheDocument();
     expect(screen.queryByLabelText("Course Scope")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Program")).not.toBeInTheDocument();

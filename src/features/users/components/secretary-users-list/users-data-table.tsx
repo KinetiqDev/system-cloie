@@ -132,27 +132,24 @@ function UserActionMenu({
         <MoreVertical className="size-4" />
         <span className="sr-only">Actions for {user.name}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 p-1.5 shadow-md">
+      <DropdownMenuContent align="end">
         <DropdownMenuItem
-          className="gap-2.5 px-3 py-2 text-sm font-medium"
           onClick={() => onViewUser(user)}
         >
-          <Eye className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <Eye className="text-muted-foreground" aria-hidden="true" />
           <span>View details</span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="gap-2.5 px-3 py-2 text-sm font-medium"
           onClick={() => onEditUser(user)}
         >
-          <Pencil className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <Pencil className="text-muted-foreground" aria-hidden="true" />
           <span>Edit user</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuSeparator />
         {user.isActive ? (
           <DropdownMenuItem
             variant="destructive"
             disabled={isPending}
-            className="gap-2.5 px-3 py-2 text-sm font-medium"
             onClick={() => onToggleActive(user.id, user.isActive)}
           >
             <UserX className="size-4 shrink-0" aria-hidden="true" />
@@ -161,10 +158,9 @@ function UserActionMenu({
         ) : (
           <DropdownMenuItem
             disabled={isPending}
-            className="text-success focus:text-success focus:bg-success/10 gap-2.5 px-3 py-2 text-sm font-medium"
             onClick={() => onToggleActive(user.id, user.isActive)}
           >
-            <UserCheck className="size-4 shrink-0" aria-hidden="true" />
+            <UserCheck className="text-success" aria-hidden="true" />
             <span>Activate</span>
           </DropdownMenuItem>
         )}
