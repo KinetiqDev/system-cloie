@@ -30,6 +30,7 @@
 
 # next.js
 /.next/
+/.next-*/
 /out/
 
 # production
@@ -97,3 +98,6 @@ docs/_private/
 
 #test accounts
 test-accounts.txt
+
+# Local agent scratch (not part of the deliverable)
+.scratch/
