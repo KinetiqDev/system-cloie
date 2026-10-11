@@ -247,8 +247,11 @@ describe("ProgramHeadToolsPage", () => {
       expect(within(duplicateDialog).getByText("Duplicate failed.")).toBeInTheDocument();
     });
     expect(showToastMock).not.toHaveBeenCalled();
-
-    fireEvent.click(within(duplicateDialog).getByRole("button", { name: "Cancel" }));
+    const cancelButton = within(duplicateDialog).getByRole("button", { name: "Cancel" });
+    await waitFor(() => {
+      expect(cancelButton).toBeEnabled();
+    });
+    fireEvent.click(cancelButton);
     await waitFor(() => {
       expect(
         screen.queryByRole("alertdialog", { name: "Duplicate Template" })

@@ -3204,6 +3204,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/instruments/components/duplicate-template-dialog.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Shared duplicate confirmation on the responsive alert-dialog contract with inline failure state",
+  },
+  {
     path: "src/features/instruments/components/evaluation-tools-tabs.tsx",
     disposition: "task",
     taskId: 20,
