@@ -1,3 +1,5 @@
+"use client";
+
 import { FilterableHead } from "@/components/data-table/filterable-head";
 import type { ResponseFilterOptions } from "@/features/analytics/services/list-program-head-response-deployments";
 import {
