@@ -105,25 +105,27 @@ export function ProgramHeadResponsesTableHead({
 
   return (
     <>
-      {/* Widths leave room for the label AND its funnel: dashboard layout is
-          length-critical, but a label that cannot fit is worse than a slightly
-          narrower reading column. */}
+      {/* These widths plus the trailing Mean / scale column (13%) are a
+          percentage budget that must total 100 on each tab: the course tab
+          spends 20+15+13+13+11+14, the program-wide tab 18+20+13+13+11+14. A
+          budget over 100 clips the last column, which is what a "widths pick
+          themselves" layout hides until a long label lands in it. */}
       <FilterableHead
         label="Evaluation"
         facets={facets.evaluation}
-        className={isCourse ? "w-[20%]" : "w-[17%]"}
+        className={isCourse ? "w-[20%]" : "w-[18%]"}
       />
       {/* "Stakeholder" is eleven characters to "Class"'s five, so the
           program-wide tab's own label decides the column's width. */}
       <FilterableHead
         label={isCourse ? "Class" : "Stakeholder"}
         facets={facets.class ?? facets.stakeholder}
-        className={isCourse ? "w-[15%]" : "w-[20%]"}
+        className={isCourse ? "w-[15%]" : "w-[19%]"}
       />
       <FilterableHead
         label={isCourse ? "Faculty" : "Target"}
         facets={facets.faculty ?? facets.target}
-        className="w-[13%]"
+        className={isCourse ? "w-[13%]" : "w-[11%]"}
       />
       <FilterableHead label="Period" facets={facets.period} className="w-[13%]" />
       <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />
@@ -132,7 +134,11 @@ export function ProgramHeadResponsesTableHead({
       <FilterableHead
         label="Submitted"
         facets={facets.submitted}
-        className="w-[14%] text-right [&>span]:justify-end"
+        className={
+          isCourse
+            ? "w-[14%] text-right [&>span]:justify-end"
+            : "w-[12%] text-right [&>span]:justify-end"
+        }
       />
     </>
   );

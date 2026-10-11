@@ -196,11 +196,13 @@ function EvaluationTable({
   options: GeneralEducationEvaluationFilterOptions;
 }) {
   return (
-    <Table className="table-fixed" label="Evaluation evidence">
+    <Table className="min-w-[64rem] table-fixed" label="Evaluation evidence">
       <TableHeader>
         <TableRow>
           <GeneralEducationResponsesTableHead state={state} options={options} />
-          <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
+          {/* "4.31 · 1–5 (5-point)" is one reading and needs 144 px, so the
+              column takes 14% and the label wraps rather than clipping. */}
+          <TableHead className="w-[14%] text-right">Mean / scale</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -252,9 +254,9 @@ function MeanValue({ item }: { item: Evaluation }) {
   return (
     <span className="font-semibold tabular-nums">
       {item.mean.toFixed(2)}
-      <span className="text-muted-foreground font-normal">
+      <span className="text-muted-foreground font-normal whitespace-normal [&>span]:whitespace-nowrap">
         {" · "}
-        {item.scaleLabel ?? "Scale unavailable"}
+        <span>{item.scaleLabel ?? "Scale unavailable"}</span>
       </span>
     </span>
   );

@@ -38,33 +38,37 @@ export function FilterableHead({
       }
       className={className}
     >
-      <span className="flex min-w-0 items-center gap-0.5">
-        {sort ? (
-          <button
-            type="button"
-            onClick={sort.onSort}
-            aria-label={`Sort by ${label}, currently ${sort.isActive ? sort.direction : "unsorted"}`}
-            aria-busy={sort.isPending || undefined}
-            className="focus-visible:ring-ring inline-flex min-h-11 min-w-0 items-center gap-1 rounded-md font-semibold focus-visible:ring-3 focus-visible:outline-none"
-          >
-            <span className="truncate">{label}</span>
-            {sort.isActive ? (
-              sort.direction === "asc" ? (
-                <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
+      {hasFilter && !sort ? (
+        <ColumnFilterTrigger label={label} facets={facets} fullCell />
+      ) : (
+        <span className="flex min-w-0 items-center gap-0.5 whitespace-normal">
+          {sort ? (
+            <button
+              type="button"
+              onClick={sort.onSort}
+              aria-label={`Sort by ${label}, currently ${sort.isActive ? sort.direction : "unsorted"}`}
+              aria-busy={sort.isPending || undefined}
+              className="focus-visible:ring-ring inline-flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-md font-semibold hover:bg-muted/40 px-1 -ml-1 transition-colors focus-visible:ring-3 focus-visible:outline-none cursor-pointer"
+            >
+              <span className="min-w-0 leading-tight">{label}</span>
+              {sort.isActive ? (
+                sort.direction === "asc" ? (
+                  <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
+                ) : (
+                  <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
+                )
               ) : (
-                <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
-              )
-            ) : (
-              <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />
-            )}
-          </button>
-        ) : (
-          <span className="min-w-0 truncate pl-1">{label}</span>
-        )}
-        {hasFilter && (
-          <ColumnFilterTrigger label={label} facets={facets} className="ml-auto self-center" />
-        )}
-      </span>
+                <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />
+              )}
+            </button>
+          ) : (
+            <span className="min-w-0 pl-1 leading-tight">{label}</span>
+          )}
+          {hasFilter && (
+            <ColumnFilterTrigger label={label} facets={facets} className="ml-auto self-center" />
+          )}
+        </span>
+      )}
     </TableHead>
   );
 }

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   Empty,
@@ -62,24 +61,11 @@ export function ProgramHeadResponsesLanding({
   data: ResponseDeploymentList;
 }) {
   const isCourse = state.tab === "course";
-  const rootHref = buildProgramHeadResponsesUrl(programId, {
-    tab: state.tab,
-    page: 1,
-    termInstanceId: state.termInstanceId,
-    stakeholder: state.stakeholder,
-  });
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="border-border flex flex-col gap-2 border-b pb-5">
         <h1 className="text-heading-xl text-balance">Responses</h1>
-        <Breadcrumbs
-          className="text-body-sm"
-          items={[
-            { label: "Responses", href: rootHref },
-            { label: isCourse ? "Course evaluations" : "Program-wide evaluations" },
-          ]}
-        />
         <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
           Review participation and open identified submitted responses for {program.code}.
         </p>
@@ -282,9 +268,9 @@ function MeanValue({ item }: { item: Deployment }) {
   return (
     <span className="font-semibold tabular-nums">
       {item.mean.toFixed(2)}
-      <span className="text-muted-foreground font-normal">
+      <span className="text-muted-foreground font-normal whitespace-normal [&>span]:whitespace-nowrap">
         {" · "}
-        {item.scaleLabel ?? "Scale unavailable"}
+        <span>{item.scaleLabel ?? "Scale unavailable"}</span>
       </span>
     </span>
   );
@@ -304,7 +290,7 @@ function ResponseTable({
   options: ResponseFilterOptions;
 }) {
   return (
-    <Table className="table-fixed" label="Evaluation evidence">
+    <Table className="min-w-[64rem] table-fixed" label="Evaluation evidence">
       <TableHeader>
         <TableRow>
           <ProgramHeadResponsesTableHead
@@ -313,7 +299,10 @@ function ResponseTable({
             options={options}
             isCourse={isCourse}
           />
-          <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
+          {/* The mean and its scale label read as one value, and the label is
+              wider than the number: "4.15 · 1–5 (5-point)" needs 144 px, so the
+              column takes 13% and the label may wrap rather than clip. */}
+          <TableHead className="w-[13%] text-right">Mean / scale</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

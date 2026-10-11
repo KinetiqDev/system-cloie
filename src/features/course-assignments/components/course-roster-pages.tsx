@@ -8,6 +8,7 @@ import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  CalendarDays,
   CheckCircle2,
   LockKeyhole,
   SearchX,
@@ -81,7 +82,6 @@ import { buildCourseRosterFacets, type CourseRosterFacetColumn } from "./course-
 import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
 import { FilterableHead } from "@/components/data-table/filterable-head";
 import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
-import { ResultSummaryStrip } from "./shared/result-summary-strip";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -310,7 +310,6 @@ function CourseRosterDiscoveryBody({
     );
   };
 
-  const activeCount = data.items.filter((assignment) => assignment.rosterState === "ACTIVE").length;
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
 
   const { byColumn: facets, all: allFacets } = buildCourseRosterFacets(filters, updateFacet, {
@@ -341,7 +340,18 @@ function CourseRosterDiscoveryBody({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-heading-xl text-balance">My Course Rosters</h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h1 className="text-heading-xl text-balance">My Course Rosters</h1>
+          {periodScopeLabel(filters, termInstances) ? (
+            <Badge
+              variant="outline"
+              className="bg-card text-muted-foreground text-xs font-normal"
+            >
+              <CalendarDays className="size-3 mr-1" aria-hidden="true" />
+              <span>{periodScopeLabel(filters, termInstances)}</span>
+            </Badge>
+          ) : null}
+        </div>
         <p className="text-body-md text-muted-foreground max-w-2xl text-pretty">
           Review and manage the active Course assignments you own. Inactive assignments and
           completed Academic Periods remain review-only.
@@ -362,8 +372,15 @@ function CourseRosterDiscoveryBody({
         onClearAll={clearAll}
         resultSummary={
           <p className="text-muted-foreground text-xs tabular-nums">
-            <span className="text-foreground font-medium">{data.total}</span>{" "}
-            {data.total === 1 ? "assignment" : "assignments"}
+            <span className="text-foreground font-medium">
+              {data.total} {data.total === 1 ? "roster" : "rosters"}
+            </span>
+            {totalPages > 1 && (
+              <>
+                <span className="text-border-strong mx-1.5">·</span>
+                <span>Page {data.page + 1} of {totalPages}</span>
+              </>
+            )}
             {isPending ? " · updating…" : ""}
           </p>
         }
@@ -378,14 +395,6 @@ function CourseRosterDiscoveryBody({
         </div>
       </TableToolbar>
 
-      <ResultSummaryStrip
-        noun="roster"
-        total={data.total}
-        activeCount={activeCount}
-        page={data.page}
-        pageSize={data.pageSize}
-        scopeLabel={periodScopeLabel(filters, termInstances)}
-      />
 
       <section aria-labelledby="course-roster-results" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">

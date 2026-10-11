@@ -92,21 +92,22 @@ export function GeneralEducationResponsesTableHead({ state, options }: Props) {
 
   return (
     <>
-      {/* Widths leave room for the label AND its funnel: at the 44 px heading
-          height a column whose label needs 82 px cannot also host a 28 px
-          control in a 12% cell, so the reading-heavy Evaluation column gives
-          the room up and the two right-aligned numeric columns take it. */}
+      {/* These widths plus the trailing Mean / scale column (14%) are a
+          percentage budget that must total 100. The budget also has to leave
+          room for each label AND its funnel: "Submitted" needs 82 px and a
+          44 px heading cannot host that plus a 28 px control in a 12% cell, so
+          the reading column gives the room up and the numeric columns take it. */}
       <FilterableHead label="Evaluation" facets={facets.evaluation} className="w-[20%]" />
       <FilterableHead label="Class" facets={facets.class} className="w-[15%]" />
       <FilterableHead label="Faculty" facets={facets.faculty} className="w-[13%]" />
-      <FilterableHead label="Period" facets={facets.period} className="w-[13%]" />
+      <FilterableHead label="Period" facets={facets.period} className="w-[12%]" />
       <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />
       {/* The funnel is pushed to the far edge of the cell, matching the numbers
           below it, so a right-aligned column stays a single visual block. */}
       <FilterableHead
         label="Submitted"
         facets={facets.submitted}
-        className="w-[14%] text-right [&>span]:justify-end"
+        className="w-[15%] text-right [&>span]:justify-end"
       />
     </>
   );
