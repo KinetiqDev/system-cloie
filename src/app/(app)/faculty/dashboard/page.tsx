@@ -485,10 +485,7 @@ function VisualizationFallbacks() {
   return (
     <div className="space-y-6">
       <CourseMeanPieChartFallback />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
-        <QualitativeWordCloudFallback />
-        <Card className="min-h-[424px]" />
-      </div>
+      <QualitativeWordCloudFallback />
     </div>
   );
 }
