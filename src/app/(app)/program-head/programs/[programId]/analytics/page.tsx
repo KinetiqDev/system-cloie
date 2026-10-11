@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
 import { ProgramHeadOutcomesView } from "@/features/analytics/components/program-head-outcomes-view";
 import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
-import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
 import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
 import {
@@ -11,7 +10,6 @@ import {
   getProgramHeadBreakdowns,
   getProgramHeadFeedback,
   getProgramHeadOutcomes,
-  getProgramHeadStakeholders,
   getProgramHeadTrends,
 } from "@/features/analytics/services/get-program-head-analytics";
 import {
@@ -73,15 +71,6 @@ async function resolveProgramHeadAnalyticsTabContent(
   switch (filters.tab) {
     case "outcomes":
       return resolveOutcomesTab(programId, filters);
-    case "stakeholders":
-      return withData(programId, filters, getProgramHeadStakeholders, (data, viewFilters) => (
-        <ProgramHeadStakeholderView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "stakeholders" })}
-          aiFilters={toInsightFilters(viewFilters)}
-        />
-      ));
     case "trends":
       return withData(programId, filters, getProgramHeadTrends, (data, viewFilters) => (
         <ProgramHeadTrendsView
@@ -129,9 +118,10 @@ function firstTrimmed(value: string | string[] | undefined): string | undefined 
 
 function legacyRedirectTarget(
   rawTab: string | undefined
-): "overview" | "courses" | "qualitative" | "none" {
+): "overview" | "outcomes" | "courses" | "qualitative" | "none" {
   if (rawTab === "overview") return "overview";
   if (rawTab === "breakdowns") return "courses";
+  if (rawTab === "stakeholders") return "outcomes";
   if (rawTab === "feedback") return "qualitative";
   return "none";
 }
@@ -163,7 +153,7 @@ export default async function SelectedProgramAnalyticsPage({
 
   const legacy = legacyRedirectTarget(rawTab);
   if (legacy === "overview") redirect(overviewRedirectUrl(programId, filters));
-  if (legacy === "courses" || legacy === "qualitative") {
+  if (legacy === "outcomes" || legacy === "courses" || legacy === "qualitative") {
     const base = buildProgramHeadProgramPath(programId, "analytics");
     const query = buildAnalyticsQueryString({ ...filters, tab: legacy });
     redirect(query ? `${base}?${query}` : base);

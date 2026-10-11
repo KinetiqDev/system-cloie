@@ -5,6 +5,7 @@ import {
   resolveSnapshotItemScale,
   type ScaleIdentity,
 } from "../aggregators/scale-identity";
+import { classifyOutcomeMean } from "../aggregators/outcome-attainment";
 import type { TargetStakeholder, YearLevel } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import type {
@@ -629,13 +630,17 @@ export function buildCourseBreakdownRows(
       ),
       meanRating: aggregate.scales.size === 1 ? aggregate.ratingSum / aggregate.ratingCount : null,
       scaleGroups: [...aggregate.scales.values()]
-        .map((group) => ({
-          scaleKey: group.scale.key,
-          scaleLabel: describeScale(group.scale.descriptors),
-          meanRating: group.ratingSum / group.ratingCount,
-          ratingCount: group.ratingCount,
-          submittedResponseCount: group.responseIds.size,
-        }))
+        .map((group) => {
+          const meanRating = group.ratingSum / group.ratingCount;
+          return {
+            scaleKey: group.scale.key,
+            scaleLabel: describeScale(group.scale.descriptors),
+            meanRating,
+            ratingCount: group.ratingCount,
+            submittedResponseCount: group.responseIds.size,
+            attainment: classifyOutcomeMean(meanRating, group.scale),
+          };
+        })
         .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey)),
       courseCode: aggregate.course.code,
       instrumentContext: instruments.length > 0 ? instruments.join(", ") : null,

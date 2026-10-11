@@ -248,6 +248,8 @@ export type ProgramHeadCourseBreakdownRowDTO = ProgramHeadBreakdownRowDTO & {
     meanRating: number;
     ratingCount: number;
     submittedResponseCount: number;
+    /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation of this group mean. */
+    attainment?: OutcomeAttainment;
   }>;
   /** Distinct instrument labels behind the course; null when none. */
   instrumentContext: string | null;

@@ -10,7 +10,6 @@ import type {
   ProgramHeadFeedbackDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOverviewDTO,
-  ProgramHeadStakeholdersDTO,
   ProgramHeadTrendsDTO,
 } from "@/features/analytics/program-head-analytics-types";
 
@@ -80,24 +79,6 @@ const outcomes: ProgramHeadOutcomesDTO = {
         responseCount: 2,
         explanation: "Mean of 3 valid ratings from 1 course-bound evaluation(s).",
       },
-    },
-  ],
-};
-
-const stakeholders: ProgramHeadStakeholdersDTO = {
-  scope: SCOPE,
-  periodOptions: PERIOD_OPTIONS,
-  emptyReason: null,
-  sourceSeparationDisclosure: "Sources use different instruments and populations.",
-  buckets: [
-    {
-      sourceKey: "COURSE_STUDENT",
-      sourceLabel: "Course-bound student evidence",
-      sourceDescription: "Course-bound evaluation responses.",
-      instrumentContext: "CILO Evaluation v2",
-      meanRating: 4.25,
-      ratingCount: 60,
-      submittedResponseCount: 15,
     },
   ],
 };
@@ -199,7 +180,6 @@ const feedback: ProgramHeadFeedbackDTO = {
 
 const outcomesReads: AnalyticsViewReads = { view: "outcomes", outcomes };
 const coursesReads: AnalyticsViewReads = { view: "courses", breakdowns };
-const stakeholdersReads: AnalyticsViewReads = { view: "stakeholders", stakeholders };
 const trendsReads: AnalyticsViewReads = { view: "trends", trends };
 const qualitativeReads: AnalyticsViewReads = { view: "qualitative", feedback };
 
@@ -306,26 +286,8 @@ describe("view-specific AI evidence packets", () => {
       ...feedback,
       tokens: [{ text: "a".repeat(80), value: 2, responseCount: 1 }],
     });
-    const { packet: stakeholderPacket } = buildAnalyticsViewPacket(
-      "stakeholders",
-      overview,
-      {
-        view: "stakeholders",
-        stakeholders: {
-          ...stakeholders,
-          buckets: [
-            {
-              ...stakeholders.buckets[0],
-              sourceDescription: "x".repeat(500),
-            },
-          ],
-        },
-      },
-      CONFIG
-    );
     const packetJson = JSON.stringify(packet);
     expect(packetJson).not.toContain("a".repeat(80));
-    expect(JSON.stringify(stakeholderPacket)).not.toContain("x".repeat(500));
     expect(packet.wordFrequencyTokens[0].text.length).toBeLessThanOrEqual(40);
   });
 
@@ -493,16 +455,6 @@ describe("view-specific AI evidence packets", () => {
       tokenAnalysis: { availableTokenCount: 2, includedTokenCount: 2, truncated: false },
       promptAnalysis: { availablePromptCount: 1, includedPromptCount: 1, truncated: false },
     });
-
-    const { evidenceScope: stakeholderScope } = buildAnalyticsViewPacket(
-      "stakeholders",
-      overview,
-      stakeholdersReads,
-      CONFIG
-    );
-    expect(stakeholderScope.evaluatedSourceLabels).toEqual(["Course-bound student evidence"]);
-    expect(stakeholderScope.qualitativeItemCount).toBeNull();
-    expect(stakeholderScope.tokenAnalysis).toBeNull();
   });
 
   it("rejects reads backing a different view", () => {

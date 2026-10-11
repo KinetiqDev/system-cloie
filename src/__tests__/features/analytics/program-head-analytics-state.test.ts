@@ -150,7 +150,6 @@ describe("labels", () => {
     expect(ANALYTICS_TAB_LABELS).toEqual({
       outcomes: "Outcomes",
       courses: "Courses",
-      stakeholders: "Stakeholders",
       trends: "Trends",
       qualitative: "Qualitative",
     });

@@ -2,7 +2,7 @@
 "use client";
 
 import { useId } from "react";
-import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -114,10 +114,13 @@ export function ProgramHeadInstrumentBreakdownChart({
     .filter((entry): entry is { label: string; meanRating: number } => entry.meanRating !== null)
     .sort((left, right) => right.meanRating - left.meanRating);
   const ratedValues = ranked.map((entry) => entry.meanRating);
-  const domain: [number, number] =
-    ratedValues.length === 1
-      ? [ratedValues[0] - 0.5, ratedValues[0] + 0.5]
-      : [Math.min(0, Math.min(...ratedValues) - 0.5), Math.max(...ratedValues) + 0.5];
+  // Zero-baseline domain whenever the evidence allows it: a single mean never
+  // fills the whole axis, and frozen scales without a positive range still
+  // keep their full extent through the Math.min guard.
+  const domain: [number, number] = [
+    Math.min(0, Math.min(...ratedValues) - 0.5),
+    Math.max(...ratedValues) + 0.5,
+  ];
 
   const insight =
     ranked.length === 1
@@ -174,21 +177,31 @@ export function ProgramHeadInstrumentBreakdownChart({
           aria-describedby={insightId}
           className="aspect-auto h-full w-full"
         >
-          <BarChart data={chartData} margin={{ bottom: 10, left: 0, right: 0, top: 10 }}>
+          <BarChart
+            data={chartData}
+            layout="vertical"
+            margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
+          >
             <ChartPatternDefs chartId={chartId} categoryCount={sourceKeys.length} />
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
             <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              // Recharts thins overlapping category ticks at narrow widths;
-              // the exact table and tooltip keep every instrument label.
-            />
-            <YAxis
+              type="number"
               domain={domain}
               tickLine={false}
               axisLine={false}
               tickFormatter={(value: number) => value.toFixed(1)}
+            />
+            <YAxis
+              type="category"
+              dataKey="label"
+              width={200}
+              tickLine={false}
+              axisLine={false}
+              // Long instrument labels truncate on the axis at narrow widths;
+              // the exact table and tooltip keep every instrument label.
+              tickFormatter={(label: string) =>
+                label.length > 24 ? `${label.slice(0, 23)}…` : label
+              }
             />
             <ChartTooltip
               formatter={(value, name) => {
@@ -203,7 +216,8 @@ export function ProgramHeadInstrumentBreakdownChart({
                 key={sourceKey}
                 dataKey={sourceKey}
                 name={sourceLabelByKey.get(sourceKey) ?? sourceKey}
-                radius={[4, 4, 0, 0]}
+                maxBarSize={32}
+                radius={[0, 6, 6, 0]}
                 isAnimationActive={false}
               >
                 {rows.map((row) => (
@@ -212,6 +226,12 @@ export function ProgramHeadInstrumentBreakdownChart({
                     fill={chartFill(chartId, sourceIndex)}
                   />
                 ))}
+                <LabelList
+                  dataKey={sourceKey}
+                  position="right"
+                  offset={8}
+                  formatter={(value) => (value == null ? "" : Number(value).toFixed(2))}
+                />
               </Bar>
             ))}
           </BarChart>

@@ -79,7 +79,7 @@ export default async function SelectedProgramDashboardPage({
       <ProgramHeadDashboardKpis
         participation={dashboard.participation}
         activeEvaluations={dashboard.activeEvaluations}
-        stakeholdersHref={dashboard.links.analyticsStakeholders}
+        responsesHref={dashboard.links.responses}
         activeEvaluationsHref={dashboard.links.responsesActiveCourse}
       />
 
@@ -87,7 +87,7 @@ export default async function SelectedProgramDashboardPage({
         <div className="flex min-w-0 flex-col gap-6 lg:order-2">
           <ProgramHeadStakeholderProgress
             participation={dashboard.participation}
-            stakeholdersHref={dashboard.links.analyticsStakeholders}
+            responsesHref={dashboard.links.responses}
           />
           <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
         </div>

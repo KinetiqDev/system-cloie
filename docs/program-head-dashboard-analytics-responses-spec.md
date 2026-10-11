@@ -503,7 +503,7 @@ submitted eligible assignments / eligible assignments
 ```
 
 Eligible follows §5.12: every in-scope assignment row counts, regardless of any exclusion record.
-The visible Response progress panel supplies the stakeholder breakdown, so the KPI does not repeat it in a popover. The headline link opens Analytics > Stakeholders in the same period scope.
+The visible Response progress panel supplies the stakeholder breakdown, so the KPI does not repeat it in a popover. The headline link opens Responses in the same period scope.
 
 Do not use registered Program population as denominator.
 
@@ -568,7 +568,7 @@ Each row displays:
 
 Keep the respondent count visibly separate from `submitted / assigned`. One person may hold several evaluation assignments, so these denominators are not expected to match.
 
-Each row's accessible name exposes exact submitted, in-progress, and not-started counts. All bars share the same available width. Clicking a row opens Analytics > Stakeholders while preserving the period scope.
+Each row's accessible name exposes exact submitted, in-progress, and not-started counts. All bars share the same available width. Clicking a row opens Responses while preserving the period scope.
 
 ## 13.7 Navigation without repeated quick actions
 
@@ -861,11 +861,15 @@ Do not create one generic CILO mean for the class summary. Show CILOs individual
 
 ---
 
-# 18. Analytics: Stakeholders tab
+# 18. Analytics: Stakeholders tab — RETIRED
 
-Purpose:
+The Program Head Stakeholders tab was removed. The Analytics workspace now has four
+canonical tabs: `outcomes`, `courses`, `trends`, `qualitative`. Old
+`?tab=stakeholders` links redirect to the Outcomes tab with the period scope
+preserved. Source-level evidence comparisons now live only in the Dean's
+Stakeholders view; participation links on the dashboard open Responses.
 
-> Compare participation and evidence results across respondent groups.
+The subsections below are kept for historical reference only.
 
 ## 18.1 Completion by stakeholder
 

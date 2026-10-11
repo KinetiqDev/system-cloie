@@ -119,7 +119,6 @@ function dashboardDataFixture(
       responses: "/program-head/programs/p1/responses",
       responsesActiveCourse: "/program-head/programs/p1/responses?status=ACTIVE",
       analyticsOutcomes: "/program-head/programs/p1/analytics?tab=outcomes",
-      analyticsStakeholders: "/program-head/programs/p1/analytics?tab=stakeholders",
       analyticsFeedback: "/program-head/programs/p1/analytics?tab=qualitative",
     },
     ...overrides,
@@ -186,7 +185,7 @@ describe("selected Program dashboard route", () => {
     const card = kpi("Response completion");
     expect(card).toHaveTextContent("78%");
     expect(card).toHaveTextContent("312 of 400 submitted");
-    expect(card).toHaveAttribute("href", "/program-head/programs/p1/analytics?tab=stakeholders");
+    expect(card).toHaveAttribute("href", "/program-head/programs/p1/responses");
   });
 
   it("states person-level respondent statuses on one line", async () => {
@@ -223,7 +222,7 @@ describe("selected Program dashboard route", () => {
     const row = screen.getByRole("link", {
       name: /Students: 205 respondents, 265 of 340 assignments submitted/,
     });
-    expect(row).toHaveAttribute("href", "/program-head/programs/p1/analytics?tab=stakeholders");
+    expect(row).toHaveAttribute("href", "/program-head/programs/p1/responses");
     expect(row).toHaveTextContent("78%");
     expect(row).toHaveTextContent("265/340");
   });

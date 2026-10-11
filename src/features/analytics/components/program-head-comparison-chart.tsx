@@ -2,7 +2,16 @@
 
 import { useId } from "react";
 import Link from "next/link";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,6 +29,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getAttainmentColor } from "./outcome-attainment-badge";
+import { AttainmentLegend } from "./outcome-attainment-legend";
+import { OUTCOME_ATTAINMENT_BENCHMARK } from "../aggregators/outcome-attainment";
+import type { OutcomeAttainment } from "../aggregators/outcome-attainment";
 
 /**
  * One comparable row in a semantic comparison. Independent means are always
@@ -37,6 +50,12 @@ export type ProgramHeadComparisonDatum = {
   context?: string | null;
   /** Optional authorized drill-through links shown in the exact table. */
   links?: Array<{ href: string; label: string }>;
+  /**
+   * Optional server-computed CLOIE_OUTCOME_MEAN_V1 classification. When any
+   * ranked row is classified, bars take the canonical CQI colors instead of
+   * categorical series colors; unclassified rows stay muted, never failure-colored.
+   */
+  attainment?: OutcomeAttainment;
 };
 
 type ProgramHeadComparisonChartProps = {
@@ -155,6 +174,8 @@ export function ProgramHeadComparisonChart({
   // at 1 (or to be positive), so a fixed [0, max] axis could clip or mislead.
   const domain: [number, number] =
     values.length === 1 ? [min - 0.5, max + 0.5] : [Math.min(0, min - 0.5), max + 0.5];
+  const hasAttainment = ranked.some((row) => row.attainment?.status === "classified");
+  const showBenchmark = hasAttainment && OUTCOME_ATTAINMENT_BENCHMARK <= max + 0.5;
   const insight =
     ranked.length === 1
       ? `Mean Rating for ${ranked[0].label}: ${ranked[0].meanRating.toFixed(2)} (${ranked[0].submittedResponseCount} ${ranked[0].submittedResponseCount === 1 ? "response" : "responses"}).`
@@ -180,10 +201,24 @@ export function ProgramHeadComparisonChart({
           <BarChart
             data={ranked}
             layout="vertical"
-            margin={{ top: 8, right: 48, bottom: 8, left: 8 }}
+            margin={{ top: showBenchmark ? 28 : 8, right: 48, bottom: 8, left: 8 }}
           >
             <ChartPatternDefs chartId={chartId} categoryCount={ranked.length} />
             <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+            {showBenchmark ? (
+              <ReferenceLine
+                x={OUTCOME_ATTAINMENT_BENCHMARK}
+                stroke="var(--text-muted)"
+                strokeDasharray="6 4"
+                strokeWidth={2}
+                label={{
+                  value: `Benchmark ${OUTCOME_ATTAINMENT_BENCHMARK.toFixed(2)}`,
+                  position: "top",
+                  fill: "var(--foreground)",
+                  fontSize: 12,
+                }}
+              />
+            ) : null}
             <XAxis
               type="number"
               domain={domain}
@@ -215,9 +250,19 @@ export function ProgramHeadComparisonChart({
                 ];
               }}
             />
-            <Bar dataKey="meanRating" radius={[0, 6, 6, 0]} isAnimationActive={false}>
+            <Bar
+              dataKey="meanRating"
+              maxBarSize={32}
+              radius={[0, 6, 6, 0]}
+              isAnimationActive={false}
+            >
               {ranked.map((row, index) => (
-                <Cell key={row.key} fill={chartFill(chartId, index)} />
+                <Cell
+                  key={row.key}
+                  fill={
+                    hasAttainment ? getAttainmentColor(row.attainment) : chartFill(chartId, index)
+                  }
+                />
               ))}
               <LabelList
                 dataKey="meanRating"
@@ -235,7 +280,9 @@ export function ProgramHeadComparisonChart({
       >
         {ranked.map((row, index) => (
           <span role="listitem" key={row.key} className="flex items-center gap-1.5">
-            <ChartSwatch fill={chartFill(chartId, index)} />
+            <ChartSwatch
+              fill={hasAttainment ? getAttainmentColor(row.attainment) : chartFill(chartId, index)}
+            />
             <span className="text-muted-foreground text-xs">
               {row.label} ({row.submittedResponseCount}{" "}
               {row.submittedResponseCount === 1 ? "response" : "responses"})
@@ -246,6 +293,7 @@ export function ProgramHeadComparisonChart({
       <p id={insightId} className="text-body-sm text-text-secondary">
         {insight}
       </p>
+      {hasAttainment ? <AttainmentLegend /> : null}
       <ComparisonExactValuesTable rows={allTableRows} />
     </div>
   );

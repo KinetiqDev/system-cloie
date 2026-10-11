@@ -166,7 +166,7 @@ Use soft surfaces for alerts and badges. Every status pairs color with text, ico
 
 Five categorical chart series (`--chart-1` … `--chart-5`), theme-resolved in `tokens.css`.
 
-- Chart colors are categorical, not semantic. Course, stakeholder, instrument, rating-distribution, ILO evidence, and comparable-period charts keep categorical colors; their legends name the categories, not attainment.
+- Chart colors are categorical, not semantic, except where server-computed attainment classification applies. The Program Head Courses tab's mean-by-course comparison charts take the canonical CQI colors when `CLOIE_OUTCOME_MEAN_V1` classification validates the frozen scale (ADR 0041), with the `AttainmentLegend` and dashed 3.50 benchmark line; unclassified rows render muted. Stakeholder, instrument, rating-distribution, ILO evidence, and comparable-period charts keep categorical colors; their legends name the categories, not attainment.
 - Classified CILO and PO means use the canonical CQI colors: `--color-success` for Meets Benchmark, `--color-warning` for Needs Attention, and `--color-danger` for Below Benchmark. Badges and chart fills share this mapping. Outcome evidence with no classification uses `--text-muted`, never a failure color. ILO evidence is not classified.
 - CILO and PO interpretation guides show all five bands from ADR 0037, exact inclusive/exclusive mean bounds, the three color meanings, unclassified states, and the proposed-policy caveat. Classification uses full precision before display rounding.
 - Draw the neutral dashed 3.50 benchmark only where server-computed outcome classifications validate the frozen scale. A numeric five-point range or PO code alone does not authorize it.

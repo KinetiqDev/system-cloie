@@ -92,7 +92,6 @@ export function normalizeInsightSection(section: InsightSection): InsightSection
 export const ANALYTICS_INSIGHT_VIEWS = [
   "outcomes",
   "courses",
-  "stakeholders",
   "trends",
   "qualitative",
 ] as const;

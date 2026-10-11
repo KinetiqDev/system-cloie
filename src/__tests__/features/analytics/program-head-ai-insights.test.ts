@@ -18,7 +18,6 @@ import type {
 const {
   getProgramHeadAnalyticsMock,
   getProgramHeadOutcomesMock,
-  getProgramHeadStakeholdersMock,
   getProgramHeadBreakdownsMock,
   getProgramHeadTrendsMock,
   getProgramHeadFeedbackMock,
@@ -34,7 +33,6 @@ const {
   return {
     getProgramHeadAnalyticsMock: vi.fn(),
     getProgramHeadOutcomesMock: vi.fn(),
-    getProgramHeadStakeholdersMock: vi.fn(),
     getProgramHeadBreakdownsMock: vi.fn(),
     getProgramHeadTrendsMock: vi.fn(),
     getProgramHeadFeedbackMock: vi.fn(),
@@ -48,7 +46,6 @@ vi.mock("openai", () => ({ default: MockOpenAIClient }));
 vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalytics: getProgramHeadAnalyticsMock,
   getProgramHeadOutcomes: getProgramHeadOutcomesMock,
-  getProgramHeadStakeholders: getProgramHeadStakeholdersMock,
   getProgramHeadBreakdowns: getProgramHeadBreakdownsMock,
   getProgramHeadTrends: getProgramHeadTrendsMock,
   getProgramHeadFeedback: getProgramHeadFeedbackMock,
@@ -105,33 +102,6 @@ const outcomesDTO = () => ({
       ],
       spansMultipleScales: false,
       excludedRatingCount: 0,
-    },
-  ],
-});
-
-const stakeholdersDTO = () => ({
-  scope: SCOPE,
-  periodOptions: PERIOD_OPTIONS,
-  emptyReason: null,
-  sourceSeparationDisclosure: "Evidence sources use different instruments and populations.",
-  buckets: [
-    {
-      sourceKey: "COURSE_STUDENT",
-      sourceLabel: "Course-bound student evidence",
-      sourceDescription: "Course-bound evaluation responses.",
-      instrumentContext: "CILO Evaluation v2",
-      meanRating: 4.25,
-      ratingCount: 60,
-      submittedResponseCount: 15,
-    },
-    {
-      sourceKey: "ALUMNI",
-      sourceLabel: "Alumni evidence",
-      sourceDescription: "Central alumni deployment responses.",
-      instrumentContext: null,
-      meanRating: 4.1,
-      ratingCount: 36,
-      submittedResponseCount: 9,
     },
   ],
 });
@@ -271,7 +241,6 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     vi.clearAllMocks();
     getProgramHeadAnalyticsMock.mockResolvedValue(overviewDTO());
     getProgramHeadOutcomesMock.mockResolvedValue(outcomesDTO());
-    getProgramHeadStakeholdersMock.mockResolvedValue(stakeholdersDTO());
     getProgramHeadBreakdownsMock.mockResolvedValue(breakdownsDTO());
     getProgramHeadTrendsMock.mockResolvedValue(trendsDTO());
     getProgramHeadFeedbackMock.mockResolvedValue(feedbackDTO());
@@ -446,7 +415,6 @@ describe("generateProgramHeadAnalyticsInsight", () => {
 
     expect(getProgramHeadAnalyticsMock).toHaveBeenCalledWith("program-bsed", FILTERS);
     expect(getProgramHeadOutcomesMock).toHaveBeenCalledWith("program-bsed", FILTERS);
-    expect(getProgramHeadStakeholdersMock).not.toHaveBeenCalled();
     expect(getProgramHeadBreakdownsMock).not.toHaveBeenCalled();
     expect(getProgramHeadTrendsMock).not.toHaveBeenCalled();
     expect(getProgramHeadFeedbackMock).not.toHaveBeenCalled();
@@ -464,7 +432,6 @@ describe("generateProgramHeadAnalyticsInsight", () => {
     expect(getProgramHeadAnalyticsMock).toHaveBeenCalledWith("program-bsed", QUALITATIVE_FILTERS);
     expect(getProgramHeadFeedbackMock).toHaveBeenCalledWith("program-bsed", QUALITATIVE_FILTERS);
     expect(getProgramHeadOutcomesMock).not.toHaveBeenCalled();
-    expect(getProgramHeadStakeholdersMock).not.toHaveBeenCalled();
     expect(getProgramHeadBreakdownsMock).not.toHaveBeenCalled();
     expect(getProgramHeadTrendsMock).not.toHaveBeenCalled();
   });

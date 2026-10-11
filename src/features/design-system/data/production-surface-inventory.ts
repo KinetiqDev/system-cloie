@@ -2869,13 +2869,6 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "New server component rendering one accessible per-scale Likert table with snapshot labels",
   },
   {
-    path: "src/features/analytics/components/program-head-stakeholder-view.tsx",
-    disposition: "already_compliant",
-    category: "feature_component",
-    notes:
-      "New server component composing source-separation disclosure, ranked source means, and response composition",
-  },
-  {
     path: "src/features/analytics/components/program-head-comparison-chart.tsx",
     disposition: "already_compliant",
     category: "feature_component",

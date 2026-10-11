@@ -118,6 +118,7 @@ export function ProgramHeadBreakdownsView({
         meanRating: scale.meanRating,
         ratingCount: scale.ratingCount,
         submittedResponseCount: scale.submittedResponseCount,
+        attainment: scale.attainment,
       });
       coursesByScale.set(scale.scaleKey, group);
     }

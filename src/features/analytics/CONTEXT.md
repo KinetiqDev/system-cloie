@@ -45,7 +45,7 @@ Professional Course-bound evidence and Central evidence within the selected auth
 _Avoid_: Student Program as General Education evidence authority, General Education contribution to Program Head aggregates
 
 **Program Head analytics tabs**:
-Five canonical tabs — `outcomes`, `courses`, `stakeholders`, `trends`, `qualitative` — encoded in URL state by `program-head-analytics-state.ts`. AI insights render inline per view (`ANALYTICS_INSIGHT_VIEWS` in `ai-insight-contract.ts`) instead of a dedicated tab. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. Filter submission uses App Router navigation: the analytics frame and selected controls remain mounted while only the active evidence region presents its tab-shaped loading geometry. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change. The Program Head responses view (`course`, `program-wide` tabs in `program-head-responses-state.ts`) follows the same submission contract: filter and page changes navigate through a transition workspace that preserves the header, tabs, and filter controls while only the evaluation evidence region reloads.
+Four canonical tabs — `outcomes`, `courses`, `trends`, `qualitative` — encoded in URL state by `program-head-analytics-state.ts`. AI insights render inline per view (`ANALYTICS_INSIGHT_VIEWS` in `ai-insight-contract.ts`) instead of a dedicated tab. Unknown or legacy tab keys redirect to their canonical successors; the overview tab redirects to the dashboard and the retired `stakeholders` tab redirects to `outcomes`; each tab resolves through view-gated reads that re-authorize via `resolveProgramHeadContext` per request. Filter submission uses App Router navigation: the analytics frame and selected controls remain mounted while only the active evidence region presents its tab-shaped loading geometry. A filter fingerprint (comparable-series + filter set) marks previously returned AI insights stale when filters change. The Program Head responses view (`course`, `program-wide` tabs in `program-head-responses-state.ts`) follows the same submission contract: filter and page changes navigate through a transition workspace that preserves the header, tabs, and filter controls while only the evaluation evidence region reloads.
 _Avoid_: Legacy seven-tab vocabulary, overview as a landing tab, client-side tab authorization, document reload on filter application, whole-workspace loading replacement
 
 **Program Head and Dean course means**:
@@ -130,7 +130,7 @@ The canonical four-bucket evidence-source vocabulary shared by dashboard cards: 
 _Avoid_: Pooling sources by rating-scale compatibility
 
 **Source-separation disclosure**:
-The Stakeholders-view notice that evidence sources use different instruments and respondent populations, so sources are kept separate and never combined into one construct.
+The notice in the Dean Stakeholders view (and the underlying `ProgramHeadStakeholdersDTO`) that evidence sources use different instruments and respondent populations, so sources are kept separate and never combined into one construct.
 _Avoid_: Cross-source mean combination
 
 **Trend comparability fingerprint**:

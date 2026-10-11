@@ -12,15 +12,15 @@ const SEGMENTS = [
 /**
  * Response progress by stakeholder (spec §13.6): one link row per stakeholder
  * with a 100% stacked bar. Percentage, submitted / assigned, and the distinct
- * respondent count stay visible without hover; rows open Analytics >
- * Stakeholders in the dashboard's period scope.
+ * respondent count stay visible without hover; rows open Responses in the
+ * dashboard's period scope.
  */
 export function ProgramHeadStakeholderProgress({
   participation,
-  stakeholdersHref,
+  responsesHref,
 }: {
   participation: ParticipationSummary;
-  stakeholdersHref: string;
+  responsesHref: string;
 }) {
   const rows = participation.stakeholders;
   return (
@@ -43,7 +43,7 @@ export function ProgramHeadStakeholderProgress({
               return (
                 <Link
                   key={row.stakeholder}
-                  href={stakeholdersHref}
+                  href={responsesHref}
                   aria-label={`${label}: ${row.respondentCount.toLocaleString()} ${row.respondentCount === 1 ? "respondent" : "respondents"}, ${row.submitted.toLocaleString()} of ${row.assigned.toLocaleString()} assignments submitted, ${percent} percent complete, ${row.inProgress.toLocaleString()} in progress, ${row.notStarted.toLocaleString()} not started`}
                   className="hover:bg-surface-hover focus-visible:ring-ring -mx-2 flex flex-col gap-1.5 rounded-lg px-2 py-2 transition-colors focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
                 >

@@ -58,8 +58,8 @@ function TableSkeleton() {
 }
 
 function EvidenceSkeleton({ tab }: { tab: AnalyticsFilterState["tab"] }) {
-  const chartCount = tab === "stakeholders" ? 2 : tab === "courses" ? 3 : 1;
-  const showsAlert = tab === "outcomes" || tab === "stakeholders";
+  const chartCount = tab === "courses" ? 3 : 1;
+  const showsAlert = tab === "outcomes";
   const showsTable = tab === "outcomes" || tab === "trends" || tab === "qualitative";
 
   return (

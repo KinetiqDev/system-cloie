@@ -16,11 +16,14 @@ test("top-down journey: dashboard to exact answers", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/program-head/programs/${fx.bsit.id}/dashboard`));
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
-  // Dashboard → stakeholder participation (Students row links to Analytics).
+  // Dashboard → stakeholder participation (Students row links to Responses).
   await page.getByRole("link", { name: /^Students: / }).click();
-  await expect(page).toHaveURL(/tab=stakeholders/);
+  await expect(page).toHaveURL(/\/responses/);
+  await expect(page.getByRole("heading", { name: "Responses" })).toBeVisible();
+
+  // Analytics → Courses tab → evaluation evidence link.
+  await page.goto(`/program-head/programs/${fx.bsit.id}/analytics`);
   await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
-  await expect(page.getByText("Evidence sources are kept separate", { exact: true })).toBeVisible();
   await page.evaluate(() => {
     Object.assign(window, { __analyticsNavigationSentinel: "preserved" });
   });

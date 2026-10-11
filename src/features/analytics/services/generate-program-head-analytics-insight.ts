@@ -23,7 +23,6 @@ import {
   getProgramHeadBreakdowns,
   getProgramHeadFeedback,
   getProgramHeadOutcomes,
-  getProgramHeadStakeholders,
   getProgramHeadTrends,
 } from "./get-program-head-analytics";
 import type {
@@ -33,7 +32,6 @@ import type {
   ProgramHeadFeedbackTokenDTO,
   ProgramHeadOutcomesDTO,
   ProgramHeadOverviewDTO,
-  ProgramHeadStakeholdersDTO,
   ProgramHeadTrendsDTO,
 } from "../program-head-analytics-types";
 
@@ -128,13 +126,11 @@ function buildPacketBase(
  */
 type OutcomesViewEvidencePacket = ReturnType<typeof buildOutcomesPacket>;
 type CoursesViewEvidencePacket = ReturnType<typeof buildCoursesPacket>;
-type StakeholdersViewEvidencePacket = ReturnType<typeof buildStakeholdersPacket>;
 type TrendsViewEvidencePacket = ReturnType<typeof buildTrendsPacket>;
 type QualitativeViewEvidencePacket = ReturnType<typeof buildQualitativePacket>["packet"];
 type AnalyticsViewEvidencePacket =
   | OutcomesViewEvidencePacket
   | CoursesViewEvidencePacket
-  | StakeholdersViewEvidencePacket
   | TrendsViewEvidencePacket
   | QualitativeViewEvidencePacket;
 
@@ -142,7 +138,6 @@ type AnalyticsViewEvidencePacket =
 export type AnalyticsViewReads =
   | { view: "outcomes"; outcomes: ProgramHeadOutcomesDTO }
   | { view: "courses"; breakdowns: ProgramHeadBreakdownsDTO }
-  | { view: "stakeholders"; stakeholders: ProgramHeadStakeholdersDTO }
   | { view: "trends"; trends: ProgramHeadTrendsDTO }
   | { view: "qualitative"; feedback: ProgramHeadFeedbackDTO };
 
@@ -261,31 +256,6 @@ function buildCoursesPacket(
       majorRows: buildContextualRows(breakdowns.majorBreakdown),
       yearLevelRows: buildContextualRows(breakdowns.yearLevelBreakdown),
     },
-  };
-}
-
-function buildStakeholdersPacket(
-  overview: ProgramHeadOverviewDTO,
-  stakeholders: ProgramHeadStakeholdersDTO,
-  appliedFilters: AppliedAnalyticsFilters
-) {
-  return {
-    view: "stakeholders" as const,
-    ...buildPacketBase(overview, appliedFilters),
-    stakeholders: {
-      sourceSeparationDisclosure: clampLabel(stakeholders.sourceSeparationDisclosure),
-      buckets: stakeholders.buckets.map((bucket) => ({
-        sourceLabel: clampLabel(bucket.sourceLabel),
-        sourceDescription: clampLabel(bucket.sourceDescription),
-        instrumentContext: bucket.instrumentContext ? clampLabel(bucket.instrumentContext) : null,
-        meanRating: ROUNDED(bucket.meanRating),
-        ratingCount: bucket.ratingCount,
-        submittedResponseCount: bucket.submittedResponseCount,
-      })),
-    },
-    limitations: [stakeholders.sourceSeparationDisclosure].filter(
-      (limitation) => limitation.length > 0
-    ),
   };
 }
 
@@ -549,20 +519,6 @@ export function buildAnalyticsViewPacket(
         },
       };
     }
-    case "stakeholders": {
-      if (reads.view !== view) throw new Error("Stakeholder evidence reads required");
-      const packet = buildStakeholdersPacket(overview, reads.stakeholders, appliedFilters);
-      return {
-        packet,
-        evidenceScope: {
-          submittedResponseCount,
-          qualitativeItemCount: null,
-          evaluatedSourceLabels: reads.stakeholders.buckets.map((bucket) => bucket.sourceLabel),
-          tokenAnalysis: null,
-          promptAnalysis: null,
-        },
-      };
-    }
     case "trends": {
       if (reads.view !== view) throw new Error("Trend evidence reads required");
       const packet = buildTrendsPacket(overview, reads.trends, appliedFilters);
@@ -611,10 +567,6 @@ const VIEW_EVIDENCE_READERS: Record<
   courses: async (programId, filters) => {
     const breakdowns = await getProgramHeadBreakdowns(programId, filters);
     return breakdowns ? { view: "courses", breakdowns } : null;
-  },
-  stakeholders: async (programId, filters) => {
-    const stakeholders = await getProgramHeadStakeholders(programId, filters);
-    return stakeholders ? { view: "stakeholders", stakeholders } : null;
   },
   trends: async (programId, filters) => {
     const trends = await getProgramHeadTrends(programId, filters);

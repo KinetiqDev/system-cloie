@@ -6,17 +6,15 @@ import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes
 export const ANALYTICS_TABS = [
   "outcomes",
   "courses",
-  "stakeholders",
   "trends",
   "qualitative",
 ] as const;
-const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback"] as const;
+const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback", "stakeholders"] as const;
 type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
 type LegacyAnalyticsTab = (typeof LEGACY_ANALYTICS_TABS)[number];
 export const ANALYTICS_TAB_LABELS: Record<AnalyticsTab, string> = {
   outcomes: "Outcomes",
   courses: "Courses",
-  stakeholders: "Stakeholders",
   trends: "Trends",
   qualitative: "Qualitative",
 };
