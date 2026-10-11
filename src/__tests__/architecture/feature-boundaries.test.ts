@@ -628,6 +628,7 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
     bindings: [
       "buildResponseFacets",
       "withResponseFacet",
+      "withoutResponseFacets",
       "ResponsesFilters",
       "ResponseFacetValues",
       "ResponseFacetView",
