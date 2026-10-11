@@ -4,6 +4,7 @@ import { resolvePostLoginDestination } from "@/features/auth/services/resolve-po
 import { prisma } from "@/lib/db/prisma";
 import { AlumniOnboardingForm } from "@/features/users/components/alumni-onboarding-form";
 import { IndustryPartnerOnboardingForm } from "@/features/users/components/industry-partner-onboarding-form";
+import { FacultyOnboardingForm } from "@/features/users/components/faculty-onboarding-form";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = { title: buildPageTitle("Complete Your Profile") };
@@ -33,10 +34,11 @@ export default async function OnboardingPage({
   const resolvedParams = await searchParams;
   const requestedIntent = typeof resolvedParams?.intent === "string" ? resolvedParams.intent : "";
   const gateIntent = "intent" in gate ? gate.intent : null;
-  const externalOnboardingGate =
-    gateIntent === "alumni" || gateIntent === "industry-partner" ? gateIntent : null;
-
-  if (!externalOnboardingGate || externalOnboardingGate !== requestedIntent) {
+  const validOnboardingGate =
+    gateIntent === "alumni" || gateIntent === "industry-partner" || gateIntent === "faculty"
+      ? gateIntent
+      : null;
+  if (!validOnboardingGate || validOnboardingGate !== requestedIntent) {
     redirect(
       resolvePostLoginDestination({
         requestedPath: null,
@@ -63,7 +65,9 @@ export default async function OnboardingPage({
   // placement form exists: placement is institution-recorded (issue #649).
   return (
     <div className="mx-auto w-full max-w-2xl py-8">
-      {externalOnboardingGate === "alumni" ? (
+      {validOnboardingGate === "faculty" ? (
+        <FacultyOnboardingForm {...identity} programs={programs} />
+      ) : validOnboardingGate === "alumni" ? (
         <AlumniOnboardingForm {...identity} programs={programs} />
       ) : (
         <IndustryPartnerOnboardingForm {...identity} programs={programs} />

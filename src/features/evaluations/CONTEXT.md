@@ -9,7 +9,7 @@ A scheduled instance of an instrument version offered to a population of respond
 _Avoid_: Survey, survey event
 
 **Course-bound evaluation**:
-A per-class deployment bound to exactly one Course Assignment and offered to that class's eligible roster members. It evaluates CILO-bound Likert questions and may also bind a Program-specific Course's questions directly to Program Outcomes, snapshotting every bound CILO description or PO code/description plus the question prompt at publish time. A Likert question with a CILO binding cannot carry direct PO bindings. Direct PO bindings are unavailable to General Education Courses. It also freezes a flat assignment-context snapshot — Course, Program, major, academic period, year level, section, and Faculty — so historical labels do not drift when live catalog records change. Faculty may be reassigned only before publication. The roster remains mutable while its assignment and Academic Period are active; adding or restoring an el…
+A per-class deployment bound to exactly one Course Assignment and offered to that class's eligible roster members. It evaluates CILO-bound Likert questions and may also bind a Professional Course's questions directly to Program Outcomes, snapshotting every bound CILO description or PO code/description plus the question prompt at publish time. A Likert question with a CILO binding cannot carry direct PO bindings. Direct PO bindings are unavailable to General Education Courses. It also freezes a flat assignment-context snapshot — Course, Program, major, academic period, year level, section, and Faculty — so historical labels do not drift when live catalog records change. Faculty may be reassigned only before publication. The roster remains mutable while its assignment and Academic Period are active; adding or restoring an el…
 _Avoid_: Class evaluation when the Central Deployment distinction matters
 
 **Likert question binding identity**:
@@ -27,7 +27,7 @@ The status progression is `DRAFT -> SCHEDULED -> ACTIVE -> CLOSED`, with the con
 _Avoid_: PENDING, EXPIRED, resetting responses on reopen
 
 **Publication alignment gate**:
-Before a Course-bound evaluation publishes, every active CILO must satisfy the Course scope's typed alignment rule. General Education requires at least one active Institutional Outcome alignment with a manifestation; Program-specific courses require a manifestation on every active PO of the owning program, and zero active POs with active CILOs is incomplete.
+Before a Course-bound evaluation publishes, every active CILO must satisfy the Course scope's typed alignment rule. General Education requires at least one active Institutional Outcome alignment with a manifestation; Professional courses require a manifestation on every active PO of the owning program, and zero active POs with active CILOs is incomplete.
 _Avoid_: Partial alignment, publish-with-warnings
 
 ## Roster exclusions

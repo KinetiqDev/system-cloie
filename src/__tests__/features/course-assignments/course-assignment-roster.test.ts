@@ -12,7 +12,7 @@ import {
 } from "@/features/course-assignments/services/course-assignment-roster";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
-  vi.mock("@/lib/db/prisma", () => ({
+vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: { findUnique: vi.fn() },
     evaluationAssignment: { findMany: vi.fn() },
@@ -48,7 +48,7 @@ describe("course-assignment-roster service", () => {
         program_id: "program-1",
         term_instance_id: "term-1",
         is_active: true,
-        course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+        course: { course_scope: CourseScope.PROFESSIONAL },
         term_instance: { status: "ACTIVE" },
         course_bound_evaluations: [],
       } as never);
@@ -76,7 +76,7 @@ describe("course-assignment-roster service", () => {
       program_id: "program-1",
       term_instance_id: "term-1",
       is_active: true,
-      course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+      course: { course_scope: CourseScope.PROFESSIONAL },
       term_instance: { status: "ACTIVE" },
       course_bound_evaluations: [],
     } as never);
@@ -143,7 +143,7 @@ describe("course-assignment-roster service", () => {
       program_id: "program-1",
       term_instance_id: "term-1",
       is_active: true,
-      course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+      course: { course_scope: CourseScope.PROFESSIONAL },
       term_instance: { status: "ACTIVE" },
       course_bound_evaluations: [],
     } as never);
@@ -172,7 +172,7 @@ describe("course-assignment-roster service", () => {
   it("does not treat a profile without a former Student ID as incomplete", () => {
     expect(
       projectRosterEligibility(
-        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        { courseScope: CourseScope.PROFESSIONAL, programId: "program-1" },
         {
           enrollments: [{ program_id: "program-1" }],
           is_active: true,
@@ -189,7 +189,7 @@ describe("course-assignment-roster service", () => {
   });
 
   it("requires an active Program-owned Major when the Program has active Majors", () => {
-    const assignment = { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" };
+    const assignment = { courseScope: CourseScope.PROFESSIONAL, programId: "program-1" };
     const base = {
       enrollments: [{ program_id: "program-1" }],
       is_active: true,
@@ -248,7 +248,7 @@ describe("course-assignment-roster service", () => {
   it("keeps missing active assignment-period placement a separate reason", () => {
     expect(
       projectRosterEligibility(
-        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        { courseScope: CourseScope.PROFESSIONAL, programId: "program-1" },
         {
           enrollments: [],
           is_active: true,
@@ -269,7 +269,7 @@ describe("course-assignment-roster service", () => {
       projectCourseBoundEvaluationEligibility({
         assignment: {
           assignmentId: "assignment-1",
-          courseScope: CourseScope.PROGRAM_SPECIFIC,
+          courseScope: CourseScope.PROFESSIONAL,
           programId: "program-1",
           termInstanceId: "term-1",
         },
@@ -292,7 +292,7 @@ describe("course-assignment-roster service", () => {
   it("restores participation when current eligibility returns", () => {
     expect(
       projectRosterEligibility(
-        { courseScope: CourseScope.PROGRAM_SPECIFIC, programId: "program-1" },
+        { courseScope: CourseScope.PROFESSIONAL, programId: "program-1" },
         {
           enrollments: [{ program_id: "program-1" }],
           is_active: true,
@@ -318,7 +318,7 @@ describe("course-assignment-roster service", () => {
             id: "assignment-1",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+            course: { course_scope: CourseScope.PROFESSIONAL },
           },
         },
       },
@@ -329,7 +329,7 @@ describe("course-assignment-roster service", () => {
             id: "assignment-1",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+            course: { course_scope: CourseScope.PROFESSIONAL },
           },
         },
       },
@@ -380,9 +380,8 @@ describe("course-assignment-roster service", () => {
       createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
     );
     const { prisma } = await import("@/lib/db/prisma");
-    const { resolveProgramHeadContext } = await import(
-      "@/features/auth/services/resolve-program-head-context"
-    );
+    const { resolveProgramHeadContext } =
+      await import("@/features/auth/services/resolve-program-head-context");
     vi.mocked(resolveProgramHeadContext).mockResolvedValue({
       success: true,
       data: {
@@ -398,7 +397,7 @@ describe("course-assignment-roster service", () => {
       program_id: "program-2",
       term_instance_id: "term-1",
       is_active: true,
-      course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+      course: { course_scope: CourseScope.PROFESSIONAL },
       term_instance: { status: "ACTIVE" },
       course_bound_evaluations: [],
     } as never);

@@ -11,7 +11,7 @@ export async function resolveLegacyCourseEvaluation(
   const evaluation = await prisma.courseBoundEvaluation.findFirst({
     where: {
       id: evaluationId,
-      course_assignment: { program_id: programId, course: { course_scope: "PROGRAM_SPECIFIC" } },
+      course_assignment: { program_id: programId, course: { course_scope: "PROFESSIONAL" } },
     },
     select: { id: true },
   });
@@ -35,7 +35,7 @@ export async function resolveLegacyCourseResponse(
           id: evaluationId,
           course_assignment: {
             program_id: programId,
-            course: { course_scope: "PROGRAM_SPECIFIC" },
+            course: { course_scope: "PROFESSIONAL" },
           },
         },
       },

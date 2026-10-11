@@ -5,6 +5,10 @@ supersedes: none
 
 # Prove the current sign-in method before internal authorization
 
+## Amendment — retired Faculty Secretary review (2026-10-11)
+
+Decision 6's denied-gate list named `FACULTY_APPROVAL_PENDING`, and the consequences section described `FACULTY_ONBOARDING_REQUIRED` as keeping its role because "the explicit Faculty registration request is the one self-service step a person may still complete". Secretary review of self-submitted Faculty requests is now retired: completing the faculty onboarding form provisions the primary active affiliation directly, and a legacy `PENDING` row without an affiliation resolves to `FACULTY_ONBOARDING_REQUIRED` instead of the pending verdict. The pending status no longer withholds any role and no longer appears in the denied-gate map; `FACULTY_REQUEST_REJECTED` still withholds. The gate change is covered by `src/__tests__/features/auth/faculty-approval-and-method-gate.test.ts` and the session-boundary suite.
+
 ## Amendment — the linked-provider set, not the first-provider field (2026-10-10)
 
 Decision 1's provider check was implemented against `app_metadata.provider`, and that implementation signed out the exact flow this ADR exists to serve. GoTrue sets `provider` to the **first-created identity's** provider and never advances it (see `UpdateAppMetaDataProviders` in the Auth server, verified on Gotrue v2.196.0): an external account registered with email and password gets `provider: "email"`, and the later Google link joins `app_metadata.providers` while `provider` stays `"email"`. The pre-fix predicate therefore resolved that Google OAuth session to null, and both the OAuth callback and the session boundary refused it with `AUTH_METHOD_MISMATCH` — the person could not continue with Google on the account they had already registered. Only the identity's _first_ provider equalled Google by accident, so all Google-first accounts worked and the defect stayed invisible.

@@ -34,19 +34,19 @@ Presentation or read-model code that owns no domain invariants. Rules stay in th
 - **Identity and Access -> Enrollments**: Student onboarding may create or defer active-term enrollment after the Student account role and profile are established.
 - **Identity and Access -> Academic Calendar**: Deferred enrollment depends on whether an active academic term exists.
 - **Course Catalog and Assignments -> Academic Calendar**: Course assignments are scoped to the active academic period.
-- **Academic Structure -> Course Catalog and Assignments**: Program-specific courses and course assignments reference the academic program that owns or scopes them.
+- **Academic Structure -> Course Catalog and Assignments**: Professional courses and course assignments reference the academic program that owns or scopes them.
 - **Academic Structure -> Outcomes**: Program Outcomes are owned by and scoped to Academic Programs.
-- **Course Catalog and Assignments -> Outcomes**: Course scope (General Education vs Program-specific) determines the typed alignment relation and valid target catalog for a Course's CILOs; active Course Assignments scope Faculty mapping authority and readiness contexts.
+- **Course Catalog and Assignments -> Outcomes**: Course scope (General Education vs Professional) determines the typed alignment relation and valid target catalog for a Course's CILOs; active Course Assignments scope Faculty mapping authority and readiness contexts.
 - **Academic Calendar -> Outcomes**: Outcome readiness and completed-period readiness snapshots are scoped to academic periods.
 - **Analytics -> Academic Calendar**: Analytics evidence is filterable by canonical School Year, Semester, and Academic Term context.
 - **Analytics -> Course Catalog and Assignments**: Course-bound student evidence and evaluation opportunities originate from Course-bound evaluations and their assignments.
-- **Analytics -> Outcomes**: Program PO evidence follows typed Program-specific CILO-to-PO mappings; General Education ILO evidence follows typed CILO-to-ILO mappings (ADR 0035); ILO attainment and ILO-to-PO crosswalks remain deferred.
+- **Analytics -> Outcomes**: Program PO evidence follows typed Professional CILO-to-PO mappings; General Education ILO evidence follows typed CILO-to-ILO mappings (ADR 0035); ILO attainment and ILO-to-PO crosswalks remain deferred.
 - **Design System -> All Contexts**: Design System provides shared semantic tokens, appearance resolution, and production component primitives consumed across all feature visual surfaces.
 - **Evaluations -> Instruments**: deployments pin an InstrumentVersion; published instruments never reference the live template.
 - **Evaluations -> Outcomes**: the publication alignment gate enforces typed alignment manifestations for every active CILO before a Course-bound evaluation publishes.
 - **Evaluations -> Course Catalog and Assignments**: Course-bound evaluations bind a CourseAssignment and target its authoritative roster; exclusions and reversals operate on roster memberships.
 - **Responses -> Evaluations**: answering is gated by the deployment availability window and, for Course-bound evaluations, active roster membership.
-- **Response Review -> Responses**: review bodies serve only after SUBMITTED; identified detail follows Course evidence ownership, Program Heads for Program-specific/Central evidence and General Education Coordinators for General Education Course-bound evidence.
+- **Response Review -> Responses**: review bodies serve only after SUBMITTED; identified detail follows Course evidence ownership, Program Heads for Professional/Central evidence and General Education Coordinators for General Education Course-bound evidence.
 - **Enrollments -> Academic Calendar**: ledger rows scope to AcademicTermInstances; Term rollover creates ROLLOVER-source enrollments in the target term.
 - **Legal -> Identity and Access**: the signed acknowledgement ticket gates the OAuth callback before Google code exchange and role selection.
 - **Dean Oversight -> Outcomes**: the oversight read model consumes period readiness snapshots and typed mapping-gap vocabulary defined by Outcomes.

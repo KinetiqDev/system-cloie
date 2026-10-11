@@ -127,11 +127,11 @@ const COLUMN_GUIDES: Record<CourseImportMode, ColumnGuideEntry[]> = {
     {
       name: "Course scope",
       required: "Required",
-      values: '"General Education" or "Program Specific".',
+      values: '"General Education" or "Professional".',
     },
     {
       name: "Program code",
-      required: "Program-specific only",
+      required: "Professional only",
       values: 'Active Program code, e.g. "BSIT". Leave blank for General Education.',
     },
     {
@@ -280,7 +280,7 @@ function contextDescription(config: CourseImportModeConfig): string {
 
 function fieldHint(config: CourseImportModeConfig): string {
   if (config.mode === "secretary") {
-    return 'Set Course scope to "General Education" or "Program Specific". Program-specific rows need an active Program code; General Education rows leave Program and Major blank.';
+    return 'Set Course scope to "General Education" or "Professional". Professional rows need an active Program code; General Education rows leave Program and Major blank.';
   }
   if (config.mode === "program-head") {
     return 'Set Course type to "Program Wide" or "Major Specific". Major-specific rows need an active Major in the selected Program.';

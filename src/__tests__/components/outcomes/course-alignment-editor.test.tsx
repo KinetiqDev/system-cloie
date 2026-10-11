@@ -47,7 +47,7 @@ const pspAlignment: CourseAlignment = {
     id: COURSE_ID,
     code: "CS-101",
     title: "Computing",
-    scope: "PROGRAM_SPECIFIC",
+    scope: "PROFESSIONAL",
     geAlignmentMode: "ILO",
     program: { id: "program-1", code: "BSCS", name: "Computer Science" },
   },
@@ -78,7 +78,7 @@ const review: CourseAlignmentReview = {
 };
 
 const pspReview: CourseAlignmentReview = {
-  scope: "PROGRAM_SPECIFIC",
+  scope: "PROFESSIONAL",
   geAlignmentMode: "ILO",
   courseId: COURSE_ID,
   before: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] }],
@@ -334,7 +334,7 @@ describe("CourseAlignmentEditor", () => {
 
   it("reports a first-time assignment as Set to in the review dialog", async () => {
     const additionReview: CourseAlignmentReview = {
-      scope: "PROGRAM_SPECIFIC",
+      scope: "PROFESSIONAL",
       geAlignmentMode: "ILO",
       courseId: COURSE_ID,
       before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -912,7 +912,7 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: /Review 0 changes/i })).toBeDisabled();
   });
 
-  it("shows the no-CILO empty state for Program-specific Courses", () => {
+  it("shows the no-CILO empty state for Professional Courses", () => {
     render(
       <CourseAlignmentEditor
         alignment={{ ...pspAlignment, cilos: [], readiness: "missing-cilos" }}

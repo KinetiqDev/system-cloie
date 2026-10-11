@@ -103,7 +103,7 @@ describe("resolve-gen-ed-courses", () => {
     const { listGenEdCourses } =
       await import("@/features/academic-structure/services/resolve-gen-ed-courses");
     const result = await listGenEdCourses();
-    // Simulate caller passing PROGRAM_SPECIFIC would still get GENERAL_EDUCATION
+    // Simulate caller passing PROFESSIONAL would still get GENERAL_EDUCATION
     expect(courseFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: { course_scope: CourseScope.GENERAL_EDUCATION } })
     );

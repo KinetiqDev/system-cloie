@@ -66,7 +66,7 @@ export function resolvePostLoginDestination({
       return "/status/unprovisioned-student";
     }
     if (intent === "faculty") {
-      return "/register/faculty";
+      return "/onboarding?intent=faculty";
     }
     if (intent === "alumni") {
       return "/onboarding?intent=alumni";
@@ -85,10 +85,7 @@ export function resolvePostLoginDestination({
   }
 
   if (profileGate.status === "FACULTY_ONBOARDING_REQUIRED") {
-    // Faculty scope is institutional: the only self-service step is the
-    // explicit registration request, so an affiliation-less Faculty role is
-    // routed there rather than to a placement form (issue #649).
-    return "/register/faculty";
+    return "/onboarding?intent=faculty";
   }
 
   if (profileGate.status === "ALUMNI_ONBOARDING_REQUIRED") {

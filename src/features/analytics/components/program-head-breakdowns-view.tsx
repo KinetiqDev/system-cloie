@@ -118,6 +118,7 @@ export function ProgramHeadBreakdownsView({
         meanRating: scale.meanRating,
         ratingCount: scale.ratingCount,
         submittedResponseCount: scale.submittedResponseCount,
+        attainment: scale.attainment,
       });
       coursesByScale.set(scale.scaleKey, group);
     }
@@ -185,10 +186,15 @@ export function ProgramHeadBreakdownsView({
               title={`Mean Rating by Course · ${group.label}${coursesByScale.size > 1 ? ` · scale group ${index + 1}` : ""}`}
               rows={group.rows}
               tableOnlyRows={index === 0 ? unratedCourses : []}
+              classification="course"
             />
           ))}
           {coursesByScale.size === 0 && (
-            <LazyProgramHeadComparisonChart title="Mean Rating by Course" rows={unratedCourses} />
+            <LazyProgramHeadComparisonChart
+              title="Mean Rating by Course"
+              rows={unratedCourses}
+              classification="course"
+            />
           )}
         </section>
       ) : (

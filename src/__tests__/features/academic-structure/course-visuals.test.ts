@@ -9,10 +9,9 @@ describe("course-visuals", () => {
     );
   });
 
-  it("maps program-specific scope to the program-wide chip", () => {
-    expect(getCourseScopeBadgeClass(CourseScope.PROGRAM_SPECIFIC)).toBe(
+  it("maps Professional scope to the program-wide chip", () => {
+    expect(getCourseScopeBadgeClass(CourseScope.PROFESSIONAL)).toBe(
       "border-chart-1/30 bg-chart-1/15 text-foreground"
     );
   });
-
 });

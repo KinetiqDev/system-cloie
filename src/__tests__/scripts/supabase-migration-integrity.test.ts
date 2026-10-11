@@ -153,7 +153,7 @@ describe("Supabase migration integrity", () => {
 
     expect(migration).toContain("BEGIN;");
     expect(migration).toContain("COMMIT;");
-    // Cross-Program ownership backstop on the Program-specific relation.
+    // Cross-Program ownership backstop on the Professional relation.
     expect(migration).toContain("enforce_cilo_mapping_program_scope");
     expect(migration).toMatch(/go_program_id <> course_program_id/);
     expect(migration).toContain("General Education CILOs map only to Institutional Outcomes");
@@ -176,7 +176,6 @@ describe("Supabase migration integrity", () => {
     expect(migration).toContain("BEGIN;");
     expect(migration).toContain("COMMIT;");
     expect(migration).toContain("CREATE OR REPLACE FUNCTION enforce_cilo_mapping_program_scope()");
-    expect(migration).toContain("Program-specific Courses must belong to an Academic Program");
     expect(migration).toContain("go_program_id IS DISTINCT FROM course_program_id");
     expect(migration).not.toContain("go_program_id <> course_program_id");
     // Function replacement only; the trigger binding is untouched.

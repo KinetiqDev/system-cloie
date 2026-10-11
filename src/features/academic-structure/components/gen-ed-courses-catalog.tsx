@@ -2,23 +2,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  Archive,
-  Pencil,
-  FileSpreadsheet,
-  MoreVertical,
-  Plus,
-  Power,
-  RotateCcw,
-  Search,
-} from "lucide-react";
+import { Archive, Pencil, FileSpreadsheet, MoreVertical, Plus, Power } from "lucide-react";
+import { AcademicSemester } from "@prisma/client";
 import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import { getSemesterLabel, getTermLabel } from "@/lib/constants/academic";
-import {
-  CourseScheduleFilterControls,
-  SCHEDULE_FILTER_ALL,
-  matchesScheduleFilters,
-} from "./course-schedule-filters";
+import { SCHEDULE_FILTER_ALL, matchesScheduleFilters } from "./course-schedule-filters";
+import { courseArchiveStatusFacet, courseScheduleFacets } from "./course-catalog-facets";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -31,15 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -194,6 +178,48 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
     `${statusFilter}:${search}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
 
+  const setScheduleFacet = (key: "yearLevel" | "semester" | "term", value: string | null) => {
+    const next = value ?? SCHEDULE_FILTER_ALL;
+    if (key === "yearLevel") setYearLevelFilter(next);
+    if (key === "semester") {
+      setSemesterFilter(next);
+      if (next === AcademicSemester.SUMMER) setTermFilter(SCHEDULE_FILTER_ALL);
+    }
+    if (key === "term") setTermFilter(next);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setStatusFilter(SCHEDULE_FILTER_ALL);
+    setYearLevelFilter(SCHEDULE_FILTER_ALL);
+    setSemesterFilter(SCHEDULE_FILTER_ALL);
+    setTermFilter(SCHEDULE_FILTER_ALL);
+    setSearch("");
+    setCurrentPage(1);
+  };
+
+  const scheduleFacets = courseScheduleFacets(
+    { yearLevel: yearLevelFilter, semester: semesterFilter, term: termFilter },
+    setScheduleFacet,
+    SCHEDULE_FILTER_ALL
+  );
+  const facets = {
+    yearLevel: [scheduleFacets.yearLevel],
+    semester: [scheduleFacets.semester],
+    term: [scheduleFacets.term],
+    status: [
+      courseArchiveStatusFacet(
+        statusFilter,
+        (value) => {
+          setStatusFilter(value ?? SCHEDULE_FILTER_ALL);
+          setCurrentPage(1);
+        },
+        SCHEDULE_FILTER_ALL
+      ),
+    ],
+  };
+  const allFacets = Object.values(facets).flat();
+
   function handleStatus(id: string, isActive: boolean) {
     startTransition(async () => {
       const result = await setGenEdCourseActiveAction(id, isActive);
@@ -253,85 +279,35 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
         <StatCard label="Archived" value={summary.archived} muted />
       </div>
 
-      {/* fallow-ignore-next-line code-duplication */}
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v ?? SCHEDULE_FILTER_ALL);
+      <TableToolbar
+        search={{
+          id: "gen-ed-course-search",
+          label: "Search courses",
+          placeholder: "Search by code or title...",
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
             setCurrentPage(1);
-          }}
-        >
-          <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
-            <SelectValue>
-              {statusFilter === SCHEDULE_FILTER_ALL
-                ? "All Statuses"
-                : statusFilter === "active"
-                  ? "Active"
-                  : "Archived"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={SCHEDULE_FILTER_ALL}>All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="archived">Archived</SelectItem>
-          </SelectContent>
-        </Select>
-        <CourseScheduleFilterControls
-          yearLevel={yearLevelFilter}
-          semester={semesterFilter}
-          term={termFilter}
-          onYearLevelChange={(v) => {
-            setYearLevelFilter(v);
-            setCurrentPage(1);
-          }}
-          onSemesterChange={(v) => {
-            setSemesterFilter(v);
-            setCurrentPage(1);
-          }}
-          onTermChange={(v) => {
-            setTermFilter(v);
-            setCurrentPage(1);
-          }}
-        />
-
-        {/* fallow-ignore-next-line code-duplication */}
-        <div className="relative w-full md:ml-auto md:max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            className="pl-8"
-            placeholder="Search by code or title..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
+          },
+        }}
+        facets={allFacets}
+        onClearAll={clearFilters}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{filteredCourses.length}</span>{" "}
+            {filteredCourses.length === 1 ? "course" : "courses"}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearFilters}
+            summary="Show results"
           />
         </div>
-
-        {(statusFilter !== SCHEDULE_FILTER_ALL ||
-          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
-          semesterFilter !== SCHEDULE_FILTER_ALL ||
-          termFilter !== SCHEDULE_FILTER_ALL ||
-          search) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setStatusFilter(SCHEDULE_FILTER_ALL);
-              setYearLevelFilter(SCHEDULE_FILTER_ALL);
-              setSemesterFilter(SCHEDULE_FILTER_ALL);
-              setTermFilter(SCHEDULE_FILTER_ALL);
-              setSearch("");
-              setCurrentPage(1);
-            }}
-          >
-            <RotateCcw aria-hidden="true" className="size-3.5" />
-            Reset
-          </Button>
-        )}
-      </div>
+      </TableToolbar>
 
       <BulkActionBar
         selectedCount={selection.selectedCount}
@@ -359,7 +335,7 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
       </BulkActionBar>
 
       <div className="overflow-x-auto rounded-lg border">
-        <Table className="min-w-0 md:min-w-[760px]">
+        <Table label="General Education courses" className="min-w-0 md:min-w-[760px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -372,10 +348,22 @@ export function GenEdCoursesCatalog({ courses, summary }: GenEdCoursesCatalogPro
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
-              <TableHead className="hidden md:table-cell">Year Level</TableHead>
-              <TableHead className="hidden md:table-cell">Semester</TableHead>
-              <TableHead className="hidden md:table-cell">Term</TableHead>
-              <TableHead className="hidden md:table-cell">Status</TableHead>
+              <FilterableHead
+                label="Year Level"
+                facets={facets.yearLevel}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Semester"
+                facets={facets.semester}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead label="Term" facets={facets.term} className="hidden md:table-cell" />
+              <FilterableHead
+                label="Status"
+                facets={facets.status}
+                className="hidden md:table-cell"
+              />
               <TableHead className="hidden md:table-cell">Last Updated</TableHead>
               <TableHead className="w-24 text-right">Actions</TableHead>
             </TableRow>

@@ -9,7 +9,7 @@ import {
 describe("course import CSV", () => {
   it("parses a Secretary file with quoted titles and preserves source rows", () => {
     const result = parseCourseImportCsv(
-      '\uFEFFcourse_code,course_title,course_scope,program_code,major_name,year_level,semester,term\r\nIT 101,"Computing, Society",PROGRAM_SPECIFIC,BSIT,Software Engineering,FIRST_YEAR,FIRST,FIRST_TERM\r\n',
+      '\uFEFFcourse_code,course_title,course_scope,program_code,major_name,year_level,semester,term\r\nIT 101,"Computing, Society",PROFESSIONAL,BSIT,Software Engineering,FIRST_YEAR,FIRST,FIRST_TERM\r\n',
       "secretary"
     );
 
@@ -20,7 +20,7 @@ describe("course import CSV", () => {
           sourceIndex: 2,
           course_code: "IT 101",
           course_title: "Computing, Society",
-          course_scope: "PROGRAM_SPECIFIC",
+          course_scope: "PROFESSIONAL",
           program_code: "BSIT",
           major_name: "Software Engineering",
           year_level: "FIRST_YEAR",

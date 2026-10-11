@@ -45,7 +45,7 @@ function assignment(overrides: Record<string, unknown> = {}) {
       code: "CS101",
       title: "Intro",
       is_active: true,
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       program_id: "program-1",
     },
     program: { id: "program-1", name: "Computer Science", is_active: true },
@@ -128,7 +128,7 @@ function mixedReadiness(status: "ACTIVE" | "COMPLETED" = "ACTIVE"): PeriodReadin
         programName: "Computer Science",
         programIsArchived: false,
         assignmentIds: [ASSIGNMENT_ID],
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         targetType: "GRADUATE_OUTCOME",
         yearLevels: ["FIRST_YEAR"],
         sections: ["MORNING"],
@@ -283,7 +283,7 @@ describe("Dean oversight read model", () => {
       expect.objectContaining({
         courseCode: "CS101",
         targetType: "GRADUATE_OUTCOME",
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         missingGoIds: ["po-1"],
         missingInstitutionalOutcomeIds: [],
       }),
@@ -324,6 +324,62 @@ describe("Dean oversight read model", () => {
     if (result.state !== "ready") throw new Error("expected ready state");
     expect(result.data.programs[0]?.pos.map((outcome) => outcome.code)).toEqual(["PO1", "PO2"]);
     expect(prismaMock.institutionalOutcome.findMany).not.toHaveBeenCalled();
+  });
+
+  // A version 1 snapshot context predates the courseScope field entirely, and
+  // its CILOs predate the typed mappedTargets/missingInstitutionalOutcomeIds
+  // shape. Classification must come from the live assignment rather than the
+  // stored context, so an archived period still reports a Professional Course
+  // gap.
+  it("resolves the Course scope of a legacy context from its live assignment", async () => {
+    prismaMock.academicTermInstance.findUnique.mockResolvedValue(period("COMPLETED"));
+    prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
+    const readiness = mixedReadiness("COMPLETED");
+    readinessMock.mockResolvedValue({
+      ...readiness,
+      schemaVersion: 1,
+      contexts: [
+        {
+          courseId: "course-1",
+          courseCode: "CS101",
+          courseName: "Intro",
+          courseIsArchived: false,
+          programId: "program-1",
+          programName: "Computer Science",
+          programIsArchived: false,
+          assignmentIds: [ASSIGNMENT_ID],
+          yearLevels: ["FIRST_YEAR"],
+          sections: ["MORNING"],
+          state: "incomplete-mapping",
+          cilos: [
+            {
+              id: "cilo-legacy",
+              description: "Unmapped",
+              isArchived: false,
+              missingGoIds: ["po-1"],
+            },
+          ],
+          pos: [
+            {
+              id: "po-1",
+              code: "PO1",
+              description: "Think critically",
+              isArchived: false,
+              order: 1,
+            },
+          ],
+          affectedCiloIds: ["cilo-legacy"],
+          affectedGoIds: ["po-1"],
+        },
+      ],
+    });
+
+    const result = await getDeanLearningOutcomes(PERIOD_ID);
+
+    if (result.state !== "ready") throw new Error("expected ready state");
+    expect(result.data.programs[0]?.mappingGaps).toEqual([
+      expect.objectContaining({ ciloId: "cilo-legacy", courseScope: "PROFESSIONAL" }),
+    ]);
   });
 
   it.each([1, 2])(
@@ -493,7 +549,7 @@ describe("Dean oversight read model", () => {
     ]);
   });
 
-  it("lists active Program-specific CILOs as gaps when the Program has zero active POs", async () => {
+  it("lists active Professional CILOs as gaps when the Program has zero active POs", async () => {
     prismaMock.academicTermInstance.findUnique.mockResolvedValue(period());
     prismaMock.courseAssignment.findMany.mockResolvedValue([assignment()]);
     const readiness = mixedReadiness();
@@ -523,7 +579,7 @@ describe("Dean oversight read model", () => {
     expect(result.data.programs[0]?.mappingGaps).toEqual([
       expect.objectContaining({
         ciloId: "cilo-1",
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         missingGoIds: [],
       }),
     ]);
@@ -546,7 +602,7 @@ describe("Dean oversight read model", () => {
           programName: "Computer Science",
           programIsArchived: false,
           assignmentIds: ["assignment-prog"],
-          courseScope: "PROGRAM_SPECIFIC",
+          courseScope: "PROFESSIONAL",
           targetType: "GRADUATE_OUTCOME",
           yearLevels: ["FIRST_YEAR"],
           sections: ["AFTERNOON"],

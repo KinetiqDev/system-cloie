@@ -8,7 +8,6 @@ const {
   analyticsFrameMock,
   outcomesMock,
   trendsMock,
-  stakeholdersMock,
   breakdownsMock,
   feedbackMock,
   resolveProgramHeadContextMock,
@@ -24,7 +23,6 @@ const {
   analyticsFrameMock: vi.fn(),
   outcomesMock: vi.fn(),
   trendsMock: vi.fn(),
-  stakeholdersMock: vi.fn(),
   breakdownsMock: vi.fn(),
   feedbackMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
@@ -41,7 +39,6 @@ vi.mock("@/features/analytics/services/get-program-head-analytics", () => ({
   getProgramHeadAnalytics: analyticsMock,
   getProgramHeadOutcomes: outcomesMock,
   getProgramHeadTrends: trendsMock,
-  getProgramHeadStakeholders: stakeholdersMock,
   getProgramHeadBreakdowns: breakdownsMock,
   getProgramHeadFeedback: feedbackMock,
 }));
@@ -138,7 +135,6 @@ describe("selected Program insights routes", () => {
     });
     outcomesMock.mockResolvedValue(bsedOutcomes);
     trendsMock.mockResolvedValue(null);
-    stakeholdersMock.mockResolvedValue(null);
     breakdownsMock.mockResolvedValue(null);
     feedbackMock.mockResolvedValue(null);
     resolveProgramHeadContextMock.mockResolvedValue(bsedContext);
@@ -556,98 +552,6 @@ describe("selected Program insights routes", () => {
     expect(trendsMock).toHaveBeenCalledWith("program-3", { tab: "trends" });
   });
 
-  it("renders the Stakeholders view with separated evidence source buckets", async () => {
-    stakeholdersMock.mockResolvedValue({
-      scope: {
-        programCode: "BSED",
-        programName: "Bachelor of Secondary Education",
-        periodLabel: null,
-      },
-      periodOptions: {
-        schoolYears: [],
-        semesters: [],
-        termInstances: [],
-      },
-      emptyReason: null,
-      sourceSeparationDisclosure: "Evidence sources are kept separate.",
-      buckets: [
-        {
-          sourceKey: "COURSE_STUDENT",
-          sourceLabel: "Course-bound student evidence",
-          sourceDescription: "Course-bound evaluations of assigned students.",
-          instrumentContext: "CILO Evaluation v2",
-          meanRating: 4.25,
-          ratingCount: 24,
-          submittedResponseCount: 12,
-        },
-        {
-          sourceKey: "ALUMNI",
-          sourceLabel: "Alumni evidence",
-          sourceDescription: "Central deployments targeting alumni respondents.",
-          instrumentContext: "Alumni Survey v1",
-          meanRating: 3.8,
-          ratingCount: 8,
-          submittedResponseCount: 4,
-        },
-      ],
-    });
-    const Page = await loadAnalyticsPage();
-    const page = await Page({
-      params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "stakeholders" }),
-    });
-
-    render(page);
-
-    expect(stakeholdersMock).toHaveBeenCalledWith("program-bsed", { tab: "stakeholders" });
-    expect(analyticsMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: "Analytics", level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("Evidence sources are kept separate")).toBeInTheDocument();
-    expect((await screen.findAllByText("Course-bound student evidence")).length).toBeGreaterThan(0);
-    expect((await screen.findAllByText("Alumni evidence")).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/not available yet/)).not.toBeInTheDocument();
-  });
-
-  it("renders no Stakeholders data when the stakeholders read denies the selected Program", async () => {
-    stakeholdersMock.mockResolvedValue(null);
-    const Page = await loadAnalyticsPage();
-
-    await expect(
-      Page({
-        params: Promise.resolve({ programId: "program-3" }),
-        searchParams: Promise.resolve({ tab: "stakeholders" }),
-      })
-    ).rejects.toThrow("NOT_FOUND");
-    expect(stakeholdersMock).toHaveBeenCalledWith("program-3", { tab: "stakeholders" });
-  });
-
-  it("renders the Stakeholders no-assignments empty state", async () => {
-    stakeholdersMock.mockResolvedValue({
-      scope: {
-        programCode: "BSED",
-        programName: "Bachelor of Secondary Education",
-        periodLabel: null,
-      },
-      periodOptions: { schoolYears: [], semesters: [], termInstances: [] },
-      emptyReason: "no-assignments",
-      sourceSeparationDisclosure: "Evidence sources are kept separate.",
-      buckets: [],
-    });
-    const Page = await loadAnalyticsPage();
-    const page = await Page({
-      params: Promise.resolve({ programId: "program-bsed" }),
-      searchParams: Promise.resolve({ tab: "stakeholders" }),
-    });
-
-    render(page);
-
-    expect(screen.getByText("No evaluation assignments")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View all periods" })).toHaveAttribute(
-      "href",
-      "/program-head/programs/program-bsed/analytics?tab=stakeholders"
-    );
-  });
-
   it("renders the Breakdowns view with course and contextual dimensions", async () => {
     breakdownsMock.mockResolvedValue({
       scope: {
@@ -823,7 +727,6 @@ describe("selected Program insights routes", () => {
     const tabNav = screen.getByRole("navigation", { name: "Analytics views" });
     expect(within(tabNav).getByText("Outcomes")).toBeInTheDocument();
     expect(within(tabNav).getByText("Courses")).toBeInTheDocument();
-    expect(within(tabNav).getByText("Stakeholders")).toBeInTheDocument();
     expect(within(tabNav).getByText("Trends")).toBeInTheDocument();
     expect(within(tabNav).getByText("Qualitative")).toBeInTheDocument();
     // AI moved inline per view: no dedicated tab remains.

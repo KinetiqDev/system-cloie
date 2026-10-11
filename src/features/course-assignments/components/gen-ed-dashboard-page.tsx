@@ -357,7 +357,7 @@ function EvidenceSection({
                         ? "Submitted responses contain no valid quantitative ratings in this period."
                         : evidence.meanRating === null
                           ? "Mean rating is unavailable because the evidence spans incompatible scales."
-                          : "Program-specific evidence and Central Deployments are excluded."}
+                          : "Professional evidence and Central Deployments are excluded."}
           </p>
           <Link
             href="/gen-ed-coordinator/analytics"

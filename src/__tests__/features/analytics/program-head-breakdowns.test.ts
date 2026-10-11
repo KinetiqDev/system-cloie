@@ -77,7 +77,7 @@ const NARROW_SNAPSHOT = [
 /** Snapshot map covering every instrument version referenced by the rows. */
 function snapshotsFor(
   rows: Array<Pick<BreakdownRatingRow, "response">>,
-  snapshot = SCALE_SNAPSHOT
+  snapshot: unknown = SCALE_SNAPSHOT
 ): Map<string, unknown> {
   const ids = [
     ...new Set(
@@ -210,7 +210,7 @@ function expectProgramScopedPredicates() {
   // Program equality alone would admit a General Education course holding an
   // assignment in this same Program, so the course scope is part of the gate.
   expect(ratingOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
-    "PROGRAM_SPECIFIC"
+    "PROFESSIONAL"
   );
   // Central deployments carry no course scope: they stay Program-owned.
   expect(ratingOr[0].assignment.central_deployment).not.toHaveProperty("course");
@@ -218,7 +218,7 @@ function expectProgramScopedPredicates() {
 }
 
 const breakdownFilters = { tab: "courses" as const };
-const stakeholdersFilters = { tab: "stakeholders" as const };
+const stakeholdersFilters = { tab: "outcomes" as const };
 
 /** Default snapshot resolution: every requested version id maps to the 1–5 scale. */
 function defaultSnapshotResolution() {
@@ -1350,6 +1350,73 @@ describe("buildCourseBreakdownRows (pure)", () => {
       meanRating: 11 / 3,
       ratingCount: 3,
       submittedResponseCount: 2,
+    });
+  });
+
+  it("classifies compatible scale-group means under the canonical attainment policy", () => {
+    const course = { id: "c1", code: "CS1", title: "Intro" };
+    const rows = [5, 4].map((value, index) =>
+      courseBoundRatingRow({
+        value,
+        responseId: `r${index}`,
+        evaluationId: "eval",
+        deploymentName: "Course evidence",
+        course,
+        instrument: instrument("iv1", "Agreement Survey"),
+      })
+    );
+    const snapshots = snapshotsFor(rows, [
+      {
+        key: "sec-1",
+        title: "Ratings",
+        items: [
+          {
+            key: "item-1",
+            kind: "quantitative",
+            prompt: "Rate.",
+            likertDescriptors: [
+              { value: 1, label: "Strongly Disagree" },
+              { value: 2, label: "Disagree" },
+              { value: 3, label: "Neutral" },
+              { value: 4, label: "Agree" },
+              { value: 5, label: "Strongly Agree" },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const [result] = buildCourseBreakdownRows(rows, [], snapshots);
+
+    expect(result.scaleGroups[0].meanRating).toBe(4.5);
+    expect(result.scaleGroups[0].attainment).toMatchObject({
+      policyId: "CLOIE_OUTCOME_MEAN_V1",
+      status: "classified",
+      interpretation: "Fully Attained",
+      cqi: "Meets Benchmark",
+      isIndirect: true,
+    });
+  });
+
+  it("leaves means on label-less numeric scales unclassified", () => {
+    const course = { id: "c2", code: "CS2", title: "Numeric" };
+    const rows = [5, 4].map((value, index) =>
+      courseBoundRatingRow({
+        value,
+        responseId: `r${index}`,
+        evaluationId: "eval",
+        deploymentName: "Course evidence",
+        course,
+        instrument: instrument("iv1", "Numeric Survey"),
+      })
+    );
+
+    const [result] = buildCourseBreakdownRows(rows, [], snapshotsFor(rows));
+
+    expect(result.scaleGroups[0].meanRating).toBe(4.5);
+    expect(result.scaleGroups[0].attainment).toMatchObject({
+      status: "unsupported-scale",
+      cqi: null,
     });
   });
 

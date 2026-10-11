@@ -167,7 +167,7 @@ export type CourseCILOMappings = {
   courseId: string;
   courseCode: string;
   courseTitle: string;
-  /** Every active PO of the owning Program; the column catalog for PROGRAM_SPECIFIC courses. */
+  /** Every active PO of the owning Program; the column catalog for PROFESSIONAL courses. */
   pos: Array<{ id: string; code: string; description: string }>;
   /** Archived owning-Program POs that still carry historical mapping rows in this Course. */
   archivedGos: Array<{ id: string; code: string; description: string }>;
@@ -175,9 +175,9 @@ export type CourseCILOMappings = {
     id: string;
     description: string;
     readiness: "ready" | "incomplete-mapping";
-    /** One entry per active PO for PROGRAM_SPECIFIC courses; null means unanswered. */
+    /** One entry per active PO for PROFESSIONAL courses; null means unanswered. */
     manifestations: Array<{ poId: string; manifestation: CILOMappingManifestation | null }>;
-    /** Historical manifestation per archived PO row for PROGRAM_SPECIFIC courses. */
+    /** Historical manifestation per archived PO row for PROFESSIONAL courses. */
     archivedManifestations: Array<{
       poId: string;
       manifestation: CILOMappingManifestation | null;
@@ -200,7 +200,7 @@ export async function listCILOMappingsForProgram(
       select: { id: true, code: true, description: true },
       orderBy: [{ order: "asc" }, { code: "asc" }],
     }),
-    // Find all program-specific courses within this program that have CILOs
+    // Find all Professional courses within this program that have CILOs
     // and are actively assigned to the program this term.
     prisma.course.findMany({
       where: {
@@ -305,7 +305,7 @@ export async function listCILOMappingsForProgram(
               })),
               cilo_institutional_outcome_mappings: [],
             },
-            "PROGRAM_SPECIFIC",
+            "PROFESSIONAL",
             selectedProgramId,
             activeGos.map((po) => po.id)
           )

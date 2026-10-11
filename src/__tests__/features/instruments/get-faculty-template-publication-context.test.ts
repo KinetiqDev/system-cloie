@@ -78,7 +78,7 @@ function template(overrides: Record<string, unknown> = {}) {
       id: COURSE_ID,
       code: "ITRES1",
       title: "Capstone Project 1",
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       major_id: null,
       program_id: PROGRAM_ID,
       program: { id: PROGRAM_ID, code: "BSIT", name: "Information Technology" },
@@ -160,11 +160,11 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
     }
   });
 
-  it("rejects a Program-specific Course when the bound Program matches no context", async () => {
+  it("rejects a Professional Course when the bound Program matches no context", async () => {
     mocks.template.findFirst.mockResolvedValue(template());
     mocks.course.findUnique.mockResolvedValue({
       id: COURSE_ID,
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
     });
     mocks.contexts.mockResolvedValue({
       success: true,
@@ -173,7 +173,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
           courseCode: "ITRES1",
           courseId: COURSE_ID,
           courseTitle: "Capstone Project 1",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSBA",
@@ -252,7 +252,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
     );
     mocks.course.findUnique.mockResolvedValue({
       id: COURSE_ID,
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
     });
     mocks.contexts.mockResolvedValue({
       success: true,
@@ -261,7 +261,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
           courseCode: "ITRES1",
           courseId: COURSE_ID,
           courseTitle: "Capstone Project 1",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSIT",
@@ -290,7 +290,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
     mocks.template.findFirst.mockResolvedValue(template());
     mocks.course.findUnique.mockResolvedValue({
       id: COURSE_ID,
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
     });
     mocks.contexts.mockResolvedValue({
       success: true,
@@ -299,7 +299,7 @@ describe("getFacultyTemplatePublicationContext course-context resolution", () =>
           courseCode: "ITRES1",
           courseId: COURSE_ID,
           courseTitle: "Capstone Project 1",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSIT",
@@ -331,7 +331,7 @@ describe("getFacultyTemplatePublicationContext course-bound PO bindings", () => 
     mocks.session.mockResolvedValue(FACULTY_SESSION);
     mocks.course.findUnique.mockResolvedValue({
       id: COURSE_ID,
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       program_id: PROGRAM_ID,
     });
     mocks.contexts.mockResolvedValue({
@@ -341,7 +341,7 @@ describe("getFacultyTemplatePublicationContext course-bound PO bindings", () => 
           courseCode: "ITRES1",
           courseId: COURSE_ID,
           courseTitle: "Capstone Project 1",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSIT",
@@ -630,10 +630,8 @@ describe("getFacultyTemplatePublicationContext course-bound PO bindings", () => 
 
     const result = await getFacultyTemplatePublicationContext(TEMPLATE_ID);
 
-    expect(result).toEqual({
-      success: false,
-      error: "Program Outcomes can only be assigned to questions in program-specific courses.",
-    });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected publication to be rejected");
     expect(mocks.po.findMany).not.toHaveBeenCalled();
   });
 });

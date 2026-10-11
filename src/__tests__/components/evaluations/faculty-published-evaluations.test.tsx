@@ -26,7 +26,7 @@ function makeItem(
     courseCode: "CS101",
     courseId: "course-1",
     courseTitle: "Introduction to Computing",
-    courseScope: "PROGRAM_SPECIFIC",
+    courseScope: "PROFESSIONAL",
     deadlineAt: null,
     deploymentName: "Intro to CS 2026-2027",
     evaluationId: "evaluation-1",
@@ -138,17 +138,14 @@ describe("FacultyPublishedEvaluations", () => {
         ]}
       />
     );
-    fireEvent.click(screen.getByRole("combobox", { name: "Academic Period" }));
-    const option = await screen.findByRole("option", {
+    fireEvent.click(screen.getByRole("button", { name: /^Filter Academic Period/ }));
+    const option = await screen.findByRole("radio", {
       name: "2024-2025 — 2nd Semester — 2nd Term",
     });
-    fireEvent.mouseMove(option);
     fireEvent.click(option);
+
     expect(await screen.findByText("Old Period Eval")).toBeInTheDocument();
     expect(screen.queryByText("New Period Eval")).not.toBeInTheDocument();
-    const periodTrigger = screen.getByRole("combobox", { name: "Academic Period" });
-    expect(periodTrigger).toHaveTextContent("2024-2025 — 2nd Semester — 2nd Term");
-    expect(periodTrigger.textContent).not.toMatch(/[0-9a-f]{8}-/i);
   });
 
   it("shows labels instead of ids for active period and course filters", () => {
@@ -173,12 +170,17 @@ describe("FacultyPublishedEvaluations", () => {
       />
     );
 
-    const periodTrigger = screen.getByRole("combobox", { name: "Academic Period" });
-    expect(periodTrigger).toHaveTextContent("2024-2025 — 2nd Semester — 2nd Term");
-    expect(periodTrigger.textContent).not.toMatch(/[0-9a-f]{8}-/i);
-    const courseTrigger = screen.getByRole("combobox", { name: "Course" });
-    expect(courseTrigger).toHaveTextContent("ITRES1 · Capstone Project 1");
-    expect(courseTrigger.textContent).not.toMatch(/[0-9a-f]{8}-/i);
+    // The funnel's name carries the selected label, never the stored id, and
+    // each applied facet keeps its own removable chip.
+    expect(
+      screen.getByRole("button", {
+        name: "Filter Academic Period: 2024-2025 — 2nd Semester — 2nd Term",
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filter Course: ITRES1" })).toBeInTheDocument();
+    for (const chip of screen.getAllByRole("button", { name: /^Remove filter/ })) {
+      expect(chip).not.toHaveTextContent(/[0-9a-f]{8}-/i);
+    }
   });
 
   it("narrows the list by search text", async () => {

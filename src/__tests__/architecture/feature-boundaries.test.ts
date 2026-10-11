@@ -626,14 +626,16 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
     module: "src/features/response-review/components/responses-filters",
     consumer: "analytics",
     bindings: [
-      "ResponseComboboxField",
-      "ResponseSelectField",
+      "buildResponseFacets",
+      "withResponseFacet",
+      "withoutResponseFacets",
       "ResponsesFilters",
-      "AdvancedResponseFilterField",
-      "RawResponseFilters",
+      "ResponseFacetValues",
+      "ResponseFacetView",
+      "ResponseFacets",
     ],
     reason:
-      "Role adapters compose the shared responsive review-filter interaction without duplicating its navigation contract.",
+      "Role adapters compose the shared instant-apply review toolbar and its facet vocabulary without duplicating the navigation contract: the adapter owns URL parsing and its canonical href, and this module owns which facet belongs to which column and what it is called.",
   },
   {
     module: "src/features/response-review/components/responses-pagination",
@@ -644,9 +646,9 @@ const DOCUMENTED_CROSS_FEATURE_SEAMS: ReadonlyArray<{
   {
     module: "src/features/response-review/components/responses-workspace",
     consumer: "analytics",
-    bindings: ["ResponsesWorkspace"],
+    bindings: ["ResponsesWorkspace", "useResponsesNavigation"],
     reason:
-      "Role-owned landing pages share the identified review workspace layout while preserving their authorization and evidence reads.",
+      "Role-owned landing pages share the identified review workspace layout while preserving their authorization and evidence reads, and their toolbars navigate through the transition the workspace owns, so the toolbar holding the applied-filter chips stays mounted while the evidence region reloads.",
   },
 ];
 

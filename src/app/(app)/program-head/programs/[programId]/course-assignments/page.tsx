@@ -42,6 +42,7 @@ export default async function SelectedProgramCourseAssignmentsPage({
       initialFilters={listPage.initialFilters}
       initialPage={listPage.state.page}
       initialError={listPage.result.success ? null : listPage.result.error}
+      listDefaultTermInstanceId={pageData.activeTermInstanceId}
       {...pageData}
     />
   );

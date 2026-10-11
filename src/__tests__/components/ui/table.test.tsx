@@ -25,7 +25,7 @@ describe("Table", () => {
       expect(table).toHaveAttribute("data-slot", "table");
     });
 
-    it("uses the semantic foreground role for header text", () => {
+    it("uses the header token role for header text", () => {
       render(
         <Table>
           <TableHeader>
@@ -35,7 +35,7 @@ describe("Table", () => {
           </TableHeader>
         </Table>
       );
-      expect(screen.getByText("Name")).toHaveClass("text-foreground");
+      expect(screen.getByText("Name")).toHaveClass("text-table-header-fg");
     });
 
     it("does not retain raw-theme dark palette selectors that bypass the semantic tokens", () => {
@@ -116,6 +116,29 @@ describe("Table", () => {
     });
   });
 
+  describe("header band", () => {
+    it("carries the distinct header fill so column labels separate from rows", () => {
+      render(
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell>x</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      );
+      const header = document.querySelector('[data-slot="table-header"]');
+      expect(header).toHaveClass("bg-table-header");
+      expect(header).toHaveClass("[&_tr:hover]:bg-transparent");
+      expect(header).toHaveClass("[&_tr]:border-table-header-border");
+    });
+  });
+
   describe("wide table containment", () => {
     it("wraps the table in an overflow-x-auto container", () => {
       render(
@@ -130,6 +153,75 @@ describe("Table", () => {
       const table = screen.getByRole("table");
       const container = table.parentElement;
       expect(container).toHaveClass("overflow-x-auto");
+    });
+
+    it("names the scrollable region from the table's own label", () => {
+      render(
+        <Table label="Course assignments">
+          <TableBody>
+            <TableRow>
+              <TableCell>x</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      );
+      expect(screen.getByRole("region", { name: "Course assignments (scrollable)" })).toBeDefined();
+    });
+
+    it("leaves the neutral region name for a table inside a labelled chart region", () => {
+      render(
+        <Table aria-label="Likert distribution">
+          <TableBody>
+            <TableRow>
+              <TableCell>x</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      );
+      // The chart card publishes its own labelled region; the table must not
+      // announce the same name twice, and it keeps its own accessible name.
+      expect(screen.getByRole("table", { name: "Likert distribution" })).toBeDefined();
+    });
+
+    it("keeps a chart-alternative table out of the chart card's landmark", () => {
+      render(
+        <Table aria-label="Attendance roster">
+          <TableBody>
+            <TableRow>
+              <TableCell>x</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      );
+      // The table names itself; its scroll container must not repeat that name
+      // as a second landmark beside the chart card that already owns one.
+      expect(screen.getByRole("table", { name: "Attendance roster" })).toBeDefined();
+      expect(
+        screen.queryByRole("region", { name: "Attendance roster (scrollable)" })
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not let two labelled list tables collide, even when one is a chart alternative", () => {
+      render(
+        <>
+          <Table label="Courses">
+            <TableBody>
+              <TableRow>
+                <TableCell>a</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          <Table label="Programs">
+            <TableBody>
+              <TableRow>
+                <TableCell>b</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </>
+      );
+      expect(screen.getByRole("region", { name: "Courses (scrollable)" })).toBeDefined();
+      expect(screen.getByRole("region", { name: "Programs (scrollable)" })).toBeDefined();
     });
   });
 

@@ -59,6 +59,21 @@ function isInstitutionalEmail(normalizedEmail: string, allowBootstrap: boolean):
   );
 }
 
+function resolveTargetRoleForEntrant(
+  intentParam: string | null,
+  targetRole: SystemRole | null,
+  normalizedEmail: string,
+  isBootstrapEmail: boolean
+): SystemRole | null {
+  if (targetRole) return targetRole;
+  if (isEntryIntent(intentParam) && intentParam === "staff") {
+    if (isInstitutionalEmail(normalizedEmail, isBootstrapEmail)) {
+      return SystemRole.FACULTY;
+    }
+  }
+  return null;
+}
+
 /**
  * Conditionally claim an unlinked domain User for this Auth identity.
  * A zero-row result means another identity already won the race (or the row
@@ -312,14 +327,21 @@ export async function GET(request: Request) {
           // Roleless unlinked match: validate self-service eligibility and
           // target role/domain BEFORE any auth_user_id/name mutation. For an
           // allowed claim, atomically link/name and create the one role.
-          if (!targetRole) {
+          const claimRole = resolveTargetRoleForEntrant(
+            intentParam,
+            targetRole,
+            normalizedEmail,
+            isBootstrapEmail
+          );
+
+          if (!claimRole) {
             await supabase.auth.signOut();
             return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
           }
 
           const eligibilityFailure = resolveSelfServiceEligibility({
             email: normalizedEmail,
-            targetRole,
+            targetRole: claimRole,
             intent: intentParam,
           });
           if (eligibilityFailure) {
@@ -347,7 +369,7 @@ export async function GET(request: Request) {
             await tx.userRole.create({
               data: {
                 user_id: matchedUser.id,
-                role: targetRole,
+                role: claimRole,
               },
             });
 
@@ -363,6 +385,7 @@ export async function GET(request: Request) {
             return redirectWithClearedTicket(`${siteUrl}/status/identity-conflict`);
           }
 
+          claimedTargetRole = claimRole;
           dbUser = linkResult.user;
         }
       } else {
@@ -404,10 +427,17 @@ export async function GET(request: Request) {
 
       claimedTargetRole = targetRole;
     } else if (!hasAnyRole) {
-      if (targetRole) {
+      const claimRole = resolveTargetRoleForEntrant(
+        intentParam,
+        targetRole,
+        normalizedEmail,
+        isBootstrapEmail
+      );
+
+      if (claimRole) {
         const eligibilityFailure = resolveSelfServiceEligibility({
           email: normalizedEmail,
-          targetRole,
+          targetRole: claimRole,
           intent: intentParam,
         });
         if (eligibilityFailure) {
@@ -418,22 +448,36 @@ export async function GET(request: Request) {
         const newRole = await prisma.userRole.create({
           data: {
             user_id: dbUser.id,
-            role: targetRole,
+            role: claimRole,
           },
         });
 
         dbUser.roles = [newRole];
+        claimedTargetRole = claimRole;
+      } else {
+        await supabase.auth.signOut();
+        return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
       }
     }
   } else {
-    if (!targetRole) {
-      // Role-less entry intent with no matching domain account: nothing to
-      // link and nothing to claim. Staff entrances require a provisioned
-      // account; external Google holders without one register first.
+    if (
+      !targetRole &&
+      isEntryIntent(intentParam) &&
+      intentParam === "staff" &&
+      !isInstitutionalEmail(normalizedEmail, isBootstrapEmail)
+    ) {
       await supabase.auth.signOut();
-      if (isEntryIntent(intentParam) && intentParam === "staff") {
-        return redirectWithClearedTicket(`${siteUrl}/status/pre-provisioning-required`);
-      }
+      return redirectWithClearedTicket(`${siteUrl}/status/invalid-domain`);
+    }
+
+    const effectiveTargetRole = resolveTargetRoleForEntrant(
+      intentParam,
+      targetRole,
+      normalizedEmail,
+      isBootstrapEmail
+    );
+    if (!effectiveTargetRole) {
+      await supabase.auth.signOut();
       if (isEntryIntent(intentParam) && intentParam === "external") {
         return redirectWithClearedTicket(`${siteUrl}/register/external`);
       }
@@ -442,7 +486,7 @@ export async function GET(request: Request) {
 
     const eligibilityFailure = resolveSelfServiceEligibility({
       email: normalizedEmail,
-      targetRole,
+      targetRole: effectiveTargetRole,
       intent: intentParam,
     });
     if (eligibilityFailure) {
@@ -463,12 +507,13 @@ export async function GET(request: Request) {
         name: resolved.name,
         roles: {
           create: {
-            role: targetRole,
+            role: effectiveTargetRole,
           },
         },
       },
       include: { roles: true },
     });
+    claimedTargetRole = effectiveTargetRole;
   }
 
   const session = await resolveAuthSessionFromUser({
@@ -495,10 +540,11 @@ export async function GET(request: Request) {
           studentProfileId: session.studentProfileId,
           alumniProfileId: session.alumniProfileId,
           industryPartnerProfileId: session.industryPartnerProfileId,
-          alumniVerificationStatus: session.alumniVerificationStatus,
           // The exchange above proved Google before this point, and the
-          // stored Faculty review state travels with the account: a pending
-          // or rejected claim must resolve to its status, never COMPLETE.
+          // stored Faculty review state travels with the account: a rejected
+          // claim must resolve to its status, never COMPLETE, while a legacy
+          // PENDING row without an affiliation resolves to self-service
+          // onboarding.
           authMethod: exchangeMethod,
           facultyApprovalStatus: session.facultyApprovalStatus,
         }).profileGate

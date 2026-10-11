@@ -29,7 +29,7 @@ _Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping, 
 A shared Course whose CILOs normally align to the school-wide Common PO catalog. Existing ILO-mode history retains its separate Institutional Outcome alignment.
 _Avoid_: Program-scoped course, course without an owning program
 
-**Program-specific Course**:
+**Professional Course**:
 A Course owned by one Academic Program; its CILOs align only to POs of that owning Program.
 _Avoid_: General Education course, cross-program course
 
@@ -79,15 +79,15 @@ Actor and timestamp records for new or changed typed mapping rows; legacy rows w
 _Avoid_: Anonymous write, inferred actor
 
 **Outcome readiness**:
-The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active central Common PO mapping with a non-null manifestation in Common mode, or an active Institutional Outcome in retained ILO mode. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PO of the Course's owning Academic Program; a Program with zero active POs alongside active CILOs is incomplete, not ready.
+The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active central Common PO mapping with a non-null manifestation in Common mode, or an active Institutional Outcome in retained ILO mode. Professional CILOs follow the exhaustive rule: a non-null manifestation for every active PO of the Course's owning Academic Program; a Program with zero active POs alongside active CILOs is incomplete, not ready.
 _Avoid_: PO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active POs
 
 **Course alignment target layer**:
-The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `COMMON_PROGRAM_OUTCOME` in Common mode or `INSTITUTIONAL_OUTCOME` in retained ILO mode and `PROGRAM_SPECIFIC` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
+The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `COMMON_PROGRAM_OUTCOME` in Common mode or `INSTITUTIONAL_OUTCOME` in retained ILO mode and `PROFESSIONAL` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
 _Avoid_: Surfaced layer value, untyped course target catalog
 
 **Completed-period readiness snapshot**:
-An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. `GRADUATE_OUTCOME` persists as a stored target-layer value in legacy and schema_version-2 snapshots alike (every Program-specific context via `targetLayerForScope`, carried in Dean mapping-gap DTOs for both); it is stored data, always translated before display (e.g. "Incomplete Program Outcome mapping:"), never surfaced verbatim to users.
+An immutable, versioned record of readiness written when an Academic Period completes; it carries typed target details for new snapshots, while existing snapshots retain their legacy interpretation and are never rewritten by later mapping or catalog changes. `GRADUATE_OUTCOME` persists as a stored target-layer value in legacy and schema_version-2 snapshots alike (every Professional context via `targetLayerForScope`, carried in Dean mapping-gap DTOs for both); it is stored data, always translated before display (e.g. "Incomplete Program Outcome mapping:"), never surfaced verbatim to users.
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
 
 **Readiness snapshot schema version**:
@@ -95,7 +95,7 @@ The version tag on period readiness snapshots: new snapshots write version 3 wit
 _Avoid_: Unversioned snapshot, rewritable snapshot
 
 **Publication alignment gate**:
-The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Program-specific Courses, at-least-one active Institutional Outcome with a manifestation for General Education), with a direct repair path to Course alignment.
+The server-side rule that rejects new Course-bound evaluation publication while any active CILO of the locked Course fails the typed alignment rule (exhaustive manifestation coverage for Professional Courses, at-least-one active Institutional Outcome with a manifestation for General Education), with a direct repair path to Course alignment.
 _Avoid_: Publish-with-gaps, alignment warning only
 
 **Faculty mapping responsibility**:
@@ -107,7 +107,7 @@ The General Education Coordinator college-wide owns the Institutional Learning O
 _Avoid_: Secretary as ILO owner, unconfirmed administrative write, Secretary ILO write
 
 **PO CSV import**:
-Program Heads may create up to 20 active POs at once for the deliberately Selected Program from a `PO Code`, `Description` CSV with an optional `Classification` column (Core or Professional per row; rows without one use the import-dialog classification). Common and Institution-specific codes cannot enter a Program Head import. Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `GO Code` and `PLO Code` headers for compatibility. Every row resolves to exactly one category before it is previewed: its own `Classification` when it names Core or Professional, otherwise the import-dialog selection; a row naming an administrative category keeps its rejection and resolves to no category. The resolved category is shown on every review row before confirmation and is carried on rejected rows too, so the "rows to fix" recovery file preserves each row's original per-row classification — repairing a rejected Professional row and reimporting it under a Core dialog selection stays Professional, and a rejected administrative row keeps its raw value so reimporting it stays rejected until the Program Head changes it deliberately. A row that supplied no category at all reimports against the dialog selection. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-PO mappings before publication.
+Program Heads may create up to 20 active POs at once for the deliberately Selected Program from a `PO Code`, `Description` CSV with an optional `Classification` column (Core or Professional per row; rows without one use the import-dialog classification). Common and Institution-specific codes cannot enter a Program Head import. Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `GO Code` and `PLO Code` headers for compatibility. Every row resolves to exactly one category before it is previewed: its own `Classification` when it names Core or Professional, otherwise the import-dialog selection; a row naming an administrative category keeps its rejection and resolves to no category. The resolved category is shown on every review row before confirmation and is carried on rejected rows too, so the "rows to fix" recovery file preserves each row's original per-row classification — repairing a rejected Professional row and reimporting it under a Core dialog selection stays Professional, and a rejected administrative row keeps its raw value so reimporting it stays rejected until the Program Head changes it deliberately. A row that supplied no category at all reimports against the dialog selection. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PO immediately enters the exhaustive Professional readiness rule, so Faculty may need to classify new CILO-to-PO mappings before publication.
 _Avoid_: Spreadsheet overwrite, archived-PO restoration, cross-Program import, partial unexpected batch, category dropped from a recovery file, silent reclassification of a repaired row, administrative category silently converted on reimport
 
 **Program Head read-only mapping review**:
@@ -138,7 +138,7 @@ _Avoid_: BSIT-owned GE target, duplicate canonical statement, Program Head Commo
 
 **GE Common PO mapping**:
 A course-owned relationship between a GE CILO and a central Common PO with an L/P/O manifestation. All assignments to the exact course share it. Coverage and readiness do not imply ILO evidence or Common PO attainment.
-_Avoid_: Assignment-owned mapping, program-specific GE copy, automatic attainment
+_Avoid_: Assignment-owned mapping, Professional GE copy, automatic attainment
 
 **Central outcome change review**:
 A Secretary/Dean review of the exact before/after change with adoption and GE mapping counts, explicit confirmation, freshness recheck, atomic linked-statement synchronization, and recorded actor. Institution-specific program POs use the same protected authoring boundary.

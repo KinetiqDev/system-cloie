@@ -71,8 +71,8 @@ const evaluation = {
   deadline_at: null,
   course_assignment_id: "assignment-1",
   course_assignment: {
-    course: { course_scope: "PROGRAM_SPECIFIC" },
-    course_scope: "PROGRAM_SPECIFIC",
+    course: { course_scope: "PROFESSIONAL" },
+    course_scope: "PROFESSIONAL",
     faculty_id: "faculty-1",
     is_active: true,
     program_id: "program-1",

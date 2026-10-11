@@ -124,7 +124,7 @@ const MOCK_ASSIGNMENT = {
     major: null,
     program_id: "program-1",
     title: "Capstone 1",
-    course_scope: "PROGRAM_SPECIFIC",
+    course_scope: "PROFESSIONAL",
   },
   program: { code: "BSIT", id: "program-1", name: "BS Information Technology" },
   term_instance: {
@@ -163,7 +163,7 @@ const MOCK_PUBLICATION_CONTEXT = {
     poBindings: [],
     course: {
       code: "IT-401",
-      courseType: "PROGRAM_SPECIFIC",
+      courseType: "PROFESSIONAL",
       id: "course-1",
       majorId: null,
       majorName: null,
@@ -203,7 +203,7 @@ const MOCK_BOUND_TEMPLATE = {
     id: "course-1",
     code: "IT-401",
     title: "Capstone 1",
-    course_scope: "PROGRAM_SPECIFIC",
+    course_scope: "PROFESSIONAL",
     program_id: "program-1",
   },
   template_cilo_question_bindings: [
@@ -265,7 +265,7 @@ describe("publishCourseBoundEvaluation", () => {
 
     // Default mocks for on-behalf template lookup
     courseFindUniqueMock.mockResolvedValue({
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       program_id: "program-1",
     });
     instrumentTemplateFindFirstMock.mockResolvedValue({
@@ -275,7 +275,7 @@ describe("publishCourseBoundEvaluation", () => {
         id: "course-1",
         code: "IT-401",
         title: "Capstone 1",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         program_id: "program-1",
       },
       template_cilo_question_bindings: [
@@ -450,7 +450,7 @@ describe("publishCourseBoundEvaluation", () => {
           courseId: "course-1",
           courseCode: "IT-401",
           courseTitle: "Capstone 1",
-          courseScope: "PROGRAM_SPECIFIC",
+          courseScope: "PROFESSIONAL",
           programId: "program-1",
           programCode: "BSIT",
           programName: "BS Information Technology",
@@ -600,7 +600,7 @@ describe("publishCourseBoundEvaluation", () => {
           courseId: "course-1",
           courseCode: "IT-401",
           courseTitle: "Capstone 1",
-          courseScope: "PROGRAM_SPECIFIC",
+          courseScope: "PROFESSIONAL",
           programId: "program-1",
           programCode: "BSIT",
           programName: "BS Information Technology",
@@ -895,7 +895,7 @@ describe("publishCourseBoundEvaluation", () => {
       expect(courseBoundEvaluationCreateMock).not.toHaveBeenCalled();
     });
 
-    it("rejects publication when a Program-specific CILO maps only a wrong-layer target", async () => {
+    it("rejects publication when a Professional CILO maps only a wrong-layer target", async () => {
       resolveAuthSessionMock.mockResolvedValue({
         activeRole: ROLES.FACULTY,
         profileGate: { status: "COMPLETE" },

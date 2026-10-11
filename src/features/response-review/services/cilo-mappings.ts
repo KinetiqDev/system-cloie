@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db/prisma";
 // `CILOMapping` names a Program's Program Outcome and `CILOInstitutional
 // OutcomeMapping` names a college-wide Institutional Learning Outcome. A
 // General Education CILO carries the latter only, so reading PO mappings there
-// would either return Program-specific noise or, worse, attribute PO
+// would either return Professional noise or, worse, attribute PO
 // semantics to college-wide evidence. Each loader below therefore has one
 // caller layer and one table.
 // ---------------------------------------------------------------------------

@@ -22,7 +22,7 @@ function makeDetail(overrides: Partial<FacultyEvaluationDetail> = {}): FacultyEv
     ],
     courseInfo: {
       courseCode: "CS101",
-      courseScope: "PROGRAM_SPECIFIC",
+      courseScope: "PROFESSIONAL",
       courseTitle: "Intro to Computing",
       majorName: null,
       programCode: "BSIT",

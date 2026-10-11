@@ -57,7 +57,7 @@ function getInitialProgramId(
 ): string | null {
   if (!defaultCourseId) return null;
   const course = availableCourses.find((c) => c.id === defaultCourseId);
-  if (course?.course_scope === CourseScope.PROGRAM_SPECIFIC) {
+  if (course?.course_scope === CourseScope.PROFESSIONAL) {
     return course.program_id;
   }
   return null;
@@ -403,7 +403,7 @@ export function CourseAssignmentFormDialog({
         ? availableCourses.filter((c) => c.course_scope === CourseScope.GENERAL_EDUCATION)
         : availableCourses.filter(
             (c) =>
-              c.course_scope === CourseScope.PROGRAM_SPECIFIC &&
+              c.course_scope === CourseScope.PROFESSIONAL &&
               (selectedProgramId
                 ? c.program_id === selectedProgramId
                 : availablePrograms.some((p) => p.id === c.program_id))

@@ -8,7 +8,7 @@ import {
 } from "@/features/auth/services/resolve-auth-method";
 
 describe("Faculty approval state (issue #649)", () => {
-  it("blocks the Faculty workspace while a self-request is pending", () => {
+  it("routes a legacy pending request without an affiliation to self-service onboarding", () => {
     const gate = resolveProfileGate({
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
@@ -18,7 +18,7 @@ describe("Faculty approval state (issue #649)", () => {
       facultyApprovalStatus: "PENDING",
     });
 
-    expect(gate).toEqual({ status: "FACULTY_APPROVAL_PENDING" });
+    expect(gate).toEqual({ status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" });
   });
 
   it("surfaces a rejected self-request and blocks the Faculty workspace", () => {
@@ -61,7 +61,7 @@ describe("Faculty approval state (issue #649)", () => {
     expect(alumniGate).toEqual({ status: "COMPLETE" });
   });
 
-  it("never reports COMPLETE for a pending Faculty request even with an affiliation", () => {
+  it("reports COMPLETE for a legacy pending request once the affiliation exists", () => {
     const gate = resolveProfileGate({
       roles: [ROLES.FACULTY],
       activeRole: ROLES.FACULTY,
@@ -72,7 +72,7 @@ describe("Faculty approval state (issue #649)", () => {
       hasFacultyAffiliation: true,
     });
 
-    expect(gate).toEqual({ status: "FACULTY_APPROVAL_PENDING" });
+    expect(gate).toEqual({ status: "COMPLETE" });
   });
 });
 

@@ -66,7 +66,7 @@ const assignment = {
   assignmentId: "assignment-1",
   courseCode: "CS101",
   courseTitle: "Computing",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   programCode: "BSCS",
   programName: "Computer Science",
   facultyName: "Ada Lovelace",
@@ -110,7 +110,7 @@ const termInstances = [
 ] as unknown as TermInstanceItem[];
 
 const courses = [
-  { id: "course-1", code: "CS101", title: "Computing", courseScope: CourseScope.PROGRAM_SPECIFIC },
+  { id: "course-1", code: "CS101", title: "Computing", courseScope: CourseScope.PROFESSIONAL },
 ];
 
 const programs = [{ id: "program-1", code: "BSCS", name: "Computer Science" }];
@@ -152,8 +152,21 @@ function renderDiscovery(
   );
 }
 
-function filterBar() {
-  return within(screen.getByRole("region", { name: "Filter rosters" }));
+/**
+ * Opens a column funnel and picks one option. Base UI renders each choice as a
+ * label wrapping a radio control, and only the control responds to a click.
+ */
+function openFacet(triggerName: string, optionName: string | RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: triggerName }));
+  const popover = document.querySelector('[data-slot="popover-content"]');
+  if (!popover) throw new Error("The column filter did not open.");
+  const row = Array.from(popover.querySelectorAll("label")).find((label) => {
+    const text = (label.textContent ?? "").trim();
+    return typeof optionName === "string" ? text.startsWith(optionName) : optionName.test(text);
+  });
+  const control = row?.querySelector('[data-slot="radio-group-item"]');
+  if (!control) throw new Error(`No facet option matched ${String(optionName)}.`);
+  fireEvent.click(control);
 }
 
 const detail: CourseRosterDetail = {
@@ -284,87 +297,72 @@ describe("course roster pages", () => {
     expect(screen.queryByText(/Ada Lovelace|ada@example.com/)).not.toBeInTheDocument();
   });
 
-  it("gives every filter control an accessible name and a reset that starts disabled", () => {
+  it("gives every filterable column a funnel and the spanning search its own field", () => {
     renderDiscovery();
 
-    for (const name of [
-      "Academic Period",
-      "Course",
-      "Program",
-      "Year level",
-      "Section",
-      "Course scope",
-    ]) {
-      expect(screen.getByRole("combobox", { name })).toBeInTheDocument();
+    for (const column of ["Course", "Program", "Class", "Academic Period"]) {
+      expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
     }
-    expect(filterBar().getByRole("button", { name: "Reset" })).toBeDisabled();
+    // Roster shows counts, not values, so it owns no filter.
+    expect(screen.queryByRole("button", { name: "Filter Roster" })).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search assignments" })).toBeInTheDocument();
   });
 
-  it("offers the active-only scope alongside every period", async () => {
+  it("offers the active-only scope alongside every period", () => {
     renderDiscovery();
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Academic Period" }));
-    expect(await screen.findByRole("option", { name: "Active assignments" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "All Academic Periods" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: /2025-2026 — 2nd Semester — 2nd Term/ })
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filter Academic Period" }));
+    const popover = document.querySelector('[data-slot="popover-content"]');
+    expect(popover).not.toBeNull();
+    const optionLabels = Array.from(popover!.querySelectorAll("label")).map((label) =>
+      (label.textContent ?? "").trim()
+    );
+    expect(optionLabels).toContain("Active assignments");
+    expect(optionLabels).toContain("All academic periods");
+    expect(optionLabels.some((label) => /2025-2026 — 2nd Semester — 2nd Term/.test(label))).toBe(
+      true
+    );
   });
 
-  it("applies a facet immediately, returns to page one, and reports it in the URL", async () => {
+  it("applies a facet immediately, returns to page one, and reports it in the URL", () => {
     renderDiscovery();
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Program" }));
-    const program = await screen.findByRole("option", { name: /BSCS/ });
-    fireEvent.mouseMove(program);
-    fireEvent.click(program);
+    openFacet("Filter Program", /BSCS/);
 
     expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?programId=program-1");
   });
 
-  it("applies the widened period scope as the retired history param did", async () => {
+  it("applies the widened period scope as the retired history param did", () => {
     renderDiscovery();
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Academic Period" }));
-    const all = await screen.findByRole("option", { name: "All Academic Periods" });
-    fireEvent.mouseMove(all);
-    fireEvent.click(all);
+    openFacet("Filter Academic Period", "All academic periods");
 
     expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters?period=all");
   });
 
-  it("counts applied facets and enables reset", () => {
+  it("counts applied facets as removable chips and enables the clear-all exit", () => {
     renderDiscovery({
       filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, programId: "program-1", search: "CS" },
     });
 
-    expect(
-      filterBar().getByText("2 active", { selector: '[data-slot="badge"]' })
-    ).toBeInTheDocument();
-    expect(filterBar().getByRole("button", { name: "Reset" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Remove filter Program: BSCS" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear all" })).toBeInTheDocument();
   });
 
-  it("keeps unapplied mobile filters out of the applied-filter count", async () => {
-    mockMatchMedia(false);
+  it("leaves the list's own default period out of the applied count", () => {
     renderDiscovery();
-    const trigger = screen.getByRole("button", { name: /More filters\s*Optional/ });
-    fireEvent.click(trigger);
-    const dialog = await screen.findByRole("dialog", { name: "More roster filters" });
-    fireEvent.click(within(dialog).getByRole("combobox", { name: "Year level" }));
-    const option = await screen.findByRole("option", { name: "2nd Year" });
-    fireEvent.mouseMove(option);
-    fireEvent.click(option);
 
-    expect(within(dialog).getByRole("button", { name: "Show results · 1 filter" })).toBeVisible();
-    expect(trigger).toHaveTextContent("Optional");
-    expect(replaceMock).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: /^Remove filter Academic Period:/ })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument();
   });
 
   it("counts a widened period scope as an applied filter", () => {
     renderDiscovery({ filters: { ...DEFAULT_COURSE_ROSTER_FILTERS, period: { mode: "all" } } });
 
     expect(
-      filterBar().getByText("1 active", { selector: '[data-slot="badge"]' })
+      screen.getByRole("button", { name: "Remove filter Academic Period: All academic periods" })
     ).toBeInTheDocument();
   });
 
@@ -377,7 +375,7 @@ describe("course roster pages", () => {
       },
     });
 
-    fireEvent.click(filterBar().getByRole("button", { name: "Reset" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
 
     expect(replaceMock).toHaveBeenCalledWith("/faculty/course-rosters");
   });
@@ -754,7 +752,7 @@ describe("course roster pages", () => {
     );
   });
 
-  it("preserves student placement details in program-specific roster rows", () => {
+  it("preserves student placement details in Professional roster rows", () => {
     render(<CourseRosterDetailPage data={detail} />);
     const student = screen.getByText("Grace Hopper").closest("tr")!;
     expect(student).toHaveTextContent("BSCS");

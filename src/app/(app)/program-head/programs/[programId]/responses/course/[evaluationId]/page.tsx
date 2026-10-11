@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/ui/back-link";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CourseEvaluationDetail } from "@/features/response-review/components/course-evaluation-detail";
 import { getProgramHeadCourseEvaluationDetail } from "@/features/response-review/services/get-program-head-course-evaluation-detail";
@@ -49,6 +50,7 @@ export default async function CourseEvaluationDetailPage({
   return (
     <CourseEvaluationDetail
       detail={detail}
+      backLink={<BackLink href={responsesHref}>Back to Responses</BackLink>}
       analyticsHref={`${buildProgramHeadAnalyticsPath(programId)}?tab=feedback`}
       breadcrumbs={
         <Breadcrumbs

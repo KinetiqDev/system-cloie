@@ -117,7 +117,7 @@ function buildTermInstanceWhere(
           some: {
             course_assignment: {
               program_id: programId,
-              course: { course_scope: "PROGRAM_SPECIFIC" },
+              course: { course_scope: "PROFESSIONAL" },
             },
           },
         },
@@ -203,7 +203,7 @@ export function buildProgramResponseScope(
         course_bound: {
           course_assignment: {
             program_id: programId,
-            course: { course_scope: "PROGRAM_SPECIFIC" as const },
+            course: { course_scope: "PROFESSIONAL" as const },
           },
           ...termInstanceWhere,
         },
@@ -230,7 +230,7 @@ export function buildProgramResponseScope(
           course_bound: {
             course_assignment: {
               program_id: programId,
-              course: { course_scope: "PROGRAM_SPECIFIC" as const },
+              course: { course_scope: "PROFESSIONAL" as const },
             },
             ...termInstanceWhere,
           },
@@ -258,7 +258,7 @@ export function buildProgramOpportunityScope(
       course_bound: {
         course_assignment: {
           program_id: programId,
-          course: { course_scope: "PROGRAM_SPECIFIC" as const },
+          course: { course_scope: "PROFESSIONAL" as const },
         },
         ...termInstanceWhere,
       },
@@ -279,7 +279,7 @@ export function buildProgramOpportunityScope(
         course_bound: {
           course_assignment: {
             program_id: programId,
-            course: { course_scope: "PROGRAM_SPECIFIC" as const },
+            course: { course_scope: "PROFESSIONAL" as const },
           },
           ...termInstanceWhere,
         },
@@ -776,7 +776,7 @@ function buildCourseBoundResponseScope(
       course_bound: {
         course_assignment: {
           program_id: programId,
-          course: { course_scope: "PROGRAM_SPECIFIC" as const },
+          course: { course_scope: "PROFESSIONAL" as const },
         },
         ...termInstanceWhere,
       },
@@ -1130,7 +1130,7 @@ async function readOutcomeScopedEvidence(
               course_bound: {
                 course_assignment: {
                   program_id: programId,
-                  course: { course_scope: "PROGRAM_SPECIFIC" },
+                  course: { course_scope: "PROFESSIONAL" },
                 },
                 ...termInstanceWhere,
                 ...(evaluationId ? { id: evaluationId } : {}),

@@ -117,10 +117,10 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       expect(resultBSBA).toEqual({ allowed: true });
     });
 
-    it("denies Coordinator for PROGRAM_SPECIFIC courses", () => {
+    it("denies Coordinator for PROFESSIONAL courses", () => {
       const result = canManageCourseAssignment(
         coordinatorSession,
-        CourseScope.PROGRAM_SPECIFIC,
+        CourseScope.PROFESSIONAL,
         "program-bsit"
       );
       expect(result).toEqual({
@@ -139,7 +139,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const resultPS = canManageCourseAssignment(
         secretarySession,
-        CourseScope.PROGRAM_SPECIFIC,
+        CourseScope.PROFESSIONAL,
         "program-bsit"
       );
       expect(resultPS).toEqual({ allowed: true });
@@ -159,7 +159,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const resultPSInScope = canManageCourseAssignment(
         phSession,
-        CourseScope.PROGRAM_SPECIFIC,
+        CourseScope.PROFESSIONAL,
         "program-bsit",
         ["program-bsit"]
       );
@@ -167,7 +167,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const resultPSOutOfScope = canManageCourseAssignment(
         phSession,
-        CourseScope.PROGRAM_SPECIFIC,
+        CourseScope.PROFESSIONAL,
         "program-bsba",
         ["program-bsit"]
       );
@@ -187,7 +187,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
 
       const resultPS = canManageCourseAssignment(
         deanSession,
-        CourseScope.PROGRAM_SPECIFIC,
+        CourseScope.PROFESSIONAL,
         "program-bsba"
       );
       expect(resultPS).toEqual({ allowed: true });
@@ -210,7 +210,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       vi.mocked(prisma.courseAssignment.findMany).mockResolvedValue([] as never);
       vi.mocked(prisma.courseAssignment.count).mockResolvedValue(0);
 
-      await listCourseAssignments({ courseScope: CourseScope.PROGRAM_SPECIFIC });
+      await listCourseAssignments({ courseScope: CourseScope.PROFESSIONAL });
 
       expect(prisma.courseAssignment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -256,7 +256,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       vi.mocked(prisma.course.findUnique).mockResolvedValue({
         id: "course-ps",
         program_id: "program-bsit",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
         is_active: true,
       } as never);
 
@@ -312,7 +312,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
         faculty_id: "faculty-1",
         course: {
           id: "course-ps",
-          course_scope: CourseScope.PROGRAM_SPECIFIC,
+          course_scope: CourseScope.PROFESSIONAL,
           program_id: "program-bsit",
         },
       } as never);
@@ -353,7 +353,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
         program_id: "program-bsit",
-        course: { course_scope: CourseScope.PROGRAM_SPECIFIC, program_id: "program-bsit" },
+        course: { course_scope: CourseScope.PROFESSIONAL, program_id: "program-bsit" },
       } as never);
 
       const failResult = await deactivateCourseAssignment("ca-ps");
@@ -388,7 +388,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
       vi.mocked(prisma.courseAssignment.findUnique).mockResolvedValue({
         id: "ca-ps",
         program_id: "program-bsit",
-        course: { course_scope: CourseScope.PROGRAM_SPECIFIC, program_id: "program-bsit" },
+        course: { course_scope: CourseScope.PROFESSIONAL, program_id: "program-bsit" },
       } as never);
 
       const failResult = await activateCourseAssignment({ assignmentId: "ca-ps" });
@@ -418,7 +418,7 @@ describe("General Education Coordinator Scope Authorization (Issue #547)", () =>
           return {
             id: "course-ps",
             program_id: "program-bsit",
-            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            course_scope: CourseScope.PROFESSIONAL,
             is_active: true,
           } as never;
         }

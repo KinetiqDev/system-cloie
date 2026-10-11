@@ -44,7 +44,8 @@ import {
   formatTargetStakeholder,
   hasActivePublishedFilters,
 } from "@/features/evaluations/components/filter-published-evaluations";
-import { PublishedEvaluationFilterBar } from "@/features/evaluations/components/published-evaluation-filter-bar";
+import { buildPublishedFacets } from "@/features/evaluations/components/published-evaluation-facets";
+import { usePublishedSearch } from "@/features/evaluations/components/use-published-search";
 import {
   DEFAULT_PUBLISHED_FILTERS,
   normalizePublishedQuery,
@@ -65,6 +66,7 @@ import {
   type EvaluationToolsTab,
 } from "./evaluation-tools-tabs";
 import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
+import { DuplicateTemplateDialog } from "./duplicate-template-dialog";
 import {
   ViewSelector as ToolsViewSelector,
   type ListCardViewMode as ToolsViewMode,
@@ -185,6 +187,7 @@ export function ProgramHeadToolsPage({
             sections={[
               {
                 heading: "Program Templates",
+                filterKey: "program-templates",
                 items: templates.map(toTemplateItem),
                 renderFooterActions: (item) => (
                   <ProgramHeadTemplateActions item={item} programId={program.id} />
@@ -212,6 +215,7 @@ export function ProgramHeadToolsPage({
               },
               {
                 heading: "Institutional Baselines",
+                filterKey: "institutional-baselines",
                 items: baselines.map(toBaselineItem),
                 renderFooterActions: (item) => (
                   <BaselineActions item={item} programId={program.id} />
@@ -287,18 +291,21 @@ function ProgramHeadTemplateActions({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  function handleDuplicate() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  function handleConfirmDuplicate() {
     startTransition(async () => {
       const result = await duplicateTemplateAction(programId, item.id);
       if (!result.success) {
-        showToast(result.error, "error");
+        setDuplicateError(result.error);
         return;
       }
+      setConfirmOpen(false);
+      setDuplicateError(null);
+      showToast("Template duplicated successfully.");
       router.refresh();
     });
   }
-
   return (
     <>
       <Button
@@ -309,7 +316,15 @@ function ProgramHeadTemplateActions({
         <Pencil className="size-3.5" data-icon="inline-start" />
         Edit
       </Button>
-      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          setDuplicateError(null);
+          setConfirmOpen(true);
+        }}
+      >
         <Copy className="size-3.5" data-icon="inline-start" />
         Duplicate
       </Button>
@@ -327,6 +342,19 @@ function ProgramHeadTemplateActions({
         <Send className="size-3.5" data-icon="inline-start" />
         Publish
       </Button>
+      {confirmOpen && (
+        <DuplicateTemplateDialog
+          templateName={item.name}
+          open={confirmOpen}
+          isPending={isPending}
+          error={duplicateError}
+          onOpenChange={(open) => {
+            setConfirmOpen(open);
+            if (!open) setDuplicateError(null);
+          }}
+          onConfirm={handleConfirmDuplicate}
+        />
+      )}
     </>
   );
 }
@@ -334,20 +362,21 @@ function ProgramHeadTemplateActions({
 function BaselineActions({ item, programId }: { item: TemplateCollectionItem; programId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  function handleDuplicate() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  function handleConfirmDuplicate() {
     startTransition(async () => {
       const result = await duplicateTemplateAction(programId, item.id);
       if (!result.success) {
-        showToast(result.error, "error");
+        setDuplicateError(result.error);
         return;
       }
-
+      setConfirmOpen(false);
+      setDuplicateError(null);
       showToast("Template duplicated successfully.");
       router.refresh();
     });
   }
-
   return (
     <>
       <Button
@@ -358,10 +387,31 @@ function BaselineActions({ item, programId }: { item: TemplateCollectionItem; pr
         <Pencil className="size-3.5" data-icon="inline-start" />
         Edit &amp; Copy
       </Button>
-      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          setDuplicateError(null);
+          setConfirmOpen(true);
+        }}
+      >
         <Copy className="size-3.5" data-icon="inline-start" />
         Duplicate
       </Button>
+      {confirmOpen && (
+        <DuplicateTemplateDialog
+          templateName={item.name}
+          open={confirmOpen}
+          isPending={isPending}
+          error={duplicateError}
+          onOpenChange={(open) => {
+            setConfirmOpen(open);
+            if (!open) setDuplicateError(null);
+          }}
+          onConfirm={handleConfirmDuplicate}
+        />
+      )}
     </>
   );
 }
@@ -487,6 +537,19 @@ function ProgramHeadPublishedDeployments({
     [filterableDeployments, filters]
   );
 
+  const facets = useMemo(
+    () =>
+      buildPublishedFacets(filters, handleFiltersChange, {
+        periods: periodOptions,
+        targets: targetOptions,
+      }),
+    [filters, periodOptions, targetOptions]
+  );
+  const search = usePublishedSearch(filters.query, (query) =>
+    handleFiltersChange({ ...filters, query }, "replace")
+  );
+  const clearFilters = () => handleFiltersChange(DEFAULT_PUBLISHED_FILTERS);
+
   const items: PublishedDeploymentItem[] = optimisticDeployments
     .filter((deployment) => visibleIds.has(deployment.id))
     .map((deployment) => ({
@@ -504,19 +567,19 @@ function ProgramHeadPublishedDeployments({
   return (
     <>
       <div className="flex min-w-0 flex-col gap-4">
-        {deployments.length > 0 && (
-          <PublishedEvaluationFilterBar
-            filters={filters}
-            periods={periodOptions}
-            record="deployment"
-            targets={targetOptions}
-            onFiltersChange={handleFiltersChange}
-          />
-        )}
         <PublishedDeploymentsCollection
           view={view}
           items={items}
           label="Published deployments"
+          facets={facets}
+          search={{
+            id: "program-head-published-search",
+            label: "Search deployments",
+            placeholder: "Search published deployments",
+            value: search.value,
+            onChange: search.onChange,
+          }}
+          onClearFilters={clearFilters}
           statusFilter={filters.status}
           onStatusFilterChange={handleStatusChange}
           empty={

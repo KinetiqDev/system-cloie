@@ -9,9 +9,6 @@ const { notFoundMock, dashboardMock } = vi.hoisted(() => ({
   dashboardMock: vi.fn(),
 }));
 
-vi.mock("@/features/course-assignments/components/program-assignment-summary", () => ({
-  ProgramAssignmentSummary: () => <div>Course assignments</div>,
-}));
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@isoterik/react-word-cloud", () => ({
   WordCloud: () => <div />,
@@ -122,7 +119,6 @@ function dashboardDataFixture(
       responses: "/program-head/programs/p1/responses",
       responsesActiveCourse: "/program-head/programs/p1/responses?status=ACTIVE",
       analyticsOutcomes: "/program-head/programs/p1/analytics?tab=outcomes",
-      analyticsStakeholders: "/program-head/programs/p1/analytics?tab=stakeholders",
       analyticsFeedback: "/program-head/programs/p1/analytics?tab=qualitative",
     },
     ...overrides,
@@ -174,12 +170,20 @@ describe("selected Program dashboard route", () => {
     expect(screen.getByText("No active Academic Period")).toBeInTheDocument();
   });
 
+  it("leads directly with key figures and does not render the course assignments card", async () => {
+    await loadPage();
+    expect(screen.queryByText("Course assignments")).not.toBeInTheDocument();
+    const header = screen.getByRole("heading", { name: "Dashboard" });
+    const kpis = screen.getByRole("region", { name: "Key figures" });
+    expect(header.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("states completion over the raw assignment denominator", async () => {
     await loadPage();
     const card = kpi("Response completion");
     expect(card).toHaveTextContent("78%");
     expect(card).toHaveTextContent("312 of 400 submitted");
-    expect(card).toHaveAttribute("href", "/program-head/programs/p1/analytics?tab=stakeholders");
+    expect(card).toHaveAttribute("href", "/program-head/programs/p1/responses");
   });
 
   it("states person-level respondent statuses on one line", async () => {
@@ -216,7 +220,7 @@ describe("selected Program dashboard route", () => {
     const row = screen.getByRole("link", {
       name: /Students: 205 respondents, 265 of 340 assignments submitted/,
     });
-    expect(row).toHaveAttribute("href", "/program-head/programs/p1/analytics?tab=stakeholders");
+    expect(row).toHaveAttribute("href", "/program-head/programs/p1/responses");
     expect(row).toHaveTextContent("78%");
     expect(row).toHaveTextContent("265/340");
   });

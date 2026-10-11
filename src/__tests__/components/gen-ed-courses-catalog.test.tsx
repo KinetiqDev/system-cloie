@@ -46,6 +46,23 @@ function renderCatalog(courses: GenEdCourseItem[] = sampleCourses()) {
   render(<GenEdCoursesCatalog courses={courses} summary={summary} />);
 }
 
+/**
+ * Opens a column funnel and picks one option. Base UI renders each choice as a
+ * label wrapping a radio control, and only the control responds to a click.
+ */
+function openFacet(triggerName: string, optionName: string | RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: triggerName }));
+  const popover = document.querySelector('[data-slot="popover-content"]');
+  if (!popover) throw new Error("The column filter did not open.");
+  const row = Array.from(popover.querySelectorAll("label")).find((label) => {
+    const text = (label.textContent ?? "").trim();
+    return typeof optionName === "string" ? text.startsWith(optionName) : optionName.test(text);
+  });
+  const control = row?.querySelector('[data-slot="radio-group-item"]');
+  if (!control) throw new Error(`No facet option matched ${String(optionName)}.`);
+  fireEvent.click(control);
+}
+
 const summary: GenEdCoursesSummary = { total: 3, active: 2, archived: 1 };
 
 let matchMediaOrig: typeof window.matchMedia | undefined;
@@ -114,14 +131,10 @@ describe("GenEdCoursesCatalog", () => {
     expect(screen.getByText("GEMATH")).toBeInTheDocument();
   });
 
-  it("filters by status via Select — Archived shows only archived", async () => {
+  it("filters by status through the Status column funnel", async () => {
     renderCatalog();
 
-    const trigger = screen.getByRole("combobox", { name: /filter by course status/i });
-    fireEvent.click(trigger);
-    const archivedOption = await screen.findByRole("option", { name: "Archived" });
-    fireEvent.mouseMove(archivedOption);
-    fireEvent.click(archivedOption);
+    openFacet("Filter Status", "Archived");
     expect(screen.getByText("GEUS")).toBeInTheDocument();
     expect(screen.queryByText("GEMATH")).not.toBeInTheDocument();
     expect(screen.queryByText("GENAT")).not.toBeInTheDocument();
@@ -142,11 +155,7 @@ describe("GenEdCoursesCatalog", () => {
       }),
     ]);
 
-    const trigger = screen.getByRole("combobox", { name: /filter by year level/i });
-    fireEvent.click(trigger);
-    const firstYear = await screen.findByRole("option", { name: "1st Year" });
-    fireEvent.mouseMove(firstYear);
-    fireEvent.click(firstYear);
+    openFacet("Filter Year Level", "1st Year");
     expect(screen.getByText("GEMATH")).toBeInTheDocument();
     expect(screen.queryByText("GEUS")).not.toBeInTheDocument();
   });
@@ -169,22 +178,16 @@ describe("GenEdCoursesCatalog", () => {
       }),
     ]);
 
-    const termTrigger = screen.getByRole("combobox", { name: /filter by term/i });
-    fireEvent.click(termTrigger);
-    const firstTerm = await screen.findByRole("option", { name: "1st Term" });
-    fireEvent.mouseMove(firstTerm);
-    fireEvent.click(firstTerm);
+    openFacet("Filter Term", "1st Term");
     expect(screen.getByText("GEFIRST")).toBeInTheDocument();
     expect(screen.queryByText("GESUM")).not.toBeInTheDocument();
 
-    const semesterTrigger = screen.getByRole("combobox", { name: /filter by semester/i });
-    fireEvent.click(semesterTrigger);
-    const summer = await screen.findByRole("option", { name: "Summer" });
-    fireEvent.mouseMove(summer);
-    fireEvent.click(summer);
+    openFacet("Filter Semester", "Summer");
     expect(screen.getByText("GESUM")).toBeInTheDocument();
     expect(screen.queryByText("GEFIRST")).not.toBeInTheDocument();
-    expect(screen.getByText("Summer semester has no terms")).toBeInTheDocument();
+    // Summer has no Terms, so the facet reports itself unavailable rather than
+    // offering a list that can only produce an empty result.
+    expect(screen.getByRole("button", { name: "Filter Term, unavailable" })).toBeDisabled();
   });
 
   it("paginates at PAGE_SIZE=15 and navigates to page 2", () => {

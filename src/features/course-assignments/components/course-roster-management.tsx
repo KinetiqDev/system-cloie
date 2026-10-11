@@ -817,7 +817,7 @@ function ReviewPreviewBlock({
             aria-label={`Roster preview: ${filterLabel}`}
             containerClassName="h-full overflow-auto"
           >
-            <TableHeader className="bg-muted sticky top-0 z-10">
+            <TableHeader className="sticky top-0 z-10">
               <TableRow>
                 <TableHead>Uploaded name</TableHead>
                 <TableHead>System account</TableHead>

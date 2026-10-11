@@ -39,6 +39,8 @@ type CourseEvaluationDetailProps = {
   analyticsHref: string;
   /** Trail rendered directly below the page title (§12). */
   breadcrumbs?: ReactNode;
+  /** Upward navigation rendered top-left above the badges. */
+  backLink?: ReactNode;
 };
 
 function statusLabel(status: string): string {
@@ -52,6 +54,7 @@ export function CourseEvaluationDetail({
   responseHref,
   analyticsHref,
   breadcrumbs,
+  backLink,
 }: CourseEvaluationDetailProps) {
   const {
     evaluation,
@@ -70,6 +73,7 @@ export function CourseEvaluationDetail({
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="border-border flex flex-col gap-2 border-b pb-5">
+        {backLink}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">Course evaluation</Badge>
           <Badge variant="secondary">{statusLabel(evaluation.status)}</Badge>

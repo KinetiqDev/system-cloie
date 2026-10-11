@@ -217,7 +217,7 @@ function AlignmentDialogs({
             <AlertDialogDescription>
               {alignment.course.scope === "GENERAL_EDUCATION"
                 ? "These changes apply to every active teaching assignment using this shared General Education Course. Confirm the complete before and after mapping."
-                : "These changes apply to every active teaching assignment for this Program-specific Course. Confirm the complete before and after mapping."}
+                : "These changes apply to every active teaching assignment for this Professional Course. Confirm the complete before and after mapping."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="text-body-sm flex max-h-64 flex-col gap-3 overflow-y-auto">
@@ -386,7 +386,7 @@ export function CourseAlignmentEditor({
   commitAction,
 }: Props) {
   const router = useRouter();
-  const isProgramSpecific = alignment.course.scope === "PROGRAM_SPECIFIC";
+  const isProfessional = alignment.course.scope !== "GENERAL_EDUCATION";
   const { activeTargetIds } = indexAlignmentTargets(alignment);
   const initialCells = cellsFromAlignment(alignment, activeTargetIds);
   const [draft, setDraft] = useState(initialCells);
@@ -410,7 +410,7 @@ export function CourseAlignmentEditor({
       ).length
     );
   }, 0);
-  const mappingComplete = isProgramSpecific
+  const mappingComplete = isProfessional
     ? alignment.targets.length > 0 &&
       alignment.cilos.every((cilo) =>
         alignment.targets.every((target) => draft[cilo.id]?.[target.id] !== undefined)

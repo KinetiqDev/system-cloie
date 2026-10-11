@@ -130,7 +130,7 @@ describe("Prisma schema structure", () => {
     expect(model).toContain('@@map("institutional_outcomes")');
   });
 
-  it("keeps the Program-specific mapping relation with actor provenance", () => {
+  it("keeps the Professional mapping relation with actor provenance", () => {
     const source = readFileSync(join(prismaModelsDir, "outcomes.prisma"), "utf8");
     const match = source.match(/model CILOMapping \{[\s\S]*?\n\}/);
 

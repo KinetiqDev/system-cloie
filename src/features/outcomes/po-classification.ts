@@ -7,6 +7,17 @@ export const PO_CLASSIFICATION_LABELS: Record<POClassification, string> = {
   INSTITUTION_SPECIFIC: "Institution-specific",
   UNCLASSIFIED: "Needs classification",
 };
+export const PO_CLASSIFICATION_DESCRIPTIVE_LABELS: Record<POClassification, string> = {
+  COMMON: "Common to all Schools",
+  CORE: "Core",
+  PROFESSIONAL: "Professional",
+  INSTITUTION_SPECIFIC: "Institution-specific",
+  UNCLASSIFIED: "Needs classification",
+};
+export const PROGRAM_HEAD_CLASSIFICATIONS = [
+  { value: "CORE", label: PO_CLASSIFICATION_LABELS.CORE },
+  { value: "PROFESSIONAL", label: PO_CLASSIFICATION_LABELS.PROFESSIONAL },
+] as const;
 
 export type POCategoryFilter = "ALL" | "COMMON" | "CORE" | "PROFESSIONAL" | "OTHER";
 

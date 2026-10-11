@@ -111,7 +111,7 @@ export async function getProgramHeadResponseDetail(
             course_bound: {
               course_assignment: {
                 program_id: programId,
-                course: { course_scope: "PROGRAM_SPECIFIC" },
+                course: { course_scope: "PROFESSIONAL" },
               },
             },
           },
@@ -175,7 +175,7 @@ export async function getProgramHeadResponseDetail(
       : Promise.resolve(new Map<string, CiloGoMapping[]>()),
   ]);
 
-  // Program-specific and Central evidence reach Program Outcomes only, so
+  // Professional and Central evidence reach Program Outcomes only, so
   // the ILO map stays empty and the projection runs on the PO layer.
   const sections = buildSubmittedResponseSections(
     response,

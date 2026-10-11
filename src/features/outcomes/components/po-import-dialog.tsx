@@ -53,7 +53,7 @@ import {
   parsePOImportCsv,
   PO_IMPORT_TEMPLATE,
 } from "../services/po-import-csv";
-import { PO_CLASSIFICATION_LABELS } from "../po-classification";
+import { PO_CLASSIFICATION_LABELS, PROGRAM_HEAD_CLASSIFICATIONS } from "../po-classification";
 import type { POImportPreview, POImportPreviewRow, POImportResult } from "../types/po-import";
 
 type Step = "file" | "review" | "results";
@@ -419,6 +419,7 @@ export function POImportDialog({ open, onOpenChange, program }: Props) {
             Classification for rows without a category
           </Label>
           <Select
+            items={PROGRAM_HEAD_CLASSIFICATIONS}
             value={classification || null}
             onValueChange={(value) => {
               if (value === "CORE" || value === "PROFESSIONAL") setClassification(value);
@@ -429,8 +430,11 @@ export function POImportDialog({ open, onOpenChange, program }: Props) {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="CORE">Core</SelectItem>
-                <SelectItem value="PROFESSIONAL">Professional</SelectItem>
+                {PROGRAM_HEAD_CLASSIFICATIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>

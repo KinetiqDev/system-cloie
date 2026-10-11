@@ -25,7 +25,7 @@ function assignment(overrides: Record<string, unknown> = {}) {
     course: {
       code: "C-101",
       title: "Course",
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       is_active: true,
       program_id: "program-1",
       cilos: [
@@ -104,7 +104,7 @@ describe("readPeriodReadiness", () => {
     });
   });
 
-  it("classifies a Program-specific context ready when every active CILO classifies every owning-Program PO", async () => {
+  it("classifies a Professional context ready when every active CILO classifies every owning-Program PO", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -235,7 +235,7 @@ describe("readPeriodReadiness", () => {
     });
   });
 
-  it("rejects Program-specific mappings to a PO outside the owning Program", async () => {
+  it("rejects Professional mappings to a PO outside the owning Program", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -265,7 +265,7 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]?.cilos[0]).toMatchObject({ mappedTargets: [] });
   });
 
-  it("rejects wrong-layer Institutional Outcome mappings for Program-specific CILOs", async () => {
+  it("rejects wrong-layer Institutional Outcome mappings for Professional CILOs", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -355,7 +355,7 @@ describe("readPeriodReadiness", () => {
     expect(readiness.contexts[0]?.pos.map((po) => po.id)).toEqual(["po-active", "po-archived"]);
   });
 
-  it("groups sections into one Program-specific Course context", async () => {
+  it("groups sections into one Professional Course context", async () => {
     vi.mocked(prisma.academicTermInstance.findUnique)
       .mockResolvedValueOnce({ status: "ACTIVE" } as never)
       .mockResolvedValueOnce({ id: "period-1", status: "ACTIVE" } as never);
@@ -553,14 +553,14 @@ describe("readPeriodReadiness", () => {
     const generalEducationContext = readiness.contexts.find(
       (context) => context.courseScope === "GENERAL_EDUCATION"
     );
-    const programSpecificContext = readiness.contexts.find(
-      (context) => context.courseScope === "PROGRAM_SPECIFIC"
+    const professionalContext = readiness.contexts.find(
+      (context) => context.courseScope === "PROFESSIONAL"
     );
     expect(generalEducationContext?.institutionalOutcomes).toEqual([
       { id: "ilo-1", code: "ILO1", description: "Shared outcome", isArchived: false, order: 0 },
       { id: "ilo-2", code: "ILO2", description: "Retired outcome", isArchived: true, order: 1 },
     ]);
-    expect(programSpecificContext?.institutionalOutcomes).toEqual([]);
+    expect(professionalContext?.institutionalOutcomes).toEqual([]);
   });
 
   it("reads completed readiness only from its immutable snapshot", async () => {

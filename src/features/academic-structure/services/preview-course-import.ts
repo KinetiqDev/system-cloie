@@ -89,18 +89,15 @@ const MODE_HEADERS: Record<CourseImportMode, readonly string[]> = {
 const INVALID_COLUMNS = "This row does not match the selected Course import template.";
 
 /**
- * Friendly alias map for CourseScope. Keyed by normalizeFriendlyInput output.
- * "GENERAL_EDUCATION", "General Education", "GE", "gen ed" → GENERAL_EDUCATION.
- * "PROGRAM_SPECIFIC", "Program Specific", "program" → PROGRAM_SPECIFIC.
+ * Friendly alias map for CourseScope. Keyed by normalizeFriendlyInput output,
+ * so the enum spelling and the plain-language spelling share one entry.
  */
 const COURSE_SCOPE_ALIASES: Record<string, CourseScope> = {
   generaleducation: CourseScope.GENERAL_EDUCATION,
   gened: CourseScope.GENERAL_EDUCATION,
   ge: CourseScope.GENERAL_EDUCATION,
   general: CourseScope.GENERAL_EDUCATION,
-  programspecific: CourseScope.PROGRAM_SPECIFIC,
-  program: CourseScope.PROGRAM_SPECIFIC,
-  ps: CourseScope.PROGRAM_SPECIFIC,
+  professional: CourseScope.PROFESSIONAL,
 };
 
 /**
@@ -177,7 +174,7 @@ type CourseTypeParseResult = { ok: true; value: string | null } | { ok: false; e
 
 function courseScopeForRow(mode: CourseImportMode, row: CourseImportRequestRow): ScopeParseResult {
   if (mode === "general-education") return { ok: true, value: CourseScope.GENERAL_EDUCATION };
-  if (mode === "program-head") return { ok: true, value: CourseScope.PROGRAM_SPECIFIC };
+  if (mode === "program-head") return { ok: true, value: CourseScope.PROFESSIONAL };
 
   const raw = readField(row, "course_scope");
   const key = normalizeFriendlyInput(raw);
@@ -187,8 +184,8 @@ function courseScopeForRow(mode: CourseImportMode, row: CourseImportRequestRow):
     ok: false,
     error:
       raw === ""
-        ? 'Course scope is required. Use "General Education" or "Program Specific".'
-        : `Course scope "${raw}" is not recognized. Use "General Education" or "Program Specific".`,
+        ? 'Course scope is required. Use "General Education" or "Professional".'
+        : `Course scope "${raw}" is not recognized. Use "General Education" or "Professional".`,
   };
 }
 
@@ -475,7 +472,7 @@ function resolveSecretaryRow(
       courseTitle: readField(row, "course_title"),
       courseScope,
       status: "INVALID",
-      error: "Program-specific Courses require a Program code.",
+      error: "Professional Courses require a Program code.",
     });
   }
 

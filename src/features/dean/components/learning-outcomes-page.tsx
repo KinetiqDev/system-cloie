@@ -224,7 +224,7 @@ function ProgramDetail({
 }) {
   // Gap rows partition by the readiness context's target layer. General
   // Education contexts align to Institutional Outcomes or, in Common mode, to
-  // the shared Common PO catalog, so a Common PO gap is never a program-specific
+  // the shared Common PO catalog, so a Common PO gap is never a Professional
   // Program Outcome gap. Pre-v2 snapshots carry no typed layer (`null`) and keep
   // their captured program-level gaps in the Program Outcome group.
   const institutionalGaps = program.mappingGaps.filter(
@@ -365,7 +365,7 @@ function ProgramContent({
         <h3 className="text-title-sm">Program Outcome mapping gaps</h3>
         {poGaps.length === 0 ? (
           <p className="text-body-sm text-text-secondary mt-2">
-            No program-specific Program Outcome gaps.
+            No Professional Program Outcome gaps.
           </p>
         ) : (
           <GapList gaps={poGaps} />
@@ -415,7 +415,7 @@ function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number][
             <span className="text-label-lg">{gap.courseCode}</span>
             <span className="text-text-secondary">{gap.courseName}</span>
             <Badge variant="outline">
-              {gap.courseScope === "GENERAL_EDUCATION" ? "General Education" : "Program-specific"}
+              {gap.courseScope === "GENERAL_EDUCATION" ? "General Education" : "Professional"}
             </Badge>
             <span className="text-caption text-text-secondary">
               {getYearLevelDisplay(gap.yearLevel)} · {getSectionLabel(gap.section)}

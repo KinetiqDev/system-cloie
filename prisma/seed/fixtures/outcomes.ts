@@ -316,7 +316,7 @@ export const ciloDefsNewCourses = [
 ] as const;
 
 /**
- * Program-specific CILO → PO mapping pairs with their explicit manifestation
+ * Professional CILO → PO mapping pairs with their explicit manifestation
  * classification. Every seeded mapping carries a manifestation; legacy rows
  * created before the manifestation column are classified on reseed.
  */

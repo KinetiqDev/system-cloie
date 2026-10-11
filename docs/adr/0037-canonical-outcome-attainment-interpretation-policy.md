@@ -38,8 +38,9 @@ To support Continuous Quality Improvement (CQI), accreditation reviews, and acad
 - **Scope of classification:**
   - Applied to Program Outcomes (POs) on the Program Head Dashboard and Outcomes view.
   - Applied to CILOs on the Faculty CILO results view.
+  - Applied to course-bound scale-group means on the Program Head Courses tab ([ADR 0041](0041-course-mean-attainment-classification.md), which amends the exclusion below).
   - Not applied to Institutional Learning Outcomes (ILOs) (ADR 0035; ILO evidence remains unlabelled).
-  - Not applied to generic course averages, overall stakeholder means, or unbound evaluation questions.
+  - Not applied to overall stakeholder means or unbound evaluation questions.
 - **Bounded AI contract:** Deterministic attainment classifications are calculated server-side prior to invoking AI. The LLM is prohibited from calculating attainment, inventing thresholds, or overriding deterministic classifications.
 
 ## Consequences

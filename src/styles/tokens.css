@@ -52,6 +52,13 @@
   --surface-overlay: #ffffff;
   --scrim: rgba(15, 23, 42, 0.5);
 
+  /* Table header band: a distinct fill so column labels stay separable from
+   * the rows beneath them (14.1:1 against primary text; 1.27:1 against rows).
+   * The rule clears 3:1 against both the band and the row. */
+  --table-header-bg: var(--surface-muted);
+  --table-header-fg: var(--text-primary);
+  --table-header-border: #6b7c93;
+
   /* Legacy alias mappings for surfaces */
   --color-background: var(--surface-secondary);
   --color-surface: var(--surface-primary);
@@ -136,6 +143,28 @@
   --chart-5: #c2410c;
 
   /* ========================================
+   * 7b. PO Classification Categorical Roles (Light Defaults)
+   * ======================================== */
+  /* Common to all Schools (ACD Cyan / Institutional Breadth) */
+  --classification-common-bg: #f0f9ff;
+  --classification-common-fg: #075985;
+  --classification-common-border: #bae6fd;
+
+  /* Core (Discipline Foundation / Indigo) */
+  --classification-core-bg: #eef2ff;
+  --classification-core-fg: #3730a3;
+  --classification-core-border: #c7d2fe;
+
+  /* Professional (Specialized Practice / Purple) */
+  --classification-professional-bg: #faf5ff;
+  --classification-professional-fg: #5b21b6;
+  --classification-professional-border: #e9d5ff;
+
+  /* Institution-specific (ACD Mission / Rose) */
+  --classification-institution-bg: #fff1f2;
+  --classification-institution-fg: #9f1239;
+  --classification-institution-border: #fecdd3;
+  /* ========================================
    * 8. Sidebar Roles (Light Defaults)
    * ======================================== */
   --sidebar-bg: #ffffff;
@@ -210,6 +239,11 @@
   --surface-overlay: #172033;
   --scrim: rgba(2, 6, 23, 0.6);
 
+  /* Table header band (dark): mirrors the light band's 1.2–1.3:1 separation. */
+  --table-header-bg: var(--surface-muted);
+  --table-header-fg: var(--text-primary);
+  --table-header-border: #75899f;
+
   /* Borders (Dark) */
   --border-default: #3b4b64;
   --border-strong: #5f7288;
@@ -253,6 +287,22 @@
   --chart-4: #a78bfa;
   --chart-5: #fb923c;
 
+  /* PO Classification Categorical Roles (Dark) */
+  --classification-common-bg: #082f49;
+  --classification-common-fg: #38bdf8;
+  --classification-common-border: #0e7490;
+
+  --classification-core-bg: #1e1b4b;
+  --classification-core-fg: #a5b4fc;
+  --classification-core-border: #4338ca;
+
+  --classification-professional-bg: #3b0764;
+  --classification-professional-fg: #d8b4fe;
+  --classification-professional-border: #7e22ce;
+
+  --classification-institution-bg: #4c0519;
+  --classification-institution-fg: #fda4af;
+  --classification-institution-border: #9f1239;
   /* Sidebar Roles (Dark) */
   --sidebar-bg: #111827;
   --sidebar-fg: #f8fafc;

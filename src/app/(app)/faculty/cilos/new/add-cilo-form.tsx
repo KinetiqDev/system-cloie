@@ -80,11 +80,11 @@ function MapCilosButton({
     <Link
       href={href}
       aria-label={
-        linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "POs" : "ILOs"}`
+        linkName ?? `Map CILOs to ${course.courseScope === "PROFESSIONAL" ? "POs" : "ILOs"}`
       }
       className={cn(buttonVariants({ variant, size: "sm", className: "max-sm:w-full" }))}
     >
-      {linkName ?? `Map CILOs to ${course.courseScope === "PROGRAM_SPECIFIC" ? "POs" : "ILOs"}`}
+      {linkName ?? `Map CILOs to ${course.courseScope === "PROFESSIONAL" ? "POs" : "ILOs"}`}
       <ArrowRight className="size-4" />
     </Link>
   );
@@ -411,7 +411,7 @@ export function AddCiloForm({
                   <p className="truncate text-sm font-medium">{courseLabel(selectedCourse)}</p>
                   <p className="text-caption text-muted-foreground">
                     Aligns to{" "}
-                    {selectedCourse.courseScope === "PROGRAM_SPECIFIC"
+                    {selectedCourse.courseScope === "PROFESSIONAL"
                       ? `POs of ${
                           selectedCourse.programName ?? selectedCourse.programCode ?? "the program"
                         }`

@@ -16,12 +16,14 @@ export function EntryShell({
   children,
   footer,
   backLink = { href: "/", label: "All sign-in options" },
+  showHelp = true,
 }: {
   title: string;
   description: string;
   children: ReactNode;
   footer?: ReactNode;
   backLink?: { href: string; label: string };
+  showHelp?: boolean;
 }) {
   return (
     <div className="entry-links mx-auto flex w-full max-w-lg min-w-0 flex-col px-4 py-6 sm:py-12">
@@ -53,15 +55,17 @@ export function EntryShell({
 
       {footer ? <div className="mt-6 text-center">{footer}</div> : null}
 
-      <p className="text-body-sm text-muted-foreground mt-6 text-center">
-        Need help?{" "}
-        <Link
-          href="/#help"
-          className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
-        >
-          Visit help and FAQs
-        </Link>
-      </p>
+      {showHelp ? (
+        <p className="text-body-sm text-muted-foreground mt-6 text-center">
+          Need help?{" "}
+          <Link
+            href="/#help"
+            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
+          >
+            Visit help and FAQs
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }

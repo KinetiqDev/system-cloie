@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
 
-const { affiliationFindManyMock, courseAssignmentFindManyMock, courseFindManyMock, resolveAuthSessionMock } = vi.hoisted(() => ({
+const {
+  affiliationFindManyMock,
+  courseAssignmentFindManyMock,
+  courseFindManyMock,
+  resolveAuthSessionMock,
+} = vi.hoisted(() => ({
   affiliationFindManyMock: vi.fn(),
   courseAssignmentFindManyMock: vi.fn(),
   courseFindManyMock: vi.fn(),
@@ -62,7 +67,7 @@ describe("listFacultyCourseContexts", () => {
     courseFindManyMock.mockResolvedValue([
       {
         code: "IT-401",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         id: "course-1",
         major: null,
         major_id: null,
@@ -93,7 +98,7 @@ describe("listFacultyCourseContexts", () => {
           courseCode: "IT-401",
           courseId: "course-1",
           courseTitle: "Capstone 1",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSIT",
@@ -154,7 +159,7 @@ describe("listFacultyCourseContexts", () => {
     courseFindManyMock.mockResolvedValue([
       {
         code: "CS-101",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         id: "course-1",
         major: null,
         major_id: null,
@@ -168,7 +173,7 @@ describe("listFacultyCourseContexts", () => {
       },
       {
         code: "CS-201",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         id: "course-2",
         major: null,
         major_id: null,
@@ -189,7 +194,7 @@ describe("listFacultyCourseContexts", () => {
           courseCode: "CS-101",
           courseId: "course-1",
           courseTitle: "Intro to CS",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSCS",
@@ -201,7 +206,7 @@ describe("listFacultyCourseContexts", () => {
           courseCode: "CS-201",
           courseId: "course-2",
           courseTitle: "Data Structures",
-          courseType: "PROGRAM_SPECIFIC",
+          courseType: "PROFESSIONAL",
           majorId: null,
           majorName: null,
           programCode: "BSCS",

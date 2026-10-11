@@ -257,7 +257,7 @@ function buildContexts(
   const grouped = new Map<string, ContextSource[]>();
   for (const assignment of assignments) {
     if (
-      assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
+      assignment.course.course_scope === "PROFESSIONAL" &&
       assignment.course.program_id !== assignment.program_id
     ) {
       continue;
@@ -544,14 +544,14 @@ type TotalsContext = {
 /**
  * First assignment of each Course/Program pair wins, so every context is
  * classified once no matter how many sections or year levels it spans.
- * Program-specific assignments whose Course belongs to another Program are
+ * Professional assignments whose Course belongs to another Program are
  * skipped, matching the canonical live projection's grouping rule.
  */
 function collectTotalsContexts(assignments: TotalsContextInput[]): TotalsContext[] {
   const contexts = new Map<string, TotalsContext>();
   for (const assignment of assignments) {
     if (
-      assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
+      assignment.course.course_scope === "PROFESSIONAL" &&
       assignment.course.program_id !== assignment.program_id
     ) {
       continue;

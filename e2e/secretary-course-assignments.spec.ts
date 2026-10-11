@@ -35,12 +35,9 @@ test("secretary assigns both course scopes and receiving portals show the assign
   await expectNoHorizontalOverflow(page);
 
   await loginAs(page, E2E_CONTRACT.demoPh.email);
-  await page.goto(`/program-head/programs/${data.bsit.id}/dashboard`);
-  const summary = page
-    .locator("[data-slot=card]")
-    .filter({ has: page.getByText("Course assignments", { exact: true }) });
+  await page.goto(`/program-head/programs/${data.bsit.id}/course-assignments`);
   for (const code of contract.courseCodes)
-    await expect(summary.getByText(new RegExp(`^${code} ·`))).toBeVisible();
+    await expect(page.getByText(code, { exact: true }).first()).toBeVisible();
 
   await loginAs(page, E2E_CONTRACT.demoGenEd.email);
   await page.goto("/gen-ed-coordinator/course-assignments?q=GEUS");

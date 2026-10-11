@@ -14,7 +14,11 @@ import type {
   RosterServiceResult,
   ScopedRosterCandidate,
 } from "../types";
-import { matchRosterName, type RosterNameCandidate, type RosterNameMatch } from "./course-roster-name-match";
+import {
+  matchRosterName,
+  type RosterNameCandidate,
+  type RosterNameMatch,
+} from "./course-roster-name-match";
 import { loadScopedRosterCandidates } from "./course-roster-candidate-scope";
 import { normalizeRosterName } from "./course-roster-csv";
 
@@ -71,7 +75,7 @@ function previewFailure(
 }
 
 function isProgramMismatchedMember(assignment: AssignmentScope, student: ExistingMemberStudent) {
-  if (assignment.courseScope !== CourseScope.PROGRAM_SPECIFIC) return false;
+  if (assignment.courseScope !== CourseScope.PROFESSIONAL) return false;
   const profileProgramId = student.student_profile?.program_id;
   const placementProgramId = student.enrollments[0]?.program_id;
   if (profileProgramId && profileProgramId !== assignment.programId) return true;
@@ -126,7 +130,10 @@ function toResolution(match: RosterNameMatch): CourseRosterPreviewResolution {
     case "SUGGESTED_MATCH":
       return {
         status: "SUGGESTED_MATCH",
-        reason: match.reason as Extract<CourseRosterPreviewResolution, { status: "SUGGESTED_MATCH" }>["reason"],
+        reason: match.reason as Extract<
+          CourseRosterPreviewResolution,
+          { status: "SUGGESTED_MATCH" }
+        >["reason"],
         candidateIds: match.matchedIds,
       };
     case "AMBIGUOUS":
@@ -251,7 +258,7 @@ export async function previewCourseRoster(
       prisma.courseAssignmentMembership.findMany({
         where: {
           course_assignment_id: assignment.assignmentId,
-          ...(assignment.courseScope === CourseScope.PROGRAM_SPECIFIC
+          ...(assignment.courseScope === CourseScope.PROFESSIONAL
             ? {
                 student: {
                   OR: [
@@ -318,7 +325,10 @@ export async function previewCourseRoster(
     const existingMemberCandidates = memberships
       .filter((membership) => !isProgramMismatchedMember(assignment, membership.student))
       .map((membership) => toExistingMemberCandidate(membership.student));
-    const candidatesByStudentId = new Map<string, CourseRosterPreviewCandidate | ScopedRosterCandidate>(
+    const candidatesByStudentId = new Map<
+      string,
+      CourseRosterPreviewCandidate | ScopedRosterCandidate
+    >(
       [...candidates, ...existingMemberCandidates].map((candidate) => [candidate.userId, candidate])
     );
     const selectable = candidates.filter((candidate) => candidate.selectable);
@@ -344,8 +354,7 @@ export async function previewCourseRoster(
           row.resolution.status === "INVALID_NAME"
       ).length,
       ineligible: rows.filter(
-        (row) =>
-          row.disposition === "INELIGIBLE" || row.disposition === "OTHER_SECTION_CONFLICT"
+        (row) => row.disposition === "INELIGIBLE" || row.disposition === "OTHER_SECTION_CONFLICT"
       ).length,
     };
 
@@ -377,7 +386,9 @@ export async function previewCourseRoster(
       return "READY_CREATE";
     }
 
-    function classifyPreviewRow(row: PreviewCourseRosterInput["rows"][number]): CourseRosterPreviewRow {
+    function classifyPreviewRow(
+      row: PreviewCourseRosterInput["rows"][number]
+    ): CourseRosterPreviewRow {
       const normalizedName = normalizeRosterName(row.submittedName);
       if (
         row.status === "INVALID_NAME" ||

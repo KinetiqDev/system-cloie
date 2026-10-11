@@ -45,11 +45,11 @@ export async function listProgramHeadCourses(
 
   const selectedProgram = contextResult.data.selectedProgram;
 
-  // Fetch PH-scoped courses (program-specific within assigned programs)
+  // Fetch PH-scoped courses (Professional within assigned programs)
   const programCourses = await prisma.course.findMany({
     where: {
       program_id: selectedProgram.id,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
     },
     include: {
       major: { select: { id: true, name: true } },

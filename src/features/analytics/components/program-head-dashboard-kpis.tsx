@@ -7,17 +7,18 @@ type Kpi = { label: string; value: string; detail: string; href: string };
 /**
  * Three headline figures for the period (spec §13.2–§13.4). Completion uses
  * the raw assignment denominator (resolved §5.12); respondents are
- * person-level (§13.3). Each figure links to the view that explains it.
+ * person-level (§13.3). Each figure links to the view that explains it;
+ * participation figures open Responses in the same period scope.
  */
 export function ProgramHeadDashboardKpis({
   participation,
   activeEvaluations,
-  stakeholdersHref,
+  responsesHref,
   activeEvaluationsHref,
 }: {
   participation: ParticipationSummary;
   activeEvaluations: { total: number; closingWithin7Days: number };
-  stakeholdersHref: string;
+  responsesHref: string;
   activeEvaluationsHref: string;
 }) {
   const { completionRate, submitted, assigned, respondents } = participation;
@@ -29,13 +30,13 @@ export function ProgramHeadDashboardKpis({
         completionRate === null
           ? "No evaluations assigned yet"
           : `${submitted.toLocaleString()} of ${assigned.toLocaleString()} submitted`,
-      href: stakeholdersHref,
+      href: responsesHref,
     },
     {
       label: "Respondents",
       value: respondents.total.toLocaleString(),
       detail: `${respondents.complete.toLocaleString()} complete · ${respondents.partial.toLocaleString()} partial · ${respondents.notStarted.toLocaleString()} not started`,
-      href: stakeholdersHref,
+      href: responsesHref,
     },
     {
       label: "Active evaluations",

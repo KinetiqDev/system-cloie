@@ -82,7 +82,7 @@ describe("Course Import Services", () => {
       }
     });
 
-    it("previews Secretary General Education and Program-Specific rows successfully", async () => {
+    it("previews Secretary General Education and Professional rows successfully", async () => {
       vi.mocked(resolveAuthSession).mockResolvedValue({
         userId: "sec-1",
         activeRole: ROLES.SECRETARY,
@@ -122,7 +122,7 @@ describe("Course Import Services", () => {
             input: {
               course_code: "IT 101",
               course_title: "Intro to Computing",
-              course_scope: "PROGRAM_SPECIFIC",
+              course_scope: "PROFESSIONAL",
               program_code: "BSIT",
               major_name: "Software Engineering",
               year_level: "FIRST_YEAR",
@@ -467,7 +467,7 @@ describe("Course Import Services", () => {
             input: {
               course_code: "IT 101",
               course_title: "Intro to Computing",
-              course_scope: "PROGRAM_SPECIFIC",
+              course_scope: "PROFESSIONAL",
               program_code: "BSIT",
               major_name: "",
               year_level: "FIRST_YEAR",

@@ -135,7 +135,7 @@ describe("Dean Course Assignments route", () => {
               updatedAt: new Date("2026-01-01"),
               courseCode: "CS101",
               courseTitle: "Intro to Computing",
-              courseScope: "PROGRAM_SPECIFIC",
+              courseScope: "PROFESSIONAL",
               facultyName: "Dean Faculty",
             },
           ],

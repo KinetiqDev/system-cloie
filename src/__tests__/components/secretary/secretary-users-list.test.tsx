@@ -101,12 +101,17 @@ function renderList(overrides: Partial<ListProps> = {}) {
   );
 }
 
-function selectOption(comboboxName: string, optionName: string) {
-  fireEvent.click(screen.getByRole("combobox", { name: comboboxName }));
-  const option = screen.getByRole("option", { name: optionName });
-  // Base UI commits the highlighted item, so highlight before clicking.
-  fireEvent.mouseMove(option);
-  fireEvent.click(option);
+/**
+ * Opens a column funnel or the toolbar's account-filter menu. A trigger's
+ * accessible name names its active value too, so match on the leading label.
+ */
+function openFilter(label: string) {
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${label}`) }));
+}
+
+function pickOption(label: string, optionName: string | RegExp) {
+  openFilter(label);
+  fireEvent.click(screen.getByRole("radio", { name: optionName }));
 }
 
 describe("SecretaryUsersList", () => {
@@ -151,22 +156,107 @@ describe("SecretaryUsersList", () => {
   it("gives server-side sort controls accessible names", () => {
     renderList();
 
+    expect(screen.getByRole("button", { name: "Sort by Name, currently asc" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Sort by name, currently ascending" })
+      screen.getByRole("button", { name: "Sort by Email, currently unsorted" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Sort by email, currently unsorted" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Sort by status, currently unsorted" })
+      screen.getByRole("button", { name: "Sort by Status, currently unsorted" })
     ).toBeInTheDocument();
   });
 
-  it("offers the General Education Coordinator role filter", () => {
+  it("offers the General Education Coordinator role filter under the Role column", () => {
     renderList();
 
-    fireEvent.click(screen.getByRole("combobox", { name: "Filter by role" }));
-    expect(screen.getByRole("option", { name: "Gen Ed Coordinator" })).toBeInTheDocument();
+    openFilter("Filter Role");
+    expect(screen.getByRole("radio", { name: "Gen Ed Coordinator" })).toBeInTheDocument();
+  });
+
+  it("gives every filterable column a funnel and the spanning search its own field", () => {
+    renderList();
+
+    for (const column of ["Role", "Program", "Year & Section"]) {
+      expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("searchbox", { name: "Search users" })).toBeInTheDocument();
+    // Email and Actions show no narrowing of their own.
+    expect(screen.queryByRole("button", { name: /^Filter Email/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Filter Actions/ })).toBeNull();
+  });
+
+  it("opens the columnless account filters from the toolbar and applies them immediately", () => {
+    replaceMock.mockClear();
+    renderList();
+
+    expect(screen.queryByRole("button", { name: /^Filter Term placement/ })).toBeNull();
+    pickOption("Account filters", "Pending verification");
+
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?verification=pending");
+  });
+
+  it("clears an applied account filter from its toolbar chip", () => {
+    replaceMock.mockClear();
+    renderList({
+      query: { page: 1, verification: "pending", sort: "name", direction: "asc" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove filter Verification: Pending verification" })
+    );
+
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/users");
+  });
+
+  it("navigates to the Student placement URL and keeps Program alongside it", () => {
+    replaceMock.mockClear();
+    renderList({
+      query: { page: 1, role: SystemRole.STUDENT, program: "BSCE", sort: "name", direction: "asc" },
+    });
+
+    pickOption("Filter Year & Section", "3rd Year");
+
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/secretary/users?role=STUDENT&program=BSCE&yearLevel=THIRD_YEAR"
+    );
+  });
+
+  it("clears the Major when the Program it belongs to changes", () => {
+    replaceMock.mockClear();
+    renderList({
+      query: {
+        page: 1,
+        role: SystemRole.STUDENT,
+        program: "BSCE",
+        major: "Structural Engineering",
+        sort: "name",
+        direction: "asc",
+      },
+    });
+
+    // A Program option reads as its code with the name beneath it.
+    pickOption("Filter Program", /^BSEE/);
+
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?role=STUDENT&program=BSEE");
+  });
+
+  it("clears the placement facets when the list switches to Students awaiting placement", () => {
+    replaceMock.mockClear();
+    renderList({
+      query: {
+        page: 1,
+        role: SystemRole.STUDENT,
+        yearLevel: YearLevel.THIRD_YEAR,
+        section: StudentSection.MORNING,
+        sort: "name",
+        direction: "asc",
+      },
+    });
+
+    pickOption("Account filters", "Awaiting term placement");
+
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/secretary/users?role=STUDENT&state=awaiting-term-placement"
+    );
   });
 
   it("navigates to the server-filtered search URL after debounce", async () => {
@@ -202,9 +292,20 @@ describe("SecretaryUsersList", () => {
 
   it("clears the search box along with the rest of the filters", () => {
     replaceMock.mockClear();
-    renderList({ query: { page: 1, q: "John", sort: "name", direction: "asc" } });
+    renderList({
+      query: {
+        page: 1,
+        q: "John",
+        role: SystemRole.STUDENT,
+        program: "BSCE",
+        state: "awaiting-term-placement",
+        verification: "pending",
+        sort: "name",
+        direction: "asc",
+      },
+    });
 
-    fireEvent.click(screen.getByRole("button", { name: /clear all filters/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
     act(() => {
       vi.advanceTimersByTime(300);
     });
@@ -216,13 +317,14 @@ describe("SecretaryUsersList", () => {
     expect(screen.getByPlaceholderText(/search by name or email/i)).toHaveValue("");
   });
 
-  it("reveals the Student filters only while the list is filtered to Students", () => {
+  it("offers the placement facets only to the Student records they describe", () => {
     const { unmount } = renderList({
       query: { page: 1, role: SystemRole.STUDENT, sort: "name", direction: "asc" },
     });
 
-    expect(screen.getByRole("combobox", { name: "Filter by year level" })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Filter by section" })).toBeInTheDocument();
+    openFilter("Filter Year & Section");
+    expect(screen.getByRole("radio", { name: "All year levels" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "All sections" })).toBeInTheDocument();
     expect(
       screen.getByText(
         /Year level and section come from each Student's placement in 2026-2027 — 1st Semester — 2nd Term/
@@ -232,8 +334,11 @@ describe("SecretaryUsersList", () => {
 
     renderList({ query: { page: 1, role: SystemRole.FACULTY, sort: "name", direction: "asc" } });
 
-    expect(screen.queryByRole("combobox", { name: "Filter by year level" })).toBeNull();
-    expect(screen.queryByRole("combobox", { name: "Filter by section" })).toBeNull();
+    // The funnel stays so the column never silently loses its filter; it reports
+    // why the placement facets do not apply here.
+    expect(
+      screen.getByRole("button", { name: "Filter Year & Section, unavailable" })
+    ).toBeDisabled();
   });
 
   it("offers the major filter only for a Program that has majors", () => {
@@ -241,14 +346,15 @@ describe("SecretaryUsersList", () => {
       query: { page: 1, role: SystemRole.STUDENT, program: "BSCE", sort: "name", direction: "asc" },
     });
 
-    expect(screen.getByRole("combobox", { name: "Filter by major" })).toBeInTheDocument();
+    openFilter("Filter Major");
+    expect(screen.getByRole("radio", { name: "Structural Engineering" })).toBeInTheDocument();
     unmount();
 
     renderList({
       query: { page: 1, role: SystemRole.STUDENT, program: "BSEE", sort: "name", direction: "asc" },
     });
 
-    expect(screen.queryByRole("combobox", { name: "Filter by major" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Filter Major, unavailable" })).toBeDisabled();
   });
 
   it("explains why placement filters are unavailable without an active Academic Period", () => {
@@ -257,12 +363,16 @@ describe("SecretaryUsersList", () => {
       query: { page: 1, role: SystemRole.STUDENT, sort: "name", direction: "asc" },
     });
 
+    // The funnel stays in the header but is disabled, so the reason is named
+    // beside the table rather than buried inside a popover that cannot open.
+    expect(
+      screen.getByRole("button", { name: "Filter Year & Section, unavailable" })
+    ).toBeDisabled();
     expect(
       screen.getByText(
         /No active Academic Period is set, so year level and section cannot be filtered/i
       )
     ).toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Filter by year level" })).toBeNull();
   });
 
   it("drops placement filters while listing Students awaiting placement", () => {
@@ -277,20 +387,11 @@ describe("SecretaryUsersList", () => {
     });
 
     expect(
+      screen.getByRole("button", { name: "Filter Year & Section, unavailable" })
+    ).toBeDisabled();
+    expect(
       screen.getByText(/Students awaiting placement have no year level or section yet/i)
     ).toBeInTheDocument();
-    expect(screen.queryByRole("combobox", { name: "Filter by year level" })).toBeNull();
-  });
-
-  it("navigates with the Student placement filters", () => {
-    replaceMock.mockClear();
-    renderList({
-      query: { page: 1, role: SystemRole.STUDENT, sort: "name", direction: "asc" },
-    });
-
-    selectOption("Filter by year level", "3rd Year");
-
-    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?role=STUDENT&yearLevel=THIRD_YEAR");
   });
 
   it("clears role-scoped refinements when the role changes", () => {
@@ -299,6 +400,7 @@ describe("SecretaryUsersList", () => {
       query: {
         page: 1,
         role: SystemRole.STUDENT,
+        program: "BSCE",
         major: "Structural Engineering",
         yearLevel: YearLevel.THIRD_YEAR,
         section: StudentSection.MORNING,
@@ -308,9 +410,10 @@ describe("SecretaryUsersList", () => {
       },
     });
 
-    selectOption("Filter by role", "Faculty");
+    pickOption("Filter Role", "Faculty");
 
-    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?role=FACULTY");
+    // Program is the one refinement every role carries, so it survives.
+    expect(replaceMock).toHaveBeenCalledWith("/secretary/users?role=FACULTY&program=BSCE");
   });
 
   it("supports page-bound selection across desktop and mobile representations", () => {

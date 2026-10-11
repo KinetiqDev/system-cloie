@@ -93,7 +93,6 @@ type DashboardLinks = {
   responses: string;
   responsesActiveCourse: string;
   analyticsOutcomes: string;
-  analyticsStakeholders: string;
   analyticsFeedback: string;
 };
 
@@ -654,7 +653,7 @@ async function listActiveEvaluations(
     }),
     prisma.courseBoundEvaluation.findMany({
       where: {
-        course_assignment: { program_id: programId, course: { course_scope: "PROGRAM_SPECIFIC" } },
+        course_assignment: { program_id: programId, course: { course_scope: "PROFESSIONAL" } },
         status: DeploymentStatus.ACTIVE,
         term_instance_id: termInstanceId,
       },
@@ -856,7 +855,6 @@ function buildDashboardLinks(programId: string, filters: DashboardPeriodFilters)
       status: DeploymentStatus.ACTIVE,
     }),
     analyticsOutcomes: buildAnalyticsUrl(programId, { ...filters, tab: "outcomes" }),
-    analyticsStakeholders: buildAnalyticsUrl(programId, { ...filters, tab: "stakeholders" }),
     analyticsFeedback: buildAnalyticsUrl(programId, { ...filters, tab: "qualitative" }),
   };
 }

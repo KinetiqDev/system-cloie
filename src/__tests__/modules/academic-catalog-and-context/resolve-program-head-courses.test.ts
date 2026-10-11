@@ -27,7 +27,7 @@ function course(overrides: Record<string, unknown> = {}) {
     id: "55555555-5555-4555-8555-555555555555",
     code: "BSED-101",
     title: "Foundations",
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
     program_id: BSED_ID,
     major_id: null,
     default_year_level: null,
@@ -76,13 +76,11 @@ describe("resolve-program-head-courses", () => {
       },
     });
     expect(result.success && result.data.courses).toHaveLength(1);
-    expect(result.success && result.data.courses[0]?.course_scope).toBe(
-      CourseScope.PROGRAM_SPECIFIC
-    );
+    expect(result.success && result.data.courses[0]?.course_scope).toBe(CourseScope.PROFESSIONAL);
     expect(result.success && "isReadOnly" in (result.data.courses[0] ?? {})).toBe(false);
     expect(courseFindManyMock).toHaveBeenCalledTimes(1);
     expect(courseFindManyMock.mock.calls[0]?.[0]).toMatchObject({
-      where: { program_id: BSED_ID, course_scope: CourseScope.PROGRAM_SPECIFIC },
+      where: { program_id: BSED_ID, course_scope: CourseScope.PROFESSIONAL },
     });
     expect(courseFindManyMock.mock.calls[0]?.[0].include.course_assignments).toMatchObject({
       where: { program_id: BSED_ID },

@@ -12,7 +12,6 @@ import {
   Pencil,
   Plus,
   Power,
-  Search,
   Trash2,
   Users,
 } from "lucide-react";
@@ -22,7 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BulkActionBar } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +33,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -42,14 +43,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -163,6 +156,29 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
     setSearchTerm(value);
     setCurrentPage(1);
   };
+
+  const clearFilters = () => {
+    setStatusFilter("__all__");
+    setSearchTerm("");
+    setCurrentPage(1);
+  };
+
+  const facets = {
+    status: [
+      {
+        id: "status",
+        label: "Status",
+        value: statusFilter === "__all__" ? null : statusFilter,
+        onChange: (value: string | null) => handleStatusChange(value),
+        allLabel: "All statuses",
+        options: [
+          { id: "active", label: "Active" },
+          { id: "inactive", label: "Inactive" },
+        ],
+      } satisfies FacetDef,
+    ],
+  };
+  const allFacets = Object.values(facets).flat();
 
   // ---- Action handlers -----------------------------------------------------
   const handleToggleActive = (programId: string, currentActive: boolean) => {
@@ -344,49 +360,32 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
         />
       </div>
 
-      {/* Filter bar — stacks on mobile, status left and search right on sm+ */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex min-w-0 flex-col gap-2 sm:w-40">
-          <Label htmlFor="program-status-filter">Status</Label>
-          <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger id="program-status-filter" className="w-full">
-              <SelectValue>
-                {statusFilter === "__all__"
-                  ? "All Statuses"
-                  : statusFilter === "active"
-                    ? "Active"
-                    : "Inactive"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="__all__">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+      <TableToolbar
+        search={{
+          id: "program-search",
+          label: "Search Programs",
+          placeholder: "Search by code or name…",
+          value: searchTerm,
+          onChange: handleSearchChange,
+        }}
+        facets={allFacets}
+        onClearAll={clearFilters}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{filteredPrograms.length}</span>{" "}
+            {filteredPrograms.length === 1 ? "program" : "programs"}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearFilters}
+            summary="Show results"
+          />
         </div>
-
-        <div className="flex min-w-0 flex-col gap-2 sm:ml-auto sm:w-80">
-          <Label htmlFor="program-search">Search Programs</Label>
-          <div className="relative">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="program-search"
-              name="program-search"
-              placeholder="Search by code or name…"
-              value={searchTerm}
-              onChange={(event) => handleSearchChange(event.target.value)}
-              className="w-full pl-9"
-              autoComplete="off"
-            />
-          </div>
-        </div>
-      </div>
+      </TableToolbar>
 
       <BulkActionBar
         selectedCount={selection.selectedCount}
@@ -473,7 +472,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
       {/* ---- Desktop table (hidden below md) ------------------------------ */}
       <div className="hidden md:block">
         <div className="overflow-x-auto rounded-lg border">
-          <Table className="min-w-[900px]">
+          <Table label="Programs" className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
@@ -491,7 +490,7 @@ export function SecretaryProgramsList({ programs, kpi }: SecretaryProgramsListPr
                 <TableHead className="text-right">POs</TableHead>
                 <TableHead className="text-right">Students</TableHead>
                 <TableHead className="text-right">Faculty</TableHead>
-                <TableHead>Status</TableHead>
+                <FilterableHead label="Status" facets={facets.status} />
                 <TableHead className="w-12">Actions</TableHead>
               </TableRow>
             </TableHeader>

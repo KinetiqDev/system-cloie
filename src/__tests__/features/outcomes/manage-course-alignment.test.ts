@@ -51,7 +51,7 @@ function course(overrides: Record<string, unknown> = {}) {
     id: COURSE_ID,
     code: "CS-101",
     title: "Computing",
-    course_scope: "PROGRAM_SPECIFIC",
+    course_scope: "PROFESSIONAL",
     ge_alignment_mode: "ILO",
     program_id: PROGRAM_ID,
     program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science", is_active: true },
@@ -355,7 +355,7 @@ describe("Course alignment service", () => {
     });
   });
 
-  it("conceals unauthorized and non-Program-specific Course URLs", async () => {
+  it("conceals unauthorized and non-Professional Course URLs", async () => {
     const { readCourseAlignment } =
       await import("@/features/outcomes/services/manage-course-alignment");
     mocks.assignment.findFirst.mockResolvedValue(null);
@@ -429,7 +429,7 @@ describe("Course alignment service", () => {
     expect(review).toMatchObject({
       success: true,
       data: {
-        scope: "PROGRAM_SPECIFIC",
+        scope: "PROFESSIONAL",
         geAlignmentMode: "ILO",
         before: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: null }] }],
         after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] }],
@@ -729,7 +729,7 @@ describe("Course alignment service", () => {
 
     const forgedReview = signedReview(
       {
-        scope: "PROGRAM_SPECIFIC" as const,
+        scope: "PROFESSIONAL" as const,
         geAlignmentMode: "ILO" as const,
         courseId: COURSE_ID,
         before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -800,7 +800,7 @@ describe("Course alignment service", () => {
 
     const forgedReview = signedReview(
       {
-        scope: "PROGRAM_SPECIFIC" as const,
+        scope: "PROFESSIONAL" as const,
         geAlignmentMode: "ILO" as const,
         courseId: COURSE_ID,
         before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -997,7 +997,7 @@ describe("Course alignment service", () => {
       mocks.ciloMapping.deleteMany.mockResolvedValue({ count: 1 });
     });
 
-    it("prepares a review for partial Program-specific progress", async () => {
+    it("prepares a review for partial Professional progress", async () => {
       mocks.course.findFirst.mockResolvedValue(emptyCourse());
       mocks.po.findMany.mockResolvedValue([
         { id: GO_ID, code: "PO-1", description: "Think critically" },
@@ -1188,7 +1188,7 @@ describe("Course alignment service", () => {
         await import("@/features/outcomes/services/manage-course-alignment");
       const crafted = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1214,7 +1214,7 @@ describe("Course alignment service", () => {
         await import("@/features/outcomes/services/manage-course-alignment");
       const duplicate = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1242,7 +1242,7 @@ describe("Course alignment service", () => {
 
       const crossProgram = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1266,7 +1266,7 @@ describe("Course alignment service", () => {
 
       const nullManifestation = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1286,7 +1286,7 @@ describe("Course alignment service", () => {
 
       const foreignCilo = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1310,7 +1310,7 @@ describe("Course alignment service", () => {
 
       const inactiveGo = signedReview(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],

@@ -44,7 +44,7 @@ import type { IdentifiedCourseEvaluationDetail, IdentifiedSubmittedRespondentRow
 // response bodies are never fetched.
 //
 // Authorization: GEN_ED_COORDINATOR role plus a General Education Course —
-// there is no selected-Program context, so a Program-specific evaluation or
+// there is no selected-Program context, so a Professional evaluation or
 // a guessed evaluation id resolves to null.
 // ---------------------------------------------------------------------------
 

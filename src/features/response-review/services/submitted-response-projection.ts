@@ -48,7 +48,7 @@ type SubmittedResponseBindingScope = {
   /**
    * Typed alignment layer for the owning Course (ADR 0035). It is decided
    * by Course scope before the projection runs, so a General Education answer
-   * can never receive PO rows and a Program-specific answer can never
+   * can never receive PO rows and a Professional answer can never
    * receive ILO rows, whatever the caller happened to load.
    */
   layer: ReviewAlignmentLayer;

@@ -1,6 +1,3 @@
-import { ProgramAssignmentSummary } from "@/features/course-assignments/components/program-assignment-summary";
-import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { notFound } from "next/navigation";
 import { BarChart3 } from "lucide-react";
 import Link from "next/link";
@@ -79,14 +76,10 @@ export default async function SelectedProgramDashboardPage({
         </div>
       </header>
 
-      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-        <ProgramAssignmentSummary programId={programId} filters={periodFilters} />
-      </Suspense>
-
       <ProgramHeadDashboardKpis
         participation={dashboard.participation}
         activeEvaluations={dashboard.activeEvaluations}
-        stakeholdersHref={dashboard.links.analyticsStakeholders}
+        responsesHref={dashboard.links.responses}
         activeEvaluationsHref={dashboard.links.responsesActiveCourse}
       />
 
@@ -94,7 +87,7 @@ export default async function SelectedProgramDashboardPage({
         <div className="flex min-w-0 flex-col gap-6 lg:order-2">
           <ProgramHeadStakeholderProgress
             participation={dashboard.participation}
-            stakeholdersHref={dashboard.links.analyticsStakeholders}
+            responsesHref={dashboard.links.responses}
           />
           <ProgramHeadNeedsAttention items={dashboard.needsAttention} />
         </div>

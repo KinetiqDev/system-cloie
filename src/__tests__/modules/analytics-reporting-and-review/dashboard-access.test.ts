@@ -335,7 +335,7 @@ describe("analytics dashboard access", () => {
     ];
     for (const queryMock of courseScoped) {
       expect(queryMock.mock.calls.length).toBeGreaterThan(0);
-      expect(JSON.stringify(queryMock.mock.calls)).toContain("PROGRAM_SPECIFIC");
+      expect(JSON.stringify(queryMock.mock.calls)).toContain("PROFESSIONAL");
     }
 
     // The active-evaluation KPI is the one place the dashboard queries
@@ -343,7 +343,7 @@ describe("analytics dashboard access", () => {
     expect(prismaMock.courseBoundEvaluation.findMany.mock.calls[0][0].where).toMatchObject({
       course_assignment: {
         program_id: "program-bsit",
-        course: { course_scope: "PROGRAM_SPECIFIC" },
+        course: { course_scope: "PROFESSIONAL" },
       },
     });
   });

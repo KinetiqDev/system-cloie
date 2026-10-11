@@ -11,11 +11,15 @@ import {
   getSemesterLabel,
   getTermLabel,
 } from "@/lib/constants/academic";
+import { SCHEDULE_FILTER_ALL, matchesScheduleFilters } from "./course-schedule-filters";
 import {
-  CourseScheduleFilterControls,
-  SCHEDULE_FILTER_ALL,
-  matchesScheduleFilters,
-} from "./course-schedule-filters";
+  courseArchiveStatusFacet,
+  courseMajorFacet,
+  courseScheduleFacets,
+} from "./course-catalog-facets";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
 import {
   AlertCircle,
   Archive,
@@ -26,8 +30,6 @@ import {
   MoreVertical,
   Plus,
   Power,
-  RotateCcw,
-  Search,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -355,7 +357,7 @@ function submitCourseForm({
 }) {
   const courseType = majorId ? "major-specific" : "program-wide";
 
-  formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
+  formData.set("course_scope", CourseScope.PROFESSIONAL);
   formData.set("programId", programId);
   formData.set("course_type", courseType);
 
@@ -559,6 +561,60 @@ export function ProgramHeadCoursesCatalog({
     `${program.id}:${statusFilter}:${search}:${majorFilter}:${yearLevelFilter}:${semesterFilter}:${termFilter}:${safePage}`
   );
 
+  const setScheduleFacet = (key: "yearLevel" | "semester" | "term", value: string | null) => {
+    const next = value ?? SCHEDULE_FILTER_ALL;
+    if (key === "yearLevel") setYearLevelFilter(next);
+    if (key === "semester") {
+      setSemesterFilter(next);
+      if (next === AcademicSemester.SUMMER) setTermFilter(SCHEDULE_FILTER_ALL);
+    }
+    if (key === "term") setTermFilter(next);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setStatusFilter(SCHEDULE_FILTER_ALL);
+    setYearLevelFilter(SCHEDULE_FILTER_ALL);
+    setSemesterFilter(SCHEDULE_FILTER_ALL);
+    setTermFilter(SCHEDULE_FILTER_ALL);
+    setMajorFilter("all");
+    setSearch("");
+    setCurrentPage(1);
+  };
+
+  const scheduleFacets = courseScheduleFacets(
+    { yearLevel: yearLevelFilter, semester: semesterFilter, term: termFilter },
+    setScheduleFacet,
+    SCHEDULE_FILTER_ALL
+  );
+  const facets = {
+    major: [
+      courseMajorFacet(
+        majorFilter,
+        (value) => {
+          setMajorFilter(value ?? "all");
+          setCurrentPage(1);
+        },
+        "all",
+        majors
+      ),
+    ],
+    yearLevel: [scheduleFacets.yearLevel],
+    semester: [scheduleFacets.semester],
+    term: [scheduleFacets.term],
+    status: [
+      courseArchiveStatusFacet(
+        statusFilter,
+        (value) => {
+          setStatusFilter(value ?? SCHEDULE_FILTER_ALL);
+          setCurrentPage(1);
+        },
+        SCHEDULE_FILTER_ALL
+      ),
+    ],
+  };
+  const allFacets = Object.values(facets).flat();
+
   function requestSingleStatusChange(course: ProgramHeadCourseItem) {
     setStatusChange({
       courses: [{ id: course.id, code: course.code }],
@@ -665,116 +721,35 @@ export function ProgramHeadCoursesCatalog({
         />
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        {/* Status filter */}
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v ?? SCHEDULE_FILTER_ALL);
+      <TableToolbar
+        search={{
+          id: "course-search",
+          label: "Search courses",
+          placeholder: "Search by code or title...",
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
             setCurrentPage(1);
-          }}
-        >
-          <SelectTrigger aria-label="Filter by course status" className="w-full md:w-[160px]">
-            <SelectValue>
-              {statusFilter === SCHEDULE_FILTER_ALL
-                ? "All Statuses"
-                : statusFilter === "active"
-                  ? "Active"
-                  : "Archived"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={SCHEDULE_FILTER_ALL}>All Statuses</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="archived">Archived</SelectItem>
-          </SelectContent>
-        </Select>
-        <CourseScheduleFilterControls
-          yearLevel={yearLevelFilter}
-          semester={semesterFilter}
-          term={termFilter}
-          onYearLevelChange={(v) => {
-            setYearLevelFilter(v);
-            setCurrentPage(1);
-          }}
-          onSemesterChange={(v) => {
-            setSemesterFilter(v);
-            setCurrentPage(1);
-          }}
-          onTermChange={(v) => {
-            setTermFilter(v);
-            setCurrentPage(1);
-          }}
-        />
-
-        {/* Major filter */}
-        {majors.length > 0 && (
-          <Select
-            value={majorFilter}
-            onValueChange={(v) => {
-              setMajorFilter(v ?? "all");
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger aria-label="Filter by major" className="w-full md:w-[180px]">
-              <SelectValue>
-                {majorFilter === "all"
-                  ? "All Majors"
-                  : (majors.find((m) => m.id === majorFilter)?.name ?? "All Majors")}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Majors</SelectItem>
-              {majors.map((major) => (
-                <SelectItem key={major.id} value={major.id}>
-                  {major.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Search */}
-        <div className="relative w-full md:ml-auto md:max-w-xs">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-          <Input
-            aria-label="Search courses"
-            className="pl-8"
-            placeholder="Search by code or title..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
+          },
+        }}
+        facets={allFacets}
+        onClearAll={clearFilters}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{filteredCourses.length}</span>{" "}
+            {filteredCourses.length === 1 ? "course" : "courses"}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearFilters}
+            summary="Show results"
           />
         </div>
-
-        {(statusFilter !== SCHEDULE_FILTER_ALL ||
-          yearLevelFilter !== SCHEDULE_FILTER_ALL ||
-          semesterFilter !== SCHEDULE_FILTER_ALL ||
-          termFilter !== SCHEDULE_FILTER_ALL ||
-          majorFilter !== "all" ||
-          search) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setStatusFilter(SCHEDULE_FILTER_ALL);
-              setYearLevelFilter(SCHEDULE_FILTER_ALL);
-              setSemesterFilter(SCHEDULE_FILTER_ALL);
-              setTermFilter(SCHEDULE_FILTER_ALL);
-              setMajorFilter("all");
-              setSearch("");
-              setCurrentPage(1);
-            }}
-          >
-            <RotateCcw aria-hidden="true" className="size-3.5" />
-            Reset
-          </Button>
-        )}
-      </div>
+      </TableToolbar>
 
       <BulkActionBar
         selectedCount={selection.selectedCount}
@@ -803,7 +778,7 @@ export function ProgramHeadCoursesCatalog({
 
       {/* Data Table */}
       <div className="overflow-x-auto rounded-lg border">
-        <Table className="min-w-0 md:min-w-[900px]">
+        <Table label="Program courses" className="min-w-0 md:min-w-[900px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -816,11 +791,29 @@ export function ProgramHeadCoursesCatalog({
               </TableHead>
               <TableHead className="w-full md:w-auto">Course</TableHead>
               <TableHead className="hidden md:table-cell">Course Title</TableHead>
-              {majors.length > 0 && <TableHead className="hidden md:table-cell">Major</TableHead>}
-              <TableHead className="hidden md:table-cell">Year Level</TableHead>
-              <TableHead className="hidden md:table-cell">Semester</TableHead>
-              <TableHead className="hidden md:table-cell">Term</TableHead>
-              <TableHead className="hidden md:table-cell">Status</TableHead>
+              {majors.length > 0 && (
+                <FilterableHead
+                  label="Major"
+                  facets={facets.major}
+                  className="hidden md:table-cell"
+                />
+              )}
+              <FilterableHead
+                label="Year Level"
+                facets={facets.yearLevel}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead
+                label="Semester"
+                facets={facets.semester}
+                className="hidden md:table-cell"
+              />
+              <FilterableHead label="Term" facets={facets.term} className="hidden md:table-cell" />
+              <FilterableHead
+                label="Status"
+                facets={facets.status}
+                className="hidden md:table-cell"
+              />
               <TableHead className="hidden md:table-cell">Last Updated</TableHead>
               <TableHead className="w-12 text-right">Actions</TableHead>
             </TableRow>

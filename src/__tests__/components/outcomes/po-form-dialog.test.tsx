@@ -148,6 +148,8 @@ describe("POFormDialog", () => {
     expect(screen.getByLabelText("PO Code")).toHaveValue("PO-1");
     expect(screen.getByLabelText("Description")).toHaveValue("Program Outcome one");
 
+    expect(screen.getByLabelText("Classification")).toHaveTextContent("Core");
+    expect(screen.getByLabelText("Classification")).not.toHaveTextContent("CORE");
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Revised outcome" },
     });
@@ -191,6 +193,61 @@ describe("POFormDialog", () => {
 
     await act(async () => {
       resolveAction({ success: true });
+    });
+  });
+
+  it("normalizes classification labels in edit mode for Core and Professional", () => {
+    const { unmount } = render(
+      <POFormDialog
+        mode="edit"
+        programId="11111111-1111-4111-8111-111111111111"
+        po={makePO({ classification: "PROFESSIONAL" })}
+        open
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    const select = screen.getByLabelText("Classification");
+    expect(select).toHaveTextContent("Professional");
+    expect(select).not.toHaveTextContent("PROFESSIONAL");
+
+    unmount();
+
+    render(
+      <POFormDialog
+        mode="edit"
+        programId="11111111-1111-4111-8111-111111111111"
+        po={makePO({ classification: "CORE" })}
+        open
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.getByLabelText("Classification")).toHaveTextContent("Core");
+    expect(screen.getByLabelText("Classification")).not.toHaveTextContent("CORE");
+  });
+
+  it("displays normalized classification label when selecting an option in edit dialog", async () => {
+    render(
+      <POFormDialog
+        mode="edit"
+        programId="11111111-1111-4111-8111-111111111111"
+        po={makePO({ classification: "CORE" })}
+        open
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    const combobox = screen.getByRole("combobox", { name: "Classification" });
+    expect(combobox).toHaveTextContent("Core");
+
+    fireEvent.click(combobox);
+    const option = await screen.findByRole("option", { name: "Professional" });
+    fireEvent.mouseMove(option);
+    fireEvent.click(option);
+
+    await waitFor(() => {
+      expect(combobox).toHaveTextContent("Professional");
+      expect(combobox).not.toHaveTextContent("PROFESSIONAL");
     });
   });
 });

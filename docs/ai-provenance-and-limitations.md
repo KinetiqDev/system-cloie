@@ -34,7 +34,7 @@
   Any missing or malformed value disables the feature closed (`loadAiConfiguration()`
   returns `null`). There is no client-side override.
 - **Scope of deployment:** Program Head (PH) AI is view-specific — each analytics
-  view (`outcomes`, `courses`, `stakeholders`, `trends`, `qualitative`) owns one
+  view (`outcomes`, `courses`, `trends`, `qualitative`) owns one
   inline interpretation requested with an explicit `analyticsView` parameter. The old
   dedicated AI tab is deleted; the component `ProgramHeadInlineAiInsight` renders one
   evidence-bound section per view. Faculty AI returns five sections
@@ -46,8 +46,8 @@
 - **Server-side evidence rebuilding:** Every AI request rebuilds its evidence
   server-side from validated, authorized reads. The PH service re-runs only the
   deterministic reader backing the requested view (`getProgramHeadOutcomes`,
-  `getProgramHeadBreakdowns`, `getProgramHeadStakeholders`, `getProgramHeadTrends`,
-  `getProgramHeadFeedback`); Faculty rebuilds from `getFacultyAnalyticsDataWithPrincipal`.
+  `getProgramHeadBreakdowns`, `getProgramHeadTrends`, `getProgramHeadFeedback`);
+  Faculty rebuilds from `getFacultyAnalyticsDataWithPrincipal`.
   Authorization is re-checked on each call — a request for a program or course outside
   the reviewer's scope returns `unauthorized` and the provider is never called.
 - **De-identified aggregate packets only:** the provider receives a bounded JSON

@@ -290,12 +290,12 @@ describe("getProgramHeadTrends", () => {
     const ratingOr =
       prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where.response.OR;
     expect(ratingOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
-      "PROGRAM_SPECIFIC"
+      "PROFESSIONAL"
     );
 
     const responseOr = prismaMock.response.findMany.mock.calls[0][0].where.OR;
     expect(responseOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
-      "PROGRAM_SPECIFIC"
+      "PROFESSIONAL"
     );
 
     // Central branches carry no course scope: Central Deployments stay PH-owned.
@@ -319,7 +319,7 @@ describe("getProgramHeadTrends", () => {
     const periodWhere = prismaMock.academicTermInstance.findMany.mock.calls[0][0].where;
     expect(periodWhere.OR[1].course_bound_evaluations.some.course_assignment).toEqual({
       program_id: "program-bsed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
   });
 

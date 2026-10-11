@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
-import { AssignmentFilters } from "./shared/assignment-filters";
-import { ResultSummaryStrip } from "./shared/result-summary-strip";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
+import { buildAssignmentFacets } from "./shared/assignment-facets";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { AssignmentFiltersState } from "./shared/assignment-filters";
 import type {
@@ -56,33 +58,38 @@ export interface CourseAssignmentsPageShellProps {
   selectedProgramId?: string;
   /** False renders a read-only list: no create entry points or form dialog. */
   canManageAssignments?: boolean;
+  /**
+   * The period the list itself falls back to when no period is chosen. Only a
+   * role whose loader applies one (Program Head) supplies it; every other role
+   * lists every period, and `activeTermInstanceId` is then just the creation
+   * form's default.
+   */
+  listDefaultTermInstanceId?: string | null;
 }
 
 function CourseAssignmentsHeader({
   pageTitle,
   pageDescription,
-  canManageAssignments,
-  onCreate,
+  periodLabel,
 }: {
   pageTitle: string;
   pageDescription: string;
-  canManageAssignments: boolean;
-  onCreate: () => void;
+  periodLabel?: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
         <h1 className="text-heading-xl text-balance">{pageTitle}</h1>
-        <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
-          {pageDescription}
-        </p>
+        {periodLabel && (
+          <Badge variant="outline" className="bg-card text-muted-foreground text-xs font-normal">
+            <CalendarDays className="mr-1 size-3" aria-hidden="true" />
+            <span>{periodLabel}</span>
+          </Badge>
+        )}
       </div>
-      {canManageAssignments && (
-        <Button onClick={onCreate} className="w-full shrink-0 shadow-sm sm:w-auto" size="default">
-          <Plus data-icon="inline-start" aria-hidden="true" />
-          Assign Faculty
-        </Button>
-      )}
+      <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
+        {pageDescription}
+      </p>
     </div>
   );
 }
@@ -103,12 +110,14 @@ export function CourseAssignmentsPageShell({
   initialError = null,
   selectedProgramId,
   canManageAssignments = true,
+  listDefaultTermInstanceId = null,
 }: CourseAssignmentsPageShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
   const [filters, setFilters] = useState<AssignmentFiltersState>(initialFilters);
+  const [searchDraft, setSearchDraft] = useState(initialFilters.searchQuery);
   const role: CourseAssignmentListRole = mode;
   // Sorting is owned by the table's column headers via URL params; filter and
   // page navigations carry the active sort so it survives those transitions.
@@ -160,13 +169,73 @@ export function CourseAssignmentsPageShell({
     [activeDir, activeSort, pathname, role, router]
   );
 
-  const handleFiltersChange = useCallback(
-    (next: AssignmentFiltersState, navigation: "push" | "replace" = "push") => {
+  const handleSearchDraftChange = useCallback((value: string) => setSearchDraft(value), []);
+
+  // Search commits after a quiet pause. Watching the committed filters keeps the
+  // timer reading current state without a ref, and re-arms it whenever another
+  // facet changes so a pending draft never lands on stale filters.
+  useEffect(() => {
+    if (searchDraft === filters.searchQuery) return;
+    const timer = window.setTimeout(() => {
+      const next = { ...filters, searchQuery: searchDraft };
       setFilters(next);
-      navigateWithState(next, 0, navigation);
+      navigateWithState(next, 0, "replace");
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft, filters, navigateWithState]);
+
+  // Navigation stays outside the state updater. React may invoke an updater
+  // during its render phase, and pushing a route there updates the Router
+  // while this component renders — the state update belongs to the event, not
+  // to the render.
+  const updateFilter = useCallback(
+    <K extends keyof AssignmentFiltersState>(key: K, value: AssignmentFiltersState[K]) => {
+      const next = { ...filters, [key]: value };
+      setFilters(next);
+      navigateWithState(next, 0, "push");
     },
-    [navigateWithState]
+    [filters, navigateWithState]
   );
+
+  // The Class column carries two facets off one state, so its popover clear
+  // composes both into the same single write + navigation as the toolbar's
+  // clear-all. Clearing facet-by-facet would push one route per key from the
+  // same stale snapshot and drop all but the last.
+  const clearClassFacets = useCallback(() => {
+    const next = { ...filters, yearLevel: null, section: null };
+    setFilters(next);
+    navigateWithState(next, 0, "push");
+  }, [filters, navigateWithState]);
+  const { byColumn: facets, all: allFacets } = buildAssignmentFacets(filters, updateFilter, {
+    availableCourses,
+    availablePrograms,
+    availableFaculty,
+    termInstances,
+    showProgramFilter: mode === "all-program" || mode === "general-education",
+    hideCourseScopeFilter: mode === "general-education",
+    defaultTermInstanceId: listDefaultTermInstanceId ?? null,
+  });
+
+  // One cleared state, one navigation: clearing facet by facet would push a
+  // route change per key and leave the browser history full of intermediate
+  // steps.
+  const handleClearAll = useCallback(() => {
+    const cleared: AssignmentFiltersState = {
+      termInstanceId: listDefaultTermInstanceId ?? null,
+      courseId: null,
+      facultyId: null,
+      programId: null,
+      yearLevel: null,
+      section: null,
+      isActive: null,
+      courseScope: null,
+      hasActiveRosterMembers: undefined,
+      searchQuery: "",
+    };
+    setSearchDraft("");
+    setFilters(cleared);
+    navigateWithState(cleared, 0, "push");
+  }, [listDefaultTermInstanceId, navigateWithState]);
 
   const selectedTerm = termInstances.find((term) => term.id === filters.termInstanceId);
   const periodLabel = selectedTerm
@@ -178,29 +247,58 @@ export function CourseAssignmentsPageShell({
       <CourseAssignmentsHeader
         pageTitle={pageTitle}
         pageDescription={pageDescription}
-        canManageAssignments={canManageAssignments}
-        onCreate={() => setCreateOpen(true)}
+        periodLabel={periodLabel}
       />
 
-      <AssignmentFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        availableCourses={availableCourses}
-        availablePrograms={availablePrograms}
-        availableFaculty={availableFaculty}
-        termInstances={termInstances}
-        showProgramFilter={mode === "all-program" || mode === "general-education"}
-        hideCourseScopeFilter={mode === "general-education"}
-        defaultTermInstanceId={activeTermInstanceId}
-      />
-
-      <ResultSummaryStrip
-        total={total}
-        activeCount={assignments.filter((assignment) => assignment.isActive).length}
-        page={page}
-        pageSize={pageSize}
-        scopeLabel={periodLabel}
-      />
+      <TableToolbar
+        search={{
+          id: "assignment-search",
+          label: "Search assignments",
+          placeholder:
+            mode === "program-head"
+              ? "Search course or faculty"
+              : "Search course, faculty, or program",
+          value: searchDraft,
+          onChange: handleSearchDraftChange,
+        }}
+        facets={allFacets}
+        onClearAll={handleClearAll}
+        actions={
+          canManageAssignments ? (
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="w-full shrink-0 shadow-xs sm:w-auto"
+              size="default"
+            >
+              <Plus data-icon="inline-start" aria-hidden="true" />
+              Assign Faculty
+            </Button>
+          ) : undefined
+        }
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">{total}</span>{" "}
+            {total === 1 ? "assignment" : "assignments"}
+            {Math.ceil(total / pageSize) > 1 && (
+              <>
+                <span className="text-border-strong mx-1.5">·</span>
+                <span>
+                  Page {page + 1} of {Math.ceil(total / pageSize)}
+                </span>
+              </>
+            )}
+          </p>
+        }
+      >
+        <div className="md:hidden">
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={handleClearAll}
+            summary="Show results"
+          />
+        </div>
+      </TableToolbar>
 
       {loadError && (
         <Alert variant="destructive">
@@ -218,6 +316,8 @@ export function CourseAssignmentsPageShell({
         mode={mode}
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
+        facets={facets}
+        onClearColumn={{ class: clearClassFacets }}
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={canManageAssignments ? () => setCreateOpen(true) : undefined}

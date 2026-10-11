@@ -175,7 +175,7 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
                   course_bound: {
                     course_assignment: {
                       program_id: "prog-bsit",
-                      course: { course_scope: "PROGRAM_SPECIFIC" },
+                      course: { course_scope: "PROFESSIONAL" },
                     },
                   },
                 },
@@ -236,7 +236,7 @@ describe("Cross-role response privacy service layer (§36, §37, §38, #548)", (
                   course_bound: {
                     course_assignment: {
                       program_id: "prog-beed",
-                      course: { course_scope: "PROGRAM_SPECIFIC" },
+                      course: { course_scope: "PROFESSIONAL" },
                     },
                   },
                 },

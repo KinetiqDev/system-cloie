@@ -2289,7 +2289,7 @@ export type Database = {
         | "ELIGIBILITY_CORRECTED"
         | "APPROVED_LATE_PARTICIPATION"
         | "OTHER"
-      CourseScope: "GENERAL_EDUCATION" | "PROGRAM_SPECIFIC"
+      CourseScope: "GENERAL_EDUCATION" | "PROFESSIONAL"
       DeploymentStatus: "DRAFT" | "SCHEDULED" | "ACTIVE" | "CLOSED" | "ARCHIVED"
       DeploymentType: "COURSE_BOUND" | "CENTRAL"
       enrollment_source: "ONBOARDING" | "ROLLOVER" | "SECRETARY"
@@ -2460,7 +2460,7 @@ export const Constants = {
         "APPROVED_LATE_PARTICIPATION",
         "OTHER",
       ],
-      CourseScope: ["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"],
+      CourseScope: ["GENERAL_EDUCATION", "PROFESSIONAL"],
       DeploymentStatus: ["DRAFT", "SCHEDULED", "ACTIVE", "CLOSED", "ARCHIVED"],
       DeploymentType: ["COURSE_BOUND", "CENTRAL"],
       enrollment_source: ["ONBOARDING", "ROLLOVER", "SECRETARY"],

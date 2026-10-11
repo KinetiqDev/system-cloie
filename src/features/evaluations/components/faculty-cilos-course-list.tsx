@@ -541,10 +541,8 @@ function filterFacultyCourses(
 ): FacultyCourseWithCiloCount[] {
   let result = courses;
 
-  if (typeFilter === "program_specific") {
-    result = result.filter(
-      (course) => course.courseScope === "PROGRAM_SPECIFIC" && !course.majorId
-    );
+  if (typeFilter === "professional") {
+    result = result.filter((course) => course.courseScope === "PROFESSIONAL" && !course.majorId);
   } else if (typeFilter === "general_education") {
     result = result.filter((course) => course.courseScope === "GENERAL_EDUCATION");
   }
@@ -954,14 +952,14 @@ export function FacultyCilosCourseList({
                   <SelectValue>
                     {typeFilter === "__all__"
                       ? "All Course Types"
-                      : typeFilter === "program_specific"
-                        ? "Program-Specific"
+                      : typeFilter === "professional"
+                        ? "Professional"
                         : "General Education"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent side="bottom" align="start" alignItemWithTrigger={false}>
                   <SelectItem value="__all__">All Course Types</SelectItem>
-                  <SelectItem value="program_specific">Program-Specific</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
                   <SelectItem value="general_education">General Education</SelectItem>
                 </SelectContent>
               </Select>

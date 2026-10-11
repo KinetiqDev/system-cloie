@@ -107,6 +107,14 @@ describe("parseCourseRosterListState", () => {
     expect(state.filters.search).toBe("");
   });
 
+  // ADR 0042: the retired identifier is no longer part of the accepted
+  // filter grammar, so it parses to no scope filter.
+  it("treats the retired PROGRAM_SPECIFIC identifier as no scope filter", () => {
+    const state = parseCourseRosterListState({ courseScope: "PROGRAM_SPECIFIC" });
+
+    expect(state.filters.courseScope).toBeNull();
+  });
+
   it("reads the first value of a repeated param", () => {
     expect(parseCourseRosterListState({ programId: [PROGRAM_ID, "other"] }).filters.programId).toBe(
       PROGRAM_ID
@@ -134,7 +142,7 @@ describe("serializeCourseRosterListState", () => {
       programId: PROGRAM_ID,
       yearLevel: YearLevel.FIRST_YEAR,
       section: StudentSection.MORNING,
-      courseScope: CourseScope.PROGRAM_SPECIFIC,
+      courseScope: CourseScope.PROFESSIONAL,
       search: "ethics",
     });
 

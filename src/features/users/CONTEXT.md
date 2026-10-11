@@ -5,9 +5,8 @@ Users defines System CLOIE account administration — the readiness gates an acc
 ## Role lifecycle
 
 **Profile gate**:
-The per-role readiness verdict resolved at sign-in that states what an account must finish before entering its portal: ROLE_SELECTION_REQUIRED (no role chosen), a role-specific onboarding requirement (FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED), STUDENT_PLACEMENT_REQUIRED (Secretary-provisioned Student whose placement the institution has not recorded yet), INACTIVE (deactivated account), REJECTED_EXTERNAL_ACCOUNT (rejected alumni or industry partner verification), FACULTY_APPROVAL_PENDING or FACULTY_REQUEST_REJECTED (a self-submitted Faculty request awaiting or refused by Secretary review), DEFERRED_ENROLLMENT (student profile present but no active enrollment), AUTH_METHOD_MISMATCH (a Google-only role opened by a password, one-time-code or recovery session), or COMPLETE (portal entry allowed). A Student has no self-service onboarding step: placement is institution-recorded, so STUDENT_PLACEMENT_REQUIRED routes to the Secretary-guidance status rather than a form. A gate that only redirects to an entry route keeps the account's active role; a gate that denies authority withholds it, so role guards fail closed.
+The per-role readiness verdict resolved at sign-in that states what an account must finish before entering its portal: ROLE_SELECTION_REQUIRED (no role chosen), a role-specific onboarding requirement (FACULTY_ONBOARDING_REQUIRED, ALUMNI_ONBOARDING_REQUIRED, INDUSTRY_PARTNER_ONBOARDING_REQUIRED), STUDENT_PLACEMENT_REQUIRED (Secretary-provisioned Student whose placement the institution has not recorded yet), INACTIVE (deactivated account), REJECTED_EXTERNAL_ACCOUNT (rejected alumni or industry partner verification), FACULTY_REQUEST_REJECTED (a refused legacy Faculty request), DEFERRED_ENROLLMENT (student profile present but no active enrollment), AUTH_METHOD_MISMATCH (a Google-only role opened by a non-Google session).
 _Avoid_: account status, sign-in result
-
 **Assigned-role set**:
 The distinct System CLOIE roles attached to one account. The `(user_id, role)` pair is unique, so the same role cannot be assigned twice; one assigned role is selected as active at a time.
 _Avoid_: Role stack, simultaneous authority, primary role
@@ -41,11 +40,10 @@ The Secretary Users list's year level and section filters read the Student's enr
 _Avoid_: Year level over enrollment history, section from the academic profile, placement filters without an active Academic Period
 
 **Faculty approval state**:
-The role-scoped PENDING / APPROVED / REJECTED review state on a self-submitted Faculty request. A self-request writes the FACULTY role together with a PENDING request and no program affiliation, so the profile gate resolves it to FACULTY_APPROVAL_PENDING and the Faculty workspace stays closed; approval creates the primary active affiliation in the same transaction. It never deactivates the account globally and never reuses external VerificationStatus. A rejected request revokes only the affiliation that approval granted — a Secretary-provisioned primary or additional program is never touched, and revocation deactivates rather than deletes so the affiliation history stays on the account. Secretary-provisioned Faculty has no request row and is complete at creation.
+The role-scoped review state on legacy self-submitted Faculty requests. Self-service Faculty registration no longer requires Secretary approval; completing the faculty onboarding form automatically provisions the primary active affiliation and registers the account. Legacy request rows are marked APPROVED upon completing onboarding.
 _Avoid_: Account deactivation, external verification status, deleting affiliations
 
-Approval revalidates both account activity and the requested Program's activity inside the decision transaction. A Program archived while the request awaits review cannot receive an active Faculty affiliation.
-
+A Program archived while an applicant attempts onboarding cannot receive an active Faculty affiliation.
 ## Provisioning and invitations
 
 **Institutional email rule**:

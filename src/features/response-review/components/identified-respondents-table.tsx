@@ -15,6 +15,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { TableFilterSheet } from "@/components/data-table/table-toolbar";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -98,6 +101,17 @@ export function IdentifiedRespondentsTable({
     setStatusFilter("ALL");
   }
 
+  const statusFacet: FacetDef = {
+    id: "respondent-status",
+    label: "Status",
+    value: statusFilter === "ALL" ? null : statusFilter,
+    onChange: (value) => setStatusFilter((value ?? "ALL") as StatusFilter),
+    allLabel: "All statuses",
+    options: STATUS_FILTERS.filter(
+      (filter): filter is Exclude<StatusFilter, "ALL"> => filter !== "ALL"
+    ).map((filter) => ({ id: filter, label: statusLabel(filter) })),
+  };
+
   if (roster.length === 0) {
     return (
       <Card>
@@ -151,29 +165,11 @@ export function IdentifiedRespondentsTable({
               className="pl-9"
             />
           </div>
-          <div
-            className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap"
-            role="group"
-            aria-label="Filter respondents by status"
-          >
-            {STATUS_FILTERS.map((filter) => (
-              <Button
-                key={filter}
-                type="button"
-                variant={statusFilter === filter ? "default" : "outline"}
-                size="sm"
-                aria-pressed={statusFilter === filter}
-                onClick={() => setStatusFilter(filter)}
-              >
-                {filter === "ALL" ? "All" : statusLabel(filter)}
-              </Button>
-            ))}
-            {filtersActive ? (
-              <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            ) : null}
-          </div>
+          {filtersActive ? (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="pb-24 md:pb-6">
@@ -198,7 +194,11 @@ export function IdentifiedRespondentsTable({
                   <TableRow>
                     <TableHead>Respondent</TableHead>
                     <TableHead>Context</TableHead>
-                    <TableHead>Status</TableHead>
+                    <FilterableHead
+                      label="Status"
+                      facets={[statusFacet]}
+                      onClear={() => setStatusFilter("ALL")}
+                    />
                     <TableHead>Assigned</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead className="text-right">Mean</TableHead>
@@ -244,6 +244,14 @@ export function IdentifiedRespondentsTable({
               </Table>
             </div>
             <div className="grid gap-3 md:hidden">
+              <TableFilterSheet
+                facets={[statusFacet]}
+                activeCount={[statusFacet].filter(facetIsApplied).length}
+                label="Filter respondents"
+                heading="Filter respondents"
+                onClearAll={() => setStatusFilter("ALL")}
+                summary="Show results"
+              />
               {filtered.map((row) => (
                 <article
                   key={row.assignmentId}

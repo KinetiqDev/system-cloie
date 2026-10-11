@@ -19,13 +19,15 @@ type ScopedRosterCandidates = {
   candidates: ScopedRosterCandidate[];
 };
 
-type CandidatePlacement = {
-  program_id: string;
-  year_level: string | null;
-  section: string | null;
-  program: { code: string; name: string } | null;
-  major: { name: string } | null;
-} | undefined;
+type CandidatePlacement =
+  | {
+      program_id: string;
+      year_level: string | null;
+      section: string | null;
+      program: { code: string; name: string } | null;
+      major: { name: string } | null;
+    }
+  | undefined;
 
 function toScopedCandidate(
   student: {
@@ -107,7 +109,7 @@ export async function loadScopedRosterCandidates(
     },
   });
 
-  // A program-specific roster manager may diagnose ineligible accounts only
+  // A Professional roster manager may diagnose ineligible accounts only
   // inside the assignment's academic neighborhood. Program-mismatched accounts
   // are neither selectable nor safe to disclose through preview or search.
   const candidates = students

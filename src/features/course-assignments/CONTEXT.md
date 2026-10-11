@@ -9,8 +9,8 @@ Shared institutional Courses where `course.course_scope == GENERAL_EDUCATION`. E
 _Avoid_: Deriving Course scope from nullable program_id, Program-owned General Education Course
 
 **Course assignment authority — approved matrix (server-enforced)**:
-Secretary: college-wide read and guarded mutation of both Course scopes. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation. Secretary retains all-program stewardship.
-_Avoid_: Client-provided course_scope, Coordinator Program-specific mutation
+Secretary: college-wide read and guarded mutation of both Course scopes. `GEN_ED_COORDINATOR`: college-wide stewardship — read and mutation — of General Education assignments only (every list read, Course picker, create, update, activation, deactivation, deletion, deletion preflight, and bulk creation is gated by `course.course_scope == GENERAL_EDUCATION` inside the server service; URL filters cannot widen it; faculty search is role-allowlist gated instead — `searchFacultyPool` has no `course_scope` predicate, so the Coordinator searches the whole active Faculty pool cross-program). Program Head: stewardship of Professional assignments within the Authorized Program set; read-only for General Education. Dean: retains all-program mutation. Secretary retains all-program stewardship.
+_Avoid_: Client-provided course_scope, Coordinator Professional mutation
 
 **Coordinator assignment UX mode**:
 `general-education` — a concrete Coordinator mode that reuses the assignment shell with Course scope fixed to General Education, allows any active target Program, and performs cross-Program Faculty search. Roster management and on-behalf evaluation publication are not granted to the Coordinator.
@@ -22,7 +22,7 @@ _Avoid_: Coordinator portfolio assignment, fake General Education Program
 
 
 **Resolved** (transfer-ilo-catalog-to-gen-ed-coordinator / ADR 0018): Institutional Learning Outcome catalog ownership is `GEN_ED_COORDINATOR` college-wide (CRUD/reorder/archive/restore; `SECRETARY` no access, `/secretary/learning-outcomes/**` redirects). Course Catalog and Assignments adds no ILO catalog mutation path.
-_Avoid_: Secretary ILO write, Coordinator Program-specific ILO scope
+_Avoid_: Secretary ILO write, Coordinator Professional ILO scope
 
 
 ## Language
@@ -31,7 +31,7 @@ _Avoid_: Secretary ILO write, Coordinator Program-specific ILO scope
 A catalog subject representing a unit of instruction, defining its code, title, credits, scope, and default year/semester/term.
 _Avoid_: Subject, course offering
 
-**Program-specific Course**:
+**Professional Course**:
 A Course owned by one academic program. Its course assignments are created for that same owning program.
 _Avoid_: Department subject, program offering
 
@@ -96,11 +96,11 @@ Faculty management of Course-assignment memberships for an active Course assignm
 _Avoid_: Student administration, term enrollment administration
 
 **Course roster manager**:
-A Faculty owner, Secretary, Dean, or Program Head authorized to manage Course-assignment memberships through their active role's role-owned route. Secretary and Dean manage all programs; a Program Head manages only active program-specific Course assignments in their assigned-program scope. Membership changes require an active Course assignment in an active academic period; publication does not remove this capability.
+A Faculty owner, Secretary, Dean, or Program Head authorized to manage Course-assignment memberships through their active role's role-owned route. Secretary and Dean manage all programs; a Program Head manages only active Professional Course assignments in their assigned-program scope. Membership changes require an active Course assignment in an active academic period; publication does not remove this capability.
 _Avoid_: Roster administrator, unrestricted faculty access
 
 **Roster eligibility**:
-The rule deciding whether an existing Student may join a Course-assignment roster. It requires an active Student with a completed profile and active term placement for the assignment's academic period. A program-specific Course assignment requires the profile and term placement program to match the assignment's program; a General Education Course assignment accepts any active-term placement.
+The rule deciding whether an existing Student may join a Course-assignment roster. It requires an active Student with a completed profile and active term placement for the assignment's academic period. A Professional Course assignment requires the profile and term placement program to match the assignment's program; a General Education Course assignment accepts any active-term placement.
 _Avoid_: Course prerequisite, cohort lock
 
 **Inactive rostered Student**:
@@ -108,7 +108,7 @@ A Student with an inactive account who retains an active Course-assignment membe
 _Avoid_: Automatically removed Student, eligible evaluation recipient
 
 **Profile-mismatched rostered Student**:
-A Student whose active Course-assignment membership no longer matches a program-specific Course assignment because their academic profile changed. The membership remains visible with its mismatch status, cannot be newly added or restored, and is excluded from Course-bound evaluation recipients.
+A Student whose active Course-assignment membership no longer matches a Professional Course assignment because their academic profile changed. The membership remains visible with its mismatch status, cannot be newly added or restored, and is excluded from Course-bound evaluation recipients.
 _Avoid_: Automatically removed Student, eligible evaluation recipient
 
 **Term-placement-ineligible rostered Student**:
@@ -120,15 +120,15 @@ The exact safe business reason a roster manager sees when a selected account can
 _Avoid_: Raw account state, server error explanation
 
 **Secretary course assignment operations**:
-All-program read and guarded mutation of Course assignments for a Secretary. Secretary and Dean stewardship coexists with General Education Coordinator stewardship of General Education and Program Head stewardship of Program-specific Courses within their authorized Programs. Creation requires an active Program, a planned or active period in an active school year, and an active Faculty account with no self-request or an approved self-request. Faculty affiliation never restricts assignment.
+All-program read and guarded mutation of Course assignments for a Secretary. Secretary and Dean stewardship coexists with General Education Coordinator stewardship of General Education and Program Head stewardship of Professional Courses within their authorized Programs. Creation requires an active Program, a planned or active period in an active school year, and an active Faculty account with no self-request or an approved self-request. Faculty affiliation never restricts assignment.
 _Avoid_: Faculty affiliation as assignment authority, pending Faculty assignment
 
 **Dean course assignment operations**:
-All-program stewardship of Course assignments by a Dean: General Education and Program-specific mutation across every academic program.
+All-program stewardship of Course assignments by a Dean: General Education and Professional mutation across every academic program.
 _Avoid_: Separate Dean assignment model, analytics-only Dean mode
 
 **All-program Course assignment manager**:
-A Secretary or Dean user with all-program Course assignment scope across every academic program, managing both General Education and Program-specific assignments.
+A Secretary or Dean user with all-program Course assignment scope across every academic program, managing both General Education and Professional assignments.
 _Avoid_: role impersonation
 
 **Course assignment list mode** (`CourseAssignmentListRole`):
@@ -144,7 +144,7 @@ A dashboard URL owned by one role even when the underlying operation capability 
 _Avoid_: Role impersonation route, shared dashboard route
 
 **Faculty affiliation**:
-A faculty member's active relationship to one or more academic programs. Affiliation is displayed as assignment context, but it does not prevent a Program Head from assigning a faculty member from another program to one of the Program Head's program-specific Courses.
+A faculty member's active relationship to one or more academic programs. Affiliation is displayed as assignment context, but it does not prevent a Program Head from assigning a faculty member from another program to one of the Program Head's Professional Courses.
 _Avoid_: Faculty scope, assignment permission
 
 **Faculty search pool**:

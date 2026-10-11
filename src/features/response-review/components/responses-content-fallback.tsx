@@ -11,19 +11,13 @@ function EvidenceTableSkeleton() {
       aria-hidden="true"
     >
       <div className="grid grid-cols-7 gap-4">
-        {[
-          "Evaluation",
-          "Stakeholder",
-          "Target",
-          "Period",
-          "Status",
-          "Submitted",
-          "Mean / scale",
-        ].map((heading) => (
-          <span key={heading} className="text-label-sm text-muted-foreground font-medium">
-            {heading}
-          </span>
-        ))}
+        {["Evaluation", "Stakeholder", "Target", "Period", "Status", "Submitted", "Mean"].map(
+          (heading) => (
+            <span key={heading} className="text-label-sm text-muted-foreground font-medium">
+              {heading}
+            </span>
+          )
+        )}
       </div>
       <div className="flex flex-col gap-4 overflow-x-auto pt-1">
         {["first", "second", "third", "fourth"].map((row) => (

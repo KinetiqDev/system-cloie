@@ -78,7 +78,7 @@ describe("Program Head Course Assignments route", () => {
           code: "CS101",
           title: "Intro to Computing",
           default_year_level: YearLevel.FIRST_YEAR,
-          course_scope: CourseScope.PROGRAM_SPECIFIC,
+          course_scope: CourseScope.PROFESSIONAL,
           program_id: "program-1",
         },
       ],

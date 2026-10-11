@@ -22,7 +22,7 @@ type ResponseDetailProps = {
   analyticsHref: string;
   /**
    * Outcome deep links (§27.6 reverse trace). The id is whichever typed
-   * alignment the answer actually carries: a PO id for Program-specific and
+   * alignment the answer actually carries: a PO id for Professional and
    * Central evidence, an ILO id for General Education. Each role resolves it
    * against its own Analytics workspace, so no href crosses role scopes.
    */

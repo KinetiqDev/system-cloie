@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client";
 // Course scope, not respondent Program membership, decides evidence ownership.
 // A General Education Course-bound evaluation belongs to the active General
 // Education Coordinator college-wide even when every respondent is a Student
-// of a Program the Program Heads oversee. Program-specific courses and Central
+// of a Program the Program Heads oversee. Professional courses and Central
 // deployments are never in this scope, and no selected-Program context exists
 // for the Coordinator, so every predicate below must stay Program-agnostic.
 //

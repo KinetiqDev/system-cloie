@@ -158,7 +158,7 @@ export async function listFacultyCoursesWithCilos(
 function getCourseScopeLabel(courseScope: CourseScope, majorId: string | null): string {
   if (courseScope === CourseScope.GENERAL_EDUCATION) return "General Education";
   if (majorId) return "Major-Specific";
-  return "Program-Specific";
+  return "Professional";
 }
 
 type FacultyCiloReadinessRow = {

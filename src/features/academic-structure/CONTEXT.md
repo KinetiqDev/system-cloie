@@ -27,7 +27,7 @@ _Avoid_: Program owner, Program Head administrator
 ## Program Head catalog surface
 
 **Unified Program Head course catalog**:
-The Program Head catalog table resolves all its courses through one program-scoped read (`resolve-program-head-courses.ts` — a single `findMany`, no separate General Education query, no read-only flag) and presents status filtering, Year Level/Semester/Term columns, and summary cards. Course-type (Program-specific/General Education) and Gen-Ed badges are deliberately absent from this surface.
+The Program Head catalog table resolves all its courses through one program-scoped read (`resolve-program-head-courses.ts` — a single `findMany`, no separate General Education query, no read-only flag) and presents status filtering, Year Level/Semester/Term columns, and summary cards. Course-type (Professional/General Education) and Gen-Ed badges are deliberately absent from this surface.
 _Avoid_: Dual catalog queries, course-type badge on the Program Head surface
 
 ## Demo catalog seed provenance

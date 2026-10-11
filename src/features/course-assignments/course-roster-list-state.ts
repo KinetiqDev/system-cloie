@@ -83,7 +83,7 @@ const sectionSchema = z.enum([
   StudentSection.AFTERNOON,
   StudentSection.EVENING,
 ]);
-const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROGRAM_SPECIFIC]);
+const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROFESSIONAL]);
 const viewSchema = z.enum(["list", "card"]);
 
 function firstNonEmptyValue(value: string | string[] | undefined): string | undefined {
@@ -149,17 +149,6 @@ export function serializeCourseRosterPeriod(period: CourseRosterPeriodScope): st
   if (period.mode === "current") return undefined;
   if (period.mode === "all") return "all";
   return period.termInstanceId;
-}
-
-/**
- * The inverse of {@link serializeCourseRosterPeriod}. The picker and the URL
- * both speak period ids plus two sentinels, so the mapping back to a scope
- * lives here rather than in either caller.
- */
-export function courseRosterPeriodFromPickerValue(value: string): CourseRosterPeriodScope {
-  if (value === "all") return { mode: "all" };
-  if (value === ACTIVE_PERIOD_SENTINEL) return { mode: "current" };
-  return { mode: "term", termInstanceId: value };
 }
 
 export function serializeCourseRosterListState(state: CourseRosterListUrlState): URLSearchParams {

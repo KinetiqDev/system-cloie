@@ -185,7 +185,7 @@ describe("getProgramHeadResponseDetail", () => {
                 course_bound: {
                   course_assignment: {
                     program_id: "prog-beed",
-                    course: { course_scope: "PROGRAM_SPECIFIC" },
+                    course: { course_scope: "PROFESSIONAL" },
                   },
                 },
               },
@@ -242,13 +242,13 @@ describe("getProgramHeadResponseDetail", () => {
     const capturedWhere = responseFindFirstMock.mock.calls[0][0].where;
     expect(capturedWhere.assignment.OR[0].course_bound.course_assignment).toEqual({
       program_id: "prog-beed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
   });
 
-  it("still resolves a Program-specific response in the same Program", async () => {
+  it("still resolves a Professional response in the same Program", async () => {
     // Boundary: the gate must exclude GE without also excluding the PH's own
-    // evidence. Same Program, same course, PROGRAM_SPECIFIC scope.
+    // evidence. Same Program, same course, PROFESSIONAL scope.
     responseFindFirstMock.mockImplementation((args) =>
       matchesWhere(args.where, {
         id: "response-1",
@@ -258,7 +258,7 @@ describe("getProgramHeadResponseDetail", () => {
             id: "eval-1",
             course_assignment: {
               program_id: "prog-beed",
-              course: { course_scope: "PROGRAM_SPECIFIC" },
+              course: { course_scope: "PROFESSIONAL" },
             },
           },
           central_deployment: null,

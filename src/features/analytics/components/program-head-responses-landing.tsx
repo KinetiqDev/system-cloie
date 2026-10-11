@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import {
   Empty,
@@ -26,7 +25,10 @@ import {
   formatResponseYearLevel,
   responseStatusVariant,
 } from "@/features/response-review/components/response-review-labels";
-import type { ResponseDeploymentList } from "@/features/analytics/services/list-program-head-response-deployments";
+import type {
+  ResponseDeploymentList,
+  ResponseFilterOptions,
+} from "@/features/analytics/services/list-program-head-response-deployments";
 import type { ProgramHeadResponsesFilterState } from "@/features/analytics/services/program-head-responses-state";
 import {
   buildProgramHeadResponsesTabUrl,
@@ -38,7 +40,10 @@ import {
   buildProgramHeadResponsesProgramWideDeploymentPath,
 } from "@/lib/constants/program-head-routes";
 import { ViewTabs } from "@/components/layout/view-tabs";
-import { ProgramHeadResponsesFilters } from "./program-head-responses-filters";
+import {
+  ProgramHeadResponsesFilters,
+  ProgramHeadResponsesTableHead,
+} from "./program-head-responses-filters";
 import { ProgramHeadResponsesPagination } from "./program-head-responses-pagination";
 import { ResponsesWorkspace } from "@/features/response-review/components/responses-workspace";
 
@@ -56,24 +61,11 @@ export function ProgramHeadResponsesLanding({
   data: ResponseDeploymentList;
 }) {
   const isCourse = state.tab === "course";
-  const rootHref = buildProgramHeadResponsesUrl(programId, {
-    tab: state.tab,
-    page: 1,
-    termInstanceId: state.termInstanceId,
-    stakeholder: state.stakeholder,
-  });
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="border-border flex flex-col gap-2 border-b pb-5">
         <h1 className="text-heading-xl text-balance">Responses</h1>
-        <Breadcrumbs
-          className="text-body-sm"
-          items={[
-            { label: "Responses", href: rootHref },
-            { label: isCourse ? "Course evaluations" : "Program-wide evaluations" },
-          ]}
-        />
         <p className="text-body-sm text-text-secondary max-w-3xl text-pretty">
           Review participation and open identified submitted responses for {program.code}.
         </p>
@@ -169,6 +161,7 @@ function EvaluationEvidence({
                 programId={programId}
                 isCourse={isCourse}
                 state={state}
+                options={data.options}
               />
             </div>
           </>
@@ -272,15 +265,7 @@ function Data({ label, children }: { label: string; children: React.ReactNode })
 
 function MeanValue({ item }: { item: Deployment }) {
   if (item.mean === null) return <>—</>;
-  return (
-    <span className="font-semibold tabular-nums">
-      {item.mean.toFixed(2)}
-      <span className="text-muted-foreground font-normal">
-        {" · "}
-        {item.scaleLabel ?? "Scale unavailable"}
-      </span>
-    </span>
-  );
+  return <span className="font-semibold tabular-nums">{item.mean.toFixed(2)}</span>;
 }
 
 function ResponseTable({
@@ -288,23 +273,25 @@ function ResponseTable({
   programId,
   isCourse,
   state,
+  options,
 }: {
   items: Deployment[];
   programId: string;
   isCourse: boolean;
   state: ProgramHeadResponsesFilterState;
+  options: ResponseFilterOptions;
 }) {
   return (
-    <Table className="table-fixed">
+    <Table className="min-w-[64rem] table-fixed" label="Evaluation evidence">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[24%]">Evaluation</TableHead>
-          <TableHead className="w-[15%]">{isCourse ? "Class" : "Stakeholder"}</TableHead>
-          <TableHead className="w-[16%]">{isCourse ? "Faculty" : "Target"}</TableHead>
-          <TableHead className="w-[17%]">Period</TableHead>
-          <TableHead className="w-[9%]">Status</TableHead>
-          <TableHead className="w-[9%] text-right">Submitted</TableHead>
-          <TableHead className="w-[10%] text-right">Mean / scale</TableHead>
+          <ProgramHeadResponsesTableHead
+            programId={programId}
+            state={state}
+            options={options}
+            isCourse={isCourse}
+          />
+          <TableHead className="w-[10%] text-right">Mean</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -337,7 +324,7 @@ function ResponseTable({
                 {formatResponseStatus(item.status)}
               </Badge>
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell className="tabular-nums">
               {item.submitted === 0 ? "None" : `${item.submitted} of ${item.assigned}`}
             </TableCell>
             <TableCell className="text-right">

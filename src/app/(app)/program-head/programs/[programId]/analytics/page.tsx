@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { ProgramHeadAnalyticsShell } from "@/features/analytics/components/program-head-analytics-shell";
 import { ProgramHeadOutcomesView } from "@/features/analytics/components/program-head-outcomes-view";
 import { ProgramHeadTrendsView } from "@/features/analytics/components/program-head-trends-view";
-import { ProgramHeadStakeholderView } from "@/features/analytics/components/program-head-stakeholder-view";
 import { ProgramHeadBreakdownsView } from "@/features/analytics/components/program-head-breakdowns-view";
 import { ProgramHeadFeedbackView } from "@/features/analytics/components/program-head-feedback-view";
 import {
@@ -11,7 +10,6 @@ import {
   getProgramHeadBreakdowns,
   getProgramHeadFeedback,
   getProgramHeadOutcomes,
-  getProgramHeadStakeholders,
   getProgramHeadTrends,
 } from "@/features/analytics/services/get-program-head-analytics";
 import {
@@ -66,50 +64,59 @@ async function resolveOutcomesTab(
   };
 }
 
+type TabResolver = (
+  programId: string,
+  filters: AnalyticsFilterState
+) => Promise<ResolvedTabContent>;
+
+function trendsTab(programId: string, filters: AnalyticsFilterState): Promise<ResolvedTabContent> {
+  return withData(programId, filters, getProgramHeadTrends, (data, viewFilters) => (
+    <ProgramHeadTrendsView
+      programId={programId}
+      data={data}
+      resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
+      aiFilters={toInsightFilters(viewFilters)}
+    />
+  ));
+}
+
+function coursesTab(programId: string, filters: AnalyticsFilterState): Promise<ResolvedTabContent> {
+  return withData(programId, filters, getProgramHeadBreakdowns, (data, viewFilters) => (
+    <ProgramHeadBreakdownsView
+      programId={programId}
+      data={data}
+      resetHref={buildAnalyticsUrl(programId, { tab: "courses" })}
+      aiFilters={toInsightFilters(viewFilters)}
+    />
+  ));
+}
+
+function qualitativeTab(
+  programId: string,
+  filters: AnalyticsFilterState
+): Promise<ResolvedTabContent> {
+  return withData(programId, filters, getProgramHeadFeedback, (data, viewFilters) => (
+    <ProgramHeadFeedbackView
+      programId={programId}
+      data={data}
+      resetHref={buildAnalyticsUrl(programId, { tab: "qualitative" })}
+      aiFilters={toInsightFilters(viewFilters)}
+    />
+  ));
+}
+
+const TAB_RESOLVERS: Record<AnalyticsFilterState["tab"], TabResolver> = {
+  outcomes: resolveOutcomesTab,
+  trends: trendsTab,
+  courses: coursesTab,
+  qualitative: qualitativeTab,
+};
+
 async function resolveProgramHeadAnalyticsTabContent(
   programId: string,
   filters: AnalyticsFilterState
 ): Promise<ResolvedTabContent> {
-  switch (filters.tab) {
-    case "outcomes":
-      return resolveOutcomesTab(programId, filters);
-    case "stakeholders":
-      return withData(programId, filters, getProgramHeadStakeholders, (data, viewFilters) => (
-        <ProgramHeadStakeholderView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "stakeholders" })}
-          aiFilters={toInsightFilters(viewFilters)}
-        />
-      ));
-    case "trends":
-      return withData(programId, filters, getProgramHeadTrends, (data, viewFilters) => (
-        <ProgramHeadTrendsView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "trends" })}
-          aiFilters={toInsightFilters(viewFilters)}
-        />
-      ));
-    case "courses":
-      return withData(programId, filters, getProgramHeadBreakdowns, (data, viewFilters) => (
-        <ProgramHeadBreakdownsView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "courses" })}
-          aiFilters={toInsightFilters(viewFilters)}
-        />
-      ));
-    case "qualitative":
-      return withData(programId, filters, getProgramHeadFeedback, (data, viewFilters) => (
-        <ProgramHeadFeedbackView
-          programId={programId}
-          data={data}
-          resetHref={buildAnalyticsUrl(programId, { tab: "qualitative" })}
-          aiFilters={toInsightFilters(viewFilters)}
-        />
-      ));
-  }
+  return TAB_RESOLVERS[filters.tab](programId, filters);
 }
 
 const VALID_RAW_TABS: Record<string, true> = {
@@ -127,13 +134,18 @@ function firstTrimmed(value: string | string[] | undefined): string | undefined 
   return (Array.isArray(value) ? value[0] : value)?.trim();
 }
 
+const LEGACY_TAB_REDIRECTS: Record<string, "overview" | "outcomes" | "courses" | "qualitative"> = {
+  overview: "overview",
+  breakdowns: "courses",
+  stakeholders: "outcomes",
+  feedback: "qualitative",
+};
+
 function legacyRedirectTarget(
   rawTab: string | undefined
-): "overview" | "courses" | "qualitative" | "none" {
-  if (rawTab === "overview") return "overview";
-  if (rawTab === "breakdowns") return "courses";
-  if (rawTab === "feedback") return "qualitative";
-  return "none";
+): "overview" | "outcomes" | "courses" | "qualitative" | "none" {
+  if (!rawTab) return "none";
+  return LEGACY_TAB_REDIRECTS[rawTab] ?? "none";
 }
 
 function overviewRedirectUrl(programId: string, filters: AnalyticsFilterState): string {
@@ -145,6 +157,15 @@ function overviewRedirectUrl(programId: string, filters: AnalyticsFilterState): 
   return query
     ? `${buildProgramHeadDashboardPath(programId)}?${query}`
     : buildProgramHeadDashboardPath(programId);
+}
+function redirectLegacyTab(programId: string, filters: AnalyticsFilterState, rawTab: string): void {
+  const legacy = legacyRedirectTarget(rawTab);
+  if (legacy === "overview") redirect(overviewRedirectUrl(programId, filters));
+  if (legacy === "outcomes" || legacy === "courses" || legacy === "qualitative") {
+    const base = buildProgramHeadProgramPath(programId, "analytics");
+    const query = buildAnalyticsQueryString({ ...filters, tab: legacy });
+    redirect(query ? `${base}?${query}` : base);
+  }
 }
 
 export default async function SelectedProgramAnalyticsPage({
@@ -161,13 +182,7 @@ export default async function SelectedProgramAnalyticsPage({
     redirect(`${buildProgramHeadProgramPath(programId, "analytics")}?tab=outcomes`);
   }
 
-  const legacy = legacyRedirectTarget(rawTab);
-  if (legacy === "overview") redirect(overviewRedirectUrl(programId, filters));
-  if (legacy === "courses" || legacy === "qualitative") {
-    const base = buildProgramHeadProgramPath(programId, "analytics");
-    const query = buildAnalyticsQueryString({ ...filters, tab: legacy });
-    redirect(query ? `${base}?${query}` : base);
-  }
+  if (rawTab) redirectLegacyTab(programId, filters, rawTab);
 
   const effectiveFilters: AnalyticsFilterState = {
     ...filters,

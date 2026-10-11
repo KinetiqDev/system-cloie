@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/ui/back-link";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { CourseEvaluationDetail } from "@/features/response-review/components/course-evaluation-detail";
 import { getGenEdCourseEvaluationDetail } from "@/features/response-review/services/get-gen-ed-course-evaluation-detail";
@@ -47,6 +48,7 @@ export default async function GenEdCourseEvaluationDetailPage({
   return (
     <CourseEvaluationDetail
       detail={detail}
+      backLink={<BackLink href={responsesHref}>Back to Responses</BackLink>}
       // Keep the response evidence's own term so the qualitative trace and the
       // ILO deep links resolve to the period this evaluation belongs to.
       analyticsHref={buildGeneralEducationAnalyticsUrl({

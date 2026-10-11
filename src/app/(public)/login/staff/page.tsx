@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { EntryShell, GoogleEntryButton } from "@/features/entry";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { resolvePostLoginDestination } from "@/features/auth/services/resolve-post-login-destination";
@@ -29,17 +28,7 @@ export default async function StaffLoginPage() {
       backLink={{ href: "/entry/staff", label: "Staff & Faculty" }}
       title="Staff sign in"
       description="Use your ACD Google account to open your assigned workspace."
-      footer={
-        <p className="text-body-sm text-muted-foreground">
-          New Faculty member?{" "}
-          <Link
-            href="/register/faculty"
-            className="text-link hover:text-primary-hover font-medium underline-offset-4 hover:underline"
-          >
-            Submit a Faculty request
-          </Link>
-        </p>
-      }
+      showHelp={false}
     >
       <GoogleEntryButton
         intent="staff"

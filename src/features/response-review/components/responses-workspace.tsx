@@ -7,7 +7,7 @@ import { ResponsesContentFallback } from "./responses-content-fallback";
 // ---------------------------------------------------------------------------
 // Identified-review workspace shell (spec §12, ADR 0034)
 //
-// Every review owner — Program Head on Program-specific/Central evidence,
+// Every review owner — Program Head on Professional/Central evidence,
 // Coordinator on General Education — filters the same kind of evaluation list
 // through the same interactions: a filter panel that stays mounted while the
 // evidence region reloads behind a transition. Only the section label differs,

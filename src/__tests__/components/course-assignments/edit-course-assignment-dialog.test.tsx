@@ -31,7 +31,7 @@ function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): Course
     facultyEmail: "test@example.com",
     courseCode: "CS101",
     courseTitle: "Intro to Computing",
-    courseScope: CourseScope.PROGRAM_SPECIFIC,
+    courseScope: CourseScope.PROFESSIONAL,
     programCode: "BSCS",
     programName: "BS Computer Science",
     termLabel: "2025-2026 — 1st Semester — 1st Term",
@@ -73,7 +73,7 @@ describe("EditCourseAssignmentDialog", () => {
       code: "CS101",
       title: "Intro to Computing",
       default_year_level: YearLevel.SECOND_YEAR,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: "program-1",
     },
     {
@@ -107,7 +107,7 @@ describe("EditCourseAssignmentDialog", () => {
     expect(screen.getByText(/course default: 2nd year/i)).toBeInTheDocument();
   });
 
-  it("locks program for Program-specific courses", () => {
+  it("locks program for Professional courses", () => {
     render(
       <EditCourseAssignmentDialog
         open

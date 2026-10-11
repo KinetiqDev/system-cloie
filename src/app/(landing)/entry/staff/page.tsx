@@ -21,11 +21,10 @@ export default function StaffLandingPage() {
       statement="Sign in to set up and run your part of the evaluation cycle, and to review the evidence your role is responsible for."
       loginHref="/login/staff"
       signInLabel="Staff & faculty sign in"
-      secondaryAction={{ href: "/register/faculty", label: "Submit a Faculty request" }}
       prerequisites={[
         "Use your @acd.edu.ph or @acdeducation.com Google account.",
         "If your account holds more than one role, you choose the workspace you want after signing in.",
-        "Faculty access needs an approved request. Other staff access is provisioned by the Secretary.",
+        "Faculty complete onboarding on first sign-in. Other staff access is provisioned by the Secretary.",
       ]}
       guideHref={resolveHelpUrl("/entry/staff")}
     >

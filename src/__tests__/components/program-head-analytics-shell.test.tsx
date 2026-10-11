@@ -47,7 +47,7 @@ describe("ProgramHeadAnalyticsShell", () => {
 
     const navigation = screen.getByRole("navigation", { name: "Analytics views" });
     const links = Array.from(navigation.querySelectorAll("a"));
-    expect(links).toHaveLength(5);
+    expect(links).toHaveLength(4);
     for (const link of links) {
       expect(link).toHaveAttribute("data-prefetch", "false");
       expect(link.getAttribute("href")).toContain("semester=FIRST");
@@ -68,11 +68,9 @@ describe("ProgramHeadAnalyticsShell", () => {
     expect(screen.getByTestId("analytics-chart-skeleton")).toBeInTheDocument();
     expect(screen.getByTestId("analytics-table-skeleton")).toBeInTheDocument();
 
-    rerender(<ProgramHeadAnalyticsContentFallback tab="stakeholders" />);
-    expect(
-      screen.getByRole("status", { name: "Loading Stakeholders evidence" })
-    ).toBeInTheDocument();
-    expect(screen.getAllByTestId("analytics-chart-skeleton")).toHaveLength(2);
+    rerender(<ProgramHeadAnalyticsContentFallback tab="courses" />);
+    expect(screen.getByRole("status", { name: "Loading Courses evidence" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("analytics-chart-skeleton")).toHaveLength(3);
   });
 
   it("uses analytics workspace geometry for cold route loading", () => {

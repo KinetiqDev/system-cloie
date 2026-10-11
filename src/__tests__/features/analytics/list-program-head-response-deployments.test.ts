@@ -30,7 +30,7 @@ const emptyStats = { course_bound_id: null, central_deployment_id: null, respons
 
 /**
  * Program Head Responses lists course-bound and program-wide deployments.
- * Course-bound evidence is Program-specific only: a General Education course
+ * Course-bound evidence is Professional only: a General Education course
  * can hold an assignment in this same Program, so Program equality alone would
  * list GE deployments, counts, and filter options the Coordinator owns. These
  * tests pin the course-scope gate on the list predicate and on every filter
@@ -53,13 +53,13 @@ describe("listProgramHeadResponseDeployments", () => {
   });
 
   describe("course-bound list", () => {
-    it("scopes the list to Program-specific courses", async () => {
+    it("scopes the list to Professional courses", async () => {
       await listProgramHeadResponseDeployments(PROGRAM, filters());
 
       const where = prismaMock.courseBoundEvaluation.findMany.mock.calls[0][0].where;
       expect(where.course_assignment).toMatchObject({
         program_id: PROGRAM,
-        course: { course_scope: "PROGRAM_SPECIFIC" },
+        course: { course_scope: "PROFESSIONAL" },
       });
       // The count query must carry the same gate as the list, or the total and
       // the rows on the page would describe different scopes.
@@ -75,7 +75,7 @@ describe("listProgramHeadResponseDeployments", () => {
 
       const where = prismaMock.courseBoundEvaluation.findMany.mock.calls[0][0].where;
       expect(where.course_assignment.course).toEqual({
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         major_id: "major-1",
       });
     });
@@ -111,7 +111,7 @@ describe("listProgramHeadResponseDeployments", () => {
       expect(result.items).toEqual([]);
     });
 
-    it("still lists a Program-specific evaluation in the same Program", async () => {
+    it("still lists a Professional evaluation in the same Program", async () => {
       // Boundary: the GE gate must exclude GE without also excluding the
       // Program Head's own evidence, which shares the same Program.
       const programEvaluation = {
@@ -126,7 +126,7 @@ describe("listProgramHeadResponseDeployments", () => {
         },
         course_assignment: {
           program_id: PROGRAM,
-          course: { course_scope: "PROGRAM_SPECIFIC" },
+          course: { course_scope: "PROFESSIONAL" },
           year_level: "SECOND_YEAR",
           section: "MORNING",
           faculty: { name: "Dr. Smith" },
@@ -158,15 +158,13 @@ describe("listProgramHeadResponseDeployments", () => {
   });
 
   describe("filter options", () => {
-    it("offers only Program-specific courses and faculty", async () => {
+    it("offers only Professional courses and faculty", async () => {
       await listProgramHeadResponseDeployments(PROGRAM, filters());
 
-      expect(prismaMock.course.findMany.mock.calls[0][0].where.course_scope).toBe(
-        "PROGRAM_SPECIFIC"
-      );
+      expect(prismaMock.course.findMany.mock.calls[0][0].where.course_scope).toBe("PROFESSIONAL");
       expect(
         prismaMock.user.findMany.mock.calls[0][0].where.course_assignments.some.course.course_scope
-      ).toBe("PROGRAM_SPECIFIC");
+      ).toBe("PROFESSIONAL");
     });
 
     it("does not offer a General Education course or its faculty", async () => {

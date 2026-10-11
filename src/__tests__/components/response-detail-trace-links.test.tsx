@@ -155,7 +155,7 @@ describe("ResponseDetail reverse trace links", () => {
               descriptorLabels: [null, null, null, null, null],
               binding: {
                 type: "CILO",
-                // Program-specific course evidence reaches POs only.
+                // Professional course evidence reaches POs only.
                 layer: "GRADUATE_OUTCOME",
                 ciloId: "cilo-1",
                 ciloLabel: "Achieve outcomes",

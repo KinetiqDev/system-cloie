@@ -22,6 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { facetIsApplied } from "@/components/data-table/types";
+import type { PublishedFacets } from "./published-evaluation-facets";
 import type { ListCardViewMode as ToolsViewMode } from "@/components/layout/view-selector";
 import { getStatusVariant } from "./evaluation-status";
 import { formatDate } from "@/lib/utils/date-format";
@@ -55,6 +59,21 @@ type PublishedDeploymentsCollectionProps = {
    * Falls back to `empty` when omitted.
    */
   filteredEmpty?: ReactNode;
+  /**
+   * The column-owned facets for this list. The toolbar chips, the column
+   * funnels and the mobile sheet all read from these definitions.
+   */
+  facets?: PublishedFacets;
+  /** Free-text search spanning every column; omitted when the list has none. */
+  search?: {
+    id: string;
+    label: string;
+    placeholder: string;
+    value: string;
+    onChange: (value: string) => void;
+  };
+  /** Restores every facet and empties the search box. */
+  onClearFilters?: () => void;
   /** Controlled status filter. Omit to keep the collection uncontrolled. */
   statusFilter?: StatusFilter;
   onStatusFilterChange?: (filter: StatusFilter) => void;
@@ -101,9 +120,201 @@ function statusLabel(status: DeploymentStatus): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
+function statusMatches(status: DeploymentStatus, filter: StatusFilter): boolean {
+  if (filter === "ALL") return status !== "ARCHIVED";
+  return status === filter;
+}
+
+function countByStatusFilter(
+  items: readonly PublishedDeploymentItem[],
+  filter: StatusFilter
+): number {
+  return items.filter((item) => statusMatches(item.status, filter)).length;
+}
+function PublishedEmptyState({
+  statusFilter,
+  activeFacetCount,
+  onClearFilters,
+}: {
+  statusFilter: StatusFilter;
+  activeFacetCount: number;
+  onClearFilters?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed py-8 text-center">
+      <p className="text-muted-foreground text-sm">
+        {statusFilter === "ALL"
+          ? "No deployments match the selected filter."
+          : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
+      </p>
+      {(activeFacetCount > 0 || statusFilter !== "ALL") && onClearFilters ? (
+        <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>
+          Clear filters
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+function StatusChipRow({
+  statusFilter,
+  statusCounts,
+  onSelect,
+}: {
+  statusFilter: StatusFilter;
+  statusCounts: Record<StatusFilter, number>;
+  onSelect: (filter: StatusFilter) => void;
+}) {
+  return (
+    <div
+      aria-label="Filter by deployment status"
+      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      role="toolbar"
+    >
+      {STATUS_FILTERS.map((filter) => (
+        <Button
+          key={filter}
+          variant={statusFilter === filter ? "default" : "outline"}
+          size="sm"
+          aria-pressed={statusFilter === filter}
+          className="shrink-0"
+          aria-label={filter === "ALL" ? "All" : statusLabel(filter)}
+          onClick={() => onSelect(filter)}
+        >
+          {filter === "ALL" ? "All" : statusLabel(filter)}
+          <span aria-hidden="true" className="tabular-nums opacity-70">
+            {statusCounts[filter]}
+          </span>
+        </Button>
+      ))}
+    </div>
+  );
+}
+function CollectionFilterSheet({
+  view,
+  isMobile,
+  facets,
+  activeFacetCount,
+  onClearFilters,
+}: {
+  view: ToolsViewMode;
+  isMobile: boolean;
+  facets: PublishedFacets | undefined;
+  activeFacetCount: number;
+  onClearFilters?: () => void;
+}) {
+  // The card layout has no heading row at any width, so the sheet is the
+  // only way to reach these facets there; the list layout keeps the
+  // sheet for the widths where the table is replaced by compact rows.
+  if (view === "card") {
+    return (
+      <MobileFilterSheet
+        facets={facets?.all ?? []}
+        activeCount={activeFacetCount}
+        label="Filters"
+        onClearAll={onClearFilters ?? (() => {})}
+        summary="Show results"
+        triggerClassName="w-auto shrink-0"
+      />
+    );
+  }
+  if (!isMobile) return null;
+  return (
+    <div className="md:hidden">
+      <MobileFilterSheet
+        facets={facets?.all ?? []}
+        activeCount={activeFacetCount}
+        label="Filters"
+        onClearAll={onClearFilters ?? (() => {})}
+        summary="Show results"
+      />
+    </div>
+  );
+}
+
+function paginateItems<T>(items: readonly T[], page: number): { total: number; pageItems: T[] } {
+  const total = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safe = Math.min(page, total);
+  return { total, pageItems: items.slice((safe - 1) * PAGE_SIZE, safe * PAGE_SIZE) };
+}
+
 // ---------------------------------------------------------------------------
 // Collection
 // ---------------------------------------------------------------------------
+type PublishedResultsProps = {
+  isMobile: boolean;
+  view: ToolsViewMode;
+  paginatedItems: PublishedDeploymentItem[];
+  label: string;
+  hasCourseColumn: boolean;
+  hasTargetColumn: boolean;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  facets: PublishedFacets | undefined;
+  columnCount: number;
+  renderExpanded: PublishedDeploymentsCollectionProps["renderExpanded"];
+  renderMenuItems: PublishedDeploymentsCollectionProps["renderMenuItems"];
+  renderCardActions: PublishedDeploymentsCollectionProps["renderCardActions"];
+};
+
+function PublishedResults({
+  isMobile,
+  view,
+  paginatedItems,
+  label,
+  hasCourseColumn,
+  hasTargetColumn,
+  expandedIds,
+  onToggle,
+  facets,
+  columnCount,
+  renderExpanded,
+  renderMenuItems,
+  renderCardActions,
+}: PublishedResultsProps) {
+  if (isMobile) {
+    return (
+      <PublishedCompactList
+        items={paginatedItems}
+        label={label}
+        hasCourse={hasCourseColumn}
+        hasTarget={hasTargetColumn}
+        expandedIds={expandedIds}
+        onToggle={onToggle}
+        renderExpanded={renderExpanded}
+        renderMenuItems={renderMenuItems}
+      />
+    );
+  }
+  if (view === "card") {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {paginatedItems.map((item) => (
+          <PublishedCard
+            key={item.id}
+            item={item}
+            hasCourse={hasCourseColumn}
+            renderMenuItems={renderMenuItems}
+            renderCardActions={renderCardActions}
+          />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <PublishedTable
+      items={paginatedItems}
+      label={label}
+      expandedIds={expandedIds}
+      onToggle={onToggle}
+      facets={facets?.byColumn}
+      hasCourse={hasCourseColumn}
+      hasTarget={hasTargetColumn}
+      columnCount={columnCount}
+      renderExpanded={renderExpanded}
+      renderMenuItems={renderMenuItems}
+    />
+  );
+}
 
 export function PublishedDeploymentsCollection({
   view,
@@ -116,6 +327,9 @@ export function PublishedDeploymentsCollection({
   renderMenuItems,
   renderCardActions,
   label = "Published evaluations",
+  facets,
+  search,
+  onClearFilters,
 }: PublishedDeploymentsCollectionProps) {
   const isMobile = useMobileCollectionLayout();
   const [internalStatusFilter, setInternalStatusFilter] = useState<StatusFilter>("ALL");
@@ -123,26 +337,28 @@ export function PublishedDeploymentsCollection({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredItems = items.filter((item) => {
-    if (statusFilter === "ALL") return item.status !== "ARCHIVED";
-    return item.status === statusFilter;
-  });
+  // A narrowing that changes how many rows are visible restarts pagination: a
+  // page index chosen under the previous set may not exist under this one.
+  const [previousItemCount, setPreviousItemCount] = useState(items.length);
+  if (items.length !== previousItemCount) {
+    setPreviousItemCount(items.length);
+    setCurrentPage(1);
+  }
+
+  const filteredItems = items.filter((item) => statusMatches(item.status, statusFilter));
   const statusCounts = Object.fromEntries(
-    STATUS_FILTERS.map((filter) => [
-      filter,
-      items.filter((item) =>
-        filter === "ALL" ? item.status !== "ARCHIVED" : item.status === filter
-      ).length,
-    ])
+    STATUS_FILTERS.map((filter) => [filter, countByStatusFilter(items, filter)])
   ) as Record<StatusFilter, number>;
 
   const hasCourseColumn = items.some((item) => Boolean(item.courseLabel));
   const hasTargetColumn = items.some((item) => Boolean(item.targetLabel));
   const columnCount = 7 + (hasCourseColumn ? 1 : 0) + (hasTargetColumn ? 1 : 0);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const { total: totalPages, pageItems: paginatedItems } = paginateItems(
+    filteredItems,
+    currentPage
+  );
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedItems = filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   function handleFilterChange(filter: StatusFilter) {
     if (controlledStatusFilter === undefined) setInternalStatusFilter(filter);
     onStatusFilterChange?.(filter);
@@ -161,76 +377,55 @@ export function PublishedDeploymentsCollection({
     });
   }
 
-  if (items.length === 0) return <>{empty}</>;
+  const activeFacetCount = facets?.all.filter(facetIsApplied).length ?? 0;
+  const searchActive = (search?.value ?? "").trim().length > 0;
+
+  // The toolbar carries the search box, so a list emptied by its own filters
+  // keeps the toolbar mounted: otherwise the operator loses the query text
+  // and cannot correct it without clearing every filter blind. A list that is
+  // empty with nothing applied renders the empty state alone.
+  if (items.length === 0 && activeFacetCount === 0 && !searchActive) return <>{empty}</>;
 
   return (
     <div className="space-y-4">
-      <div
-        aria-label="Filter by deployment status"
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
-        role="toolbar"
-      >
-        {STATUS_FILTERS.map((filter) => (
-          <Button
-            key={filter}
-            variant={statusFilter === filter ? "default" : "outline"}
-            size="sm"
-            aria-pressed={statusFilter === filter}
-            className="shrink-0"
-            aria-label={filter === "ALL" ? "All" : statusLabel(filter)}
-            onClick={() => handleFilterChange(filter)}
-          >
-            {filter === "ALL" ? "All" : statusLabel(filter)}
-            <span aria-hidden="true" className="tabular-nums opacity-70">
-              {statusCounts[filter]}
-            </span>
-          </Button>
-        ))}
-      </div>
+      <TableToolbar search={search} facets={facets?.all} onClearAll={onClearFilters}>
+        <CollectionFilterSheet
+          view={view}
+          isMobile={isMobile}
+          facets={facets}
+          activeFacetCount={activeFacetCount}
+          onClearFilters={onClearFilters}
+        />
+      </TableToolbar>
+      <StatusChipRow
+        statusFilter={statusFilter}
+        statusCounts={statusCounts}
+        onSelect={handleFilterChange}
+      />
+
       {filteredItems.length === 0 ? (
         (filteredEmpty ?? (
-          <div className="rounded-lg border border-dashed py-8 text-center">
-            <p className="text-muted-foreground text-sm">
-              {statusFilter === "ALL"
-                ? "No deployments match the selected filter."
-                : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
-            </p>
-          </div>
+          <PublishedEmptyState
+            statusFilter={statusFilter}
+            activeFacetCount={activeFacetCount}
+            onClearFilters={onClearFilters}
+          />
         ))
-      ) : isMobile ? (
-        <PublishedCompactList
-          items={paginatedItems}
-          label={label}
-          hasCourse={hasCourseColumn}
-          hasTarget={hasTargetColumn}
-          expandedIds={expandedIds}
-          onToggle={toggleExpanded}
-          renderExpanded={renderExpanded}
-          renderMenuItems={renderMenuItems}
-        />
-      ) : view === "card" ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {paginatedItems.map((item) => (
-            <PublishedCard
-              key={item.id}
-              item={item}
-              hasCourse={hasCourseColumn}
-              renderMenuItems={renderMenuItems}
-              renderCardActions={renderCardActions}
-            />
-          ))}
-        </div>
       ) : (
-        <PublishedTable
-          items={paginatedItems}
+        <PublishedResults
+          isMobile={isMobile}
+          view={view}
+          paginatedItems={paginatedItems}
           label={label}
+          hasCourseColumn={hasCourseColumn}
+          hasTargetColumn={hasTargetColumn}
           expandedIds={expandedIds}
           onToggle={toggleExpanded}
-          hasCourse={hasCourseColumn}
-          hasTarget={hasTargetColumn}
+          facets={facets}
           columnCount={columnCount}
           renderExpanded={renderExpanded}
           renderMenuItems={renderMenuItems}
+          renderCardActions={renderCardActions}
         />
       )}
 
@@ -390,6 +585,7 @@ function PublishedTable({
   label,
   expandedIds,
   onToggle,
+  facets,
   hasCourse,
   hasTarget,
   columnCount,
@@ -399,6 +595,7 @@ function PublishedTable({
   items: PublishedDeploymentItem[];
   label: string;
   expandedIds: Set<string>;
+  facets?: PublishedFacets["byColumn"];
   onToggle: (id: string) => void;
   hasCourse: boolean;
   hasTarget: boolean;
@@ -416,9 +613,9 @@ function PublishedTable({
           <TableRow>
             <TableHead className="w-10"></TableHead>
             <TableHead>Name</TableHead>
-            {hasCourse && <TableHead>Course</TableHead>}
-            {hasTarget && <TableHead>Target</TableHead>}
-            <TableHead>Academic Period</TableHead>
+            {hasCourse && <FilterableHead label="Course" facets={facets?.course} />}
+            {hasTarget && <FilterableHead label="Target" facets={facets?.target} />}
+            <FilterableHead label="Academic Period" facets={facets?.period} />
             <TableHead>Status</TableHead>
             <TableHead>Responses</TableHead>
             <TableHead>Published</TableHead>

@@ -25,26 +25,24 @@ vi.mock("@/lib/actions/course-assignment-actions", () => ({
   preflightCourseAssignmentDeletionAction: vi.fn(),
 }));
 
-vi.mock("@/features/course-assignments/components/shared/assignment-filters", () => ({
-  AssignmentFilters: ({
-    filters,
-    onFiltersChange,
-  }: {
-    filters: Record<string, unknown>;
-    onFiltersChange: (filters: Record<string, unknown>) => void;
-  }) => (
-    <div data-testid="assignment-filters">
-      <button type="button" onClick={() => onFiltersChange({ ...filters, isActive: false })}>
-        Set inactive
-      </button>
-      <button type="button" onClick={() => onFiltersChange({ ...filters, isActive: null })}>
-        Set all statuses
-      </button>
-    </div>
-  ),
-}));
-
 const termInstances = [] as TermInstanceItem[];
+
+/** Column funnels live in the desktop table, so the shell test runs desktop. */
+function mockDesktopViewport() {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(() => false),
+    }))
+  );
+}
 const assignment: CourseAssignmentItem = {
   id: "assignment-1",
   termInstanceId: "term-1",
@@ -61,7 +59,7 @@ const assignment: CourseAssignmentItem = {
   facultyEmail: "faculty@example.com",
   courseCode: "CS101",
   courseTitle: "Introduction to Computing",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   programCode: "BSCS",
   programName: "Computer Science",
   termLabel: "2025-2026 — 1st Semester — 1st Term",
@@ -94,9 +92,27 @@ function renderShell() {
   );
 }
 
+/**
+ * Opens a column funnel and picks one option. Base UI renders each choice as a
+ * label wrapping a radio control, and only the control responds to a click.
+ */
+function openFacet(triggerName: string, optionName: string | RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: triggerName }));
+  const popover = document.querySelector('[data-slot="popover-content"]');
+  if (!popover) throw new Error("The column filter did not open.");
+  const row = Array.from(popover.querySelectorAll("label")).find((label) => {
+    const text = (label.textContent ?? "").trim();
+    return typeof optionName === "string" ? text.startsWith(optionName) : optionName.test(text);
+  });
+  const control = row?.querySelector('[data-slot="radio-group-item"]');
+  if (!control) throw new Error(`No facet option matched ${String(optionName)}.`);
+  fireEvent.click(control);
+}
+
 describe("CourseAssignmentsPageShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDesktopViewport();
   });
 
   it("renders server-provided initial assignments without a mount read", () => {
@@ -105,15 +121,30 @@ describe("CourseAssignmentsPageShell", () => {
     expect(screen.getByText("faculty@example.com")).toBeInTheDocument();
   });
 
-  it("represents filter changes as canonical URL navigation", () => {
+  it("keeps every column funnel reachable and names it for assistive technology", () => {
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: "Set inactive" }));
+    for (const column of ["Course", "Faculty", "Program", "Class", "Term", "Scope", "Roster"]) {
+      expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
+    }
+    // The default Status filter is applied, so its funnel carries the value.
+    expect(screen.getByRole("button", { name: "Filter Status: Active" })).toBeInTheDocument();
+  });
+
+  it("offers the spanning search above the table rather than in a column", () => {
+    renderShell();
+    expect(screen.getByRole("searchbox", { name: "Search assignments" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filter Search" })).not.toBeInTheDocument();
+  });
+
+  it("represents a column filter change as canonical URL navigation", () => {
+    renderShell();
+    openFacet("Filter Status: Active", "Inactive");
     expect(pushMock).toHaveBeenCalledWith("/secretary/course-assignments?isActive=false");
   });
 
   it("preserves an explicit all-statuses selection in the route URL", () => {
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: "Set all statuses" }));
+    openFacet("Filter Status: Active", "All statuses");
     expect(pushMock).toHaveBeenCalledWith("/secretary/course-assignments?isActive=all");
   });
 

@@ -38,7 +38,7 @@ export function getEffectiveDeploymentStatus(
  *
  * Authorization rules:
  * - Faculty: Can only deploy their own assignments (self-deploy)
- * - Program Head: Can deploy on-behalf for program-specific assignments in their scope
+ * - Program Head: Can deploy on-behalf for Professional assignments in their scope
  * - Dean/Secretary: Can deploy on-behalf for any assignment
  *
  * @param session - Auth session with roles

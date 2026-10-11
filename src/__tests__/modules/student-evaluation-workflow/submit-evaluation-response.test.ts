@@ -98,7 +98,7 @@ function courseBoundAssignment(overrides: Record<string, unknown> = {}) {
     course_bound: {
       activation_at: new Date("2026-04-01T00:00:00.000Z"),
       course_assignment: {
-        course: { course_scope: "PROGRAM_SPECIFIC" },
+        course: { course_scope: "PROFESSIONAL" },
         id: "course-assignment-1",
         program_id: "program-1",
         term_instance_id: "term-1",

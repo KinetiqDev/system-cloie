@@ -3,11 +3,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   ArrowDown,
   ArrowRight,
   ArrowUp,
+  CalendarDays,
   CheckCircle2,
   LockKeyhole,
   SearchX,
@@ -76,8 +77,11 @@ import {
   RestoreRosterMember,
 } from "./course-roster-management";
 import { CourseRosterRetry } from "./course-roster-retry";
-import { CourseRosterDiscoveryFilters, CourseRosterMemberFilters } from "./course-roster-filters";
-import { ResultSummaryStrip } from "./shared/result-summary-strip";
+import { CourseRosterMemberFilters } from "./course-roster-filters";
+import { buildCourseRosterFacets, type CourseRosterFacetColumn } from "./course-roster-facets";
+import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
+import { FilterableHead } from "@/components/data-table/filterable-head";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
 
 const eligibilityLabels: Record<RosterEligibilityReason, string> = {
   UNKNOWN_ACCOUNT: "Unknown account",
@@ -257,6 +261,64 @@ function CourseRosterDiscoveryBody({
     [router, view]
   );
 
+  const [searchDraft, setSearchDraft] = useState(filters.search);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchTimer = useRef<number | null>(null);
+  // A keystroke marks the draft as a live edit; a server-driven change clears
+  // that flag so an armed debounce for a stale draft never navigates. A
+  // response echoing our own navigation is not a server-driven change.
+  const draftIsLive = useRef(false);
+  const lastServerSearch = useRef(filters.search);
+  const lastNavigatedSearch = useRef<string | null>(null);
+
+  // The debounced commit reads the latest filters through a ref: a facet
+  // chosen during the wait must survive the pending keystroke instead of
+  // being overwritten by the snapshot the keystroke closed over.
+  const latestFilters = useRef(filters);
+  useEffect(() => {
+    latestFilters.current = filters;
+  }, [filters]);
+
+  useEffect(() => {
+    if (lastServerSearch.current === filters.search) return;
+    lastServerSearch.current = filters.search;
+    if (filters.search !== lastNavigatedSearch.current) {
+      draftIsLive.current = false;
+    }
+  }, [filters.search]);
+
+  // A pending keystroke never navigates after unmount: leaving the page
+  // during the wait must not send the operator back to the roster route.
+  useEffect(
+    () => () => {
+      if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    },
+    []
+  );
+  // A server-driven search change (deep link, back/forward, clearing search)
+  // resets the draft, but never overwrites an in-progress keystroke: the sync
+  // waits for blur so a focused field keeps the operator's text.
+  if (!searchFocused && searchDraft !== filters.search) {
+    setSearchDraft(filters.search);
+  }
+
+  const updateFacet = useCallback(
+    <K extends keyof CourseRosterFilterState>(key: K, value: CourseRosterFilterState[K]) =>
+      navigate({ ...filters, [key]: value }),
+    [filters, navigate]
+  );
+  // The Course and Class columns each carry two facets off one URL state, so
+  // their popover clears compose into the same single navigation as the
+  // toolbar's clear-all instead of one push per facet from a stale snapshot.
+  const clearCourseFacets = useCallback(
+    () => navigate({ ...filters, courseId: null, courseScope: null }),
+    [filters, navigate]
+  );
+  const clearClassFacets = useCallback(
+    () => navigate({ ...filters, yearLevel: null, section: null }),
+    [filters, navigate]
+  );
+
   if (!data) {
     return (
       <CourseRosterDiscoveryError message={error ?? "The roster request could not be completed."} />
@@ -275,37 +337,98 @@ function CourseRosterDiscoveryBody({
     );
   };
 
-  const activeCount = data.items.filter((assignment) => assignment.rosterState === "ACTIVE").length;
   const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize));
+
+  const { byColumn: facets, all: allFacets } = buildCourseRosterFacets(filters, updateFacet, {
+    termInstances,
+    courses,
+    programs,
+  });
+
+  const handleSearchChange = (value: string) => {
+    setSearchDraft(value);
+    draftIsLive.current = true;
+    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      searchTimer.current = null;
+      if (!draftIsLive.current) return;
+      lastNavigatedSearch.current = value;
+      navigate({ ...latestFilters.current, search: value });
+    }, 300);
+  };
+
+  const clearAll = () => {
+    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    draftIsLive.current = false;
+    setSearchDraft("");
+    navigate({ ...DEFAULT_COURSE_ROSTER_FILTERS });
+  };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-heading-xl text-balance">My Course Rosters</h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h1 className="text-heading-xl text-balance">My Course Rosters</h1>
+          {periodScopeLabel(filters, termInstances) ? (
+            <Badge variant="outline" className="bg-card text-muted-foreground text-xs font-normal">
+              <CalendarDays className="mr-1 size-3" aria-hidden="true" />
+              <span>{periodScopeLabel(filters, termInstances)}</span>
+            </Badge>
+          ) : null}
+        </div>
         <p className="text-body-md text-muted-foreground max-w-2xl text-pretty">
           Review and manage the active Course assignments you own. Inactive assignments and
           completed Academic Periods remain review-only.
         </p>
       </div>
 
-      <CourseRosterDiscoveryFilters
-        filters={filters}
-        termInstances={termInstances}
-        courses={courses}
-        programs={programs}
-        pending={isPending}
-        onNavigate={navigate}
-      />
-
-      <ResultSummaryStrip
-        noun="roster"
-        total={data.total}
-        activeCount={activeCount}
-        page={data.page}
-        pageSize={data.pageSize}
-        scopeLabel={periodScopeLabel(filters, termInstances)}
-      />
-
+      <TableToolbar
+        search={{
+          id: "roster-search",
+          label: "Search assignments",
+          placeholder: "Search courses or programs…",
+          value: searchDraft,
+          onChange: handleSearchChange,
+          onFocus: () => setSearchFocused(true),
+          onBlur: () => setSearchFocused(false),
+        }}
+        facets={allFacets}
+        onClearAll={clearAll}
+        resultSummary={
+          <p className="text-muted-foreground text-xs tabular-nums">
+            <span className="text-foreground font-medium">
+              {data.total} {data.total === 1 ? "roster" : "rosters"}
+            </span>
+            {totalPages > 1 && (
+              <>
+                <span className="text-border-strong mx-1.5">·</span>
+                <span>
+                  Page {data.page + 1} of {totalPages}
+                </span>
+              </>
+            )}
+            {isPending ? " · updating…" : ""}
+          </p>
+        }
+      >
+        {view === "card" ? (
+          <MobileFilterSheet
+            facets={allFacets}
+            activeCount={allFacets.filter(facetIsApplied).length}
+            onClearAll={clearAll}
+            summary="Show results"
+          />
+        ) : (
+          <div className="md:hidden">
+            <MobileFilterSheet
+              facets={allFacets}
+              activeCount={allFacets.filter(facetIsApplied).length}
+              onClearAll={clearAll}
+              summary="Show results"
+            />
+          </div>
+        )}
+      </TableToolbar>
       <section aria-labelledby="course-roster-results" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="course-roster-results" className="text-heading-lg">
@@ -330,7 +453,11 @@ function CourseRosterDiscoveryBody({
         ) : view === "card" ? (
           <CourseRosterCardGrid assignments={data.items} />
         ) : (
-          <CourseRosterList assignments={data.items} />
+          <CourseRosterList
+            assignments={data.items}
+            facets={facets}
+            onClearColumn={{ course: clearCourseFacets, class: clearClassFacets }}
+          />
         )}
       </section>
 
@@ -345,7 +472,15 @@ function CourseRosterDiscoveryBody({
   );
 }
 
-function CourseRosterList({ assignments }: { assignments: CourseRosterAssignmentSummary[] }) {
+function CourseRosterList({
+  assignments,
+  facets,
+  onClearColumn,
+}: {
+  assignments: CourseRosterAssignmentSummary[];
+  facets: Record<CourseRosterFacetColumn, FacetDef[]>;
+  onClearColumn?: Partial<Record<CourseRosterFacetColumn, () => void>>;
+}) {
   return (
     <Table
       aria-label="Course assignments"
@@ -358,10 +493,10 @@ function CourseRosterList({ assignments }: { assignments: CourseRosterAssignment
       </caption>
       <TableHeader>
         <TableRow>
-          <TableHead>Course</TableHead>
-          <TableHead>Program</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Academic Period</TableHead>
+          <FilterableHead label="Course" facets={facets.course} onClear={onClearColumn?.course} />
+          <FilterableHead label="Program" facets={facets.program} />
+          <FilterableHead label="Class" facets={facets.class} onClear={onClearColumn?.class} />
+          <FilterableHead label="Academic Period" facets={facets.period} />
           <TableHead>Roster</TableHead>
           <TableHead className="text-right">
             <span className="sr-only">Actions</span>
@@ -752,6 +887,59 @@ function memberStatus(member: CourseRosterMember) {
   );
 }
 
+function RosterEmptyState({
+  search,
+  includeRemoved,
+  clearHref,
+}: {
+  search: string;
+  includeRemoved: boolean;
+  clearHref: string;
+}) {
+  return (
+    <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
+      <p>
+        No students match{search ? ` “${search}”` : " this view"}.{" "}
+        {includeRemoved ? "Removed students are included." : "Removed students are hidden."}
+      </p>
+      {(search || includeRemoved) && (
+        <Link href={clearHref} className={cn(buttonVariants({ variant: "outline" }), "mt-4")}>
+          Clear filters
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function RosterSortHead({
+  sortDirection,
+  isPending,
+  onToggle,
+}: {
+  sortDirection: "asc" | "desc";
+  isPending: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <TableHead aria-sort={sortDirection === "asc" ? "ascending" : "descending"}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`Sort by student name, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
+        aria-busy={isPending || undefined}
+        className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold focus-visible:ring-3 focus-visible:outline-none"
+      >
+        Student
+        {sortDirection === "asc" ? (
+          <ArrowUp aria-hidden="true" className="size-4" />
+        ) : (
+          <ArrowDown aria-hidden="true" className="size-4" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 function RosterTable({
   members,
   includeRemoved,
@@ -794,20 +982,11 @@ function RosterTable({
 
   if (members.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
-        <p>
-          No students match{search ? ` “${search}”` : " this view"}.{" "}
-          {includeRemoved ? "Removed students are included." : "Removed students are hidden."}
-        </p>
-        {(search || includeRemoved) && (
-          <Link
-            href={`${basePath}?${new URLSearchParams({ sort: sortDirection })}`}
-            className={cn(buttonVariants({ variant: "outline" }), "mt-4")}
-          >
-            Clear filters
-          </Link>
-        )}
-      </div>
+      <RosterEmptyState
+        search={search}
+        includeRemoved={includeRemoved}
+        clearHref={`${basePath}?${new URLSearchParams({ sort: sortDirection })}`}
+      />
     );
   }
 
@@ -820,24 +999,13 @@ function RosterTable({
       className="min-w-[48rem]"
     >
       <caption className="sr-only">Course roster members and current eligibility</caption>
-      <TableHeader className="bg-muted/40">
+      <TableHeader>
         <TableRow>
-          <TableHead aria-sort={sortDirection === "asc" ? "ascending" : "descending"}>
-            <button
-              type="button"
-              onClick={handleSortToggle}
-              aria-label={`Sort by student name, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
-              aria-busy={isSortPending || undefined}
-              className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold focus-visible:ring-3 focus-visible:outline-none"
-            >
-              Student
-              {sortDirection === "asc" ? (
-                <ArrowUp aria-hidden="true" className="size-4" />
-              ) : (
-                <ArrowDown aria-hidden="true" className="size-4" />
-              )}
-            </button>
-          </TableHead>
+          <RosterSortHead
+            sortDirection={sortDirection}
+            isPending={isSortPending}
+            onToggle={handleSortToggle}
+          />
           {assignment.courseScope === "GENERAL_EDUCATION" && <TableHead>Program</TableHead>}
           <TableHead>Status</TableHead>
           <TableHead>Added</TableHead>

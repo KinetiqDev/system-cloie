@@ -9,7 +9,7 @@ enum YearLevel {
 
 enum CourseScope {
   GENERAL_EDUCATION
-  PROGRAM_SPECIFIC
+  PROFESSIONAL
 }
 
 enum StudentSection {
@@ -61,7 +61,7 @@ model Course {
   seed_source        String?
   program_id         String?           @db.Uuid
   major_id           String?           @db.Uuid
-  course_scope       CourseScope       @default(PROGRAM_SPECIFIC)
+  course_scope       CourseScope       @default(PROFESSIONAL)
   ge_alignment_mode  GEAlignmentMode   @default(ILO)
   default_year_level YearLevel?
   default_semester   AcademicSemester?

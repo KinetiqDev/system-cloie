@@ -102,22 +102,8 @@ test.describe("public entry (signed-out)", () => {
     await gotoStable(page, "/login/staff");
     await expect(page.getByRole("heading", { level: 1, name: "Staff sign in" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Continue with ACD Google/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /Submit a Faculty request/ })).toHaveAttribute(
-      "href",
-      "/register/faculty"
-    );
-    await expect(page.locator("h1")).toHaveCount(1);
-    await expectNoHorizontalOverflow(page);
-    await expectNoAxeViolations(page);
-  });
-
-  test("faculty registration signs users in before any request form", async ({ page }) => {
-    await gotoStable(page, "/register/faculty");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Faculty registration" })
-    ).toBeVisible();
-    await expect(page.getByRole("button", { name: /Continue with ACD Google/ })).toBeVisible();
-    await expect(page.getByText(/grants no Faculty access/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /Submit a Faculty request/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Visit help and FAQs/ })).toHaveCount(0);
     await expect(page.locator("h1")).toHaveCount(1);
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);

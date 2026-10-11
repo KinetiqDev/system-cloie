@@ -1,8 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { CloieLogoMark } from "@/components/brand/cloie-logo-mark";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { AppearanceMenuTrigger } from "@/features/design-system/components/appearance-menu-trigger";
 import { resolveAppearanceAvailability } from "@/features/design-system/services/resolve-appearance-availability";
 
@@ -21,12 +23,12 @@ function externalLinkAttributes(href: string) {
 }
 
 /**
- * Audience landing chrome. Identity stays in the header; the first screen
- * carries content instead: a scoped kicker, the audience, one statement of what
- * signing in does, the single action, and the numbered prerequisites beside it.
- * Body sections are rule-ruled lists; numerals are opt-in per list, because
- * numbering a set of parallel responsibilities asserts a sequence that is not
- * there — see `LandingItems`.
+ * Audience landing chrome. The hero section leads with a paired ACD seal and
+ * System CLOIE brand lockup establishing immediate institutional trust,
+ * followed by the audience heading, statement, upscaled CTA pair, and the
+ * numbered prerequisites beside it. Body sections are rule-ruled lists;
+ * numerals are opt-in per list, because numbering a set of parallel
+ * responsibilities asserts a sequence that is not there — see `LandingItems`.
  */
 export function AudienceLanding({
   audience,
@@ -46,7 +48,11 @@ export function AudienceLanding({
   statement: string;
   loginHref: string;
   signInLabel: string;
-  secondaryAction?: { href: string; label: string };
+  secondaryAction?: {
+    href: string;
+    label: string;
+    variant?: "outline" | "ghost" | "secondary";
+  };
   /** Short facts the visitor should know before they act. */
   prerequisites: readonly string[];
   guideHref: string;
@@ -62,14 +68,10 @@ export function AudienceLanding({
       </a>
       <header className="border-border border-b">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-x-2 px-4 py-3 sm:gap-x-4 sm:px-6 sm:py-4 lg:px-8">
-          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <CloieLogoMark className="h-9" />
-            <div className="min-w-0">
-              <p className="text-title-md font-bold">System CLOIE</p>
-              <p className="text-caption text-muted-foreground hidden md:block">
-                Assumption College of Davao
-              </p>
-            </div>
+          <div className="flex min-w-0 items-center">
+            <span className="font-heading text-primary text-2xl font-bold tracking-tight sm:text-3xl">
+              System CLOIE
+            </span>
           </div>
           <nav aria-label="Page navigation" className="flex shrink-0 items-center gap-2 md:gap-5">
             <a href="#before-you-sign-in" className={`${textLink} max-lg:hidden`}>
@@ -100,21 +102,64 @@ export function AudienceLanding({
           className="grid gap-8 pt-10 pb-10 sm:pt-14 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-16 lg:pt-16 lg:pb-14"
         >
           <div className="max-w-2xl">
-            <p className="text-body-sm text-muted-foreground font-medium">{scope}</p>
+            <div className="mb-6 flex items-center gap-3.5 sm:gap-4">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="border-border flex size-12 shrink-0 items-center justify-center rounded-full border bg-white shadow-2xs sm:size-14">
+                  <Image
+                    src="/logos/acd-logo.png"
+                    alt="Assumption College of Davao seal"
+                    width={56}
+                    height={56}
+                    className="size-9 object-contain sm:size-11"
+                    priority
+                  />
+                </div>
+                <CloieLogoMark className="size-12 shadow-2xs sm:size-14" priority />
+              </div>
+              <div className="bg-border/80 h-8 w-px shrink-0" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-caption text-muted-foreground font-semibold tracking-wider uppercase">
+                  Assumption College of Davao
+                </p>
+                <p className="text-caption text-foreground/80 font-medium sm:truncate">{scope}</p>
+              </div>
+            </div>
             <h1
               id="audience-heading"
-              className="text-display-md lg:text-display-lg mt-2 tracking-tight text-balance"
+              className="text-display-md lg:text-display-lg tracking-tight text-balance"
             >
               {audience}
             </h1>
             <p className="text-body-lg text-muted-foreground mt-4">{statement}</p>
-            <div className="mt-7 flex flex-col items-center gap-y-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
-              <Link href={loginHref} className={buttonVariants({ className: "w-full sm:w-auto" })}>
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+              <Link
+                href={loginHref}
+                className={cn(
+                  buttonVariants({
+                    size: "lg",
+                    className:
+                      "w-full font-semibold shadow-sm transition-all hover:shadow active:scale-[0.99] sm:w-auto",
+                  })
+                )}
+              >
                 {signInLabel}
-                <ArrowRight className="size-4" aria-hidden="true" />
+                <ArrowRight
+                  data-icon="inline-end"
+                  className="size-4.5 transition-transform group-hover/button:translate-x-0.5"
+                  aria-hidden="true"
+                />
               </Link>
               {secondaryAction ? (
-                <Link href={secondaryAction.href} className={`${textLink} text-body-sm`}>
+                <Link
+                  href={secondaryAction.href}
+                  className={cn(
+                    buttonVariants({
+                      variant: secondaryAction.variant ?? "ghost",
+                      size: "lg",
+                      className: "w-full font-semibold sm:w-auto",
+                    })
+                  )}
+                >
                   {secondaryAction.label}
                 </Link>
               ) : null}

@@ -26,10 +26,13 @@ const facultyDecisionSchema = z.object({
  * callback, so it is an *entry* gate: a Secretary who signed in through the
  * staff entrance already acknowledged the current documents, and an ordinary
  * administrative decision neither re-enters nor grants a role. Requiring an
- * entry ticket again would make every real decision unreachable. The gate
- * still runs before the writes that do enter or grant — the Faculty
- * registration action (`src/lib/actions/faculty-actions.ts`) and the
- * email-first external actions (`src/lib/actions/external-entry-actions.ts`).
+ * entry ticket again would make every real decision unreachable. That is also
+ * why Faculty onboarding (`src/lib/actions/faculty-actions.ts`) does not
+ * re-verify a ticket: it completes inside the already-acknowledged
+ * staff-entrance session, and the consumed ticket cannot be presented twice.
+ * The email-first external actions are the exception — they verify the
+ * `external`-intent ticket server-side because their flow mints it after
+ * sign-in, before the gated write.
  *
  * The Google method stays enforced: SECRETARY is a Google-only role, so a
  * password, OTP, or recovery session resolves the profile gate to

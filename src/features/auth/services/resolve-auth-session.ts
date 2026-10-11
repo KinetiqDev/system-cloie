@@ -41,8 +41,8 @@ function isKnownRole(roleName: string): roleName is Role {
 /**
  * Gates that withhold the session's active role. Each names an account or
  * session that must not authorize as its assigned role: no institution-recorded
- * placement, an inactive account, a rejected external account, a Faculty request
- * not approved, or a Google-only role opened by a non-Google method.
+ * placement, an inactive account, a rejected external account, a refused Faculty
+ * request, or a Google-only role opened by a non-Google method.
  *
  * Excluded: gates that only redirect to a self-service route the person may
  * still complete — role selection, Faculty registration, Alumni and Industry
@@ -54,7 +54,6 @@ const AUTHORIZATION_DENIED_PROFILE_GATES: Partial<
   STUDENT_PLACEMENT_REQUIRED: true,
   INACTIVE: true,
   REJECTED_EXTERNAL_ACCOUNT: true,
-  FACULTY_APPROVAL_PENDING: true,
   FACULTY_REQUEST_REJECTED: true,
   AUTH_METHOD_MISMATCH: true,
 };

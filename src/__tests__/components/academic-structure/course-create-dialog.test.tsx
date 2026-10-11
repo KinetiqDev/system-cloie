@@ -74,7 +74,7 @@ describe("CourseCreateDialog", () => {
     const formData = createCourseActionMock.mock.calls[0]?.[0] as FormData;
     expect(formData.get("code")).toBe("GE9");
     expect(formData.get("title")).toBe("Ethics");
-    expect(formData.get("course_scope")).toBe("PROGRAM_SPECIFIC");
+    expect(formData.get("course_scope")).toBe("PROFESSIONAL");
     await waitFor(() =>
       expect(showToastMock).toHaveBeenCalledWith("Course GE9 created.", "success")
     );
