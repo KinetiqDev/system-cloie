@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PROGRAM_HEAD_CLASSIFICATIONS } from "@/features/outcomes/po-classification";
 import { createPOSchema } from "@/features/outcomes/schemas/po";
 
 const details = {
@@ -22,4 +23,11 @@ describe("Program Head PO classification", () => {
       expect(createPOSchema.safeParse({ ...details, classification }).success).toBe(false);
     }
   );
+
+  it("provides normalized labels for Program Head classifications", () => {
+    expect(PROGRAM_HEAD_CLASSIFICATIONS).toEqual([
+      { value: "CORE", label: "Core" },
+      { value: "PROFESSIONAL", label: "Professional" },
+    ]);
+  });
 });

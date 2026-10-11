@@ -204,6 +204,20 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
+  /* ---------- PO Classification Categories ---------- */
+  --color-classification-common-bg: var(--classification-common-bg);
+  --color-classification-common-fg: var(--classification-common-fg);
+  --color-classification-common-border: var(--classification-common-border);
+  --color-classification-core-bg: var(--classification-core-bg);
+  --color-classification-core-fg: var(--classification-core-fg);
+  --color-classification-core-border: var(--classification-core-border);
+  --color-classification-professional-bg: var(--classification-professional-bg);
+  --color-classification-professional-fg: var(--classification-professional-fg);
+  --color-classification-professional-border: var(--classification-professional-border);
+  --color-classification-institution-bg: var(--classification-institution-bg);
+  --color-classification-institution-fg: var(--classification-institution-fg);
+  --color-classification-institution-border: var(--classification-institution-border);
+
   /* ---------- Shadows ---------- */
   --shadow-sm: var(--shadow-sm);
   --shadow-dropdown: var(--shadow-dropdown);

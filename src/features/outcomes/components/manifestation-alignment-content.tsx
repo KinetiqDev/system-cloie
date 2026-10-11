@@ -13,7 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import type { CourseAlignment } from "@/features/outcomes/services/manage-course-alignment";
-import { PO_CLASSIFICATION_LABELS } from "../po-classification";
+import { POClassificationBadge } from "./po-classification-badge";
 import { cn } from "@/lib/utils";
 import {
   MANIFESTATION_OPTIONS,
@@ -192,15 +192,17 @@ export function ManifestationAlignmentContent({
                     key={target.id}
                     scope="col"
                     aria-label={`${copy.shortNoun} ${targetIndex + 1}: ${target.code}, ${target.description}`}
-                    className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
+                    className="min-w-44 px-3 pt-2.5 pb-2.5 text-left align-top font-medium"
                   >
-                    <span className="block">{target.code}</span>
-                    {target.classification && (
-                      <Badge variant="secondary">
-                        {PO_CLASSIFICATION_LABELS[target.classification]}
-                      </Badge>
-                    )}
-                    <span className="text-muted-foreground mt-1 block text-xs leading-snug font-normal break-words">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-foreground text-sm font-semibold tracking-tight">
+                        {target.code}
+                      </span>
+                      {target.classification && (
+                        <POClassificationBadge classification={target.classification} />
+                      )}
+                    </div>
+                    <span className="text-muted-foreground mt-1.5 block text-xs leading-snug font-normal break-words">
                       {target.description}
                     </span>
                   </th>
@@ -276,12 +278,12 @@ export function ManifestationAlignmentContent({
                         : "border-border bg-surface-input"
                     )}
                   >
-                    <p className="text-label-lg font-medium">{target.code}</p>
-                    {target.classification && (
-                      <Badge variant="secondary">
-                        {PO_CLASSIFICATION_LABELS[target.classification]}
-                      </Badge>
-                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <p className="text-label-lg font-semibold text-foreground">{target.code}</p>
+                      {target.classification && (
+                        <POClassificationBadge classification={target.classification} />
+                      )}
+                    </div>
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>
                     {unanswered && <p className="text-muted-foreground text-body-sm">Unanswered</p>}
                     <ManifestationPicker

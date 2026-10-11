@@ -446,6 +446,7 @@ Canonical: standard, KPI, chart, portal choice, formal institutional.
 - A line row scrolls its own overflow rather than the page; its underline sits outside the trigger box inside reserved row padding.
 - Choose the tab contract by what the view does: panel switchers render `Tabs` with `TabsContent` (`role="tab"`); view switchers that navigate render `ViewTabs`, a labelled `nav` of links that reuses the same recipe and marks the active view with `aria-current="page"`.
 - Cyan badges are categorical; semantic badges indicate status. Primary-tint chips use link text (see §8.5).
+- Program Outcome classification badges (`POClassificationBadge`) consume dedicated categorical roles: Common to all Schools (ACD Cyan categorical accent `--classification-common-*`), Core (Indigo discipline foundation `--classification-core-*`), Professional (Purple specialized practice `--classification-professional-*`), and Institution-specific (Rose mission tint `--classification-institution-*`). They provide ≥7:1 WCAG AAA contrast in both Light and Dark themes and avoid green/amber/red status tokens to eliminate CQI attainment status confusion.
 - Progress includes a text/count/percentage.
 - Structure remains identical across themes.
 

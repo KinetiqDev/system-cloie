@@ -3312,6 +3312,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
   },
   {
+    path: "src/features/outcomes/components/po-classification-badge.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Program Outcome classification badge on dedicated categorical roles with a visible text label",
+  },
+  {
     path: "src/features/outcomes/components/manifestation-picker.tsx",
     disposition: "task",
     taskId: 17,

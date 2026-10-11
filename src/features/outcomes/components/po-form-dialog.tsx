@@ -33,7 +33,7 @@ import {
   type UpdatePOInput,
 } from "../schemas/po";
 import { createPOAction, updatePOAction } from "@/lib/actions/program-head-outcome-actions";
-import { isProgramHeadCategory } from "../po-classification";
+import { PROGRAM_HEAD_CLASSIFICATIONS, isProgramHeadCategory } from "../po-classification";
 import type { ProgramPOItem } from "../services/manage-program-head-outcomes";
 
 type POFormDialogProps =
@@ -59,10 +59,6 @@ type POFormDialogProps =
  * one: an administrative PO arriving here prefills with no selection at all,
  * and the schema still refuses to submit until a permitted value is chosen.
  */
-const PROGRAM_HEAD_CLASSIFICATIONS = [
-  { value: "CORE", label: "Core" },
-  { value: "PROFESSIONAL", label: "Professional" },
-] as const;
 
 /** Server-action failure banner, shared by both form modes. */
 function FormRootError({ error }: { error?: { message?: string } }) {
@@ -94,7 +90,11 @@ function POClassificationField({
   return (
     <Field data-invalid={!!error}>
       <FieldLabel htmlFor={`${idPrefix}-po-classification`}>Classification</FieldLabel>
-      <Select value={value ?? null} onValueChange={onValueChange}>
+      <Select
+        items={PROGRAM_HEAD_CLASSIFICATIONS}
+        value={value ?? null}
+        onValueChange={onValueChange}
+      >
         <SelectTrigger
           id={`${idPrefix}-po-classification`}
           className="w-full"

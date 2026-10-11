@@ -71,10 +71,15 @@ describe("POImportDialog", () => {
       },
     });
     await uploadCsv("PO Code,Description\nPO-20,Apply computing knowledge");
-    fireEvent.click(
-      screen.getByRole("combobox", { name: "Classification for rows without a category" })
-    );
-    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
+    const classificationCombobox = screen.getByRole("combobox", {
+      name: "Classification for rows without a category",
+    });
+    fireEvent.click(classificationCombobox);
+    const coreOption = await screen.findByRole("option", { name: "Core" });
+    fireEvent.mouseMove(coreOption);
+    fireEvent.click(coreOption);
+    expect(classificationCombobox).toHaveTextContent("Core");
+    expect(classificationCombobox).not.toHaveTextContent("CORE");
     fireEvent.click(screen.getByRole("button", { name: "Check file" }));
     expect(await screen.findByRole("heading", { name: "Review POs" })).toBeInTheDocument();
     expect(screen.getByText(/may show incomplete CILO mappings/i)).toBeInTheDocument();
