@@ -16,6 +16,10 @@ export type POImportOutcome = Exclude<POImportRowStatus, "READY"> | "CREATED";
 export type POImportPreviewRow = {
   sourceIndex: number;
   input: POImportSourceRow["input"];
+  // Resolved per row: the row's own Classification column when it names a
+  // Program Head category, otherwise the import-dialog selection. Carried on
+  // every row — including rejected ones — so recovery files and review rows
+  // never drop the category the Program Head chose.
   classification?: "CORE" | "PROFESSIONAL";
   poCode: string;
   description: string;

@@ -113,6 +113,66 @@ describe("ProgramHeadOutcomesPage", () => {
     expect(screen.getByText("Return to All to reorder")).toBeInTheDocument();
   });
 
+  it("keeps every classification reachable in the scrollable tab row", async () => {
+    render(<ProgramHeadOutcomesPage pos={[makePO()]} program={program} />);
+
+    const core = screen.getByRole("tab", { name: "Core (1)" });
+    act(() => core.focus());
+    await act(async () => {
+      fireEvent.keyDown(core, { key: "ArrowRight" });
+    });
+
+    expect(screen.getByRole("tab", { name: "Professional (0)" })).toHaveFocus();
+  });
+
+  it("counts every tab from the catalog without double-counting All", () => {
+    render(
+      <ProgramHeadOutcomesPage
+        pos={[
+          makePO({ id: "po-core", code: "PO-1" }),
+          makePO({ id: "po-prof", code: "PO-2", classification: "PROFESSIONAL", order: 1 }),
+          makePO({ id: "po-inst", code: "PO-3", classification: "INSTITUTION_SPECIFIC", order: 2 }),
+        ]}
+        program={program}
+      />
+    );
+
+    expect(screen.getByRole("tab", { name: "All (3)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Core (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Professional (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Other (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Common (0)" })).toBeInTheDocument();
+  });
+
+  it("explains an empty Program Head category and keeps the create path", () => {
+    render(<ProgramHeadOutcomesPage pos={[makePO()]} program={program} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Professional (0)" }));
+
+    expect(screen.getByText("No Professional POs")).toBeInTheDocument();
+    expect(screen.queryByText("No Program Outcomes yet")).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Add PO" })[1]);
+
+    expect(screen.getByRole("heading", { name: "Add Program Outcome" })).toBeInTheDocument();
+  });
+
+  it("names the administrative owner instead of offering a Program Head create path", () => {
+    render(<ProgramHeadOutcomesPage pos={[makePO()]} program={program} />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Common (0)" }));
+
+    expect(screen.getByText("No Common POs in this program")).toBeInTheDocument();
+    expect(screen.getByText(/Secretary or Dean adopts one/)).toBeInTheDocument();
+    // The header action is the only create path: an administrative category
+    // stays Secretary/Dean-owned, so its empty tab offers no Program Head CTA.
+    expect(screen.getAllByRole("button", { name: "Add PO" })).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Other (0)" }));
+
+    expect(screen.getByText("No Institution-specific or unclassified POs")).toBeInTheDocument();
+  });
+
   it("shows the empty state and opens the create dialog from it", () => {
     render(<ProgramHeadOutcomesPage pos={[]} program={program} />);
 

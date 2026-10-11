@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted design, 2026-10-10. Implementation and release verification are tracked in the working change. User decisions supersede the proposed defaults in `po-classification-impl-plan.md`. This partially supersedes [ADR 0005](0005-outcome-ownership-and-dean-oversight.md) for Dean outcome stewardship: Dean and Secretary jointly hold central Common PO and program-local Common/Institution-specific write authority, while ADR 0005's Core/Professional, ILO, CILO, mapping-edit prohibitions and read-only Dean oversight remain in force.
+Accepted design, 2026-10-10. Implementation and release verification are tracked in PR #670. The decisions below record the accepted ownership and alignment rules. This partially supersedes [ADR 0005](0005-outcome-ownership-and-dean-oversight.md) for Dean outcome stewardship: Dean and Secretary jointly hold central Common PO and program-local Common/Institution-specific write authority, while ADR 0005's Core/Professional, ILO, CILO, mapping-edit prohibitions and read-only Dean oversight remain in force.
 
 ## Decision
 

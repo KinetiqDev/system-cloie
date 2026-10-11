@@ -277,6 +277,74 @@ export type Database = {
           },
         ]
       }
+      cilo_common_po_mappings: {
+        Row: {
+          cilo_id: string
+          common_outcome_id: string
+          created_at: string
+          created_by: string
+          id: string
+          manifestation:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          cilo_id: string
+          common_outcome_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at: string
+          updated_by: string
+        }
+        Update: {
+          cilo_id?: string
+          common_outcome_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          manifestation?:
+            | Database["public"]["Enums"]["CILOMappingManifestation"]
+            | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cilo_common_po_mappings_cilo_id_fkey"
+            columns: ["cilo_id"]
+            isOneToOne: false
+            referencedRelation: "cilos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_common_po_mappings_common_outcome_id_fkey"
+            columns: ["common_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "common_program_outcomes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_common_po_mappings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cilo_common_po_mappings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cilo_institutional_outcome_mappings: {
         Row: {
           cilo_id: string
@@ -457,6 +525,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      common_program_outcomes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          order: number
+          source_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          source_ref?: string | null
+          updated_at: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          order?: number
+          source_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       course_assignment_memberships: {
         Row: {
@@ -947,6 +1048,7 @@ export type Database = {
             | null
           default_term: Database["public"]["Enums"]["academic_term"] | null
           default_year_level: Database["public"]["Enums"]["year_level"] | null
+          ge_alignment_mode: Database["public"]["Enums"]["GEAlignmentMode"]
           id: string
           is_active: boolean
           major_id: string | null
@@ -964,6 +1066,7 @@ export type Database = {
             | null
           default_term?: Database["public"]["Enums"]["academic_term"] | null
           default_year_level?: Database["public"]["Enums"]["year_level"] | null
+          ge_alignment_mode?: Database["public"]["Enums"]["GEAlignmentMode"]
           id?: string
           is_active?: boolean
           major_id?: string | null
@@ -981,6 +1084,7 @@ export type Database = {
             | null
           default_term?: Database["public"]["Enums"]["academic_term"] | null
           default_year_level?: Database["public"]["Enums"]["year_level"] | null
+          ge_alignment_mode?: Database["public"]["Enums"]["GEAlignmentMode"]
           id?: string
           is_active?: boolean
           major_id?: string | null
@@ -1220,7 +1324,9 @@ export type Database = {
       }
       gos: {
         Row: {
+          classification: Database["public"]["Enums"]["POClassification"]
           code: string
+          common_outcome_id: string | null
           created_at: string
           description: string
           id: string
@@ -1230,7 +1336,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          classification?: Database["public"]["Enums"]["POClassification"]
           code: string
+          common_outcome_id?: string | null
           created_at?: string
           description: string
           id?: string
@@ -1240,7 +1348,9 @@ export type Database = {
           updated_at: string
         }
         Update: {
+          classification?: Database["public"]["Enums"]["POClassification"]
           code?: string
+          common_outcome_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -1250,6 +1360,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "gos_common_outcome_id_fkey"
+            columns: ["common_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "common_program_outcomes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gos_program_id_fkey"
             columns: ["program_id"]
@@ -1647,6 +1764,41 @@ export type Database = {
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outcome_changes: {
+        Row: {
+          actor_id: string
+          after: Json
+          before: Json
+          created_at: string
+          id: string
+          input: Json
+        }
+        Insert: {
+          actor_id: string
+          after: Json
+          before: Json
+          created_at?: string
+          id?: string
+          input: Json
+        }
+        Update: {
+          actor_id?: string
+          after?: Json
+          before?: Json
+          created_at?: string
+          id?: string
+          input?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcome_changes_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -2143,7 +2295,14 @@ export type Database = {
       enrollment_source: "ONBOARDING" | "ROLLOVER" | "SECRETARY"
       EvaluationTemplateType: "PROGRAM_WIDE" | "COURSE_BOUND"
       faculty_approval_status: "PENDING" | "APPROVED" | "REJECTED"
+      GEAlignmentMode: "ILO" | "COMMON_PO"
       InviteStatus: "DRAFT" | "SENT" | "ACCEPTED" | "REVOKED"
+      POClassification:
+        | "COMMON"
+        | "CORE"
+        | "PROFESSIONAL"
+        | "INSTITUTION_SPECIFIC"
+        | "UNCLASSIFIED"
       ResponseStatus: "IN_PROGRESS" | "SUBMITTED"
       student_section: "MORNING" | "AFTERNOON" | "EVENING"
       SystemRole:
@@ -2307,7 +2466,15 @@ export const Constants = {
       enrollment_source: ["ONBOARDING", "ROLLOVER", "SECRETARY"],
       EvaluationTemplateType: ["PROGRAM_WIDE", "COURSE_BOUND"],
       faculty_approval_status: ["PENDING", "APPROVED", "REJECTED"],
+      GEAlignmentMode: ["ILO", "COMMON_PO"],
       InviteStatus: ["DRAFT", "SENT", "ACCEPTED", "REVOKED"],
+      POClassification: [
+        "COMMON",
+        "CORE",
+        "PROFESSIONAL",
+        "INSTITUTION_SPECIFIC",
+        "UNCLASSIFIED",
+      ],
       ResponseStatus: ["IN_PROGRESS", "SUBMITTED"],
       student_section: ["MORNING", "AFTERNOON", "EVENING"],
       SystemRole: [

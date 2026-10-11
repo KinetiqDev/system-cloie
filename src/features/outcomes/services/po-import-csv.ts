@@ -1,5 +1,10 @@
 import { parseCsvRecords, type CsvRecord } from "@/lib/csv/parse-csv-records";
-import { PO_IMPORT_MAX_ROWS, type POImportSourceRow } from "../types/po-import";
+import { PO_CLASSIFICATION_LABELS } from "../po-classification";
+import {
+  PO_IMPORT_MAX_ROWS,
+  type POImportPreviewRow,
+  type POImportSourceRow,
+} from "../types/po-import";
 
 export { PO_IMPORT_MAX_ROWS } from "../types/po-import";
 
@@ -102,12 +107,33 @@ export function parsePOImportCsv(input: string | Uint8Array): POImportParseResul
 }
 
 export function exportFailedPOImportRows(
-  rows: Array<{ poCode: string; description: string; error: string }>
+  rows: Array<{
+    poCode: string;
+    description: string;
+    classification?: POImportPreviewRow["classification"];
+    sourceClassification?: string;
+    error: string;
+  }>
 ): string {
+  // The recovery file stays a valid import file, so it carries each row's
+  // Classification. Repairing a rejected Professional row and reimporting it
+  // then keeps Professional even when the dialog default is Core. A row that
+  // resolved to no category keeps its original raw text, so an administrative
+  // value stays rejected on reimport instead of silently becoming the dialog's
+  // category; the Program Head must change it explicitly.
   return [
-    "\uFEFFPO Code,Description,Error",
+    "\uFEFFPO Code,Description,Classification,Error",
     ...rows.map((row) =>
-      [row.poCode, row.description, row.error].map((value) => csvCell(value)).join(",")
+      [
+        row.poCode,
+        row.description,
+        row.classification
+          ? PO_CLASSIFICATION_LABELS[row.classification]
+          : (row.sourceClassification ?? ""),
+        row.error,
+      ]
+        .map((value) => csvCell(value))
+        .join(",")
     ),
     "",
   ].join("\r\n");

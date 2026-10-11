@@ -53,6 +53,7 @@ import {
   parsePOImportCsv,
   PO_IMPORT_TEMPLATE,
 } from "../services/po-import-csv";
+import { PO_CLASSIFICATION_LABELS } from "../po-classification";
 import type { POImportPreview, POImportPreviewRow, POImportResult } from "../types/po-import";
 
 type Step = "file" | "review" | "results";
@@ -136,6 +137,9 @@ function RowList({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-label-md">Row {row.sourceIndex}</span>
                 <Badge variant={successful ? "success" : "outline"}>{label}</Badge>
+                {row.classification && (
+                  <Badge variant="secondary">{PO_CLASSIFICATION_LABELS[row.classification]}</Badge>
+                )}
               </div>
               <p className="text-body-sm mt-1 font-semibold break-words">
                 {row.poCode || "PO code not provided"}
@@ -578,6 +582,8 @@ function ResultsActions({
               exportFailedPOImportRows(
                 rowsToFix.map((row) => ({
                   poCode: row.poCode,
+                  sourceClassification: row.input.classification,
+                  classification: row.classification,
                   description: row.description,
                   error: row.error ?? "Not created.",
                 }))

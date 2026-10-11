@@ -42,6 +42,7 @@ function readyRow(sourceIndex: number, poCode: string, description: string) {
   return {
     sourceIndex,
     input: { po_code: poCode, description },
+    classification: "CORE" as const,
     poCode,
     description,
     status: "READY" as const,
@@ -89,8 +90,20 @@ describe("confirmPOImport", () => {
 
     expect(createManyMock).toHaveBeenCalledWith({
       data: [
-        { code: "PO-1", description: "First outcome", order: 5, program_id: PROGRAM_ID },
-        { code: "PO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID },
+        {
+          code: "PO-1",
+          description: "First outcome",
+          classification: "CORE",
+          order: 5,
+          program_id: PROGRAM_ID,
+        },
+        {
+          code: "PO-2",
+          description: "Second outcome",
+          classification: "CORE",
+          order: 6,
+          program_id: PROGRAM_ID,
+        },
       ],
     });
     expect(result).toEqual({
@@ -122,7 +135,15 @@ describe("confirmPOImport", () => {
     const result = await confirmPOImport(request);
 
     expect(createManyMock).toHaveBeenCalledWith({
-      data: [{ code: "PO-1", description: "First outcome", order: 6, program_id: PROGRAM_ID }],
+      data: [
+        {
+          code: "PO-1",
+          description: "First outcome",
+          classification: "CORE",
+          order: 6,
+          program_id: PROGRAM_ID,
+        },
+      ],
     });
     expect(result).toMatchObject({
       success: true,
@@ -205,7 +226,15 @@ describe("confirmPOImport", () => {
 
     expect(transactionMock).toHaveBeenCalledTimes(2);
     expect(createManyMock).toHaveBeenCalledWith({
-      data: [{ code: "PO-2", description: "Second outcome", order: 6, program_id: PROGRAM_ID }],
+      data: [
+        {
+          code: "PO-2",
+          description: "Second outcome",
+          classification: "CORE",
+          order: 6,
+          program_id: PROGRAM_ID,
+        },
+      ],
     });
     expect(result).toMatchObject({
       success: true,

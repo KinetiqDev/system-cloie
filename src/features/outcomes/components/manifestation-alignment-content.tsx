@@ -175,7 +175,8 @@ export function ManifestationAlignmentContent({
       {manifestLegend()}
 
       <div className="hidden md:block" data-testid="manifestation-matrix">
-        <div className="overflow-x-auto">
+        {/* Contain absolutely positioned screen-reader text within the table's scrollport. */}
+        <div className="relative overflow-x-auto">
           <table className="w-full caption-bottom text-sm">
             <caption className="sr-only">{copy.caption}</caption>
             <thead>

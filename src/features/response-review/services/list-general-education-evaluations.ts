@@ -101,13 +101,15 @@ function assignmentFilterWhere(
     ...(filters.section ? { section: filters.section } : {}),
     course: {
       course_scope: "GENERAL_EDUCATION",
-      ...(filters.iloId ? { cilos: { some: iloCiloWhere(filters.iloId) } } : {}),
+      ...(filters.iloId
+        ? { ge_alignment_mode: "ILO", cilos: { some: iloCiloWhere(filters.iloId) } }
+        : {}),
     },
   };
 }
 
 /**
- * ILO facet: evaluations whose Course has an active CILO currently mapped to
+ * ILO facet: evaluations whose ILO-mode Course has an active CILO currently mapped to
  * the selected ILO. Manifestation is descriptive, so it never narrows the
  * facet — a mapping with no recorded classification still counts as
  * alignment. Only current mappings are considered, so re-pointing a CILO at a
@@ -298,13 +300,17 @@ async function loadFilterOptions(): Promise<GeneralEducationEvaluationFilterOpti
       select: { id: true, code: true, name: true },
       orderBy: { code: "asc" },
     }),
-    // The reachable ILO set, matching the facet exactly: an ILO some active
-    // General Education CILO currently maps to. Manifestation never narrows
-    // this — a mapping with no classification still makes the ILO selectable.
+    // ILO-mode CILOs define the reachable set; retained ILO rows on Common-mode
+    // courses are inapplicable even when the old mapping still exists.
     prisma.institutionalOutcome.findMany({
       where: {
         cilo_mappings: {
-          some: { cilo: { is_active: true, course: { course_scope: "GENERAL_EDUCATION" } } },
+          some: {
+            cilo: {
+              is_active: true,
+              course: { course_scope: "GENERAL_EDUCATION", ge_alignment_mode: "ILO" },
+            },
+          },
         },
       },
       select: { id: true, code: true, description: true },

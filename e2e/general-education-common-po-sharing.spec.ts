@@ -21,8 +21,12 @@ for (const width of [1440, 393]) {
     await page.goto(`/faculty/cilos/${contract.courseId}/alignment`);
     await expect(page.getByText("Shared General Education mapping")).toBeVisible();
     await expect(page.getByText(/Edits apply to every assignment of this course/)).toBeVisible();
+    // The matrix renders twice by design: a table on desktop and cards on
+    // mobile. Assert on the surface the viewport actually shows, so the first
+    // DOM match is never the hidden one.
+    const surface = page.getByTestId(width < 768 ? "manifestation-cards" : "manifestation-matrix");
     for (const code of contract.commonOutcomeCodes) {
-      await expect(page.getByText(code, { exact: true }).first()).toBeVisible();
+      await expect(surface.getByText(code, { exact: true }).first()).toBeVisible();
     }
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);
@@ -32,13 +36,13 @@ for (const width of [1440, 393]) {
     await page.goto(`/faculty/cilos/${contract.courseId}/alignment`);
     await expect(page.getByText("Shared General Education mapping")).toBeVisible();
     for (const code of contract.commonOutcomeCodes) {
-      await expect(page.getByText(code, { exact: true }).first()).toBeVisible();
+      await expect(surface.getByText(code, { exact: true }).first()).toBeVisible();
     }
 
     // One course-owned mapping set: both readers resolve identical saved values
     // (CILO 2 maps to COMMON-3 with the PRACTICE manifestation in the seed).
     await expect(
-      page.getByRole("button", { name: /manifestation: Practice/ }).first()
+      surface.getByRole("button", { name: /manifestation: Practice/ }).first()
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectNoAxeViolations(page);

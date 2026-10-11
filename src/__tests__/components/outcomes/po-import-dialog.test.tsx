@@ -21,6 +21,7 @@ const program = {
 const readyRow = {
   sourceIndex: 2,
   input: { po_code: "PO-20", description: "Apply computing knowledge" },
+  classification: "CORE" as const,
   poCode: "PO-20",
   description: "Apply computing knowledge",
   status: "READY" as const,
@@ -133,5 +134,100 @@ describe("POImportDialog", () => {
     expect(await screen.findByRole("button", { name: "Download rows to fix" })).toBeInTheDocument();
     expect(screen.getByText("Description must be 3 to 1,000 characters.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Review CILO mappings" })).toBeInTheDocument();
+  });
+
+  it("shows each row's resolved classification before confirmation", async () => {
+    const professionalRow = {
+      ...readyRow,
+      sourceIndex: 3,
+      classification: "PROFESSIONAL" as const,
+      input: {
+        po_code: "PO-21",
+        description: "Lead an organization",
+        classification: "Professional",
+      },
+      poCode: "PO-21",
+      description: "Lead an organization",
+    };
+    vi.mocked(previewPOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [readyRow, professionalRow],
+        summary: { ...summary, total: 2, ready: 2 },
+      },
+    });
+    vi.mocked(confirmPOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { ...readyRow, outcome: "CREATED" as const },
+          { ...professionalRow, outcome: "CREATED" as const },
+        ],
+        summary: { total: 2, ready: 0, attention: 0, existing: 0, created: 2, notCreated: 0 },
+      },
+    });
+    await uploadCsv(
+      "PO Code,Description,Classification\nPO-20,Apply computing knowledge,\nPO-21,Lead an organization,Professional"
+    );
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Classification for rows without a category" })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check file" }));
+
+    // The Professional row overrides the Core dialog selection, and the
+    // override is visible before the Program Head confirms.
+    expect(await screen.findByRole("heading", { name: "Review POs" })).toBeInTheDocument();
+    expect(screen.getByText("Professional")).toBeInTheDocument();
+    expect(screen.getByText("Core")).toBeInTheDocument();
+  });
+
+  it("keeps a rejected row's classification in the downloaded recovery file", async () => {
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:recovery");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const rejectedRow = {
+      ...readyRow,
+      sourceIndex: 3,
+      classification: "PROFESSIONAL" as const,
+      input: { po_code: "PO-21", description: "No", classification: "Professional" },
+      poCode: "PO-21",
+      description: "No",
+      status: "INVALID" as const,
+      error: "Description must be at least 3 characters.",
+    };
+    vi.mocked(previewPOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [readyRow, rejectedRow],
+        summary: { ...summary, total: 2, ready: 1, attention: 1 },
+      },
+    });
+    vi.mocked(confirmPOImportAction).mockResolvedValue({
+      success: true,
+      data: {
+        rows: [
+          { ...readyRow, outcome: "CREATED" as const },
+          { ...rejectedRow, outcome: "INVALID" as const },
+        ],
+        summary: { total: 2, ready: 0, attention: 1, existing: 0, created: 1, notCreated: 1 },
+      },
+    });
+    await uploadCsv("PO Code,Description,Classification\nPO-21,No,Professional");
+    fireEvent.click(
+      screen.getByRole("combobox", { name: "Classification for rows without a category" })
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
+    fireEvent.click(screen.getByRole("button", { name: "Check file" }));
+    const createButton = await screen.findByRole("button", { name: "Create 1 PO" });
+    await waitFor(() => expect(createButton).toBeEnabled());
+    fireEvent.click(createButton);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Download rows to fix" }));
+    const csv = await (createObjectURL.mock.calls[0]?.[0] as Blob).text();
+    expect(csv).toContain("PO Code,Description,Classification,Error");
+    // Core was selected in the dialog; the recovery file must still say
+    // Professional so the repaired row cannot be reimported as Core.
+    expect(csv).toContain("Professional");
   });
 });

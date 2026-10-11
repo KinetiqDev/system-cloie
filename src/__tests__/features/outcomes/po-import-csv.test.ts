@@ -74,25 +74,86 @@ describe("PO import CSV", () => {
   it("exports reusable rows to fix without internal statuses", () => {
     expect(
       exportFailedPOImportRows([
-        { poCode: "PO-1", description: '=HYPERLINK("bad")', error: "Description is invalid." },
+        {
+          poCode: "PO-1",
+          description: '=HYPERLINK("bad")',
+          classification: "CORE",
+          error: "Description is invalid.",
+        },
       ])
     ).toBe(
-      '\uFEFFPO Code,Description,Error\r\nPO-1,"\'=HYPERLINK(""bad"")",Description is invalid.\r\n'
+      '\uFEFFPO Code,Description,Classification,Error\r\nPO-1,"\'=HYPERLINK(""bad"")",Core,Description is invalid.\r\n'
     );
   });
 
   it("re-accepts the generated rows-to-fix file and ignores its Error column", () => {
     const correction = exportFailedPOImportRows([
-      { poCode: "PO-1", description: "Correct this outcome", error: "Already exists." },
+      {
+        poCode: "PO-1",
+        description: "Correct this outcome",
+        classification: "PROFESSIONAL",
+        error: "Already exists.",
+      },
     ]);
     expect(parsePOImportCsv(correction)).toEqual({
       success: true,
       rows: [
         {
           sourceIndex: 2,
-          input: { po_code: "PO-1", description: "Correct this outcome" },
+          input: {
+            po_code: "PO-1",
+            description: "Correct this outcome",
+            classification: "Professional",
+          },
         },
       ],
     });
+  });
+
+  it("round-trips a rejected row's category so recovery cannot silently reclassify it", () => {
+    const recovery = exportFailedPOImportRows([
+      {
+        poCode: "PO-7",
+        description: "No",
+        classification: "PROFESSIONAL",
+        error: "Description must be at least 3 characters.",
+      },
+    ]);
+    const reparsed = parsePOImportCsv(recovery);
+    expect(reparsed.success).toBe(true);
+    if (!reparsed.success) return;
+    // The Program Head repairs only the description; the category survives the
+    // repair, so reimporting under a Core dialog selection stays Professional.
+    const repaired = reparsed.rows.map((row) => ({
+      sourceIndex: row.sourceIndex,
+      input: { ...row.input, description: "Repaired professional outcome" },
+    }));
+    expect(repaired[0]?.input.classification?.trim().toUpperCase()).toBe("PROFESSIONAL");
+  });
+
+  it("writes an empty Classification cell when a row supplied no category at all", () => {
+    expect(
+      exportFailedPOImportRows([{ poCode: "PO-1", description: "Outcome", error: "Not created." }])
+    ).toBe("\uFEFFPO Code,Description,Classification,Error\r\nPO-1,Outcome,,Not created.\r\n");
+  });
+
+  it("keeps a rejected administrative category raw so reimport cannot silently convert it", () => {
+    // A Common row cannot enter a Program Head import. Repairing only its
+    // description must not silently turn it into the dialog's Core category;
+    // the raw value has to survive so the row stays rejected until changed.
+    const recovery = exportFailedPOImportRows([
+      {
+        poCode: "PO-9",
+        description: "No",
+        sourceClassification: "Common",
+        error: "Select Core or Professional for this import.",
+      },
+    ]);
+    expect(recovery).toContain("PO-9,No,Common,");
+
+    const reparsed = parsePOImportCsv(recovery);
+    expect(reparsed.success).toBe(true);
+    if (!reparsed.success) return;
+    expect(reparsed.rows[0]?.input.classification).toBe("Common");
   });
 });

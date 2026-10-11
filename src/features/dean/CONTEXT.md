@@ -17,7 +17,7 @@ A coarse filter classifying a course's alignment risk as `missing-cilos`, `incom
 _Avoid_: Readiness state (when referring to the Outcomes classifier's exact `ready`/`missing-cilos`/`incomplete-mapping` states)
 
 **Mapping gap**:
-A course-level gap row surfaced per program for the selected period, carrying a reason (`missing-cilos` or `incomplete-mapping`) and the missing Program Outcome and Institutional Outcome references. General Education gaps are labeled as Institutional Outcome gaps, never as missing Program POs.
+A course-level gap row surfaced per program for the selected period, carrying a reason (`missing-cilos` or `incomplete-mapping`) and the missing target references. General Education gaps are grouped by their readiness context's target layer — Institutional Outcome gaps or, in Common mode, shared Common PO gaps — and are never reported as program-specific Program Outcome gaps. Program-specific contexts carry Program Outcome gaps; a pre-v2 snapshot has no typed layer and keeps its captured program-level gaps in that Program Outcome group.
 _Avoid_: Readiness issue, alignment warning
 
 **Archived outcome display**:
