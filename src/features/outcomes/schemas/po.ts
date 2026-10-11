@@ -14,7 +14,12 @@ export const poDetailsSchema = z.object({
     .max(1000, "Description must be 1000 characters or fewer."),
 });
 
-const poFields = poDetailsSchema.shape;
+const poFields = {
+  ...poDetailsSchema.shape,
+  classification: z.enum(["CORE", "PROFESSIONAL"], {
+    error: "Select Core or Professional.",
+  }),
+};
 
 export const createPOSchema = z.object({
   programId: z.string().uuid("Invalid Program ID."),

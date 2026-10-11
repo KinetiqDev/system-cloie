@@ -101,26 +101,147 @@ function allDistributionGroups(
   return outcomes.flatMap((outcome) => distributionGroupsFor(outcome));
 }
 
-export function GeneralEducationOutcomesView({
-  data,
+/**
+ * Common-PO alignment mode reports alignment only. The whole view collapses to
+ * that one explanation, so it is its own surface rather than a conditional
+ * block inside the evidence list.
+ */
+function CommonModeScopeNotice({ data }: { data: GeneralEducationOutcomesDTO }) {
+  return (
+    <Alert variant="information">
+      <AlertTitle>ILO evidence is not applicable to this alignment mode</AlertTitle>
+      <AlertDescription>
+        These General Education courses align to shared Common POs. Their{" "}
+        {countedNoun(data.commonModeRatingCount ?? 0, "valid rating")} remain available in Course
+        and CILO evidence. Common PO mappings report alignment only, not ILO evidence or Common PO
+        attainment.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** Common PO courses sit outside ILO evidence, so their counts are stated first. */
+function CommonModeCoursesNotice({ data }: { data: GeneralEducationOutcomesDTO }) {
+  const commonModeCourseCount = data.commonModeCourseCount ?? 0;
+  if (commonModeCourseCount === 0) {
+    return null;
+  }
+  return (
+    <Alert variant="information">
+      <AlertTitle>Common PO courses are separate from ILO evidence</AlertTitle>
+      <AlertDescription>
+        {countedNoun(commonModeCourseCount, "course")} use Common PO alignment. Their{" "}
+        {countedNoun(data.commonModeRatingCount ?? 0, "valid rating")} are not missing ILO mappings
+        and do not enter the ILO results below.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/**
+ * Unlinked valid ratings are reported whenever they exist, including in a
+ * scope whose ratings reach no ILO row at all — otherwise the counts a
+ * reader most needs would disappear exactly when mapping is broken.
+ */
+function UnlinkedRatingsNotice({
+  unlinkedRatings,
+}: {
+  unlinkedRatings: GeneralEducationOutcomesDTO["unlinkedRatings"];
+}) {
+  if (unlinkedRatings.generalItems + unlinkedRatings.unmappedCilos === 0) {
+    return null;
+  }
+  return (
+    <Alert variant="warning">
+      <AlertTitle>Valid ratings that reached no learning outcome</AlertTitle>
+      <AlertDescription>
+        {countedNoun(unlinkedRatings.unmappedCilos, "rating")} came from CILOs with no current ILO
+        mapping, and {countedNoun(unlinkedRatings.generalItems, "general question rating")} bound to
+        no CILO. They are counted here rather than silently dropped, and no institutional target
+        exists against which any mean could be judged.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** Scope-level absence: two distinct causes, each with its own explanation. */
+function OutcomesScopeEmptyStates({
+  emptyReason,
   resetHref,
-  filters,
-}: GeneralEducationOutcomesViewProps) {
-  const {
-    emptyReason,
-    outcomes,
-    currentMappingDisclosure,
-    manyToManyDisclosure,
-    unlinkedRatings,
-    alignmentCoverage,
-    courseMatrix,
-  } = data;
-
-  const ordered = catalogOrder(outcomes);
-  const hasOutcomes = ordered.length > 0;
-  const crossScaleOutcomes = ordered.filter((outcome) => outcome.spansMultipleScales);
+}: {
+  emptyReason: GeneralEducationOutcomesDTO["emptyReason"];
+  resetHref: string;
+}) {
   const scopeEmpty = emptyScopeCopy(emptyReason === "no-mapped-outcomes" ? null : emptyReason);
+  return (
+    <>
+      {scopeEmpty ? (
+        <ScopeEmptyState
+          title={scopeEmpty.title}
+          description={scopeEmpty.description}
+          resetHref={resetHref}
+        />
+      ) : null}
+      {emptyReason === "no-mapped-outcomes" ? (
+        <ScopeEmptyState
+          title="No mapped ILO evidence"
+          description="Submitted General Education ratings exist in this scope, but none reach an Institutional Learning Outcome. Every rating must pass through a published CILO question binding and that CILO's current ILO mapping; there is no direct question-to-ILO binding."
+          resetHref={resetHref}
+        />
+      ) : null}
+    </>
+  );
+}
 
+/** The disclosures that qualify how the outcome rows below may be read. */
+function OutcomeMappingAlerts({
+  ordered,
+  currentMappingDisclosure,
+  manyToManyDisclosure,
+}: {
+  ordered: GeneralEducationIloEvidenceDTO[];
+  currentMappingDisclosure: string;
+  manyToManyDisclosure: boolean;
+}) {
+  const crossScaleOutcomes = ordered.filter((outcome) => outcome.spansMultipleScales);
+  return (
+    <div className="flex flex-col gap-3">
+      <Alert variant="information">
+        <AlertTitle>Current CILO-to-ILO mappings</AlertTitle>
+        <AlertDescription>{currentMappingDisclosure}</AlertDescription>
+      </Alert>
+      {manyToManyDisclosure ? (
+        <Alert variant="information">
+          <AlertTitle>Multiple ILO mapping</AlertTitle>
+          <AlertDescription>{MANY_TO_MANY_DISCLOSURE}</AlertDescription>
+        </Alert>
+      ) : null}
+      {crossScaleOutcomes.length > 0 ? (
+        <Alert variant="warning">
+          <AlertTitle>
+            {countedNoun(crossScaleOutcomes.length, "outcome")} pool more than one rating scale
+          </AlertTitle>
+          <AlertDescription>
+            {crossScaleOutcomes.map((outcome) => outcome.code).join(", ")} combine ratings from
+            different frozen instrument-version scales. Values across different scales are not
+            directly comparable, so each scale keeps its own distribution below.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  );
+}
+
+/** Every deterministic outcome surface, in evidence-before-interpretation order. */
+function OutcomeEvidenceSection({
+  data,
+  ordered,
+  filters,
+}: {
+  data: GeneralEducationOutcomesDTO;
+  ordered: GeneralEducationIloEvidenceDTO[];
+  filters: GeneralEducationAnalyticsFilterState;
+}) {
   // Many-to-many ILO rows are not additive: one rating reaches every mapped
   // ILO, so summing rows would report a false total. The label names the rows
   // and their distinct contributing courses instead.
@@ -130,148 +251,114 @@ export function GeneralEducationOutcomesView({
   const evidenceBasis = `${countedNoun(ordered.length, "institutional learning outcome")} with evidence from ${countedNoun(contributingCourseIds.size, "course")}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Unlinked valid ratings are reported whenever they exist, including in a
-          scope whose ratings reach no ILO row at all — otherwise the counts a
-          reader most needs would disappear exactly when mapping is broken. */}
-      {unlinkedRatings.generalItems + unlinkedRatings.unmappedCilos > 0 ? (
-        <Alert variant="warning">
-          <AlertTitle>Valid ratings that reached no learning outcome</AlertTitle>
-          <AlertDescription>
-            {countedNoun(unlinkedRatings.unmappedCilos, "rating")} came from CILOs with no current
-            ILO mapping, and {countedNoun(unlinkedRatings.generalItems, "general question rating")}{" "}
-            bound to no CILO. They are counted here rather than silently dropped, and no
-            institutional target exists against which any mean could be judged.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {scopeEmpty ? (
-        <ScopeEmptyState
-          title={scopeEmpty.title}
-          description={scopeEmpty.description}
-          resetHref={resetHref}
-        />
-      ) : null}
+    <>
+      <OutcomeMappingAlerts
+        ordered={ordered}
+        currentMappingDisclosure={data.currentMappingDisclosure}
+        manyToManyDisclosure={data.manyToManyDisclosure}
+      />
 
-      {emptyReason === "no-mapped-outcomes" ? (
-        <ScopeEmptyState
-          title="No mapped ILO evidence"
-          description="Submitted General Education ratings exist in this scope, but none reach an Institutional Learning Outcome. Every rating must pass through a published CILO question binding and that CILO's current ILO mapping; there is no direct question-to-ILO binding."
-          resetHref={resetHref}
+      <LazyOutcomeMeanBarChart
+        title="Mean Rating by Institutional Learning Outcome"
+        outcomes={ordered}
+        labels={INSTITUTIONAL_OUTCOME_LABELS}
+        preserveOrder
+      />
+
+      <LazyGeneralEducationDistributionChart
+        title="Likert Distribution by Outcome and Scale"
+        description="Each bar is normalized to its own scale's valid ratings, so a 1–4 instrument and a 1–5 instrument each fill their own bar instead of implying one shared range."
+        groups={allDistributionGroups(ordered)}
+        emptyTitle="No resolved Likert distribution"
+        emptyDescription="No valid rating in this scope resolved against a frozen instrument scale."
+      />
+
+      <LazyGeneralEducationAlignmentChart
+        title="CILO Alignment by Learning, Practice, and Opportunity"
+        rows={data.alignmentCoverage}
+        emptyTitle="No alignment coverage yet"
+        emptyDescription="No active CILO in this scope is currently mapped to an Institutional Learning Outcome."
+      />
+
+      {/* One insight per view, placed after every deterministic chart and before
+          the matrices and exact tables, so the interpretation never precedes
+          evidence it claims to read. */}
+      <GeneralEducationInlineAiInsight
+        view="outcomes"
+        filters={filters}
+        evidenceBasis={evidenceBasis}
+      />
+
+      <CourseIloMatrix matrix={data.courseMatrix} outcomes={ordered} />
+
+      <OutcomeContributorMatrix
+        outcomes={ordered}
+        labels={INSTITUTIONAL_OUTCOME_LABELS}
+        selectedOutcomeId={filters.iloId}
+        renderReviewLinks={(outcome) => (
+          <div className="text-body-sm mt-3 flex flex-col gap-2">
+            <Link
+              href={iloReviewHref(outcome.outcomeId, filters)}
+              className="text-link underline underline-offset-3 pointer-coarse:min-h-11 pointer-coarse:content-center"
+            >
+              Review responses for {outcome.code}
+            </Link>
+            {outcome.evidenceEvaluations.map((evaluation) => (
+              <Link
+                key={evaluation.evaluationId}
+                href={`/gen-ed-coordinator/responses/course/${evaluation.evaluationId}`}
+                className="text-link underline underline-offset-3 pointer-coarse:min-h-11 pointer-coarse:content-center"
+              >
+                {evaluation.deploymentName}
+              </Link>
+            ))}
+          </div>
+        )}
+      />
+
+      <SectionShell
+        id="ge-outcome-exact-values"
+        title="Exact values by institutional learning outcome"
+        description="Every reported number in one place, with the scale context, archived state, and review links behind each row."
+      >
+        <OutcomesExactValueTable
+          outcomes={ordered}
+          selectedIloId={filters.iloId}
+          filters={filters}
         />
-      ) : null}
+      </SectionShell>
+    </>
+  );
+}
+
+export function GeneralEducationOutcomesView({
+  data,
+  resetHref,
+  filters,
+}: GeneralEducationOutcomesViewProps) {
+  if (data.iloEvidenceApplicable === false) {
+    return <CommonModeScopeNotice data={data} />;
+  }
+
+  const ordered = catalogOrder(data.outcomes);
+  const hasOutcomes = ordered.length > 0;
+  const unlinkedTotal = data.unlinkedRatings.generalItems + data.unlinkedRatings.unmappedCilos;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <CommonModeCoursesNotice data={data} />
+      <UnlinkedRatingsNotice unlinkedRatings={data.unlinkedRatings} />
+      <OutcomesScopeEmptyStates emptyReason={data.emptyReason} resetHref={resetHref} />
 
       {hasOutcomes ? (
-        <>
-          <div className="flex flex-col gap-3">
-            <Alert variant="information">
-              <AlertTitle>Current CILO-to-ILO mappings</AlertTitle>
-              <AlertDescription>{currentMappingDisclosure}</AlertDescription>
-            </Alert>
-            {manyToManyDisclosure ? (
-              <Alert variant="information">
-                <AlertTitle>Multiple ILO mapping</AlertTitle>
-                <AlertDescription>{MANY_TO_MANY_DISCLOSURE}</AlertDescription>
-              </Alert>
-            ) : null}
-            {crossScaleOutcomes.length > 0 ? (
-              <Alert variant="warning">
-                <AlertTitle>
-                  {countedNoun(crossScaleOutcomes.length, "outcome")} pool more than one rating
-                  scale
-                </AlertTitle>
-                <AlertDescription>
-                  {crossScaleOutcomes.map((outcome) => outcome.code).join(", ")} combine ratings
-                  from different frozen instrument-version scales. Values across different scales
-                  are not directly comparable, so each scale keeps its own distribution below.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
-
-          <LazyOutcomeMeanBarChart
-            title="Mean Rating by Institutional Learning Outcome"
-            outcomes={ordered}
-            labels={INSTITUTIONAL_OUTCOME_LABELS}
-            preserveOrder
-          />
-
-          <LazyGeneralEducationDistributionChart
-            title="Likert Distribution by Outcome and Scale"
-            description="Each bar is normalized to its own scale's valid ratings, so a 1–4 instrument and a 1–5 instrument each fill their own bar instead of implying one shared range."
-            groups={allDistributionGroups(ordered)}
-            emptyTitle="No resolved Likert distribution"
-            emptyDescription="No valid rating in this scope resolved against a frozen instrument scale."
-          />
-
-          <LazyGeneralEducationAlignmentChart
-            title="CILO Alignment by Learning, Practice, and Opportunity"
-            rows={alignmentCoverage}
-            emptyTitle="No alignment coverage yet"
-            emptyDescription="No active CILO in this scope is currently mapped to an Institutional Learning Outcome."
-          />
-
-          {/* One insight per view, placed after every deterministic chart and
-              before the matrices and exact tables, so the interpretation never
-              precedes evidence it claims to read. */}
-          <GeneralEducationInlineAiInsight
-            view="outcomes"
-            filters={filters}
-            evidenceBasis={evidenceBasis}
-          />
-
-          <CourseIloMatrix matrix={courseMatrix} outcomes={ordered} />
-
-          <OutcomeContributorMatrix
-            outcomes={ordered}
-            labels={INSTITUTIONAL_OUTCOME_LABELS}
-            selectedOutcomeId={filters.iloId}
-            renderReviewLinks={(outcome) => (
-              <div className="text-body-sm mt-3 flex flex-col gap-2">
-                <Link
-                  href={iloReviewHref(outcome.outcomeId, filters)}
-                  className="text-link underline underline-offset-3 pointer-coarse:min-h-11 pointer-coarse:content-center"
-                >
-                  Review responses for {outcome.code}
-                </Link>
-                {outcome.evidenceEvaluations.map((evaluation) => (
-                  <Link
-                    key={evaluation.evaluationId}
-                    href={`/gen-ed-coordinator/responses/course/${evaluation.evaluationId}`}
-                    className="text-link underline underline-offset-3 pointer-coarse:min-h-11 pointer-coarse:content-center"
-                  >
-                    {evaluation.deploymentName}
-                  </Link>
-                ))}
-              </div>
-            )}
-          />
-
-          <SectionShell
-            id="ge-outcome-exact-values"
-            title="Exact values by institutional learning outcome"
-            description="Every reported number in one place, with the scale context, archived state, and review links behind each row."
-          >
-            <OutcomesExactValueTable
-              outcomes={ordered}
-              selectedIloId={filters.iloId}
-              filters={filters}
-            />
-          </SectionShell>
-        </>
-      ) : null}
-
-      {/* The insight mounts on every Outcomes scope, empty or not: its own
-          server action reports insufficient evidence in its own words. */}
-      {!hasOutcomes ? (
+        <OutcomeEvidenceSection data={data} ordered={ordered} filters={filters} />
+      ) : (
         <GeneralEducationInlineAiInsight
           view="outcomes"
           filters={filters}
-          evidenceBasis={`No institutional learning outcome evidence in this scope; ${
-            unlinkedRatings.generalItems + unlinkedRatings.unmappedCilos
-          } valid ratings reached no ILO mapping`}
+          evidenceBasis={`No institutional learning outcome evidence in this scope; ${unlinkedTotal} valid ratings reached no ILO mapping`}
         />
-      ) : null}
+      )}
 
       <SelectedOutcomeScrollTarget outcomeId={filters.iloId} />
     </div>

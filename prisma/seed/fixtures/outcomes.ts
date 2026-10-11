@@ -1,111 +1,150 @@
+import { POClassification } from "@prisma/client";
 import { U } from "../constants/ids";
+
+export const commonPODefs = [
+  {
+    code: "COMMON-1",
+    description:
+      "Communicate ideas clearly and responsibly across academic, professional, and civic contexts.",
+    order: 1,
+  },
+  {
+    code: "COMMON-2",
+    description:
+      "Apply critical thinking and evidence-based reasoning to problems that affect communities.",
+    order: 2,
+  },
+  {
+    code: "COMMON-3",
+    description: "Act ethically, respect human dignity, and contribute responsibly to society.",
+    order: 3,
+  },
+] as const;
 
 export const poDefs = [
   {
     pc: "BSIT",
     code: "BSIT-GO1",
+    classification: POClassification.PROFESSIONAL,
     desc: "Apply computing and IT solutions to complex real-world problems using appropriate methodologies.",
     order: 1,
   },
   {
     pc: "BSIT",
     code: "BSIT-GO2",
+    classification: POClassification.CORE,
     desc: "Demonstrate professional ethics, social responsibility, and commitment to quality standards in IT practice.",
     order: 2,
   },
   {
     pc: "BSIT",
     code: "BSIT-GO3",
+    classification: POClassification.CORE,
     desc: "Engage in lifelong learning and adapt to evolving technologies in the computing discipline.",
     order: 3,
   },
   {
     pc: "BSED",
     code: "BSED-GO1",
+    classification: POClassification.PROFESSIONAL,
     desc: "Demonstrate pedagogical content knowledge in the chosen area of specialization.",
     order: 1,
   },
   {
     pc: "BSED",
     code: "BSED-GO2",
+    classification: POClassification.CORE,
     desc: "Apply curriculum development skills to design learner-centered educational experiences.",
     order: 2,
   },
   {
     pc: "BSED",
     code: "BSED-GO3",
+    classification: POClassification.CORE,
     desc: "Exhibit professional teaching ethics and a commitment to continuous professional development.",
     order: 3,
   },
   {
     pc: "BEED",
     code: "BEED-GO1",
+    classification: POClassification.PROFESSIONAL,
     desc: "Design effective, age-appropriate learning environments for elementary learners.",
     order: 1,
   },
   {
     pc: "BEED",
     code: "BEED-GO2",
+    classification: POClassification.CORE,
     desc: "Apply child development principles in planning and delivering instruction.",
     order: 2,
   },
   {
     pc: "BEED",
     code: "BEED-GO3",
+    classification: POClassification.PROFESSIONAL,
     desc: "Demonstrate inclusive education practices that address diverse learner needs.",
     order: 3,
   },
   {
     pc: "BSBA",
     code: "BSBA-GO1",
+    classification: POClassification.CORE,
     desc: "Apply business management principles to organizational decision-making and operations.",
     order: 1,
   },
   {
     pc: "BSBA",
     code: "BSBA-GO2",
+    classification: POClassification.PROFESSIONAL,
     desc: "Demonstrate financial literacy and analytical skills in business contexts.",
     order: 2,
   },
   {
     pc: "BSBA",
     code: "BSBA-GO3",
+    classification: POClassification.CORE,
     desc: "Exercise ethical business practices and corporate social responsibility.",
     order: 3,
   },
   {
     pc: "BSSW",
     code: "BSSW-GO1",
+    classification: POClassification.PROFESSIONAL,
     desc: "Apply social work theories and methods to promote community well-being.",
     order: 1,
   },
   {
     pc: "BSSW",
     code: "BSSW-GO2",
+    classification: POClassification.PROFESSIONAL,
     desc: "Demonstrate community engagement skills for participatory development.",
     order: 2,
   },
   {
     pc: "BSSW",
     code: "BSSW-GO3",
+    classification: POClassification.CORE,
     desc: "Uphold social work ethics and advocate for social justice and human rights.",
     order: 3,
   },
   {
     pc: "BSHM",
     code: "BSHM-GO1",
+    classification: POClassification.CORE,
     desc: "Apply hospitality operations management in diverse service environments.",
     order: 1,
   },
   {
     pc: "BSHM",
     code: "BSHM-GO2",
+    classification: POClassification.PROFESSIONAL,
     desc: "Demonstrate customer service excellence and interpersonal communication skills.",
     order: 2,
   },
   {
     pc: "BSHM",
     code: "BSHM-GO3",
+    classification: POClassification.CORE,
     desc: "Practice responsible tourism and sustainability in hospitality enterprises.",
     order: 3,
   },

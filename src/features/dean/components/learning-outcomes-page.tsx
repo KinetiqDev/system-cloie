@@ -1,3 +1,4 @@
+import { PO_CLASSIFICATION_LABELS } from "@/features/outcomes/po-classification";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -158,6 +159,14 @@ export function LearningOutcomesContent({
           )}
         </section>
       ) : null}
+      {(result.data.commonOutcomes?.length ?? 0) > 0 && (
+        <section className="flex flex-col gap-2" aria-labelledby="common-outcomes">
+          <h2 id="common-outcomes" className="text-heading-md">
+            Shared Common POs
+          </h2>
+          <CatalogList outcomes={result.data.commonOutcomes!} />
+        </section>
+      )}
       {programs.length === 0 ? (
         <Card>
           <CardContent className="text-body-sm text-text-secondary py-6">
@@ -204,6 +213,8 @@ function PeriodControls({
   );
 }
 
+type ProgramGaps = DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+
 function ProgramDetail({
   program,
   open,
@@ -211,10 +222,21 @@ function ProgramDetail({
   program: DeanLearningOutcomesData["programs"][number];
   open: boolean;
 }) {
+  // Gap rows partition by the readiness context's target layer. General
+  // Education contexts align to Institutional Outcomes or, in Common mode, to
+  // the shared Common PO catalog, so a Common PO gap is never a program-specific
+  // Program Outcome gap. Pre-v2 snapshots carry no typed layer (`null`) and keep
+  // their captured program-level gaps in the Program Outcome group.
   const institutionalGaps = program.mappingGaps.filter(
     (gap) => gap.targetType === "INSTITUTIONAL_OUTCOME"
   );
-  const poGaps = program.mappingGaps.filter((gap) => gap.targetType !== "INSTITUTIONAL_OUTCOME");
+  const commonGaps = program.mappingGaps.filter(
+    (gap) => gap.targetType === "COMMON_PROGRAM_OUTCOME"
+  );
+  const poGaps = program.mappingGaps.filter(
+    (gap) =>
+      gap.targetType !== "INSTITUTIONAL_OUTCOME" && gap.targetType !== "COMMON_PROGRAM_OUTCOME"
+  );
   const notReady = program.missingCiloContexts + program.incompleteMappingContexts;
   const coverage =
     program.activeContexts === 0
@@ -228,6 +250,7 @@ function ProgramDetail({
           <ProgramMappingCounts
             poCount={program.poCount}
             institutionalGapCount={institutionalGaps.length}
+            commonGapCount={commonGaps.length}
             poGapCount={poGaps.length}
           />
           <span className="text-caption text-text-secondary tabular-nums">
@@ -259,38 +282,52 @@ function ProgramDetail({
           {coverage}% coverage from {program.readyContexts} of {program.activeContexts}{" "}
           {program.activeContexts === 1 ? "context" : "contexts"}.
         </p>
-        <ProgramContent program={program} institutionalGaps={institutionalGaps} poGaps={poGaps} />
+        <ProgramContent
+          program={program}
+          institutionalGaps={institutionalGaps}
+          commonGaps={commonGaps}
+          poGaps={poGaps}
+        />
       </div>
     </details>
   );
 }
 
+/** One count phrase per alignment layer, so a layer can never borrow another's total. */
+function gapCount(count: number, label: string): string {
+  return `${count} ${label} ${count === 1 ? "gap" : "gaps"}`;
+}
+
 function ProgramMappingCounts({
   poCount,
   institutionalGapCount,
+  commonGapCount,
   poGapCount,
 }: {
   poCount: number;
   institutionalGapCount: number;
+  commonGapCount: number;
   poGapCount: number;
 }) {
-  return (
-    <span className="text-caption text-text-secondary tabular-nums">
-      {poCount} Graduate {poCount === 1 ? "Outcome" : "Outcomes"} · {institutionalGapCount}{" "}
-      Institutional Outcome {institutionalGapCount === 1 ? "gap" : "gaps"} · {poGapCount} Graduate
-      Outcome {poGapCount === 1 ? "gap" : "gaps"}
-    </span>
-  );
+  const counts = [
+    `${poCount} Program Outcome${poCount === 1 ? "" : "s"}`,
+    gapCount(institutionalGapCount, "Institutional Outcome"),
+    gapCount(commonGapCount, "Common PO"),
+    gapCount(poGapCount, "Program Outcome"),
+  ].join(" · ");
+  return <span className="text-caption text-text-secondary tabular-nums">{counts}</span>;
 }
 
 function ProgramContent({
   program,
   institutionalGaps,
+  commonGaps,
   poGaps,
 }: {
   program: DeanLearningOutcomesData["programs"][number];
-  institutionalGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
-  poGaps: DeanLearningOutcomesData["programs"][number]["mappingGaps"];
+  institutionalGaps: ProgramGaps;
+  commonGaps: ProgramGaps;
+  poGaps: ProgramGaps;
 }) {
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -302,6 +339,16 @@ function ProgramContent({
           </p>
         ) : (
           <GapList gaps={institutionalGaps} />
+        )}
+      </div>
+      <div>
+        <h3 className="text-title-sm">Common PO mapping gaps</h3>
+        {commonGaps.length === 0 ? (
+          <p className="text-body-sm text-text-secondary mt-2">
+            No General Education Common PO gaps.
+          </p>
+        ) : (
+          <GapList gaps={commonGaps} />
         )}
       </div>
       <div>
@@ -345,6 +392,9 @@ function CatalogList({
           className="text-body-sm flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-baseline sm:gap-3"
         >
           <span className="text-label-lg">{outcome.code}</span>
+          {outcome.classification && (
+            <Badge variant="secondary">{PO_CLASSIFICATION_LABELS[outcome.classification]}</Badge>
+          )}
           <span className="text-text-secondary">{outcome.statement}</span>
           {outcome.isArchived ? <Badge variant="outline">Archived</Badge> : null}
         </li>
@@ -377,11 +427,13 @@ function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number][
             </p>
           ) : (
             <p className="text-text-secondary mt-2">
-              {gap.targetType === "INSTITUTIONAL_OUTCOME"
-                ? "Incomplete Institutional Outcome mapping:"
-                : gap.targetType === "GRADUATE_OUTCOME"
-                  ? "Incomplete Program Outcome mapping:"
-                  : "Incomplete mapping:"}{" "}
+              {gap.targetType === "COMMON_PROGRAM_OUTCOME"
+                ? "Incomplete shared Common PO mapping:"
+                : gap.targetType === "INSTITUTIONAL_OUTCOME"
+                  ? "Incomplete Institutional Outcome mapping:"
+                  : gap.targetType === "GRADUATE_OUTCOME"
+                    ? "Incomplete Program Outcome mapping:"
+                    : "Incomplete mapping:"}{" "}
               {gap.ciloStatement}
               {gap.ciloIsArchived ? (
                 <Badge className="ml-2" variant="outline">

@@ -240,6 +240,22 @@ export const E2E_CONTRACT = {
     meanRating: 4.3125,
   },
 
+  /** ADR 0040 shared GE Common PO alignment: one course, two assignment programs, one mapping set. */
+  geCommonAlignment: {
+    courseCode: "GESTECH",
+    ciloCount: 3,
+    mappings: [
+      { ciloOrder: 1, commonOutcomeCode: "COMMON-2", manifestation: "LEARNING" },
+      { ciloOrder: 2, commonOutcomeCode: "COMMON-3", manifestation: "PRACTICE" },
+      { ciloOrder: 3, commonOutcomeCode: "COMMON-3", manifestation: "OPPORTUNITY" },
+    ],
+    /** Faculty who hold active GESTECH assignments in different programs this term. */
+    readers: [
+      { facultyEmail: "demo-faculty@cloie.test", programCode: "BSIT" },
+      { facultyEmail: "faculty-bsba@cloie.test", programCode: "BSBA" },
+    ],
+  },
+
   /** Reviewed expectations for the IT201 course-bound SUBMITTED response (journey A). */
   courseResponse: {
     respondentName: "Demo Student",
@@ -344,6 +360,8 @@ export type FixtureData = {
   };
   gestechAssignment: { id: string };
   gestechMobileAssignment: { id: string };
+  /** Shared GE Common PO alignment fixture (ADR 0040). */
+  geCommonAlignment: { courseId: string; commonOutcomeCodes: string[] };
   /** Issue #546 publication fixtures. */
   publicationTemplate: { id: string; code: string; name: string };
   publicationTarget: { id: string; courseCode: string; programCode: string };

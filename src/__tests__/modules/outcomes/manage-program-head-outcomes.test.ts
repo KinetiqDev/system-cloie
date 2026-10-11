@@ -161,6 +161,8 @@ describe("manage-program-head-outcomes", () => {
         order: 0,
         is_active: true,
         program_id: PROGRAM_ID,
+        classification: "CORE",
+        common_outcome_id: null,
         created_at: new Date(),
         updated_at: new Date(),
         _count: { cilo_mappings: 2 },
@@ -495,6 +497,7 @@ describe("manage-program-head-outcomes", () => {
     poCreateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await createPO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       code: "PO-1",
       description: "Critical Thinking",
@@ -507,6 +510,8 @@ describe("manage-program-head-outcomes", () => {
         description: "Critical Thinking",
         order: 0,
         program_id: PROGRAM_ID,
+        classification: "CORE",
+        common_outcome_id: null,
       },
     });
   });
@@ -516,6 +521,7 @@ describe("manage-program-head-outcomes", () => {
     programHeadAssignmentFindManyMock.mockResolvedValue([]);
 
     const result = await createPO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       code: "PO-1",
       description: "Critical Thinking",
@@ -534,6 +540,7 @@ describe("manage-program-head-outcomes", () => {
     poCreateMock.mockRejectedValue(createPrismaUniqueConstraintError());
 
     const result = await createPO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       code: "PO-1",
       description: "Duplicate PO",
@@ -555,10 +562,13 @@ describe("manage-program-head-outcomes", () => {
       order: 0,
       is_active: true,
       program_id: PROGRAM_ID,
+      classification: "CORE",
+      common_outcome_id: null,
     });
     poUpdateMock.mockResolvedValue({ id: GO_ID });
 
     const result = await updatePO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       id: GO_ID,
       code: "PO-1-UPDATED",
@@ -571,6 +581,8 @@ describe("manage-program-head-outcomes", () => {
       data: {
         code: "PO-1-UPDATED",
         description: "Updated description",
+        classification: "CORE",
+        common_outcome_id: null,
       },
     });
   });
@@ -582,6 +594,7 @@ describe("manage-program-head-outcomes", () => {
     });
 
     const result = await updatePO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       id: GO_ID,
       code: "PO-1",
@@ -604,6 +617,7 @@ describe("manage-program-head-outcomes", () => {
     poFindUniqueMock.mockResolvedValue({ id: GO_ID, program_id: PROGRAM_ID });
 
     const result = await updatePO({
+      classification: "CORE",
       programId: selectedProgramId,
       id: GO_ID,
       code: "PO-1",
@@ -623,6 +637,8 @@ describe("manage-program-head-outcomes", () => {
     poFindUniqueMock.mockResolvedValue({
       id: GO_ID,
       program_id: PROGRAM_ID,
+      classification: "CORE",
+      common_outcome_id: null,
       code: "PO-1",
       description: "Original",
       order: 0,
@@ -640,6 +656,8 @@ describe("manage-program-head-outcomes", () => {
     poFindUniqueMock.mockResolvedValue({
       id: GO_ID,
       program_id: PROGRAM_ID,
+      classification: "CORE",
+      common_outcome_id: null,
       code: "PO-1",
       description: "Original",
       order: 0,
@@ -659,6 +677,8 @@ describe("manage-program-head-outcomes", () => {
     poFindUniqueMock.mockResolvedValue({
       id: GO_ID,
       program_id: PROGRAM_ID,
+      classification: "CORE",
+      common_outcome_id: null,
       code: "PO-1",
       description: "Original",
       order: 0,
@@ -725,6 +745,7 @@ describe("manage-program-head-outcomes", () => {
     resolveAuthSessionMock.mockResolvedValue(null);
 
     const result = await createPO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       code: "PO-1",
       description: "Test",
@@ -744,6 +765,7 @@ describe("manage-program-head-outcomes", () => {
     });
 
     const result = await createPO({
+      classification: "CORE",
       programId: PROGRAM_ID,
       code: "PO-1",
       description: "Test",

@@ -1,9 +1,19 @@
-import type { CILOMappingManifestation, CourseScope } from "@prisma/client";
+import type { CILOMappingManifestation, CourseScope, GEAlignmentMode } from "@prisma/client";
 
-export type CourseAlignmentTargetLayer = "INSTITUTIONAL_OUTCOME" | "GRADUATE_OUTCOME";
+export type CourseAlignmentTargetLayer =
+  | "INSTITUTIONAL_OUTCOME"
+  | "GRADUATE_OUTCOME"
+  | "COMMON_PROGRAM_OUTCOME";
 
-export function targetLayerForScope(courseScope: CourseScope): CourseAlignmentTargetLayer {
-  return courseScope === "GENERAL_EDUCATION" ? "INSTITUTIONAL_OUTCOME" : "GRADUATE_OUTCOME";
+export function targetLayerForScope(
+  courseScope: CourseScope,
+  mode: GEAlignmentMode = "ILO"
+): CourseAlignmentTargetLayer {
+  return courseScope === "GENERAL_EDUCATION"
+    ? mode === "COMMON_PO"
+      ? "COMMON_PROGRAM_OUTCOME"
+      : "INSTITUTIONAL_OUTCOME"
+    : "GRADUATE_OUTCOME";
 }
 
 export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mapping";
@@ -23,6 +33,10 @@ export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mappi
  * never satisfy alignment, regardless of any historical relation elsewhere.
  */
 type CiloAlignmentRow = {
+  cilo_common_po_mappings?: Array<{
+    manifestation: CILOMappingManifestation | null;
+    common_outcome: { is_active: boolean };
+  }>;
   cilo_mappings: Array<{
     manifestation: CILOMappingManifestation | null;
     po: { id: string; program_id: string | null; is_active: boolean };
@@ -36,9 +50,14 @@ export function ciloIsAligned(
   cilo: CiloAlignmentRow,
   courseScope: CourseScope,
   owningProgramId: string | null,
-  activeGoIds: string[]
+  activeGoIds: string[],
+  mode: GEAlignmentMode = "ILO"
 ): boolean {
   if (courseScope === "GENERAL_EDUCATION") {
+    if (mode === "COMMON_PO")
+      return (cilo.cilo_common_po_mappings ?? []).some(
+        ({ common_outcome, manifestation }) => common_outcome.is_active && manifestation !== null
+      );
     return cilo.cilo_institutional_outcome_mappings.some(
       ({ institutional_outcome, manifestation }) =>
         institutional_outcome.is_active && manifestation !== null
@@ -72,10 +91,11 @@ export function classifyCourseAlignment(
   cilos: CiloAlignmentRow[],
   courseScope: CourseScope,
   owningProgramId: string | null,
-  activeGoIds: string[]
+  activeGoIds: string[],
+  mode: GEAlignmentMode = "ILO"
 ): CourseAlignmentState {
   if (cilos.length === 0) return "missing-cilos";
-  if (cilos.some((cilo) => !ciloIsAligned(cilo, courseScope, owningProgramId, activeGoIds))) {
+  if (cilos.some((cilo) => !ciloIsAligned(cilo, courseScope, owningProgramId, activeGoIds, mode))) {
     return "incomplete-mapping";
   }
   return "ready";

@@ -1,9 +1,26 @@
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import { z } from "zod";
 import { poDetailsSchema } from "../schemas/po";
 import type { POImportRequest } from "../schemas/po-import";
+import { isProgramHeadCategory } from "../po-classification";
 import type { POImportPreview, POImportPreviewRow, POImportSummary } from "../types/po-import";
+
+/**
+ * Every row keeps the category it would actually save, so a rejected row is
+ * recoverable with that same category. A row naming no category inherits the
+ * import-dialog selection; a row naming an administrative category keeps its
+ * own rejection and carries no importable category.
+ */
+function resolveRowClassification(
+  rowClassification: string,
+  fallback: POImportRequest["classification"]
+): POImportPreviewRow["classification"] {
+  if (rowClassification === "") return fallback;
+  return isProgramHeadCategory(rowClassification) ? rowClassification : undefined;
+}
+
 export function normalizePOCode(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toUpperCase();
 }
@@ -46,16 +63,26 @@ export async function previewPOImport(
   );
   const counts = new Map<string, number>();
   const parsedRows = request.rows.map((row) => {
-    const parsed = poDetailsSchema.safeParse({
-      code: normalizeText(row.input.po_code),
-      description: normalizeText(row.input.description),
-    });
+    const requested = row.input.classification?.trim().toUpperCase() ?? "";
+    const parsed = poDetailsSchema
+      .extend({
+        classification: z.enum(["CORE", "PROFESSIONAL"], {
+          error:
+            "Select Core or Professional for this import. Common and Institution-specific POs are managed by the Secretary or Dean.",
+        }),
+      })
+      .safeParse({
+        classification: requested || request.classification,
+        code: normalizeText(row.input.po_code),
+        description: normalizeText(row.input.description),
+      });
     const poCode = normalizePOCode(row.input.po_code);
     if (poCode) counts.set(poCode, (counts.get(poCode) ?? 0) + 1);
-    return { row, parsed, poCode };
+    const classification = resolveRowClassification(requested, request.classification);
+    return { row, parsed, poCode, classification };
   });
 
-  const rows: POImportPreviewRow[] = parsedRows.map(({ row, parsed, poCode }) => {
+  const rows: POImportPreviewRow[] = parsedRows.map(({ row, parsed, poCode, classification }) => {
     const description = normalizeText(row.input.description);
     if (!parsed.success) {
       return {
@@ -63,6 +90,7 @@ export async function previewPOImport(
         input: row.input,
         poCode,
         description,
+        classification,
         status: "INVALID",
         error: parsed.error.issues[0]?.message ?? "Enter valid Program Outcome details.",
       };
@@ -73,6 +101,7 @@ export async function previewPOImport(
         input: row.input,
         poCode: parsed.data.code,
         description: parsed.data.description,
+        classification,
         status: "DUPLICATE_IN_FILE",
         error: `PO code "${parsed.data.code}" appears more than once in this file. Keep one row.`,
       };
@@ -84,6 +113,7 @@ export async function previewPOImport(
         input: row.input,
         poCode: parsed.data.code,
         description: parsed.data.description,
+        classification,
         status: archived ? "DUPLICATE_EXISTING_ARCHIVED" : "DUPLICATE_EXISTING_ACTIVE",
         error: archived
           ? `PO code "${parsed.data.code}" already belongs to an archived Program Outcome. It will not be restored.`
@@ -95,6 +125,7 @@ export async function previewPOImport(
       input: row.input,
       poCode: parsed.data.code,
       description: parsed.data.description,
+      classification,
       status: "READY",
       error: null,
     };

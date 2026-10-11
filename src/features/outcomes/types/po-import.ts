@@ -2,7 +2,7 @@ export const PO_IMPORT_MAX_ROWS = 20;
 
 export type POImportSourceRow = {
   sourceIndex: number;
-  input: { po_code: string; description: string };
+  input: { po_code: string; description: string; classification?: string };
 };
 
 export type POImportRowStatus =
@@ -16,6 +16,11 @@ export type POImportOutcome = Exclude<POImportRowStatus, "READY"> | "CREATED";
 export type POImportPreviewRow = {
   sourceIndex: number;
   input: POImportSourceRow["input"];
+  // Resolved per row: the row's own Classification column when it names a
+  // Program Head category, otherwise the import-dialog selection. Carried on
+  // every row — including rejected ones — so recovery files and review rows
+  // never drop the category the Program Head chose.
+  classification?: "CORE" | "PROFESSIONAL";
   poCode: string;
   description: string;
   status: POImportRowStatus;

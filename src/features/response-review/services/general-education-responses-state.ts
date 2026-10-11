@@ -10,8 +10,8 @@ import { GEN_ED_RESPONSES_PATH } from "@/lib/constants/gen-ed-routes";
 // dimension. It does carry the Program Head review facets that apply to any
 // course evaluation — status and response progress — plus two class-context
 // facets: `programId` (the assignment's Program, never the respondent's) and
-// `iloId` (evaluations whose Course has an active CILO currently mapped to
-// that Institutional Learning Outcome).
+// `iloId` (evaluations whose ILO-mode Course has an active CILO currently
+// mapped to that Institutional Learning Outcome).
 // ---------------------------------------------------------------------------
 
 const MAX_PAGE = 10_000;
@@ -33,7 +33,7 @@ export type GeneralEducationResponsesFilterState = {
   facultyId?: string;
   yearLevel?: YearLevel;
   section?: StudentSection;
-  /** Evaluations whose Course has an active CILO currently mapped to this ILO. */
+  /** Evaluations whose ILO-mode Course has an active CILO currently mapped to this ILO. */
   iloId?: string;
   status?: DeploymentStatus;
   completion?: ResponseCompletionFilter;

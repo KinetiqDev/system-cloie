@@ -62,6 +62,7 @@ model Course {
   program_id         String?           @db.Uuid
   major_id           String?           @db.Uuid
   course_scope       CourseScope       @default(PROGRAM_SPECIFIC)
+  ge_alignment_mode  GEAlignmentMode   @default(ILO)
   default_year_level YearLevel?
   default_semester   AcademicSemester?
   default_term       AcademicTerm?

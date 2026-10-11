@@ -27,6 +27,7 @@ export async function createGenEdCourse(
         code: input.code,
         title: input.title,
         course_scope: CourseScope.GENERAL_EDUCATION,
+        ge_alignment_mode: "COMMON_PO",
         program_id: null,
         major_id: null,
         default_year_level: input.default_year_level ?? null,

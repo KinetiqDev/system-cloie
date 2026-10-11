@@ -26,6 +26,7 @@ const alignment: CourseAlignment = {
     code: "GESTECH",
     title: "Science, Technology and Society",
     scope: "GENERAL_EDUCATION",
+    geAlignmentMode: "ILO",
     program: null,
   },
   cilos: [{ id: CILO_ID, description: "Apply core concepts", mappings: [] }],
@@ -35,12 +36,19 @@ const alignment: CourseAlignment = {
   freshnessToken: "freshness",
 };
 
+const commonAlignment: CourseAlignment = {
+  ...alignment,
+  course: { ...alignment.course, geAlignmentMode: "COMMON_PO" },
+  targets: [{ id: ILO_ID, code: "COMMON-1", description: "Think critically" }],
+};
+
 const pspAlignment: CourseAlignment = {
   course: {
     id: COURSE_ID,
     code: "CS-101",
     title: "Computing",
     scope: "PROGRAM_SPECIFIC",
+    geAlignmentMode: "ILO",
     program: { id: "program-1", code: "BSCS", name: "Computer Science" },
   },
   cilos: [
@@ -58,6 +66,7 @@ const pspAlignment: CourseAlignment = {
 
 const review: CourseAlignmentReview = {
   scope: "GENERAL_EDUCATION",
+  geAlignmentMode: "ILO",
   courseId: COURSE_ID,
   before: [{ ciloId: CILO_ID, mappings: [] }],
   after: [{ ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }] }],
@@ -70,6 +79,7 @@ const review: CourseAlignmentReview = {
 
 const pspReview: CourseAlignmentReview = {
   scope: "PROGRAM_SPECIFIC",
+  geAlignmentMode: "ILO",
   courseId: COURSE_ID,
   before: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] }],
   after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] }],
@@ -325,6 +335,7 @@ describe("CourseAlignmentEditor", () => {
   it("reports a first-time assignment as Set to in the review dialog", async () => {
     const additionReview: CourseAlignmentReview = {
       scope: "PROGRAM_SPECIFIC",
+      geAlignmentMode: "ILO",
       courseId: COURSE_ID,
       before: [{ ciloId: CILO_ID, mappings: [] }],
       after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "OPPORTUNITY" }] }],
@@ -544,6 +555,29 @@ describe("CourseAlignmentEditor", () => {
     expect(screen.getByRole("button", { name: "Reload alignment" })).toBeEnabled();
   });
 
+  it("names Common targets and shared assignment impact on desktop and mobile", () => {
+    render(
+      <CourseAlignmentEditor
+        alignment={commonAlignment}
+        prepareAction={vi.fn()}
+        commitAction={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Shared General Education mapping")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Map each CILO to at least one active Common PO from the shared catalog. Edits apply to every assignment of this course."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("manifestation-matrix")).getByText("COMMON-1")
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("manifestation-cards")).getByText("COMMON-1")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/active Institutional Outcome from/)).not.toBeInTheDocument();
+  });
+
   it("shows Institutional Outcome columns and a shared-impact warning for General Education", () => {
     render(
       <CourseAlignmentEditor alignment={alignment} prepareAction={vi.fn()} commitAction={vi.fn()} />
@@ -551,7 +585,7 @@ describe("CourseAlignmentEditor", () => {
 
     expect(
       screen.getByText(
-        "Classify each CILO against at least one active Institutional Outcome from the college-wide catalog."
+        "Map each CILO to at least one active Institutional Outcome from the college-wide catalog. Edits apply to every assignment of this course."
       )
     ).toBeInTheDocument();
     expect(

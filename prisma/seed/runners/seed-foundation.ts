@@ -71,6 +71,8 @@ export async function seedFoundation(): Promise<FoundationContext> {
         code: d.code,
         title: d.title,
         course_scope: d.scope,
+        ge_alignment_mode:
+          d.scope === "GENERAL_EDUCATION" && d.code !== "GEETHICS" ? "COMMON_PO" : "ILO",
         seed_source: ACD_DEMO_CATALOG_SEED_SOURCE,
         is_active: true,
         program_id: d.pc ? (pMap.get(d.pc)?.id ?? null) : null,

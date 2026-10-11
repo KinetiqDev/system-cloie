@@ -19,6 +19,8 @@ const expectedFiles = [
 ];
 
 const expectedEnums = [
+  "POClassification",
+  "GEAlignmentMode",
   "AcademicPeriodStatus",
   "AcademicSemester",
   "AcademicTerm",
@@ -41,6 +43,9 @@ const expectedEnums = [
 ];
 
 const expectedModels = [
+  "CommonProgramOutcome",
+  "CILOCommonPOMapping",
+  "OutcomeChange",
   "AcademicPeriodReadinessSnapshot",
   "AcademicTermInstance",
   "AlumniProfile",

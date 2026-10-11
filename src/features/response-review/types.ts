@@ -13,7 +13,7 @@ import type {
 import type { PoMetric } from "@/features/analytics/aggregators/po";
 import type { WordCloudToken } from "@/features/analytics/types";
 import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-types";
-import type { CiloIloMapping } from "./services/cilo-mappings";
+import type { CiloIloMapping, CiloCommonMapping } from "./services/cilo-mappings";
 
 // ---------------------------------------------------------------------------
 // Identified review belongs to Program Heads for Program-specific/Central
@@ -42,6 +42,13 @@ export type ProgramWidePoBinding = {
  * carry ILO rows, so each variant declares only the list it can hold.
  */
 export type SubmittedCiloAnswerBinding =
+  | {
+      type: "CILO";
+      layer: "COMMON_PROGRAM_OUTCOME";
+      ciloId: string | null;
+      ciloLabel: string;
+      commonMappings: CiloCommonMapping[];
+    }
   | {
       type: "CILO";
       layer: "GRADUATE_OUTCOME";
@@ -250,6 +257,7 @@ export type IdentifiedCourseEvaluationDetail = {
    * order. Empty on Program-specific Courses, where `ciloResults[].mappings`
    * already carries the PO layer.
    */
+  commonMappingsByCilo?: Record<string, CiloCommonMapping[]>;
   iloMappingsByCilo: Record<string, CiloIloMapping[]>;
   /** ILO evidence for this one evaluation; empty for Program-specific Courses. */
   iloResults: OutcomeEvidenceDTO[];
@@ -259,7 +267,10 @@ export type IdentifiedCourseEvaluationDetail = {
 };
 
 /** Which typed CILO→outcome table backs this evaluation's review surface. */
-export type ReviewAlignmentLayer = "GRADUATE_OUTCOME" | "INSTITUTIONAL_OUTCOME";
+export type ReviewAlignmentLayer =
+  | "GRADUATE_OUTCOME"
+  | "INSTITUTIONAL_OUTCOME"
+  | "COMMON_PROGRAM_OUTCOME";
 
 /** Program-wide question result with its publication-time PO bindings. */
 export type ProgramHeadCentralQuestionResult = QuestionMetric & {

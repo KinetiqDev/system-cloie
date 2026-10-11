@@ -36,6 +36,7 @@ describe("previewPOImport", () => {
     const { previewPOImport } = await import("@/features/outcomes/services/preview-po-import");
     const result = await previewPOImport({
       programId: PROGRAM_ID,
+      classification: "CORE",
       rows: [
         { sourceIndex: 2, input: { po_code: " po-1 ", description: "Valid outcome" } },
         { sourceIndex: 3, input: { po_code: "PO-2", description: "Different text" } },
@@ -75,12 +76,74 @@ describe("previewPOImport", () => {
     });
   });
 
+  it("keeps the resolved classification on every row, including rejected ones", async () => {
+    const { previewPOImport } = await import("@/features/outcomes/services/preview-po-import");
+    const result = await previewPOImport({
+      programId: PROGRAM_ID,
+      classification: "CORE",
+      rows: [
+        {
+          sourceIndex: 2,
+          input: { po_code: "PO-1", description: "Valid outcome", classification: "Professional" },
+        },
+        { sourceIndex: 3, input: { po_code: "PO-3", description: "Archived code" } },
+        { sourceIndex: 4, input: { po_code: "PO-1x", description: "No" } },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          expect.objectContaining({
+            poCode: "PO-1",
+            status: "READY",
+            classification: "PROFESSIONAL",
+          }),
+          expect.objectContaining({
+            status: "DUPLICATE_EXISTING_ARCHIVED",
+            classification: "CORE",
+          }),
+          expect.objectContaining({ status: "INVALID", classification: "CORE" }),
+        ],
+      },
+    });
+  });
+
+  it("carries no importable classification for an administrative category the row names", async () => {
+    const { previewPOImport } = await import("@/features/outcomes/services/preview-po-import");
+    const result = await previewPOImport({
+      programId: PROGRAM_ID,
+      classification: "CORE",
+      rows: [
+        {
+          sourceIndex: 2,
+          input: { po_code: "PO-1", description: "Shared", classification: "Common" },
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        rows: [
+          expect.objectContaining({
+            status: "INVALID",
+            error: expect.stringContaining("Select Core or Professional"),
+          }),
+        ],
+      },
+    });
+    expect(result.success && result.data.rows[0]?.classification).toBeUndefined();
+  });
+
   it("rejects an inactive selected Program", async () => {
     programFindMock.mockResolvedValue({ id: PROGRAM_ID, is_active: false });
     const { previewPOImport } = await import("@/features/outcomes/services/preview-po-import");
     await expect(
       previewPOImport({
         programId: PROGRAM_ID,
+        classification: "CORE",
         rows: [{ sourceIndex: 2, input: { po_code: "PO-1", description: "Valid outcome" } }],
       })
     ).resolves.toEqual({ success: false, error: "Active Academic Program is required." });

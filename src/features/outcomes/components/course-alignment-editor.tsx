@@ -549,13 +549,19 @@ export function CourseAlignmentEditor({
     <div className="flex flex-col gap-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-muted-foreground text-body-sm">{eyebrow}</p>
+          <p className="text-muted-foreground text-body-sm">
+            {alignment.course.scope === "GENERAL_EDUCATION"
+              ? "Shared General Education mapping"
+              : eyebrow}
+          </p>
           <h1 className="text-heading-lg">
             {alignment.course.code}: {alignment.course.title}
           </h1>
           <p className="text-muted-foreground text-body-sm mt-1">
             {alignment.course.scope === "GENERAL_EDUCATION"
-              ? "Classify each CILO against at least one active Institutional Outcome from the college-wide catalog."
+              ? alignment.course.geAlignmentMode === "COMMON_PO"
+                ? "Map each CILO to at least one active Common PO from the shared catalog. Edits apply to every assignment of this course."
+                : "Map each CILO to at least one active Institutional Outcome from the college-wide catalog. Edits apply to every assignment of this course."
               : `Classify each CILO against every active Program Outcome owned by ${alignment.course.program?.code ?? "the program"}.`}
           </p>
         </div>

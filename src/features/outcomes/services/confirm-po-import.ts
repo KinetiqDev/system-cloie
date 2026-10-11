@@ -65,6 +65,7 @@ export async function confirmPOImport(
             data: readyRows.map((row, index) => ({
               code: row.poCode,
               description: row.description,
+              classification: row.classification!,
               order: startOrder + index,
               program_id: programId,
             })),

@@ -4,6 +4,8 @@
 
 Accepted — partially superseded for ILO catalog ownership by [ADR 0018](0018-transfer-ilo-ownership-to-gen-ed-coordinator.md); readiness, mapping, and Dean-oversight semantics remain.
 
+Partially superseded 2026-10-10 for outcome-classification stewardship by [ADR 0040](0040-program-outcome-classification-and-shared-ge-common-alignment.md): the Dean now shares Secretary/Dean write authority over the central Common PO catalog and program-local Common and Institution-specific POs, so "the Dean does not edit outcomes or mappings" no longer holds for those categories. Core/Professional PO, ILO, CILO, and mapping-edit prohibitions remain in force, and the Dean's oversight projection stays read-only.
+
 Amended 2026-08-14 for Issue #372: catalog-only amendment recording the Secretary-owned Institutional Learning Outcome catalog.
 
 Amended 2026-08-15 for Issue #377: supersedes the #372 amendment's deferred claims. This amendment records the complete implemented Institutional Outcome layer — typed General Education CILO-to-Institutional Outcome mapping, Faculty mapping responsibility, Secretary stewardship and correction authority, Program Head read-only mapping review, Dean typed oversight, versioned immutable readiness snapshots, the new-publication alignment gate, and the irreversible legacy General Education cutover. ILO-to-GO crosswalks, dual CILO target mappings, and Insights/analytics over ILOs remain deferred and are not claimed here.

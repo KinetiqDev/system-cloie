@@ -27,7 +27,7 @@ The outcome binding of one submitted quantitative answer: CILO (with the Course'
 _Avoid_: Raw question outcome, unbound rating, PO mapping on a General Education answer
 
 **Coordinator review facets**:
-The Coordinator responses list filters by search, academic period, evaluation status (any non-draft status), response progress (`zero`, `partial`, `complete`), Course, class-context Program (`CourseAssignment.program_id`), ILO (evaluations whose Course has an active CILO currently mapped to it), Faculty, year level, and section. Course scope, not the respondent's Program, keeps ownership.
+The Coordinator responses list filters by search, academic period, evaluation status (any non-draft status), response progress (`zero`, `partial`, `complete`), Course, class-context Program (`CourseAssignment.program_id`), ILO (evaluations whose ILO-mode Course has an active CILO currently mapped to it), Faculty, year level, and section. Common-mode courses remain reviewable without an ILO filter, but retained ILO mappings neither match that facet nor populate its choices. Course scope, not the respondent's Program, keeps ownership.
 _Avoid_: Respondent-Program ownership, Central evidence in Coordinator review
 
 **Publication-time PO binding**:

@@ -4,6 +4,66 @@ enum CILOMappingManifestation {
   OPPORTUNITY
 }
 
+enum POClassification {
+  COMMON
+  CORE
+  PROFESSIONAL
+  INSTITUTION_SPECIFIC
+  UNCLASSIFIED
+}
+
+enum GEAlignmentMode {
+  ILO
+  COMMON_PO
+}
+
+model CommonProgramOutcome {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique
+  description String
+  order       Int      @default(0)
+  source_ref  String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  program_pos PO[]
+  ge_mappings CILOCommonPOMapping[]
+
+  @@map("common_program_outcomes")
+}
+
+model OutcomeChange {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actor_id   String   @db.Uuid
+  input      Json
+  before     Json
+  after      Json
+  created_at DateTime @default(now())
+  actor      User     @relation(fields: [actor_id], references: [id], onDelete: Restrict)
+
+  @@map("outcome_changes")
+}
+
+model CILOCommonPOMapping {
+  id                String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cilo_id           String @db.Uuid
+  common_outcome_id String @db.Uuid
+  manifestation     CILOMappingManifestation?
+  created_by        String @db.Uuid
+  updated_by        String @db.Uuid
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  cilo              CILO @relation(fields: [cilo_id], references: [id], onDelete: Cascade)
+  common_outcome    CommonProgramOutcome @relation(fields: [common_outcome_id], references: [id], onDelete: Restrict)
+  creator           User @relation("CILOCommonPOMappingCreator", fields: [created_by], references: [id], onDelete: Restrict)
+  updater           User @relation("CILOCommonPOMappingUpdater", fields: [updated_by], references: [id], onDelete: Restrict)
+
+  @@unique([cilo_id, common_outcome_id])
+  @@index([common_outcome_id])
+  @@map("cilo_common_po_mappings")
+}
+
 model PO {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String
@@ -14,6 +74,10 @@ model PO {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
+  classification              POClassification @default(UNCLASSIFIED)
+  common_outcome_id           String? @db.Uuid
+  common_outcome              CommonProgramOutcome? @relation(fields: [common_outcome_id], references: [id], onDelete: Restrict)
+
   program                      Program                                @relation(fields: [program_id], references: [id], onDelete: Restrict)
   cilo_mappings                CILOMapping[]
   template_question_bindings   InstrumentTemplatePoQuestionBinding[]
@@ -21,6 +85,9 @@ model PO {
   course_bound_question_bindings CourseBoundPoQuestionBinding[]
 
   @@unique([program_id, code])
+  @@unique([program_id, common_outcome_id])
+  @@index([classification])
+  @@index([common_outcome_id])
   @@map("gos")
 }
 
@@ -35,6 +102,7 @@ model CILO {
 
   course                              Course                                  @relation(fields: [course_id], references: [id], onDelete: Cascade)
   author                              User                                    @relation(fields: [created_by], references: [id], onDelete: Restrict)
+  cilo_common_po_mappings              CILOCommonPOMapping[]
   cilo_mappings                       CILOMapping[]
   cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]
   question_bindings                   CourseBoundCiloQuestionBinding[]

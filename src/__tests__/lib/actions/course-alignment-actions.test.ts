@@ -19,6 +19,7 @@ const TARGET_ID = "33333333-3333-4333-8333-333333333333";
 function validReview() {
   return {
     scope: "GENERAL_EDUCATION" as const,
+    geAlignmentMode: "ILO" as const,
     courseId: COURSE_ID,
     before: [{ ciloId: CILO_ID, mappings: [] as Array<{ targetId: string; manifestation: null }> }],
     after: [
@@ -51,6 +52,7 @@ describe("Course alignment actions", () => {
       success: true,
       data: {
         scope: "GENERAL_EDUCATION",
+        geAlignmentMode: "ILO",
         courseId: COURSE_ID,
         before: [],
         after: [],
@@ -107,6 +109,7 @@ describe("Course alignment actions", () => {
       commitCourseAlignmentAction(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [{ ciloId: CILO_ID, mappings: [{ targetId: TARGET_ID, manifestation: "L" }] }],

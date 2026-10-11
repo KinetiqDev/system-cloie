@@ -17,16 +17,20 @@ import { describeScale } from "@/features/analytics/aggregators/scale-identity";
 import { encodeQuestionKey } from "@/features/analytics/aggregators/question-identity";
 import type {
   CiloGoMapping,
+  CiloMetric,
   MetricEvidenceSummary,
   QuestionMetric,
 } from "@/features/analytics/aggregators/types";
-import type { CiloIloMapping } from "@/features/response-review/services/cilo-mappings";
+import type {
+  CiloCommonMapping,
+  CiloIloMapping,
+} from "@/features/response-review/services/cilo-mappings";
 import { OutcomeEvidenceDetail } from "@/features/analytics/components/outcome-evidence-detail";
 import { formatOutcomeAlignment } from "./response-review-labels";
 import { IdentifiedRespondentsTable } from "./identified-respondents-table";
 import { formatMean, formatPercent } from "./format";
 import { formatDate } from "@/lib/utils/date-format";
-import type { IdentifiedCourseEvaluationDetail } from "../types";
+import type { IdentifiedCourseEvaluationDetail, ReviewAlignmentLayer } from "../types";
 
 type CourseEvaluationDetailProps = {
   detail: IdentifiedCourseEvaluationDetail;
@@ -55,6 +59,7 @@ export function CourseEvaluationDetail({
     participation,
     ciloResults,
     alignmentLayer,
+    commonMappingsByCilo,
     iloMappingsByCilo,
     iloResults,
     questionResults,
@@ -145,7 +150,11 @@ export function CourseEvaluationDetail({
                 <TableHead>CILO</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>
-                  {alignmentLayer === "INSTITUTIONAL_OUTCOME" ? "ILO alignments" : "PO mappings"}
+                  {alignmentLayer === "COMMON_PROGRAM_OUTCOME"
+                    ? "Common PO alignment"
+                    : alignmentLayer === "INSTITUTIONAL_OUTCOME"
+                      ? "ILO alignments"
+                      : "PO mappings"}
                 </TableHead>
                 <TableHead className="text-right">Ratings</TableHead>
                 <TableHead className="text-right">Responses</TableHead>
@@ -161,32 +170,13 @@ export function CourseEvaluationDetail({
                 </TableRow>
               ) : (
                 ciloResults.map((cilo) => (
-                  <TableRow key={cilo.ciloId}>
-                    <TableCell className="font-medium">CILO</TableCell>
-                    <TableCell className="break-words whitespace-normal">
-                      {cilo.description}
-                    </TableCell>
-                    <TableCell className="whitespace-normal">
-                      {alignmentLayer === "INSTITUTIONAL_OUTCOME"
-                        ? iloAlignmentLabels(iloMappingsByCilo[cilo.ciloId])
-                        : poMappingLabels(cilo)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {cilo.quantitative?.ratingCount ?? 0}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {cilo.quantitative?.responseCount ?? 0}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      <span className="inline-flex items-center gap-1">
-                        {formatMean(cilo.quantitative?.mean ?? null)}
-                        <HowCalculatedPopover
-                          metric={cilo.evidenceSummary}
-                          label={`${cilo.ciloId} CILO mean`}
-                        />
-                      </span>
-                    </TableCell>
-                  </TableRow>
+                  <CiloResultRow
+                    key={cilo.ciloId}
+                    cilo={cilo}
+                    alignmentLayer={alignmentLayer}
+                    commonMappingsByCilo={commonMappingsByCilo}
+                    iloMappingsByCilo={iloMappingsByCilo}
+                  />
                 ))
               )}
             </TableBody>
@@ -194,6 +184,12 @@ export function CourseEvaluationDetail({
         </CardContent>
       </Card>
 
+      {alignmentLayer === "COMMON_PROGRAM_OUTCOME" && (
+        <p className="text-body-sm text-muted-foreground">
+          ILO evidence is not applicable to this alignment mode. Common PO alignment does not
+          compute attainment.
+        </p>
+      )}
       {/* ILO evidence (ADR 0035): grouped through the Course's current CILO
           alignments, so a later mapping edit reinterprets this history. The
           mean is evidence, never attainment — no institutional target exists. */}
@@ -421,6 +417,16 @@ function poMappingLabels(cilo: { mappings: CiloGoMapping[] }): string {
 }
 
 /**
+ * Current shared Common PO codes behind one CILO. Common alignment is
+ * coverage only, so an unaligned CILO reads "No current mapping" instead of
+ * implying failed ILO evidence.
+ */
+function commonAlignmentLabels(mappings: CiloCommonMapping[] | undefined): string {
+  if (!mappings || mappings.length === 0) return "No current mapping";
+  return mappings.map((mapping) => mapping.code).join(", ");
+}
+
+/**
  * ILO alignments for one CILO. Manifestation is descriptive only, so a
  * mapping with no classification is shown as such rather than dropped — the
  * alignment itself is still evidence.
@@ -436,6 +442,62 @@ function iloAlignmentLabels(alignments: CiloIloMapping[] | undefined): string {
       })
     )
     .join(", ");
+}
+
+/**
+ * Alignment column of one CILO row. Each typed layer renders only its own
+ * table, so a Course scope can never show PO labels where ILO alignments
+ * apply, and an unaligned Common PO CILO reads "No current mapping" instead
+ * of implying failed ILO evidence.
+ */
+function ciloAlignmentLabels(
+  alignmentLayer: ReviewAlignmentLayer,
+  cilo: CiloMetric,
+  commonMappingsByCilo: Record<string, CiloCommonMapping[]> | undefined,
+  iloMappingsByCilo: Record<string, CiloIloMapping[]>
+): string {
+  if (alignmentLayer === "COMMON_PROGRAM_OUTCOME") {
+    return commonAlignmentLabels(commonMappingsByCilo?.[cilo.ciloId]);
+  }
+  if (alignmentLayer === "INSTITUTIONAL_OUTCOME") {
+    return iloAlignmentLabels(iloMappingsByCilo[cilo.ciloId]);
+  }
+  return poMappingLabels(cilo);
+}
+
+/** One CILO-bound ratings row (§25.1). */
+function CiloResultRow({
+  cilo,
+  alignmentLayer,
+  commonMappingsByCilo,
+  iloMappingsByCilo,
+}: {
+  cilo: CiloMetric;
+  alignmentLayer: ReviewAlignmentLayer;
+  commonMappingsByCilo: Record<string, CiloCommonMapping[]> | undefined;
+  iloMappingsByCilo: Record<string, CiloIloMapping[]>;
+}) {
+  return (
+    <TableRow>
+      <TableCell className="font-medium">CILO</TableCell>
+      <TableCell className="break-words whitespace-normal">{cilo.description}</TableCell>
+      <TableCell className="whitespace-normal">
+        {ciloAlignmentLabels(alignmentLayer, cilo, commonMappingsByCilo, iloMappingsByCilo)}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {cilo.quantitative?.ratingCount ?? 0}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {cilo.quantitative?.responseCount ?? 0}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        <span className="inline-flex items-center gap-1">
+          {formatMean(cilo.quantitative?.mean ?? null)}
+          <HowCalculatedPopover metric={cilo.evidenceSummary} label={`${cilo.ciloId} CILO mean`} />
+        </span>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 function DistributionCounts({

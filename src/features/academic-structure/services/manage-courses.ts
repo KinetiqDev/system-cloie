@@ -87,6 +87,7 @@ export async function createCourse(
         code: input.code,
         title: input.title,
         course_scope: input.course_scope,
+        ge_alignment_mode: input.course_scope === "GENERAL_EDUCATION" ? "COMMON_PO" : "ILO",
         default_year_level: input.default_year_level ?? null,
         default_semester: input.default_semester ?? null,
         default_term: input.default_term ?? null,

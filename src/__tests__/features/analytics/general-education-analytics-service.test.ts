@@ -581,6 +581,37 @@ describe("General Education Coordinator analytics reads", () => {
       ]);
     });
 
+    it("reports Common-mode ILO evidence as inapplicable rather than missing mappings", async () => {
+      const commonCourse = { ...ETHICS, ge_alignment_mode: "COMMON_PO" };
+      const binding = bindingRow({});
+      prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
+        { ...binding, cilo: { ...binding.cilo, course: commonCourse } },
+      ]);
+      const deployment = courseBound({
+        course_assignment: { ...courseBound().course_assignment, course: commonCourse },
+      });
+      prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([
+        ratingRow({ value: 4, responseId: "r1", courseBound: deployment }),
+      ]);
+      prismaMock.response.findMany.mockResolvedValue([
+        responseRow({ id: "r1", courseBound: deployment }),
+      ]);
+      prismaMock.evaluationAssignment.findMany.mockResolvedValue([
+        assignmentRow({ respondentId: "u1", courseBound: deployment }),
+      ]);
+      prismaMock.course.findMany.mockResolvedValue([
+        { ...commonCourse, cilos: [{ id: "cilo-1" }] },
+      ]);
+      const dto = await getGeneralEducationOutcomes(FILTERS);
+      expect(dto).toMatchObject({
+        iloEvidenceApplicable: false,
+        commonModeCourseCount: 1,
+        commonModeRatingCount: 1,
+        unlinkedRatings: { generalItems: 0, unmappedCilos: 0 },
+      });
+      expect(dto!.outcomes.every((outcome) => outcome.ratingCount === 0)).toBe(true);
+    });
+
     it("pools each rating once per ILO through the current CILO mappings", async () => {
       prismaMock.courseBoundCiloQuestionBinding.findMany.mockResolvedValue([
         bindingRow({

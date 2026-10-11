@@ -4,6 +4,7 @@ import { ROLES } from "@/lib/constants/roles";
 const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   po: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+  common: { findUnique: vi.fn() },
   cilo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
   assignment: { findFirst: vi.fn() },
   selectedContext: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     pO: mocks.po,
+    commonProgramOutcome: mocks.common,
     cILO: mocks.cilo,
     courseAssignment: mocks.assignment,
     $transaction: mocks.transaction,
@@ -88,8 +90,141 @@ describe("manage-outcome-writes", () => {
       code: "PO-1",
       description: "Old",
       order: 0,
+      classification: "CORE",
+      common_outcome_id: null,
       program_id: "program-1",
       is_active: true,
+    });
+  });
+
+  it("lets a Program Head claim a legacy UNCLASSIFIED PO with a real category and denies an out-of-category claim", async () => {
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    mocks.po.findUnique.mockResolvedValue({
+      id: "po-legacy",
+      code: "PO-LEGACY",
+      description: "Old",
+      order: 0,
+      classification: "UNCLASSIFIED",
+      common_outcome_id: null,
+      program_id: "program-1",
+      is_active: true,
+    });
+    await expect(
+      prepareOutcomeWrite({
+        kind: "PO",
+        action: "update",
+        classification: "CORE",
+        programId: "program-1",
+        id: "po-legacy",
+        code: "PO-LEGACY",
+        description: "Claimed as Core",
+      })
+    ).resolves.toMatchObject({ success: true });
+    await expect(
+      prepareOutcomeWrite({
+        kind: "PO",
+        action: "update",
+        // Common adoption is Secretary/Dean territory even for a legacy row.
+        classification: "COMMON",
+        programId: "program-1",
+        id: "po-legacy",
+        code: "PO-LEGACY",
+        description: "Not a Program Head claim",
+      })
+    ).resolves.toMatchObject({ success: false });
+    expect(mocks.po.findUnique).toHaveBeenCalledWith({
+      where: { id: "po-legacy" },
+      select: { program_id: true, classification: true },
+    });
+  });
+
+  it("lets the Secretary claim a legacy UNCLASSIFIED PO as Institution-specific", async () => {
+    mocks.session.mockResolvedValue(SECRETARY);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    mocks.po.findUnique.mockResolvedValue({
+      id: "po-legacy",
+      code: "PO-LEGACY",
+      description: "Old",
+      order: 0,
+      classification: "UNCLASSIFIED",
+      common_outcome_id: null,
+      program_id: "program-1",
+      is_active: true,
+    });
+    await expect(
+      prepareOutcomeWrite({
+        kind: "PO",
+        action: "update",
+        classification: "INSTITUTION_SPECIFIC",
+        programId: "program-1",
+        id: "po-legacy",
+        code: "PO-LEGACY",
+        description: "Claimed as Institution-specific",
+      })
+    ).resolves.toMatchObject({
+      success: true,
+      data: expect.objectContaining({
+        input: expect.objectContaining({ classification: "INSTITUTION_SPECIFIC" }),
+      }),
+    });
+  });
+
+  it("denies a Secretary COMMON adoption whose description does not match the central statement", async () => {
+    mocks.session.mockResolvedValue(SECRETARY);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    // The active central record carries a different approved statement, so the
+    // denial must come from the statement match, not a missing record.
+    mocks.common.findUnique.mockResolvedValue({
+      id: "common-1",
+      is_active: true,
+      description: "Different central statement",
+    });
+    expect(
+      await prepareOutcomeWrite({
+        kind: "PO",
+        action: "create",
+        classification: "COMMON",
+        commonOutcomeId: "common-1",
+        programId: "program-1",
+        code: "PO-C",
+        description: "Local competing statement",
+      })
+    ).toMatchObject({ success: false });
+  });
+
+  it("adopts a Secretary COMMON PO whose description matches the central statement", async () => {
+    mocks.session.mockResolvedValue(SECRETARY);
+    mocks.po.findMany.mockResolvedValue([]);
+    const { prepareOutcomeWrite } =
+      await import("@/features/outcomes/services/manage-outcome-writes");
+    mocks.common.findUnique.mockResolvedValue({
+      id: "common-1",
+      is_active: true,
+      description: "The approved central statement",
+    });
+    const review = await prepareOutcomeWrite({
+      kind: "PO",
+      action: "create",
+      classification: "COMMON",
+      commonOutcomeId: "common-1",
+      programId: "program-1",
+      code: "PO-C",
+      description: "The approved central statement",
+    });
+    expect(review).toMatchObject({
+      success: true,
+      data: expect.objectContaining({
+        after: expect.arrayContaining([
+          expect.objectContaining({
+            code: "PO-C",
+            classification: "COMMON",
+            common_outcome_id: "common-1",
+          }),
+        ]),
+      }),
     });
   });
 
@@ -99,6 +234,7 @@ describe("manage-outcome-writes", () => {
     const review = await prepareOutcomeWrite({
       kind: "PO",
       action: "update",
+      classification: "CORE",
       programId: "program-1",
       id: "po-1",
       code: "po-2",
@@ -113,6 +249,8 @@ describe("manage-outcome-writes", () => {
           code: "PO-1",
           description: "Old",
           order: 0,
+          classification: "CORE",
+          common_outcome_id: null,
           program_id: "program-1",
           is_active: true,
         },
@@ -121,6 +259,8 @@ describe("manage-outcome-writes", () => {
           code: "PO-2",
           description: "New",
           order: 0,
+          classification: "CORE",
+          common_outcome_id: null,
           program_id: "program-1",
           is_active: true,
         },
@@ -141,6 +281,7 @@ describe("manage-outcome-writes", () => {
       await prepareOutcomeWrite({
         kind: "PO",
         action: "update",
+        classification: "CORE",
         programId: "program-1",
         id: "po-1",
         code: "PO-2",
@@ -156,6 +297,7 @@ describe("manage-outcome-writes", () => {
     const review = await prepareOutcomeWrite({
       kind: "PO",
       action: "update",
+      classification: "CORE",
       programId: "program-1",
       id: "po-1",
       code: "PO-2",
@@ -166,6 +308,8 @@ describe("manage-outcome-writes", () => {
       code: "PO-CHANGED",
       description: "Changed",
       order: 0,
+      classification: "CORE",
+      common_outcome_id: null,
       program_id: "program-1",
       is_active: true,
     });
@@ -182,6 +326,7 @@ describe("manage-outcome-writes", () => {
     const review = await prepareOutcomeWrite({
       kind: "PO",
       action: "update",
+      classification: "CORE",
       programId: "program-1",
       id: "po-1",
       code: "PO-2",
@@ -196,6 +341,7 @@ describe("manage-outcome-writes", () => {
           input: {
             kind: "PO",
             action: "update",
+            classification: "CORE",
             programId: "program-1",
             id: "po-1",
             code: "PO-2",
@@ -261,6 +407,7 @@ describe("manage-outcome-writes", () => {
     const review = await prepareOutcomeWrite({
       kind: "PO",
       action: "update",
+      classification: "CORE",
       programId: "program-1",
       id: "po-1",
       code: "PO-2",
@@ -294,7 +441,7 @@ describe("manage-outcome-writes", () => {
           }),
         },
       };
-      await callback(tx);
+      await callback({ ...tx, courseAssignment: mocks.assignment });
       persisted.splice(0, persisted.length, ...staged);
     });
     const { prepareOutcomeWrite, commitOutcomeWrite } =
@@ -322,6 +469,7 @@ describe("manage-outcome-writes", () => {
       prepareOutcomeWrite({
         kind: "PO",
         action: "update",
+        classification: "CORE",
         programId: "program-1",
         id: "po-1",
         code: "PO-2",
@@ -363,6 +511,7 @@ describe("manage-outcome-writes", () => {
       prepareOutcomeWrite({
         kind: "PO",
         action: "update",
+        classification: "CORE",
         programId: "program-1",
         id: "po-1",
         code: "PO-2",

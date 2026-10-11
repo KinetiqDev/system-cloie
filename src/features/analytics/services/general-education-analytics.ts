@@ -125,7 +125,12 @@ type GeCiloBindingRow = {
   cilo: {
     id: string;
     description: string;
-    course: { id: string; code: string; title: string } | null;
+    course: {
+      id: string;
+      code: string;
+      title: string;
+      ge_alignment_mode?: import("@prisma/client").GEAlignmentMode;
+    } | null;
     cilo_institutional_outcome_mappings: GeIloMappingRow[];
   } | null;
   course_bound_evaluation: {
@@ -301,6 +306,30 @@ function addIdToList(byEvaluation: Map<string, string[]>, key: string, value: st
   byEvaluation.set(key, values);
 }
 
+/**
+ * ILO rows one rating reaches. A Common PO CILO aligns to no institutional
+ * outcome, so it reports as inapplicable evidence (an empty list) rather than
+ * as a CILO whose ILO mappings are merely missing.
+ */
+function institutionalMappingsOf(binding: GeCiloBindingRow): readonly GeIloMappingRow[] {
+  if (binding.cilo?.course?.ge_alignment_mode === "COMMON_PO") return [];
+  return binding.cilo?.cilo_institutional_outcome_mappings ?? [];
+}
+
+/**
+ * Publication-time CILO labels of one evaluation, resolved once from its
+ * frozen `cilos_snapshot` so a CILO keeps the label it had at publication
+ * however many questions evidence it.
+ */
+function evaluationCiloLabels(
+  binding: GeCiloBindingRow,
+  ciloOrderByCourse: ReadonlyMap<string, string[]>
+): Map<string, string> {
+  const orderedCiloIds =
+    ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
+  return resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds);
+}
+
 function indexEvidenceBindings(
   bindings: readonly GeCiloBindingRow[],
   ciloOrderByCourse: ReadonlyMap<string, string[]>
@@ -315,14 +344,9 @@ function indexEvidenceBindings(
     if (!bindingByQuestion.has(key)) bindingByQuestion.set(key, binding);
     if (binding.cilo) addIdToList(ciloIdsByEvaluation, evaluationId, binding.cilo.id);
     if (!ciloLabelsByEvaluation.has(evaluationId)) {
-      const orderedCiloIds =
-        ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
-      ciloLabelsByEvaluation.set(
-        evaluationId,
-        resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds)
-      );
+      ciloLabelsByEvaluation.set(evaluationId, evaluationCiloLabels(binding, ciloOrderByCourse));
     }
-    outcomeIdsByQuestion.set(key, binding.cilo?.cilo_institutional_outcome_mappings ?? []);
+    outcomeIdsByQuestion.set(key, institutionalMappingsOf(binding));
   }
   return { bindingByQuestion, outcomeIdsByQuestion, ciloIdsByEvaluation, ciloLabelsByEvaluation };
 }
@@ -421,7 +445,7 @@ const readGeneralEducationEvidence = cache(async function readGeneralEducationEv
               select: {
                 id: true,
                 description: true,
-                course: { select: { id: true, code: true, title: true } },
+                course: { select: { id: true, code: true, title: true, ge_alignment_mode: true } },
                 cilo_institutional_outcome_mappings: {
                   select: {
                     manifestation: true,
@@ -692,6 +716,7 @@ const readGeneralEducationAlignments = cache(async function readGeneralEducation
         is_active: true,
         course: {
           course_scope: "GENERAL_EDUCATION",
+          ge_alignment_mode: "ILO",
           course_assignments: { some: scope.courseAssignmentScope },
         },
       },
@@ -839,13 +864,26 @@ export async function getGeneralEducationOutcomes(
         id: true,
         code: true,
         title: true,
+        ge_alignment_mode: true,
         cilos: { select: { id: true }, orderBy: { created_at: "asc" } },
       },
     }),
   ]);
   const outcomeIdsOf = geOutcomeIdResolverFor(evidence);
+  const commonCourseIds = new Set(
+    scopedCourses
+      .filter((course) => course.ge_alignment_mode === "COMMON_PO")
+      .map((course) => course.id)
+  );
+  const iloEvidenceApplicable =
+    scopedCourses.length === 0 ||
+    scopedCourses.some((course) => course.ge_alignment_mode !== "COMMON_PO");
+  const iloRatingRows = evidence.ratingRows.filter((row) => !commonCourseIds.has(row.course.id));
+  const commonModeRatingCount = evidence.ratingRows.filter(
+    (row) => commonCourseIds.has(row.course.id) && isValidGeRating(row, evidence.snapshotById)
+  ).length;
 
-  const outcomeRows: OutcomeEvidenceRow[] = evidence.ratingRows.flatMap((row) => {
+  const outcomeRows: OutcomeEvidenceRow[] = iloRatingRows.flatMap((row) => {
     const mappings = geOutcomeMappingsFor(evidence, row);
     if (mappings.length === 0) return [];
     const ciloLabel =
@@ -888,14 +926,16 @@ export async function getGeneralEducationOutcomes(
   const aggregation = aggregateOutcomeEvidence(outcomeRows);
   const outcomes = mergeGeIloRows(iloCatalog, buildOutcomeEvidenceDtos(aggregation));
   const courseOutcomeEvidence = collectGeCourseOutcomeEvidence(
-    evidence.ratingRows,
+    iloRatingRows,
     outcomeIdsOf,
     evidence.snapshotById
   );
   const courses = new Map<string, GeCourseRef>();
-  for (const row of evidence.ratingRows) courses.set(row.course.id, row.course);
-  for (const row of evidence.assignments) courses.set(row.course.id, row.course);
-  for (const course of scopedCourses) courses.set(course.id, course);
+  for (const row of iloRatingRows) courses.set(row.course.id, row.course);
+  for (const row of evidence.assignments)
+    if (!commonCourseIds.has(row.course.id)) courses.set(row.course.id, row.course);
+  for (const course of scopedCourses)
+    if (!commonCourseIds.has(course.id)) courses.set(course.id, course);
 
   const scopeEmptyReason = geScopeEmptyReason(
     evidence.evaluationOpportunityCount,
@@ -903,6 +943,9 @@ export async function getGeneralEducationOutcomes(
   );
 
   return {
+    iloEvidenceApplicable,
+    commonModeCourseCount: commonCourseIds.size,
+    commonModeRatingCount,
     emptyReason:
       scopeEmptyReason ??
       (outcomes.some((outcome) => outcome.ratingCount > 0) ? null : "no-mapped-outcomes"),
@@ -910,7 +953,7 @@ export async function getGeneralEducationOutcomes(
     currentMappingDisclosure: GE_CURRENT_MAPPING_DISCLOSURE,
     manyToManyDisclosure: aggregation.hasMultiMappedCilo,
     unlinkedRatings: summarizeUnlinkedRatings({
-      ratingRows: evidence.ratingRows,
+      ratingRows: iloRatingRows,
       outcomeIdsOf,
       isValidRating: (row) => isValidGeRating(row, evidence.snapshotById),
     }),

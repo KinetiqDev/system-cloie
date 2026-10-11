@@ -157,26 +157,62 @@ describe("listGeneralEducationEvaluations (ADR 0034)", () => {
     expect(where.course_assignment.course.course_scope).toBe("GENERAL_EDUCATION");
   });
 
-  it("lists an evaluation whose course has an active CILO currently mapped to the ILO", async () => {
-    await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
-
-    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
-    expect(where.course_assignment.course.course_scope).toBe("GENERAL_EDUCATION");
-    expect(where.course_assignment.course.cilos).toEqual({
-      some: {
-        is_active: true,
-        cilo_institutional_outcome_mappings: { some: { institutional_outcome_id: "ilo-1" } },
+  it("filters ILO evidence by alignment mode even when Common courses retain ILO mappings", async () => {
+    const course = {
+      course_scope: "GENERAL_EDUCATION",
+      cilos: [
+        {
+          is_active: true,
+          cilo_institutional_outcome_mappings: [
+            { institutional_outcome_id: "ilo-1", manifestation: null },
+          ],
+        },
+      ],
+    };
+    const candidates = [
+      {
+        id: "ilo-course",
+        ...reviewStatusRow("CLOSED"),
+        course_assignment: { course: { ...course, ge_alignment_mode: "ILO" } },
       },
-    });
+      {
+        id: "common-course",
+        ...reviewStatusRow("CLOSED"),
+        course_assignment: { course: { ...course, ge_alignment_mode: "COMMON_PO" } },
+      },
+    ];
+    await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
+    const where = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(selectRows(where, candidates).map((row) => row.id)).toEqual(["ilo-course"]);
+
+    courseBoundEvaluationFindManyMock.mockClear();
+    await listGeneralEducationEvaluations(FILTER);
+    const unfiltered = courseBoundEvaluationFindManyMock.mock.calls[0][0].where;
+    expect(selectRows(unfiltered, candidates).map((row) => row.id)).toEqual([
+      "ilo-course",
+      "common-course",
+    ]);
   });
 
-  it("keeps an unclassified ILO mapping inside the facet", async () => {
-    // Manifestation is descriptive and never narrows a facet: an alignment
-    // with no recorded classification is still a current mapping.
-    await listGeneralEducationEvaluations({ page: 1, iloId: "ilo-1" });
-
-    const [where] = courseBoundEvaluationFindManyMock.mock.calls[0];
-    expect(JSON.stringify(where.where)).not.toContain("manifestation");
+  it("omits ILO choices reachable only through retained mappings on Common courses", async () => {
+    const candidates = ["ILO", "COMMON_PO"].map((mode) => ({
+      id: mode,
+      code: mode,
+      description: "Outcome statement",
+      cilo_mappings: [
+        {
+          cilo: {
+            is_active: true,
+            course: { course_scope: "GENERAL_EDUCATION", ge_alignment_mode: mode },
+          },
+        },
+      ],
+    }));
+    institutionalOutcomeFindManyMock.mockImplementation(({ where }) =>
+      Promise.resolve(selectRows(where, candidates))
+    );
+    const result = await listGeneralEducationEvaluations(FILTER);
+    expect(result?.options.ilos.map((ilo) => ilo.id)).toEqual(["ILO"]);
   });
 
   it("classifies response progress against real opportunities, never 0 of 0 as complete", async () => {

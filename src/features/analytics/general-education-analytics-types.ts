@@ -50,6 +50,9 @@ export type GeneralEducationIloEvidenceDTO = OutcomeEvidenceDTO & {
   order: number;
 };
 export type GeneralEducationOutcomesDTO = {
+  iloEvidenceApplicable?: boolean;
+  commonModeCourseCount?: number;
+  commonModeRatingCount?: number;
   emptyReason: GeneralEducationAnalyticsEmptyReason | "no-mapped-outcomes";
   outcomes: GeneralEducationIloEvidenceDTO[];
   currentMappingDisclosure: string;

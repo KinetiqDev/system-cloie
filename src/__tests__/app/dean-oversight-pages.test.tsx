@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { Suspense } from "react";
 import React from "react";
 import { renderToReadableStream } from "react-dom/server";
@@ -96,6 +96,22 @@ const outcomeData = {
           reason: "incomplete-mapping" as const,
           missingGoIds: [],
           missingInstitutionalOutcomeIds: ["ilo-1"],
+        },
+        {
+          courseId: "course-ge-common",
+          courseCode: "GE201",
+          courseName: "Common Mode Seminar",
+          courseScope: "GENERAL_EDUCATION" as const,
+          targetType: "COMMON_PROGRAM_OUTCOME" as const,
+          yearLevel: "SECOND_YEAR",
+          section: "EVENING",
+          ciloId: "cilo-ge-common",
+          ciloStatement: "Relate discipline to civic life",
+          ciloIsArchived: false,
+          reason: "incomplete-mapping" as const,
+          missingGoIds: [],
+          missingInstitutionalOutcomeIds: [],
+          missingCommonOutcomeIds: ["common-1"],
         },
         {
           courseId: "course-1",
@@ -309,6 +325,76 @@ describe("Dean oversight pages", () => {
       screen.queryByRole("button", { name: /edit|add|create|archive|restore|reorder/i })
     ).not.toBeInTheDocument();
     expect(getDeanLearningOutcomesMock).toHaveBeenCalledWith(PERIOD_ID, "incomplete-mappings");
+  });
+
+  // ADR 0040: a Common-mode General Education context aligns to the shared
+  // Common PO catalog, never to a program-owned PO. Its gap must therefore be
+  // counted and listed under the Common PO section instead of being absorbed
+  // into the program-specific Program Outcome gaps.
+  it("groups a Common PO gap under the Common section, not program-specific POs", async () => {
+    render(
+      <LearningOutcomesContent
+        result={await getDeanLearningOutcomesMock()}
+        selectedProgram={PROGRAM_ID}
+      />
+    );
+
+    const commonSection = screen.getByRole("heading", {
+      name: "Common PO mapping gaps",
+    }).parentElement as HTMLElement;
+    const programGapSection = screen.getByRole("heading", {
+      name: "Program Outcome mapping gaps",
+    }).parentElement as HTMLElement;
+
+    expect(within(commonSection).getByText("GE201")).toBeInTheDocument();
+    expect(
+      within(commonSection).getByText(/Incomplete shared Common PO mapping:/)
+    ).toBeInTheDocument();
+    expect(within(programGapSection).queryByText("GE201")).not.toBeInTheDocument();
+    expect(within(programGapSection).getByText("CS101")).toBeInTheDocument();
+    expect(screen.queryByText("No General Education Common PO gaps.")).not.toBeInTheDocument();
+    // Counts follow the partition, so no layer borrows another's total, and the
+    // GO-era wording is gone from the labels this component owns.
+    expect(
+      await screen.findByText(
+        "2 Program Outcomes · 1 Institutional Outcome gap · 1 Common PO gap · 1 Program Outcome gap"
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Graduate Outcome/i)).not.toBeInTheDocument();
+  });
+
+  it("states an empty Common PO gap section when no Common-mode context is a gap", async () => {
+    getDeanLearningOutcomesMock.mockResolvedValue({
+      state: "ready",
+      data: {
+        ...outcomeData,
+        programs: [
+          {
+            ...outcomeData.programs[0],
+            mappingGaps: outcomeData.programs[0].mappingGaps.filter(
+              (gap) => gap.targetType !== "COMMON_PROGRAM_OUTCOME"
+            ),
+          },
+        ],
+      },
+    });
+    render(
+      <LearningOutcomesContent
+        result={await getDeanLearningOutcomesMock()}
+        selectedProgram={PROGRAM_ID}
+      />
+    );
+
+    const commonSection = screen.getByRole("heading", {
+      name: "Common PO mapping gaps",
+    }).parentElement as HTMLElement;
+    expect(
+      within(commonSection).getByText("No General Education Common PO gaps.")
+    ).toBeInTheDocument();
+    const counts = await screen.findByText(/2 Program Outcomes · 1 Institutional Outcome gap/);
+    expect(counts.textContent).toBe(
+      "2 Program Outcomes · 1 Institutional Outcome gap · 0 Common PO gaps · 1 Program Outcome gap"
+    );
   });
 
   it("keeps Learning Outcomes heading and period controls visible while details wait", async () => {
