@@ -334,71 +334,76 @@ function manifestationDiff(
   return { additions, updates, removals };
 }
 
-async function applyManifestationDiff(
+async function writeCommonPODiff(
   tx: Prisma.TransactionClient,
   diff: ManifestationDiff,
-  userId: string,
-  scope: CourseScope,
-  mode: GEAlignmentMode
+  userId: string
 ): Promise<void> {
-  if (scope === "GENERAL_EDUCATION" && mode === "COMMON_PO") {
-    if (diff.additions.length)
-      await tx.cILOCommonPOMapping.createMany({
-        data: diff.additions.map((item) => ({
+  if (diff.additions.length)
+    await tx.cILOCommonPOMapping.createMany({
+      data: diff.additions.map((item) => ({
+        cilo_id: item.ciloId,
+        common_outcome_id: item.targetId,
+        manifestation: item.manifestation,
+        created_by: userId,
+        updated_by: userId,
+      })),
+    });
+  for (const update of diff.updates)
+    await tx.cILOCommonPOMapping.updateMany({
+      where: { cilo_id: update.ciloId, common_outcome_id: update.targetId },
+      data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
+    });
+  if (diff.removals.length)
+    await tx.cILOCommonPOMapping.deleteMany({
+      where: {
+        OR: diff.removals.map((item) => ({
           cilo_id: item.ciloId,
           common_outcome_id: item.targetId,
-          manifestation: item.manifestation,
-          created_by: userId,
-          updated_by: userId,
         })),
-      });
-    for (const item of diff.updates)
-      await tx.cILOCommonPOMapping.updateMany({
-        where: { cilo_id: item.ciloId, common_outcome_id: item.targetId },
-        data: { manifestation: item.to, updated_by: userId, updated_at: new Date() },
-      });
-    if (diff.removals.length)
-      await tx.cILOCommonPOMapping.deleteMany({
-        where: {
-          OR: diff.removals.map((item) => ({
-            cilo_id: item.ciloId,
-            common_outcome_id: item.targetId,
-          })),
-        },
-      });
-    return;
+      },
+    });
+}
+
+async function writeILOMappingDiff(
+  tx: Prisma.TransactionClient,
+  diff: ManifestationDiff,
+  userId: string
+): Promise<void> {
+  if (diff.additions.length > 0) {
+    await tx.cILOInstitutionalOutcomeMapping.createMany({
+      data: diff.additions.map((item) => ({
+        cilo_id: item.ciloId,
+        institutional_outcome_id: item.targetId,
+        manifestation: item.manifestation,
+        created_by: userId,
+        updated_by: userId,
+      })),
+    });
   }
-  if (scope === "GENERAL_EDUCATION") {
-    if (diff.additions.length > 0) {
-      await tx.cILOInstitutionalOutcomeMapping.createMany({
-        data: diff.additions.map((item) => ({
+  for (const update of diff.updates) {
+    await tx.cILOInstitutionalOutcomeMapping.updateMany({
+      where: { cilo_id: update.ciloId, institutional_outcome_id: update.targetId },
+      data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
+    });
+  }
+  if (diff.removals.length > 0) {
+    await tx.cILOInstitutionalOutcomeMapping.deleteMany({
+      where: {
+        OR: diff.removals.map((item) => ({
           cilo_id: item.ciloId,
           institutional_outcome_id: item.targetId,
-          manifestation: item.manifestation,
-          created_by: userId,
-          updated_by: userId,
         })),
-      });
-    }
-    for (const update of diff.updates) {
-      await tx.cILOInstitutionalOutcomeMapping.updateMany({
-        where: { cilo_id: update.ciloId, institutional_outcome_id: update.targetId },
-        data: { manifestation: update.to, updated_by: userId, updated_at: new Date() },
-      });
-    }
-    if (diff.removals.length > 0) {
-      await tx.cILOInstitutionalOutcomeMapping.deleteMany({
-        where: {
-          OR: diff.removals.map((item) => ({
-            cilo_id: item.ciloId,
-            institutional_outcome_id: item.targetId,
-          })),
-        },
-      });
-    }
-    return;
+      },
+    });
   }
+}
 
+async function writePOMappingDiff(
+  tx: Prisma.TransactionClient,
+  diff: ManifestationDiff,
+  userId: string
+): Promise<void> {
   if (diff.additions.length > 0) {
     await tx.cILOMapping.createMany({
       data: diff.additions.map((item) => ({
@@ -423,6 +428,20 @@ async function applyManifestationDiff(
       },
     });
   }
+}
+
+async function applyManifestationDiff(
+  tx: Prisma.TransactionClient,
+  diff: ManifestationDiff,
+  userId: string,
+  scope: CourseScope,
+  mode: GEAlignmentMode
+): Promise<void> {
+  if (scope === "GENERAL_EDUCATION")
+    return mode === "COMMON_PO"
+      ? writeCommonPODiff(tx, diff, userId)
+      : writeILOMappingDiff(tx, diff, userId);
+  return writePOMappingDiff(tx, diff, userId);
 }
 
 function postWriteMappings(

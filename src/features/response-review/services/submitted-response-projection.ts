@@ -9,6 +9,7 @@ import type { CiloIloMapping, CiloCommonMapping } from "./cilo-mappings";
 import type { RespondentIdentityContext } from "./respondent-context";
 import type {
   IdentifiedSubmittedResponseDetail,
+  ProgramWidePoBinding,
   ReviewAlignmentLayer,
   SubmittedAnswerBinding,
 } from "../types";
@@ -53,16 +54,15 @@ type SubmittedResponseBindingScope = {
   layer: ReviewAlignmentLayer;
 };
 
-function resolveSubmittedAnswerBinding(
+/**
+ * Direct PO bindings frozen on one course question. A retired PO keeps its
+ * `snapshot:<code>:<description>` key so it stays deep-linkable.
+ */
+function directPoBindings(
   scope: SubmittedResponseBindingScope,
-  entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
-  alignments: {
-    poMappings: Map<string, CiloGoMapping[]>;
-    iloMappings: Map<string, CiloIloMapping[]>;
-    commonMappings?: Map<string, CiloCommonMapping[]>;
-  }
-): SubmittedAnswerBinding {
-  const directBindings = scope.poSnapshots
+  entry: { section_key: string; item_key: string }
+): ProgramWidePoBinding[] {
+  return scope.poSnapshots
     .filter(
       (snapshot) =>
         snapshot.section_key === entry.section_key && snapshot.item_key === entry.item_key
@@ -74,45 +74,89 @@ function resolveSubmittedAnswerBinding(
       code: snapshot.po_code_snapshot,
       description: snapshot.po_description_snapshot,
     }));
+}
 
-  const binding = scope.ciloBindings.find(
+/**
+ * The CILO a quantitative answer binds to, matched by its published foreign
+ * key when present and otherwise by the question's own section/item keys.
+ */
+function resolveBoundCilo(
+  scope: SubmittedResponseBindingScope,
+  entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string }
+): CourseBoundCiloBinding | undefined {
+  return scope.ciloBindings.find(
     (candidate) =>
       candidate.id === entry.cilo_question_binding_id ||
       (!entry.cilo_question_binding_id &&
         candidate.section_key === entry.section_key &&
         candidate.item_key === entry.item_key)
   );
-  if (!binding) {
-    return directBindings.length > 0
-      ? { type: "PO", poBindings: directBindings }
-      : { type: "GENERAL" };
-  }
-  if (scope.layer === "COMMON_PROGRAM_OUTCOME")
+}
+
+/**
+ * CILO binding for the typed alignment layer the owning Course actually
+ * reaches (ADR 0035). Each layer carries only its own outcome list, so a
+ * Course scope can never publish the wrong table's rows.
+ */
+function ciloLayerBinding(
+  layer: ReviewAlignmentLayer,
+  binding: CourseBoundCiloBinding,
+  alignments: {
+    poMappings: Map<string, CiloGoMapping[]>;
+    iloMappings: Map<string, CiloIloMapping[]>;
+    commonMappings?: Map<string, CiloCommonMapping[]>;
+  },
+  directBindings: ProgramWidePoBinding[]
+): SubmittedAnswerBinding {
+  const ciloId = binding.cilo_id;
+  const ciloLabel = binding.cilo_description_snapshot;
+  if (layer === "COMMON_PROGRAM_OUTCOME") {
     return {
       type: "CILO",
       layer: "COMMON_PROGRAM_OUTCOME",
-      ciloId: binding.cilo_id,
-      ciloLabel: binding.cilo_description_snapshot,
-      commonMappings: alignments.commonMappings?.get(binding.cilo_id ?? "") ?? [],
+      ciloId,
+      ciloLabel,
+      commonMappings: alignments.commonMappings?.get(ciloId ?? "") ?? [],
     };
-  if (scope.layer === "INSTITUTIONAL_OUTCOME") {
+  }
+  if (layer === "INSTITUTIONAL_OUTCOME") {
     return {
       type: "CILO",
       layer: "INSTITUTIONAL_OUTCOME",
-      ciloId: binding.cilo_id,
-      ciloLabel: binding.cilo_description_snapshot,
-      iloMappings: alignments.iloMappings.get(binding.cilo_id ?? "") ?? [],
+      ciloId,
+      ciloLabel,
+      iloMappings: alignments.iloMappings.get(ciloId ?? "") ?? [],
     };
   }
   return {
     type: "CILO",
     layer: "GRADUATE_OUTCOME",
-    ciloId: binding.cilo_id,
-    ciloLabel: binding.cilo_description_snapshot,
-    poMappings: alignments.poMappings.get(binding.cilo_id ?? "") ?? [],
+    ciloId,
+    ciloLabel,
+    poMappings: alignments.poMappings.get(ciloId ?? "") ?? [],
     directPoBindings: directBindings,
   };
 }
+
+function resolveSubmittedAnswerBinding(
+  scope: SubmittedResponseBindingScope,
+  entry: { cilo_question_binding_id: string | null; section_key: string; item_key: string },
+  alignments: {
+    poMappings: Map<string, CiloGoMapping[]>;
+    iloMappings: Map<string, CiloIloMapping[]>;
+    commonMappings?: Map<string, CiloCommonMapping[]>;
+  }
+): SubmittedAnswerBinding {
+  const directBindings = directPoBindings(scope, entry);
+  const binding = resolveBoundCilo(scope, entry);
+  if (!binding) {
+    return directBindings.length > 0
+      ? { type: "PO", poBindings: directBindings }
+      : { type: "GENERAL" };
+  }
+  return ciloLayerBinding(scope.layer, binding, alignments, directBindings);
+}
+
 export function buildSubmittedResponseSections(
   response: {
     quant_items: Array<{

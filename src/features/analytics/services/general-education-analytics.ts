@@ -306,6 +306,30 @@ function addIdToList(byEvaluation: Map<string, string[]>, key: string, value: st
   byEvaluation.set(key, values);
 }
 
+/**
+ * ILO rows one rating reaches. A Common PO CILO aligns to no institutional
+ * outcome, so it reports as inapplicable evidence (an empty list) rather than
+ * as a CILO whose ILO mappings are merely missing.
+ */
+function institutionalMappingsOf(binding: GeCiloBindingRow): readonly GeIloMappingRow[] {
+  if (binding.cilo?.course?.ge_alignment_mode === "COMMON_PO") return [];
+  return binding.cilo?.cilo_institutional_outcome_mappings ?? [];
+}
+
+/**
+ * Publication-time CILO labels of one evaluation, resolved once from its
+ * frozen `cilos_snapshot` so a CILO keeps the label it had at publication
+ * however many questions evidence it.
+ */
+function evaluationCiloLabels(
+  binding: GeCiloBindingRow,
+  ciloOrderByCourse: ReadonlyMap<string, string[]>
+): Map<string, string> {
+  const orderedCiloIds =
+    ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
+  return resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds);
+}
+
 function indexEvidenceBindings(
   bindings: readonly GeCiloBindingRow[],
   ciloOrderByCourse: ReadonlyMap<string, string[]>
@@ -320,19 +344,9 @@ function indexEvidenceBindings(
     if (!bindingByQuestion.has(key)) bindingByQuestion.set(key, binding);
     if (binding.cilo) addIdToList(ciloIdsByEvaluation, evaluationId, binding.cilo.id);
     if (!ciloLabelsByEvaluation.has(evaluationId)) {
-      const orderedCiloIds =
-        ciloOrderByCourse.get(binding.course_bound_evaluation.course_assignment.course.id) ?? [];
-      ciloLabelsByEvaluation.set(
-        evaluationId,
-        resolveCiloLabels(binding.course_bound_evaluation.cilos_snapshot, orderedCiloIds)
-      );
+      ciloLabelsByEvaluation.set(evaluationId, evaluationCiloLabels(binding, ciloOrderByCourse));
     }
-    outcomeIdsByQuestion.set(
-      key,
-      binding.cilo?.course?.ge_alignment_mode === "COMMON_PO"
-        ? []
-        : (binding.cilo?.cilo_institutional_outcome_mappings ?? [])
-    );
+    outcomeIdsByQuestion.set(key, institutionalMappingsOf(binding));
   }
   return { bindingByQuestion, outcomeIdsByQuestion, ciloIdsByEvaluation, ciloLabelsByEvaluation };
 }

@@ -389,12 +389,98 @@ function buildContexts(
     );
 }
 
+/**
+ * Bounded projection read by the active-period totals path. It carries only
+ * what classification needs — scope, alignment mode, active CILOs and active
+ * Program PO ids — never descriptions, codes, archived rows or catalog state,
+ * so the roll-up stays cheap on large periods.
+ */
+const totalsInclude = {
+  course: {
+    select: {
+      course_scope: true,
+      ge_alignment_mode: true,
+      program_id: true,
+      cilos: {
+        where: { is_active: true },
+        select: {
+          cilo_mappings: {
+            select: {
+              manifestation: true,
+              po: { select: { id: true, program_id: true, is_active: true } },
+            },
+          },
+          cilo_common_po_mappings: {
+            select: {
+              manifestation: true,
+              common_outcome: { select: { id: true, is_active: true } },
+            },
+          },
+          cilo_institutional_outcome_mappings: {
+            select: {
+              manifestation: true,
+              institutional_outcome: { select: { id: true, is_active: true } },
+            },
+          },
+        },
+      },
+    },
+  },
+  program: {
+    select: {
+      id: true,
+      name: true,
+      pos: { where: { is_active: true }, select: { id: true } },
+    },
+  },
+} satisfies Prisma.CourseAssignmentSelect;
+
+type TotalsAssignment = Prisma.CourseAssignmentGetPayload<{
+  select: typeof totalsInclude;
+}>;
+
+/** The bounded projection plus the two scalar keys that identify a context. */
+type TotalsContextInput = TotalsAssignment & {
+  course_id: string;
+  program_id: string;
+};
+
 async function readInstitutionalOutcomeCatalog(
   db: typeof prisma | Prisma.TransactionClient
 ): Promise<InstitutionalOutcomeCatalogRow[]> {
   return db.institutionalOutcome.findMany({
     select: { id: true, code: true, description: true, is_active: true, order: true },
   });
+}
+
+/**
+ * Per-Program readiness roll-up shared by the full live projection and the
+ * bounded totals projection. Both read the same context set and must agree
+ * field for field, so the accumulation and the program-name ordering live in
+ * one place; only the state resolution differs between them.
+ */
+function tallyProgramTotals<Context extends { programId: string; programName: string }>(
+  contexts: Iterable<Context>,
+  stateOf: (context: Context) => ReadinessState
+): ProgramReadinessTotal[] {
+  const totals = new Map<string, ProgramReadinessTotal>();
+  for (const context of contexts) {
+    const total = totals.get(context.programId) ?? {
+      programId: context.programId,
+      programName: context.programName,
+      activeContexts: 0,
+      readyContexts: 0,
+      missingCiloContexts: 0,
+      incompleteMappingContexts: 0,
+    };
+    const state = stateOf(context);
+    total.activeContexts += 1;
+    if (state === "ready") total.readyContexts += 1;
+    if (state === "missing-cilos") total.missingCiloContexts += 1;
+    if (state === "incomplete-mapping") total.incompleteMappingContexts += 1;
+    totals.set(context.programId, total);
+  }
+  return [...totals.values()].sort((a, b) => a.programName.localeCompare(b.programName));
 }
 
 async function calculateLive(
@@ -433,28 +519,56 @@ async function calculateLive(
     institutionalOutcomes,
     commonOutcomes
   );
-  const totals = new Map<string, ProgramReadinessTotal>();
-  for (const context of contexts) {
-    const total = totals.get(context.programId) ?? {
-      programId: context.programId,
-      programName: context.programName,
-      activeContexts: 0,
-      readyContexts: 0,
-      missingCiloContexts: 0,
-      incompleteMappingContexts: 0,
-    };
-    total.activeContexts++;
-    if (context.state === "ready") total.readyContexts++;
-    if (context.state === "missing-cilos") total.missingCiloContexts++;
-    if (context.state === "incomplete-mapping") total.incompleteMappingContexts++;
-    totals.set(context.programId, total);
-  }
   return {
     period,
     schemaVersion: READINESS_SNAPSHOT_SCHEMA_VERSION,
     contexts,
-    programTotals: [...totals.values()].sort((a, b) => a.programName.localeCompare(b.programName)),
+    programTotals: tallyProgramTotals(contexts, (context) => context.state),
   };
+}
+
+/**
+ * Alignment inputs the bounded totals projection needs to classify one
+ * Course/Program context without materializing the full readiness payload.
+ */
+type TotalsContext = {
+  programId: string;
+  programName: string;
+  courseScope: CourseScope;
+  mode: GEAlignmentMode;
+  program_id: string | null;
+  cilos: ReadinessCilo[];
+  activeGoIds: string[];
+};
+
+/**
+ * First assignment of each Course/Program pair wins, so every context is
+ * classified once no matter how many sections or year levels it spans.
+ * Program-specific assignments whose Course belongs to another Program are
+ * skipped, matching the canonical live projection's grouping rule.
+ */
+function collectTotalsContexts(assignments: TotalsContextInput[]): TotalsContext[] {
+  const contexts = new Map<string, TotalsContext>();
+  for (const assignment of assignments) {
+    if (
+      assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
+      assignment.course.program_id !== assignment.program_id
+    ) {
+      continue;
+    }
+    const key = `${assignment.course_id}:${assignment.program_id}`;
+    if (contexts.has(key)) continue;
+    contexts.set(key, {
+      programId: assignment.program.id,
+      programName: assignment.program.name,
+      courseScope: assignment.course.course_scope,
+      mode: assignment.course.ge_alignment_mode,
+      program_id: assignment.course.program_id,
+      cilos: assignment.course.cilos as ReadinessCilo[],
+      activeGoIds: assignment.program.pos.map((po) => po.id),
+    });
+  }
+  return [...contexts.values()];
 }
 
 async function calculateLiveTotals(periodId: string): Promise<ProgramReadinessTotal[]> {
@@ -468,107 +582,19 @@ async function calculateLiveTotals(periodId: string): Promise<ProgramReadinessTo
     select: {
       course_id: true,
       program_id: true,
-      course: {
-        select: {
-          course_scope: true,
-          ge_alignment_mode: true,
-          program_id: true,
-          cilos: {
-            where: { is_active: true },
-            select: {
-              cilo_mappings: {
-                select: {
-                  manifestation: true,
-                  po: { select: { id: true, program_id: true, is_active: true } },
-                },
-              },
-              cilo_common_po_mappings: {
-                select: {
-                  manifestation: true,
-                  common_outcome: { select: { id: true, is_active: true } },
-                },
-              },
-              cilo_institutional_outcome_mappings: {
-                select: {
-                  manifestation: true,
-                  institutional_outcome: { select: { id: true, is_active: true } },
-                },
-              },
-            },
-          },
-        },
-      },
-      program: {
-        select: {
-          id: true,
-          name: true,
-          pos: { where: { is_active: true }, select: { id: true } },
-        },
-      },
+      ...totalsInclude,
     },
   });
 
-  const contexts = new Map<
-    string,
-    {
-      programId: string;
-      programName: string;
-      courseScope: CourseScope;
-      mode: GEAlignmentMode;
-      program_id: string | null;
-      cilos: ReadinessCilo[];
-      activeGoIds: string[];
-    }
-  >();
-
-  for (const assignment of assignments) {
-    if (
-      assignment.course.course_scope === "PROGRAM_SPECIFIC" &&
-      assignment.course.program_id !== assignment.program_id
-    ) {
-      continue;
-    }
-
-    const key = `${assignment.course_id}:${assignment.program_id}`;
-    if (!contexts.has(key)) {
-      contexts.set(key, {
-        programId: assignment.program.id,
-        programName: assignment.program.name,
-        courseScope: assignment.course.course_scope,
-        mode: assignment.course.ge_alignment_mode,
-        program_id: assignment.course.program_id,
-        cilos: assignment.course.cilos as ReadinessCilo[],
-        activeGoIds: assignment.program.pos.map((po) => po.id),
-      });
-    }
-  }
-
-  const totals = new Map<string, ProgramReadinessTotal>();
-  for (const context of contexts.values()) {
-    const total = totals.get(context.programId) ?? {
-      programId: context.programId,
-      programName: context.programName,
-      activeContexts: 0,
-      readyContexts: 0,
-      missingCiloContexts: 0,
-      incompleteMappingContexts: 0,
-    };
-    const state = classifyCourseAlignment(
+  return tallyProgramTotals(collectTotalsContexts(assignments), (context) =>
+    classifyCourseAlignment(
       context.cilos,
       context.courseScope,
       context.program_id,
       context.activeGoIds,
       context.mode
-    );
-
-    total.activeContexts += 1;
-    if (state === "ready") total.readyContexts += 1;
-    if (state === "missing-cilos") total.missingCiloContexts += 1;
-    if (state === "incomplete-mapping") total.incompleteMappingContexts += 1;
-    totals.set(context.programId, total);
-  }
-
-  return [...totals.values()].sort((a, b) => a.programName.localeCompare(b.programName));
+    )
+  );
 }
 
 export async function readPeriodReadiness(periodId: string): Promise<PeriodReadiness> {

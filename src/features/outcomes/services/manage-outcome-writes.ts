@@ -71,7 +71,7 @@ type ILOWriteInput = Extract<OutcomeWriteInput, { kind: "ILO" }>;
 type CiloWriteInput = Extract<OutcomeWriteInput, { kind: "CILO" }>;
 
 type ReviewValue = unknown;
-type OutcomeWriteReview = {
+export type OutcomeWriteReview = {
   input: OutcomeWriteInput;
   before: ReviewValue;
   after: ReviewValue;
@@ -112,28 +112,29 @@ async function scopeAllowsILO(input: ILOWriteInput, role: WriterRole): Promise<b
   return role === ROLES.GEN_ED_COORDINATOR;
 }
 
-async function scopeAllowsPO(
-  input: POWriteInput,
-  role: WriterRole,
+async function scopeAllowsPOClaim(
+  input: Extract<POWriteInput, { action: "create" | "update" }>,
+  admin: boolean,
   db: Prisma.TransactionClient | typeof prisma
 ): Promise<boolean> {
-  const admin = role === ROLES.SECRETARY || role === ROLES.DEAN;
-  if (!admin && role !== ROLES.PROGRAM_HEAD) return false;
-  if (input.action === "create" || input.action === "update") {
-    if (!poDetailsSchema.safeParse(input).success) return false;
-    const permitted = admin
-      ? isAdministrativeCategory(input.classification)
-      : isProgramHeadCategory(input.classification);
-    if (!permitted) return false;
-    if (input.classification === "COMMON") {
-      if (!input.commonOutcomeId) return false;
-      const common = await db.commonProgramOutcome.findUnique({
-        where: { id: input.commonOutcomeId },
-      });
-      if (!common?.is_active || common.description !== input.description.trim()) return false;
-    } else if (input.commonOutcomeId) return false;
-  }
-  if (input.action === "create" || input.action === "reorder") return true;
+  if (!poDetailsSchema.safeParse(input).success) return false;
+  const permitted = admin
+    ? isAdministrativeCategory(input.classification)
+    : isProgramHeadCategory(input.classification);
+  if (!permitted) return false;
+  if (input.classification !== "COMMON") return !input.commonOutcomeId;
+  if (!input.commonOutcomeId) return false;
+  const common = await db.commonProgramOutcome.findUnique({
+    where: { id: input.commonOutcomeId },
+  });
+  return Boolean(common?.is_active) && common?.description === input.description.trim();
+}
+
+async function scopeAllowsStoredPO(
+  input: Extract<POWriteInput, { action: "update" | "archive" | "restore" }>,
+  admin: boolean,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<boolean> {
   const po = await db.pO.findUnique({
     where: { id: input.id },
     select: { program_id: true, classification: true },
@@ -146,6 +147,24 @@ async function scopeAllowsPO(
   // legacy row is never locked by classification metadata alone.
   if (current === "UNCLASSIFIED") return true;
   return admin ? isAdministrativeCategory(current) : isProgramHeadCategory(current);
+}
+
+async function scopeAllowsPO(
+  input: POWriteInput,
+  role: WriterRole,
+  db: Prisma.TransactionClient | typeof prisma
+): Promise<boolean> {
+  const admin = role === ROLES.SECRETARY || role === ROLES.DEAN;
+  if (!admin && role !== ROLES.PROGRAM_HEAD) return false;
+  if (input.action === "reorder") return true;
+  if (input.action === "create") return scopeAllowsPOClaim(input, admin, db);
+  // An update carries both a claim and an existing row: the claim must pass,
+  // and the stored row must still be owned by the role writing it.
+  if (input.action === "update") {
+    if (!(await scopeAllowsPOClaim(input, admin, db))) return false;
+    return scopeAllowsStoredPO(input, admin, db);
+  }
+  return scopeAllowsStoredPO(input, admin, db);
 }
 
 async function scopeAllowsCilo(
@@ -301,9 +320,90 @@ async function readState(
   }
 }
 
+type ReviewRecord = Record<string, unknown>;
+
+/**
+ * Shared tail of every review transform: a missing row, the archive/restore
+ * activation toggle, and the caller-supplied update patch. Each kind passes its
+ * own field vocabulary so key order, trimming and null semantics stay exactly
+ * as that writer defines them.
+ */
+function nextRecordState(before: ReviewValue, action: string, patch: ReviewRecord): ReviewValue {
+  if (!before) return null;
+  const record = before as ReviewRecord;
+  // Archive and restore only flip the active flag; every other action edits content.
+  if (action === "archive" || action === "restore")
+    return { ...record, is_active: action === "restore" };
+  return action === "update" ? { ...record, ...patch } : record;
+}
+
+/**
+ * Write-side twin of {@link nextRecordState}: an update applies its content
+ * patch, while archive/restore only flips the active flag.
+ */
+function writePatch(action: string, patch: ReviewRecord): ReviewRecord {
+  if (action === "archive" || action === "restore") return { is_active: action === "restore" };
+  return patch;
+}
+
+const reorderState = (orderedIds: readonly string[]): ReviewRecord[] =>
+  orderedIds.map((id, order) => ({ id, order }));
+
+/** Only Common POs carry the optional central source reference. */
+const commonSourceRef = (input: CatalogContentInput): ReviewRecord =>
+  input.kind === "COMMON_PO" ? { source_ref: input.sourceRef?.trim() || null } : {};
+
+type CatalogContentInput =
+  | Extract<ILOWriteInput, { action: "create" | "update" }>
+  | Extract<CommonWriteInput, { action: "create" | "update" }>;
+
+function catalogUpdatePatch(
+  input: Extract<CatalogContentInput, { action: "update" }>
+): ReviewRecord {
+  return {
+    code: input.code.trim().toUpperCase(),
+    description: input.description.trim(),
+    ...commonSourceRef(input),
+  };
+}
+
+function nextCatalogState(
+  input: ILOWriteInput | CommonWriteInput,
+  before: ReviewValue
+): ReviewValue {
+  if (input.action === "create") {
+    const existing = before as ReviewRecord[];
+    return [
+      ...existing,
+      {
+        code: input.code.trim().toUpperCase(),
+        description: input.description.trim(),
+        order: existing.length,
+        is_active: true,
+        ...commonSourceRef(input),
+      },
+    ];
+  }
+  if (input.action === "reorder") return reorderState(input.orderedIds);
+  return nextRecordState(
+    before,
+    input.action,
+    input.action === "update" ? catalogUpdatePatch(input) : {}
+  );
+}
+
+function poUpdatePatch(input: Extract<POWriteInput, { action: "update" }>): ReviewRecord {
+  return {
+    code: input.code.trim().toUpperCase(),
+    description: input.description.trim(),
+    classification: input.classification,
+    common_outcome_id: input.commonOutcomeId ?? null,
+  };
+}
+
 function nextPOState(input: POWriteInput, before: ReviewValue): ReviewValue {
   if (input.action === "create") {
-    const existing = before as Array<Record<string, unknown>>;
+    const existing = before as ReviewRecord[];
     return [
       ...existing,
       {
@@ -317,62 +417,18 @@ function nextPOState(input: POWriteInput, before: ReviewValue): ReviewValue {
       },
     ];
   }
-  if (input.action === "reorder") return input.orderedIds.map((id, order) => ({ id, order }));
-  // fallow-ignore-next-line code-duplication
-  // fallow-ignore-next-line code-duplication
-  if (!before) return null;
-  const record = before as Record<string, unknown>;
-  if (input.action === "archive" || input.action === "restore")
-    return { ...record, is_active: input.action === "restore" };
-  if (input.action === "update")
-    return {
-      ...record,
-      code: input.code.trim().toUpperCase(),
-      description: input.description.trim(),
-      classification: input.classification,
-      common_outcome_id: input.commonOutcomeId ?? null,
-    };
-  return record;
+  if (input.action === "reorder") return reorderState(input.orderedIds);
+  return nextRecordState(
+    before,
+    input.action,
+    input.action === "update" ? poUpdatePatch(input) : {}
+  );
 }
 
-// fallow-ignore-next-line code-duplication
-function nextCatalogState(
-  input: ILOWriteInput | CommonWriteInput,
-  before: ReviewValue
-): ReviewValue {
-  if (input.action === "create") {
-    const existing = before as Array<Record<string, unknown>>;
-    return [
-      ...existing,
-      {
-        code: input.code.trim().toUpperCase(),
-        description: input.description.trim(),
-        order: existing.length,
-        is_active: true,
-        ...(input.kind === "COMMON_PO" ? { source_ref: input.sourceRef?.trim() || null } : {}),
-      },
-    ];
-  }
-  if (input.action === "reorder") return input.orderedIds.map((id, order) => ({ id, order }));
-  if (!before) return null;
-  const record = before as Record<string, unknown>;
-  if (input.action === "archive" || input.action === "restore")
-    return { ...record, is_active: input.action === "restore" };
-  if (input.action === "update")
-    return {
-      ...record,
-      code: input.code.trim().toUpperCase(),
-      description: input.description.trim(),
-      ...(input.kind === "COMMON_PO" ? { source_ref: input.sourceRef?.trim() || null } : {}),
-    };
-  return record;
-}
-
-// fallow-ignore-next-line code-duplication
 function nextCiloState(input: CiloWriteInput, before: ReviewValue, userId: string): ReviewValue {
   if (input.action === "create")
     return [
-      ...(before as Array<Record<string, unknown>>),
+      ...(before as ReviewRecord[]),
       {
         description: input.description.trim(),
         course_id: input.courseId,
@@ -380,12 +436,11 @@ function nextCiloState(input: CiloWriteInput, before: ReviewValue, userId: strin
         is_active: true,
       },
     ];
-  if (!before) return null;
-  const record = before as Record<string, unknown>;
-  if (input.action === "archive" || input.action === "restore")
-    return { ...record, is_active: input.action === "restore" };
-  if (input.action === "update") return { ...record, description: input.description.trim() };
-  return record;
+  return nextRecordState(
+    before,
+    input.action,
+    input.action === "update" ? { description: input.description.trim() } : {}
+  );
 }
 
 function nextState(input: OutcomeWriteInput, before: ReviewValue, userId: string): ReviewValue {
@@ -432,6 +487,32 @@ export async function prepareOutcomeWrite(
   return { success: true, data: { ...unsigned, signature: signReview(unsigned, session.userId) } };
 }
 
+/**
+ * Reorder only writes when the submitted list is a permutation of every stored
+ * row: no duplicates, no omissions. Returns null when the list is incomplete.
+ */
+function isCompleteOrder(
+  orderedIds: readonly string[],
+  rows: ReadonlyArray<{ id: string }>
+): boolean {
+  return (
+    new Set(orderedIds).size === orderedIds.length &&
+    orderedIds.length === rows.length &&
+    !rows.some((row) => !orderedIds.includes(row.id))
+  );
+}
+
+async function reorderOutcome(
+  orderedIds: readonly string[],
+  rows: ReadonlyArray<{ id: string }>,
+  update: (id: string, order: number) => Promise<unknown>,
+  message: string
+): Promise<ServiceResult<{ id?: string }>> {
+  if (!isCompleteOrder(orderedIds, rows)) return failure(message);
+  await Promise.all(orderedIds.map((id, order) => update(id, order)));
+  return { success: true, data: {} };
+}
+
 // fallow-ignore-next-line code-duplication
 async function writeILO(
   tx: Prisma.TransactionClient,
@@ -454,23 +535,13 @@ async function writeILO(
       },
     };
   }
-  if (input.action === "reorder") {
-    const ilos = current as Array<{ id: string; order: number }>;
-    if (
-      new Set(input.orderedIds).size !== input.orderedIds.length ||
-      ilos.length !== input.orderedIds.length ||
-      ilos.some((ilo) => !input.orderedIds.includes(ilo.id))
-    )
-      return failure("Institutional Outcomes must be a complete unique college-wide order.");
-    // fallow-ignore-next-line code-duplication
-    await Promise.all(
-      input.orderedIds.map((id, order) =>
-        // fallow-ignore-next-line code-duplication
-        tx.institutionalOutcome.update({ where: { id }, data: { order } })
-      )
+  if (input.action === "reorder")
+    return reorderOutcome(
+      input.orderedIds,
+      current as Array<{ id: string; order: number }>,
+      (id, order) => tx.institutionalOutcome.update({ where: { id }, data: { order } }),
+      "Institutional Outcomes must be a complete unique college-wide order."
     );
-    return { success: true, data: {} };
-  }
   const data =
     input.action === "update"
       ? { code: input.code.trim().toUpperCase(), description: input.description.trim() }
@@ -488,42 +559,34 @@ async function writeCommonPO(
   input: CommonWriteInput,
   current: ReviewValue
 ): Promise<ServiceResult<{ id?: string }>> {
-  if (input.action === "reorder") {
-    const rows = current as Array<{ id: string }>;
-    if (
-      new Set(input.orderedIds).size !== rows.length ||
-      input.orderedIds.length !== rows.length ||
-      rows.some((row) => !input.orderedIds.includes(row.id))
-    )
-      return failure("Submit the complete Common PO order.");
-    await Promise.all(
-      input.orderedIds.map((id, order) =>
-        tx.commonProgramOutcome.update({ where: { id }, data: { order } })
-      )
+  if (input.action === "reorder")
+    return reorderOutcome(
+      input.orderedIds,
+      current as Array<{ id: string }>,
+      (id, order) => tx.commonProgramOutcome.update({ where: { id }, data: { order } }),
+      "Submit the complete Common PO order."
     );
-    return { success: true, data: {} };
-  }
-  if (input.action === "create") {
-    const row = await tx.commonProgramOutcome.create({
+  if (input.action === "create")
+    return {
+      success: true,
       data: {
-        code: input.code.trim().toUpperCase(),
-        description: input.description.trim(),
-        source_ref: input.sourceRef?.trim() || null,
-        order: (current as unknown[]).length,
+        id: (
+          await tx.commonProgramOutcome.create({
+            data: {
+              code: input.code.trim().toUpperCase(),
+              description: input.description.trim(),
+              source_ref: input.sourceRef?.trim() || null,
+              order: (current as unknown[]).length,
+            },
+          })
+        ).id,
       },
-    });
-    return { success: true, data: { id: row.id } };
-  }
+    };
+  // An update restates the central wording, so every adopting program PO must
+  // follow the amended statement; archive/restore only flips the active flag.
   const row = await tx.commonProgramOutcome.update({
     where: { id: input.id },
-    data:
-      input.action === "update"
-        ? {
-            code: input.code.trim().toUpperCase(),
-            description: input.description.trim(),
-            source_ref: input.sourceRef?.trim() || null,
-          }
-        : { is_active: input.action === "restore" },
+    data: writePatch(input.action, input.action === "update" ? catalogUpdatePatch(input) : {}),
   });
   if (input.action === "update")
     await tx.pO.updateMany({
@@ -562,21 +625,15 @@ async function writePO(
       },
     };
   }
-  if (input.action === "reorder") {
-    const pos = current as Array<{ id: string; order: number }>;
-    if (
-      new Set(input.orderedIds).size !== input.orderedIds.length ||
-      pos.length !== input.orderedIds.length ||
-      pos.some((po) => !input.orderedIds.includes(po.id))
-    )
-      return failure("Program Outcomes must be a complete unique program order.");
-    await Promise.all(
-      // fallow-ignore-next-line code-duplication
-      input.orderedIds.map((id, order) => tx.pO.update({ where: { id }, data: { order } }))
+  if (input.action === "reorder")
+    return reorderOutcome(
+      input.orderedIds,
+      current as Array<{ id: string; order: number }>,
+      (id, order) => tx.pO.update({ where: { id }, data: { order } }),
+      "Program Outcomes must be a complete unique program order."
     );
-    return { success: true, data: {} };
-  }
-  const data =
+  const data = writePatch(
+    input.action,
     input.action === "update"
       ? {
           code: input.code.trim().toUpperCase(),
@@ -584,7 +641,8 @@ async function writePO(
           classification: input.classification,
           common_outcome_id: input.commonOutcomeId ?? null,
         }
-      : { is_active: input.action === "restore" };
+      : {}
+  );
   return {
     success: true,
     data: { id: (await tx.pO.update({ where: { id: input.id }, data })).id },
@@ -671,6 +729,33 @@ function writeReviewedOutcome(
   }
 }
 
+/** Every rejection after re-authorization reports the same denial to the caller. */
+const reviewedFailure = () => failure("You do not have permission to modify this outcome.");
+
+/**
+ * Administrative writes and every central Common PO change are auditable;
+ * program-head and faculty writes stay off the central change log.
+ */
+function isAuditedWrite(input: OutcomeWriteInput, role: WriterRole): boolean {
+  return input.kind === "COMMON_PO" || role === ROLES.SECRETARY || role === ROLES.DEAN;
+}
+
+async function recordOutcomeChange(
+  tx: Prisma.TransactionClient,
+  review: OutcomeWriteReview,
+  current: ReviewValue,
+  userId: string
+): Promise<void> {
+  await tx.outcomeChange.create({
+    data: {
+      actor_id: userId,
+      input: JSON.parse(token(review.input)),
+      before: JSON.parse(token(current)) ?? Prisma.JsonNull,
+      after: JSON.parse(token(review.after)) ?? Prisma.JsonNull,
+    },
+  });
+}
+
 async function commitReviewedOutcome(
   tx: Prisma.TransactionClient,
   review: OutcomeWriteReview,
@@ -678,28 +763,16 @@ async function commitReviewedOutcome(
   role: WriterRole
 ): Promise<ServiceResult<{ id?: string }>> {
   if (!(await programHeadAssignmentIsCurrent(tx, review.input, userId, role)))
-    return failure("You do not have permission to modify this outcome.");
-  if (!(await scopeAllows(review.input, userId, role, tx)))
-    return failure("You do not have permission to modify this outcome.");
+    return reviewedFailure();
+  if (!(await scopeAllows(review.input, userId, role, tx))) return reviewedFailure();
   const current = await readState(review.input, tx);
   if (token(current) !== review.freshnessToken)
     return failure("Outcome changed after review. Prepare a new review.");
   if (!reviewMatchesCurrentState(review, current, userId))
     return failure("Outcome review does not match requested write.");
   const result = await writeReviewedOutcome(tx, review.input, current, userId);
-  if (
-    result.success &&
-    (review.input.kind === "COMMON_PO" || role === ROLES.SECRETARY || role === ROLES.DEAN)
-  ) {
-    await tx.outcomeChange.create({
-      data: {
-        actor_id: userId,
-        input: JSON.parse(token(review.input)),
-        before: JSON.parse(token(current)) ?? Prisma.JsonNull,
-        after: JSON.parse(token(review.after)) ?? Prisma.JsonNull,
-      },
-    });
-  }
+  if (result.success && isAuditedWrite(review.input, role))
+    await recordOutcomeChange(tx, review, current, userId);
   return result;
 }
 
