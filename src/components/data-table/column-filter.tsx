@@ -41,20 +41,22 @@ export function FacetPopoverBody({
       <PopoverTitle className="text-muted-foreground px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide uppercase">
         {heading}
       </PopoverTitle>
-      {facets.map((facet, index) => (
-        <div key={facet.id} className="flex min-w-0 flex-col">
-          {facets.length > 1 && (
-            <p className="text-foreground px-2 pt-2 pb-1 text-xs font-semibold">{facet.label}</p>
-          )}
-          {facet.disabled ? (
-            <p className="text-muted-foreground px-2 py-2 text-xs leading-normal">
-              {facet.disabledReason ?? "Not available in this view."}
-            </p>
-          ) : (
-            <FacetField facet={facet} idPrefix={`${instanceId}-${index}`} />
-          )}
-        </div>
-      ))}
+      <div className="flex max-h-[min(24rem,calc(100dvh-10rem))] min-w-0 flex-col gap-0 overflow-y-auto">
+        {facets.map((facet, index) => (
+          <div key={facet.id} className="flex min-w-0 flex-col">
+            {facets.length > 1 && (
+              <p className="text-foreground px-2 pt-2 pb-1 text-xs font-semibold">{facet.label}</p>
+            )}
+            {facet.disabled ? (
+              <p className="text-muted-foreground px-2 py-2 text-xs leading-normal">
+                {facet.disabledReason ?? "Not available in this view."}
+              </p>
+            ) : (
+              <FacetField facet={facet} idPrefix={`${instanceId}-${index}`} />
+            )}
+          </div>
+        ))}
+      </div>
       {active.length > 0 && (
         <div className="border-border mt-1 flex justify-end border-t px-1 pt-1.5">
           <Button type="button" variant="ghost" size="sm" onClick={clear}>

@@ -144,7 +144,12 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
                   }}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="program_id" className="w-full">
+                  <SelectTrigger
+                    id="program_id"
+                    className="w-full"
+                    aria-invalid={errors.program_id ? true : undefined}
+                    aria-describedby={errors.program_id ? "program_id-error" : undefined}
+                  >
                     <SelectValue placeholder="Select your program affiliation">
                       {field.value ? getProgramLabel(field.value) : undefined}
                     </SelectValue>
@@ -160,8 +165,12 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
               )}
             />
             {errors.program_id && (
-              <p id="program_id-error" className="text-destructive flex items-center gap-1 text-xs">
-                <AlertCircle className="size-3" />
+              <p
+                id="program_id-error"
+                role="alert"
+                className="text-destructive flex items-center gap-1 text-xs"
+              >
+                <AlertCircle className="size-3" aria-hidden="true" />
                 {errors.program_id.message}
               </p>
             )}

@@ -293,9 +293,16 @@ export function PublishedDeploymentsCollection({
     });
   }
 
-  if (items.length === 0) return <>{empty}</>;
+  const activeFacetCount =
+    facets?.all.filter(facetIsApplied).length ?? 0;
+  const searchActive = (search?.value ?? "").trim().length > 0;
 
-  const activeFacetCount = facets?.all.filter(facetIsApplied).length ?? 0;
+  // The toolbar carries the search box, so a list emptied by its own filters
+  // keeps the toolbar mounted: otherwise the operator loses the query text
+  // and cannot correct it without clearing every filter blind. A list that is
+  // empty with nothing applied renders the empty state alone.
+  if (items.length === 0 && activeFacetCount === 0 && !searchActive) return <>{empty}</>;
+
 
   return (
     <div className="space-y-4">

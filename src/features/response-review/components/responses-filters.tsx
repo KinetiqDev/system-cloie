@@ -384,9 +384,11 @@ function useResponseSearchDraft(committed: string | undefined, onCommit: (value:
   const [draft, setDraft] = useState(committedText);
   const [shownCommit, setShownCommit] = useState(committedText);
   const [focused, setFocused] = useState(false);
+  const committedRef = useRef(committedText);
+  committedRef.current = committedText;
+  const shownCommitRef = useRef(committedText);
   const timer = useRef<number | null>(null);
   const latestCommit = useRef(onCommit);
-
   useEffect(() => {
     latestCommit.current = onCommit;
   });
@@ -396,6 +398,7 @@ function useResponseSearchDraft(committed: string | undefined, onCommit: (value:
   // touched, with no effect, no ref read, and no cascading pass.
   if (shownCommit !== committedText) {
     setShownCommit(committedText);
+    shownCommitRef.current = committedText;
     if (!focused) setDraft(committedText);
   }
 
@@ -415,11 +418,30 @@ function useResponseSearchDraft(committed: string | undefined, onCommit: (value:
     }, SEARCH_DEBOUNCE_MS);
   }, []);
 
+  // A clear action resets the box immediately: the pending keystroke is
+  // cancelled so it cannot recommit the cleared text after the wait.
+  const reset = useCallback(() => {
+    if (timer.current !== null) window.clearTimeout(timer.current);
+    timer.current = null;
+    setDraft("");
+  }, []);
+
+  const onBlur = useCallback(() => {
+    setFocused(false);
+    // A query that landed while the field had focus was deferred; adopt it
+    // now so the box never shows a different query from the results.
+    setDraft((current) => {
+      if (shownCommitRef.current !== committedRef.current) return committedRef.current;
+      return current;
+    });
+  }, []);
+
   return {
     value: draft,
     onChange,
     onFocus: useCallback(() => setFocused(true), []),
-    onBlur: useCallback(() => setFocused(false), []),
+    onBlur,
+    reset,
   };
 }
 
@@ -451,6 +473,10 @@ export function ResponsesFilters({
 }) {
   const draft = useResponseSearchDraft(search.value, search.onChange);
   const activeCount = facets.filter(facetIsApplied).length;
+  const handleClearAll = () => {
+    draft.reset();
+    onClearAll();
+  };
 
   return (
     <TableToolbar
@@ -464,7 +490,7 @@ export function ResponsesFilters({
         onBlur: draft.onBlur,
       }}
       facets={facets}
-      onClearAll={onClearAll}
+      onClearAll={handleClearAll}
     >
       {overflowFacets && overflowFacets.length > 0 ? (
         <ResponseFacetMenu facets={overflowFacets} />

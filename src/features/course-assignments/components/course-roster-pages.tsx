@@ -271,6 +271,12 @@ function CourseRosterDiscoveryBody({
   const lastServerSearch = useRef(filters.search);
   const lastNavigatedSearch = useRef<string | null>(null);
 
+  // The debounced commit reads the latest filters through a ref: a facet
+  // chosen during the wait must survive the pending keystroke instead of
+  // being overwritten by the snapshot the keystroke closed over.
+  const latestFilters = useRef(filters);
+  latestFilters.current = filters;
+
   useEffect(() => {
     if (lastServerSearch.current === filters.search) return;
     lastServerSearch.current = filters.search;
@@ -279,6 +285,14 @@ function CourseRosterDiscoveryBody({
     }
   }, [filters.search]);
 
+  // A pending keystroke never navigates after unmount: leaving the page
+  // during the wait must not send the operator back to the roster route.
+  useEffect(
+    () => () => {
+      if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    },
+    []
+  );
   // A server-driven search change (deep link, back/forward, clearing search)
   // resets the draft, but never overwrites an in-progress keystroke: the sync
   // waits for blur so a focused field keeps the operator's text.
@@ -337,7 +351,7 @@ function CourseRosterDiscoveryBody({
       searchTimer.current = null;
       if (!draftIsLive.current) return;
       lastNavigatedSearch.current = value;
-      updateFacet("search", value);
+      navigate({ ...latestFilters.current, search: value });
     }, 300);
   };
 
@@ -395,16 +409,24 @@ function CourseRosterDiscoveryBody({
           </p>
         }
       >
-        <div className="md:hidden">
+        {view === "card" ? (
           <MobileFilterSheet
             facets={allFacets}
             activeCount={allFacets.filter(facetIsApplied).length}
             onClearAll={clearAll}
             summary="Show results"
           />
-        </div>
+        ) : (
+          <div className="md:hidden">
+            <MobileFilterSheet
+              facets={allFacets}
+              activeCount={allFacets.filter(facetIsApplied).length}
+              onClearAll={clearAll}
+              summary="Show results"
+            />
+          </div>
+        )}
       </TableToolbar>
-
       <section aria-labelledby="course-roster-results" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="course-roster-results" className="text-heading-lg">
