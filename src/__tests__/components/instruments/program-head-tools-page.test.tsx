@@ -5,6 +5,18 @@ import type { ProgramHeadTemplateItem } from "@/features/instruments/services/ma
 import type { ProgramHeadDeploymentItem } from "@/features/evaluations/services/list-program-head-deployments";
 import type { InstitutionalBaselineItem } from "@/features/instruments/services/list-institutional-baselines";
 
+// The duplicate confirmation picks Dialog vs Drawer via useMediaQuery; jsdom has
+// no matchMedia, so stub a desktop viewport: min-width queries match and
+// max-width ones do not, which keeps the published list in its desktop layout.
+vi.stubGlobal(
+  "matchMedia",
+  vi.fn((query: string) => ({
+    matches: query.includes("min-width"),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
+);
 const { routerPushMock, routerRefreshMock, showToastMock } = vi.hoisted(() => ({
   routerPushMock: vi.fn(),
   routerRefreshMock: vi.fn(),
@@ -176,7 +188,7 @@ describe("ProgramHeadToolsPage", () => {
     );
   });
 
-  test("duplicates an institutional baseline directly into the selected program", async () => {
+  test("confirms before duplicating an institutional baseline into the selected program", async () => {
     duplicateTemplateActionMock.mockResolvedValue({ success: true });
 
     renderPage();
@@ -186,6 +198,10 @@ describe("ProgramHeadToolsPage", () => {
     expect(baselines).not.toBeNull();
     fireEvent.click(within(baselines!).getByRole("button", { name: "Duplicate" }));
 
+    const dialog = await screen.findByRole("alertdialog", { name: "Duplicate Template" });
+    expect(duplicateTemplateActionMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Duplicate" }));
+
     await waitFor(() => {
       expect(duplicateTemplateActionMock).toHaveBeenCalledWith("program-1", "baseline-1");
       expect(showToastMock).toHaveBeenCalledWith("Template duplicated successfully.");
@@ -193,7 +209,27 @@ describe("ProgramHeadToolsPage", () => {
     });
   });
 
-  test("does not surface a stale operation error inside the delete confirmation", async () => {
+  test("confirms before duplicating a program-owned template with a success toast", async () => {
+    duplicateTemplateActionMock.mockResolvedValue({ success: true });
+
+    renderPage();
+    const programTemplates = screen
+      .getByRole("heading", { name: "Program Templates" })
+      .closest("section");
+    fireEvent.click(within(programTemplates!).getByRole("button", { name: "Duplicate" }));
+
+    const dialog = await screen.findByRole("alertdialog", { name: "Duplicate Template" });
+    expect(within(dialog).getByText("BSIT Tool")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Duplicate" }));
+
+    await waitFor(() => {
+      expect(duplicateTemplateActionMock).toHaveBeenCalledWith("program-1", "template-1");
+      expect(showToastMock).toHaveBeenCalledWith("Template duplicated successfully.");
+      expect(routerRefreshMock).toHaveBeenCalledOnce();
+    });
+  });
+
+  test("keeps a failed duplicate error inside its own confirmation", async () => {
     duplicateTemplateActionMock.mockResolvedValue({ success: false, error: "Duplicate failed." });
 
     renderPage();
@@ -204,8 +240,19 @@ describe("ProgramHeadToolsPage", () => {
     expect(programTemplates).not.toBeNull();
     fireEvent.click(within(programTemplates!).getByRole("button", { name: "Duplicate" }));
 
+    const duplicateDialog = await screen.findByRole("alertdialog", { name: "Duplicate Template" });
+    fireEvent.click(within(duplicateDialog).getByRole("button", { name: "Duplicate" }));
+
     await waitFor(() => {
-      expect(showToastMock).toHaveBeenCalledWith("Duplicate failed.", "error");
+      expect(within(duplicateDialog).getByText("Duplicate failed.")).toBeInTheDocument();
+    });
+    expect(showToastMock).not.toHaveBeenCalled();
+
+    fireEvent.click(within(duplicateDialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("alertdialog", { name: "Duplicate Template" })
+      ).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Actions" })[0]);

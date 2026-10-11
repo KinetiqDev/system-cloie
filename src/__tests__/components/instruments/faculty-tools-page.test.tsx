@@ -3,6 +3,18 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { FacultyToolsPage } from "@/features/instruments/components/faculty-tools-page";
 import type { FacultyTemplateItem } from "@/features/instruments/services/list-faculty-templates";
 
+// The duplicate confirmation picks Dialog vs Drawer via useMediaQuery; jsdom has
+// no matchMedia, so stub a desktop viewport: min-width queries match and
+// max-width ones do not, which keeps the published list in its desktop layout.
+vi.stubGlobal(
+  "matchMedia",
+  vi.fn((query: string) => ({
+    matches: query.includes("min-width"),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }))
+);
 const { routerPushMock, routerRefreshMock, showToastMock } = vi.hoisted(() => ({
   routerPushMock: vi.fn(),
   routerRefreshMock: vi.fn(),

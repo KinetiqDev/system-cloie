@@ -66,6 +66,7 @@ import {
   type EvaluationToolsTab,
 } from "./evaluation-tools-tabs";
 import { TemplateCollection, type TemplateCollectionItem } from "./template-collection";
+import { DuplicateTemplateDialog } from "./duplicate-template-dialog";
 import {
   ViewSelector as ToolsViewSelector,
   type ListCardViewMode as ToolsViewMode,
@@ -290,18 +291,21 @@ function ProgramHeadTemplateActions({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  function handleDuplicate() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  function handleConfirmDuplicate() {
     startTransition(async () => {
       const result = await duplicateTemplateAction(programId, item.id);
       if (!result.success) {
-        showToast(result.error, "error");
+        setDuplicateError(result.error);
         return;
       }
+      setConfirmOpen(false);
+      setDuplicateError(null);
+      showToast("Template duplicated successfully.");
       router.refresh();
     });
   }
-
   return (
     <>
       <Button
@@ -312,7 +316,15 @@ function ProgramHeadTemplateActions({
         <Pencil className="size-3.5" data-icon="inline-start" />
         Edit
       </Button>
-      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          setDuplicateError(null);
+          setConfirmOpen(true);
+        }}
+      >
         <Copy className="size-3.5" data-icon="inline-start" />
         Duplicate
       </Button>
@@ -330,6 +342,19 @@ function ProgramHeadTemplateActions({
         <Send className="size-3.5" data-icon="inline-start" />
         Publish
       </Button>
+      {confirmOpen && (
+        <DuplicateTemplateDialog
+          templateName={item.name}
+          open={confirmOpen}
+          isPending={isPending}
+          error={duplicateError}
+          onOpenChange={(open) => {
+            setConfirmOpen(open);
+            if (!open) setDuplicateError(null);
+          }}
+          onConfirm={handleConfirmDuplicate}
+        />
+      )}
     </>
   );
 }
@@ -337,20 +362,21 @@ function ProgramHeadTemplateActions({
 function BaselineActions({ item, programId }: { item: TemplateCollectionItem; programId: string }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  function handleDuplicate() {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  function handleConfirmDuplicate() {
     startTransition(async () => {
       const result = await duplicateTemplateAction(programId, item.id);
       if (!result.success) {
-        showToast(result.error, "error");
+        setDuplicateError(result.error);
         return;
       }
-
+      setConfirmOpen(false);
+      setDuplicateError(null);
       showToast("Template duplicated successfully.");
       router.refresh();
     });
   }
-
   return (
     <>
       <Button
@@ -361,10 +387,31 @@ function BaselineActions({ item, programId }: { item: TemplateCollectionItem; pr
         <Pencil className="size-3.5" data-icon="inline-start" />
         Edit &amp; Copy
       </Button>
-      <Button variant="outline" size="sm" disabled={isPending} onClick={handleDuplicate}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          setDuplicateError(null);
+          setConfirmOpen(true);
+        }}
+      >
         <Copy className="size-3.5" data-icon="inline-start" />
         Duplicate
       </Button>
+      {confirmOpen && (
+        <DuplicateTemplateDialog
+          templateName={item.name}
+          open={confirmOpen}
+          isPending={isPending}
+          error={duplicateError}
+          onOpenChange={(open) => {
+            setConfirmOpen(open);
+            if (!open) setDuplicateError(null);
+          }}
+          onConfirm={handleConfirmDuplicate}
+        />
+      )}
     </>
   );
 }
