@@ -29,7 +29,7 @@ const ASSIGNMENT = {
   courseId: "course-1",
   programId: "program-1",
   termInstanceId: "term-1",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   isActive: true,
   periodStatus: "ACTIVE" as const,
   hasPublishedEvaluation: false,

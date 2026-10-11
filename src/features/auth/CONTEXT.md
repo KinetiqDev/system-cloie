@@ -13,11 +13,11 @@ Every active `GEN_ED_COORDINATOR` account shares the same managed scope: `Course
 _Avoid_: Coordinator portfolio assignment, fake General Education Program, ProgramHead-like scope table
 
 **Coordinator assignment authority** (after the approved transfer; server-enforced):
-Secretary: no Course assignment mutation; read-only visibility only. Coordinator: college-wide read and mutation for General Education assignments only. Program Head: mutation for Program-specific assignments within the Authorized Program set; read-only for General Education. Dean: all-program mutation across General Education and Program-specific assignments. Faculty: read-only for own assignments; no assignment mutation. Server services enforce the General Education predicate inside reads and every mutation path (create, update, activation, deactivation, deletion, deletion preflight, bulk creation).
+Secretary: no Course assignment mutation; read-only visibility only. Coordinator: college-wide read and mutation for General Education assignments only. Program Head: mutation for Professional assignments within the Authorized Program set; read-only for General Education. Dean: all-program mutation across General Education and Professional assignments. Faculty: read-only for own assignments; no assignment mutation. Server services enforce the General Education predicate inside reads and every mutation path (create, update, activation, deactivation, deletion, deletion preflight, bulk creation).
 _Avoid_: Program Head Coordinator mutation, Secretary General Education mutation after the transfer, client-provided course_scope filter
 
 **Course evidence ownership**:
-The active General Education Coordinator owns General Education Course-bound response review and analytics college-wide. The active Program Head owns Program-specific Course-bound and Central evidence within authorized Programs. A Student's Program membership grants no General Education evidence access to the Program Head. Faculty and Dean evidence permissions are unchanged by this transfer.
+The active General Education Coordinator owns General Education Course-bound response review and analytics college-wide. The active Program Head owns Professional Course-bound and Central evidence within authorized Programs. A Student's Program membership grants no General Education evidence access to the Program Head. Faculty and Dean evidence permissions are unchanged by this transfer.
 _Avoid_: Program-scoped General Education review, assigned role as active authority
 
 

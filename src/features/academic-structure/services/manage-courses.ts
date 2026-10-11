@@ -22,7 +22,7 @@ async function ensureCourseScopeContext(input: {
   }
 
   if (!input.program_id) {
-    return { success: false, error: "Program-specific courses require a program." };
+    return { success: false, error: "Professional courses require a program." };
   }
 
   const program = await prisma.program.findUnique({

@@ -142,7 +142,7 @@ describe("program head selected Program new CILO evaluation page", () => {
     expect(courseAssignmentFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          course: { course_scope: "PROGRAM_SPECIFIC" },
+          course: { course_scope: "PROFESSIONAL" },
           course_bound_evaluations: { none: { published_at: { not: null } } },
           is_active: true,
           program_id: "program-bsed",

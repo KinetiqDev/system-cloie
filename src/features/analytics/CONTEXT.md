@@ -41,7 +41,7 @@ _Avoid_: One request per chart, manual first-generation button, TTL-only freshne
 ## Program Head analytics surface (shipped contract)
 
 **Program Head evidence scope**:
-Program-specific Course-bound evidence and Central evidence within the selected authorized Program. General Education Course-bound evidence is excluded from all analytics, response rates, trends, qualitative feedback, filter choices, and response-review links, even when respondents belong to that Program. General Education evidence belongs to the Coordinator college-wide.
+Professional Course-bound evidence and Central evidence within the selected authorized Program. General Education Course-bound evidence is excluded from all analytics, response rates, trends, qualitative feedback, filter choices, and response-review links, even when respondents belong to that Program. General Education evidence belongs to the Coordinator college-wide.
 _Avoid_: Student Program as General Education evidence authority, General Education contribution to Program Head aggregates
 
 **Program Head analytics tabs**:
@@ -59,11 +59,11 @@ _Avoid_: Persisted AI result, stale insight after filter change
 ## General Education Coordinator evidence (approved scope, issue #477)
 
 **General Education evidence (first release, approved)**:
-Course-bound General Education evidence only — submitted `Response.status == SUBMITTED` for Course-bound evaluations where `CourseAssignment.Course.course_scope == GENERAL_EDUCATION`, aggregated across Programs. Central Deployments are excluded from the first Coordinator analytics release. Program-specific Course-bound evidence is excluded from the Coordinator read path.
-_Avoid_: Central Deployment as General Education evidence, Program-specific evidence in Coordinator analytics
+Course-bound General Education evidence only — submitted `Response.status == SUBMITTED` for Course-bound evaluations where `CourseAssignment.Course.course_scope == GENERAL_EDUCATION`, aggregated across Programs. Central Deployments are excluded from the first Coordinator analytics release. Professional Course-bound evidence is excluded from the Coordinator read path.
+_Avoid_: Central Deployment as General Education evidence, Professional evidence in Coordinator analytics
 
 **Coordinator analytics scope**:
-Cross-Program read path gated by the active college-wide General Education Coordinator role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes Program-specific and Central evidence. Program Head analytics retain only Program-specific Course-bound and Program-scoped Central evidence; a respondent's Program membership never widens that scope.
+Cross-Program read path gated by the active college-wide General Education Coordinator role. The scope includes submitted General Education Course-bound evidence within the requested academic scope and excludes Professional and Central evidence. Program Head analytics retain only Professional Course-bound and Program-scoped Central evidence; a respondent's Program membership never widens that scope.
 _Avoid_: Selected-Program assumption for Coordinator analytics, ILO-to-PO attainment rollup
 
 **Coordinator analytics workspace**:
@@ -218,7 +218,7 @@ _Avoid_: Verbatim excerpt in the provider packet, provider-reproduced respondent
 
 ## Dean analytics workspace (ADR 0038)
 
-The active Dean has a college-wide, aggregate-only read path at `/dean/analytics`. The college view compares historical opportunities, submitted responses and deployment activity across programs, keeping General Education outside program-specific comparison. College totals also include General Education and Central deployments without a program; program rows therefore do not sum to the college total. Programs keep distinct POs and no college PO ranking or pooled outcome score exists.
+The active Dean has a college-wide, aggregate-only read path at `/dean/analytics`. The college view compares historical opportunities, submitted responses and deployment activity across programs, keeping General Education outside Professional comparison. College totals also include General Education and Central deployments without a program; program rows therefore do not sum to the college total. Programs keep distinct POs and no college PO ranking or pooled outcome score exists.
 
 Program views show PO catalog evidence gaps, frozen direct bindings, current CILO mapping contributions, scale-separated distributions, evaluation provenance, course/instrument results, source-separated stakeholders, comparable history and repeated-term feedback. The institutional view shows General Education CILO-to-ILO evidence, unlinked ratings, course contributions and history without attainment or PO propagation. Operational evidence ownership does not change.
 

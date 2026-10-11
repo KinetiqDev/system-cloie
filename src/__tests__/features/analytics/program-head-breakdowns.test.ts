@@ -210,7 +210,7 @@ function expectProgramScopedPredicates() {
   // Program equality alone would admit a General Education course holding an
   // assignment in this same Program, so the course scope is part of the gate.
   expect(ratingOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
-    "PROGRAM_SPECIFIC"
+    "PROFESSIONAL"
   );
   // Central deployments carry no course scope: they stay Program-owned.
   expect(ratingOr[0].assignment.central_deployment).not.toHaveProperty("course");

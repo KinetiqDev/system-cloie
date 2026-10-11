@@ -66,7 +66,7 @@ const assignment = {
   assignmentId: "assignment-1",
   courseCode: "CS101",
   courseTitle: "Computing",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   programCode: "BSCS",
   programName: "Computer Science",
   facultyName: "Ada Lovelace",
@@ -110,7 +110,7 @@ const termInstances = [
 ] as unknown as TermInstanceItem[];
 
 const courses = [
-  { id: "course-1", code: "CS101", title: "Computing", courseScope: CourseScope.PROGRAM_SPECIFIC },
+  { id: "course-1", code: "CS101", title: "Computing", courseScope: CourseScope.PROFESSIONAL },
 ];
 
 const programs = [{ id: "program-1", code: "BSCS", name: "Computer Science" }];
@@ -752,7 +752,7 @@ describe("course roster pages", () => {
     );
   });
 
-  it("preserves student placement details in program-specific roster rows", () => {
+  it("preserves student placement details in Professional roster rows", () => {
     render(<CourseRosterDetailPage data={detail} />);
     const student = screen.getByText("Grace Hopper").closest("tr")!;
     expect(student).toHaveTextContent("BSCS");

@@ -163,7 +163,7 @@ describe("Cross-role response privacy DTO boundary (§36, §40, #548)", () => {
 
   it("a submitted CILO answer names its typed layer and can carry only that layer's data", () => {
     // ADR 0035: the layer is the discriminator. A General Education answer
-    // reaches ILOs and holds no PO fields; a Program-specific answer reaches
+    // reaches ILOs and holds no PO fields; a Professional answer reaches
     // POs and holds no ILO fields. One shape with both lists renamed would let
     // ILO rows ride in a PO field, so the variants are structurally distinct.
     expectTypeOf<SubmittedCiloAnswerBinding["layer"]>().toEqualTypeOf<

@@ -14,8 +14,8 @@ const programHeadCourseFields = {
   course_type: z.enum(["program-wide", "major-specific"]).default("program-wide"),
   code: courseCodeField,
   title: courseTitleField,
-  course_scope: z.literal(CourseScope.PROGRAM_SPECIFIC, {
-    message: "Program Heads can only create program-specific courses.",
+  course_scope: z.literal(CourseScope.PROFESSIONAL, {
+    message: "Program Heads can only create Professional Courses.",
   }),
   major_id: optionalUuidField,
   ...courseTemporalFields,

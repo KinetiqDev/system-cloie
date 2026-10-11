@@ -40,7 +40,7 @@ describe("where-clause evaluator", () => {
     const where = submittedWhere(scope);
 
     expect(matchesWhere(where, { response: courseBoundResponse("GENERAL_EDUCATION") })).toBe(false);
-    expect(matchesWhere(where, { response: courseBoundResponse("PROGRAM_SPECIFIC") })).toBe(true);
+    expect(matchesWhere(where, { response: courseBoundResponse("PROFESSIONAL") })).toBe(true);
     expect(matchesWhere(where, { response: centralResponse() })).toBe(true);
   });
 
@@ -49,7 +49,7 @@ describe("where-clause evaluator", () => {
     const where = submittedWhere(scope);
 
     expect(
-      matchesWhere(where, { response: courseBoundResponse("PROGRAM_SPECIFIC", "prog-beed") })
+      matchesWhere(where, { response: courseBoundResponse("PROFESSIONAL", "prog-beed") })
     ).toBe(false);
     expect(matchesWhere(where, { response: centralResponse("prog-beed") })).toBe(false);
   });
@@ -64,8 +64,8 @@ describe("where-clause evaluator", () => {
       central_deployment: null,
     });
 
-    expect(matchesWhere(scope, assignment("PROGRAM_SPECIFIC", "t1"))).toBe(true);
-    expect(matchesWhere(scope, assignment("PROGRAM_SPECIFIC", "t2"))).toBe(false);
+    expect(matchesWhere(scope, assignment("PROFESSIONAL", "t1"))).toBe(true);
+    expect(matchesWhere(scope, assignment("PROFESSIONAL", "t2"))).toBe(false);
     expect(matchesWhere(scope, assignment("GENERAL_EDUCATION", "t1"))).toBe(false);
   });
 
@@ -129,14 +129,14 @@ describe("where-clause evaluator", () => {
   it("excludes a General Education course from the course-bound evaluation list", () => {
     const where = {
       status: "ACTIVE",
-      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROGRAM_SPECIFIC" } },
+      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROFESSIONAL" } },
     };
     const evaluation = (courseScope: string) => ({
       status: "ACTIVE",
       course_assignment: { program_id: PROGRAM, course: { course_scope: courseScope } },
     });
 
-    expect(matchesWhere(where, evaluation("PROGRAM_SPECIFIC"))).toBe(true);
+    expect(matchesWhere(where, evaluation("PROFESSIONAL"))).toBe(true);
     expect(matchesWhere(where, evaluation("GENERAL_EDUCATION"))).toBe(false);
   });
 
@@ -147,11 +147,11 @@ describe("where-clause evaluator", () => {
     // assertion even though the database would have excluded it.
     const where = {
       status: { not: "DRAFT" },
-      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROGRAM_SPECIFIC" } },
+      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROFESSIONAL" } },
     };
     const evaluation = (status: string) => ({
       status,
-      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROGRAM_SPECIFIC" } },
+      course_assignment: { program_id: PROGRAM, course: { course_scope: "PROFESSIONAL" } },
     });
 
     expect(matchesWhere(where, evaluation("ACTIVE"))).toBe(true);

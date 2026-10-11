@@ -149,8 +149,8 @@ export function ManagementCoursesList({
 
     if (scopeFilter === "general_education") {
       result = result.filter((c) => c.courseScope === CourseScope.GENERAL_EDUCATION);
-    } else if (scopeFilter === "program_specific") {
-      result = result.filter((c) => c.courseScope === CourseScope.PROGRAM_SPECIFIC);
+    } else if (scopeFilter === "professional") {
+      result = result.filter((c) => c.courseScope === CourseScope.PROFESSIONAL);
     }
 
     if (programFilter !== SCHEDULE_FILTER_ALL) {
@@ -339,8 +339,8 @@ export function ManagementCoursesList({
           icon={<Library className="text-muted-foreground size-5" />}
         />
         <KPICard
-          label="Program-Specific"
-          value={kpi.programSpecificCourses}
+          label="Professional"
+          value={kpi.professionalCourses}
           icon={<GraduationCap className="text-muted-foreground size-5" />}
         />
       </div>

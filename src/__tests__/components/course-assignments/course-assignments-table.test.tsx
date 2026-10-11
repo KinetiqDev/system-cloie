@@ -59,7 +59,7 @@ function createAssignment(overrides: Partial<CourseAssignmentItem> = {}): Course
     facultyEmail: "test@example.com",
     courseCode: "CS101",
     courseTitle: "Intro to Computing",
-    courseScope: CourseScope.PROGRAM_SPECIFIC,
+    courseScope: CourseScope.PROFESSIONAL,
     programCode: "BSCS",
     programName: "BS Computer Science",
     termLabel: "2025-2026 — 1st Semester — 1st Term",
@@ -166,7 +166,7 @@ describe("CourseAssignmentsTable", () => {
     expect(replaceMock).toHaveBeenCalledWith("/secretary/course-assignments?sort=course&dir=desc");
   });
 
-  it("renders Edit for a Program-specific Program Head assignment", () => {
+  it("renders Edit for a Professional Program Head assignment", () => {
     renderTable();
     openRowActions();
 
@@ -389,7 +389,7 @@ describe("CourseAssignmentsTable", () => {
     renderTable({ assignments: [], total: 0, onAssignFaculty: onAssign });
 
     expect(screen.getByTestId("empty-state")).toHaveTextContent(/no course assignments found/i);
-    expect(screen.getByText(/assign faculty to a Program-specific Course/i)).toBeInTheDocument();
+    expect(screen.getByText(/assign faculty to a Professional Course/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /assign faculty/i }));
     expect(onAssign).toHaveBeenCalled();
@@ -453,7 +453,7 @@ describe("CourseAssignmentsTable", () => {
         code: "CS101",
         title: "Intro to Computing",
         default_year_level: YearLevel.SECOND_YEAR,
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
         program_id: "program-1",
       },
     ];

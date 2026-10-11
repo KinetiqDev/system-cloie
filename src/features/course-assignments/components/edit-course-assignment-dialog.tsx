@@ -163,7 +163,7 @@ export function EditCourseAssignmentDialog({
         </p>
       ) : (
         <p className="text-muted-foreground text-xs">
-          Program-specific assignments are locked to the course&apos;s owning program.
+          Professional assignments are locked to the course&apos;s owning program.
         </p>
       )}
 

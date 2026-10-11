@@ -26,7 +26,7 @@ function makeItem(
     courseCode: "CS101",
     courseId: "course-1",
     courseTitle: "Introduction to Computing",
-    courseScope: "PROGRAM_SPECIFIC",
+    courseScope: "PROFESSIONAL",
     deadlineAt: null,
     deploymentName: "Intro to CS 2026-2027",
     evaluationId: "evaluation-1",

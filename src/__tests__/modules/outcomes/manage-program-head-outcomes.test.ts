@@ -258,7 +258,7 @@ describe("manage-program-head-outcomes", () => {
         id: "course-ps",
         code: "CS101",
         title: "Introduction to Computing",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         cilos: [
           {
             id: "cilo-aligned",
@@ -442,7 +442,7 @@ describe("manage-program-head-outcomes", () => {
     ]);
   });
 
-  it("reports every Program-specific CILO incomplete when the Program has no active POs", async () => {
+  it("reports every Professional CILO incomplete when the Program has no active POs", async () => {
     const selectedProgramId = "program-1";
     programHeadAssignmentFindManyMock.mockResolvedValue([{ program_id: selectedProgramId }]);
     poFindManyMock.mockResolvedValue([]);
@@ -451,7 +451,7 @@ describe("manage-program-head-outcomes", () => {
         id: "course-ps",
         code: "CS101",
         title: "Introduction to Computing",
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         cilos: [
           {
             id: "cilo-1",

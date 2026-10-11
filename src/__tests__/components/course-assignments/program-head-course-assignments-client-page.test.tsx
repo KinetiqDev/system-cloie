@@ -36,7 +36,7 @@ describe("Program Head Course Assignments server-first shell", () => {
               updatedAt: new Date(),
               courseCode: "CS101",
               courseTitle: "Intro to Computing",
-              courseScope: CourseScope.PROGRAM_SPECIFIC,
+              courseScope: CourseScope.PROFESSIONAL,
               facultyName: "Faculty Member",
             },
           ],

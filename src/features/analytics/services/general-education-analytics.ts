@@ -93,7 +93,7 @@ import type { GeneralEducationAnalyticsFilterState as GeneralEducationFilters } 
 // one read per tab. Every read re-authorizes the active college-wide
 // Coordinator role before it queries private evidence, and every read resolves
 // the same General Education Course-bound predicates from the same filter set,
-// so no view can drift into Program-specific or Central evidence. Views share
+// so no view can drift into Professional or Central evidence. Views share
 // request-scoped reads through `cache` keyed on the canonical filter scope;
 // no result is persisted and no cache entry survives a process restart.
 //

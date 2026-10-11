@@ -30,7 +30,7 @@ export type ManagementCoursesKPI = {
   totalCourses: number;
   activeCourses: number;
   generalEducationCourses: number;
-  programSpecificCourses: number;
+  professionalCourses: number;
 };
 
 export type MajorFilterOption = {
@@ -98,14 +98,14 @@ export async function listManagementCoursesSummary(): Promise<{
   // KPI accumulators
   let activeCourses = 0;
   let generalEducationCourses = 0;
-  let programSpecificCourses = 0;
+  let professionalCourses = 0;
 
   const courses: ManagementCourseSummaryItem[] = rawCourses.map((c) => {
     if (c.is_active) activeCourses++;
     if (c.course_scope === CourseScope.GENERAL_EDUCATION) {
       generalEducationCourses++;
     } else {
-      programSpecificCourses++;
+      professionalCourses++;
     }
 
     return {
@@ -114,7 +114,7 @@ export async function listManagementCoursesSummary(): Promise<{
       title: c.title,
       courseScope: c.course_scope,
       courseScopeLabel:
-        c.course_scope === CourseScope.GENERAL_EDUCATION ? "General Education" : "Program-Specific",
+        c.course_scope === CourseScope.GENERAL_EDUCATION ? "General Education" : "Professional",
       isActive: c.is_active,
       programId: c.program?.id ?? null,
       programCode: c.program?.code ?? null,
@@ -135,7 +135,7 @@ export async function listManagementCoursesSummary(): Promise<{
       totalCourses: rawCourses.length,
       activeCourses,
       generalEducationCourses,
-      programSpecificCourses,
+      professionalCourses,
     },
     programs: rawPrograms,
   };

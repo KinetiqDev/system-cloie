@@ -376,7 +376,7 @@ describe("createBaselineCopy", () => {
       copyInput({
         poBindings: [{ poId: "po-1", itemKey: "question-b", sectionKey: "section-b" }],
         settings: {
-          description: "Program-specific instrument",
+          description: "Professional instrument",
           is_active: false,
           is_faculty_accessible: true,
           template_type: "COURSE_BOUND",
@@ -387,7 +387,7 @@ describe("createBaselineCopy", () => {
     expect(result).toEqual({ success: true, data: { id: "copy-1" } });
     expect(templateCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        description: "Program-specific instrument",
+        description: "Professional instrument",
         is_active: false,
         is_faculty_accessible: true,
         template_type: "COURSE_BOUND",

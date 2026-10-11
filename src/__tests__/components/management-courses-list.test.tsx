@@ -60,8 +60,8 @@ const mockCourses: ManagementCourseSummaryItem[] = [
     id: "course-2",
     code: "IT101",
     title: "Introduction to Programming",
-    courseScope: "PROGRAM_SPECIFIC",
-    courseScopeLabel: "Program-Specific",
+    courseScope: "PROFESSIONAL",
+    courseScopeLabel: "Professional",
     isActive: true,
     programId: "prog-1",
     programCode: "BSIT",
@@ -80,7 +80,7 @@ const mockKPI: ManagementCoursesKPI = {
   totalCourses: 2,
   activeCourses: 2,
   generalEducationCourses: 1,
-  programSpecificCourses: 1,
+  professionalCourses: 1,
 };
 
 const mockPrograms: ProgramFilterOption[] = [
@@ -157,7 +157,7 @@ describe("ManagementCoursesList", () => {
     expect(screen.getByText("Total Courses")).toBeInTheDocument();
     expect(screen.getByText("Active Courses")).toBeInTheDocument();
     expect(screen.getAllByText("General Education").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Program-Specific").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Professional").length).toBeGreaterThan(0);
   });
 
   test("displays scope badges correctly", () => {
@@ -171,7 +171,7 @@ describe("ManagementCoursesList", () => {
     );
 
     expect(screen.getAllByText("General Education").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Program-Specific").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Professional").length).toBeGreaterThan(0);
   });
 
   test("shows program and major information when available", () => {

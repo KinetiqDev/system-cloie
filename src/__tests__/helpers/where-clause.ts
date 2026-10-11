@@ -2,7 +2,7 @@
  * Minimal Prisma `where`-clause evaluator for unit tests.
  *
  * Program Head evidence ownership now separates General Education
- * course-bound evidence from Program-specific evidence. The security-relevant
+ * course-bound evidence from Professional evidence. The security-relevant
  * claim is behavioral: a GE row whose `CourseAssignment.program_id` equals the
  * selected Program must not match the predicates the PH services send to
  * Prisma. Asserting only the query shape would let a refactor satisfy its

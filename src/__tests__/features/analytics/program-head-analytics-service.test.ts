@@ -130,11 +130,11 @@ describe("getProgramHeadAnalytics", () => {
     expect(assignmentOr).toHaveLength(2);
     expect(assignmentOr[0].central_deployment.program_id).toBe("program-bsed");
     expect(assignmentOr[1].course_bound.course_assignment.program_id).toBe("program-bsed");
-    // Course-bound evidence is Program-specific only. A General Education
+    // Course-bound evidence is Professional only. A General Education
     // course can carry an assignment inside this same Program, so Program
     // equality alone would not exclude it.
     expect(assignmentOr[1].course_bound.course_assignment.course.course_scope).toBe(
-      "PROGRAM_SPECIFIC"
+      "PROFESSIONAL"
     );
 
     // Rating aggregate scopes to program-bsed
@@ -146,7 +146,7 @@ describe("getProgramHeadAnalytics", () => {
       "program-bsed"
     );
     expect(aggregateOr[1].assignment.course_bound.course_assignment.course.course_scope).toBe(
-      "PROGRAM_SPECIFIC"
+      "PROFESSIONAL"
     );
   });
 
@@ -547,14 +547,14 @@ describe("evidence-source scope predicates", () => {
     };
 
     const responseCourseBranch = response.OR[1].assignment.course_bound!;
-    expect(responseCourseBranch.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
+    expect(responseCourseBranch.course_assignment.course.course_scope).toBe("PROFESSIONAL");
     expect(responseCourseBranch.course_assignment.program_id).toBe("program-bsit");
     // The selected period still narrows the branch; scope exclusion must not
     // drop the period predicate.
     expect(responseCourseBranch.term_instance_id).toEqual({ in: ["term-1"] });
 
     const opportunityCourseBranch = opportunity.OR[1].course_bound!;
-    expect(opportunityCourseBranch.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
+    expect(opportunityCourseBranch.course_assignment.course.course_scope).toBe("PROFESSIONAL");
     expect(opportunityCourseBranch.course_assignment.program_id).toBe("program-bsit");
     expect(opportunityCourseBranch.term_instance_id).toEqual({ in: ["term-1"] });
   });
@@ -587,7 +587,7 @@ describe("evidence-source scope predicates", () => {
       };
     };
     expect(response.assignment.course_bound.course_assignment.course.course_scope).toBe(
-      "PROGRAM_SPECIFIC"
+      "PROFESSIONAL"
     );
 
     const opportunity = buildProgramOpportunityScope(
@@ -599,6 +599,6 @@ describe("evidence-source scope predicates", () => {
         course_assignment: { program_id: string; course: { course_scope: string } };
       };
     };
-    expect(opportunity.course_bound.course_assignment.course.course_scope).toBe("PROGRAM_SPECIFIC");
+    expect(opportunity.course_bound.course_assignment.course.course_scope).toBe("PROFESSIONAL");
   });
 });

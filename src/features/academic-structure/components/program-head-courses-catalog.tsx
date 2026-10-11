@@ -357,7 +357,7 @@ function submitCourseForm({
 }) {
   const courseType = majorId ? "major-specific" : "program-wide";
 
-  formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
+  formData.set("course_scope", CourseScope.PROFESSIONAL);
   formData.set("programId", programId);
   formData.set("course_type", courseType);
 

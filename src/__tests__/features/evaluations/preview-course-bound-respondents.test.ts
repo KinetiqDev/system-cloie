@@ -62,7 +62,7 @@ const MOCK_ASSIGNMENT = {
     id: "course-1",
     code: "CS-101",
     title: "Intro to Computer Science",
-    course_scope: "PROGRAM_SPECIFIC",
+    course_scope: "PROFESSIONAL",
   },
 };
 

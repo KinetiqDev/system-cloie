@@ -76,8 +76,8 @@ describe("CourseForm temporal fields", () => {
       renderCourseForm();
 
       const scopeTrigger = screen.getByLabelText(/course scope/i);
-      expect(scopeTrigger).toHaveTextContent("Program-Specific");
-      expect(scopeTrigger).not.toHaveTextContent("PROGRAM_SPECIFIC");
+      expect(scopeTrigger).toHaveTextContent("Professional");
+      expect(scopeTrigger).not.toHaveTextContent("PROFESSIONAL");
     });
 
     it("switches the label when General Education is selected", async () => {
@@ -149,7 +149,7 @@ describe("CourseForm temporal fields", () => {
         id: "course-1",
         code: "TEST101",
         title: "Test Course",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
         program_id: "prog-1",
         major_id: null,
         default_year_level: YearLevel.FIRST_YEAR,
@@ -167,7 +167,7 @@ describe("CourseForm temporal fields", () => {
         id: "course-1",
         code: "TEST101",
         title: "Test Course",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
         program_id: "prog-1",
         major_id: null,
         default_year_level: YearLevel.SECOND_YEAR,
@@ -249,7 +249,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
     const invalidData = {
       code: "TEST101",
       title: "Test Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: validUuid,
       major_id: null,
       default_semester: AcademicSemester.SUMMER,
@@ -269,7 +269,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
     const validData = {
       code: "SUM101",
       title: "Summer Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: validUuid,
       major_id: null,
       default_semester: AcademicSemester.SUMMER,
@@ -286,7 +286,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
     const validData = {
       code: "TEST101",
       title: "Test Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: validUuid,
       major_id: null,
       default_semester: AcademicSemester.FIRST,
@@ -303,7 +303,7 @@ describe("CourseForm Zod validation for temporal fields", () => {
     const validData = {
       code: "TEST101",
       title: "Test Course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: validUuid,
       major_id: null,
       // No temporal fields - should be valid

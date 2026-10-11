@@ -34,7 +34,7 @@ describe("resolveLegacyCiloReviewRedirect", () => {
   });
 
   describe("resolveLegacyCourseEvaluation", () => {
-    it("resolves a Program-specific evaluation in the selected Program", async () => {
+    it("resolves a Professional evaluation in the selected Program", async () => {
       prismaMock.courseBoundEvaluation.findFirst.mockResolvedValue({ id: EVALUATION });
 
       await expect(resolveLegacyCourseEvaluation(EVALUATION, PROGRAM)).resolves.toBe(EVALUATION);
@@ -42,7 +42,7 @@ describe("resolveLegacyCiloReviewRedirect", () => {
         id: EVALUATION,
         course_assignment: {
           program_id: PROGRAM,
-          course: { course_scope: "PROGRAM_SPECIFIC" },
+          course: { course_scope: "PROFESSIONAL" },
         },
       });
     });
@@ -72,7 +72,7 @@ describe("resolveLegacyCiloReviewRedirect", () => {
   });
 
   describe("resolveLegacyCourseResponse", () => {
-    it("resolves a submitted Program-specific response", async () => {
+    it("resolves a submitted Professional response", async () => {
       prismaMock.response.findFirst.mockResolvedValue({ id: RESPONSE });
 
       await expect(resolveLegacyCourseResponse(RESPONSE, EVALUATION, PROGRAM)).resolves.toBe(
@@ -87,7 +87,7 @@ describe("resolveLegacyCiloReviewRedirect", () => {
             id: EVALUATION,
             course_assignment: {
               program_id: PROGRAM,
-              course: { course_scope: "PROGRAM_SPECIFIC" },
+              course: { course_scope: "PROFESSIONAL" },
             },
           },
         },

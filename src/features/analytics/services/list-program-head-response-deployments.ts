@@ -103,7 +103,7 @@ function courseEvaluationWhere(
     ...(filters.courseId ? { course_id: filters.courseId } : {}),
     ...(filters.facultyId ? { faculty_id: filters.facultyId } : {}),
     course: {
-      course_scope: "PROGRAM_SPECIFIC",
+      course_scope: "PROFESSIONAL",
       ...(filters.majorId ? { major_id: filters.majorId } : {}),
     },
     ...(filters.yearLevel ? { year_level: filters.yearLevel } : {}),
@@ -277,7 +277,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
               some: {
                 course_assignment: {
                   program_id: programId,
-                  course: { course_scope: "PROGRAM_SPECIFIC" },
+                  course: { course_scope: "PROFESSIONAL" },
                 },
               },
             },
@@ -294,7 +294,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
     }),
     prisma.course.findMany({
       where: {
-        course_scope: "PROGRAM_SPECIFIC",
+        course_scope: "PROFESSIONAL",
         course_assignments: {
           some: { program_id: programId, course_bound_evaluations: { some: {} } },
         },
@@ -307,7 +307,7 @@ async function loadFilterOptions(programId: string): Promise<ResponseFilterOptio
         course_assignments: {
           some: {
             program_id: programId,
-            course: { course_scope: "PROGRAM_SPECIFIC" },
+            course: { course_scope: "PROFESSIONAL" },
             course_bound_evaluations: { some: {} },
           },
         },

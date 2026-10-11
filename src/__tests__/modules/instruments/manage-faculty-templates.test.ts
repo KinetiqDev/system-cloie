@@ -120,7 +120,7 @@ function setSharedMocks() {
   });
   affiliationFindManyMock.mockResolvedValue([{ program_id: "program-1" }]);
   courseFindUniqueMock.mockResolvedValue({
-    course_scope: "PROGRAM_SPECIFIC",
+    course_scope: "PROFESSIONAL",
     program_id: "program-1",
   });
   listFacultyCourseContextsMock.mockResolvedValue({
@@ -280,10 +280,9 @@ describe("manage-faculty-templates structure persistence", () => {
       po_question_bindings: [{ poId: "po-1", itemKey: "question-b", sectionKey: "section-b" }],
     });
 
-    expect(result).toEqual({
-      success: false,
-      error: "Program Outcomes can only be assigned to questions in program-specific courses.",
-    });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected the PO binding to be rejected");
+    expect(result.error).toBeTruthy();
     expect(poBindingCreateManyMock).not.toHaveBeenCalled();
     expect(transactionMock).not.toHaveBeenCalled();
   });

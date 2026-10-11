@@ -127,7 +127,7 @@ describe("listStudentAssignedEvaluations", () => {
             id: "course-assignment-eligible",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Capstone 1" },
+            course: { course_scope: "PROFESSIONAL", major: null, title: "Capstone 1" },
             program: { name: "BSIT" },
             faculty: { name: "Ada Lovelace" },
           },
@@ -150,7 +150,7 @@ describe("listStudentAssignedEvaluations", () => {
             id: "course-assignment-ineligible",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Networks" },
+            course: { course_scope: "PROFESSIONAL", major: null, title: "Networks" },
             program: { name: "BSIT" },
             faculty: { name: "Grace Hopper" },
           },
@@ -173,7 +173,7 @@ describe("listStudentAssignedEvaluations", () => {
             id: "course-assignment-submitted",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Databases" },
+            course: { course_scope: "PROFESSIONAL", major: null, title: "Databases" },
             program: { name: "BSIT" },
             faculty: { name: "Alan Turing" },
           },
@@ -258,7 +258,7 @@ describe("listStudentAssignedEvaluations", () => {
             id: "course-assignment-retired",
             program_id: "program-1",
             term_instance_id: "term-1",
-            course: { course_scope: "PROGRAM_SPECIFIC", major: null, title: "Legacy Course" },
+            course: { course_scope: "PROFESSIONAL", major: null, title: "Legacy Course" },
             program: { name: "BSIT" },
             faculty: { name: "Alan Turing" },
           },
@@ -320,7 +320,7 @@ describe("listStudentAssignedEvaluations", () => {
         course_bound: {
           activation_at: new Date("2026-04-01T00:00:00.000Z"),
           course_assignment: {
-            course_scope: "PROGRAM_SPECIFIC",
+            course_scope: "PROFESSIONAL",
             id: "course-assignment-snapshot",
             program_id: "program-1",
             term_instance_id: "term-1",
@@ -334,7 +334,7 @@ describe("listStudentAssignedEvaluations", () => {
             courseAssignmentId: "course-assignment-snapshot",
             courseCode: "IT-401",
             courseId: "course-1",
-            courseScope: "PROGRAM_SPECIFIC",
+            courseScope: "PROFESSIONAL",
             courseTitle: "Capstone 1 (previous edition)",
             facultyId: "faculty-1",
             facultyName: "Previous Faculty",
@@ -426,7 +426,7 @@ describe("listStudentAssignedEvaluations", () => {
         course_bound: {
           activation_at: new Date("2026-04-01T00:00:00.000Z"),
           course_assignment: {
-            course_scope: "PROGRAM_SPECIFIC",
+            course_scope: "PROFESSIONAL",
             id: "course-assignment-due",
             program_id: "program-1",
             term_instance_id: "term-1",
@@ -451,7 +451,7 @@ describe("listStudentAssignedEvaluations", () => {
         course_bound: {
           activation_at: new Date("2026-04-01T00:00:00.000Z"),
           course_assignment: {
-            course_scope: "PROGRAM_SPECIFIC",
+            course_scope: "PROFESSIONAL",
             id: "course-assignment-started",
             program_id: "program-1",
             term_instance_id: "term-1",
@@ -487,7 +487,7 @@ describe("listStudentAssignedEvaluations", () => {
         course_bound: {
           activation_at: new Date("2026-04-01T00:00:00.000Z"),
           course_assignment: {
-            course_scope: "PROGRAM_SPECIFIC",
+            course_scope: "PROFESSIONAL",
             id: "course-assignment-far",
             program_id: "program-1",
             term_instance_id: "term-1",

@@ -81,7 +81,7 @@ export async function createProgramHeadCourse(
           data: {
             code: input.code,
             title: input.title,
-            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            course_scope: CourseScope.PROFESSIONAL,
             program_id: contextResult.data.selectedProgram.id,
             major_id: majorId,
             default_year_level: input.default_year_level ?? null,
@@ -143,12 +143,12 @@ export async function updateProgramHeadCourse(
           where: {
             id: input.id,
             program_id: contextResult.data.selectedProgram.id,
-            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            course_scope: CourseScope.PROFESSIONAL,
           },
           data: {
             code: input.code,
             title: input.title,
-            course_scope: CourseScope.PROGRAM_SPECIFIC,
+            course_scope: CourseScope.PROFESSIONAL,
             program_id: contextResult.data.selectedProgram.id,
             major_id: majorId,
             default_year_level: input.default_year_level ?? null,
@@ -202,7 +202,7 @@ export async function toggleProgramHeadCourseActive(
         where: {
           id: input.id,
           program_id: contextResult.data.selectedProgram.id,
-          course_scope: CourseScope.PROGRAM_SPECIFIC,
+          course_scope: CourseScope.PROFESSIONAL,
         },
         data: { is_active: input.is_active },
       });

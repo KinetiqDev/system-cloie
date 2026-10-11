@@ -185,7 +185,7 @@ describe("review surface academic-context labels", () => {
   });
 
   it("names the alignment layer the Course actually reaches", () => {
-    // Program-specific evidence shows PO mappings; General Education shows ILO
+    // Professional evidence shows PO mappings; General Education shows ILO
     // alignments. The header is the reader's only cue about which layer a row
     // is grouped through, so it must not be generic wording.
     const { unmount } = render(

@@ -44,7 +44,7 @@ function isTransactionWriteConflict(error: unknown) {
  * satisfy the Course scope's typed alignment rule before a Course-bound
  * evaluation may be published. General Education follows the at-least-one
  * active Institutional Outcome rule with a non-null manifestation;
- * Program-specific Courses require a non-null manifestation for every active
+ * Professional Courses require a non-null manifestation for every active
  * PO of the Course's owning Academic Program (zero active POs with active
  * CILOs is incomplete). Archived targets, wrong-program rows, and rows without
  * a manifestation never satisfy the gate.
@@ -394,7 +394,7 @@ export async function publishCourseBoundEvaluation({
 
             // New-publication alignment gate: reject before deployment creation
             // when any active CILO fails the Course scope's typed alignment
-            // rule (exhaustive manifestation coverage for Program-specific
+            // rule (exhaustive manifestation coverage for Professional
             // Courses, at-least-one active Institutional Outcome for General
             // Education). Runs after the existing template-context validation
             // so no-CILO and binding errors keep their established semantics.

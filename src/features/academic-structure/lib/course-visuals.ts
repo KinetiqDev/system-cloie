@@ -9,7 +9,7 @@ import { CourseScope } from "@prisma/client";
 const GENERAL_EDUCATION_CHIP = "border-chart-3/30 bg-chart-3/15 text-foreground";
 const PROGRAM_WIDE_CHIP = "border-chart-1/30 bg-chart-1/15 text-foreground";
 
-/** Categorical chip for a course scope (general education vs program-specific). */
+/** Categorical chip for a course scope (general education vs Professional). */
 export function getCourseScopeBadgeClass(scope: CourseScope): string {
   return scope === CourseScope.GENERAL_EDUCATION ? GENERAL_EDUCATION_CHIP : PROGRAM_WIDE_CHIP;
 }

@@ -130,7 +130,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(courseBoundEvaluationFindFirstMock).not.toHaveBeenCalled();
   });
 
-  it("scopes the evaluation query to the selected Program and Program-specific courses", async () => {
+  it("scopes the evaluation query to the selected Program and Professional courses", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(MOCK_EVALUATION);
     evaluationAssignmentFindManyMock.mockResolvedValue([]);
     responseFindManyMock.mockResolvedValue([]);
@@ -143,7 +143,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
           id: "eval-1",
           course_assignment: {
             program_id: "prog-beed",
-            course: { course_scope: "PROGRAM_SPECIFIC" },
+            course: { course_scope: "PROFESSIONAL" },
           },
         },
       })
@@ -176,14 +176,14 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
     expect(responseFindManyMock).not.toHaveBeenCalled();
   });
 
-  it("still resolves a Program-specific evaluation in the selected Program", async () => {
+  it("still resolves a Professional evaluation in the selected Program", async () => {
     // Boundary: the GE gate must not exclude the Program Head's own evidence.
     courseBoundEvaluationFindFirstMock.mockImplementation((args) =>
       matchesWhere(args.where, {
         id: "eval-1",
         course_assignment: {
           program_id: "prog-beed",
-          course: { course_scope: "PROGRAM_SPECIFIC" },
+          course: { course_scope: "PROFESSIONAL" },
         },
       })
         ? Promise.resolve(MOCK_EVALUATION)
@@ -318,7 +318,7 @@ describe("getProgramHeadCourseEvaluationDetail", () => {
         courseId: "course-1",
         courseCode: "IT101-PREV",
         courseTitle: "Intro to Computing (previous edition)",
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         programId: "prog-beed",
         programCode: "BEED",
         programName: "BEED",

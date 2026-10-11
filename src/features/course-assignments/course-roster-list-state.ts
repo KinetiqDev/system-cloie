@@ -83,7 +83,7 @@ const sectionSchema = z.enum([
   StudentSection.AFTERNOON,
   StudentSection.EVENING,
 ]);
-const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROGRAM_SPECIFIC]);
+const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROFESSIONAL]);
 const viewSchema = z.enum(["list", "card"]);
 
 function firstNonEmptyValue(value: string | string[] | undefined): string | undefined {

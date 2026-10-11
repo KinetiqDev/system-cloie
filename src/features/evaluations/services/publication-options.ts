@@ -11,7 +11,7 @@ import { getOnBehalfTemplatePublicationContext } from "./publish-course-bound-ev
  *
  * Invariants:
  * - `readProgramHeadPublicationOptions` returns only assignments that are
- *   active, in the ACTIVE academic period, bound to a PROGRAM_SPECIFIC Course of
+ *   active, in the ACTIVE academic period, bound to a PROFESSIONAL Course of
  *   the given Program, and unpublished, and only where the owning Faculty member
  *   has an active COURSE_BOUND template whose resolved context names that same
  *   Course and Program. A stale or template-less assignment is omitted, never
@@ -65,7 +65,7 @@ export async function readProgramHeadPublicationOptions(
     where: {
       is_active: true,
       program_id: selectedProgramId,
-      course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+      course: { course_scope: CourseScope.PROFESSIONAL },
       term_instance: { status: "ACTIVE" },
       course_bound_evaluations: { none: { published_at: { not: null } } },
     },

@@ -153,7 +153,7 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
     expect(where.course_assignment.program_id).toBeUndefined();
   });
 
-  it("returns null when the evaluation is a Program-specific course", async () => {
+  it("returns null when the evaluation is a Professional course", async () => {
     courseBoundEvaluationFindFirstMock.mockResolvedValue(null);
 
     await expect(getGenEdCourseEvaluationDetail("eval-it201")).resolves.toBeNull();
@@ -220,7 +220,7 @@ describe("getGenEdCourseEvaluationDetail (ADR 0034)", () => {
         manifestation: "LEARNING",
       },
     ]);
-    // A General Education evaluation must never read the Program-specific
+    // A General Education evaluation must never read the Professional
     // CILO→PO mapping table, and its CILO metrics carry no PO rows.
     expect(poMappingFindManyMock).not.toHaveBeenCalled();
     expect(detail!.ciloResults[0].mappings).toEqual([]);

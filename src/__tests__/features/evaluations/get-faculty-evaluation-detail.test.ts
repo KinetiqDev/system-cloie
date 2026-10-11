@@ -37,7 +37,7 @@ const evaluation = {
       id: "course-1",
       code: "IT-401",
       title: "Capstone 1",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       major_id: null,
       major: null,
     },
@@ -147,7 +147,7 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
         courseId: "course-1",
         courseCode: "IT-401-PREV",
         courseTitle: "Capstone 1 (previous edition)",
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         programId: "program-1",
         programCode: "BSIT",
         programName: "BS Information Technology",
@@ -173,7 +173,7 @@ describe("getFacultyEvaluationDetail – historical visibility", () => {
       data: {
         courseInfo: {
           courseCode: "IT-401-PREV",
-          courseScope: "PROGRAM_SPECIFIC",
+          courseScope: "PROFESSIONAL",
           courseTitle: "Capstone 1 (previous edition)",
           programCode: "BSIT",
           programName: "BS Information Technology",

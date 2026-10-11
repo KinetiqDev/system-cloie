@@ -113,7 +113,7 @@ function manifestLegend() {
 /**
  * Course alignment matrix: a desktop table (`hidden md:block`) and mobile CILO
  * cards (`md:hidden`), both driving the same draft state through `onChangeCell`.
- * Copy follows Course scope so Program-specific columns are POs and General
+ * Copy follows Course scope so Professional columns are POs and General
  * Education columns are Institutional Outcomes.
  */
 export function ManifestationAlignmentContent({
@@ -163,9 +163,9 @@ export function ManifestationAlignmentContent({
               ? `${coveredCilos} of ${cilos.length} CILOs covered`
               : `${classifiedPairs} of ${totalPairs} relationships classified`}
           </span>
-          {alignment.course.scope === "PROGRAM_SPECIFIC" && <span>{remaining} remaining</span>}
+          {alignment.course.scope !== "GENERAL_EDUCATION" && <span>{remaining} remaining</span>}
         </p>
-        {((alignment.course.scope === "PROGRAM_SPECIFIC" && remaining > 0) ||
+        {((alignment.course.scope !== "GENERAL_EDUCATION" && remaining > 0) ||
           (alignment.course.scope === "GENERAL_EDUCATION" && coveredCilos < cilos.length)) && (
           <p className="text-muted-foreground text-body-sm" aria-live="polite">
             {copy.incompleteMessage}

@@ -107,7 +107,7 @@ export async function loadScopedRosterCandidates(
     },
   });
 
-  // A program-specific roster manager may diagnose ineligible accounts only
+  // A Professional roster manager may diagnose ineligible accounts only
   // inside the assignment's academic neighborhood. Program-mismatched accounts
   // are neither selectable nor safe to disclose through preview or search.
   const candidates = students

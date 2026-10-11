@@ -135,7 +135,7 @@ describe("getStudentAssignedEvaluationSession", () => {
         courseAssignmentId: COURSE_ASSIGNMENT_ID,
         courseCode: "IT-101",
         courseId: "course-1",
-        courseScope: "PROGRAM_SPECIFIC",
+        courseScope: "PROFESSIONAL",
         courseTitle: "Introduction to Computing (previous edition)",
         facultyId: "faculty-1",
         facultyName: "Previous Faculty",

@@ -12,7 +12,7 @@ import {
 const assignment = {
   facultyId: "faculty-1",
   programId: "program-1",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   isActive: true,
 };
 

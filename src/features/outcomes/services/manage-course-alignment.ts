@@ -122,7 +122,7 @@ type FreshnessMapping = {
 };
 
 function targetMappings(cilo: AlignmentCiloRow, scope: CourseScope, mode: GEAlignmentMode) {
-  if (scope === "PROGRAM_SPECIFIC")
+  if (scope === "PROFESSIONAL")
     return cilo.cilo_mappings.map((m) => ({ target: m.po, manifestation: m.manifestation }));
   if (mode === "COMMON_PO")
     return (cilo.cilo_common_po_mappings ?? []).map((m) => ({
@@ -514,7 +514,7 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
       id: courseId,
       is_active: true,
       OR: [
-        { course_scope: "PROGRAM_SPECIFIC", program_id: { not: null } },
+        { course_scope: "PROFESSIONAL", program_id: { not: null } },
         { course_scope: "GENERAL_EDUCATION" },
       ],
     },
@@ -566,7 +566,7 @@ async function readCourse(db: Prisma.TransactionClient | typeof prisma, courseId
 type AlignmentCourse = NonNullable<Awaited<ReturnType<typeof readCourse>>>;
 
 function courseScopeOf(course: AlignmentCourse): CourseScope {
-  return course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROGRAM_SPECIFIC";
+  return course.course_scope === "GENERAL_EDUCATION" ? "GENERAL_EDUCATION" : "PROFESSIONAL";
 }
 
 function courseIsUnavailable(course: AlignmentCourse): boolean {

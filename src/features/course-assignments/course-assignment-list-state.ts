@@ -61,7 +61,7 @@ const sectionSchema = z.enum([
   StudentSection.AFTERNOON,
   StudentSection.EVENING,
 ]);
-const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROGRAM_SPECIFIC]);
+const courseScopeSchema = z.enum([CourseScope.GENERAL_EDUCATION, CourseScope.PROFESSIONAL]);
 const courseAssignmentSortFields = [
   "course",
   "faculty",

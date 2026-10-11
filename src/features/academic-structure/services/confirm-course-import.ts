@@ -75,7 +75,7 @@ function baseCreateInput(
   return {
     code: row.courseCode,
     title: row.courseTitle,
-    course_scope: row.courseScope ?? CourseScope.PROGRAM_SPECIFIC,
+    course_scope: row.courseScope ?? CourseScope.PROFESSIONAL,
     ge_alignment_mode: row.courseScope === CourseScope.GENERAL_EDUCATION ? "COMMON_PO" : "ILO",
     program_id: programId,
     major_id: majorId,
@@ -86,7 +86,7 @@ function baseCreateInput(
 }
 
 async function resolveSecretaryRelationships(row: CourseImportPreviewRow) {
-  if (row.courseScope !== CourseScope.PROGRAM_SPECIFIC || !row.programCode) {
+  if (row.courseScope !== CourseScope.PROFESSIONAL || !row.programCode) {
     return { programId: undefined, majorId: undefined };
   }
 
@@ -144,7 +144,7 @@ async function createImportedCourse(
       course_type: row.courseType === "MAJOR_SPECIFIC" ? "major-specific" : "program-wide",
       code: row.courseCode,
       title: row.courseTitle,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       major_id: majorId,
       default_year_level: row.yearLevel ?? undefined,
       default_semester: row.semester ?? undefined,

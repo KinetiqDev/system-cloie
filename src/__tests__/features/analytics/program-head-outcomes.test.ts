@@ -236,19 +236,19 @@ describe("getProgramHeadOutcomes", () => {
       prismaMock.quantitativeResponseItem.findMany.mock.calls[0][0].where.response;
     expect(ratingWhere.assignment.course_bound.course_assignment).toEqual({
       program_id: "program-bsed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
 
     const opportunityWhere = prismaMock.evaluationAssignment.count.mock.calls[0][0].where;
     expect(opportunityWhere.course_bound.course_assignment).toEqual({
       program_id: "program-bsed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
 
     const submittedWhere = prismaMock.response.count.mock.calls[0][0].where;
     expect(submittedWhere.assignment.course_bound.course_assignment).toEqual({
       program_id: "program-bsed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
   });
 
@@ -258,7 +258,7 @@ describe("getProgramHeadOutcomes", () => {
     const periodWhere = prismaMock.academicTermInstance.findMany.mock.calls[0][0].where;
     expect(periodWhere.OR[1].course_bound_evaluations.some.course_assignment).toEqual({
       program_id: "program-bsed",
-      course: { course_scope: "PROGRAM_SPECIFIC" },
+      course: { course_scope: "PROFESSIONAL" },
     });
   });
 

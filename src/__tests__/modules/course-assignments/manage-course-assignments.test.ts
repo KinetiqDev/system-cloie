@@ -353,7 +353,7 @@ describe("manage-course-assignments", () => {
       );
     });
 
-    it("should reject Dean creation of a Program-specific assignment for a non-owning program", async () => {
+    it("should reject Dean creation of a Professional assignment for a non-owning program", async () => {
       vi.mocked(authModule.resolveAuthSession).mockResolvedValue(mockDeanSession);
 
       const { prisma } = await import("@/lib/db/prisma");

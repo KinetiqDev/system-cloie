@@ -103,7 +103,7 @@ export function projectRosterEligibility(
     return { eligible: false, reason: "NO_ACTIVE_TERM_PLACEMENT" };
   }
   if (
-    assignment.courseScope === CourseScope.PROGRAM_SPECIFIC &&
+    assignment.courseScope === CourseScope.PROFESSIONAL &&
     (profile.program_id !== assignment.programId ||
       student.enrollments[0]?.program_id !== assignment.programId)
   ) {

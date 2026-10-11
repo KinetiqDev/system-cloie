@@ -102,13 +102,13 @@ describe("Course alignment actions", () => {
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
-  it("rejects a Program-specific review with an invalid manifestation", async () => {
+  it("rejects a Professional review with an invalid manifestation", async () => {
     const { commitCourseAlignmentAction } = await import("@/lib/actions/course-alignment-actions");
 
     await expect(
       commitCourseAlignmentAction(
         {
-          scope: "PROGRAM_SPECIFIC",
+          scope: "PROFESSIONAL",
           geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],

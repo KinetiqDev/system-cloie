@@ -24,7 +24,7 @@ export type CourseAlignmentState = "ready" | "missing-cilos" | "incomplete-mappi
  * A CILO is aligned only through the typed relation its Course scope owns:
  * - General Education CILOs require at least one active Institutional Outcome
  *   mapping with a non-null manifestation ("at-least-one" rule).
- * - Program-specific CILOs require a non-null manifestation for EVERY active
+ * - Professional CILOs require a non-null manifestation for EVERY active
  *   Program Outcome owned by the Course's owning Academic Program.
  *   A Program with zero active POs alongside active CILOs is incomplete, not
  *   vacuously ready.

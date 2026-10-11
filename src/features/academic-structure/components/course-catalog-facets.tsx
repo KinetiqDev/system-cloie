@@ -27,7 +27,7 @@ export function courseScopeFacet(
     onChange: (next) => onChange(next ?? allValue),
     allLabel: "All scopes",
     options: [
-      { id: "program_specific", label: "Program-specific" },
+      { id: "professional", label: "Professional" },
       { id: "general_education", label: "General Education" },
     ],
   };

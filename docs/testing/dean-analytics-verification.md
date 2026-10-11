@@ -10,7 +10,7 @@ The technical scope decision is ADR 0038. Deterministic calculations reuse the e
 
 - Participation is submitted responses divided by historical EvaluationAssignment opportunities, multiplied by 100 for display. Zero opportunities reports unavailable. It is not a count of distinct eligible people.
 - College activity includes General Education and Central deployments without an attributed program. Program comparison excludes both, so program cards are not additive to the college total.
-- Evaluation coverage counts active program-specific course assignments with no non-draft evaluation. This is a live assignment inventory, separate from readiness snapshots. Deactivated assignments do not create operational gap flags.
+- Evaluation coverage counts active Professional Course assignments with no non-draft evaluation. This is a live assignment inventory, separate from readiness snapshots. Deactivated assignments do not create operational gap flags.
 - PO evidence retains owning-program context, frozen direct PO bindings and current typed CILO-to-PO mapping disclosures. Many-to-many outcome rows are not additive.
 - General Education ILO evidence follows typed CILO-to-ILO mappings and does not imply attainment or PO propagation. Its service response rate is a ratio; the Dean display converts it to percentage.
 - Dean program history excludes invalid frozen-scale ratings and withholds a period mean spanning multiple instrument versions, scales or sources. Existing comparability fingerprints control chronological comparisons.

@@ -132,7 +132,7 @@ interface CourseAssignmentsRowProps {
 
 const VIEW_ONLY_LABEL = "View only";
 const READ_ONLY_LABEL = "Read only";
-const PROGRAM_SPECIFIC_LABEL = "Program-specific";
+const PROFESSIONAL_LABEL = "Professional";
 const COORDINATOR_SCOPE_LABEL = "Managed by General Education Coordinator";
 
 /**
@@ -149,7 +149,7 @@ type AssignmentRowCapability = {
 
 /**
  * Resolves the row capability from the list mode and the Course scope: the
- * Program Head sees only Program-specific rows and the Coordinator only
+ * Program Head sees only Professional rows and the Coordinator only
  * General Education rows, while a view-only host keeps the whole list
  * read-only.
  */
@@ -186,7 +186,7 @@ function assignmentRowCapability(
   }
   return {
     selectable,
-    readOnlyLabel: dispatchedToCoordinator ? COORDINATOR_SCOPE_LABEL : PROGRAM_SPECIFIC_LABEL,
+    readOnlyLabel: dispatchedToCoordinator ? COORDINATOR_SCOPE_LABEL : PROFESSIONAL_LABEL,
     menuReadOnlyLabel: READ_ONLY_LABEL,
     delegatedToCoordinator: dispatchedToCoordinator,
   };
@@ -248,7 +248,7 @@ function assignmentRowPresentation(assignment: CourseAssignmentItem): Assignment
   const isGeneralEducation = assignment.courseScope === CourseScope.GENERAL_EDUCATION;
   const rosterCount = assignment.rosterMembershipCount ?? 0;
   return {
-    scopeLabel: isGeneralEducation ? "GE" : "Program-specific",
+    scopeLabel: isGeneralEducation ? "GE" : "Professional",
     scopeBadgeVariant: isGeneralEducation ? "secondary" : "outline",
     statusLabel: assignment.isActive ? "Active" : "Inactive",
     statusBadgeVariant: assignment.isActive ? "success" : "outline",
@@ -770,7 +770,7 @@ export function CourseAssignmentsTable({
               ? "Assign faculty to a course across any program to get started. Each assignment creates a class and its roster."
               : mode === "general-education"
                 ? "Assign faculty to a General Education course to get started. GE assignments are shared college-wide."
-                : "Assign faculty to a Program-specific Course to get started. Create a class — year, section, and term — and its roster unlocks evaluations."}
+                : "Assign faculty to a Professional Course to get started. Create a class — year, section, and term — and its roster unlocks evaluations."}
           </EmptyDescription>
         </EmptyHeader>
         {onAssignFaculty && (

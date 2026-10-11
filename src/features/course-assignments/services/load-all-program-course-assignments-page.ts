@@ -43,7 +43,7 @@ export async function loadAllProgramCourseAssignmentsPageData(
     courseWhere.course_scope = courseScopeFilter;
   } else if (selectedProgramId) {
     courseWhere.program_id = selectedProgramId;
-    courseWhere.course_scope = CourseScope.PROGRAM_SPECIFIC;
+    courseWhere.course_scope = CourseScope.PROFESSIONAL;
   }
 
   const [schoolYears, programs, courses, faculty] = await Promise.all([

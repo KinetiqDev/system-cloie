@@ -443,7 +443,7 @@ function courseGoCatalogNote(
 ): string | null {
   if (isLoading) return "Loading Program Outcomes…";
   if (reason === "general-education" || selectedCourseContext?.courseType === "GENERAL_EDUCATION") {
-    return "Program Outcome binding applies to program-specific courses.";
+    return "Program Outcome binding applies to Professional Courses.";
   }
   if (reason === "unselected-course") {
     // A stale "no course" reason with a live selection means the catalog has
@@ -857,7 +857,7 @@ export function TemplateBuilder({
       available:
         facultyMode &&
         Boolean(boundCourseId) &&
-        selectedCourseType === "PROGRAM_SPECIFIC" &&
+        selectedCourseType === "PROFESSIONAL" &&
         courseGoOptionsReason !== "general-education" &&
         !isLoadingGoOptions,
     }),
@@ -2564,7 +2564,7 @@ function QuestionCard({
 
           {/* Course-bound PO axis: one question may cover several Graduate
             Outcomes of the bound Course's owning Program. The control is
-            unavailable until a program-specific Course is bound; when the
+            unavailable until a Professional Course is bound; when the
             catalog itself cannot be offered, a note names the reason. */}
           {facultyMode && question.type === "likert" && courseBoundPoBindingAvailable && (
             <div className="space-y-2">

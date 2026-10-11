@@ -11,7 +11,7 @@ import { expectNoAxeViolations, expectNoHorizontalOverflow, loginAs } from "./su
  *   - The Coordinator completes one approved college-wide General Education ILO or Course Assignment mutation
  *     and sees the persisted result after reload.
  *   - Server authorization derives scope from Course.course_scope == GENERAL_EDUCATION.
- *   - Program-specific Course Assignment mutation attempt is denied at the server boundary.
+ *   - Professional Course Assignment mutation attempt is denied at the server boundary.
  *   - Program Head and Secretary role boundaries remain unchanged.
  *   - Desktop and mobile viewports are clean of serious/critical axe findings and horizontal overflow.
  */
@@ -63,7 +63,7 @@ test.describe("General Education Coordinator Scope Verification", () => {
     await expect(page.getByText(uniqueDesc).first()).toBeVisible();
   });
 
-  test("Coordinator is granted General Education course assignment management, but denied Program-specific mutation", async ({
+  test("Coordinator is granted General Education course assignment management, but denied Professional mutation", async ({
     page,
   }) => {
     const fx = fixture();
@@ -90,7 +90,7 @@ test.describe("General Education Coordinator Scope Verification", () => {
     await expectNoHorizontalOverflow(page);
 
     // Forged URL filter must not widen scope: coordinator list stays GENERAL_EDUCATION only.
-    await page.goto("/gen-ed-coordinator/course-assignments?courseScope=PROGRAM_SPECIFIC");
+    await page.goto("/gen-ed-coordinator/course-assignments?courseScope=PROFESSIONAL");
     await expect(
       page.getByRole("heading", { name: "General Education Assignments" }).first()
     ).toBeVisible({

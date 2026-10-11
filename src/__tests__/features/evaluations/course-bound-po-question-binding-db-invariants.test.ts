@@ -78,7 +78,7 @@ async function seedOwnedRows(): Promise<OwnedRows> {
     data: {
       code: `BIND-TEST-${suffix}`,
       title: "Course-bound PO binding test course",
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
       program_id: program.id,
       is_active: true,
     },

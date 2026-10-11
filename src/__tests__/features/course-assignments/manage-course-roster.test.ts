@@ -19,7 +19,7 @@ const assignment = {
   program_id: "program-1",
   term_instance_id: "term-1",
   is_active: true,
-  course: { course_scope: CourseScope.PROGRAM_SPECIFIC },
+  course: { course_scope: CourseScope.PROFESSIONAL },
   term_instance: { status: "ACTIVE" },
   course_bound_evaluations: [],
 };

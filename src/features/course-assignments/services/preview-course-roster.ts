@@ -71,7 +71,7 @@ function previewFailure(
 }
 
 function isProgramMismatchedMember(assignment: AssignmentScope, student: ExistingMemberStudent) {
-  if (assignment.courseScope !== CourseScope.PROGRAM_SPECIFIC) return false;
+  if (assignment.courseScope !== CourseScope.PROFESSIONAL) return false;
   const profileProgramId = student.student_profile?.program_id;
   const placementProgramId = student.enrollments[0]?.program_id;
   if (profileProgramId && profileProgramId !== assignment.programId) return true;
@@ -251,7 +251,7 @@ export async function previewCourseRoster(
       prisma.courseAssignmentMembership.findMany({
         where: {
           course_assignment_id: assignment.assignmentId,
-          ...(assignment.courseScope === CourseScope.PROGRAM_SPECIFIC
+          ...(assignment.courseScope === CourseScope.PROFESSIONAL
             ? {
                 student: {
                   OR: [

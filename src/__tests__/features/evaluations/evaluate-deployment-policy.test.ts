@@ -11,7 +11,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
   const baseAssignment = {
     faculty_id: "faculty-1",
     program_id: "prog-1",
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
   };
 
   describe("Faculty self-deploy", () => {
@@ -49,11 +49,11 @@ describe("canDeployCourseBoundEvaluation policy", () => {
   describe("Program Head on-behalf deployment", () => {
     const phSession = makeSession([ROLES.PROGRAM_HEAD], "ph-user");
 
-    it("allows PH to deploy on-behalf for program-specific course in their scope", () => {
+    it("allows PH to deploy on-behalf for Professional course in their scope", () => {
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-1",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
       };
 
       const result = canDeployCourseBoundEvaluation(phSession, assignment, ["prog-1"]);
@@ -80,7 +80,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-2",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
       };
 
       const result = canDeployCourseBoundEvaluation(phSession, assignment, ["prog-1"]);
@@ -98,7 +98,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-1",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
       };
 
       const result = canDeployCourseBoundEvaluation(session, assignment, []);
@@ -111,7 +111,7 @@ describe("canDeployCourseBoundEvaluation policy", () => {
       const assignment = {
         faculty_id: "faculty-1",
         program_id: "prog-1",
-        course_scope: CourseScope.PROGRAM_SPECIFIC,
+        course_scope: CourseScope.PROFESSIONAL,
       };
 
       const result = canDeployCourseBoundEvaluation(session, assignment, []);

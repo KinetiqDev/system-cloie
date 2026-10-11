@@ -34,7 +34,7 @@ export default async function SecretaryCourseAssignmentsPage({
     <CourseAssignmentsPageShell
       key={JSON.stringify(listPage.state)}
       pageTitle="Course Assignments"
-      pageDescription="Assign faculty to Program-specific and General Education courses across all programs."
+      pageDescription="Assign faculty to Professional and General Education courses across all programs."
       mode="all-program"
       canManageAssignments={true}
       initialData={listPage.result.success ? listPage.result.data : null}

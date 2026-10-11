@@ -37,7 +37,7 @@ describe("Program Head Course actions", () => {
     formData.set("programId", PROGRAM_ID);
     formData.set("code", "BSED-101");
     formData.set("title", "Foundations");
-    formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
+    formData.set("course_scope", CourseScope.PROFESSIONAL);
     formData.set("course_type", "program-wide");
 
     await expect(createProgramHeadCourseAction(formData)).resolves.toEqual({ success: true });
@@ -51,7 +51,7 @@ describe("Program Head Course actions", () => {
     const formData = new FormData();
     formData.set("code", "BSED-101");
     formData.set("title", "Foundations");
-    formData.set("course_scope", CourseScope.PROGRAM_SPECIFIC);
+    formData.set("course_scope", CourseScope.PROFESSIONAL);
 
     await expect(createProgramHeadCourseAction(formData)).resolves.toMatchObject({ success: false });
     expect(createCourseMock).not.toHaveBeenCalled();

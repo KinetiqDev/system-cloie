@@ -52,7 +52,7 @@ function input(overrides: Record<string, unknown> = {}) {
     programId: BSED_ID,
     code: "IT-301",
     title: "Web Development",
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
     ...overrides,
   } as never;
 }
@@ -172,7 +172,7 @@ describe("manage-program-head-courses", () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
       program_id: BEED_ID,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
     });
 
     await expect(
@@ -188,7 +188,7 @@ describe("manage-program-head-courses", () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
       program_id: BSED_ID,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
     });
 
     await expect(updateProgramHeadCourse(input({ id: COURSE_ID }))).resolves.toEqual({
@@ -197,7 +197,7 @@ describe("manage-program-head-courses", () => {
     });
     expect(transactionMock).toHaveBeenCalledTimes(1);
     expect(courseUpdateManyMock).toHaveBeenCalledWith({
-      where: { id: COURSE_ID, program_id: BSED_ID, course_scope: CourseScope.PROGRAM_SPECIFIC },
+      where: { id: COURSE_ID, program_id: BSED_ID, course_scope: CourseScope.PROFESSIONAL },
       data: expect.objectContaining({ program_id: BSED_ID }),
     });
   });
@@ -206,7 +206,7 @@ describe("manage-program-head-courses", () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
       program_id: BSED_ID,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
     });
     courseUpdateManyMock.mockResolvedValue({ count: 0 });
 
@@ -233,7 +233,7 @@ describe("manage-program-head-courses", () => {
     courseFindUniqueMock.mockResolvedValue({
       id: COURSE_ID,
       program_id: BEED_ID,
-      course_scope: CourseScope.PROGRAM_SPECIFIC,
+      course_scope: CourseScope.PROFESSIONAL,
     });
 
     await expect(

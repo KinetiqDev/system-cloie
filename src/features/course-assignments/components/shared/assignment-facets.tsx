@@ -21,7 +21,7 @@ type FacetOptions = {
 
 const COURSE_SCOPE_LABELS: Record<CourseScope, string> = {
   [CourseScope.GENERAL_EDUCATION]: "General Education",
-  [CourseScope.PROGRAM_SPECIFIC]: "Program-specific",
+  [CourseScope.PROFESSIONAL]: "Professional",
 };
 
 export type AssignmentFacetColumn =

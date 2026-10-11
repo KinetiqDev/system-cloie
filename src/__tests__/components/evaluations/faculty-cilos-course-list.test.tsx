@@ -23,8 +23,8 @@ const courses: FacultyCourseWithCiloCount[] = [
     id: "course-1",
     code: "CS101",
     title: "Intro to Computing",
-    courseScope: "PROGRAM_SPECIFIC",
-    courseScopeLabel: "Program-Specific",
+    courseScope: "PROFESSIONAL",
+    courseScopeLabel: "Professional",
     programId: "program-1",
     programCode: "BSCS",
     programName: "BS Computer Science",
@@ -96,7 +96,7 @@ describe("FacultyCilosCourseList", () => {
 
     expect(screen.getByRole("heading", { name: "Manage CILOs" })).toBeInTheDocument();
     expect(screen.getByText("CS101 — Intro to Computing")).toBeInTheDocument();
-    expect(screen.getByText("Program-Specific")).toBeInTheDocument();
+    expect(screen.getByText("Professional")).toBeInTheDocument();
     expect(screen.getByText(/Incomplete mapping/)).toBeInTheDocument();
   });
   it("loads and displays CILOs when the modal opens", async () => {
@@ -247,8 +247,8 @@ describe("FacultyCilosCourseList", () => {
             id: "course-ready",
             code: "ITRES2",
             title: "Capstone Project 2",
-            courseScope: "PROGRAM_SPECIFIC",
-            courseScopeLabel: "Program-Specific",
+            courseScope: "PROFESSIONAL",
+            courseScopeLabel: "Professional",
             programId: "program-1",
             programCode: "BSIT",
             programName: "BS Information Technology",

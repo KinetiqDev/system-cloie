@@ -118,7 +118,7 @@ const readCollegeEvidence = cache(async (termInstanceId?: string) => {
     }),
     prisma.courseAssignment.groupBy({
       by: ["program_id"],
-      where: { ...period, is_active: true, course: { course_scope: "PROGRAM_SPECIFIC" } },
+      where: { ...period, is_active: true, course: { course_scope: "PROFESSIONAL" } },
       _count: { _all: true },
     }),
     prisma.courseAssignment.groupBy({
@@ -126,7 +126,7 @@ const readCollegeEvidence = cache(async (termInstanceId?: string) => {
       where: {
         ...period,
         is_active: true,
-        course: { course_scope: "PROGRAM_SPECIFIC" },
+        course: { course_scope: "PROFESSIONAL" },
         course_bound_evaluations: { none: { status: { not: "DRAFT" } } },
       },
       _count: { _all: true },

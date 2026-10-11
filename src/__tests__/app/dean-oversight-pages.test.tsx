@@ -117,7 +117,7 @@ const outcomeData = {
           courseId: "course-1",
           courseCode: "CS101",
           courseName: "Foundations",
-          courseScope: "PROGRAM_SPECIFIC" as const,
+          courseScope: "PROFESSIONAL" as const,
           targetType: "GRADUATE_OUTCOME" as const,
           yearLevel: "FIRST_YEAR",
           section: "MORNING",
@@ -330,8 +330,8 @@ describe("Dean oversight pages", () => {
   // ADR 0040: a Common-mode General Education context aligns to the shared
   // Common PO catalog, never to a program-owned PO. Its gap must therefore be
   // counted and listed under the Common PO section instead of being absorbed
-  // into the program-specific Program Outcome gaps.
-  it("groups a Common PO gap under the Common section, not program-specific POs", async () => {
+  // into the Professional Program Outcome gaps.
+  it("groups a Common PO gap under the Common section, not Professional POs", async () => {
     render(
       <LearningOutcomesContent
         result={await getDeanLearningOutcomesMock()}

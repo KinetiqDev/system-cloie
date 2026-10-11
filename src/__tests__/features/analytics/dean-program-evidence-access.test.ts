@@ -57,7 +57,7 @@ describe("Explicit Dean program evidence reader", () => {
     expect(scope.status).toBe("SUBMITTED");
     expect(scope.deployment_id).toBe("evaluation-1");
     expect(JSON.stringify(scope)).toContain("program-bsed");
-    expect(JSON.stringify(scope)).toContain("PROGRAM_SPECIFIC");
+    expect(JSON.stringify(scope)).toContain("PROFESSIONAL");
     expect(resolveProgramHeadContextMock).not.toHaveBeenCalled();
     expect(prismaMock.evaluationAssignment.count.mock.calls[0][0].where.course_bound.id).toBe(
       "evaluation-1"

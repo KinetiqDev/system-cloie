@@ -89,7 +89,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                     <span className="text-label-sm">{course.courseCode}</span>
                   </Badge>
                   <Badge variant="information" className="text-label-sm">
-                    Program-specific
+                    Professional
                   </Badge>
                 </div>
                 <h2 className="font-heading text-title-lg font-semibold text-pretty">

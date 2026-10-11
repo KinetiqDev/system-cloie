@@ -738,7 +738,7 @@ describe("dedicated demo authorization boundaries", () => {
 
     const decision = canManageCourseAssignment(
       session!,
-      CourseScope.PROGRAM_SPECIFIC,
+      CourseScope.PROFESSIONAL,
       "program-other"
     );
     expect(decision).toEqual({ allowed: false, reason: "Course is outside your program scope." });
@@ -767,7 +767,7 @@ describe("dedicated demo authorization boundaries", () => {
     const decision = canViewCourseRoster(session!, {
       facultyId: "different-faculty",
       programId: "program-1",
-      courseScope: CourseScope.PROGRAM_SPECIFIC,
+      courseScope: CourseScope.PROFESSIONAL,
       isActive: true,
     });
     expect(decision).toEqual({ allowed: false, reason: "Course assignment not found." });
@@ -792,7 +792,7 @@ describe("dedicated demo authorization boundaries", () => {
     expect(session).not.toBeNull();
     expect(session!.activeRole).toBe(ROLES.FACULTY);
 
-    const decision = canManageCourseAssignment(session!, CourseScope.PROGRAM_SPECIFIC, "program-1");
+    const decision = canManageCourseAssignment(session!, CourseScope.PROFESSIONAL, "program-1");
     expect(decision).toEqual({ allowed: false, reason: "Insufficient permissions." });
   });
 });

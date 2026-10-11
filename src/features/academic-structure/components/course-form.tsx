@@ -77,7 +77,7 @@ export function CourseForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<CourseScope>(
-    fixedScope ?? defaultValues?.course_scope ?? CourseScope.PROGRAM_SPECIFIC
+    fixedScope ?? defaultValues?.course_scope ?? CourseScope.PROFESSIONAL
   );
   const [programId, setProgramId] = useState(defaultValues?.program_id ?? "");
   const [majorId, setMajorId] = useState(defaultValues?.major_id ?? "");
@@ -218,12 +218,12 @@ export function CourseForm({
                 <SelectValue>
                   {scope === CourseScope.GENERAL_EDUCATION
                     ? "General Education"
-                    : "Program-Specific"}
+                    : "Professional"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={CourseScope.GENERAL_EDUCATION}>General Education</SelectItem>
-                <SelectItem value={CourseScope.PROGRAM_SPECIFIC}>Program-Specific</SelectItem>
+                <SelectItem value={CourseScope.PROFESSIONAL}>Professional</SelectItem>
               </SelectContent>
             </Select>
           </div>

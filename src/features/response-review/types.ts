@@ -16,7 +16,7 @@ import type { OutcomeEvidenceDTO } from "@/features/analytics/outcome-evidence-t
 import type { CiloIloMapping, CiloCommonMapping } from "./services/cilo-mappings";
 
 // ---------------------------------------------------------------------------
-// Identified review belongs to Program Heads for Program-specific/Central
+// Identified review belongs to Program Heads for Professional/Central
 // evidence and to General Education Coordinators for General Education.
 // These shapes never join Faculty/Dean aggregate DTOs.
 // ---------------------------------------------------------------------------
@@ -37,7 +37,7 @@ export type ProgramWidePoBinding = {
  *
  * `layer` names the typed alignment the Course's CILOs actually reach, and
  * it is the discriminator: a General Education CILO carries ILO alignments
- * and no PO data, while a Program-specific CILO carries PO mappings and no
+ * and no PO data, while a Professional CILO carries PO mappings and no
  * ILO data. Keeping both lists on one shape would let a renamed PO field
  * carry ILO rows, so each variant declares only the list it can hold.
  */
@@ -247,19 +247,19 @@ export type IdentifiedCourseEvaluationDetail = {
   participation: ParticipationSummary;
   ciloResults: CiloMetric[];
   /**
-   * Typed alignment layer the evaluation's CILOs reach. Program-specific
+   * Typed alignment layer the evaluation's CILOs reach. Professional
    * Courses resolve to PO mappings and General Education Courses to ILO
    * alignments, so a surface never infers the layer from wording.
    */
   alignmentLayer: ReviewAlignmentLayer;
   /**
    * Current ILO alignments behind each CILO id in `ciloResults`, in table
-   * order. Empty on Program-specific Courses, where `ciloResults[].mappings`
+   * order. Empty on Professional Courses, where `ciloResults[].mappings`
    * already carries the PO layer.
    */
   commonMappingsByCilo?: Record<string, CiloCommonMapping[]>;
   iloMappingsByCilo: Record<string, CiloIloMapping[]>;
-  /** ILO evidence for this one evaluation; empty for Program-specific Courses. */
+  /** ILO evidence for this one evaluation; empty for Professional Courses. */
   iloResults: OutcomeEvidenceDTO[];
   questionResults: QuestionMetric[];
   qualitative: QualitativeSummary;

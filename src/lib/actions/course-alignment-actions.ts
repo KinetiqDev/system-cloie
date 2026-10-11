@@ -51,7 +51,7 @@ const manifestationUpdateSchema = manifestationPairSchema.extend({
 });
 
 const reviewSchema = z.object({
-  scope: z.enum(["GENERAL_EDUCATION", "PROGRAM_SPECIFIC"]),
+  scope: z.enum(["GENERAL_EDUCATION", "PROFESSIONAL"]),
   geAlignmentMode: z.enum(["ILO", "COMMON_PO"]),
   courseId: z.string().uuid(),
   before: manifestationSnapshotSchema,

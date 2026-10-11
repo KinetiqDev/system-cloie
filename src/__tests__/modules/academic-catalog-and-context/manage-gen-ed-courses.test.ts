@@ -86,7 +86,7 @@ describe("manage-gen-ed-courses", () => {
     expect(updateManyMock).not.toHaveBeenCalled();
   });
 
-  it("rejects forged Program-specific IDs", async () => {
+  it("rejects forged Professional IDs", async () => {
     updateManyMock.mockResolvedValue({ count: 0 });
     const { setGenEdCourseActive } =
       await import("@/features/academic-structure/services/manage-gen-ed-courses");

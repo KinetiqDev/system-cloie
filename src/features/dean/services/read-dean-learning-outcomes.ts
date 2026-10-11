@@ -196,12 +196,12 @@ function gapTargetType(
 }
 
 function gapCourseScope(context: ReadinessContext, assignment: AssignmentRow): CourseScope {
-  if (context.courseScope === "GENERAL_EDUCATION" || context.courseScope === "PROGRAM_SPECIFIC") {
+  if (context.courseScope === "GENERAL_EDUCATION" || context.courseScope === "PROFESSIONAL") {
     return context.courseScope;
   }
   return assignment.course.course_scope === "GENERAL_EDUCATION"
     ? "GENERAL_EDUCATION"
-    : "PROGRAM_SPECIFIC";
+    : "PROFESSIONAL";
 }
 
 function v2CiloIsIncomplete(
@@ -214,7 +214,7 @@ function v2CiloIsIncomplete(
   if (context.courseScope === "GENERAL_EDUCATION") {
     return !cilo.mappedTargets.some((target) => !target.isArchived);
   }
-  // Program-specific CILOs share the classifier's exhaustive rule: a CILO
+  // Professional CILOs share the classifier's exhaustive rule: a CILO
   // is a gap unless it classifies every active owning-Program PO, and
   // zero active POs alongside an active CILO is incomplete, not ready.
   return !hasExhaustiveGoCoverage(

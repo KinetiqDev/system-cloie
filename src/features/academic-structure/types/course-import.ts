@@ -125,7 +125,7 @@ export type CourseImportModeConfig =
     };
 
 export const COURSE_IMPORT_MODE_LABELS: Record<CourseImportMode, string> = {
-  secretary: "General Education and Program-specific Courses",
-  "program-head": "Program-specific Courses",
+  secretary: "General Education and Professional Courses",
+  "program-head": "Professional Courses",
   "general-education": "College-wide General Education Courses",
 };

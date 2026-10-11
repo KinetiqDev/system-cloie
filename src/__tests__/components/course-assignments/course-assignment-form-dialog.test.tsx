@@ -54,7 +54,7 @@ const mockCourses = [
     code: "CS101",
     title: "Intro",
     default_year_level: YearLevel.FIRST_YEAR,
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
     program_id: "prog-1",
   },
   {
@@ -62,7 +62,7 @@ const mockCourses = [
     code: "CS201",
     title: "Data Structures",
     default_year_level: YearLevel.SECOND_YEAR,
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
     program_id: "prog-1",
   },
   {
@@ -78,7 +78,7 @@ const mockCourses = [
     code: "ED201",
     title: "Education Foundations",
     default_year_level: YearLevel.FIRST_YEAR,
-    course_scope: CourseScope.PROGRAM_SPECIFIC,
+    course_scope: CourseScope.PROFESSIONAL,
     program_id: "prog-2",
   },
 ];
@@ -636,7 +636,7 @@ describe("CourseAssignmentFormDialog all-program mode", () => {
     expect(screen.getByRole("option", { name: /ge101 — general education/i })).toBeInTheDocument();
   });
 
-  it("locks program for Program-specific courses in all-program mode", async () => {
+  it("locks program for Professional courses in all-program mode", async () => {
     render(<Wrapper defaultCourseId="course-1" />);
 
     fireEvent.click(screen.getByRole("button", { name: /next/i }));

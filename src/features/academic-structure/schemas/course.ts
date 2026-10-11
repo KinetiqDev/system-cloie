@@ -37,7 +37,7 @@ function validateCourseRelationships(
   if (!data.program_id) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Program-specific courses require a program.",
+      message: "Professional courses require a program.",
       path: ["program_id"],
     });
   }

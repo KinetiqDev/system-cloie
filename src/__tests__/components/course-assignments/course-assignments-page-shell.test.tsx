@@ -59,7 +59,7 @@ const assignment: CourseAssignmentItem = {
   facultyEmail: "faculty@example.com",
   courseCode: "CS101",
   courseTitle: "Introduction to Computing",
-  courseScope: CourseScope.PROGRAM_SPECIFIC,
+  courseScope: CourseScope.PROFESSIONAL,
   programCode: "BSCS",
   programName: "Computer Science",
   termLabel: "2025-2026 — 1st Semester — 1st Term",

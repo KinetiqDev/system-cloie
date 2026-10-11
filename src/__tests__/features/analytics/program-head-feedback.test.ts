@@ -250,7 +250,7 @@ describe("getProgramHeadFeedback", () => {
     expect(
       prismaMock.qualitativeResponseItem.findMany.mock.calls[0][0].where.response.OR[1].assignment
         .course_bound.course_assignment.course.course_scope
-    ).toBe("PROGRAM_SPECIFIC");
+    ).toBe("PROFESSIONAL");
   });
 
   it("excludes empty qualitative items from tokens, counts, and links", async () => {

@@ -144,7 +144,7 @@ async function resolveFacultyCourseContext(input: {
   const isGeneralEducation = course.course_scope === CourseScope.GENERAL_EDUCATION;
 
   // General Education Courses have no owning Program; their contexts match on
-  // Course alone so faculty can publish shared-Course evaluations. Program-specific
+  // Course alone so faculty can publish shared-Course evaluations. Professional
   // Courses must match the bound Program and major exactly.
   if (!isGeneralEducation && !input.boundProgramId) {
     return null;
@@ -268,7 +268,7 @@ async function resolveCourseBoundGoCatalog(
   if (course.course_scope === CourseScope.GENERAL_EDUCATION) {
     return {
       success: false,
-      error: "Program Outcomes can only be assigned to questions in program-specific courses.",
+      error: "Program Outcomes can only be assigned to questions in Professional Courses.",
     };
   }
 
@@ -836,7 +836,7 @@ async function resolvePublicationCourseContext(
   }
 
   // General Education Courses have no owning Program; their contexts match on
-  // Course alone. Program-specific Courses must resolve through the bound
+  // Course alone. Professional Courses must resolve through the bound
   // Program and major.
   if (
     template.bound_course.course_scope !== CourseScope.GENERAL_EDUCATION &&

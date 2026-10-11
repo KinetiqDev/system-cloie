@@ -100,18 +100,18 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
       )
     ).toBe("incomplete-mapping");
   });
-  it("classifies a Program-specific Course incomplete when one active CILO lacks a PO manifestation", () => {
+  it("classifies a Professional Course incomplete when one active CILO lacks a PO manifestation", () => {
     const state = classify(
       [mappedCilo("po-1", "LEARNING"), unmappedCilo()],
-      "PROGRAM_SPECIFIC",
+      "PROFESSIONAL",
       PROGRAM,
       ["po-1"]
     );
     expect(state).toBe("incomplete-mapping");
   });
 
-  it("classifies a Program-specific Course incomplete when a CILO classifies only one of two active POs", () => {
-    const state = classify([mappedCilo("po-1", "LEARNING")], "PROGRAM_SPECIFIC", PROGRAM, [
+  it("classifies a Professional Course incomplete when a CILO classifies only one of two active POs", () => {
+    const state = classify([mappedCilo("po-1", "LEARNING")], "PROFESSIONAL", PROGRAM, [
       "po-1",
       "po-2",
     ]);
@@ -120,16 +120,16 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
 
   it("flips a fully classified Course back to incomplete when a new PO is added", () => {
     const cilos = [mappedCilo("po-1", "LEARNING")];
-    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["po-1"])).toBe("ready");
+    expect(classify(cilos, "PROFESSIONAL", PROGRAM, ["po-1"])).toBe("ready");
     // A newly created PO joins the active catalog, so the same rows no longer
     // cover every required pair until Faculty classify the new PO.
-    expect(classify(cilos, "PROGRAM_SPECIFIC", PROGRAM, ["po-1", "po-2"])).toBe(
+    expect(classify(cilos, "PROFESSIONAL", PROGRAM, ["po-1", "po-2"])).toBe(
       "incomplete-mapping"
     );
   });
 
   it("classifies incomplete, not ready, when the Program has zero active POs alongside active CILOs", () => {
-    const state = classify([unmappedCilo()], "PROGRAM_SPECIFIC", PROGRAM, []);
+    const state = classify([unmappedCilo()], "PROFESSIONAL", PROGRAM, []);
     expect(state).toBe("incomplete-mapping");
   });
 
@@ -140,14 +140,14 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
       ],
       cilo_institutional_outcome_mappings: [],
     };
-    const state = classify([cilo], "PROGRAM_SPECIFIC", PROGRAM, ["po-1"]);
+    const state = classify([cilo], "PROFESSIONAL", PROGRAM, ["po-1"]);
     expect(state).toBe("incomplete-mapping");
   });
 
   it("does not count a mapping to a PO outside the owning Program", () => {
     const state = classify(
       [mappedCilo("po-1", "LEARNING", "program-2")],
-      "PROGRAM_SPECIFIC",
+      "PROFESSIONAL",
       PROGRAM,
       ["po-1"]
     );
@@ -157,7 +157,7 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
   it("does not count a mapping to an archived PO", () => {
     const state = classify(
       [mappedCilo("po-1", "LEARNING", PROGRAM, false)],
-      "PROGRAM_SPECIFIC",
+      "PROFESSIONAL",
       PROGRAM,
       ["po-1"]
     );
@@ -167,7 +167,7 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
   it("classifies ready when every active CILO has a manifestation for every active PO", () => {
     const state = classify(
       [mappedCilo("po-1", "LEARNING"), mappedCilo("po-1", "PRACTICE")],
-      "PROGRAM_SPECIFIC",
+      "PROFESSIONAL",
       PROGRAM,
       ["po-1"]
     );
@@ -188,15 +188,15 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
           cilo_institutional_outcome_mappings: [],
         },
       ],
-      "PROGRAM_SPECIFIC",
+      "PROFESSIONAL",
       PROGRAM,
       ["po-1"]
     );
     expect(state).toBe("ready");
   });
 
-  it("keeps missing-cilos for a Program-specific Course without active CILOs", () => {
-    const state = classify([], "PROGRAM_SPECIFIC", PROGRAM, []);
+  it("keeps missing-cilos for a Professional Course without active CILOs", () => {
+    const state = classify([], "PROFESSIONAL", PROGRAM, []);
     expect(state).toBe("missing-cilos");
   });
 
