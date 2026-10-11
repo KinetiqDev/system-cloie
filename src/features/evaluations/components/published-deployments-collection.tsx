@@ -208,6 +208,7 @@ export function PublishedDeploymentsCollection({
             label="Filters"
             onClearAll={onClearFilters ?? (() => {})}
             summary="Show results"
+            triggerClassName="w-auto shrink-0"
           />
         ) : (
           isMobile && (

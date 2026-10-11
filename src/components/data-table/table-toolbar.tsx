@@ -14,6 +14,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useMediaQuery } from "@/components/ui/use-media-query";
 import { Input } from "@/components/ui/input";
 import { FacetField } from "./facet-field";
 import { facetChipLabel, facetIsApplied, type FacetDef } from "./types";
@@ -116,15 +124,21 @@ export function TableToolbar({
 }
 
 /**
- * The mobile counterpart of the column funnels: once a table collapses to
- * cards there is no heading row left to hang filters on, so the same facet
- * definitions open in one sheet instead. Facets apply as they change, exactly
- * as the funnels do, and the sheet's action simply closes it.
+ * Responsive counterpart of the column funnels: once a table collapses to
+ * cards (or on surfaces without table column headings), this control provides
+ * access to the same facet definitions.
+ *
+ * - On desktop (>= 768px): renders a focused Popover anchored directly below
+ *   the filter button, providing swift in-context refinement without obscuring
+ *   the entire workspace with a mobile overlay drawer.
+ * - On mobile (< 768px): renders a bottom Drawer with safe-area spacing and
+ *   touch-ergonomic controls.
  */
-export function MobileFilterSheet({
+export function TableFilterSheet({
   facets,
   activeCount,
   label = "Filters",
+  heading = "Filter this list",
   onClearAll,
   summary,
   triggerClassName,
@@ -132,15 +146,115 @@ export function MobileFilterSheet({
   facets: FacetDef[];
   activeCount: number;
   label?: string;
+  heading?: string;
   onClearAll: () => void;
   summary: string;
   /**
-   * Overrides the trigger's width. It spans its container by default, which
-   * suits a full-width filter row; a caller placing it beside other content
-   * asks for an inline-width trigger instead.
+   * Overrides the trigger's width. Defaults to full width on mobile and
+   * auto width on desktop.
    */
   triggerClassName?: string;
 }) {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  if (isDesktop) {
+    return (
+      <Popover>
+        <PopoverTrigger
+          openOnHover={false}
+          render={
+            <Button
+              variant="outline"
+              className={cn("w-full sm:w-auto justify-between gap-2.5", triggerClassName)}
+            />
+          }
+        >
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal className="size-4 shrink-0" aria-hidden="true" />
+            <span className="sr-only">
+              {label}
+              {activeCount > 0 ? `, ${activeCount} active` : ""}
+            </span>
+            <span aria-hidden="true">{label}</span>
+          </span>
+          <span
+            className={cn(
+              "text-xs transition-colors",
+              activeCount > 0 ? "text-primary font-medium" : "text-muted-foreground"
+            )}
+            aria-hidden="true"
+          >
+            {activeCount > 0 ? `${activeCount} active` : "Optional"}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side="bottom"
+          sideOffset={6}
+          className="w-80 sm:w-88 max-w-[calc(100vw-2rem)] p-0 gap-0 shadow-lg rounded-xl border border-border bg-popover text-popover-foreground overflow-hidden"
+        >
+          <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 bg-surface-primary">
+            <div className="flex items-center gap-2">
+              <PopoverTitle className="text-foreground text-sm font-semibold">
+                {heading}
+              </PopoverTitle>
+              {activeCount > 0 && (
+                <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums">
+                  {activeCount} active
+                </span>
+              )}
+            </div>
+            <PopoverClose
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Close filters"
+                  className="text-muted-foreground hover:text-foreground -mr-1 rounded-md"
+                />
+              }
+            >
+              <X className="size-3.5" aria-hidden="true" />
+            </PopoverClose>
+          </div>
+
+          <div className="flex max-h-[min(26rem,calc(100dvh-12rem))] min-w-0 flex-col gap-4 overflow-y-auto px-4 py-3">
+            {facets.map((facet) => (
+              <div key={facet.id} className="flex min-w-0 flex-col gap-1.5">
+                <p className="text-foreground text-xs font-semibold tracking-wide uppercase">
+                  {facet.label}
+                </p>
+                {facet.disabled ? (
+                  <p className="text-muted-foreground text-xs leading-normal">
+                    {facet.disabledReason ?? "Not available in this view."}
+                  </p>
+                ) : (
+                  <FacetField facet={facet} idPrefix={`popover-${facet.id}`} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-muted/40 flex items-center justify-between gap-2 border-t border-border/80 px-4 py-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClearAll}
+              disabled={activeCount === 0}
+              className="h-8 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              Reset filters
+            </Button>
+            <PopoverClose render={<Button size="sm" className="h-8 text-xs font-medium" />}>
+              {summary}
+            </PopoverClose>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <Drawer showSwipeHandle>
       <DrawerTrigger
@@ -152,7 +266,7 @@ export function MobileFilterSheet({
         }
       >
         <span className="flex items-center gap-2">
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
+          <SlidersHorizontal className="size-4 shrink-0" aria-hidden="true" />
           {/* Only the count is live, so the trigger announces state, not a moving label. */}
           <span className="sr-only">
             {label}
@@ -160,13 +274,19 @@ export function MobileFilterSheet({
           </span>
           <span aria-hidden="true">{label}</span>
         </span>
-        <span className="text-muted-foreground" aria-hidden="true">
+        <span
+          className={cn(
+            "text-xs transition-colors",
+            activeCount > 0 ? "text-primary font-medium" : "text-muted-foreground"
+          )}
+          aria-hidden="true"
+        >
           {activeCount > 0 ? `${activeCount} active` : "Optional"}
         </span>
       </DrawerTrigger>
       <DrawerContent className="max-h-[88dvh]">
         <DrawerHeader className="text-left">
-          <DrawerTitle>Filter this list</DrawerTitle>
+          <DrawerTitle>{heading}</DrawerTitle>
         </DrawerHeader>
         <div className="grid min-h-0 gap-3 overflow-y-auto px-4 py-2">
           {facets.map((facet) => (
@@ -184,7 +304,7 @@ export function MobileFilterSheet({
         </div>
         <DrawerFooter className="pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <DrawerClose render={<Button />}>{summary}</DrawerClose>
-          <Button variant="outline" onClick={onClearAll}>
+          <Button variant="outline" onClick={onClearAll} disabled={activeCount === 0}>
             Reset filters
           </Button>
         </DrawerFooter>
@@ -192,3 +312,5 @@ export function MobileFilterSheet({
     </Drawer>
   );
 }
+
+export const MobileFilterSheet = TableFilterSheet;
