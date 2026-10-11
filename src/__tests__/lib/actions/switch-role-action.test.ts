@@ -90,7 +90,7 @@ describe("switchActiveRole", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
   });
 
-  it("blocks a pending Faculty request on switch instead of recomputing COMPLETE", async () => {
+  it("routes a legacy pending Faculty request to onboarding on switch", async () => {
     resolveAuthSessionMock.mockResolvedValue({
       userId: "user-1",
       email: "person@acd.edu.ph",
@@ -113,7 +113,7 @@ describe("switchActiveRole", () => {
       requestedPath: null,
       intent: null,
       activeRole: ROLES.FACULTY,
-      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
   });
 

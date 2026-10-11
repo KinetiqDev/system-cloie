@@ -291,6 +291,17 @@ function CourseRosterDiscoveryBody({
       navigate({ ...filters, [key]: value }),
     [filters, navigate]
   );
+  // The Course and Class columns each carry two facets off one URL state, so
+  // their popover clears compose into the same single navigation as the
+  // toolbar's clear-all instead of one push per facet from a stale snapshot.
+  const clearCourseFacets = useCallback(
+    () => navigate({ ...filters, courseId: null, courseScope: null }),
+    [filters, navigate]
+  );
+  const clearClassFacets = useCallback(
+    () => navigate({ ...filters, yearLevel: null, section: null }),
+    [filters, navigate]
+  );
 
   if (!data) {
     return (
@@ -418,7 +429,11 @@ function CourseRosterDiscoveryBody({
         ) : view === "card" ? (
           <CourseRosterCardGrid assignments={data.items} />
         ) : (
-          <CourseRosterList assignments={data.items} facets={facets} />
+          <CourseRosterList
+            assignments={data.items}
+            facets={facets}
+            onClearColumn={{ course: clearCourseFacets, class: clearClassFacets }}
+          />
         )}
       </section>
 
@@ -436,9 +451,11 @@ function CourseRosterDiscoveryBody({
 function CourseRosterList({
   assignments,
   facets,
+  onClearColumn,
 }: {
   assignments: CourseRosterAssignmentSummary[];
   facets: Record<CourseRosterFacetColumn, FacetDef[]>;
+  onClearColumn?: Partial<Record<CourseRosterFacetColumn, () => void>>;
 }) {
   return (
     <Table
@@ -452,9 +469,9 @@ function CourseRosterList({
       </caption>
       <TableHeader>
         <TableRow>
-          <FilterableHead label="Course" facets={facets.course} />
+          <FilterableHead label="Course" facets={facets.course} onClear={onClearColumn?.course} />
           <FilterableHead label="Program" facets={facets.program} />
-          <FilterableHead label="Class" facets={facets.class} />
+          <FilterableHead label="Class" facets={facets.class} onClear={onClearColumn?.class} />
           <FilterableHead label="Academic Period" facets={facets.period} />
           <TableHead>Roster</TableHead>
           <TableHead className="text-right">

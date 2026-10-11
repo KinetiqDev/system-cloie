@@ -168,6 +168,9 @@ export function SecretaryUsersList({
     );
   };
 
+  const handleClearPlacement = () =>
+    navigateWithQuery({ yearLevel: undefined, section: undefined, page: 1 });
+
   const handleClearFilters = () => {
     setSearchDraft("");
     navigateWithQuery({
@@ -255,6 +258,7 @@ export function SecretaryUsersList({
         onClearSelection={selection.clearSelection}
         onBulkStatus={handleBulkStatus}
         facets={columnFacets}
+        onClearColumn={{ placement: handleClearPlacement }}
       />
 
       {placementNote ? (

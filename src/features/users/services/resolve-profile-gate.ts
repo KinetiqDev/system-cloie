@@ -101,9 +101,10 @@ function resolveFacultyGate(input: ProfileGateInput): ProfileGate {
   if (input.facultyApprovalStatus === "REJECTED") {
     return { status: "FACULTY_REQUEST_REJECTED" };
   }
-  if (input.facultyApprovalStatus === "PENDING") {
-    return { status: "FACULTY_APPROVAL_PENDING" };
-  }
+  // Secretary review of self-submitted Faculty requests is retired: completing
+  // the faculty onboarding form provisions the affiliation directly and marks
+  // any legacy PENDING row APPROVED, so a request without an affiliation is an
+  // unfinished onboarding, never a pending review.
   if (!input.hasFacultyAffiliation) {
     return { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" };
   }

@@ -10,6 +10,7 @@ import {
   buildResponseFacets,
   ResponsesFilters,
   withResponseFacet,
+  withoutResponseFacets,
   type ResponseFacetValues,
 } from "./responses-filters";
 import { useResponsesNavigation } from "./responses-workspace";
@@ -89,6 +90,19 @@ export function GeneralEducationResponsesFilters({ state, options }: Props) {
  */
 export function GeneralEducationResponsesTableHead({ state, options }: Props) {
   const facets = useGeneralEducationFacets(state, options).byColumn;
+  const { navigate } = useResponsesNavigation();
+  // Class carries year level + section + class program, so its popover clear
+  // drops all three keys in one navigation.
+  const clearClass = () =>
+    navigate(
+      buildGeneralEducationResponsesUrl(
+        withoutResponseFacets(state, [
+          "yearLevel",
+          "section",
+          "programId",
+        ]) as Partial<GeneralEducationResponsesFilterState>
+      )
+    );
 
   return (
     <>
@@ -97,7 +111,12 @@ export function GeneralEducationResponsesTableHead({ state, options }: Props) {
           room for each label AND its funnel while reallocating excess
           whitespace to the Evaluation title column. */}
       <FilterableHead label="Evaluation" facets={facets.evaluation} className="w-[28%]" />
-      <FilterableHead label="Class" facets={facets.class} className="w-[15%]" />
+      <FilterableHead
+        label="Class"
+        facets={facets.class}
+        className="w-[15%]"
+        onClear={clearClass}
+      />
       <FilterableHead label="Faculty" facets={facets.faculty} className="w-[13%]" />
       <FilterableHead label="Period" facets={facets.period} className="w-[12%]" />
       <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />

@@ -36,6 +36,7 @@ const {
   transactionMock,
   facultyAffiliationUpdateManyMock,
   facultyAffiliationUpsertMock,
+  facultyAffiliationFindFirstMock,
   studentProfileUpsertMock,
   studentEnrollmentUpsertMock,
   activeTermFindFirstMock,
@@ -51,6 +52,7 @@ const {
   transactionMock: vi.fn(),
   facultyAffiliationUpdateManyMock: vi.fn(),
   facultyAffiliationUpsertMock: vi.fn(),
+  facultyAffiliationFindFirstMock: vi.fn(),
   studentProfileUpsertMock: vi.fn(),
   studentEnrollmentUpsertMock: vi.fn(),
   activeTermFindFirstMock: vi.fn(),
@@ -59,7 +61,6 @@ const {
   readDevAuthCookieMock: vi.fn(),
   readCiTestAuthCookieMock: vi.fn(),
 }));
-
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
     get: vi.fn(() => undefined),
@@ -105,7 +106,7 @@ vi.mock("@/lib/db/prisma", () => ({
     program: {
       findUnique: vi.fn(async () => ({ id: "program-1", is_active: true, majors: [] })),
     },
-    facultyProgramAffiliation: { findFirst: vi.fn(async () => ({ id: "affiliation-1" })) },
+    facultyProgramAffiliation: { findFirst: facultyAffiliationFindFirstMock },
     userRole: { create: userRoleCreateMock },
     $transaction: transactionMock,
   },
@@ -186,7 +187,7 @@ describe("internal role authorization boundary (issue #649)", () => {
     readCiTestAuthCookieMock.mockResolvedValue(null);
     // The acting officer deliberately selected this role context.
     readActiveRoleCookieMock.mockResolvedValue("SECRETARY");
-    activeTermFindFirstMock.mockResolvedValue({ id: "term-active" });
+    facultyAffiliationFindFirstMock.mockResolvedValue({ id: "affiliation-1" });
     userRoleCreateMock.mockResolvedValue({ id: "role-1" });
     transactionMock.mockImplementation(async (callback: (tx: unknown) => unknown) =>
       callback({
@@ -254,17 +255,29 @@ describe("internal role authorization boundary (issue #649)", () => {
       expect(session?.activeRole).toBeNull();
     });
 
-    it.each(["PENDING", "REJECTED"] as const)(
-      "withholds the active role while a Faculty request is %s",
-      async (facultyApprovalStatus) => {
-        readActiveRoleCookieMock.mockResolvedValue("FACULTY");
-        arrangeSession({ role: SystemRole.FACULTY, facultyApprovalStatus });
+    it("withholds the active role while a Faculty request is REJECTED", async () => {
+      readActiveRoleCookieMock.mockResolvedValue("FACULTY");
+      arrangeSession({ role: SystemRole.FACULTY, facultyApprovalStatus: "REJECTED" });
 
-        const session = await resolveAuthSession();
+      const session = await resolveAuthSession();
 
-        expect(session?.activeRole).toBeNull();
-      }
-    );
+      expect(session?.profileGate).toEqual({ status: "FACULTY_REQUEST_REJECTED" });
+      expect(session?.activeRole).toBeNull();
+    });
+
+    it("routes a legacy PENDING Faculty request to self-service onboarding", async () => {
+      readActiveRoleCookieMock.mockResolvedValue("FACULTY");
+      arrangeSession({ role: SystemRole.FACULTY, facultyApprovalStatus: "PENDING" });
+      facultyAffiliationFindFirstMock.mockResolvedValue(null);
+
+      const session = await resolveAuthSession();
+
+      expect(session?.profileGate).toEqual({
+        status: "FACULTY_ONBOARDING_REQUIRED",
+        intent: "faculty",
+      });
+      expect(session?.activeRole).toBe("FACULTY");
+    });
 
     it("withholds the active role for a Student awaiting institution placement", async () => {
       // Placement is Secretary-recorded, so a provisioned Student with no

@@ -221,12 +221,15 @@ export function TemplateCollection({
   );
   const totalItems = filledSections.reduce((sum, section) => sum + section.items.length, 0);
 
-  // Each section keeps its own facet state, so the chips carry the section's
-  // name. Clearing all of them restores the page's opening state.
+  // Each section keeps its own facet state, so the chips carry a real updater
+  // bound to their own section: the toolbar's X clears that section's filter
+  // instead of calling a no-op. Clearing all of them restores the page's
+  // opening state.
   const appliedChips: FacetDef[] = filledSections.flatMap((section) =>
     buildTemplateFacets(
       filtersFor(section.filterKey),
-      () => undefined,
+      (key, value) =>
+        setFiltersFor(section.filterKey, { ...filtersFor(section.filterKey), [key]: value }),
       section.items,
       section.filterKey
     ).all.filter(facetIsApplied)

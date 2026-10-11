@@ -540,10 +540,11 @@ export async function GET(request: Request) {
           studentProfileId: session.studentProfileId,
           alumniProfileId: session.alumniProfileId,
           industryPartnerProfileId: session.industryPartnerProfileId,
-          alumniVerificationStatus: session.alumniVerificationStatus,
           // The exchange above proved Google before this point, and the
-          // stored Faculty review state travels with the account: a pending
-          // or rejected claim must resolve to its status, never COMPLETE.
+          // stored Faculty review state travels with the account: a rejected
+          // claim must resolve to its status, never COMPLETE, while a legacy
+          // PENDING row without an affiliation resolves to self-service
+          // onboarding.
           authMethod: exchangeMethod,
           facultyApprovalStatus: session.facultyApprovalStatus,
         }).profileGate

@@ -5,7 +5,7 @@ import { Funnel } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { FacetField } from "./facet-field";
 import { facetIsApplied, facetValueLabel, type FacetDef } from "./types";
 
@@ -14,23 +14,33 @@ import { facetIsApplied, facetValueLabel, type FacetDef } from "./types";
  * home for columnless facets render one implementation rather than two that
  * drift. Each facet is labelled, an unavailable one explains itself, and the
  * whole set clears at once.
+ *
+ * `onClear` composes the clear into one consumer-owned write. A column
+ * carrying several facets must pass it: each facet's `onChange` closes over
+ * the committed state, so clearing facet-by-facet issues one navigation per
+ * facet from the same snapshot and all but the last are silently dropped.
+ * Single-facet columns may omit it and fall back to clearing that one facet.
  */
 export function FacetPopoverBody({
   heading,
   facets,
+  onClear,
 }: {
   /** Names the popover, e.g. the column it narrows. */
   heading: string;
   facets: FacetDef[];
+  /** Clears every facet in one write; defaults to clearing each facet in turn. */
+  onClear?: () => void;
 }) {
   const instanceId = useId();
   const active = facets.filter(facetIsApplied);
+  const clear = onClear ?? (() => facets.forEach((facet) => facet.onChange(null)));
 
   return (
     <PopoverContent align="start" className="w-80 gap-1 p-1.5">
-      <p className="text-muted-foreground px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide uppercase">
+      <PopoverTitle className="text-muted-foreground px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide uppercase">
         {heading}
-      </p>
+      </PopoverTitle>
       {facets.map((facet, index) => (
         <div key={facet.id} className="flex min-w-0 flex-col">
           {facets.length > 1 && (
@@ -47,12 +57,7 @@ export function FacetPopoverBody({
       ))}
       {active.length > 0 && (
         <div className="border-border mt-1 flex justify-end border-t px-1 pt-1.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => facets.forEach((facet) => facet.onChange(null))}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={clear}>
             Clear this filter
           </Button>
         </div>
@@ -60,7 +65,6 @@ export function FacetPopoverBody({
     </PopoverContent>
   );
 }
-
 /**
  * The filter a column heading carries: a funnel that opens that column's own
  * choices in place, so narrowing never leaves the table it narrows.
@@ -70,11 +74,14 @@ export function ColumnFilterTrigger({
   facets,
   className,
   fullCell,
+  onClear,
 }: {
   label: string;
   facets: FacetDef[];
   className?: string;
   fullCell?: boolean;
+  /** Clears every facet in one consumer-owned write; see FacetPopoverBody. */
+  onClear?: () => void;
 }) {
   const active = facets.filter(facetIsApplied);
   const unavailable = facets.every((facet) => facet.disabled === true);
@@ -138,7 +145,7 @@ export function ColumnFilterTrigger({
           )
         }
       />
-      <FacetPopoverBody heading={`Filter ${label}`} facets={facets} />
+      <FacetPopoverBody heading={`Filter ${label}`} facets={facets} onClear={onClear} />
     </Popover>
   );
 }

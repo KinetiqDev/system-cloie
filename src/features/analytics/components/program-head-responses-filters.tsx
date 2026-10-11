@@ -1,5 +1,3 @@
-"use client";
-
 import { FilterableHead } from "@/components/data-table/filterable-head";
 import type { ResponseFilterOptions } from "@/features/analytics/services/list-program-head-response-deployments";
 import {
@@ -10,6 +8,7 @@ import {
   buildResponseFacets,
   ResponsesFilters,
   withResponseFacet,
+  withoutResponseFacets,
   type ResponseFacetValues,
   type ResponseFacetView,
   type ResponseFacets,
@@ -102,7 +101,31 @@ export function ProgramHeadResponsesTableHead({
   isCourse,
 }: Props & { isCourse: boolean }) {
   const facets = useProgramHeadFacets(programId, state, options).byColumn;
-
+  const { navigate } = useResponsesNavigation();
+  // The Class column carries year level + section and Target carries major +
+  // year level, so their popover clears drop both keys in one navigation.
+  const clearClass = () =>
+    navigate(
+      buildProgramHeadResponsesUrl(programId, {
+        ...(withoutResponseFacets(state, [
+          "yearLevel",
+          "section",
+        ]) as ProgramHeadResponsesFilterState),
+        tab: state.tab,
+        page: 1,
+      })
+    );
+  const clearTarget = () =>
+    navigate(
+      buildProgramHeadResponsesUrl(programId, {
+        ...(withoutResponseFacets(state, [
+          "majorId",
+          "yearLevel",
+        ]) as ProgramHeadResponsesFilterState),
+        tab: state.tab,
+        page: 1,
+      })
+    );
   return (
     <>
       {/* These widths plus the trailing Mean column (10%) are a percentage
@@ -121,11 +144,13 @@ export function ProgramHeadResponsesTableHead({
         label={isCourse ? "Class" : "Stakeholder"}
         facets={facets.class ?? facets.stakeholder}
         className={isCourse ? "w-[15%]" : "w-[19%]"}
+        onClear={isCourse ? clearClass : undefined}
       />
       <FilterableHead
         label={isCourse ? "Faculty" : "Target"}
         facets={facets.faculty ?? facets.target}
         className={isCourse ? "w-[13%]" : "w-[11%]"}
+        onClear={isCourse ? undefined : clearTarget}
       />
       <FilterableHead label="Period" facets={facets.period} className="w-[13%]" />
       <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />

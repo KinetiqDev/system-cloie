@@ -183,7 +183,6 @@ describe("OnboardingPage", () => {
     ["INACTIVE", "/status/inactive"],
     ["REJECTED_EXTERNAL_ACCOUNT", "/status/rejected"],
     ["AUTH_METHOD_MISMATCH", "/status/method-mismatch"],
-    ["FACULTY_APPROVAL_PENDING", "/status/faculty-pending"],
     ["COMPLETE", "/alumni/dashboard"],
   ])("renders no form for the %s verdict", async (status, destination) => {
     resolveAuthSessionMock.mockResolvedValue({

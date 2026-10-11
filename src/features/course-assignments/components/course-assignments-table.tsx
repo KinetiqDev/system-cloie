@@ -109,6 +109,8 @@ interface CourseAssignmentsTableProps {
   availablePrograms?: Program[];
   /** One filter set per filterable column heading, keyed by the column. */
   facets?: Record<string, FacetDef[]>;
+  /** Composed single-write clear per column; omitted columns clear facet-by-facet. */
+  onClearColumn?: Record<string, () => void>;
   onPageChange: (page: number) => void;
   onAssignmentUpdated?: () => void;
   onAssignFaculty?: () => void;
@@ -525,6 +527,7 @@ export function CourseAssignmentsTable({
   availableCourses = [],
   availablePrograms = [],
   facets,
+  onClearColumn,
   onPageChange,
   onAssignmentUpdated,
   onAssignFaculty,
@@ -986,7 +989,11 @@ export function CourseAssignmentsTable({
                 {mode !== "program-head" && (
                   <FilterableHead label="Program" facets={facets?.program} />
                 )}
-                <FilterableHead label="Class" facets={facets?.class} />
+                <FilterableHead
+                  label="Class"
+                  facets={facets?.class}
+                  onClear={onClearColumn?.class}
+                />
                 <FilterableHead label="Term" facets={facets?.term} />
                 <FilterableHead label="Scope" facets={facets?.scope} />
                 <FilterableHead label="Status" facets={facets?.status} />

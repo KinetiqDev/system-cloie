@@ -16,11 +16,14 @@ export function FilterableHead({
   facets,
   sort,
   className,
+  onClear,
 }: {
   label: string;
   facets?: FacetDef[];
   sort?: { isActive: boolean; direction: "asc" | "desc"; isPending: boolean; onSort: () => void };
   className?: string;
+  /** Clears every facet in one consumer-owned write; see FacetPopoverBody. */
+  onClear?: () => void;
 }) {
   const hasFilter = facets !== undefined && facets.length > 0;
 
@@ -39,7 +42,7 @@ export function FilterableHead({
       className={className}
     >
       {hasFilter && !sort ? (
-        <ColumnFilterTrigger label={label} facets={facets} fullCell />
+        <ColumnFilterTrigger label={label} facets={facets} fullCell onClear={onClear} />
       ) : (
         <span className="flex min-w-0 items-center gap-0.5 whitespace-normal">
           {sort ? (
@@ -65,7 +68,12 @@ export function FilterableHead({
             <span className="min-w-0 pl-1 leading-tight">{label}</span>
           )}
           {hasFilter && (
-            <ColumnFilterTrigger label={label} facets={facets} className="ml-auto self-center" />
+            <ColumnFilterTrigger
+              label={label}
+              facets={facets}
+              className="ml-auto self-center"
+              onClear={onClear}
+            />
           )}
         </span>
       )}

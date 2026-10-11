@@ -7,7 +7,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { FacetField } from "@/components/data-table/facet-field";
 import { facetIsApplied, facetValueLabel, type FacetDef } from "@/components/data-table/types";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { STUDENT_SECTION_OPTIONS, YEAR_LEVEL_OPTIONS } from "@/lib/constants/academic";
 import { formatRole } from "@/features/users/lib/role-visuals";
 import type { SecretaryUsersActivePeriod } from "../../services/list-secretary-users-summary";
@@ -276,9 +276,9 @@ export function UsersToolbarFacetMenu({
         ) : null}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 gap-1 p-1.5">
-        <p className="text-muted-foreground px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide uppercase">
+        <PopoverTitle className="text-muted-foreground px-2 pt-1.5 pb-1 text-xs font-semibold tracking-wide uppercase">
           Account filters
-        </p>
+        </PopoverTitle>
         {facets.map((facet, index) => (
           <div key={facet.id} className="flex min-w-0 flex-col">
             <p className="text-foreground px-2 pt-2 pb-1 text-xs font-semibold">{facet.label}</p>

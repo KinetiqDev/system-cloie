@@ -95,9 +95,10 @@ export async function switchActiveRole(role: string): Promise<void> {
           alumniVerificationStatus: session.alumniVerificationStatus,
           industryPartnerVerificationStatus: session.industryPartnerVerificationStatus,
           // The boundary already judged the method; carry its verdict and the
-          // stored Faculty review state so a pending, rejected, or mismatched
-          // session cannot recompute COMPLETE on switch. Fresh FACULTY
-          // readiness still wins through the spread below.
+          // stored Faculty review state so a rejected or mismatched session
+          // cannot recompute COMPLETE on switch, while a legacy PENDING row
+          // without an affiliation recomputes to self-service onboarding.
+          // Fresh FACULTY readiness still wins through the spread below.
           authMethod: session.authMethod,
           facultyApprovalStatus: session.facultyApprovalStatus,
           ...readiness,

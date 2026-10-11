@@ -289,7 +289,19 @@ export function withResponseFacet<State extends object>(
   else next[key] = value;
   return next as State & { page: number };
 }
-
+/**
+ * The next state after one column's popover clear: start from the committed
+ * state and drop every key the column owns, so a column carrying several
+ * facets navigates once instead of once per facet from the same stale
+ */
+export function withoutResponseFacets<State extends object>(
+  state: State,
+  keys: readonly string[]
+): State & { page: number } {
+  const next = { ...state, page: 1 } as Record<string, unknown>;
+  for (const key of keys) delete next[key];
+  return next as State & { page: number };
+}
 /** Debounce window for the toolbar's cross-column search. */
 const SEARCH_DEBOUNCE_MS = 300;
 

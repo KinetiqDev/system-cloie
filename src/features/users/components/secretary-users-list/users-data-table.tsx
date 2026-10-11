@@ -64,8 +64,9 @@ interface UsersDataTableProps {
   onBulkStatus: (isActive: boolean) => void;
   /** One entry per filterable column, keyed by column. */
   facets: UsersTableFacets;
+  /** Composed single-write clear per column; omitted columns clear facet-by-facet. */
+  onClearColumn?: Partial<Record<keyof UsersTableFacets, () => void>>;
 }
-
 export type UsersTableFacets = {
   role: FacetDef[];
   program: FacetDef[];
@@ -237,6 +238,7 @@ export function UsersDataTable({
   onClearSelection,
   onBulkStatus,
   facets,
+  onClearColumn,
 }: UsersDataTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -330,7 +332,11 @@ export function UsersDataTable({
               <FilterableHead label="Role" facets={facets.role} />
               <FilterableHead label="Program" facets={facets.program} />
               <FilterableHead label="Major" facets={facets.major} />
-              <FilterableHead label="Year & Section" facets={facets.placement} />
+              <FilterableHead
+                label="Year & Section"
+                facets={facets.placement}
+                onClear={onClearColumn?.placement}
+              />
               <FilterableHead
                 label="Email"
                 sort={{

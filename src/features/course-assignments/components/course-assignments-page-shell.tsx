@@ -197,6 +197,15 @@ export function CourseAssignmentsPageShell({
     [filters, navigateWithState]
   );
 
+  // The Class column carries two facets off one state, so its popover clear
+  // composes both into the same single write + navigation as the toolbar's
+  // clear-all. Clearing facet-by-facet would push one route per key from the
+  // same stale snapshot and drop all but the last.
+  const clearClassFacets = useCallback(() => {
+    const next = { ...filters, yearLevel: null, section: null };
+    setFilters(next);
+    navigateWithState(next, 0, "push");
+  }, [filters, navigateWithState]);
   const { byColumn: facets, all: allFacets } = buildAssignmentFacets(filters, updateFilter, {
     availableCourses,
     availablePrograms,
@@ -308,6 +317,7 @@ export function CourseAssignmentsPageShell({
         availableCourses={availableCourses}
         availablePrograms={availablePrograms}
         facets={facets}
+        onClearColumn={{ class: clearClassFacets }}
         onPageChange={(nextPage) => navigateWithState(filters, nextPage)}
         onAssignmentUpdated={refreshAssignments}
         onAssignFaculty={canManageAssignments ? () => setCreateOpen(true) : undefined}

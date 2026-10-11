@@ -904,7 +904,7 @@ describe("auth callback route", () => {
     expect(response.headers.get("location")).toBe("https://cloie.test/alumni/dashboard");
   });
 
-  it("resolves a fresh Faculty claim to the pending gate, never COMPLETE", async () => {
+  it("resolves a fresh Faculty claim to onboarding, never COMPLETE", async () => {
     exchangeCodeForSessionMock.mockResolvedValue({
       error: null,
       data: {
@@ -928,8 +928,9 @@ describe("auth callback route", () => {
       user_id: "domain-user-1",
       role: SystemRole.FACULTY,
     });
-    // The stored review state travels with the account: a pending request
-    // must survive the claimed-role snapshot rebuild.
+    // The stored review state travels with the account: a legacy pending row
+    // without an affiliation resolves to self-service onboarding, never
+    // COMPLETE.
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: null,
       roles: ["STUDENT", "FACULTY"],
@@ -940,7 +941,7 @@ describe("auth callback route", () => {
       authMethod: "google",
       profileGate: { status: "ROLE_SELECTION_REQUIRED" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=faculty");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
@@ -949,10 +950,10 @@ describe("auth callback route", () => {
     expect(signOutMock).not.toHaveBeenCalled();
     expect(resolvePostLoginDestinationMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+        profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
       })
     );
-    expect(response.headers.get("location")).toContain("/status/faculty-pending");
+    expect(response.headers.get("location")).toContain("/onboarding?intent=faculty");
   });
 
   it("refuses a Student self-claim on an already-linked multi-role account", async () => {
@@ -1261,9 +1262,9 @@ describe("auth callback route", () => {
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
       roles: ["FACULTY"],
-      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=faculty");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
@@ -1275,7 +1276,7 @@ describe("auth callback route", () => {
         role: SystemRole.FACULTY,
       },
     });
-    expect(response.headers.get("location")).toBe("https://cloie.test/status/faculty-pending");
+    expect(response.headers.get("location")).toBe("https://cloie.test/onboarding?intent=faculty");
   });
 
   it("blocks roleless existing user claiming a pre-provisioned role", async () => {
@@ -1443,9 +1444,9 @@ describe("auth callback route", () => {
     resolveAuthSessionFromUserMock.mockResolvedValue({
       activeRole: "FACULTY",
       roles: ["FACULTY"],
-      profileGate: { status: "FACULTY_APPROVAL_PENDING" },
+      profileGate: { status: "FACULTY_ONBOARDING_REQUIRED", intent: "faculty" },
     });
-    resolvePostLoginDestinationMock.mockReturnValue("/status/faculty-pending");
+    resolvePostLoginDestinationMock.mockReturnValue("/onboarding?intent=faculty");
 
     const response = await GET(
       callbackRequest("https://cloie.test/api/auth/callback?code=abc&intent=faculty", "faculty")
@@ -1466,7 +1467,7 @@ describe("auth callback route", () => {
       },
     });
     expect(updateUserMock).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toBe("https://cloie.test/status/faculty-pending");
+    expect(response.headers.get("location")).toBe("https://cloie.test/onboarding?intent=faculty");
   });
 
   describe("Bootstrap Secretary Path", () => {

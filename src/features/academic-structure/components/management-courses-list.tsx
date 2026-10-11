@@ -143,7 +143,7 @@ export function ManagementCoursesList({
 
     if (statusFilter === "active") {
       result = result.filter((c) => c.isActive);
-    } else if (statusFilter === "inactive") {
+    } else if (statusFilter === "archived") {
       result = result.filter((c) => !c.isActive);
     }
 
@@ -481,6 +481,7 @@ export function ManagementCoursesList({
                   yearLevelFilter !== SCHEDULE_FILTER_ALL ||
                   semesterFilter !== SCHEDULE_FILTER_ALL ||
                   termFilter !== SCHEDULE_FILTER_ALL ||
+                  statusFilter !== SCHEDULE_FILTER_ALL ||
                   searchTerm
                     ? "Clear or change the filters to see more courses."
                     : "No courses found."}

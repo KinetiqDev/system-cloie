@@ -16,6 +16,8 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { FilterableHead } from "@/components/data-table/filterable-head";
+import { TableFilterSheet } from "@/components/data-table/table-toolbar";
+import { facetIsApplied, type FacetDef } from "@/components/data-table/types";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -98,6 +100,17 @@ export function IdentifiedRespondentsTable({
     setQuery("");
     setStatusFilter("ALL");
   }
+
+  const statusFacet: FacetDef = {
+    id: "respondent-status",
+    label: "Status",
+    value: statusFilter === "ALL" ? null : statusFilter,
+    onChange: (value) => setStatusFilter((value ?? "ALL") as StatusFilter),
+    allLabel: "All statuses",
+    options: STATUS_FILTERS.filter(
+      (filter): filter is Exclude<StatusFilter, "ALL"> => filter !== "ALL"
+    ).map((filter) => ({ id: filter, label: statusLabel(filter) })),
+  };
 
   if (roster.length === 0) {
     return (
@@ -183,18 +196,8 @@ export function IdentifiedRespondentsTable({
                     <TableHead>Context</TableHead>
                     <FilterableHead
                       label="Status"
-                      facets={[
-                        {
-                          id: "respondent-status",
-                          label: "Status",
-                          value: statusFilter === "ALL" ? null : statusFilter,
-                          onChange: (value) => setStatusFilter((value ?? "ALL") as StatusFilter),
-                          allLabel: "All statuses",
-                          options: STATUS_FILTERS.filter(
-                            (filter): filter is Exclude<StatusFilter, "ALL"> => filter !== "ALL"
-                          ).map((filter) => ({ id: filter, label: statusLabel(filter) })),
-                        },
-                      ]}
+                      facets={[statusFacet]}
+                      onClear={() => setStatusFilter("ALL")}
                     />
                     <TableHead>Assigned</TableHead>
                     <TableHead>Submitted</TableHead>
@@ -241,6 +244,14 @@ export function IdentifiedRespondentsTable({
               </Table>
             </div>
             <div className="grid gap-3 md:hidden">
+              <TableFilterSheet
+                facets={[statusFacet]}
+                activeCount={[statusFacet].filter(facetIsApplied).length}
+                label="Filter respondents"
+                heading="Filter respondents"
+                onClearAll={() => setStatusFilter("ALL")}
+                summary="Show results"
+              />
               {filtered.map((row) => (
                 <article
                   key={row.assignmentId}
