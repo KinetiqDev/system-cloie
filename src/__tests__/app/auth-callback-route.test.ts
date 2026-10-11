@@ -1734,9 +1734,7 @@ describe("auth callback route", () => {
           }),
         })
       );
-      expect(response.headers.get("location")).toBe(
-        "https://cloie.test/onboarding?intent=faculty"
-      );
+      expect(response.headers.get("location")).toBe("https://cloie.test/onboarding?intent=faculty");
     });
 
     it("rejects unmatched non-institutional staff entrants with invalid-domain status", async () => {
@@ -1749,9 +1747,7 @@ describe("auth callback route", () => {
 
       expect(signOutMock).toHaveBeenCalledTimes(1);
       expect(createUserMock).not.toHaveBeenCalled();
-      expect(response.headers.get("location")).toBe(
-        "https://cloie.test/status/invalid-domain"
-      );
+      expect(response.headers.get("location")).toBe("https://cloie.test/status/invalid-domain");
     });
 
     it("sends unmatched external entrants to external registration without creating anything", async () => {

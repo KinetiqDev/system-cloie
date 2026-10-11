@@ -81,11 +81,8 @@ function CourseAssignmentsHeader({
       <div className="flex min-w-0 flex-wrap items-center gap-2.5">
         <h1 className="text-heading-xl text-balance">{pageTitle}</h1>
         {periodLabel && (
-          <Badge
-            variant="outline"
-            className="bg-card text-muted-foreground text-xs font-normal"
-          >
-            <CalendarDays className="size-3 mr-1" aria-hidden="true" />
+          <Badge variant="outline" className="bg-card text-muted-foreground text-xs font-normal">
+            <CalendarDays className="mr-1 size-3" aria-hidden="true" />
             <span>{periodLabel}</span>
           </Badge>
         )}
@@ -276,7 +273,9 @@ export function CourseAssignmentsPageShell({
             {Math.ceil(total / pageSize) > 1 && (
               <>
                 <span className="text-border-strong mx-1.5">·</span>
-                <span>Page {page + 1} of {Math.ceil(total / pageSize)}</span>
+                <span>
+                  Page {page + 1} of {Math.ceil(total / pageSize)}
+                </span>
               </>
             )}
           </p>
@@ -291,7 +290,6 @@ export function CourseAssignmentsPageShell({
           />
         </div>
       </TableToolbar>
-
 
       {loadError && (
         <Alert variant="destructive">

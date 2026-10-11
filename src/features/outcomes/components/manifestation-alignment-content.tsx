@@ -279,7 +279,7 @@ export function ManifestationAlignmentContent({
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
-                      <p className="text-label-lg font-semibold text-foreground">{target.code}</p>
+                      <p className="text-label-lg text-foreground font-semibold">{target.code}</p>
                       {target.classification && (
                         <POClassificationBadge classification={target.classification} />
                       )}

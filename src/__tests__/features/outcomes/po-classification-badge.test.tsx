@@ -43,7 +43,9 @@ describe("POClassificationBadge", () => {
 
     for (const c of classifications) {
       const { unmount } = render(<POClassificationBadge classification={c} />);
-      const badge = screen.getByTitle(`Classification: ${PO_CLASSIFICATION_CONFIG[c].descriptiveLabel}`);
+      const badge = screen.getByTitle(
+        `Classification: ${PO_CLASSIFICATION_CONFIG[c].descriptiveLabel}`
+      );
       const expectedClasses = PO_CLASSIFICATION_CONFIG[c].badgeClass.split(" ");
       for (const cls of expectedClasses) {
         expect(badge).toHaveClass(cls);

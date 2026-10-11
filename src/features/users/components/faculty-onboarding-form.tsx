@@ -89,7 +89,8 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
               Faculty Onboarding
             </h1>
             <p className="text-body-sm text-muted-foreground mt-1">
-              Select your academic program affiliation to complete registration and access your faculty workspace.
+              Select your academic program affiliation to complete registration and access your
+              faculty workspace.
             </p>
           </div>
 
@@ -105,13 +106,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
               <Label htmlFor="faculty-name">Full name</Label>
               <div className="relative">
                 <UserCircle className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input
-                  id="faculty-name"
-                  value={name}
-                  readOnly
-                  disabled
-                  className="bg-muted pl-9"
-                />
+                <Input id="faculty-name" value={name} readOnly disabled className="bg-muted pl-9" />
               </div>
             </div>
 
@@ -165,10 +160,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
               )}
             />
             {errors.program_id && (
-              <p
-                id="program_id-error"
-                className="text-destructive flex items-center gap-1 text-xs"
-              >
+              <p id="program_id-error" className="text-destructive flex items-center gap-1 text-xs">
                 <AlertCircle className="size-3" />
                 {errors.program_id.message}
               </p>
@@ -177,12 +169,7 @@ export function FacultyOnboardingForm({ email, name, programs }: FacultyOnboardi
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 px-6 pt-2 pb-8 sm:px-8">
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full font-semibold"
-            disabled={isSubmitting}
-          >
+          <Button type="submit" size="lg" className="w-full font-semibold" disabled={isSubmitting}>
             {isSubmitting ? "Finalizing..." : "Complete Registration"}
             {!isSubmitting && <ArrowRight className="size-4" data-icon="inline-end" />}
           </Button>

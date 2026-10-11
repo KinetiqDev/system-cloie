@@ -14,5 +14,4 @@ describe("course-visuals", () => {
       "border-chart-1/30 bg-chart-1/15 text-foreground"
     );
   });
-
 });

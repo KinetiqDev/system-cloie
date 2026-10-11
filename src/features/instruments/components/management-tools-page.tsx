@@ -162,7 +162,9 @@ export function ManagementToolsPage({
       {/* Templates Collection */}
       <TemplateCollection
         view={view}
-        viewControl={<ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />}
+        viewControl={
+          <ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />
+        }
         sections={[
           {
             filterKey: "institutional-templates",

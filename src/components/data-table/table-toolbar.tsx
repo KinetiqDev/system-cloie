@@ -68,7 +68,7 @@ export function TableToolbar({
           {resultSummary && <div className="shrink-0">{resultSummary}</div>}
         </div>
         {search && (
-          <div className="order-1 relative min-w-0 w-full sm:order-2 sm:w-64 md:w-72 lg:w-80 sm:ml-auto">
+          <div className="relative order-1 w-full min-w-0 sm:order-2 sm:ml-auto sm:w-64 md:w-72 lg:w-80">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
@@ -108,7 +108,13 @@ export function TableToolbar({
                 </button>
               ))}
               {onClearAll && (
-                <Button type="button" variant="ghost" size="sm" onClick={onClearAll} className="h-7">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClearAll}
+                  className="h-7"
+                >
                   Clear all
                 </Button>
               )}
@@ -165,7 +171,7 @@ export function TableFilterSheet({
           render={
             <Button
               variant="outline"
-              className={cn("w-full sm:w-auto justify-between gap-2.5", triggerClassName)}
+              className={cn("w-full justify-between gap-2.5 sm:w-auto", triggerClassName)}
             />
           }
         >
@@ -191,9 +197,9 @@ export function TableFilterSheet({
           align="start"
           side="bottom"
           sideOffset={6}
-          className="w-80 sm:w-88 max-w-[calc(100vw-2rem)] p-0 gap-0 shadow-lg rounded-xl border border-border bg-popover text-popover-foreground overflow-hidden"
+          className="border-border bg-popover text-popover-foreground w-80 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden rounded-xl border p-0 shadow-lg sm:w-88"
         >
-          <div className="flex items-center justify-between border-b border-border/80 px-4 py-3 bg-surface-primary">
+          <div className="border-border/80 bg-surface-primary flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
               <PopoverTitle className="text-foreground text-sm font-semibold">
                 {heading}
@@ -235,14 +241,14 @@ export function TableFilterSheet({
             ))}
           </div>
 
-          <div className="bg-muted/40 flex items-center justify-between gap-2 border-t border-border/80 px-4 py-2.5">
+          <div className="bg-muted/40 border-border/80 flex items-center justify-between gap-2 border-t px-4 py-2.5">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={onClearAll}
               disabled={activeCount === 0}
-              className="h-8 text-xs text-muted-foreground hover:text-foreground disabled:opacity-40"
+              className="text-muted-foreground hover:text-foreground h-8 text-xs disabled:opacity-40"
             >
               Reset filters
             </Button>

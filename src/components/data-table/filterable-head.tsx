@@ -48,7 +48,7 @@ export function FilterableHead({
               onClick={sort.onSort}
               aria-label={`Sort by ${label}, currently ${sort.isActive ? sort.direction : "unsorted"}`}
               aria-busy={sort.isPending || undefined}
-              className="focus-visible:ring-ring inline-flex min-h-11 min-w-0 flex-1 items-center gap-1 rounded-md font-semibold hover:bg-muted/40 px-1 -ml-1 transition-colors focus-visible:ring-3 focus-visible:outline-none cursor-pointer"
+              className="focus-visible:ring-ring hover:bg-muted/40 -ml-1 inline-flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md px-1 font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
               <span className="min-w-0 leading-tight">{label}</span>
               {sort.isActive ? (

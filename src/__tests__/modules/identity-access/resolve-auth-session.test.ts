@@ -736,11 +736,7 @@ describe("dedicated demo authorization boundaries", () => {
     expect(session!.activeRole).toBe(ROLES.PROGRAM_HEAD);
     expect(session!.profileGate.status).toBe("COMPLETE");
 
-    const decision = canManageCourseAssignment(
-      session!,
-      CourseScope.PROFESSIONAL,
-      "program-other"
-    );
+    const decision = canManageCourseAssignment(session!, CourseScope.PROFESSIONAL, "program-other");
     expect(decision).toEqual({ allowed: false, reason: "Course is outside your program scope." });
   });
 

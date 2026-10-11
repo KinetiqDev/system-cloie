@@ -98,10 +98,10 @@ describe("manage-program-head-courses", () => {
       data: { id: COURSE_ID },
     });
     expect(resolveProgramHeadContextMock).toHaveBeenCalledWith(BSED_ID);
-    expect(revalidateProgramHeadAssignmentMock).toHaveBeenCalledWith(
-      expect.anything(),
-      { userId: USER_ID, programId: BSED_ID }
-    );
+    expect(revalidateProgramHeadAssignmentMock).toHaveBeenCalledWith(expect.anything(), {
+      userId: USER_ID,
+      programId: BSED_ID,
+    });
     expect(courseCreateMock).toHaveBeenCalledWith({
       data: expect.objectContaining({ program_id: BSED_ID, major_id: null }),
     });

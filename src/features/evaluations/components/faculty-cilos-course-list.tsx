@@ -542,9 +542,7 @@ function filterFacultyCourses(
   let result = courses;
 
   if (typeFilter === "professional") {
-    result = result.filter(
-      (course) => course.courseScope === "PROFESSIONAL" && !course.majorId
-    );
+    result = result.filter((course) => course.courseScope === "PROFESSIONAL" && !course.majorId);
   } else if (typeFilter === "general_education") {
     result = result.filter((course) => course.courseScope === "GENERAL_EDUCATION");
   }

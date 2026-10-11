@@ -175,9 +175,7 @@ describe("selected Program dashboard route", () => {
     expect(screen.queryByText("Course assignments")).not.toBeInTheDocument();
     const header = screen.getByRole("heading", { name: "Dashboard" });
     const kpis = screen.getByRole("region", { name: "Key figures" });
-    expect(
-      header.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
+    expect(header.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("states completion over the raw assignment denominator", async () => {

@@ -216,9 +216,7 @@ export function CourseForm({
             >
               <SelectTrigger id={`course-scope-${defaultValues?.id ?? "new"}`} className="w-full">
                 <SelectValue>
-                  {scope === CourseScope.GENERAL_EDUCATION
-                    ? "General Education"
-                    : "Professional"}
+                  {scope === CourseScope.GENERAL_EDUCATION ? "General Education" : "Professional"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>

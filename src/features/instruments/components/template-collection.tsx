@@ -158,7 +158,12 @@ function CourseBadge({ item }: { item: TemplateCollectionItem }) {
 // Collection
 // ---------------------------------------------------------------------------
 
-export function TemplateCollection({ view, sections, empty, viewControl }: TemplateCollectionProps) {
+export function TemplateCollection({
+  view,
+  sections,
+  empty,
+  viewControl,
+}: TemplateCollectionProps) {
   const filledSections = sections.filter((section) => section.items.length > 0);
   const singleSection = filledSections.length === 1 ? filledSections[0] : null;
   // One page, one search. Two sections would otherwise show two identical
@@ -254,8 +259,8 @@ export function TemplateCollection({ view, sections, empty, viewControl }: Templ
               </span>
             ) : (
               <>
-                <span className="text-foreground font-medium">{totalVisible}</span> of{" "}
-                {totalItems} template{totalItems !== 1 ? "s" : ""}
+                <span className="text-foreground font-medium">{totalVisible}</span> of {totalItems}{" "}
+                template{totalItems !== 1 ? "s" : ""}
               </>
             )}
           </p>

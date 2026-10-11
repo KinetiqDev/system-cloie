@@ -213,11 +213,7 @@ describe("previewCourseBoundRespondents", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toHaveLength(3);
-      expect(result.data.map((r) => r.name)).toEqual([
-        "John Doe",
-        "Mary Anne O'Connor",
-        "Prince",
-      ]);
+      expect(result.data.map((r) => r.name)).toEqual(["John Doe", "Mary Anne O'Connor", "Prince"]);
       expect(result.data[0]).toEqual({
         email: "student1@school.edu",
         majorId: null,

@@ -161,9 +161,7 @@ describe("listProgramHeadResponseDeployments", () => {
     it("offers only Professional courses and faculty", async () => {
       await listProgramHeadResponseDeployments(PROGRAM, filters());
 
-      expect(prismaMock.course.findMany.mock.calls[0][0].where.course_scope).toBe(
-        "PROFESSIONAL"
-      );
+      expect(prismaMock.course.findMany.mock.calls[0][0].where.course_scope).toBe("PROFESSIONAL");
       expect(
         prismaMock.user.findMany.mock.calls[0][0].where.course_assignments.some.course.course_scope
       ).toBe("PROFESSIONAL");

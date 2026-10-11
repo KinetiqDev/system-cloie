@@ -133,9 +133,7 @@ describe("getProgramHeadAnalytics", () => {
     // Course-bound evidence is Professional only. A General Education
     // course can carry an assignment inside this same Program, so Program
     // equality alone would not exclude it.
-    expect(assignmentOr[1].course_bound.course_assignment.course.course_scope).toBe(
-      "PROFESSIONAL"
-    );
+    expect(assignmentOr[1].course_bound.course_assignment.course.course_scope).toBe("PROFESSIONAL");
 
     // Rating aggregate scopes to program-bsed
     const aggregateCall = prismaMock.quantitativeResponseItem.aggregate.mock.calls[0][0];

@@ -12,7 +12,7 @@ import {
 } from "@/features/course-assignments/services/course-assignment-roster";
 
 vi.mock("@/features/auth/services/resolve-auth-session");
-  vi.mock("@/lib/db/prisma", () => ({
+vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     courseAssignment: { findUnique: vi.fn() },
     evaluationAssignment: { findMany: vi.fn() },
@@ -380,9 +380,8 @@ describe("course-assignment-roster service", () => {
       createAuthSessionSnapshot({ userId: "head-1", roles: [ROLES.PROGRAM_HEAD] })
     );
     const { prisma } = await import("@/lib/db/prisma");
-    const { resolveProgramHeadContext } = await import(
-      "@/features/auth/services/resolve-program-head-context"
-    );
+    const { resolveProgramHeadContext } =
+      await import("@/features/auth/services/resolve-program-head-context");
     vi.mocked(resolveProgramHeadContext).mockResolvedValue({
       success: true,
       data: {

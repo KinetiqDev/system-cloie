@@ -343,11 +343,8 @@ function CourseRosterDiscoveryBody({
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
           <h1 className="text-heading-xl text-balance">My Course Rosters</h1>
           {periodScopeLabel(filters, termInstances) ? (
-            <Badge
-              variant="outline"
-              className="bg-card text-muted-foreground text-xs font-normal"
-            >
-              <CalendarDays className="size-3 mr-1" aria-hidden="true" />
+            <Badge variant="outline" className="bg-card text-muted-foreground text-xs font-normal">
+              <CalendarDays className="mr-1 size-3" aria-hidden="true" />
               <span>{periodScopeLabel(filters, termInstances)}</span>
             </Badge>
           ) : null}
@@ -378,7 +375,9 @@ function CourseRosterDiscoveryBody({
             {totalPages > 1 && (
               <>
                 <span className="text-border-strong mx-1.5">·</span>
-                <span>Page {data.page + 1} of {totalPages}</span>
+                <span>
+                  Page {data.page + 1} of {totalPages}
+                </span>
               </>
             )}
             {isPending ? " · updating…" : ""}
@@ -394,7 +393,6 @@ function CourseRosterDiscoveryBody({
           />
         </div>
       </TableToolbar>
-
 
       <section aria-labelledby="course-roster-results" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">

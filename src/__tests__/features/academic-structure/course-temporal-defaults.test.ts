@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { createCourseSchema, updateCourseSchema } from "@/features/academic-structure/schemas/course";
+import {
+  createCourseSchema,
+  updateCourseSchema,
+} from "@/features/academic-structure/schemas/course";
 import { AcademicSemester, AcademicTerm, CourseScope, YearLevel } from "@prisma/client";
 
 describe("Course temporal defaults schema", () => {
@@ -90,7 +93,9 @@ describe("Course temporal defaults schema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        const hasSummerError = result.error.issues.some((issue) => issue.message.includes("Summer"));
+        const hasSummerError = result.error.issues.some((issue) =>
+          issue.message.includes("Summer")
+        );
         expect(hasSummerError).toBe(true);
       }
     });
@@ -104,7 +109,9 @@ describe("Course temporal defaults schema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        const hasSummerError = result.error.issues.some((issue) => issue.message.includes("Summer"));
+        const hasSummerError = result.error.issues.some((issue) =>
+          issue.message.includes("Summer")
+        );
         expect(hasSummerError).toBe(true);
       }
     });
@@ -146,7 +153,9 @@ describe("Course temporal defaults schema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        const hasSemesterError = result.error.issues.some((issue) => issue.message.includes("Semester must be set"));
+        const hasSemesterError = result.error.issues.some((issue) =>
+          issue.message.includes("Semester must be set")
+        );
         expect(hasSemesterError).toBe(true);
       }
     });
@@ -218,7 +227,9 @@ describe("Course temporal defaults schema", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        const hasSummerError = result.error.issues.some((issue) => issue.message.includes("Summer"));
+        const hasSummerError = result.error.issues.some((issue) =>
+          issue.message.includes("Summer")
+        );
         expect(hasSummerError).toBe(true);
       }
     });

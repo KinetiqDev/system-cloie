@@ -95,7 +95,7 @@ export function ColumnFilterTrigger({
                   : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
               }
               className={cn(
-                "group/btn focus-visible:ring-ring flex min-h-11 w-full min-w-0 items-center justify-between gap-1.5 -mx-2 px-2 rounded-md font-semibold text-xs tracking-wider uppercase whitespace-nowrap transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:outline-none cursor-pointer text-left",
+                "group/btn focus-visible:ring-ring hover:bg-muted/60 -mx-2 flex min-h-11 w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 rounded-md px-2 text-left text-xs font-semibold tracking-wider whitespace-nowrap uppercase transition-colors focus-visible:ring-3 focus-visible:outline-none",
                 active.length > 0
                   ? "text-primary hover:text-primary font-bold"
                   : "text-table-header-fg hover:text-foreground",
@@ -106,9 +106,9 @@ export function ColumnFilterTrigger({
               <Funnel
                 aria-hidden="true"
                 className={cn(
-                  "size-3.5 shrink-0 transition-colors ml-1",
+                  "ml-1 size-3.5 shrink-0 transition-colors",
                   active.length > 0
-                    ? "fill-current text-primary"
+                    ? "text-primary fill-current"
                     : "text-muted-foreground group-hover/btn:text-foreground"
                 )}
               />

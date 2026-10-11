@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLES } from "@/lib/constants/roles";
 import { listFacultyCourseContexts } from "@/features/evaluations/services/list-faculty-course-contexts";
 
-const { affiliationFindManyMock, courseAssignmentFindManyMock, courseFindManyMock, resolveAuthSessionMock } = vi.hoisted(() => ({
+const {
+  affiliationFindManyMock,
+  courseAssignmentFindManyMock,
+  courseFindManyMock,
+  resolveAuthSessionMock,
+} = vi.hoisted(() => ({
   affiliationFindManyMock: vi.fn(),
   courseAssignmentFindManyMock: vi.fn(),
   courseFindManyMock: vi.fn(),

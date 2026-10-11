@@ -43,8 +43,7 @@ export const PO_CLASSIFICATION_CONFIG: Record<POClassification, POClassification
     descriptiveLabel: PO_CLASSIFICATION_DESCRIPTIVE_LABELS.INSTITUTION_SPECIFIC,
   },
   UNCLASSIFIED: {
-    badgeClass:
-      "border-border border-dashed bg-muted/60 text-muted-foreground",
+    badgeClass: "border-border border-dashed bg-muted/60 text-muted-foreground",
     dotClass: "bg-muted-foreground",
     label: PO_CLASSIFICATION_LABELS.UNCLASSIFIED,
     descriptiveLabel: PO_CLASSIFICATION_DESCRIPTIVE_LABELS.UNCLASSIFIED,
@@ -94,7 +93,7 @@ export function POClassificationBadge({
     >
       {showDot && (
         <span
-          className={cn("size-1.5 rounded-full shrink-0 opacity-80", config.dotClass)}
+          className={cn("size-1.5 shrink-0 rounded-full opacity-80", config.dotClass)}
           aria-hidden="true"
         />
       )}

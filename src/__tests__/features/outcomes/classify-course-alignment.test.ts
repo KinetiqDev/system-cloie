@@ -123,9 +123,7 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
     expect(classify(cilos, "PROFESSIONAL", PROGRAM, ["po-1"])).toBe("ready");
     // A newly created PO joins the active catalog, so the same rows no longer
     // cover every required pair until Faculty classify the new PO.
-    expect(classify(cilos, "PROFESSIONAL", PROGRAM, ["po-1", "po-2"])).toBe(
-      "incomplete-mapping"
-    );
+    expect(classify(cilos, "PROFESSIONAL", PROGRAM, ["po-1", "po-2"])).toBe("incomplete-mapping");
   });
 
   it("classifies incomplete, not ready, when the Program has zero active POs alongside active CILOs", () => {
@@ -145,12 +143,9 @@ describe("classifyCourseAlignment exhaustive readiness", () => {
   });
 
   it("does not count a mapping to a PO outside the owning Program", () => {
-    const state = classify(
-      [mappedCilo("po-1", "LEARNING", "program-2")],
-      "PROFESSIONAL",
-      PROGRAM,
-      ["po-1"]
-    );
+    const state = classify([mappedCilo("po-1", "LEARNING", "program-2")], "PROFESSIONAL", PROGRAM, [
+      "po-1",
+    ]);
     expect(state).toBe("incomplete-mapping");
   });
 

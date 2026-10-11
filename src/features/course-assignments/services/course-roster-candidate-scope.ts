@@ -19,13 +19,15 @@ type ScopedRosterCandidates = {
   candidates: ScopedRosterCandidate[];
 };
 
-type CandidatePlacement = {
-  program_id: string;
-  year_level: string | null;
-  section: string | null;
-  program: { code: string; name: string } | null;
-  major: { name: string } | null;
-} | undefined;
+type CandidatePlacement =
+  | {
+      program_id: string;
+      year_level: string | null;
+      section: string | null;
+      program: { code: string; name: string } | null;
+      major: { name: string } | null;
+    }
+  | undefined;
 
 function toScopedCandidate(
   student: {

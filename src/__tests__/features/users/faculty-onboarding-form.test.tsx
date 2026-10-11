@@ -33,29 +33,23 @@ describe("FacultyOnboardingForm", () => {
 
   it("renders read-only faculty identity and program options", () => {
     render(
-      <FacultyOnboardingForm
-        email="faculty@acd.edu.ph"
-        name="Amara Reyes"
-        programs={PROGRAMS}
-      />
+      <FacultyOnboardingForm email="faculty@acd.edu.ph" name="Amara Reyes" programs={PROGRAMS} />
     );
 
     expect(screen.getByDisplayValue("faculty@acd.edu.ph")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Amara Reyes")).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Complete Registration/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cancel and return to sign in/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Cancel and return to sign in/i })
+    ).toBeInTheDocument();
   });
 
   it("submits the chosen program affiliation and redirects to /faculty/dashboard on success", async () => {
     createFacultyProfileMock.mockResolvedValue({ success: true });
 
     render(
-      <FacultyOnboardingForm
-        email="faculty@acd.edu.ph"
-        name="Amara Reyes"
-        programs={PROGRAMS}
-      />
+      <FacultyOnboardingForm email="faculty@acd.edu.ph" name="Amara Reyes" programs={PROGRAMS} />
     );
 
     fireEvent.click(screen.getByRole("combobox"));
@@ -78,11 +72,7 @@ describe("FacultyOnboardingForm", () => {
     });
 
     render(
-      <FacultyOnboardingForm
-        email="faculty@acd.edu.ph"
-        name="Amara Reyes"
-        programs={PROGRAMS}
-      />
+      <FacultyOnboardingForm email="faculty@acd.edu.ph" name="Amara Reyes" programs={PROGRAMS} />
     );
 
     fireEvent.click(screen.getByRole("combobox"));
@@ -98,11 +88,7 @@ describe("FacultyOnboardingForm", () => {
 
   it("allows resetting the incomplete role claim to cancel", async () => {
     render(
-      <FacultyOnboardingForm
-        email="faculty@acd.edu.ph"
-        name="Amara Reyes"
-        programs={PROGRAMS}
-      />
+      <FacultyOnboardingForm email="faculty@acd.edu.ph" name="Amara Reyes" programs={PROGRAMS} />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Cancel and return to sign in/i }));

@@ -89,12 +89,7 @@ export function normalizeInsightSection(section: InsightSection): InsightSection
  * its own bounded evidence packet and a single validated `InsightSection`,
  * rendered inline by the owning view instead of a dedicated AI tab.
  */
-export const ANALYTICS_INSIGHT_VIEWS = [
-  "outcomes",
-  "courses",
-  "trends",
-  "qualitative",
-] as const;
+export const ANALYTICS_INSIGHT_VIEWS = ["outcomes", "courses", "trends", "qualitative"] as const;
 export type AnalyticsInsightView = (typeof ANALYTICS_INSIGHT_VIEWS)[number];
 
 /**

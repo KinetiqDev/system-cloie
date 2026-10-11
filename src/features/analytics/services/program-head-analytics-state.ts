@@ -3,12 +3,7 @@ import { z } from "zod";
 import { buildProgramHeadProgramPath } from "@/lib/constants/program-head-routes";
 
 /** Canonical analytics workspace tabs (spec §14). */
-export const ANALYTICS_TABS = [
-  "outcomes",
-  "courses",
-  "trends",
-  "qualitative",
-] as const;
+export const ANALYTICS_TABS = ["outcomes", "courses", "trends", "qualitative"] as const;
 const LEGACY_ANALYTICS_TABS = ["overview", "breakdowns", "feedback", "stakeholders"] as const;
 type AnalyticsTab = (typeof ANALYTICS_TABS)[number];
 type LegacyAnalyticsTab = (typeof LEGACY_ANALYTICS_TABS)[number];

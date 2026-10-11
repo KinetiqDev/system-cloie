@@ -60,7 +60,6 @@ vi.mock("@/features/users/components/faculty-onboarding-form", () => ({
   ),
 }));
 
-
 import OnboardingPage from "@/app/(public)/onboarding/page";
 
 describe("OnboardingPage", () => {

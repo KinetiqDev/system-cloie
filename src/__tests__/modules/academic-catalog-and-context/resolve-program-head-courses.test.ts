@@ -76,9 +76,7 @@ describe("resolve-program-head-courses", () => {
       },
     });
     expect(result.success && result.data.courses).toHaveLength(1);
-    expect(result.success && result.data.courses[0]?.course_scope).toBe(
-      CourseScope.PROFESSIONAL
-    );
+    expect(result.success && result.data.courses[0]?.course_scope).toBe(CourseScope.PROFESSIONAL);
     expect(result.success && "isReadOnly" in (result.data.courses[0] ?? {})).toBe(false);
     expect(courseFindManyMock).toHaveBeenCalledTimes(1);
     expect(courseFindManyMock.mock.calls[0]?.[0]).toMatchObject({

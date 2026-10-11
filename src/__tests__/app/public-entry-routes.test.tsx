@@ -192,7 +192,6 @@ describe("Public entry routes", () => {
     expect(mark).toHaveClass("h-[78%]", "w-auto");
   });
 
-
   it("external entrance is email-first with a Google alternative", async () => {
     render(await ExternalLoginPage({ searchParams: emptyParams }));
     expect(
