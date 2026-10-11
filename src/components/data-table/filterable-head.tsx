@@ -28,19 +28,7 @@ export function FilterableHead({
   const hasFilter = facets !== undefined && facets.length > 0;
 
   return (
-    <TableHead
-      aria-label={label}
-      aria-sort={
-        sort
-          ? sort.isActive
-            ? sort.direction === "asc"
-              ? "ascending"
-              : "descending"
-            : "none"
-          : undefined
-      }
-      className={className}
-    >
+    <TableHead aria-label={label} aria-sort={ariaSort(sort)} className={className}>
       {hasFilter && !sort ? (
         <ColumnFilterTrigger label={label} facets={facets} fullCell onClear={onClear} />
       ) : (
@@ -54,15 +42,7 @@ export function FilterableHead({
               className="focus-visible:ring-ring hover:bg-muted/40 -ml-1 inline-flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-1 rounded-md px-1 font-semibold transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
               <span className="min-w-0 leading-tight">{label}</span>
-              {sort.isActive ? (
-                sort.direction === "asc" ? (
-                  <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
-                ) : (
-                  <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
-                )
-              ) : (
-                <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />
-              )}
+              <SortDirectionIcon active={sort.isActive} direction={sort.direction} />
             </button>
           ) : (
             <span className="min-w-0 pl-1 leading-tight">{label}</span>
@@ -79,4 +59,20 @@ export function FilterableHead({
       )}
     </TableHead>
   );
+}
+function SortDirectionIcon({ active, direction }: { active: boolean; direction: "asc" | "desc" }) {
+  if (!active) return <ArrowUpDown aria-hidden="true" className="size-3.5 shrink-0 opacity-50" />;
+  return direction === "asc" ? (
+    <ArrowUp aria-hidden="true" className="size-3.5 shrink-0" />
+  ) : (
+    <ArrowDown aria-hidden="true" className="size-3.5 shrink-0" />
+  );
+}
+
+function ariaSort(
+  sort: { isActive: boolean; direction: "asc" | "desc" } | undefined
+): "ascending" | "descending" | "none" | undefined {
+  if (!sort) return undefined;
+  if (!sort.isActive) return "none";
+  return sort.direction === "asc" ? "ascending" : "descending";
 }

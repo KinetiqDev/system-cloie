@@ -6,7 +6,7 @@ import {
   PO_CLASSIFICATION_DESCRIPTIVE_LABELS,
 } from "../po-classification";
 
-export interface POClassificationConfig {
+interface POClassificationConfig {
   badgeClass: string;
   dotClass: string;
   label: string;
@@ -50,7 +50,7 @@ export const PO_CLASSIFICATION_CONFIG: Record<POClassification, POClassification
   },
 };
 
-export interface POClassificationBadgeProps {
+interface POClassificationBadgeProps {
   classification: POClassification;
   format?: "short" | "descriptive";
   className?: string;

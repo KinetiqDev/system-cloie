@@ -67,7 +67,7 @@ interface UsersDataTableProps {
   /** Composed single-write clear per column; omitted columns clear facet-by-facet. */
   onClearColumn?: Partial<Record<keyof UsersTableFacets, () => void>>;
 }
-export type UsersTableFacets = {
+type UsersTableFacets = {
   role: FacetDef[];
   program: FacetDef[];
   major: FacetDef[];

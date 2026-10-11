@@ -77,8 +77,6 @@ type TemplateSection = {
   renderOverflowMenu?: (item: TemplateCollectionItem) => ReactNode;
 };
 
-export type { TemplateFilters };
-
 function templateTypeLabel(item: TemplateCollectionItem): string {
   return item.templateType === "PROGRAM_WIDE" ? "Program-wide" : "Course-bound";
 }

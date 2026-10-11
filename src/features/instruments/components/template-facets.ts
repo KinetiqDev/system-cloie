@@ -17,7 +17,7 @@ export const DEFAULT_TEMPLATE_FILTERS: TemplateFilters = {
   source: null,
 };
 
-export type TemplateFacets = {
+type TemplateFacets = {
   /** The facets that hang off a column heading. */
   byColumn: Record<TemplateFacetColumn, FacetDef[]>;
   /** Every facet the list offers, so applied ones can show as removable chips. */

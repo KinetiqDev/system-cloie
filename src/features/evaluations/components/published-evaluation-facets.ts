@@ -6,7 +6,7 @@ import type {
   TargetFilterOption,
 } from "./filter-published-evaluations";
 
-export type PublishedFacetColumn = "course" | "target" | "period";
+type PublishedFacetColumn = "course" | "target" | "period";
 
 export type PublishedFacets = {
   /** The facets that hang off a column heading. Only offered columns appear. */
@@ -15,7 +15,7 @@ export type PublishedFacets = {
   all: FacetDef[];
 };
 
-export type PublishedFacetUpdate = (
+type PublishedFacetUpdate = (
   next: PublishedEvaluationFilters,
   navigation?: "push" | "replace"
 ) => void;

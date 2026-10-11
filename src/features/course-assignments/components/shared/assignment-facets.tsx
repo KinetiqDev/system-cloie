@@ -24,7 +24,7 @@ const COURSE_SCOPE_LABELS: Record<CourseScope, string> = {
   [CourseScope.PROFESSIONAL]: "Professional",
 };
 
-export type AssignmentFacetColumn =
+type AssignmentFacetColumn =
   | "course"
   | "faculty"
   | "program"

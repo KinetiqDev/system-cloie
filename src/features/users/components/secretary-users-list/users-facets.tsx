@@ -38,9 +38,9 @@ export type UsersFacetState = {
 export type UsersFacetKey = keyof UsersFacetState;
 
 /** The columns that own a filter funnel in the users table. */
-export type UsersFacetColumn = "role" | "program" | "major" | "placement";
+type UsersFacetColumn = "role" | "program" | "major" | "placement";
 
-export type ProgramOption = {
+type ProgramOption = {
   id: string;
   code: string;
   name: string;
@@ -77,14 +77,74 @@ export function usersFacetPatch(
   }
 }
 
-/**
- * Every narrowing control the Secretary Users list offers, expressed once as
- * facets. The column headings, the toolbar chips and the mobile sheet all read
- * from this, so no control can drift from its siblings.
- *
- * Search is deliberately absent: it spans Name and Email, so it belongs to the
- * toolbar rather than to any one column.
- */
+type PlacementContext = {
+  studentContext: boolean;
+  awaitingPlacement: boolean;
+  available: boolean;
+  unavailableReason: string | undefined;
+  note: string | null;
+};
+
+function resolvePlacementContext(
+  state: UsersFacetState,
+  activePeriod: SecretaryUsersActivePeriod | null
+): PlacementContext {
+  // Term placement is a Student record, so it is presentable for Students and
+  // alongside All Roles; elsewhere the server drops it too.
+  const studentContext = state.role === undefined || state.role === SystemRole.STUDENT;
+  const awaitingPlacement = state.state === "awaiting-term-placement";
+  const inPlacementContext = studentContext && !awaitingPlacement;
+
+  const unavailableReason = !inPlacementContext
+    ? studentContext
+      ? "Students awaiting placement have no year level or section yet."
+      : "Only Students carry a term placement."
+    : activePeriod === null
+      ? "No active Academic Period is set, so year level and section cannot be filtered."
+      : undefined;
+  // A column whose every facet is disabled disables its own funnel, so the
+  // reason is named beside the table too: the operator still learns why the
+  // placement filters cannot narrow this list.
+  const note = !studentContext
+    ? null
+    : awaitingPlacement
+      ? "Students awaiting placement have no year level or section yet."
+      : activePeriod === null
+        ? "No active Academic Period is set, so year level and section cannot be filtered."
+        : `Year level and section come from each Student's placement in ${activePeriod.label}.`;
+
+  return {
+    studentContext,
+    awaitingPlacement,
+    available: unavailableReason === undefined,
+    unavailableReason,
+    note,
+  };
+}
+function buildMajorFacet(
+  state: UsersFacetState,
+  update: (key: UsersFacetKey, value: string | null) => void,
+  programs: ProgramOption[]
+): FacetDef {
+  const selectedProgram = programs.find((entry) => entry.code === state.program);
+  const programMajors = selectedProgram?.majors ?? [];
+  return {
+    id: "major",
+    label: "Major",
+    value: state.role === SystemRole.STUDENT ? (state.major ?? null) : null,
+    onChange: (value) => update("major", value),
+    allLabel: "All majors",
+    disabled: state.role !== SystemRole.STUDENT || programMajors.length === 0,
+    disabledReason:
+      state.role !== SystemRole.STUDENT
+        ? "Only Students carry a major."
+        : selectedProgram
+          ? "This Program has no majors."
+          : "Choose a Program to narrow by its majors.",
+    options: programMajors.map((entry) => ({ id: entry.name, label: entry.name })),
+  };
+}
+
 export function buildUsersFacets(
   state: UsersFacetState,
   update: (key: UsersFacetKey, value: string | null) => void,
@@ -96,35 +156,12 @@ export function buildUsersFacets(
   /** Prose naming where the placement facets read from, or why they cannot. */
   placementNote: string | null;
 } {
-  // Term placement is a Student record, so it is presentable for Students and
-  // alongside All Roles; elsewhere the server drops it too.
-  const studentContext = state.role === undefined || state.role === SystemRole.STUDENT;
+  const placementCtx = resolvePlacementContext(state, options.activePeriod);
   // Verification belongs to an external stakeholder's record.
   const externalContext =
     state.role === undefined ||
     state.role === SystemRole.ALUMNI ||
     state.role === SystemRole.INDUSTRY_PARTNER;
-  const awaitingPlacement = state.state === "awaiting-term-placement";
-  const placementContext = studentContext && !awaitingPlacement;
-
-  const placementUnavailableReason = !placementContext
-    ? studentContext
-      ? "Students awaiting placement have no year level or section yet."
-      : "Only Students carry a term placement."
-    : options.activePeriod === null
-      ? "No active Academic Period is set, so year level and section cannot be filtered."
-      : undefined;
-  const placementAvailable = placementUnavailableReason === undefined;
-  // A column whose every facet is disabled disables its own funnel, so the
-  // reason is named beside the table too: the operator still learns why the
-  // placement filters cannot narrow this list.
-  const placementNote = !studentContext
-    ? null
-    : awaitingPlacement
-      ? "Students awaiting placement have no year level or section yet."
-      : options.activePeriod === null
-        ? "No active Academic Period is set, so year level and section cannot be filtered."
-        : `Year level and section come from each Student's placement in ${options.activePeriod.label}.`;
 
   const role: FacetDef = {
     id: "role",
@@ -148,44 +185,28 @@ export function buildUsersFacets(
     })),
   };
 
-  const selectedProgram = options.programs.find((entry) => entry.code === state.program);
-  const programMajors = selectedProgram?.majors ?? [];
-  const major: FacetDef = {
-    id: "major",
-    label: "Major",
-    value: state.role === SystemRole.STUDENT ? (state.major ?? null) : null,
-    onChange: (value) => update("major", value),
-    allLabel: "All majors",
-    disabled: state.role !== SystemRole.STUDENT || programMajors.length === 0,
-    disabledReason:
-      state.role !== SystemRole.STUDENT
-        ? "Only Students carry a major."
-        : selectedProgram
-          ? "This Program has no majors."
-          : "Choose a Program to narrow by its majors.",
-    options: programMajors.map((entry) => ({ id: entry.name, label: entry.name })),
-  };
+  const major: FacetDef = buildMajorFacet(state, update, options.programs);
 
   // The Year & Section column carries two facts, so it offers two labelled facets.
   const placement: FacetDef[] = [
     {
       id: "yearLevel",
       label: "Year level",
-      value: placementAvailable ? (state.yearLevel ?? null) : null,
+      value: placementCtx.available ? (state.yearLevel ?? null) : null,
       onChange: (value) => update("yearLevel", value),
       allLabel: "All year levels",
-      disabled: !placementAvailable,
-      disabledReason: placementUnavailableReason,
+      disabled: !placementCtx.available,
+      disabledReason: placementCtx.unavailableReason,
       options: YEAR_LEVEL_OPTIONS.map((option) => ({ id: option.value, label: option.label })),
     },
     {
       id: "section",
       label: "Section",
-      value: placementAvailable ? (state.section ?? null) : null,
+      value: placementCtx.available ? (state.section ?? null) : null,
       onChange: (value) => update("section", value),
       allLabel: "All sections",
-      disabled: !placementAvailable,
-      disabledReason: placementUnavailableReason,
+      disabled: !placementCtx.available,
+      disabledReason: placementCtx.unavailableReason,
       options: STUDENT_SECTION_OPTIONS.map((option) => ({
         id: option.value,
         label: option.label,
@@ -196,10 +217,10 @@ export function buildUsersFacets(
   const placementState: FacetDef = {
     id: "state",
     label: "Term placement",
-    value: studentContext ? (state.state ?? null) : null,
+    value: placementCtx.studentContext ? (state.state ?? null) : null,
     onChange: (value) => update("state", value),
     allLabel: "Any placement",
-    disabled: !studentContext,
+    disabled: !placementCtx.studentContext,
     disabledReason: "Only Students can be awaiting term placement.",
     options: [{ id: "awaiting-term-placement", label: "Awaiting term placement" }],
   };
@@ -230,7 +251,7 @@ export function buildUsersFacets(
     all: [...Object.values(byColumn).flat(), placementState, verification],
     // The prose the old filter bar showed under the Student controls, kept so
     // a disabled funnel never drops the explanation it exists to carry.
-    placementNote,
+    placementNote: placementCtx.note,
   };
 }
 

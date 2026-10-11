@@ -136,6 +136,3 @@ export function courseScheduleFacets(
     },
   };
 }
-
-/** The clearing value these facets share, re-exported for their callers. */
-export { SCHEDULE_FILTER_ALL };

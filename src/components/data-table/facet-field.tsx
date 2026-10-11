@@ -36,7 +36,7 @@ export function FacetField({ facet, idPrefix }: { facet: FacetDef; idPrefix: str
 }
 
 /** A facet whose option list is short enough to scan without a search box. */
-export function OptionFacet({
+function OptionFacet({
   facet,
   idPrefix,
   options,

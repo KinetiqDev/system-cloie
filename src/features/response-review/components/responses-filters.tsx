@@ -32,7 +32,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** Columns the evaluation-evidence table can narrow through its own heading. */
-export type ResponseFacetColumn =
+type ResponseFacetColumn =
   | "evaluation"
   | "class"
   | "faculty"
@@ -66,7 +66,7 @@ export type ResponseFacetValues = {
 
 type FacetChoice = { id: string; label: string };
 
-export type ResponseFacetOptions = {
+type ResponseFacetOptions = {
   termInstances: readonly FacetChoice[];
   courses: readonly FacetChoice[];
   faculty: readonly FacetChoice[];
@@ -78,9 +78,9 @@ export type ResponseFacetOptions = {
 };
 
 /** Writes one URL key. A null value clears the facet. */
-export type ResponseFacetUpdate = (key: string, value: string | null) => void;
+type ResponseFacetUpdate = (key: string, value: string | null) => void;
 
-export type ResponseFacetColumns = Partial<Record<ResponseFacetColumn, FacetDef[]>>;
+type ResponseFacetColumns = Partial<Record<ResponseFacetColumn, FacetDef[]>>;
 
 export type ResponseFacets = {
   /** Facets grouped by the column heading they hang off. */
@@ -114,73 +114,154 @@ function optionList(
     emptyMessage,
   };
 }
+function columnsForView(
+  view: ResponseFacetView,
+  facets: Record<
+    | "course"
+    | "faculty"
+    | "major"
+    | "instrument"
+    | "classProgram"
+    | "ilo"
+    | "yearLevel"
+    | "section"
+    | "stakeholder"
+    | "period"
+    | "status"
+    | "submitted",
+    FacetDef
+  >
+): ResponseFacetColumns {
+  if (view === "program-wide") {
+    return {
+      stakeholder: [facets.stakeholder],
+      // Target is the joined major · year level, so both facts narrow it.
+      target: [facets.major, facets.yearLevel],
+      period: [facets.period],
+      status: [facets.status],
+      submitted: [facets.submitted],
+    };
+  }
+  if (view === "coordinator") {
+    return {
+      evaluation: [facets.course],
+      class: [facets.yearLevel, facets.section, facets.classProgram],
+      faculty: [facets.faculty],
+      period: [facets.period],
+      status: [facets.status],
+      submitted: [facets.submitted],
+    };
+  }
+  return {
+    evaluation: [facets.course],
+    class: [facets.yearLevel, facets.section],
+    faculty: [facets.faculty],
+    period: [facets.period],
+    status: [facets.status],
+    submitted: [facets.submitted],
+  };
+}
 
-/**
- * Every narrowing control a review list offers, expressed once as facets. The
- * column headings, the toolbar chips, the toolbar popover, and the mobile
- * sheet all read from this, so no control can drift from its siblings.
- */
+function optionFacet(
+  id: string,
+  label: string,
+  value: string | null | undefined,
+  key: string,
+  update: ResponseFacetUpdate,
+  allLabel: string,
+  choices: readonly FacetChoice[] | undefined,
+  searchPlaceholder: string,
+  emptyMessage: string
+): FacetDef {
+  return {
+    id,
+    label,
+    value: value ?? null,
+    onChange: (next) => update(key, next),
+    allLabel,
+    ...optionList(choices, searchPlaceholder, emptyMessage),
+  };
+}
+
 export function buildResponseFacets(
   view: ResponseFacetView,
   values: ResponseFacetValues,
   update: ResponseFacetUpdate,
   options: ResponseFacetOptions
 ): ResponseFacets {
-  const course: FacetDef = {
-    id: "courseId",
-    label: "Course",
-    value: values.courseId ?? null,
-    onChange: (value) => update("courseId", value),
-    allLabel: "All courses",
-    ...optionList(options.courses, "Search courses…", "No courses match your search."),
-  };
+  const course: FacetDef = optionFacet(
+    "courseId",
+    "Course",
+    values.courseId,
+    "courseId",
+    update,
+    "All courses",
+    options.courses,
+    "Search courses…",
+    "No courses match your search."
+  );
 
-  const faculty: FacetDef = {
-    id: "facultyId",
-    label: "Faculty",
-    value: values.facultyId ?? null,
-    onChange: (value) => update("facultyId", value),
-    allLabel: "All faculty",
-    ...optionList(options.faculty, "Search faculty…", "No faculty match your search."),
-  };
+  const faculty: FacetDef = optionFacet(
+    "facultyId",
+    "Faculty",
+    values.facultyId,
+    "facultyId",
+    update,
+    "All faculty",
+    options.faculty,
+    "Search faculty…",
+    "No faculty match your search."
+  );
 
-  const major: FacetDef = {
-    id: "majorId",
-    label: "Major",
-    value: values.majorId ?? null,
-    onChange: (value) => update("majorId", value),
-    allLabel: "All majors",
-    ...optionList(options.majors, "Search majors…", "No majors match your search."),
-  };
+  const major: FacetDef = optionFacet(
+    "majorId",
+    "Major",
+    values.majorId,
+    "majorId",
+    update,
+    "All majors",
+    options.majors,
+    "Search majors…",
+    "No majors match your search."
+  );
 
-  const instrument: FacetDef = {
-    id: "instrumentTemplateId",
-    label: "Evaluation instrument",
-    value: values.instrumentTemplateId ?? null,
-    onChange: (value) => update("instrumentTemplateId", value),
-    allLabel: "All instruments",
-    ...optionList(options.instruments, "Search instruments…", "No instruments match your search."),
-  };
+  const instrument: FacetDef = optionFacet(
+    "instrumentTemplateId",
+    "Evaluation instrument",
+    values.instrumentTemplateId,
+    "instrumentTemplateId",
+    update,
+    "All instruments",
+    options.instruments,
+    "Search instruments…",
+    "No instruments match your search."
+  );
 
   // ADR 0035: this Program is the class the evaluation was assigned to, never
   // the respondent's, so the label says so wherever the control appears.
-  const classProgram: FacetDef = {
-    id: "programId",
-    label: "Class program",
-    value: values.programId ?? null,
-    onChange: (value) => update("programId", value),
-    allLabel: "All class programs",
-    ...optionList(options.programs, "Search programs…", "No class programs match your search."),
-  };
+  const classProgram: FacetDef = optionFacet(
+    "programId",
+    "Class program",
+    values.programId,
+    "programId",
+    update,
+    "All class programs",
+    options.programs,
+    "Search programs…",
+    "No class programs match your search."
+  );
 
-  const ilo: FacetDef = {
-    id: "iloId",
-    label: "Institutional Learning Outcome",
-    value: values.iloId ?? null,
-    onChange: (value) => update("iloId", value),
-    allLabel: "All institutional outcomes",
-    ...optionList(options.ilos, "Search outcomes…", "No institutional outcomes match your search."),
-  };
+  const ilo: FacetDef = optionFacet(
+    "iloId",
+    "Institutional Learning Outcome",
+    values.iloId,
+    "iloId",
+    update,
+    "All institutional outcomes",
+    options.ilos,
+    "Search outcomes…",
+    "No institutional outcomes match your search."
+  );
 
   const yearLevel: FacetDef = {
     id: "yearLevel",
@@ -209,18 +290,17 @@ export function buildResponseFacets(
     options: RESPONSE_STAKEHOLDER_OPTIONS,
   };
 
-  const period: FacetDef = {
-    id: "termInstanceId",
-    label: "Academic period",
-    value: values.termInstanceId ?? null,
-    onChange: (value) => update("termInstanceId", value),
-    allLabel: "All academic periods",
-    ...optionList(
-      options.termInstances,
-      "Search academic periods…",
-      "No academic periods match your search."
-    ),
-  };
+  const period: FacetDef = optionFacet(
+    "termInstanceId",
+    "Academic period",
+    values.termInstanceId,
+    "termInstanceId",
+    update,
+    "All academic periods",
+    options.termInstances,
+    "Search academic periods…",
+    "No academic periods match your search."
+  );
 
   const status: FacetDef = {
     id: "status",
@@ -239,34 +319,20 @@ export function buildResponseFacets(
     options: RESPONSE_COMPLETION_FACETS,
   };
 
-  const byColumn: ResponseFacetColumns =
-    view === "course"
-      ? {
-          evaluation: [course],
-          class: [yearLevel, section],
-          faculty: [faculty],
-          period: [period],
-          status: [status],
-          submitted: [submitted],
-        }
-      : view === "program-wide"
-        ? {
-            stakeholder: [stakeholder],
-            // Target is the joined major · year level, so both facts narrow it.
-            target: [major, yearLevel],
-            period: [period],
-            status: [status],
-            submitted: [submitted],
-          }
-        : {
-            evaluation: [course],
-            class: [yearLevel, section, classProgram],
-            faculty: [faculty],
-            period: [period],
-            status: [status],
-            submitted: [submitted],
-          };
-
+  const byColumn = columnsForView(view, {
+    course,
+    faculty,
+    major,
+    instrument,
+    classProgram,
+    ilo,
+    yearLevel,
+    section,
+    stakeholder,
+    period,
+    status,
+    submitted,
+  });
   // Course-bound evidence has no Major column and the Coordinator has no
   // instrument column, so those facets stay reachable from the toolbar.
   const overflow = view === "course" ? [major] : view === "program-wide" ? [instrument] : [ilo];

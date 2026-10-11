@@ -120,6 +120,116 @@ function statusLabel(status: DeploymentStatus): string {
   return status.charAt(0) + status.slice(1).toLowerCase();
 }
 
+function statusMatches(status: DeploymentStatus, filter: StatusFilter): boolean {
+  if (filter === "ALL") return status !== "ARCHIVED";
+  return status === filter;
+}
+
+function countByStatusFilter(
+  items: readonly PublishedDeploymentItem[],
+  filter: StatusFilter
+): number {
+  return items.filter((item) => statusMatches(item.status, filter)).length;
+}
+function PublishedEmptyState({
+  statusFilter,
+  activeFacetCount,
+  onClearFilters,
+}: {
+  statusFilter: StatusFilter;
+  activeFacetCount: number;
+  onClearFilters?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed py-8 text-center">
+      <p className="text-muted-foreground text-sm">
+        {statusFilter === "ALL"
+          ? "No deployments match the selected filter."
+          : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
+      </p>
+      {(activeFacetCount > 0 || statusFilter !== "ALL") && onClearFilters ? (
+        <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>
+          Clear filters
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+function StatusChipRow({
+  statusFilter,
+  statusCounts,
+  onSelect,
+}: {
+  statusFilter: StatusFilter;
+  statusCounts: Record<StatusFilter, number>;
+  onSelect: (filter: StatusFilter) => void;
+}) {
+  return (
+    <div
+      aria-label="Filter by deployment status"
+      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+      role="toolbar"
+    >
+      {STATUS_FILTERS.map((filter) => (
+        <Button
+          key={filter}
+          variant={statusFilter === filter ? "default" : "outline"}
+          size="sm"
+          aria-pressed={statusFilter === filter}
+          className="shrink-0"
+          aria-label={filter === "ALL" ? "All" : statusLabel(filter)}
+          onClick={() => onSelect(filter)}
+        >
+          {filter === "ALL" ? "All" : statusLabel(filter)}
+          <span aria-hidden="true" className="tabular-nums opacity-70">
+            {statusCounts[filter]}
+          </span>
+        </Button>
+      ))}
+    </div>
+  );
+}
+function CollectionFilterSheet({
+  view,
+  isMobile,
+  facets,
+  activeFacetCount,
+  onClearFilters,
+}: {
+  view: ToolsViewMode;
+  isMobile: boolean;
+  facets: PublishedFacets | undefined;
+  activeFacetCount: number;
+  onClearFilters?: () => void;
+}) {
+  // The card layout has no heading row at any width, so the sheet is the
+  // only way to reach these facets there; the list layout keeps the
+  // sheet for the widths where the table is replaced by compact rows.
+  if (view === "card") {
+    return (
+      <MobileFilterSheet
+        facets={facets?.all ?? []}
+        activeCount={activeFacetCount}
+        label="Filters"
+        onClearAll={onClearFilters ?? (() => {})}
+        summary="Show results"
+        triggerClassName="w-auto shrink-0"
+      />
+    );
+  }
+  if (!isMobile) return null;
+  return (
+    <div className="md:hidden">
+      <MobileFilterSheet
+        facets={facets?.all ?? []}
+        activeCount={activeFacetCount}
+        label="Filters"
+        onClearAll={onClearFilters ?? (() => {})}
+        summary="Show results"
+      />
+    </div>
+  );
+}
 // ---------------------------------------------------------------------------
 // Collection
 // ---------------------------------------------------------------------------
@@ -153,17 +263,9 @@ export function PublishedDeploymentsCollection({
     setCurrentPage(1);
   }
 
-  const filteredItems = items.filter((item) => {
-    if (statusFilter === "ALL") return item.status !== "ARCHIVED";
-    return item.status === statusFilter;
-  });
+  const filteredItems = items.filter((item) => statusMatches(item.status, statusFilter));
   const statusCounts = Object.fromEntries(
-    STATUS_FILTERS.map((filter) => [
-      filter,
-      items.filter((item) =>
-        filter === "ALL" ? item.status !== "ARCHIVED" : item.status === filter
-      ).length,
-    ])
+    STATUS_FILTERS.map((filter) => [filter, countByStatusFilter(items, filter)])
   ) as Record<StatusFilter, number>;
 
   const hasCourseColumn = items.some((item) => Boolean(item.courseLabel));
@@ -198,69 +300,27 @@ export function PublishedDeploymentsCollection({
   return (
     <div className="space-y-4">
       <TableToolbar search={search} facets={facets?.all} onClearAll={onClearFilters}>
-        {/* The card layout has no heading row at any width, so the sheet is the
-            only way to reach these facets there; the list layout keeps the
-            sheet for the widths where the table is replaced by compact rows. */}
-        {view === "card" ? (
-          <MobileFilterSheet
-            facets={facets?.all ?? []}
-            activeCount={activeFacetCount}
-            label="Filters"
-            onClearAll={onClearFilters ?? (() => {})}
-            summary="Show results"
-            triggerClassName="w-auto shrink-0"
-          />
-        ) : (
-          isMobile && (
-            <div className="md:hidden">
-              <MobileFilterSheet
-                facets={facets?.all ?? []}
-                activeCount={activeFacetCount}
-                label="Filters"
-                onClearAll={onClearFilters ?? (() => {})}
-                summary="Show results"
-              />
-            </div>
-          )
-        )}
+        <CollectionFilterSheet
+          view={view}
+          isMobile={isMobile}
+          facets={facets}
+          activeFacetCount={activeFacetCount}
+          onClearFilters={onClearFilters}
+        />
       </TableToolbar>
+      <StatusChipRow
+        statusFilter={statusFilter}
+        statusCounts={statusCounts}
+        onSelect={handleFilterChange}
+      />
 
-      <div
-        aria-label="Filter by deployment status"
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
-        role="toolbar"
-      >
-        {STATUS_FILTERS.map((filter) => (
-          <Button
-            key={filter}
-            variant={statusFilter === filter ? "default" : "outline"}
-            size="sm"
-            aria-pressed={statusFilter === filter}
-            className="shrink-0"
-            aria-label={filter === "ALL" ? "All" : statusLabel(filter)}
-            onClick={() => handleFilterChange(filter)}
-          >
-            {filter === "ALL" ? "All" : statusLabel(filter)}
-            <span aria-hidden="true" className="tabular-nums opacity-70">
-              {statusCounts[filter]}
-            </span>
-          </Button>
-        ))}
-      </div>
       {filteredItems.length === 0 ? (
         (filteredEmpty ?? (
-          <div className="rounded-lg border border-dashed py-8 text-center">
-            <p className="text-muted-foreground text-sm">
-              {statusFilter === "ALL"
-                ? "No deployments match the selected filter."
-                : `No ${statusLabel(statusFilter).toLowerCase()} deployments found.`}
-            </p>
-            {(activeFacetCount > 0 || statusFilter !== "ALL") && onClearFilters ? (
-              <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilters}>
-                Clear filters
-              </Button>
-            ) : null}
-          </div>
+          <PublishedEmptyState
+            statusFilter={statusFilter}
+            activeFacetCount={activeFacetCount}
+            onClearFilters={onClearFilters}
+          />
         ))
       ) : isMobile ? (
         <PublishedCompactList

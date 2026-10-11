@@ -86,6 +86,10 @@ export function ColumnFilterTrigger({
   const active = facets.filter(facetIsApplied);
   const unavailable = facets.every((facet) => facet.disabled === true);
   const summary = active.map(facetValueLabel).join(", ");
+  const triggerLabel = unavailable
+    ? `Filter ${label}, unavailable`
+    : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`;
+  const triggerActive = active.length > 0;
 
   return (
     <Popover>
@@ -96,14 +100,10 @@ export function ColumnFilterTrigger({
             <button
               type="button"
               disabled={unavailable}
-              aria-label={
-                unavailable
-                  ? `Filter ${label}, unavailable`
-                  : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
-              }
+              aria-label={triggerLabel}
               className={cn(
                 "group/btn focus-visible:ring-ring hover:bg-muted/60 -mx-2 flex min-h-11 w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 rounded-md px-2 text-left text-xs font-semibold tracking-wider whitespace-nowrap uppercase transition-colors focus-visible:ring-3 focus-visible:outline-none",
-                active.length > 0
+                triggerActive
                   ? "text-primary hover:text-primary font-bold"
                   : "text-table-header-fg hover:text-foreground",
                 className
@@ -114,7 +114,7 @@ export function ColumnFilterTrigger({
                 aria-hidden="true"
                 className={cn(
                   "ml-1 size-3.5 shrink-0 transition-colors",
-                  active.length > 0
+                  triggerActive
                     ? "text-primary fill-current"
                     : "text-muted-foreground group-hover/btn:text-foreground"
                 )}
@@ -126,20 +126,16 @@ export function ColumnFilterTrigger({
               variant="ghost"
               size="icon-sm"
               disabled={unavailable}
-              aria-label={
-                unavailable
-                  ? `Filter ${label}, unavailable`
-                  : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
-              }
+              aria-label={triggerLabel}
               className={cn(
                 "text-muted-foreground hover:text-foreground -mr-1 ml-0.5 shrink-0",
-                active.length > 0 && "text-primary hover:text-primary",
+                triggerActive && "text-primary hover:text-primary",
                 className
               )}
             >
               <Funnel
                 aria-hidden="true"
-                className={cn("size-3.5", active.length > 0 && "fill-current")}
+                className={cn("size-3.5", triggerActive && "fill-current")}
               />
             </Button>
           )

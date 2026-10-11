@@ -863,6 +863,59 @@ function memberStatus(member: CourseRosterMember) {
   );
 }
 
+function RosterEmptyState({
+  search,
+  includeRemoved,
+  clearHref,
+}: {
+  search: string;
+  includeRemoved: boolean;
+  clearHref: string;
+}) {
+  return (
+    <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
+      <p>
+        No students match{search ? ` “${search}”` : " this view"}.{" "}
+        {includeRemoved ? "Removed students are included." : "Removed students are hidden."}
+      </p>
+      {(search || includeRemoved) && (
+        <Link href={clearHref} className={cn(buttonVariants({ variant: "outline" }), "mt-4")}>
+          Clear filters
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function RosterSortHead({
+  sortDirection,
+  isPending,
+  onToggle,
+}: {
+  sortDirection: "asc" | "desc";
+  isPending: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <TableHead aria-sort={sortDirection === "asc" ? "ascending" : "descending"}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={`Sort by student name, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
+        aria-busy={isPending || undefined}
+        className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold focus-visible:ring-3 focus-visible:outline-none"
+      >
+        Student
+        {sortDirection === "asc" ? (
+          <ArrowUp aria-hidden="true" className="size-4" />
+        ) : (
+          <ArrowDown aria-hidden="true" className="size-4" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 function RosterTable({
   members,
   includeRemoved,
@@ -905,20 +958,11 @@ function RosterTable({
 
   if (members.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm">
-        <p>
-          No students match{search ? ` “${search}”` : " this view"}.{" "}
-          {includeRemoved ? "Removed students are included." : "Removed students are hidden."}
-        </p>
-        {(search || includeRemoved) && (
-          <Link
-            href={`${basePath}?${new URLSearchParams({ sort: sortDirection })}`}
-            className={cn(buttonVariants({ variant: "outline" }), "mt-4")}
-          >
-            Clear filters
-          </Link>
-        )}
-      </div>
+      <RosterEmptyState
+        search={search}
+        includeRemoved={includeRemoved}
+        clearHref={`${basePath}?${new URLSearchParams({ sort: sortDirection })}`}
+      />
     );
   }
 
@@ -933,22 +977,11 @@ function RosterTable({
       <caption className="sr-only">Course roster members and current eligibility</caption>
       <TableHeader>
         <TableRow>
-          <TableHead aria-sort={sortDirection === "asc" ? "ascending" : "descending"}>
-            <button
-              type="button"
-              onClick={handleSortToggle}
-              aria-label={`Sort by student name, currently ${sortDirection === "asc" ? "ascending" : "descending"}`}
-              aria-busy={isSortPending || undefined}
-              className="focus-visible:ring-ring inline-flex min-h-11 items-center gap-1.5 rounded-md px-1 font-semibold focus-visible:ring-3 focus-visible:outline-none"
-            >
-              Student
-              {sortDirection === "asc" ? (
-                <ArrowUp aria-hidden="true" className="size-4" />
-              ) : (
-                <ArrowDown aria-hidden="true" className="size-4" />
-              )}
-            </button>
-          </TableHead>
+          <RosterSortHead
+            sortDirection={sortDirection}
+            isPending={isSortPending}
+            onToggle={handleSortToggle}
+          />
           {assignment.courseScope === "GENERAL_EDUCATION" && <TableHead>Program</TableHead>}
           <TableHead>Status</TableHead>
           <TableHead>Added</TableHead>

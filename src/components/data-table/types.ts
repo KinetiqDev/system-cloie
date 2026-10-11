@@ -12,7 +12,7 @@
  */
 
 /** One selectable narrowing value inside a column filter. */
-export type FacetOption = {
+type FacetOption = {
   /** Value written to the owning list's state. */
   id: string;
   label: string;
@@ -57,7 +57,7 @@ export type OptionFacetDef = FacetDefBase & {
 };
 
 /** A single on/off refinement, e.g. "Only classes with no active members". */
-export type ToggleFacetDef = FacetDefBase & {
+type ToggleFacetDef = FacetDefBase & {
   kind: "toggle";
   /** Value written while the toggle is on. */
   onValue: string;
