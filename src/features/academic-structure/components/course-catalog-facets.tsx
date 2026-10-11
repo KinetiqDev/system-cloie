@@ -2,7 +2,6 @@
 
 import { SEMESTER_OPTIONS, TERM_OPTIONS, YEAR_LEVEL_OPTIONS } from "@/lib/constants/academic";
 import type { FacetDef } from "@/components/data-table/types";
-import { SCHEDULE_FILTER_ALL } from "./course-schedule-filters";
 
 /**
  * The narrowing controls the Course catalogs share. These lists filter in
