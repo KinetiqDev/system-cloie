@@ -1,6 +1,7 @@
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import type { ServiceResult } from "@/lib/utils/service-result";
+import { z } from "zod";
 import { poDetailsSchema } from "../schemas/po";
 import type { POImportRequest } from "../schemas/po-import";
 import type { POImportPreview, POImportPreviewRow, POImportSummary } from "../types/po-import";
@@ -46,10 +47,18 @@ export async function previewPOImport(
   );
   const counts = new Map<string, number>();
   const parsedRows = request.rows.map((row) => {
-    const parsed = poDetailsSchema.safeParse({
-      code: normalizeText(row.input.po_code),
-      description: normalizeText(row.input.description),
-    });
+    const parsed = poDetailsSchema
+      .extend({
+        classification: z.enum(["CORE", "PROFESSIONAL"], {
+          error:
+            "Select Core or Professional for this import. Common and Institution-specific POs are managed by the Secretary or Dean.",
+        }),
+      })
+      .safeParse({
+        classification: row.input.classification?.trim().toUpperCase() || request.classification,
+        code: normalizeText(row.input.po_code),
+        description: normalizeText(row.input.description),
+      });
     const poCode = normalizePOCode(row.input.po_code);
     if (poCode) counts.set(poCode, (counts.get(poCode) ?? 0) + 1);
     return { row, parsed, poCode };
@@ -95,6 +104,7 @@ export async function previewPOImport(
       input: row.input,
       poCode: parsed.data.code,
       description: parsed.data.description,
+      classification: parsed.data.classification,
       status: "READY",
       error: null,
     };

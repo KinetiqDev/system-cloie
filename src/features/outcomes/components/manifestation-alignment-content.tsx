@@ -13,6 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import type { CourseAlignment } from "@/features/outcomes/services/manage-course-alignment";
+import { PO_CLASSIFICATION_LABELS } from "../po-classification";
 import { cn } from "@/lib/utils";
 import {
   MANIFESTATION_OPTIONS,
@@ -45,7 +46,21 @@ type TargetCopy = {
   archivedLabel: string;
 };
 
-function targetCopy(scope: CourseAlignment["course"]["scope"]): TargetCopy {
+function targetCopy(scope: CourseAlignment["course"]["scope"], common = false): TargetCopy {
+  if (scope === "GENERAL_EDUCATION" && common)
+    return {
+      shortNoun: "Common PO",
+      header: "CILO / Common PO",
+      caption: "Shared General Education CILO to Common PO manifestation matrix.",
+      incompleteMessage:
+        "Choose Learning, Practice, or Opportunity for at least one active Common PO per CILO before publishing.",
+      emptyTitle: "No active Common POs are available.",
+      emptyDescription:
+        "The Secretary or Dean must add or restore a Common PO before this course can be aligned.",
+      archivedTitle: "Archived Common POs",
+      archivedDescription: "Historical mappings are read-only and do not satisfy live readiness.",
+      archivedLabel: "Archived Common PO manifestations, read-only",
+    };
   if (scope === "GENERAL_EDUCATION") {
     return {
       shortNoun: "ILO",
@@ -108,7 +123,7 @@ export function ManifestationAlignmentContent({
   onChangeCell,
 }: ManifestationAlignmentContentProps) {
   const { cilos, targets } = alignment;
-  const copy = targetCopy(alignment.course.scope);
+  const copy = targetCopy(alignment.course.scope, alignment.course.geAlignmentMode === "COMMON_PO");
   const totalPairs = cilos.length * targets.length;
   const classifiedPairs = cilos.reduce(
     (total, cilo) => total + targets.filter((target) => draft[cilo.id]?.[target.id]).length,
@@ -179,6 +194,11 @@ export function ManifestationAlignmentContent({
                     className="min-w-40 px-3 pt-2 pb-2 text-left align-top font-medium"
                   >
                     <span className="block">{target.code}</span>
+                    {target.classification && (
+                      <Badge variant="secondary">
+                        {PO_CLASSIFICATION_LABELS[target.classification]}
+                      </Badge>
+                    )}
                     <span className="text-muted-foreground mt-1 block text-xs leading-snug font-normal break-words">
                       {target.description}
                     </span>
@@ -256,6 +276,11 @@ export function ManifestationAlignmentContent({
                     )}
                   >
                     <p className="text-label-lg font-medium">{target.code}</p>
+                    {target.classification && (
+                      <Badge variant="secondary">
+                        {PO_CLASSIFICATION_LABELS[target.classification]}
+                      </Badge>
+                    )}
                     <p className="text-muted-foreground text-body-sm">{target.description}</p>
                     {unanswered && <p className="text-muted-foreground text-body-sm">Unanswered</p>}
                     <ManifestationPicker

@@ -1,4 +1,10 @@
-import type { AcademicPeriodStatus, CourseScope, StudentSection, YearLevel } from "@prisma/client";
+import type {
+  POClassification,
+  AcademicPeriodStatus,
+  CourseScope,
+  StudentSection,
+  YearLevel,
+} from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import {
   readPeriodReadiness,
@@ -39,6 +45,7 @@ type DeanOutcomeCatalogEntry = {
   statement: string;
   isArchived: boolean;
   displayOrder: number;
+  classification?: POClassification;
 };
 
 type DeanMappingGap = {
@@ -55,6 +62,7 @@ type DeanMappingGap = {
   reason: "missing-cilos" | "incomplete-mapping";
   missingGoIds: string[];
   missingInstitutionalOutcomeIds: string[];
+  missingCommonOutcomeIds?: string[];
 };
 
 export type DeanLearningOutcomesData = {
@@ -62,6 +70,7 @@ export type DeanLearningOutcomesData = {
   schemaVersion: number;
   risk: "missing-cilos" | "incomplete-mappings" | "not-ready" | null;
   institutionalOutcomes: DeanOutcomeCatalogEntry[];
+  commonOutcomes?: DeanOutcomeCatalogEntry[];
   programs: Array<{
     id: string;
     name: string;
@@ -113,6 +122,7 @@ function visibleCatalog(
     description: string;
     isArchived: boolean;
     order: number;
+    classification?: POClassification;
   }>,
   periodStatus: AcademicPeriodStatus
 ): DeanOutcomeCatalogEntry[] {
@@ -124,6 +134,7 @@ function visibleCatalog(
       statement: target.description,
       isArchived: target.isArchived,
       displayOrder: target.order,
+      classification: target.classification,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder || a.code.localeCompare(b.code));
 }
@@ -174,7 +185,11 @@ function gapTargetType(
   schemaVersion: number
 ): CourseAlignmentTargetLayer | null {
   if (schemaVersion < 2) return null;
-  if (context.targetType === "INSTITUTIONAL_OUTCOME" || context.targetType === "GRADUATE_OUTCOME") {
+  if (
+    context.targetType === "COMMON_PROGRAM_OUTCOME" ||
+    context.targetType === "INSTITUTIONAL_OUTCOME" ||
+    context.targetType === "GRADUATE_OUTCOME"
+  ) {
     return context.targetType;
   }
   return context.courseScope === "GENERAL_EDUCATION" ? "INSTITUTIONAL_OUTCOME" : "GRADUATE_OUTCOME";
@@ -308,6 +323,7 @@ function mappingGapsForContext(
     reason: "incomplete-mapping",
     missingGoIds: cilo.missingGoIds ?? [],
     missingInstitutionalOutcomeIds: cilo.missingInstitutionalOutcomeIds ?? [],
+    missingCommonOutcomeIds: cilo.missingCommonOutcomeIds ?? [],
   }));
 }
 
@@ -387,6 +403,16 @@ export async function getDeanLearningOutcomes(
       schemaVersion,
       risk,
       institutionalOutcomes,
+      commonOutcomes: visibleCatalog(
+        [
+          ...new Map(
+            readiness.contexts
+              .flatMap((context) => context.commonOutcomes ?? [])
+              .map((row) => [row.id, row])
+          ).values(),
+        ],
+        period.status
+      ),
       programs: [...programs.values()].sort(byUnresolvedContextsThenName).map((program) => ({
         ...program,
         mappingGaps: program.mappingGaps.sort(byCourseThenClass),

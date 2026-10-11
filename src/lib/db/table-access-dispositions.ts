@@ -130,6 +130,9 @@ export const TABLE_ACCESS_DISPOSITIONS = {
   },
 
   // outcomes.prisma
+  common_program_outcomes: { kind: "server-only" },
+  cilo_common_po_mappings: { kind: "server-only" },
+  outcome_changes: { kind: "server-only" },
   gos: { kind: "server-only" },
   cilos: { kind: "server-only" },
   institutional_outcomes: { kind: "server-only" },

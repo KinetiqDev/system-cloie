@@ -54,11 +54,11 @@ describe("PO import CSV", () => {
     ["PO Code,Description\n", "Add at least one PO row to the CSV file."],
     [
       "code,text\nPO-1,Outcome",
-      "Use the Program Outcome import template. Expected columns: PO Code, Description.",
+      "Use the Program Outcome import template. Expected columns: PO Code, Description, with an optional Classification column.",
     ],
     [
       "PO Code,Description,Status\nPO-1,Outcome,Active",
-      "Use the Program Outcome import template. Expected columns: PO Code, Description.",
+      "Use the Program Outcome import template. Expected columns: PO Code, Description, with an optional Classification column.",
     ],
   ])("rejects an invalid file", (csv, error) => {
     expect(parsePOImportCsv(csv)).toEqual({ success: false, error });

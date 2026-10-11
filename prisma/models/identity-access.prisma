@@ -76,6 +76,9 @@ model User {
   exclusion_reversals                         CourseBoundEvaluationExclusion[]    @relation("CourseBoundEvaluationExclusionReverser")
   created_cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]   @relation("CILOInstitutionalOutcomeMappingCreator")
   updated_cilo_institutional_outcome_mappings CILOInstitutionalOutcomeMapping[]   @relation("CILOInstitutionalOutcomeMappingUpdater")
+  outcome_changes                            OutcomeChange[]
+  created_cilo_common_po_mappings             CILOCommonPOMapping[] @relation("CILOCommonPOMappingCreator")
+  updated_cilo_common_po_mappings             CILOCommonPOMapping[] @relation("CILOCommonPOMappingUpdater")
   created_cilo_mappings                       CILOMapping[]                       @relation("CILOMappingCreator")
   updated_cilo_mappings                       CILOMapping[]                       @relation("CILOMappingUpdater")
 

@@ -56,6 +56,50 @@ function classify(
 }
 
 describe("classifyCourseAlignment exhaustive readiness", () => {
+  it("uses only shared Common PO mappings for a Common-mode GE course", () => {
+    const cilo = {
+      ...geCilo(1),
+      cilo_common_po_mappings: [
+        { manifestation: "PRACTICE" as const, common_outcome: { is_active: true } },
+      ],
+    };
+    expect(classifyCourseAlignment([cilo], "GENERAL_EDUCATION", null, [], "COMMON_PO")).toBe(
+      "ready"
+    );
+    expect(classifyCourseAlignment([geCilo(1)], "GENERAL_EDUCATION", null, [], "COMMON_PO")).toBe(
+      "incomplete-mapping"
+    );
+    expect(
+      classifyCourseAlignment(
+        [
+          {
+            ...cilo,
+            cilo_common_po_mappings: [{ manifestation: null, common_outcome: { is_active: true } }],
+          },
+        ],
+        "GENERAL_EDUCATION",
+        null,
+        [],
+        "COMMON_PO"
+      )
+    ).toBe("incomplete-mapping");
+    expect(
+      classifyCourseAlignment(
+        [
+          {
+            ...cilo,
+            cilo_common_po_mappings: [
+              { manifestation: "LEARNING", common_outcome: { is_active: false } },
+            ],
+          },
+        ],
+        "GENERAL_EDUCATION",
+        null,
+        [],
+        "COMMON_PO"
+      )
+    ).toBe("incomplete-mapping");
+  });
   it("classifies a Program-specific Course incomplete when one active CILO lacks a PO manifestation", () => {
     const state = classify(
       [mappedCilo("po-1", "LEARNING"), unmappedCilo()],

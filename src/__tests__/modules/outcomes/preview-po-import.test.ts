@@ -36,6 +36,7 @@ describe("previewPOImport", () => {
     const { previewPOImport } = await import("@/features/outcomes/services/preview-po-import");
     const result = await previewPOImport({
       programId: PROGRAM_ID,
+      classification: "CORE",
       rows: [
         { sourceIndex: 2, input: { po_code: " po-1 ", description: "Valid outcome" } },
         { sourceIndex: 3, input: { po_code: "PO-2", description: "Different text" } },
@@ -81,6 +82,7 @@ describe("previewPOImport", () => {
     await expect(
       previewPOImport({
         programId: PROGRAM_ID,
+        classification: "CORE",
         rows: [{ sourceIndex: 2, input: { po_code: "PO-1", description: "Valid outcome" } }],
       })
     ).resolves.toEqual({ success: false, error: "Active Academic Program is required." });

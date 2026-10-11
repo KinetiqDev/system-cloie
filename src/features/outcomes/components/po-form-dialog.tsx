@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm, type RefCallBack, type UseFormRegisterReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,14 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
@@ -25,6 +33,7 @@ import {
   type UpdatePOInput,
 } from "../schemas/po";
 import { createPOAction, updatePOAction } from "@/lib/actions/program-head-outcome-actions";
+import { isProgramHeadCategory } from "../po-classification";
 import type { ProgramPOItem } from "../services/manage-program-head-outcomes";
 
 type POFormDialogProps =
@@ -43,11 +52,160 @@ type POFormDialogProps =
       onOpenChange: (open: boolean) => void;
     };
 
+/**
+ * A Program Head may only set a Core or Professional classification. The two
+ * administrative categories — Common and Institution-specific — are owned by
+ * the central catalog, so this form never offers them and never pre-selects
+ * one: an administrative PO arriving here prefills with no selection at all,
+ * and the schema still refuses to submit until a permitted value is chosen.
+ */
+const PROGRAM_HEAD_CLASSIFICATIONS = [
+  { value: "CORE", label: "Core" },
+  { value: "PROFESSIONAL", label: "Professional" },
+] as const;
+
+/** Server-action failure banner, shared by both form modes. */
+function FormRootError({ error }: { error?: { message?: string } }) {
+  if (!error) {
+    return null;
+  }
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{error.message}</AlertDescription>
+    </Alert>
+  );
+}
+
+function POClassificationField({
+  idPrefix,
+  value,
+  onValueChange,
+  onBlur,
+  triggerRef,
+  error,
+}: {
+  idPrefix: "create" | "edit";
+  value: string | undefined;
+  onValueChange: (value: string | null) => void;
+  onBlur: () => void;
+  triggerRef: RefCallBack;
+  error?: { message?: string };
+}) {
+  return (
+    <Field data-invalid={!!error}>
+      <FieldLabel htmlFor={`${idPrefix}-po-classification`}>Classification</FieldLabel>
+      <Select value={value ?? null} onValueChange={onValueChange}>
+        <SelectTrigger
+          id={`${idPrefix}-po-classification`}
+          className="w-full"
+          onBlur={onBlur}
+          ref={triggerRef}
+          aria-invalid={!!error}
+        >
+          <SelectValue placeholder="Select a classification" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {PROGRAM_HEAD_CLASSIFICATIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      <FieldError errors={[error]} />
+    </Field>
+  );
+}
+
+function POCodeField({
+  idPrefix,
+  registration,
+  error,
+}: {
+  idPrefix: "create" | "edit";
+  registration: UseFormRegisterReturn;
+  error?: { message?: string };
+}) {
+  return (
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={`${idPrefix}-go-code`}>PO Code</FieldLabel>
+      <FieldContent>
+        <Input
+          id={`${idPrefix}-go-code`}
+          placeholder="e.g. PO-1"
+          autoComplete="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${idPrefix}-go-code-error` : undefined}
+          {...registration}
+        />
+        <FieldError id={`${idPrefix}-go-code-error`} errors={[error]} />
+      </FieldContent>
+    </Field>
+  );
+}
+
+function PODescriptionField({
+  idPrefix,
+  registration,
+  error,
+}: {
+  idPrefix: "create" | "edit";
+  registration: UseFormRegisterReturn;
+  error?: { message?: string };
+}) {
+  return (
+    <Field data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={`${idPrefix}-go-description`}>Description</FieldLabel>
+      <FieldContent>
+        <Textarea
+          id={`${idPrefix}-go-description`}
+          placeholder="Describe the Program Outcome..."
+          rows={4}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${idPrefix}-go-description-error` : undefined}
+          {...registration}
+        />
+        <FieldError id={`${idPrefix}-go-description-error`} errors={[error]} />
+      </FieldContent>
+    </Field>
+  );
+}
+
+function POSubmitActions({
+  isPending,
+  onClose,
+  submitLabel,
+}: {
+  isPending: boolean;
+  onClose: () => void;
+  submitLabel: string;
+}) {
+  return (
+    <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full md:w-auto"
+        onClick={onClose}
+        disabled={isPending}
+      >
+        Cancel
+      </Button>
+      <Button type="submit" className="w-full md:w-auto" loading={isPending}>
+        {isPending ? "Saving..." : submitLabel}
+      </Button>
+    </div>
+  );
+}
+
 function CreateForm({ programId, onClose }: { programId: string; onClose: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
     reset,
@@ -63,6 +221,7 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
       formData.set("programId", data.programId);
       formData.set("code", data.code);
       formData.set("description", data.description);
+      formData.set("classification", data.classification);
       const result = await createPOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
@@ -77,54 +236,29 @@ function CreateForm({ programId, onClose }: { programId: string; onClose: () => 
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      {errors.root && (
-        <Alert variant="destructive">
-          <AlertDescription>{errors.root.message}</AlertDescription>
-        </Alert>
-      )}
-      <Field data-invalid={errors.code ? true : undefined}>
-        <FieldLabel htmlFor="create-go-code">PO Code</FieldLabel>
-        <FieldContent>
-          <Input
-            id="create-go-code"
-            placeholder="e.g. PO-1"
-            autoComplete="off"
-            aria-invalid={errors.code ? true : undefined}
-            aria-describedby={errors.code ? "create-go-code-error" : undefined}
-            {...register("code")}
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <FormRootError error={errors.root} />
+      <Controller
+        name="classification"
+        control={control}
+        render={({ field }) => (
+          <POClassificationField
+            idPrefix="create"
+            value={field.value}
+            onValueChange={(value) => field.onChange(value)}
+            onBlur={field.onBlur}
+            triggerRef={field.ref}
+            error={errors.classification}
           />
-          <FieldError id="create-go-code-error" errors={[errors.code]} />
-        </FieldContent>
-      </Field>
-      <Field data-invalid={errors.description ? true : undefined}>
-        <FieldLabel htmlFor="create-go-description">Description</FieldLabel>
-        <FieldContent>
-          <Textarea
-            id="create-go-description"
-            placeholder="Describe the Program Outcome..."
-            rows={4}
-            aria-invalid={errors.description ? true : undefined}
-            aria-describedby={errors.description ? "create-go-description-error" : undefined}
-            {...register("description")}
-          />
-          <FieldError id="create-go-description-error" errors={[errors.description]} />
-        </FieldContent>
-      </Field>
-      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full md:w-auto"
-          onClick={onClose}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" className="w-full md:w-auto" loading={isPending}>
-          {isPending ? "Saving..." : "Create PO"}
-        </Button>
-      </div>
+        )}
+      />
+      <POCodeField idPrefix="create" registration={register("code")} error={errors.code} />
+      <PODescriptionField
+        idPrefix="create"
+        registration={register("description")}
+        error={errors.description}
+      />
+      <POSubmitActions isPending={isPending} onClose={onClose} submitLabel="Create PO" />
     </form>
   );
 }
@@ -142,13 +276,20 @@ function EditForm({
   const [isPending, startTransition] = useTransition();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
     reset,
     setError,
   } = useForm<UpdatePOInput>({
     resolver: customZodResolver(updatePOSchema),
-    defaultValues: { programId, id: po.id, code: po.code, description: po.description },
+    defaultValues: {
+      programId,
+      id: po.id,
+      code: po.code,
+      description: po.description,
+      classification: isProgramHeadCategory(po.classification) ? po.classification : undefined,
+    },
   });
 
   function onSubmit(data: UpdatePOInput) {
@@ -158,6 +299,7 @@ function EditForm({
       formData.set("id", data.id);
       formData.set("code", data.code);
       formData.set("description", data.description);
+      formData.set("classification", data.classification);
       const result = await updatePOAction(formData);
       if (!result.success) {
         setError("root", { message: result.error });
@@ -172,56 +314,31 @@ function EditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <input type="hidden" {...register("programId")} />
       <input type="hidden" {...register("id")} />
-      {errors.root && (
-        <Alert variant="destructive">
-          <AlertDescription>{errors.root.message}</AlertDescription>
-        </Alert>
-      )}
-      <Field data-invalid={errors.code ? true : undefined}>
-        <FieldLabel htmlFor="edit-go-code">PO Code</FieldLabel>
-        <FieldContent>
-          <Input
-            id="edit-go-code"
-            placeholder="e.g. PO-1"
-            autoComplete="off"
-            aria-invalid={errors.code ? true : undefined}
-            aria-describedby={errors.code ? "edit-go-code-error" : undefined}
-            {...register("code")}
+      <FormRootError error={errors.root} />
+      <Controller
+        name="classification"
+        control={control}
+        render={({ field }) => (
+          <POClassificationField
+            idPrefix="edit"
+            value={field.value}
+            onValueChange={(value) => field.onChange(value)}
+            onBlur={field.onBlur}
+            triggerRef={field.ref}
+            error={errors.classification}
           />
-          <FieldError id="edit-go-code-error" errors={[errors.code]} />
-        </FieldContent>
-      </Field>
-      <Field data-invalid={errors.description ? true : undefined}>
-        <FieldLabel htmlFor="edit-go-description">Description</FieldLabel>
-        <FieldContent>
-          <Textarea
-            id="edit-go-description"
-            placeholder="Describe the Program Outcome..."
-            rows={4}
-            aria-invalid={errors.description ? true : undefined}
-            aria-describedby={errors.description ? "edit-go-description-error" : undefined}
-            {...register("description")}
-          />
-          <FieldError id="edit-go-description-error" errors={[errors.description]} />
-        </FieldContent>
-      </Field>
-      <div className="flex flex-col-reverse gap-2 pt-2 md:flex-row md:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full md:w-auto"
-          onClick={onClose}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" className="w-full md:w-auto" loading={isPending}>
-          {isPending ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
+        )}
+      />
+      <POCodeField idPrefix="edit" registration={register("code")} error={errors.code} />
+      <PODescriptionField
+        idPrefix="edit"
+        registration={register("description")}
+        error={errors.description}
+      />
+      <POSubmitActions isPending={isPending} onClose={onClose} submitLabel="Save Changes" />
     </form>
   );
 }

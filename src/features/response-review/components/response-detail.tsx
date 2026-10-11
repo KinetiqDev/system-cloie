@@ -273,7 +273,16 @@ function AnswerBindingBadges({
   if (binding.type === "PO") {
     return <PoBadge poBindings={binding.poBindings} outcomeHref={outcomeHref} />;
   }
-  return binding.layer === "INSTITUTIONAL_OUTCOME" ? (
+  return binding.layer === "COMMON_PROGRAM_OUTCOME" ? (
+    <Badge variant="outline">
+      <CiloLabel label={binding.ciloLabel} />
+      <span className="ml-2">
+        Common POs:{" "}
+        {binding.commonMappings.map((mapping) => mapping.code).join(", ") || "No current mapping"}.
+        ILO evidence does not apply.
+      </span>
+    </Badge>
+  ) : binding.layer === "INSTITUTIONAL_OUTCOME" ? (
     <IloAlignmentBadge binding={binding} outcomeHref={outcomeHref} />
   ) : (
     <CiloGoBadge binding={binding} outcomeHref={outcomeHref} />

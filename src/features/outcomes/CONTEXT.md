@@ -9,7 +9,7 @@ A college-wide learning outcome in the shared Institutional Outcome catalog, own
 _Avoid_: Program Outcome, college-level PO, Graduate Outcome
 
 **Program Outcome (PO)**:
-A program-level learning outcome owned by exactly one Academic Program; Program Heads administer POs within their assigned Program scope. The earlier terms "Graduate Outcome" and "Program Learning Outcome" are retained only in historical records and compatibility identifiers such as the `goId` and `ploId` URL aliases.
+A program-level learning outcome owned by exactly one Academic Program; Program Heads administer Core and Professional POs within their assigned Program scope. Secretary and Dean administer program-local Common and Institution-specific POs. The earlier terms "Graduate Outcome" and "Program Learning Outcome" are retained only in historical records and compatibility identifiers such as the `goId` and `ploId` URL aliases.
 _Avoid_: Graduate Outcome, GO, Program Learning Outcome, PLO, Institutional outcome, program-level template
 
 **PO compatibility boundary**:
@@ -26,7 +26,7 @@ The way a CILO contributes to a PO or Institutional Outcome, carried by every ty
 _Avoid_: Numeric or weighted manifestation, missing manifestation on a mapping, manifestation-filtered evidence
 
 **General Education Course**:
-A Course whose CILOs align to the shared Institutional Outcome catalog.
+A shared Course whose CILOs normally align to the school-wide Common PO catalog. Existing ILO-mode history retains its separate Institutional Outcome alignment.
 _Avoid_: Program-scoped course, course without an owning program
 
 **Program-specific Course**:
@@ -59,7 +59,7 @@ _Avoid_: Equal-weight attainment, weighted coverage, attainment formula
 
 
 **Shared General Education mapping**:
-The Course-level CILO-to-ILO mapping set that applies automatically to every active Course Assignment context using that General Education Course; it is never duplicated per Program or per assignment.
+The Course-level CILO-to-Common-PO mapping set, or retained ILO-mode mapping set, that applies automatically to every active Course Assignment context using that General Education Course; it is never duplicated per Program or per assignment.
 _Avoid_: Per-program GE mapping, per-assignment GE mapping
 
 **Course alignment workspace**:
@@ -79,11 +79,11 @@ Actor and timestamp records for new or changed typed mapping rows; legacy rows w
 _Avoid_: Anonymous write, inferred actor
 
 **Outcome readiness**:
-The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active Institutional Outcome mapping with a non-null manifestation. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PO of the Course's owning Academic Program; a Program with zero active POs alongside active CILOs is incomplete, not ready.
+The per-(Course, Academic Program) state derived from active Course Assignments: `missing-cilos` (no active CILOs), `incomplete-mapping` (any active CILO fails the typed alignment rule), or `ready` (every active CILO satisfies it). General Education CILOs follow the at-least-one rule: at least one active central Common PO mapping with a non-null manifestation in Common mode, or an active Institutional Outcome in retained ILO mode. Program-specific CILOs follow the exhaustive rule: a non-null manifestation for every active PO of the Course's owning Academic Program; a Program with zero active POs alongside active CILOs is incomplete, not ready.
 _Avoid_: PO-only readiness, per-assignment readiness, CILO count as readiness, vacuous readiness with zero active POs
 
 **Course alignment target layer**:
-The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `INSTITUTIONAL_OUTCOME` and `PROGRAM_SPECIFIC` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
+The internal discriminator resolving a Course scope to its typed target catalog: `GENERAL_EDUCATION` resolves to `COMMON_PROGRAM_OUTCOME` in Common mode or `INSTITUTIONAL_OUTCOME` in retained ILO mode and `PROGRAM_SPECIFIC` to `GRADUATE_OUTCOME`; persisted in readiness snapshot contexts and Dean mapping-gap DTOs, translated before display, never surfaced verbatim to users.
 _Avoid_: Surfaced layer value, untyped course target catalog
 
 **Completed-period readiness snapshot**:
@@ -91,7 +91,7 @@ An immutable, versioned record of readiness written when an Academic Period comp
 _Avoid_: Live readiness read, mutable snapshot, relabeled legacy snapshot
 
 **Readiness snapshot schema version**:
-The version tag on period readiness snapshots: new snapshots write version 2 (typed payloads under the exhaustive manifestation rule); version 1 (column default) keeps legacy at-least-one-target semantics, and reads branch on it; snapshots are immutable via DB trigger.
+The version tag on period readiness snapshots: new snapshots write version 3 with explicit Common PO targets; version 2 retains its captured typed ILO/PO payload (typed payloads under the exhaustive manifestation rule); version 1 (column default) keeps legacy at-least-one-target semantics, and reads branch on it; snapshots are immutable via DB trigger.
 _Avoid_: Unversioned snapshot, rewritable snapshot
 
 **Publication alignment gate**:
@@ -107,7 +107,7 @@ The General Education Coordinator college-wide owns the Institutional Learning O
 _Avoid_: Secretary as ILO owner, unconfirmed administrative write, Secretary ILO write
 
 **PO CSV import**:
-Program Heads may create up to 20 active POs at once for the deliberately Selected Program from a two-column CSV (`PO Code`, `Description`). Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `GO Code` and `PLO Code` headers for compatibility. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-PO mappings before publication.
+Program Heads may create up to 20 active POs at once for the deliberately Selected Program from a `PO Code`, `Description` CSV with an optional `Classification` column (Core or Professional per row; rows without one use the import-dialog classification). Common and Institution-specific codes cannot enter a Program Head import. Import is create-only: matching active or archived codes are reported and never updated, restored, archived, or reordered. The parser continues to accept the legacy `GO Code` and `PLO Code` headers for compatibility. The server revalidates Program authority and current catalog state before an atomic append in file order. Every imported active PO immediately enters the exhaustive Program-specific readiness rule, so Faculty may need to classify new CILO-to-PO mappings before publication.
 _Avoid_: Spreadsheet overwrite, archived-PO restoration, cross-Program import, partial unexpected batch
 
 **Program Head read-only mapping review**:
@@ -126,3 +126,22 @@ _Avoid_: ILO-to-PO mapping, automatic crosswalk, attainment rollup
 
 The Institutional Learning Outcome catalog ownership and write-authority conflict (ADR 0005 documenting Secretary ownership vs the live server denial) is **resolved** by ADR 0018: `GEN_ED_COORDINATOR college-wide owns ILO` (CRUD, reorder, archive, restore; college-wide `order`, `code @unique`). The Secretary has no ILO access and `SECRETARY_NAV` retains no Learning Outcomes entry. Earlier deferred notes are superseded.
 _Avoid_: Secretary ILO ownership, Coordinator ILO catalog editor deferred assumption
+
+
+**PO classification**:
+An explicitly selected category of a program PO: Common, Core, Professional, or Institution-specific. Category never follows a code or numerical range. Program Heads select only Core and Professional; Secretary and Dean handle the other categories. UNCLASSIFIED is the migration-only compatibility state with no owner category: either an authorized Program Head (claiming Core/Professional) or Secretary/Dean (claiming Common/Institution-specific) may claim it by saving a real classification, while demo seed records carry explicit classifications.
+_Avoid_: Inferred classification, PO-number threshold, Institution-specific as ILO
+
+**Common Program Outcome**:
+One institution-wide canonical Common PO definition managed by Secretary and Dean, independently of every program PO. Programs retain local codes and ordering through centrally managed adoption records. Shared corrections update linked statements together; archive never cascades into local active states.
+_Avoid_: BSIT-owned GE target, duplicate canonical statement, Program Head Common writer
+
+**GE Common PO mapping**:
+A course-owned relationship between a GE CILO and a central Common PO with an L/P/O manifestation. All assignments to the exact course share it. Coverage and readiness do not imply ILO evidence or Common PO attainment.
+_Avoid_: Assignment-owned mapping, program-specific GE copy, automatic attainment
+
+**Central outcome change review**:
+A Secretary/Dean review of the exact before/after change with adoption and GE mapping counts, explicit confirmation, freshness recheck, atomic linked-statement synchronization, and recorded actor. Institution-specific program POs use the same protected authoring boundary.
+_Avoid_: Immediate global edit, Secretary/Dean ILO authority
+
+The approved ownership and GE alignment decision is [ADR 0040](../../../docs/adr/0040-program-outcome-classification-and-shared-ge-common-alignment.md).

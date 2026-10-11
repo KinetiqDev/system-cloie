@@ -121,6 +121,7 @@ export type GECourseCILOMappings = {
   courseCode: string;
   courseTitle: string;
   courseScope: "GENERAL_EDUCATION";
+  targetType?: "COMMON_PROGRAM_OUTCOME" | "INSTITUTIONAL_OUTCOME";
   cilos: Array<{
     id: string;
     description: string;
@@ -152,11 +153,21 @@ export async function listCILOILOMappingsForGE(): Promise<ServiceResult<GECourse
       id: true,
       code: true,
       title: true,
+      ge_alignment_mode: true,
       cilos: {
         where: { is_active: true },
         select: {
           id: true,
           description: true,
+          cilo_common_po_mappings: {
+            select: {
+              id: true,
+              manifestation: true,
+              common_outcome: {
+                select: { id: true, code: true, description: true, is_active: true },
+              },
+            },
+          },
           cilo_institutional_outcome_mappings: {
             select: {
               id: true,
@@ -178,30 +189,50 @@ export async function listCILOILOMappingsForGE(): Promise<ServiceResult<GECourse
     courseCode: course.code,
     courseTitle: course.title,
     courseScope: "GENERAL_EDUCATION" as const,
+    targetType:
+      course.ge_alignment_mode === "COMMON_PO" ? "COMMON_PROGRAM_OUTCOME" : "INSTITUTIONAL_OUTCOME",
     cilos: course.cilos.map((cilo) => ({
       id: cilo.id,
       description: cilo.description,
-      mappedTargets: cilo.cilo_institutional_outcome_mappings.map((m) => ({
-        id: m.institutional_outcome.id,
+      mappedTargets: (course.ge_alignment_mode === "COMMON_PO"
+        ? cilo.cilo_common_po_mappings.map((m) => ({ mapping: m, catalog: m.common_outcome }))
+        : cilo.cilo_institutional_outcome_mappings.map((m) => ({
+            mapping: m,
+            catalog: m.institutional_outcome,
+          }))
+      ).map(({ mapping: m, catalog }) => ({
+        id: catalog.id,
         mappingId: m.id,
-        code: m.institutional_outcome.code,
-        description: m.institutional_outcome.description,
-        is_active: m.institutional_outcome.is_active,
+        code: catalog.code,
+        description: catalog.description,
+        is_active: catalog.is_active,
         manifestation: m.manifestation ?? null,
       })),
       readiness: ciloIsAligned(
         {
           cilo_mappings: [],
-          cilo_institutional_outcome_mappings: cilo.cilo_institutional_outcome_mappings.map(
-            (m) => ({
-              manifestation: m.manifestation ?? null,
-              institutional_outcome: { is_active: m.institutional_outcome.is_active },
-            })
-          ),
+          ...(course.ge_alignment_mode === "COMMON_PO"
+            ? {
+                cilo_common_po_mappings: cilo.cilo_common_po_mappings.map((m) => ({
+                  manifestation: m.manifestation,
+                  common_outcome: { is_active: m.common_outcome.is_active },
+                })),
+                cilo_institutional_outcome_mappings: [],
+              }
+            : {
+                cilo_common_po_mappings: [],
+                cilo_institutional_outcome_mappings: cilo.cilo_institutional_outcome_mappings.map(
+                  (m) => ({
+                    manifestation: m.manifestation,
+                    institutional_outcome: { is_active: m.institutional_outcome.is_active },
+                  })
+                ),
+              }),
         },
         "GENERAL_EDUCATION",
         null,
-        []
+        [],
+        course.ge_alignment_mode
       )
         ? "ready"
         : "incomplete-mapping",

@@ -27,6 +27,8 @@ function makePO(overrides: Partial<ProgramPOItem> = {}): ProgramPOItem {
   return {
     id: "11111111-1111-4111-8111-111111111112",
     code: "PO-1",
+    classification: "CORE",
+    common_outcome_id: null,
     description: "Program Outcome one",
     order: 0,
     is_active: true,
@@ -82,6 +84,8 @@ describe("POFormDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("combobox", { name: "Classification" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-5" } });
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Program Outcome five" },
@@ -114,6 +118,8 @@ describe("POFormDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("combobox", { name: "Classification" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-5" } });
     fireEvent.change(screen.getByLabelText("Description"), {
       target: { value: "Program Outcome five" },
@@ -174,6 +180,8 @@ describe("POFormDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("combobox", { name: "Classification" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Core" }));
     fireEvent.change(screen.getByLabelText("PO Code"), { target: { value: "PO-9" } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Nine" } });
     fireEvent.click(screen.getByRole("button", { name: "Create PO" }));

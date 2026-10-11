@@ -31,6 +31,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { showToast } from "@/components/ui/toast";
@@ -197,6 +205,14 @@ function FileStep({
             <dt className="text-label-sm">Description</dt>
             <dd className="text-body-sm text-muted-foreground">Required, 3 to 1,000 characters.</dd>
           </div>
+          <div className="grid gap-1 px-3 py-2 sm:grid-cols-[9rem_1fr]">
+            <dt className="text-label-sm">Classification</dt>
+            <dd className="text-body-sm text-muted-foreground">
+              Optional. Core or Professional per row; rows without one use the dialog
+              classification. Common and Institution-specific POs are managed by the Secretary or
+              Dean, so they cannot be imported here.
+            </dd>
+          </div>
         </dl>
       </div>
       <div className="flex flex-col gap-2">
@@ -312,6 +328,7 @@ function ResultsStep({ result }: { result: POImportResult }) {
 export function POImportDialog({ open, onOpenChange, program }: Props) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [classification, setClassification] = useState<"" | "CORE" | "PROFESSIONAL">("");
   const [step, setStep] = useState<Step>("file");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -349,7 +366,18 @@ export function POImportDialog({ open, onOpenChange, program }: Props) {
     startTransition(async () => {
       const parsed = parsePOImportCsv(new Uint8Array(await file.arrayBuffer()));
       if (!parsed.success) return setError(parsed.error);
-      const response = await previewPOImportAction({ programId: program.id, rows: parsed.rows });
+      const rowClassification = (value: string | undefined) =>
+        value?.trim().toUpperCase() === "CORE" || value?.trim().toUpperCase() === "PROFESSIONAL";
+      const needsClassification =
+        !classification && parsed.rows.some((row) => !rowClassification(row.input.classification));
+      if (needsClassification) {
+        return setError("Select Core or Professional for rows without a Classification column.");
+      }
+      const response = await previewPOImportAction({
+        programId: program.id,
+        ...(classification ? { classification } : {}),
+        rows: parsed.rows,
+      });
       if (!response.success) return setError(response.error);
       setPreview(response.data);
       setStep("review");
@@ -361,6 +389,7 @@ export function POImportDialog({ open, onOpenChange, program }: Props) {
     startTransition(async () => {
       const response = await confirmPOImportAction({
         programId: program.id,
+        ...(classification ? { classification } : {}),
         rows: preview.rows.map((row) => ({ sourceIndex: row.sourceIndex, input: row.input })),
       });
       if (!response.success) {
@@ -380,6 +409,29 @@ export function POImportDialog({ open, onOpenChange, program }: Props) {
 
   const content = (
     <div className="flex flex-col gap-5">
+      {step === "file" && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="po-import-classification">
+            Classification for rows without a category
+          </Label>
+          <Select
+            value={classification || null}
+            onValueChange={(value) => {
+              if (value === "CORE" || value === "PROFESSIONAL") setClassification(value);
+            }}
+          >
+            <SelectTrigger id="po-import-classification" className="w-full">
+              <SelectValue placeholder="Select classification" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="CORE">Core</SelectItem>
+                <SelectItem value="PROFESSIONAL">Professional</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       {step === "file" && (
         <FileStep program={program} file={file} onSelect={selectFile} pending={pending} />
       )}

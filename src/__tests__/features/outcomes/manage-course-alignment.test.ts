@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   course: { findFirst: vi.fn(), findMany: vi.fn() },
   po: { count: vi.fn(), findMany: vi.fn() },
   ilo: { count: vi.fn(), findMany: vi.fn() },
+  common: { findMany: vi.fn() },
+  commonMapping: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   transaction: vi.fn(),
   ciloMapping: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   iloMapping: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
@@ -24,6 +26,7 @@ vi.mock("@/lib/db/prisma", () => ({
     course: mocks.course,
     pO: mocks.po,
     institutionalOutcome: mocks.ilo,
+    commonProgramOutcome: mocks.common,
     $transaction: mocks.transaction,
   },
 }));
@@ -37,6 +40,7 @@ const GO_ID = "33333333-3333-4333-8333-333333333333";
 const PROGRAM_ID = "44444444-4444-4444-8444-444444444444";
 const FACULTY = { userId: "faculty-1", activeRole: ROLES.FACULTY, roles: [ROLES.FACULTY] };
 const FRESHNESS_TOKEN = JSON.stringify({
+  mode: "ILO",
   ciloIds: [CILO_ID],
   catalogIds: [GO_ID],
   mappings: [{ ciloId: CILO_ID, targetId: GO_ID, manifestation: null }],
@@ -48,6 +52,7 @@ function course(overrides: Record<string, unknown> = {}) {
     code: "CS-101",
     title: "Computing",
     course_scope: "PROGRAM_SPECIFIC",
+    ge_alignment_mode: "ILO",
     program_id: PROGRAM_ID,
     program: { id: PROGRAM_ID, code: "BSCS", name: "Computer Science", is_active: true },
     cilos: [
@@ -75,6 +80,7 @@ function generalEducationCourse(overrides: Record<string, unknown> = {}) {
     code: "GESTECH",
     title: "Science, Technology and Society",
     course_scope: "GENERAL_EDUCATION",
+    ge_alignment_mode: "ILO",
     program_id: null,
     program: null,
     cilos: [
@@ -153,6 +159,7 @@ function tokenFor(
   mappings: Array<{ ciloId: string; targetId: string; manifestation: string | null }>
 ): string {
   return JSON.stringify({
+    mode: "ILO",
     ciloIds: [...ciloIds].sort((left, right) => left.localeCompare(right)),
     catalogIds: [...catalogIds].sort((left, right) => left.localeCompare(right)),
     mappings: [...mappings].sort(
@@ -205,6 +212,93 @@ describe("Course alignment service", () => {
     mocks.po.count.mockResolvedValue(1);
     mocks.ilo.findMany.mockResolvedValue([]);
     mocks.ilo.count.mockResolvedValue(0);
+  });
+
+  it("shares one GE Common PO mapping between faculty in different programs and rejects stale reviews", async () => {
+    const { readCourseAlignment, prepareCourseAlignmentWrite, commitCourseAlignmentWrite } =
+      await import("@/features/outcomes/services/manage-course-alignment");
+    const shared = generalEducationCourse({
+      ge_alignment_mode: "COMMON_PO",
+      cilos: [
+        {
+          id: CILO_ID,
+          description: "Reason ethically",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [],
+          cilo_common_po_mappings: [
+            {
+              common_outcome_id: ILO_ID,
+              manifestation: "LEARNING",
+              common_outcome: {
+                id: ILO_ID,
+                code: "COMMON-1",
+                description: "Act ethically",
+                is_active: true,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    mocks.course.findFirst.mockResolvedValue(shared);
+    mocks.common.findMany.mockResolvedValue([
+      { id: ILO_ID, code: "COMMON-1", description: "Act ethically" },
+    ]);
+    const a = await readCourseAlignment(COURSE_ID);
+    mocks.session.mockResolvedValue({ ...FACULTY, userId: "faculty-other-program" });
+    mocks.assignment.findFirst.mockResolvedValue({ id: "bsba-assignment" });
+    const b = await readCourseAlignment(COURSE_ID);
+    expect(a).toEqual(b);
+    if (!b.success) throw new Error(b.error);
+    const review = await prepareCourseAlignmentWrite({
+      courseId: COURSE_ID,
+      freshnessToken: b.data.freshnessToken,
+      desired: [{ ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "PRACTICE" }] }],
+    });
+    if (!review.success) throw new Error(review.error);
+    mocks.transaction.mockImplementation((callback) =>
+      callback({
+        courseAssignment: mocks.assignment,
+        course: mocks.course,
+        commonProgramOutcome: mocks.common,
+        cILOCommonPOMapping: mocks.commonMapping,
+      })
+    );
+    expect((await commitCourseAlignmentWrite(review.data, true)).success).toBe(true);
+    expect(mocks.commonMapping.updateMany).toHaveBeenCalledWith({
+      where: { cilo_id: CILO_ID, common_outcome_id: ILO_ID },
+      data: expect.objectContaining({
+        manifestation: "PRACTICE",
+        updated_by: "faculty-other-program",
+      }),
+    });
+    mocks.course.findFirst.mockResolvedValue({
+      ...shared,
+      cilos: [
+        {
+          id: CILO_ID,
+          description: "Reason ethically",
+          cilo_mappings: [],
+          cilo_institutional_outcome_mappings: [],
+          cilo_common_po_mappings: [
+            {
+              common_outcome_id: ILO_ID,
+              manifestation: "OPPORTUNITY",
+              common_outcome: {
+                id: ILO_ID,
+                code: "COMMON-1",
+                description: "Act ethically",
+                is_active: true,
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(await commitCourseAlignmentWrite(review.data, true)).toMatchObject({
+      success: false,
+      error: expect.stringContaining("changed after review"),
+    });
   });
 
   it("returns only the active owning-Program catalog and readiness", async () => {
@@ -336,6 +430,7 @@ describe("Course alignment service", () => {
       success: true,
       data: {
         scope: "PROGRAM_SPECIFIC",
+        geAlignmentMode: "ILO",
         before: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: null }] }],
         after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "PRACTICE" }] }],
         additions: [],
@@ -483,7 +578,7 @@ describe("Course alignment service", () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: "Submit manifestations only for active Institutional Outcomes.",
+      error: "Submit manifestations only for active targets of this GE alignment mode.",
     });
   });
 
@@ -508,6 +603,7 @@ describe("Course alignment service", () => {
       success: true,
       data: {
         scope: "GENERAL_EDUCATION",
+        geAlignmentMode: "ILO",
         before: [{ ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "LEARNING" }] }],
         after: [{ ciloId: CILO_ID, mappings: [{ targetId: ILO_ID, manifestation: "PRACTICE" }] }],
         additions: [],
@@ -634,6 +730,7 @@ describe("Course alignment service", () => {
     const forgedReview = signedReview(
       {
         scope: "PROGRAM_SPECIFIC" as const,
+        geAlignmentMode: "ILO" as const,
         courseId: COURSE_ID,
         before: [{ ciloId: CILO_ID, mappings: [] }],
         after: [{ ciloId: CILO_ID, mappings: [] }],
@@ -704,6 +801,7 @@ describe("Course alignment service", () => {
     const forgedReview = signedReview(
       {
         scope: "PROGRAM_SPECIFIC" as const,
+        geAlignmentMode: "ILO" as const,
         courseId: COURSE_ID,
         before: [{ ciloId: CILO_ID, mappings: [] }],
         after: [{ ciloId: CILO_ID, mappings: [] }],
@@ -1091,6 +1189,7 @@ describe("Course alignment service", () => {
       const crafted = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: "LEARNING" }] }],
@@ -1116,6 +1215,7 @@ describe("Course alignment service", () => {
       const duplicate = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [
@@ -1143,6 +1243,7 @@ describe("Course alignment service", () => {
       const crossProgram = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [
@@ -1166,6 +1267,7 @@ describe("Course alignment service", () => {
       const nullManifestation = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [{ ciloId: CILO_ID, mappings: [{ targetId: GO_ID, manifestation: null }] }],
@@ -1185,6 +1287,7 @@ describe("Course alignment service", () => {
       const foreignCilo = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [
@@ -1208,6 +1311,7 @@ describe("Course alignment service", () => {
       const inactiveGo = signedReview(
         {
           scope: "PROGRAM_SPECIFIC",
+          geAlignmentMode: "ILO",
           courseId: COURSE_ID,
           before: [{ ciloId: CILO_ID, mappings: [] }],
           after: [

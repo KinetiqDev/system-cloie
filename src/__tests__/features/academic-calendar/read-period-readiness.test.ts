@@ -11,6 +11,7 @@ vi.mock("@/lib/db/prisma", () => ({
     courseAssignment: { findMany: vi.fn() },
     academicPeriodReadinessSnapshot: { create: vi.fn(), findUnique: vi.fn() },
     institutionalOutcome: { findMany: vi.fn() },
+    commonProgramOutcome: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 
@@ -798,7 +799,7 @@ describe("readPeriodReadiness", () => {
 
     expect(prisma.academicPeriodReadinessSnapshot.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ period_id: "period-1", schema_version: 2 }),
+        data: expect.objectContaining({ period_id: "period-1", schema_version: 3 }),
       })
     );
   });

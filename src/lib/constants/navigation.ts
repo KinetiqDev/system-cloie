@@ -70,6 +70,7 @@ const SECRETARY_NAV: NavItem[] = [
   { name: "School Years", href: "/secretary/school-years", icon: Calendar },
   { name: "Programs", href: "/secretary/programs", icon: Building2 },
   { name: "Courses", href: "/secretary/courses", icon: BookOpen },
+  { name: "Common / Institution-specific POs", href: "/secretary/common-outcomes", icon: Layers3 },
   { name: "Course Assignments", href: "/secretary/course-assignments", icon: UsersRound },
   { name: "Evaluation Tools", href: "/secretary/instruments", icon: ClipboardList },
 ];
@@ -181,6 +182,7 @@ const DEAN_NAV_GROUPS: NavGroup[] = [
         icon: UsersRound,
       },
       { name: "Evaluation Tools", href: "/dean/academic-structure/instruments", icon: Layers3 },
+      { name: "Common / Institution-specific POs", href: "/dean/common-outcomes", icon: Layers3 },
     ],
   },
   {

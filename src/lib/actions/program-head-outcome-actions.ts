@@ -74,6 +74,7 @@ export async function createPOAction(formData: FormData): Promise<ActionResult> 
     code: formData.get("code"),
     description: formData.get("description"),
     order: formData.get("order"),
+    classification: formData.get("classification"),
     programId: formData.get("programId"),
   });
 
@@ -97,6 +98,7 @@ export async function updatePOAction(formData: FormData): Promise<ActionResult> 
     code: formData.get("code"),
     description: formData.get("description"),
     order: formData.get("order"),
+    classification: formData.get("classification"),
     programId: formData.get("programId"),
   });
 

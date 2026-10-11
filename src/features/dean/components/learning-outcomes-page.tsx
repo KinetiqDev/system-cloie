@@ -1,3 +1,4 @@
+import { PO_CLASSIFICATION_LABELS } from "@/features/outcomes/po-classification";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -158,6 +159,14 @@ export function LearningOutcomesContent({
           )}
         </section>
       ) : null}
+      {(result.data.commonOutcomes?.length ?? 0) > 0 && (
+        <section className="flex flex-col gap-2" aria-labelledby="common-outcomes">
+          <h2 id="common-outcomes" className="text-heading-md">
+            Shared Common POs
+          </h2>
+          <CatalogList outcomes={result.data.commonOutcomes!} />
+        </section>
+      )}
       {programs.length === 0 ? (
         <Card>
           <CardContent className="text-body-sm text-text-secondary py-6">
@@ -345,6 +354,9 @@ function CatalogList({
           className="text-body-sm flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-baseline sm:gap-3"
         >
           <span className="text-label-lg">{outcome.code}</span>
+          {outcome.classification && (
+            <Badge variant="secondary">{PO_CLASSIFICATION_LABELS[outcome.classification]}</Badge>
+          )}
           <span className="text-text-secondary">{outcome.statement}</span>
           {outcome.isArchived ? <Badge variant="outline">Archived</Badge> : null}
         </li>
@@ -377,11 +389,13 @@ function GapList({ gaps }: { gaps: DeanLearningOutcomesData["programs"][number][
             </p>
           ) : (
             <p className="text-text-secondary mt-2">
-              {gap.targetType === "INSTITUTIONAL_OUTCOME"
-                ? "Incomplete Institutional Outcome mapping:"
-                : gap.targetType === "GRADUATE_OUTCOME"
-                  ? "Incomplete Program Outcome mapping:"
-                  : "Incomplete mapping:"}{" "}
+              {gap.targetType === "COMMON_PROGRAM_OUTCOME"
+                ? "Incomplete shared Common PO mapping:"
+                : gap.targetType === "INSTITUTIONAL_OUTCOME"
+                  ? "Incomplete Institutional Outcome mapping:"
+                  : gap.targetType === "GRADUATE_OUTCOME"
+                    ? "Incomplete Program Outcome mapping:"
+                    : "Incomplete mapping:"}{" "}
               {gap.ciloStatement}
               {gap.ciloIsArchived ? (
                 <Badge className="ml-2" variant="outline">
