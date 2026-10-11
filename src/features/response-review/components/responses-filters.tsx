@@ -385,22 +385,26 @@ function useResponseSearchDraft(committed: string | undefined, onCommit: (value:
   const [shownCommit, setShownCommit] = useState(committedText);
   const [focused, setFocused] = useState(false);
   const committedRef = useRef(committedText);
-  committedRef.current = committedText;
   const shownCommitRef = useRef(committedText);
   const timer = useRef<number | null>(null);
   const latestCommit = useRef(onCommit);
   useEffect(() => {
     latestCommit.current = onCommit;
   });
+  useEffect(() => {
+    committedRef.current = committedText;
+  }, [committedText]);
 
   // Adjusting state during render is React's own answer for "the committed
   // query changed while the field had focus": it re-renders before the DOM is
   // touched, with no effect, no ref read, and no cascading pass.
   if (shownCommit !== committedText) {
     setShownCommit(committedText);
-    shownCommitRef.current = committedText;
     if (!focused) setDraft(committedText);
   }
+  useEffect(() => {
+    shownCommitRef.current = shownCommit;
+  }, [shownCommit]);
 
   useEffect(
     () => () => {

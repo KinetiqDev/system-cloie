@@ -275,7 +275,9 @@ function CourseRosterDiscoveryBody({
   // chosen during the wait must survive the pending keystroke instead of
   // being overwritten by the snapshot the keystroke closed over.
   const latestFilters = useRef(filters);
-  latestFilters.current = filters;
+  useEffect(() => {
+    latestFilters.current = filters;
+  }, [filters]);
 
   useEffect(() => {
     if (lastServerSearch.current === filters.search) return;
