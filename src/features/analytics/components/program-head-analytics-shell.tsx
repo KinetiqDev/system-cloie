@@ -59,7 +59,7 @@ export function ProgramHeadAnalyticsShell({
       <header className="border-border/80 flex flex-col gap-3 border-b pb-5">
         <div className="flex flex-col gap-1">
           <h1 className="text-heading-xl text-balance">Analytics</h1>
-          <Breadcrumbs items={breadcrumbItems} className="text-body-sm" />
+          {poCode ? <Breadcrumbs items={breadcrumbItems} className="text-body-sm" /> : null}
           {scope.periodLabel ? (
             <p className="text-body-sm text-text-secondary text-pretty">{scope.periodLabel}</p>
           ) : null}

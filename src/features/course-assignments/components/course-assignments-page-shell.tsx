@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { CourseAssignmentsTable } from "./course-assignments-table";
 import { MobileFilterSheet, TableToolbar } from "@/components/data-table/table-toolbar";
 import { facetIsApplied } from "@/components/data-table/types";
 import { buildAssignmentFacets } from "./shared/assignment-facets";
-import { ResultSummaryStrip } from "./shared/result-summary-strip";
 import { CourseAssignmentFormDialog } from "./course-assignment-form-dialog";
 import type { AssignmentFiltersState } from "./shared/assignment-filters";
 import type {
@@ -70,28 +70,29 @@ export interface CourseAssignmentsPageShellProps {
 function CourseAssignmentsHeader({
   pageTitle,
   pageDescription,
-  canManageAssignments,
-  onCreate,
+  periodLabel,
 }: {
   pageTitle: string;
   pageDescription: string;
-  canManageAssignments: boolean;
-  onCreate: () => void;
+  periodLabel?: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex min-w-0 flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2.5">
         <h1 className="text-heading-xl text-balance">{pageTitle}</h1>
-        <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
-          {pageDescription}
-        </p>
+        {periodLabel && (
+          <Badge
+            variant="outline"
+            className="bg-card text-muted-foreground text-xs font-normal"
+          >
+            <CalendarDays className="size-3 mr-1" aria-hidden="true" />
+            <span>{periodLabel}</span>
+          </Badge>
+        )}
       </div>
-      {canManageAssignments && (
-        <Button onClick={onCreate} className="w-full shrink-0 shadow-sm sm:w-auto" size="default">
-          <Plus data-icon="inline-start" aria-hidden="true" />
-          Assign Faculty
-        </Button>
-      )}
+      <p className="text-body-sm text-text-secondary max-w-2xl leading-relaxed text-pretty">
+        {pageDescription}
+      </p>
     </div>
   );
 }
@@ -171,31 +172,32 @@ export function CourseAssignmentsPageShell({
     [activeDir, activeSort, pathname, role, router]
   );
 
-  const searchTimer = useRef<number | null>(null);
-  const handleSearchDraftChange = useCallback(
-    (value: string) => {
-      setSearchDraft(value);
-      if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
-      searchTimer.current = window.setTimeout(() => {
-        searchTimer.current = null;
-        setFilters((current) => {
-          const next = { ...current, searchQuery: value };
-          navigateWithState(next, 0, "replace");
-          return next;
-        });
-      }, 300);
-    },
-    [navigateWithState]
-  );
+  const handleSearchDraftChange = useCallback((value: string) => setSearchDraft(value), []);
 
+  // Search commits after a quiet pause. Watching the committed filters keeps the
+  // timer reading current state without a ref, and re-arms it whenever another
+  // facet changes so a pending draft never lands on stale filters.
+  useEffect(() => {
+    if (searchDraft === filters.searchQuery) return;
+    const timer = window.setTimeout(() => {
+      const next = { ...filters, searchQuery: searchDraft };
+      setFilters(next);
+      navigateWithState(next, 0, "replace");
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft, filters, navigateWithState]);
+
+  // Navigation stays outside the state updater. React may invoke an updater
+  // during its render phase, and pushing a route there updates the Router
+  // while this component renders — the state update belongs to the event, not
+  // to the render.
   const updateFilter = useCallback(
-    <K extends keyof AssignmentFiltersState>(key: K, value: AssignmentFiltersState[K]) =>
-      setFilters((current) => {
-        const next = { ...current, [key]: value };
-        navigateWithState(next, 0, "push");
-        return next;
-      }),
-    [navigateWithState]
+    <K extends keyof AssignmentFiltersState>(key: K, value: AssignmentFiltersState[K]) => {
+      const next = { ...filters, [key]: value };
+      setFilters(next);
+      navigateWithState(next, 0, "push");
+    },
+    [filters, navigateWithState]
   );
 
   const { byColumn: facets, all: allFacets } = buildAssignmentFacets(filters, updateFilter, {
@@ -208,20 +210,26 @@ export function CourseAssignmentsPageShell({
     defaultTermInstanceId: listDefaultTermInstanceId ?? null,
   });
 
+  // One cleared state, one navigation: clearing facet by facet would push a
+  // route change per key and leave the browser history full of intermediate
+  // steps.
   const handleClearAll = useCallback(() => {
-    if (searchTimer.current !== null) window.clearTimeout(searchTimer.current);
+    const cleared: AssignmentFiltersState = {
+      termInstanceId: listDefaultTermInstanceId ?? null,
+      courseId: null,
+      facultyId: null,
+      programId: null,
+      yearLevel: null,
+      section: null,
+      isActive: null,
+      courseScope: null,
+      hasActiveRosterMembers: undefined,
+      searchQuery: "",
+    };
     setSearchDraft("");
-    updateFilter("termInstanceId", listDefaultTermInstanceId ?? null);
-    updateFilter("courseId", null);
-    updateFilter("facultyId", null);
-    updateFilter("programId", null);
-    updateFilter("yearLevel", null);
-    updateFilter("section", null);
-    updateFilter("isActive", null);
-    updateFilter("courseScope", null);
-    updateFilter("hasActiveRosterMembers", undefined);
-    updateFilter("searchQuery", "");
-  }, [listDefaultTermInstanceId, updateFilter]);
+    setFilters(cleared);
+    navigateWithState(cleared, 0, "push");
+  }, [listDefaultTermInstanceId, navigateWithState]);
 
   const selectedTerm = termInstances.find((term) => term.id === filters.termInstanceId);
   const periodLabel = selectedTerm
@@ -233,8 +241,7 @@ export function CourseAssignmentsPageShell({
       <CourseAssignmentsHeader
         pageTitle={pageTitle}
         pageDescription={pageDescription}
-        canManageAssignments={canManageAssignments}
-        onCreate={() => setCreateOpen(true)}
+        periodLabel={periodLabel}
       />
 
       <TableToolbar
@@ -250,10 +257,28 @@ export function CourseAssignmentsPageShell({
         }}
         facets={allFacets}
         onClearAll={handleClearAll}
+        actions={
+          canManageAssignments ? (
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="w-full shrink-0 shadow-xs sm:w-auto"
+              size="default"
+            >
+              <Plus data-icon="inline-start" aria-hidden="true" />
+              Assign Faculty
+            </Button>
+          ) : undefined
+        }
         resultSummary={
           <p className="text-muted-foreground text-xs tabular-nums">
             <span className="text-foreground font-medium">{total}</span>{" "}
             {total === 1 ? "assignment" : "assignments"}
+            {Math.ceil(total / pageSize) > 1 && (
+              <>
+                <span className="text-border-strong mx-1.5">·</span>
+                <span>Page {page + 1} of {Math.ceil(total / pageSize)}</span>
+              </>
+            )}
           </p>
         }
       >
@@ -267,13 +292,6 @@ export function CourseAssignmentsPageShell({
         </div>
       </TableToolbar>
 
-      <ResultSummaryStrip
-        total={total}
-        activeCount={assignments.filter((assignment) => assignment.isActive).length}
-        page={page}
-        pageSize={pageSize}
-        scopeLabel={periodLabel}
-      />
 
       {loadError && (
         <Alert variant="destructive">

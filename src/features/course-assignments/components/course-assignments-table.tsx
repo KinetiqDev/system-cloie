@@ -984,52 +984,12 @@ export function CourseAssignmentsTable({
                   onSort={handleSort}
                 />
                 {mode !== "program-head" && (
-                  <SortableColumnHeader
-                    field="program"
-                    label="Program"
-                    facets={facets?.program}
-                    activeSort={activeSort}
-                    activeDir={activeDir}
-                    isPending={isSortPending}
-                    onSort={handleSort}
-                  />
+                  <FilterableHead label="Program" facets={facets?.program} />
                 )}
-                <SortableColumnHeader
-                  field="class"
-                  label="Class"
-                  facets={facets?.class}
-                  activeSort={activeSort}
-                  activeDir={activeDir}
-                  isPending={isSortPending}
-                  onSort={handleSort}
-                />
-                <SortableColumnHeader
-                  field="term"
-                  label="Term"
-                  facets={facets?.term}
-                  activeSort={activeSort}
-                  activeDir={activeDir}
-                  isPending={isSortPending}
-                  onSort={handleSort}
-                />
-                <SortableColumnHeader
-                  field="scope"
-                  label="Scope"
-                  facets={facets?.scope}
-                  activeSort={activeSort}
-                  activeDir={activeDir}
-                  isPending={isSortPending}
-                  onSort={handleSort}
-                />
-                <SortableColumnHeader
-                  field="status"
-                  label="Status"
-                  facets={facets?.status}
-                  activeSort={activeSort}
-                  activeDir={activeDir}
-                  isPending={isSortPending}
-                  onSort={handleSort}
-                />
+                <FilterableHead label="Class" facets={facets?.class} />
+                <FilterableHead label="Term" facets={facets?.term} />
+                <FilterableHead label="Scope" facets={facets?.scope} />
+                <FilterableHead label="Status" facets={facets?.status} />
                 <FilterableHead label="Roster" facets={facets?.roster} />
                 <TableHead className="w-[48px]">
                   <span className="sr-only">Actions</span>
@@ -1206,17 +1166,11 @@ export function CourseAssignmentsTable({
       )}
 
       {totalPages > 1 && (
-        <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
-          <div className="text-muted-foreground text-sm tabular-nums">
-            Showing {page * pageSize + 1} to {Math.min((page + 1) * pageSize, total)} of {total}{" "}
-            results
-          </div>
-          <Pagination
-            currentPage={page + 1}
-            totalPages={totalPages}
-            onPageChange={(nextPage) => onPageChange(nextPage - 1)}
-          />
-        </div>
+        <Pagination
+          currentPage={page + 1}
+          totalPages={totalPages}
+          onPageChange={(nextPage) => onPageChange(nextPage - 1)}
+        />
       )}
     </div>
   );

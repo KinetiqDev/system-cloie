@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { BookOpen, MoreVertical } from "lucide-react";
 
 import { FilterableHead } from "@/components/data-table/filterable-head";
@@ -88,6 +88,8 @@ type TemplateCollectionProps = {
   sections: TemplateSection[];
   /** Rendered when no section contains items. */
   empty: ReactNode;
+  /** List/Card view toggle or toolbar control rendered in the toolbar. */
+  viewControl?: ReactNode;
 };
 
 // ---------------------------------------------------------------------------
@@ -156,9 +158,9 @@ function CourseBadge({ item }: { item: TemplateCollectionItem }) {
 // Collection
 // ---------------------------------------------------------------------------
 
-export function TemplateCollection({ view, sections, empty }: TemplateCollectionProps) {
+export function TemplateCollection({ view, sections, empty, viewControl }: TemplateCollectionProps) {
   const filledSections = sections.filter((section) => section.items.length > 0);
-
+  const singleSection = filledSections.length === 1 ? filledSections[0] : null;
   // One page, one search. Two sections would otherwise show two identical
   // search boxes; the facets still narrow per section, because "Status: Active"
   // means something different for a Program template than for an institutional
@@ -180,11 +182,32 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
     };
   }, [searchDraft, query]);
 
-  if (filledSections.length === 0) return <>{empty}</>;
-
   const filtersFor = (filterKey: string) => sectionFilters[filterKey] ?? DEFAULT_TEMPLATE_FILTERS;
   const setFiltersFor = (filterKey: string, next: TemplateFilters) =>
     setSectionFilters((current) => ({ ...current, [filterKey]: next }));
+
+  const updateSingleSection = useCallback(
+    <K extends keyof TemplateFilters>(key: K, value: TemplateFilters[K]) => {
+      if (!singleSection) return;
+      setFiltersFor(singleSection.filterKey, {
+        ...filtersFor(singleSection.filterKey),
+        [key]: value,
+      });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [singleSection, sectionFilters]
+  );
+
+  const singleSectionFacets = useMemo(() => {
+    if (!singleSection) return [];
+    return buildTemplateFacets(
+      filtersFor(singleSection.filterKey),
+      updateSingleSection,
+      singleSection.items,
+      singleSection.filterKey
+    ).all;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [singleSection, sectionFilters, updateSingleSection]);
 
   const totalVisible = filledSections.reduce(
     (sum, section) =>
@@ -209,6 +232,8 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
     setSectionFilters({});
   };
 
+  if (filledSections.length === 0) return <>{empty}</>;
+
   return (
     <div className={view === "card" ? "space-y-8" : "space-y-6"}>
       <TableToolbar
@@ -223,11 +248,43 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
         onClearAll={clearAllFacets}
         resultSummary={
           <p className="text-muted-foreground text-xs tabular-nums">
-            <span className="text-foreground font-medium">{totalVisible}</span> of {totalItems}{" "}
-            template{totalItems === 1 ? "" : "s"}
+            {totalVisible === totalItems ? (
+              <span className="text-foreground font-medium">
+                {totalItems} template{totalItems !== 1 ? "s" : ""}
+              </span>
+            ) : (
+              <>
+                <span className="text-foreground font-medium">{totalVisible}</span> of{" "}
+                {totalItems} template{totalItems !== 1 ? "s" : ""}
+              </>
+            )}
           </p>
         }
-      />
+      >
+        {viewControl}
+        {singleSection &&
+          (view === "card" ? (
+            <MobileFilterSheet
+              facets={singleSectionFacets}
+              activeCount={singleSectionFacets.filter(facetIsApplied).length}
+              label="Filters"
+              onClearAll={() => setFiltersFor(singleSection.filterKey, DEFAULT_TEMPLATE_FILTERS)}
+              summary="Show results"
+              triggerClassName="w-auto shrink-0"
+            />
+          ) : (
+            <div className="md:hidden">
+              <MobileFilterSheet
+                facets={singleSectionFacets}
+                activeCount={singleSectionFacets.filter(facetIsApplied).length}
+                label="Filters"
+                onClearAll={() => setFiltersFor(singleSection.filterKey, DEFAULT_TEMPLATE_FILTERS)}
+                summary="Show results"
+                triggerClassName="w-auto shrink-0"
+              />
+            </div>
+          ))}
+      </TableToolbar>
       {filledSections.map((section) => (
         <TemplateSectionView
           key={section.filterKey}
@@ -236,6 +293,7 @@ export function TemplateCollection({ view, sections, empty }: TemplateCollection
           query={query}
           filters={filtersFor(section.filterKey)}
           onFiltersChange={(next) => setFiltersFor(section.filterKey, next)}
+          isSingleSection={filledSections.length === 1}
         />
       ))}
     </div>
@@ -253,12 +311,14 @@ function TemplateSectionView({
   query,
   filters,
   onFiltersChange,
+  isSingleSection = false,
 }: {
   view: ToolsViewMode;
   section: TemplateSection;
   query: string;
   filters: TemplateFilters;
   onFiltersChange: (next: TemplateFilters) => void;
+  isSingleSection?: boolean;
 }) {
   const instanceId = useId();
 
@@ -285,12 +345,14 @@ function TemplateSectionView({
       {section.heading && (
         <h2 className="text-heading-lg text-foreground text-pretty">{section.heading}</h2>
       )}
-      {view === "card" ? (
+      {view === "card" && !isSingleSection ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground shrink-0 text-xs tabular-nums">
-            <span className="text-foreground font-medium">{visibleItems.length}</span> of{" "}
-            {section.items.length}
-          </p>
+          {section.heading ? null : (
+            <p className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              <span className="text-foreground font-medium">{visibleItems.length}</span> of{" "}
+              {section.items.length}
+            </p>
+          )}
           <MobileFilterSheet
             facets={facetDefs.all}
             activeCount={facetDefs.all.filter(facetIsApplied).length}

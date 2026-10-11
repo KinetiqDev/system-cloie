@@ -159,17 +159,10 @@ export function ManagementToolsPage({
         </Button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-foreground text-sm" aria-live="polite">
-          {templates.length} template{templates.length !== 1 ? "s" : ""}
-        </p>
-        <ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />
-      </div>
-
       {/* Templates Collection */}
       <TemplateCollection
         view={view}
+        viewControl={<ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />}
         sections={[
           {
             filterKey: "institutional-templates",

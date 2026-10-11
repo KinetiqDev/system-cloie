@@ -69,10 +69,12 @@ export function ColumnFilterTrigger({
   label,
   facets,
   className,
+  fullCell,
 }: {
   label: string;
   facets: FacetDef[];
   className?: string;
+  fullCell?: boolean;
 }) {
   const active = facets.filter(facetIsApplied);
   const unavailable = facets.every((facet) => facet.disabled === true);
@@ -83,29 +85,59 @@ export function ColumnFilterTrigger({
       <PopoverTrigger
         openOnHover={false}
         render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            disabled={unavailable}
-            aria-label={
-              unavailable
-                ? `Filter ${label}, unavailable`
-                : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
-            }
-            className={cn(
-              "text-muted-foreground hover:text-foreground -mr-1 ml-0.5 shrink-0",
-              active.length > 0 && "text-primary hover:text-primary",
-              className
-            )}
-          />
+          fullCell ? (
+            <button
+              type="button"
+              disabled={unavailable}
+              aria-label={
+                unavailable
+                  ? `Filter ${label}, unavailable`
+                  : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
+              }
+              className={cn(
+                "group/btn focus-visible:ring-ring flex min-h-11 w-full min-w-0 items-center justify-between gap-1.5 -mx-2 px-2 rounded-md font-semibold text-xs tracking-wider uppercase whitespace-nowrap transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:outline-none cursor-pointer text-left",
+                active.length > 0
+                  ? "text-primary hover:text-primary font-bold"
+                  : "text-table-header-fg hover:text-foreground",
+                className
+              )}
+            >
+              <span className="min-w-0 truncate leading-tight">{label}</span>
+              <Funnel
+                aria-hidden="true"
+                className={cn(
+                  "size-3.5 shrink-0 transition-colors ml-1",
+                  active.length > 0
+                    ? "fill-current text-primary"
+                    : "text-muted-foreground group-hover/btn:text-foreground"
+                )}
+              />
+            </button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              disabled={unavailable}
+              aria-label={
+                unavailable
+                  ? `Filter ${label}, unavailable`
+                  : `Filter ${label}${active.length > 0 ? `: ${summary}` : ""}`
+              }
+              className={cn(
+                "text-muted-foreground hover:text-foreground -mr-1 ml-0.5 shrink-0",
+                active.length > 0 && "text-primary hover:text-primary",
+                className
+              )}
+            >
+              <Funnel
+                aria-hidden="true"
+                className={cn("size-3.5", active.length > 0 && "fill-current")}
+              />
+            </Button>
+          )
         }
-      >
-        <Funnel
-          aria-hidden="true"
-          className={cn("size-3.5", active.length > 0 && "fill-current")}
-        />
-      </PopoverTrigger>
+      />
       <FacetPopoverBody heading={`Filter ${label}`} facets={facets} />
     </Popover>
   );

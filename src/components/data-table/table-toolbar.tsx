@@ -29,6 +29,7 @@ export function TableToolbar({
   facets = [],
   onClearAll,
   children,
+  actions,
 }: {
   /** Free-text search for facets that belong to no single column. */
   search?: {
@@ -46,14 +47,20 @@ export function TableToolbar({
   facets?: FacetDef[];
   onClearAll?: () => void;
   children?: ReactNode;
+  /** Primary or contextual action(s) rendered below the search input. */
+  actions?: ReactNode;
 }) {
   const applied = facets.filter(facetIsApplied);
 
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="order-2 flex min-w-0 flex-wrap items-center justify-between gap-2 empty:hidden sm:order-1 sm:justify-start">
+          {children}
+          {resultSummary && <div className="shrink-0">{resultSummary}</div>}
+        </div>
         {search && (
-          <div className="relative min-w-0 flex-1 sm:min-w-[16rem]">
+          <div className="order-1 relative min-w-0 w-full sm:order-2 sm:w-64 md:w-72 lg:w-80 sm:ml-auto">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"
@@ -72,31 +79,36 @@ export function TableToolbar({
             />
           </div>
         )}
-        {children}
-        {resultSummary && <div className="ml-auto shrink-0">{resultSummary}</div>}
       </div>
 
-      {applied.length > 0 && (
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          {applied.map((facet) => (
-            <button
-              key={facet.id}
-              type="button"
-              aria-label={`Remove filter ${facetChipLabel(facet)}`}
-              onClick={() => facet.onChange(null)}
-              className="border-border bg-card text-foreground hover:bg-surface-hover focus-visible:ring-ring inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
-            >
-              <span aria-hidden="true" className="truncate">
-                {facetChipLabel(facet)}
-              </span>
-              <X aria-hidden="true" className="text-muted-foreground size-3.5 shrink-0" />
-            </button>
-          ))}
-          {onClearAll && (
-            <Button type="button" variant="ghost" size="sm" onClick={onClearAll} className="h-7">
-              Clear all
-            </Button>
+      {(applied.length > 0 || actions) && (
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {applied.length > 0 ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {applied.map((facet) => (
+                <button
+                  key={facet.id}
+                  type="button"
+                  aria-label={`Remove filter ${facetChipLabel(facet)}`}
+                  onClick={() => facet.onChange(null)}
+                  className="border-border bg-card text-foreground hover:bg-surface-hover focus-visible:ring-ring inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors focus-visible:ring-3 focus-visible:outline-none"
+                >
+                  <span aria-hidden="true" className="truncate">
+                    {facetChipLabel(facet)}
+                  </span>
+                  <X aria-hidden="true" className="text-muted-foreground size-3.5 shrink-0" />
+                </button>
+              ))}
+              {onClearAll && (
+                <Button type="button" variant="ghost" size="sm" onClick={onClearAll} className="h-7">
+                  Clear all
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="hidden sm:block" />
           )}
+          {actions && <div className="shrink-0 sm:ml-auto">{actions}</div>}
         </div>
       )}
     </div>
