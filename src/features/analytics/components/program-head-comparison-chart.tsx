@@ -75,6 +75,21 @@ type ProgramHeadComparisonChartProps = {
    */
   classification?: "course" | "contextual";
 };
+function axisDomain(
+  values: number[],
+  min: number,
+  max: number,
+  includeBenchmark: boolean
+): [number, number] {
+  // Data-derived domain: frozen snapshot scales are not guaranteed to start
+  // at 1 (or to be positive), so a fixed [0, max] axis could clip or mislead.
+  // Course charts keep the 3.50 benchmark inside the axis so the line never
+  // disappears for especially low or high means.
+  const low = includeBenchmark ? Math.min(min - 0.5, OUTCOME_ATTAINMENT_BENCHMARK) : min - 0.5;
+  const high = includeBenchmark ? Math.max(max + 0.5, OUTCOME_ATTAINMENT_BENCHMARK) : max + 0.5;
+  return values.length === 1 ? [low, high] : [Math.min(0, low), high];
+}
+
 /** Exact-value disclosure shared by the chart and its unrated empty state. */
 function ComparisonExactValuesTable({ rows }: { rows: ProgramHeadComparisonDatum[] }) {
   const showsContext = rows.some((row) => row.context != null);
@@ -182,16 +197,7 @@ export function ProgramHeadComparisonChart({
   // at 1 (or to be positive), so a fixed [0, max] axis could clip or mislead.
   // Course charts keep the 3.50 benchmark inside the axis so the line never
   // disappears for especially low or high means.
-  const domain: [number, number] =
-    values.length === 1
-      ? [
-          Math.min(min - 0.5, classify ? OUTCOME_ATTAINMENT_BENCHMARK : min - 0.5),
-          Math.max(max + 0.5, classify ? OUTCOME_ATTAINMENT_BENCHMARK : max + 0.5),
-        ]
-      : [
-          Math.min(0, min - 0.5, classify ? OUTCOME_ATTAINMENT_BENCHMARK : min - 0.5),
-          Math.max(max + 0.5, classify ? OUTCOME_ATTAINMENT_BENCHMARK : max + 0.5),
-        ];
+  const domain: [number, number] = axisDomain(values, min, max, classify);
   const hasAttainment = classify && ranked.some((row) => row.attainment?.status === "classified");
   const showBenchmark = hasAttainment;
   // Course charts classify every mean independently: a classified row takes

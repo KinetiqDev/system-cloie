@@ -230,9 +230,91 @@ function CollectionFilterSheet({
     </div>
   );
 }
+
+function paginateItems<T>(items: readonly T[], page: number): { total: number; pageItems: T[] } {
+  const total = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safe = Math.min(page, total);
+  return { total, pageItems: items.slice((safe - 1) * PAGE_SIZE, safe * PAGE_SIZE) };
+}
+
 // ---------------------------------------------------------------------------
 // Collection
 // ---------------------------------------------------------------------------
+type PublishedResultsProps = {
+  isMobile: boolean;
+  view: ToolsViewMode;
+  paginatedItems: PublishedDeploymentItem[];
+  label: string;
+  hasCourseColumn: boolean;
+  hasTargetColumn: boolean;
+  expandedIds: Set<string>;
+  onToggle: (id: string) => void;
+  facets: PublishedFacets | undefined;
+  columnCount: number;
+  renderExpanded: PublishedDeploymentsCollectionProps["renderExpanded"];
+  renderMenuItems: PublishedDeploymentsCollectionProps["renderMenuItems"];
+  renderCardActions: PublishedDeploymentsCollectionProps["renderCardActions"];
+};
+
+function PublishedResults({
+  isMobile,
+  view,
+  paginatedItems,
+  label,
+  hasCourseColumn,
+  hasTargetColumn,
+  expandedIds,
+  onToggle,
+  facets,
+  columnCount,
+  renderExpanded,
+  renderMenuItems,
+  renderCardActions,
+}: PublishedResultsProps) {
+  if (isMobile) {
+    return (
+      <PublishedCompactList
+        items={paginatedItems}
+        label={label}
+        hasCourse={hasCourseColumn}
+        hasTarget={hasTargetColumn}
+        expandedIds={expandedIds}
+        onToggle={onToggle}
+        renderExpanded={renderExpanded}
+        renderMenuItems={renderMenuItems}
+      />
+    );
+  }
+  if (view === "card") {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {paginatedItems.map((item) => (
+          <PublishedCard
+            key={item.id}
+            item={item}
+            hasCourse={hasCourseColumn}
+            renderMenuItems={renderMenuItems}
+            renderCardActions={renderCardActions}
+          />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <PublishedTable
+      items={paginatedItems}
+      label={label}
+      expandedIds={expandedIds}
+      onToggle={onToggle}
+      facets={facets?.byColumn}
+      hasCourse={hasCourseColumn}
+      hasTarget={hasTargetColumn}
+      columnCount={columnCount}
+      renderExpanded={renderExpanded}
+      renderMenuItems={renderMenuItems}
+    />
+  );
+}
 
 export function PublishedDeploymentsCollection({
   view,
@@ -272,9 +354,8 @@ export function PublishedDeploymentsCollection({
   const hasTargetColumn = items.some((item) => Boolean(item.targetLabel));
   const columnCount = 7 + (hasCourseColumn ? 1 : 0) + (hasTargetColumn ? 1 : 0);
 
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const { total: totalPages, pageItems: paginatedItems } = paginateItems(filteredItems, currentPage);
   const safePage = Math.min(currentPage, totalPages);
-  const paginatedItems = filteredItems.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   function handleFilterChange(filter: StatusFilter) {
     if (controlledStatusFilter === undefined) setInternalStatusFilter(filter);
     onStatusFilterChange?.(filter);
@@ -327,41 +408,21 @@ export function PublishedDeploymentsCollection({
             onClearFilters={onClearFilters}
           />
         ))
-      ) : isMobile ? (
-        <PublishedCompactList
-          items={paginatedItems}
-          label={label}
-          hasCourse={hasCourseColumn}
-          hasTarget={hasTargetColumn}
-          expandedIds={expandedIds}
-          onToggle={toggleExpanded}
-          renderExpanded={renderExpanded}
-          renderMenuItems={renderMenuItems}
-        />
-      ) : view === "card" ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {paginatedItems.map((item) => (
-            <PublishedCard
-              key={item.id}
-              item={item}
-              hasCourse={hasCourseColumn}
-              renderMenuItems={renderMenuItems}
-              renderCardActions={renderCardActions}
-            />
-          ))}
-        </div>
       ) : (
-        <PublishedTable
-          items={paginatedItems}
+        <PublishedResults
+          isMobile={isMobile}
+          view={view}
+          paginatedItems={paginatedItems}
           label={label}
+          hasCourseColumn={hasCourseColumn}
+          hasTargetColumn={hasTargetColumn}
           expandedIds={expandedIds}
           onToggle={toggleExpanded}
-          facets={facets?.byColumn}
-          hasCourse={hasCourseColumn}
-          hasTarget={hasTargetColumn}
+          facets={facets}
           columnCount={columnCount}
           renderExpanded={renderExpanded}
           renderMenuItems={renderMenuItems}
+          renderCardActions={renderCardActions}
         />
       )}
 
