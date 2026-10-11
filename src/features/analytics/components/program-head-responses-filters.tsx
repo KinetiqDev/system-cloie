@@ -105,15 +105,15 @@ export function ProgramHeadResponsesTableHead({
 
   return (
     <>
-      {/* These widths plus the trailing Mean / scale column (13%) are a
-          percentage budget that must total 100 on each tab: the course tab
-          spends 20+15+13+13+11+14, the program-wide tab 18+20+13+13+11+14. A
-          budget over 100 clips the last column, which is what a "widths pick
+      {/* These widths plus the trailing Mean column (10%) are a percentage
+          budget that must total 100 on each tab: the course tab spends
+          27+15+13+13+11+11, the program-wide tab 25+19+11+13+11+11. A budget
+          over 100 clips the last column, which is what a "widths pick
           themselves" layout hides until a long label lands in it. */}
       <FilterableHead
         label="Evaluation"
         facets={facets.evaluation}
-        className={isCourse ? "w-[20%]" : "w-[18%]"}
+        className={isCourse ? "w-[27%]" : "w-[25%]"}
       />
       {/* "Stakeholder" is eleven characters to "Class"'s five, so the
           program-wide tab's own label decides the column's width. */}
@@ -129,17 +129,7 @@ export function ProgramHeadResponsesTableHead({
       />
       <FilterableHead label="Period" facets={facets.period} className="w-[13%]" />
       <FilterableHead label="Status" facets={facets.status} className="w-[11%]" />
-      {/* The funnel is pushed to the far edge of the cell, matching the numbers
-          below it, so a right-aligned column stays a single visual block. */}
-      <FilterableHead
-        label="Submitted"
-        facets={facets.submitted}
-        className={
-          isCourse
-            ? "w-[14%] text-right [&>span]:justify-end"
-            : "w-[12%] text-right [&>span]:justify-end"
-        }
-      />
+      <FilterableHead label="Submitted" facets={facets.submitted} className="w-[11%]" />
     </>
   );
 }

@@ -24,7 +24,7 @@ const options = {
 };
 
 describe("ProgramHeadResponsesLanding", () => {
-  it("humanizes evidence labels and includes scale context", () => {
+  it("humanizes evidence labels and displays quantitative mean", () => {
     render(
       <ProgramHeadResponsesLanding
         programId="program-1"
@@ -56,7 +56,8 @@ describe("ProgramHeadResponsesLanding", () => {
     expect(screen.getAllByText("Industry partners").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/1 of 2 submitted/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/1–5 \(5-point\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("4.42").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/1–5 \(5-point\)/)).not.toBeInTheDocument();
     expect(screen.queryByText("INDUSTRY_PARTNER")).not.toBeInTheDocument();
   });
 
@@ -201,10 +202,10 @@ describe("ProgramHeadResponsesLanding", () => {
       screen
         .getAllByRole("columnheader")
         .map((heading) => heading.getAttribute("aria-label") ?? heading.textContent)
-    ).toEqual(["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted", "Mean / scale"]);
+    ).toEqual(["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted", "Mean"]);
     for (const column of ["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted"]) {
       expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();
     }
-    expect(screen.queryByRole("button", { name: /^Filter Mean \/ scale/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Filter Mean$/ })).not.toBeInTheDocument();
   });
 });

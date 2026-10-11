@@ -67,7 +67,7 @@ function renderFilters(state: ProgramHeadResponsesFilterState, isCourse = state.
               options={options}
               isCourse={isCourse}
             />
-            <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
+            <TableHead className="w-[10%] text-right">Mean</TableHead>
           </TableRow>
         </TableHeader>
       </Table>

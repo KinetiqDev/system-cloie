@@ -65,7 +65,7 @@ describe("GeneralEducationResponsesLanding", () => {
       screen
         .getAllByRole("columnheader")
         .map((heading) => heading.getAttribute("aria-label") ?? heading.textContent)
-    ).toEqual(["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted", "Mean / scale"]);
+    ).toEqual(["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted", "Mean"]);
 
     for (const column of ["Evaluation", "Class", "Faculty", "Period", "Status", "Submitted"]) {
       expect(screen.getByRole("button", { name: `Filter ${column}` })).toBeInTheDocument();

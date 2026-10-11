@@ -265,15 +265,7 @@ function Data({ label, children }: { label: string; children: React.ReactNode })
 
 function MeanValue({ item }: { item: Deployment }) {
   if (item.mean === null) return <>—</>;
-  return (
-    <span className="font-semibold tabular-nums">
-      {item.mean.toFixed(2)}
-      <span className="text-muted-foreground font-normal whitespace-normal [&>span]:whitespace-nowrap">
-        {" · "}
-        <span>{item.scaleLabel ?? "Scale unavailable"}</span>
-      </span>
-    </span>
-  );
+  return <span className="font-semibold tabular-nums">{item.mean.toFixed(2)}</span>;
 }
 
 function ResponseTable({
@@ -299,10 +291,7 @@ function ResponseTable({
             options={options}
             isCourse={isCourse}
           />
-          {/* The mean and its scale label read as one value, and the label is
-              wider than the number: "4.15 · 1–5 (5-point)" needs 144 px, so the
-              column takes 13% and the label may wrap rather than clip. */}
-          <TableHead className="w-[13%] text-right">Mean / scale</TableHead>
+          <TableHead className="w-[10%] text-right">Mean</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -335,7 +324,7 @@ function ResponseTable({
                 {formatResponseStatus(item.status)}
               </Badge>
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell className="tabular-nums">
               {item.submitted === 0 ? "None" : `${item.submitted} of ${item.assigned}`}
             </TableCell>
             <TableCell className="text-right">

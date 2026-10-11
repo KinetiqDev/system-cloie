@@ -61,7 +61,7 @@ function renderFilters(state: GeneralEducationResponsesFilterState) {
         <TableHeader>
           <TableRow>
             <GeneralEducationResponsesTableHead state={state} options={options} />
-            <TableHead className="w-[11%] text-right">Mean / scale</TableHead>
+            <TableHead className="w-[10%] text-right">Mean</TableHead>
           </TableRow>
         </TableHeader>
       </Table>

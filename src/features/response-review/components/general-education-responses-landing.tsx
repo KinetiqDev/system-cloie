@@ -200,9 +200,7 @@ function EvaluationTable({
       <TableHeader>
         <TableRow>
           <GeneralEducationResponsesTableHead state={state} options={options} />
-          {/* "4.31 · 1–5 (5-point)" is one reading and needs 144 px, so the
-              column takes 14% and the label wraps rather than clipping. */}
-          <TableHead className="w-[14%] text-right">Mean / scale</TableHead>
+          <TableHead className="w-[10%] text-right">Mean</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -236,7 +234,7 @@ function EvaluationTable({
                 {formatResponseStatus(item.status)}
               </Badge>
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell className="tabular-nums">
               {item.submitted === 0 ? "None" : `${item.submitted} of ${item.assigned}`}
             </TableCell>
             <TableCell className="text-right">
@@ -251,15 +249,7 @@ function EvaluationTable({
 
 function MeanValue({ item }: { item: Evaluation }) {
   if (item.mean === null) return <>—</>;
-  return (
-    <span className="font-semibold tabular-nums">
-      {item.mean.toFixed(2)}
-      <span className="text-muted-foreground font-normal whitespace-normal [&>span]:whitespace-nowrap">
-        {" · "}
-        <span>{item.scaleLabel ?? "Scale unavailable"}</span>
-      </span>
-    </span>
-  );
+  return <span className="font-semibold tabular-nums">{item.mean.toFixed(2)}</span>;
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
