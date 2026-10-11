@@ -89,7 +89,12 @@ describe("fallow config", () => {
   it("classifies every source path group and permits only the documented seams", () => {
     const policy = readPolicy();
 
-    expect(policy.ignoreDependencies).toEqual(["supabase", "shadcn", "react-dom", "@tailwindcss/oxide"]);
+    expect(policy.ignoreDependencies).toEqual([
+      "supabase",
+      "shadcn",
+      "react-dom",
+      "@tailwindcss/oxide",
+    ]);
     expect(policy.rules).toEqual({ "unresolved-imports": "warn" });
     expect(policy.audit).toEqual({
       deadCodeBaseline: "fallow-baselines/dead-code.json",

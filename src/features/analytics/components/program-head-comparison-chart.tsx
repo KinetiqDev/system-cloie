@@ -280,10 +280,7 @@ export function ProgramHeadComparisonChart({
               isAnimationActive={false}
             >
               {ranked.map((row, index) => (
-                <Cell
-                  key={row.key}
-                  fill={barFill(row, index)}
-                />
+                <Cell key={row.key} fill={barFill(row, index)} />
               ))}
               <LabelList
                 dataKey="meanRating"
@@ -301,9 +298,7 @@ export function ProgramHeadComparisonChart({
       >
         {ranked.map((row, index) => (
           <span role="listitem" key={row.key} className="flex items-center gap-1.5">
-            <ChartSwatch
-              fill={barFill(row, index)}
-            />
+            <ChartSwatch fill={barFill(row, index)} />
             <span className="text-muted-foreground text-xs">
               {row.label} ({row.submittedResponseCount}{" "}
               {row.submittedResponseCount === 1 ? "response" : "responses"})
