@@ -354,7 +354,10 @@ export function PublishedDeploymentsCollection({
   const hasTargetColumn = items.some((item) => Boolean(item.targetLabel));
   const columnCount = 7 + (hasCourseColumn ? 1 : 0) + (hasTargetColumn ? 1 : 0);
 
-  const { total: totalPages, pageItems: paginatedItems } = paginateItems(filteredItems, currentPage);
+  const { total: totalPages, pageItems: paginatedItems } = paginateItems(
+    filteredItems,
+    currentPage
+  );
   const safePage = Math.min(currentPage, totalPages);
   function handleFilterChange(filter: StatusFilter) {
     if (controlledStatusFilter === undefined) setInternalStatusFilter(filter);
