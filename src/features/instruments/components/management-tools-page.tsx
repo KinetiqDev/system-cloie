@@ -145,18 +145,12 @@ export function ManagementToolsPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
-          <p className="text-body-sm text-text-secondary">
-            Manage institutional baseline evaluation templates. These templates can be adopted by
-            program heads for their programs.
-          </p>
-        </div>
-        <Button render={<Link href={`${basePath}/new`} />} className="shrink-0">
-          <Plus className="mr-2 size-4" />
-          Create Template
-        </Button>
+      <div className="space-y-2">
+        <h1 className="text-heading-xl text-text-primary">Evaluation Tools</h1>
+        <p className="text-body-sm text-text-secondary">
+          Manage institutional baseline evaluation templates. These templates can be adopted by
+          program heads for their programs.
+        </p>
       </div>
 
       {/* Templates Collection */}
@@ -164,6 +158,12 @@ export function ManagementToolsPage({
         view={view}
         viewControl={
           <ToolsViewSelector label="Templates" value={view} onValueChange={selectView} />
+        }
+        actions={
+          <Button render={<Link href={`${basePath}/new`} />}>
+            <Plus className="size-4" data-icon="inline-start" />
+            Create Template
+          </Button>
         }
         sections={[
           {
@@ -216,11 +216,15 @@ export function ManagementToolsPage({
         ]}
         empty={
           <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground text-sm">
-                No baseline templates yet. Click &quot;Create Template&quot; to build your first
-                evaluation tool.
+            <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+              <p className="text-muted-foreground max-w-sm text-sm text-balance">
+                No baseline templates yet. Create one to give program heads a starting point for
+                their evaluations.
               </p>
+              <Button render={<Link href={`${basePath}/new`} />}>
+                <Plus className="size-4" data-icon="inline-start" />
+                Create Template
+              </Button>
             </CardContent>
           </Card>
         }

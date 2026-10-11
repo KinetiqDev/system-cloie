@@ -2,7 +2,21 @@ import { describe, expect, it, vi } from "vitest";
 import { getGeneralEducationOutcomes } from "@/features/analytics/services/general-education-analytics";
 const { resolveAuthSessionMock, prismaMock } = vi.hoisted(() => ({
   resolveAuthSessionMock: vi.fn(),
-  prismaMock: { quantitativeResponseItem: { findMany: vi.fn() } },
+  prismaMock: {
+    quantitativeResponseItem: { findMany: vi.fn().mockResolvedValue([]) },
+    qualitativeResponseItem: { findMany: vi.fn().mockResolvedValue([]) },
+    course: { findMany: vi.fn().mockResolvedValue([]) },
+    institutionalOutcome: { findMany: vi.fn().mockResolvedValue([]) },
+    academicTermInstance: { findMany: vi.fn().mockResolvedValue([]) },
+    response: { findMany: vi.fn().mockResolvedValue([]) },
+    evaluationAssignment: { findMany: vi.fn().mockResolvedValue([]) },
+    courseAssignment: { findMany: vi.fn().mockResolvedValue([]) },
+    courseBoundEvaluation: { findMany: vi.fn().mockResolvedValue([]) },
+    courseBoundCiloQuestionBinding: { findMany: vi.fn().mockResolvedValue([]) },
+    instrumentVersion: { findMany: vi.fn().mockResolvedValue([]) },
+    cILOCommonPOMapping: { findMany: vi.fn().mockResolvedValue([]) },
+    cILOInstitutionalOutcomeMapping: { findMany: vi.fn().mockResolvedValue([]) },
+  },
 }));
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({
   resolveAuthSession: resolveAuthSessionMock,
@@ -14,7 +28,6 @@ describe("Explicit Dean institutional reader", () => {
     "PROGRAM_HEAD",
     "FACULTY",
     "GEN_ED_COORDINATOR",
-    "SECRETARY",
     "STUDENT",
     "ALUMNI",
     "INDUSTRY_PARTNER",
@@ -23,5 +36,12 @@ describe("Explicit Dean institutional reader", () => {
     resolveAuthSessionMock.mockResolvedValue(role ? { activeRole: role } : null);
     expect(await getGeneralEducationOutcomes({ tab: "outcomes" }, "dean")).toBeNull();
     expect(prismaMock.quantitativeResponseItem.findMany).not.toHaveBeenCalled();
+  });
+
+  // The Secretary shares the Dean's institutional (ILO) evidence surface.
+  it("admits the Secretary to institutional evidence", async () => {
+    vi.clearAllMocks();
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: "SECRETARY" });
+    expect(await getGeneralEducationOutcomes({ tab: "outcomes" }, "dean")).not.toBeNull();
   });
 });

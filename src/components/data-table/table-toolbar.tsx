@@ -122,7 +122,7 @@ export function TableToolbar({
           ) : (
             <div className="hidden sm:block" />
           )}
-          {actions && <div className="shrink-0 sm:ml-auto">{actions}</div>}
+          {actions && <div className="ml-auto shrink-0">{actions}</div>}
         </div>
       )}
     </div>

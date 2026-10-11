@@ -77,8 +77,8 @@ export async function commitCentralOutcomeAction(
     return { success: false, error: "Invalid outcome review." } as const;
   const result = await commitOutcomeWrite(review, confirmed);
   if (result.success) {
-    revalidatePath("/secretary/common-outcomes");
-    revalidatePath("/dean/common-outcomes");
+    revalidatePath("/secretary/learning-outcomes");
+    revalidatePath("/dean/college-oversight/learning-outcomes");
     revalidatePath("/program-head/outcomes");
     revalidatePath("/faculty/cilos");
     revalidatePath("/gen-ed-coordinator/outcomes");

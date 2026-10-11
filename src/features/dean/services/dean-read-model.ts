@@ -1,5 +1,5 @@
 import type { AcademicPeriodStatus, Prisma } from "@prisma/client";
-import { ROLES } from "@/lib/constants/roles";
+import { isCollegeOversightRole } from "@/lib/constants/college-oversight";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
 import { listAcademicPeriodSummaries } from "@/features/academic-calendar/services/read-academic-period-summaries";
 import { formatTermInstanceLabel } from "@/lib/utils/date-format";
@@ -37,8 +37,8 @@ export function periodSummary(period: PeriodRecord): DeanPeriodSummary {
 export async function listDeanEligiblePeriods(): Promise<DeanPeriodSummary[]> {
   const session = await resolveAuthSession();
   if (!session) throw new DeanReadModelUnauthorizedError("Authentication required.");
-  if (session.activeRole !== ROLES.DEAN) {
-    throw new DeanReadModelUnauthorizedError("College Dean access required.");
+  if (!isCollegeOversightRole(session.activeRole)) {
+    throw new DeanReadModelUnauthorizedError("College Dean or Secretary access required.");
   }
 
   return listAcademicPeriodSummaries();

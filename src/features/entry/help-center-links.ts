@@ -72,9 +72,10 @@ export const HELP_ROUTES: readonly HelpRoute[] = [
   { appRoute: "/secretary/instruments/new", helpPath: "/secretary/evaluation-tools/" },
   { appRoute: "/secretary/instruments/:id/edit", helpPath: "/secretary/evaluation-tools/" },
   { appRoute: "/secretary/instruments", helpPath: "/secretary/evaluation-tools/" },
+  // Both roles share one Learning Outcomes surface (ADR 0043), so both roles
+  // resolve to its single article until the Help Center splits it per role.
+  { appRoute: "/secretary/learning-outcomes", helpPath: "/dean/learning-outcomes/" },
   { appRoute: "/secretary/dashboard", helpPath: "/secretary/" },
-  // Learning Outcomes redirects to the dashboard server-side, so it is never
-  // a client pathname here. Kept out of the table on purpose.
 
   // -------------------------------------------------------------------- Dean
   {

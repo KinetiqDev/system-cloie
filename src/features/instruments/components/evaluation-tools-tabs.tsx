@@ -12,7 +12,6 @@ type EvaluationToolsTabsProps = {
   initialTab?: EvaluationToolsTab;
   templates: ReactNode;
   published: ReactNode;
-  action?: ReactNode | ((activeTab: EvaluationToolsTab) => ReactNode);
   /** List/Card view toggle rendered in the right-aligned tab toolbar. */
   viewControl?: ReactNode;
 };
@@ -43,7 +42,6 @@ export function EvaluationToolsTabs({
   initialTab = "templates",
   templates,
   published,
-  action,
   viewControl,
 }: EvaluationToolsTabsProps) {
   const [activeTab, setActiveTab] = useState<EvaluationToolsTab>(initialTab);
@@ -58,18 +56,13 @@ export function EvaluationToolsTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <TabsList variant="line" className="self-start">
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
         </TabsList>
 
-        {(action || viewControl) && (
-          <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
-            {typeof action === "function" ? action(activeTab) : action}
-            <div className="shrink-0">{viewControl}</div>
-          </div>
-        )}
+        {viewControl && <div className="ml-auto shrink-0">{viewControl}</div>}
       </div>
 
       <TabsContent value="templates" className="pt-6">

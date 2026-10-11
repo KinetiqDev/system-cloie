@@ -40,19 +40,34 @@ const VALID_TASK_IDS: number[] = Array.from({ length: 27 }, (_, i) => i + 1);
 
 export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   {
-    path: "src/features/outcomes/components/central-outcomes-page.tsx",
+    path: "src/features/outcomes/components/central-outcomes-catalog.tsx",
     disposition: "already_compliant",
     category: "feature_component",
+    notes:
+      "Dean/Secretary outcome catalog: reviewed Common and administrative PO writes in responsive dialogs, read-only Core/Professional POs and ILOs",
   },
   {
-    path: "src/app/(app)/secretary/common-outcomes/page.tsx",
+    path: "src/features/analytics/components/college-analytics-page.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes: "College analytics shared by the Dean and Secretary routes",
+  },
+  {
+    path: "src/app/(app)/secretary/analytics/page.tsx",
     disposition: "already_compliant",
     category: "route",
   },
   {
-    path: "src/app/(app)/dean/common-outcomes/page.tsx",
+    path: "src/app/(app)/secretary/analytics/loading.tsx",
     disposition: "already_compliant",
     category: "route",
+    notes: "Re-exports the Dean analytics skeleton",
+  },
+  {
+    path: "src/app/(app)/secretary/learning-outcomes/loading.tsx",
+    disposition: "already_compliant",
+    category: "route",
+    notes: "Re-exports the Dean Learning Outcomes loading state",
   },
   {
     path: "src/features/entry/components/audience-landing.tsx",
@@ -1379,9 +1394,9 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
   },
   {
     path: "src/app/(app)/secretary/learning-outcomes/page.tsx",
-    disposition: "redirect",
+    disposition: "already_compliant",
     category: "route",
-    notes: "Secretary outcome surface removed; redirects to Secretary landing",
+    notes: "Secretary Learning Outcomes reuses the shared Dean/Secretary page",
   },
   {
     path: "src/app/(app)/secretary/dashboard/loading.tsx",
@@ -3324,6 +3339,13 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
     category: "feature_component",
     notes:
       "Program Outcome classification badge on dedicated categorical roles with a visible text label",
+  },
+  {
+    path: "src/features/outcomes/components/manifestation-badge.tsx",
+    disposition: "already_compliant",
+    category: "feature_component",
+    notes:
+      "Read-only CILO manifestation badge on dedicated categorical roles; Unmapped uses the warning status role with a dashed outline and icon",
   },
   {
     path: "src/features/outcomes/components/manifestation-picker.tsx",

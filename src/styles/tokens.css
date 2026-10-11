@@ -164,6 +164,22 @@
   --classification-institution-bg: #fff1f2;
   --classification-institution-fg: #9f1239;
   --classification-institution-border: #fecdd3;
+
+  /* ========================================
+   * 7c. CILO Manifestation Categorical Roles (Light Defaults)
+   * Hues avoid CQI status (green/amber/red) and PO classification hues.
+   * ======================================== */
+  --manifestation-learning-bg: #f0fdfa;
+  --manifestation-learning-fg: #115e59;
+  --manifestation-learning-border: #99f6e4;
+
+  --manifestation-practice-bg: #eff6ff;
+  --manifestation-practice-fg: #1e40af;
+  --manifestation-practice-border: #bfdbfe;
+
+  --manifestation-opportunity-bg: #fdf4ff;
+  --manifestation-opportunity-fg: #86198f;
+  --manifestation-opportunity-border: #f5d0fe;
   /* ========================================
    * 8. Sidebar Roles (Light Defaults)
    * ======================================== */
@@ -303,6 +319,19 @@
   --classification-institution-bg: #4c0519;
   --classification-institution-fg: #fda4af;
   --classification-institution-border: #9f1239;
+
+  /* CILO Manifestation Categorical Roles (Dark) */
+  --manifestation-learning-bg: #042f2e;
+  --manifestation-learning-fg: #5eead4;
+  --manifestation-learning-border: #0f766e;
+
+  --manifestation-practice-bg: #172554;
+  --manifestation-practice-fg: #93c5fd;
+  --manifestation-practice-border: #1d4ed8;
+
+  --manifestation-opportunity-bg: #4a044e;
+  --manifestation-opportunity-fg: #f0abfc;
+  --manifestation-opportunity-border: #a21caf;
   /* Sidebar Roles (Dark) */
   --sidebar-bg: #111827;
   --sidebar-fg: #f8fafc;

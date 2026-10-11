@@ -1,13 +1,13 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db/prisma";
-import { ROLES } from "@/lib/constants/roles";
 import { resolveAuthSession } from "@/features/auth/services/resolve-auth-session";
+import { isCollegeOversightRole } from "@/lib/constants/college-oversight";
 import { buildInstancePeriodLabel } from "./academic-periods";
 import type { DeanAnalyticsFilters } from "./dean-analytics-state";
 
 export async function requireDeanAnalytics() {
   const session = await resolveAuthSession();
-  return session?.activeRole === ROLES.DEAN ? session : null;
+  return isCollegeOversightRole(session?.activeRole) ? session : null;
 }
 
 export type DeanDeploymentEvidence = {

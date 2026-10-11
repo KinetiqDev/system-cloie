@@ -53,6 +53,37 @@ function renderTwoSectionCollection() {
 }
 
 describe("TemplateCollection", () => {
+  test("renders the list action under the search line when items exist", () => {
+    render(
+      <TemplateCollection
+        view="card"
+        sections={[
+          {
+            filterKey: "mine",
+            items: [makeItem()],
+            renderFooterActions: () => null,
+          },
+        ]}
+        empty={<p>Empty</p>}
+        actions={<button type="button">Create Template</button>}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Create Template" })).toBeInTheDocument();
+  });
+
+  test("drops the action with the toolbar when the list is empty", () => {
+    render(
+      <TemplateCollection
+        view="card"
+        sections={[{ filterKey: "mine", items: [], renderFooterActions: () => null }]}
+        empty={<p>Empty</p>}
+        actions={<button type="button">Create Template</button>}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Create Template" })).not.toBeInTheDocument();
+  });
   test("renders card anatomy with origin marker and badges", () => {
     render(
       <TemplateCollection

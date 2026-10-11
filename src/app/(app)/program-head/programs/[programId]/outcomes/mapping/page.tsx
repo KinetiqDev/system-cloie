@@ -18,18 +18,13 @@ import {
   listCILOMappingsForProgram,
   type CourseCILOMappings,
 } from "@/features/outcomes/services/manage-program-head-outcomes";
+import { ManifestationBadge } from "@/features/outcomes/components/manifestation-badge";
 import { buildProgramHeadOutcomesPath } from "@/lib/constants/program-head-routes";
 import { buildPageTitle } from "@/lib/page-title";
 
 export const metadata = {
   title: buildPageTitle("CILO Mapping Review", "Program Head"),
 };
-
-function manifestationLabel(value: CILOMappingManifestation | null): string {
-  if (!value) return "Unanswered";
-  const word = `${value.charAt(0)}${value.slice(1).toLowerCase()}`;
-  return `${word} (${value.charAt(0)})`;
-}
 
 function manifestationFor(
   cilo: CourseCILOMappings["cilos"][number],
@@ -162,9 +157,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                                 </th>
                                 {course.pos.map((po) => (
                                   <td key={po.id} className="text-text-primary py-3 pr-4 pl-4">
-                                    <span className="text-label-sm">
-                                      {manifestationLabel(manifestationFor(cilo, po.id))}
-                                    </span>
+                                    <ManifestationBadge value={manifestationFor(cilo, po.id)} />
                                   </td>
                                 ))}
                               </tr>
@@ -220,9 +213,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                                       {po.description}
                                     </span>
                                   </span>
-                                  <span className="text-label-sm shrink-0">
-                                    {manifestationLabel(manifestation)}
-                                  </span>
+                                  <ManifestationBadge value={manifestation} className="shrink-0" />
                                 </li>
                               );
                             })}
@@ -263,9 +254,7 @@ export default async function SelectedProgramOutcomeMappingPage({
                                 <Badge variant="outline" className="text-text-muted">
                                   Archived
                                 </Badge>
-                                <span className="text-body-sm">
-                                  {manifestationLabel(mapping.manifestation)}
-                                </span>
+                                <ManifestationBadge value={mapping.manifestation} />
                               </li>
                             );
                           })

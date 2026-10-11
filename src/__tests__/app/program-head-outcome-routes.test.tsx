@@ -121,7 +121,11 @@ describe("selected Program Outcome routes", () => {
     expect(html).toContain("Design solutions");
     expect(html).toContain("Learning (L)");
     expect(html).toContain("Practice (P)");
-    expect(html).toContain("Unanswered");
+    expect(html).toContain("Unmapped");
+    expect(html).not.toContain("Unanswered");
+    expect(html).toContain("bg-manifestation-learning-bg");
+    expect(html).toContain("bg-manifestation-practice-bg");
+    expect(html).toContain("bg-manifestation-opportunity-bg");
     expect(html).toContain("Aligned");
     expect(html).toContain("Needs mapping");
     expect(html).toContain("bg-success-soft");

@@ -19,21 +19,116 @@ import {
 import { DeanLearningOutcomesLoading } from "@/features/dean/components/dean-oversight-loading";
 import { DeanPeriodSelect } from "./dean-period-select";
 import { getSectionLabel, getYearLevelDisplay } from "@/lib/constants/academic";
+import { ViewTabs } from "@/components/layout/view-tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { CollegeOversightRoutes } from "@/lib/constants/college-oversight";
+import { readCentralOutcomeAdministration } from "@/features/outcomes/services/manage-central-outcomes";
+import { CentralOutcomesCatalog } from "@/features/outcomes/components/central-outcomes-catalog";
 
-type SearchParams = { period?: string; risk?: string; program?: string };
+type SearchParams = { tab?: string; period?: string; risk?: string; program?: string };
+type LearningOutcomesTab = "catalog" | "readiness";
+
+/**
+ * Readiness query parameters without an explicit tab still open readiness, so
+ * dashboard links and period bookmarks keep landing on the projection they
+ * were written for. Anything else is the catalog.
+ */
+export function resolveLearningOutcomesTab(params: SearchParams): LearningOutcomesTab {
+  if (params.tab === "catalog" || params.tab === "readiness") return params.tab;
+  return params.period || params.risk || params.program ? "readiness" : "catalog";
+}
+
+/** The two Learning Outcomes views, as real links so the tab is bookmarkable. */
+export function LearningOutcomesViewTabs({
+  tab,
+  routes,
+}: {
+  tab: LearningOutcomesTab;
+  routes: CollegeOversightRoutes;
+}) {
+  return (
+    <ViewTabs
+      label="Learning Outcomes views"
+      activeValue={tab}
+      items={[
+        { value: "catalog", label: "Outcome catalog", href: routes.learningOutcomes },
+        {
+          value: "readiness",
+          label: "Mapping readiness",
+          href: `${routes.learningOutcomes}?tab=readiness`,
+        },
+      ]}
+    />
+  );
+}
 const validRisks = new Set<NonNullable<DeanLearningOutcomesData["risk"]>>([
   "missing-cilos",
   "incomplete-mappings",
   "not-ready",
 ]);
 
-// fallow-ignore-next-line complexity
-export default async function DeanLearningOutcomesPage({
+/**
+ * The Dean and Secretary Learning Outcomes page. The catalog tab lists and
+ * edits the outcome catalogs; the readiness tab is the read-only,
+ * period-scoped mapping-gap projection. Readiness query parameters without a
+ * tab still open readiness, so dashboard links and bookmarks keep working.
+ */
+export async function LearningOutcomesPage({
   searchParams,
+  routes,
 }: {
   searchParams: Promise<SearchParams>;
+  routes: CollegeOversightRoutes;
 }) {
   const params = await searchParams;
+  const tab = resolveLearningOutcomesTab(params);
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-heading-xl">Learning Outcomes</h1>
+        <p className="text-body-md text-text-secondary max-w-3xl">
+          Every outcome across the college: Common to all Schools, Program Outcomes of every
+          classification, and Institutional Learning Outcomes, with period-by-period mapping
+          readiness.
+        </p>
+      </div>
+      <LearningOutcomesViewTabs tab={tab} routes={routes} />
+      {tab === "catalog" ? (
+        <Suspense fallback={<CatalogLoading />}>
+          <OutcomeCatalog />
+        </Suspense>
+      ) : (
+        <ReadinessView params={params} routes={routes} />
+      )}
+    </div>
+  );
+}
+
+async function OutcomeCatalog() {
+  const result = await readCentralOutcomeAdministration();
+  if (!result.success) redirect("/unauthorized");
+  return <CentralOutcomesCatalog data={result.data} />;
+}
+
+function CatalogLoading() {
+  return (
+    <div className="flex flex-col gap-4" aria-label="Loading outcome catalog" aria-busy="true">
+      <Skeleton className="h-7 w-56" />
+      <Skeleton className="h-4 w-96 max-w-full" />
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+}
+
+// fallow-ignore-next-line complexity
+export async function ReadinessView({
+  params,
+  routes,
+}: {
+  params: SearchParams;
+  routes: CollegeOversightRoutes;
+}) {
   if (params.risk && !validRisks.has(params.risk as NonNullable<DeanLearningOutcomesData["risk"]>))
     notFound();
 
@@ -47,9 +142,8 @@ export default async function DeanLearningOutcomesPage({
 
   if (!selectedPeriodId)
     return (
-      <EmptyPage
-        title="Learning Outcomes"
-        heading="No active Academic Period"
+      <EmptyPeriod
+        dashboardHref={routes.dashboard}
         message={
           periods.length > 0
             ? "A completed period is available for historical review. Select it through its period URL."
@@ -58,10 +152,10 @@ export default async function DeanLearningOutcomesPage({
       />
     );
   if (!params.period && activePeriodId) {
-    const query = new URLSearchParams({ period: activePeriodId });
+    const query = new URLSearchParams({ tab: "readiness", period: activePeriodId });
     if (risk) query.set("risk", risk);
     if (params.program) query.set("program", params.program);
-    redirect(`/dean/college-oversight/learning-outcomes?${query}`);
+    redirect(`${routes.learningOutcomes}?${query}`);
   }
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -76,13 +170,6 @@ export default async function DeanLearningOutcomesPage({
   void detailPromise.catch(() => undefined);
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-heading-lg">Learning Outcomes</h1>
-        <p className="text-body-md text-text-secondary max-w-2xl">
-          Read-only college oversight of Institutional Outcomes, Program Outcomes, and typed Course
-          Intended Learning Outcome mapping gaps.
-        </p>
-      </div>
       <PeriodControls periods={periods} selectedPeriodId={selectedPeriodId} risk={risk} />
       <div className="text-text-secondary flex flex-wrap items-center gap-2 text-sm">
         <span>Selected period</span>
@@ -199,6 +286,7 @@ function PeriodControls({
 }) {
   return (
     <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+      <input type="hidden" name="tab" value="readiness" />
       <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
         <label htmlFor="period" className="text-label-lg">
           Academic Period
@@ -463,35 +551,21 @@ function riskLabel(risk: NonNullable<DeanLearningOutcomesData["risk"]>) {
       ? "Incomplete mappings"
       : "Not ready";
 }
-function EmptyPage({
-  title,
-  heading,
-  message,
-}: {
-  title: string;
-  heading: string;
-  message: string;
-}) {
+function EmptyPeriod({ dashboardHref, message }: { dashboardHref: string; message: string }) {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-heading-lg">{title}</h1>
-        <p className="text-body-md text-text-secondary">Read-only college oversight.</p>
-      </div>
-      <Card>
-        <CardHeader>
-          <h2 className="text-title-md">{heading}</h2>
-          <CardDescription>{message}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href="/dean/dashboard"
-            className="text-link focus-visible:ring-ring font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-          >
-            Return to Dashboard
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <h2 className="text-title-md">No active Academic Period</h2>
+        <CardDescription>{message}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Link
+          href={dashboardHref}
+          className="text-link focus-visible:ring-ring font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
+        >
+          Return to Dashboard
+        </Link>
+      </CardContent>
+    </Card>
   );
 }

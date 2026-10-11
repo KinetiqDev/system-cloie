@@ -13,6 +13,10 @@ import { isRepeatedTerm, type WordCloudToken } from "../types";
 import type { DeanEvidence } from "../services/dean-evidence";
 import { deanAnalyticsUrl, type DeanAnalyticsFilters } from "../services/dean-analytics-state";
 import {
+  COLLEGE_OVERSIGHT_ROUTES,
+  type CollegeOversightRoutes,
+} from "@/lib/constants/college-oversight";
+import {
   DEAN_BUCKET_SHORT_LABELS,
   DEAN_SOURCE_LABELS,
   DEAN_SOURCE_SHORT_LABELS,
@@ -273,13 +277,18 @@ function collegePeriodRows(college: CollegeData, filters: DeanAnalyticsFilters) 
 function DeanProgramChoices({
   college,
   filters,
+  routes,
 }: {
   college: CollegeData;
   filters: DeanAnalyticsFilters;
+  routes: CollegeOversightRoutes;
 }) {
   const targetView = filters.view === "college" ? "outcomes" : filters.view;
   const hrefFor = (programId: string) =>
-    deanAnalyticsUrl({ view: targetView, programId, termInstanceId: filters.termInstanceId });
+    deanAnalyticsUrl(
+      { view: targetView, programId, termInstanceId: filters.termInstanceId },
+      routes.analytics
+    );
   const withActivity = college.programRows.filter((program) => program.deployments > 0);
   const withoutActivity = college.programRows.filter((program) => program.deployments === 0);
   const ranked = [...withActivity].sort((left, right) => right.submitted - left.submitted);
@@ -330,9 +339,11 @@ function DeanProgramChoices({
 function DeanCollegeView({
   evidence,
   filters,
+  routes,
 }: {
   evidence: EvidenceKind<"college">;
   filters: DeanAnalyticsFilters;
+  routes: CollegeOversightRoutes;
 }) {
   const { college } = evidence;
   const withActivity = college.programRows.filter((program) => program.deployments > 0);
@@ -360,7 +371,7 @@ function DeanCollegeView({
           ]}
         />
       )}
-      <DeanProgramChoices college={college} filters={filters} />
+      <DeanProgramChoices college={college} filters={filters} routes={routes} />
       {filters.view === "college" && (
         <>
           <div className="grid min-w-0 gap-4 lg:grid-cols-2">
@@ -424,7 +435,7 @@ function DeanCollegeView({
             )}
           </div>
           <Link
-            href={`/dean/college-oversight/learning-outcomes${filters.termInstanceId ? `?period=${filters.termInstanceId}` : ""}`}
+            href={`${routes.learningOutcomes}?tab=readiness${filters.termInstanceId ? `&period=${filters.termInstanceId}` : ""}`}
             className={linkStyle}
           >
             See missing outcome mappings
@@ -805,9 +816,11 @@ function DeanOutcomesView({
 function DeanCoursesView({
   evidence,
   filters,
+  routes,
 }: {
   evidence: EvidenceKind<"courses">;
   filters: DeanAnalyticsFilters;
+  routes: CollegeOversightRoutes;
 }) {
   const data = evidence.data;
   if (!data) return null;
@@ -860,12 +873,15 @@ function DeanCoursesView({
                         <li key={evaluation.evaluationId}>
                           <Link
                             className={linkStyle}
-                            href={deanAnalyticsUrl({
-                              ...filters,
-                              view: "outcomes",
-                              evaluationId: evaluation.evaluationId,
-                              source: "COURSE",
-                            })}
+                            href={deanAnalyticsUrl(
+                              {
+                                ...filters,
+                                view: "outcomes",
+                                evaluationId: evaluation.evaluationId,
+                                source: "COURSE",
+                              },
+                              routes.analytics
+                            )}
                           >
                             Inspect {evaluation.deploymentName}
                           </Link>
@@ -1098,13 +1114,15 @@ function DeanFeedbackView({
 export function DeanEvidenceView({
   evidence,
   filters,
+  routes = COLLEGE_OVERSIGHT_ROUTES.DEAN,
 }: {
   evidence: DeanEvidence;
   filters: DeanAnalyticsFilters;
+  routes?: CollegeOversightRoutes;
 }) {
   switch (evidence.kind) {
     case "college":
-      return <DeanCollegeView evidence={evidence} filters={filters} />;
+      return <DeanCollegeView evidence={evidence} filters={filters} routes={routes} />;
     case "institutional":
       return <DeanInstitutionalView evidence={evidence} />;
     default:
@@ -1118,7 +1136,7 @@ export function DeanEvidenceView({
         case "outcomes":
           return <DeanOutcomesView evidence={evidence} filters={filters} />;
         case "courses":
-          return <DeanCoursesView evidence={evidence} filters={filters} />;
+          return <DeanCoursesView evidence={evidence} filters={filters} routes={routes} />;
         case "stakeholders":
           return <DeanStakeholdersView evidence={evidence} filters={filters} />;
         case "trends":

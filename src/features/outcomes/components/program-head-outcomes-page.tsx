@@ -62,9 +62,12 @@ import type { ProgramPOItem } from "../services/manage-program-head-outcomes";
 import { buildProgramHeadOutcomeMappingPath } from "@/lib/constants/program-head-routes";
 import { cn } from "@/lib/utils";
 import {
+  countByCategory,
   isProgramHeadCategory,
   matchesPOCategory,
   type POCategoryFilter,
+  PO_CATEGORY_TABS,
+  PO_CATEGORY_TAB_LABELS,
   PO_CLASSIFICATION_LABELS,
 } from "../po-classification";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -72,31 +75,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 type ProgramHeadOutcomesPageProps = {
   pos: ProgramPOItem[];
   program: { id: string; code: string; name: string };
-};
-
-/** Tab order of the classification filter row, All first. */
-const PO_CATEGORY_TABS = [
-  "ALL",
-  "COMMON",
-  "CORE",
-  "PROFESSIONAL",
-  "OTHER",
-] as const satisfies readonly POCategoryFilter[];
-
-/**
- * `matchesPOCategory` treats "ALL" as match-everything, so All is the catalog
- * size rather than a category tally.
- */
-const PO_CATEGORY_TALLIES = PO_CATEGORY_TABS.filter(
-  (category): category is Exclude<POCategoryFilter, "ALL"> => category !== "ALL"
-);
-
-const PO_CATEGORY_TAB_LABELS: Record<POCategoryFilter, string> = {
-  ALL: "All",
-  COMMON: PO_CLASSIFICATION_LABELS.COMMON,
-  CORE: PO_CLASSIFICATION_LABELS.CORE,
-  PROFESSIONAL: PO_CLASSIFICATION_LABELS.PROFESSIONAL,
-  OTHER: "Other",
 };
 
 /**
@@ -134,23 +112,6 @@ const CATEGORY_EMPTY_COPY: Record<
     authorable: false,
   },
 };
-
-/** One pass over the catalog, so tab counts never re-filter it per tab per render. */
-function countByCategory(pos: ProgramPOItem[]): Record<POCategoryFilter, number> {
-  const counts: Record<POCategoryFilter, number> = {
-    ALL: pos.length,
-    COMMON: 0,
-    CORE: 0,
-    PROFESSIONAL: 0,
-    OTHER: 0,
-  };
-  for (const po of pos) {
-    for (const category of PO_CATEGORY_TALLIES) {
-      if (matchesPOCategory(po.classification, category)) counts[category] += 1;
-    }
-  }
-  return counts;
-}
 
 /**
  * An empty classification tab explains itself instead of rendering a blank

@@ -44,12 +44,13 @@ describe("academic-period cache ownership", () => {
     expect(revalidateTagMock).not.toHaveBeenCalledWith(ACTIVE_SCHOOL_YEAR_TAG, "max");
   });
 
-  it("retains the complete Dean route invalidation set during migration", () => {
+  it("retains the complete college oversight route invalidation set during migration", () => {
     revalidateAcademicPeriodReadModelRoutes();
 
     expect(revalidatePathMock.mock.calls).toEqual([
       ["/dean/dashboard"],
       ["/dean/college-oversight/learning-outcomes"],
+      ["/secretary/learning-outcomes"],
     ]);
   });
 });
