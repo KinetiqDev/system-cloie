@@ -9,9 +9,6 @@ const { notFoundMock, dashboardMock } = vi.hoisted(() => ({
   dashboardMock: vi.fn(),
 }));
 
-vi.mock("@/features/course-assignments/components/program-assignment-summary", () => ({
-  ProgramAssignmentSummary: () => <div>Course assignments</div>,
-}));
 vi.mock("next/navigation", () => ({ notFound: notFoundMock }));
 vi.mock("@isoterik/react-word-cloud", () => ({
   WordCloud: () => <div />,
@@ -172,6 +169,16 @@ describe("selected Program dashboard route", () => {
     dashboardMock.mockResolvedValue(dashboardDataFixture({ periodLabel: null }));
     await loadPage();
     expect(screen.getByText("No active Academic Period")).toBeInTheDocument();
+  });
+
+  it("leads directly with key figures and does not render the course assignments card", async () => {
+    await loadPage();
+    expect(screen.queryByText("Course assignments")).not.toBeInTheDocument();
+    const header = screen.getByRole("heading", { name: "Dashboard" });
+    const kpis = screen.getByRole("region", { name: "Key figures" });
+    expect(
+      header.compareDocumentPosition(kpis) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("states completion over the raw assignment denominator", async () => {
