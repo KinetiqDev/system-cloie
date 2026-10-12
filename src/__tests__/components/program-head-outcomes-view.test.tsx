@@ -161,6 +161,7 @@ describe("ProgramHeadOutcomesView", () => {
                   scaleLabel: "1–5 (5-point)",
                   meanRating: 4.5,
                   ratingCount: 10,
+                  categories: [],
                 },
               ],
             },
@@ -306,7 +307,13 @@ describe("ProgramHeadOutcomesView", () => {
         questionCount: 3,
         evidenceSummary: { ratingCount: 10, explanation: "Mean of 10 valid ratings." },
         scaleGroups: [
-          { scaleKey: "five-point", scaleLabel: "1–5 (5-point)", meanRating: 4.5, ratingCount: 10 },
+          {
+            scaleKey: "five-point",
+            scaleLabel: "1–5 (5-point)",
+            meanRating: 4.5,
+            ratingCount: 10,
+            categories: [],
+          },
         ],
       },
     ];

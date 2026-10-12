@@ -157,6 +157,7 @@ export const TABLE_ACCESS_DISPOSITIONS = {
 
   // responses.prisma
   responses: { kind: "server-only" },
+  report_export_audits: { kind: "server-only" },
   quantitative_response_items: { kind: "server-only" },
   qualitative_response_items: { kind: "server-only" },
 } as const satisfies Record<string, TableAccessDisposition>;

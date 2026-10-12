@@ -276,6 +276,14 @@ describe("Dean program-wide scale separation", () => {
           scaleLabel,
           meanRating: mean,
           ratingCount: labels.length,
+          // The canonical metric falls back to the raw value when a descriptor
+          // has no label, exactly as `buildQuantitativeMetric` does.
+          categories: labels.map(([value, label]) => ({
+            value,
+            label: String(label ?? value),
+            count: 1,
+            percentage: 1 / labels.length,
+          })),
         },
       ],
     };

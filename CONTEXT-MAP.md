@@ -8,6 +8,7 @@
 - [Academic Structure](./src/features/academic-structure/CONTEXT.md) - defines academic programs and majors offered by the college.
 - [Outcomes](./src/features/outcomes/CONTEXT.md) - defines the college-wide Institutional Learning Outcome catalog (GEN_ED_COORDINATOR owns ILO), Program-owned Program Outcomes (POs), Course-level CILOs, typed alignment relations, readiness semantics, and role responsibilities.
 - [Analytics](./src/features/analytics/CONTEXT.md) - defines submitted-response evidence, source-aware analytics terminology, Program PO evidence boundaries, and bounded AI-assisted interpretation.
+- [Reports](./src/features/reports/CONTEXT.md) - defines the Program Head report exports: course workbook, Program Outcome workbook, raw quantitative CSV, identified response records, and the export audit trail.
 - [Design System](./src/features/design-system/CONTEXT.md) - defines root semantic tokens, unified appearance preferences (Light, Dark, System), protected visual showcase, and production-surface inventory.
 - [Evaluations](./src/features/evaluations/CONTEXT.md) - defines evaluation deployments (Course-bound and Central), the deployment lifecycle, roster exclusions and reversals, publication alignment gating, and deployment authorization.
 - [Instruments](./src/features/instruments/CONTEXT.md) - defines evaluation instrument templates, immutable versions with frozen structure snapshots, question types, CILO/PO question bindings, and baseline/program-copy provisioning.
@@ -41,6 +42,9 @@ Presentation or read-model code that owns no domain invariants. Rules stay in th
 - **Analytics -> Academic Calendar**: Analytics evidence is filterable by canonical School Year, Semester, and Academic Term context.
 - **Analytics -> Course Catalog and Assignments**: Course-bound student evidence and evaluation opportunities originate from Course-bound evaluations and their assignments.
 - **Analytics -> Outcomes**: Program PO evidence follows typed Professional CILO-to-PO mappings; General Education ILO evidence follows typed CILO-to-ILO mappings (ADR 0035); ILO attainment and ILO-to-PO crosswalks remain deferred.
+- **Reports -> Analytics**: Reports is a read-only projection over Analytics evidence and aggregators; it reuses Analytics scope predicates, canonical metrics, attainment classification, and current-mapping disclosures, and owns no second arithmetic path or evidence scope.
+- **Reports -> Response Review**: Reports reads identified respondent names and respondent category through the Response Review identity path for authorized Program Heads only, and excludes raw qualitative comments.
+- **Reports -> Users**: export audit records name the exporting actor; account rules stay in Users.
 - **Design System -> All Contexts**: Design System provides shared semantic tokens, appearance resolution, and production component primitives consumed across all feature visual surfaces.
 - **Evaluations -> Instruments**: deployments pin an InstrumentVersion; published instruments never reference the live template.
 - **Evaluations -> Outcomes**: the publication alignment gate enforces typed alignment manifestations for every active CILO before a Course-bound evaluation publishes.

@@ -1958,6 +1958,66 @@ export type Database = {
           },
         ]
       }
+      report_export_audits: {
+        Row: {
+          actor_id: string
+          created_at: string
+          export_kind: Database["public"]["Enums"]["ReportExportKind"]
+          id: string
+          identified: boolean
+          program_id: string
+          rating_item_count: number
+          school_year_id: string | null
+          semester: Database["public"]["Enums"]["academic_semester"] | null
+          submitted_response_count: number
+          term_instance_id: string | null
+          year_level: Database["public"]["Enums"]["year_level"] | null
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          export_kind: Database["public"]["Enums"]["ReportExportKind"]
+          id?: string
+          identified?: boolean
+          program_id: string
+          rating_item_count?: number
+          school_year_id?: string | null
+          semester?: Database["public"]["Enums"]["academic_semester"] | null
+          submitted_response_count?: number
+          term_instance_id?: string | null
+          year_level?: Database["public"]["Enums"]["year_level"] | null
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          export_kind?: Database["public"]["Enums"]["ReportExportKind"]
+          id?: string
+          identified?: boolean
+          program_id?: string
+          rating_item_count?: number
+          school_year_id?: string | null
+          semester?: Database["public"]["Enums"]["academic_semester"] | null
+          submitted_response_count?: number
+          term_instance_id?: string | null
+          year_level?: Database["public"]["Enums"]["year_level"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_export_audits_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_export_audits_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       responses: {
         Row: {
           assignment_id: string
@@ -2303,6 +2363,10 @@ export type Database = {
         | "PROFESSIONAL"
         | "INSTITUTION_SPECIFIC"
         | "UNCLASSIFIED"
+      ReportExportKind:
+        | "COURSE_WORKBOOK"
+        | "PROGRAM_OUTCOME_WORKBOOK"
+        | "RAW_QUANTITATIVE_CSV"
       ResponseStatus: "IN_PROGRESS" | "SUBMITTED"
       student_section: "MORNING" | "AFTERNOON" | "EVENING"
       SystemRole:
@@ -2474,6 +2538,11 @@ export const Constants = {
         "PROFESSIONAL",
         "INSTITUTION_SPECIFIC",
         "UNCLASSIFIED",
+      ],
+      ReportExportKind: [
+        "COURSE_WORKBOOK",
+        "PROGRAM_OUTCOME_WORKBOOK",
+        "RAW_QUANTITATIVE_CSV",
       ],
       ResponseStatus: ["IN_PROGRESS", "SUBMITTED"],
       student_section: ["MORNING", "AFTERNOON", "EVENING"],

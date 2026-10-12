@@ -973,7 +973,7 @@ function toOutcomeEvidenceRow(
  * CILO-to-PO mappings. Publication-time mapping snapshots do not exist yet,
  * so later mapping edits may reinterpret historical outcome rows.
  */
-const CURRENT_MAPPING_DISCLOSURE =
+export const CURRENT_MAPPING_DISCLOSURE =
   "Outcome rows group historical ratings using the Program's current CILO-to-PO mappings. " +
   "Publication-time mapping snapshots are not yet available, so later mapping edits may reinterpret historical outcome rows.";
 
@@ -1269,6 +1269,9 @@ async function buildProgramWideOutcomeDtos(
             scaleLabel: group.scale ? describeScale(group.scale.descriptors) : "",
             meanRating: group.mean,
             ratingCount: group.ratingCount,
+            // Per-option counts behind the group mean, so a reporting surface can
+            // print the exact distribution without re-aggregating the rows.
+            categories: group.distribution,
           }))
           .sort((left, right) => left.scaleKey.localeCompare(right.scaleKey)),
       });

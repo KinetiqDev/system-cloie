@@ -52,6 +52,7 @@ model User {
   deployed_evaluations                        CourseBoundEvaluation[]             @relation("CourseBoundEvaluationDeployer")
   evaluation_assignments                      EvaluationAssignment[]
   responses                                   Response[]
+  report_export_audits                       ReportExportAudit[]
   created_cilos                               CILO[]
   faculty_program_affiliations                FacultyProgramAffiliation[]
   program_head_assignments                    ProgramHeadAssignment[]

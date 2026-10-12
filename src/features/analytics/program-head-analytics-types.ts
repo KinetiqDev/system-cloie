@@ -132,6 +132,14 @@ export type ProgramHeadProgramWideOutcomeDTO = {
     scaleLabel: string;
     meanRating: number | null;
     ratingCount: number;
+    /** Per-option counts of this exact scale identity; sums to `ratingCount`. */
+    categories: Array<{
+      value: number;
+      label: string;
+      count: number;
+      /** Full-precision share of this scale group; round only for display. */
+      percentage: number;
+    }>;
   }>;
   /** Deterministic CLOIE_OUTCOME_MEAN_V1 interpretation for this PO mean. */
   attainment?: OutcomeAttainment;

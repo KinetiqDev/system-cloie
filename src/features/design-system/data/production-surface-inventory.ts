@@ -3595,6 +3595,12 @@ export const PRODUCTION_SURFACE_INVENTORY: InventoryEntry[] = [
       "Coordinator evidence workspace using shared semantic tokens and accessible evidence alternatives (ADR 0035)",
   },
   {
+    path: "src/features/reports/components/program-head-report-exports.tsx",
+    disposition: "task",
+    taskId: 14,
+    category: "feature_component",
+  },
+  {
     path: "src/features/response-review/components/responses-filters.tsx",
     disposition: "already_compliant",
     category: "feature_component",
