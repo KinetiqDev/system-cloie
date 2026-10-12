@@ -56,6 +56,16 @@ const TERM_LABELS: Record<string, string> = {
 /** Sentinel term filter that matches no rows, used when a filter resolves to nothing. */
 export const IMPOSSIBLE_TERM_INSTANCE_ID = "00000000-0000-0000-0000-000000000000";
 
+/**
+ * Readable label of one semester filter value, independent of any term
+ * instance. Selectors and reporting surfaces that filter by semester alone need
+ * this, because no resolved instance carries the label in that case.
+ */
+export function getSemesterLabel(semester: string | undefined): string | null {
+  if (!semester) return null;
+  return SEMESTER_LABELS[semester] ?? semester;
+}
+
 /** Readable label for one academic period from its canonical parts. */
 export function buildInstancePeriodLabel(instance: AcademicPeriodParts): string {
   const semesterLabel = SEMESTER_LABELS[instance.semester] ?? instance.semester;

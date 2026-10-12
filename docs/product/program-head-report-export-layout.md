@@ -38,15 +38,56 @@ Worksheets: `Overview`, `PO Summary`, `PO Classification`, `PO Rating Tallies`, 
 
 ## 3. Raw quantitative CSV
 
-One row per original submitted quantitative answer item, deterministic order, stable headers:
+One row per original submitted quantitative answer item, deterministic order, stable headers (39 columns, in this order):
 
-`period_school_year, period_semester, period_term, period_label, program_code, program_name, year_level, evidence_source, course_code, course_title, faculty_name, section, evaluation_id, evaluation_name, evaluation_status, instrument_name, instrument_version, cilo_code, cilo_description, po_codes, po_descriptions, po_classifications, manifestations, question_section_key, question_item_key, question_prompt, scale_label, rating_descriptor, rating_value, respondent_name, respondent_id, response_id, submitted_at`
+```
+period_school_year
+period_semester
+period_term
+period_label
+program_code
+program_name
+year_level
+evidence_source
+respondent_category
+deployment_type
+deployment_id
+deployment_name
+deployment_status
+course_code
+course_title
+course_assignment_id
+faculty_name
+section
+instrument_name
+instrument_version
+cilo_code
+cilo_description
+po_codes
+po_descriptions
+po_classifications
+manifestations
+direct_po_codes
+direct_po_descriptions
+direct_po_classifications
+question_section_key
+question_item_key
+question_prompt
+scale_label
+rating_value
+rating_descriptor
+respondent_name
+respondent_id
+response_id
+submitted_at
+```
 
 Notes:
 
 - Comma, quote, and newline characters are escaped; a leading `=`, `+`, `-`, or `@` is neutralized so a value can never execute as a spreadsheet formula.
-- No respondent id, account id, student number, name, or email is exported. Stable internal ids are exported for matching and deduplication only.
-- Question text is exported as the frozen publication snapshot prompt.
+- **This is an identified export.** `respondent_name` carries the respondent's account name, and `respondent_id` and `response_id` are stable internal identifiers carried so rows can be matched and deduplicated without merging two people who share a name. No account email, student number, or other identifier is exported, and no qualitative comment is ever exported.
+- Program-wide rows have no course, faculty, section, or CILO columns: a Central deployment carries no course context and binds Program Outcomes directly.
+- Question text is exported as the frozen publication snapshot prompt; `rating_descriptor` is the label that snapshot gives the answered value.
 
 ## Unresolved institutional requirements
 

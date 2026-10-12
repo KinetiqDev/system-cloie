@@ -12,6 +12,7 @@ import { getYearLevelDisplay } from "@/lib/constants/year-levels";
 import {
   buildPeriodLabel,
   buildPeriodOptions,
+  getSemesterLabel,
 } from "@/features/analytics/services/academic-periods";
 import { resolveTermInstanceFilter } from "@/features/analytics/services/get-program-head-analytics";
 import {
@@ -204,7 +205,9 @@ export async function resolveReportPeriod(
       schoolYearId: filters.schoolYearId ?? null,
       schoolYearCode: instanceOption?.schoolYearLabel ?? resolved.schoolYearLabel ?? null,
       semester: (filters.semester as AcademicSemester | undefined) ?? null,
-      semesterLabel: instanceOption?.semesterLabel ?? null,
+      // A semester selected without a term still narrows the scope, so the
+      // label must name it rather than claim "All semesters".
+      semesterLabel: instanceOption?.semesterLabel ?? getSemesterLabel(filters.semester),
       termInstanceId: filters.termInstanceId ?? null,
       termLabel: instanceOption?.termLabel ?? null,
       label: instanceOption?.label ?? composedLabel ?? "All academic periods",

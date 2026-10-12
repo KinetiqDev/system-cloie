@@ -731,3 +731,218 @@ export const EXPECTED_COURSE_PO = [
     classification: "Needs classification",
   },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Multi-binding and mixed-scale fixtures (added after review)
+// ---------------------------------------------------------------------------
+
+/**
+ * One published question bound directly to two Program Outcomes. Analytics
+ * credits the answer to both; an export that keeps only the last binding
+ * silently drops one Program Outcome's evidence.
+ */
+export function groupWithTwoDirectPoBindings(): ReportCourseGroup {
+  return {
+    ...GROUP_IT102,
+    evaluationId: "eval-it102-multi-po",
+    evaluationName: "IT102 Multi-PO CILO Evaluation",
+    structureSnapshot: IT102_SNAPSHOT,
+    ciloBindings: [],
+    directPoBindings: [
+      {
+        sectionKey: "po-items",
+        itemKey: "po-direct-1",
+        poId: "po-4",
+        poCode: "BSIT-GO4",
+        poDescription: "Demonstrate continuous professional learning",
+        questionPrompt: "I keep my professional knowledge up to date.",
+      },
+      {
+        sectionKey: "po-items",
+        itemKey: "po-direct-1",
+        poId: "po-2",
+        poCode: "BSIT-GO2",
+        poDescription: "Apply computing principles to unfamiliar problems",
+        questionPrompt: "I keep my professional knowledge up to date.",
+      },
+    ],
+    assignedRespondentCount: 2,
+    submissions: [
+      { respondentId: "user-eda", responseStatus: "SUBMITTED" as const },
+      { respondentId: "user-fay", responseStatus: "SUBMITTED" as const },
+    ],
+    responses: [
+      {
+        responseId: "resp-multi-1",
+        respondentId: "user-eda",
+        respondentName: "Echo, Eda",
+        submittedAt: new Date("2026-01-14T08:00:00.000Z"),
+        answers: [answer("po-items", "po-direct-1", 4)],
+      },
+      {
+        responseId: "resp-multi-2",
+        respondentId: "user-fay",
+        respondentName: "Foxtrot, Fay",
+        submittedAt: new Date("2026-01-14T08:04:00.000Z"),
+        answers: [answer("po-items", "po-direct-1", 5)],
+      },
+    ],
+  };
+}
+
+/**
+ * A class group holding one question on the approved 1–5 attainment scale and
+ * one general question on an unrelated 1–10 scale, so the printed option
+ * columns must cover both identities.
+ */
+export function groupWithTenPointGeneralQuestion(): ReportCourseGroup {
+  const base = GROUP_IT101_MORNING;
+  return {
+    ...base,
+    evaluationId: "eval-it101-ten-point",
+    evaluationName: "IT101 Ten-Point CILO Evaluation",
+    structureSnapshot: [
+      {
+        key: "cilo-items",
+        title: "CILO Results",
+        questions: [
+          {
+            key: "cilo-1-q1",
+            type: "likert",
+            order: 1,
+            prompt: "I explained technical ideas clearly.",
+            likertDescriptors: ATTAINMENT_DESCRIPTORS,
+          },
+          {
+            key: "general-10",
+            type: "likert",
+            order: 2,
+            prompt: "How satisfied were you with the facilities?",
+            likertDescriptors: Array.from({ length: 10 }, (_, index) => ({
+              value: index + 1,
+              label: `Level ${index + 1}`,
+            })),
+          },
+        ],
+      },
+    ],
+    ciloBindings: [
+      {
+        sectionKey: "cilo-items",
+        itemKey: "cilo-1-q1",
+        ciloId: "cilo-1",
+        ciloLabel: "CILO 1",
+        ciloDescription: "Explain technical ideas",
+        questionPrompt: "I explained technical ideas clearly.",
+      },
+    ],
+    directPoBindings: [],
+    assignedRespondentCount: 2,
+    submissions: [
+      { respondentId: "user-ann", responseStatus: "SUBMITTED" as const },
+      { respondentId: "user-ben-1", responseStatus: "SUBMITTED" as const },
+    ],
+    responses: [
+      {
+        responseId: "resp-ten-ann",
+        respondentId: "user-ann",
+        respondentName: "Alpha, Ann",
+        submittedAt: new Date("2026-01-12T09:15:00.000Z"),
+        answers: [answer("cilo-items", "cilo-1-q1", 4), answer("cilo-items", "general-10", 8)],
+      },
+      {
+        responseId: "resp-ten-ben",
+        respondentId: "user-ben-1",
+        respondentName: "Bravo, Ben",
+        submittedAt: new Date("2026-01-12T09:20:00.000Z"),
+        answers: [answer("cilo-items", "general-10", 10)],
+      },
+    ],
+  };
+}
+
+/**
+ * One CILO whose two questions sit on incompatible scales, answered by the
+ * same two people, so per-scale response counts overlap and only the canonical
+ * count is correct.
+ */
+export function groupWithMixedScaleCilo(): ReportCourseGroup {
+  return {
+    ...GROUP_IT101_MORNING,
+    evaluationId: "eval-it101-mixed-scale",
+    evaluationName: "IT101 Mixed-Scale CILO Evaluation",
+    structureSnapshot: [
+      {
+        key: "cilo-items",
+        title: "CILO Results",
+        questions: [
+          {
+            key: "cilo-1-attainment",
+            type: "likert",
+            order: 1,
+            prompt: "I achieved the outcome.",
+            likertDescriptors: ATTAINMENT_DESCRIPTORS,
+          },
+          {
+            key: "cilo-1-agreement",
+            type: "likert",
+            order: 2,
+            prompt: "I agree the outcome was achieved.",
+            likertDescriptors: AGREEMENT_DESCRIPTORS,
+          },
+        ],
+      },
+    ],
+    ciloBindings: [
+      {
+        sectionKey: "cilo-items",
+        itemKey: "cilo-1-attainment",
+        ciloId: "cilo-1",
+        ciloLabel: "CILO 1",
+        ciloDescription: "Explain technical ideas",
+        questionPrompt: "I achieved the outcome.",
+      },
+      {
+        sectionKey: "cilo-items",
+        itemKey: "cilo-1-agreement",
+        ciloId: "cilo-1",
+        ciloLabel: "CILO 1",
+        ciloDescription: "Explain technical ideas",
+        questionPrompt: "I agree the outcome was achieved.",
+      },
+    ],
+    directPoBindings: [],
+    assignedRespondentCount: 3,
+    submissions: [
+      { respondentId: "user-ann", responseStatus: "SUBMITTED" as const },
+      { respondentId: "user-ben-1", responseStatus: "SUBMITTED" as const },
+      { respondentId: "user-ben-2", responseStatus: "SUBMITTED" as const },
+    ],
+    responses: [
+      {
+        responseId: "resp-mixed-1",
+        respondentId: "user-ann",
+        respondentName: "Alpha, Ann",
+        submittedAt: new Date("2026-01-12T09:15:00.000Z"),
+        answers: [
+          answer("cilo-items", "cilo-1-attainment", 5),
+          answer("cilo-items", "cilo-1-agreement", 4),
+        ],
+      },
+      {
+        responseId: "resp-mixed-2",
+        respondentId: "user-ben-1",
+        respondentName: "Bravo, Ben",
+        submittedAt: new Date("2026-01-12T09:20:00.000Z"),
+        answers: [answer("cilo-items", "cilo-1-attainment", 4)],
+      },
+      {
+        responseId: "resp-mixed-3",
+        respondentId: "user-ben-2",
+        respondentName: "Bravo, Ben",
+        submittedAt: new Date("2026-01-12T09:22:00.000Z"),
+        answers: [answer("cilo-items", "cilo-1-agreement", 2)],
+      },
+    ],
+  };
+}

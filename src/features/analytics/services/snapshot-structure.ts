@@ -31,9 +31,11 @@ export function isSnapshotSection(value: unknown): value is SnapshotSection {
  *
  * Submission completeness treats `required: false` as optional and an absent
  * flag as required, in every snapshot format. The legacy split-array formats
- * carry no flag at all, so their items are required by definition.
+ * carry no flag at all, so their items are required by definition. `unknown`
+ * belongs to no snapshot item: it marks an answer key the snapshot does not
+ * enumerate, where a reporting surface must not claim an item was required.
  */
-export type SnapshotItemApplicability = "required" | "optional";
+export type SnapshotItemApplicability = "required" | "optional" | "unknown";
 
 type SnapshotQuantitativeItem = {
   sectionKey: string;

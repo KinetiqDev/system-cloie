@@ -33,6 +33,8 @@ import {
   applyPrintSetup,
   bandRow,
   displayMean,
+  distributionCount,
+  distributionMean,
   freezeHeadingRows,
   outlineTable,
   setColumnWidths,
@@ -217,6 +219,8 @@ function writePoSummarySheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookInpu
   row += 1;
   row = writeNote(worksheet, row, CURRENT_MAPPING_DISCLOSURE);
   row = writeNote(worksheet, row, PROPOSED_POLICY_NOTICE);
+  row += 1;
+  row = writeNote(worksheet, row, CURRENT_MAPPING_DISCLOSURE);
   row += 1;
 
   const headers: HeaderCell[] = [
@@ -453,6 +457,7 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
       descriptor: string;
       count: number;
       percentage: number;
+      /** Valid ratings behind THIS scale identity, not the pooled PO total. */
       validCount: number;
       excludedCount: number | null;
       mean: number | null;
@@ -499,10 +504,10 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
             descriptor: category.label ?? String(category.value),
             count: category.count,
             percentage: category.percentage,
-            validCount: outcome.ratingCount,
+            validCount: distributionCount(distribution.categories),
             excludedCount: outcome.excludedRatingCount,
-            mean: outcome.meanRating,
-            displayMean: displayMean(outcome.meanRating),
+            mean: distributionMean(distribution.categories),
+            displayMean: displayMean(distributionMean(distribution.categories)),
             interpretation: attainmentStatusLabel(poAttainment(outcome)),
             cqi: poAttainment(outcome).cqi,
           },
@@ -527,10 +532,11 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
             descriptor: category.label,
             count: category.count,
             percentage: category.percentage,
-            validCount: outcome.ratingCount,
+            // Program-wide rows already carry each group's own mean and count.
+            validCount: group.ratingCount,
             excludedCount: null,
-            mean: outcome.meanRating,
-            displayMean: displayMean(outcome.meanRating),
+            mean: group.meanRating,
+            displayMean: displayMean(group.meanRating),
             interpretation: attainmentStatusLabel(poAttainment(outcome)),
             cqi: poAttainment(outcome).cqi,
           },

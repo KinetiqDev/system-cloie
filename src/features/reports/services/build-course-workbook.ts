@@ -25,11 +25,14 @@ import {
   SHARED_DICTIONARY_ROWS,
   YEAR_LEVEL_NOTICE,
 } from "./report-text";
+import { listSnapshotQuantitativeItems } from "@/features/analytics/services/snapshot-structure";
 import {
   applyFilter,
   applyPrintSetup,
   bandRow,
   displayMean,
+  distributionCount,
+  distributionMean,
   freezeHeadingRows,
   outlineTable,
   safeSheetName,
@@ -64,10 +67,19 @@ type CourseWorkbookInput = {
   exportedBy: string;
 };
 
-/** Distinct rating values of one class group, in ascending order. */
+/**
+ * Distinct rating values across every quantitative question of a class group,
+ * in ascending order. The option columns must cover general and direct-PO
+ * questions too, or their counts fall outside the printed grid.
+ */
 function scaleValuesOf(group: ReportCourseGroup): number[] {
   const values = new Set<number>();
-  for (const binding of group.ciloBindings) {
+  for (const question of listSnapshotQuantitativeItems(group.structureSnapshot)) {
+    for (const descriptor of descriptorsOf(group, question.sectionKey, question.itemKey)) {
+      values.add(descriptor.value);
+    }
+  }
+  for (const binding of group.directPoBindings) {
     for (const descriptor of descriptorsOf(group, binding.sectionKey, binding.itemKey)) {
       values.add(descriptor.value);
     }
@@ -336,6 +348,91 @@ function writeQuestionTallies(
   return row + 1;
 }
 
+/** Printed column positions of the CILO summary table, after the option grid. */
+type CiloSummaryColumns = {
+  countStart: number;
+  scalesColumn: number;
+  fullMeanColumn: number;
+  displayMeanColumn: number;
+  interpretationColumn: number;
+  cqiColumn: number;
+};
+
+/** One printed CILO row: the whole CILO, or one of its scale identities. */
+type CiloSummaryRowEntry = {
+  summary: ReportClassGroupModel["ciloSummaries"][number];
+  scaleGroup: ReportClassGroupModel["ciloSummaries"][number]["scaleGroups"][number] | null;
+  /** True when the row reports one identity of a mixed-scale CILO. */
+  mixed: boolean;
+};
+
+/**
+ * A mixed-scale CILO expands into one row per scale identity so neither group
+ * is hidden; every other CILO prints a single row.
+ */
+function ciloSummaryRows(model: ReportClassGroupModel): CiloSummaryRowEntry[] {
+  return model.ciloSummaries.flatMap((summary): CiloSummaryRowEntry[] =>
+    summary.scaleGroups.length > 1
+      ? summary.scaleGroups.map((scaleGroup) => ({ summary, scaleGroup, mixed: true }))
+      : [{ summary, scaleGroup: summary.scaleGroups[0] ?? null, mixed: false }]
+  );
+}
+
+/** The figures one printed CILO row shows, resolved from its scale identity. */
+function printedCiloFigures(entry: CiloSummaryRowEntry) {
+  const { summary, scaleGroup } = entry;
+  return {
+    mean: scaleGroup ? scaleGroup.mean : summary.mean,
+    ratingCount: scaleGroup ? scaleGroup.ratingCount : summary.validCount,
+    categories: scaleGroup?.categories ?? [],
+    scaleLabel: scaleIdentityLabel(summary, scaleGroup),
+  };
+}
+
+function writeCiloSummaryRow(
+  worksheet: ExcelJS.Worksheet,
+  row: number,
+  entry: CiloSummaryRowEntry,
+  columns: CiloSummaryColumns,
+  scaleValues: number[]
+): void {
+  const { summary, mixed } = entry;
+  const figures = printedCiloFigures(entry);
+  writeText(worksheet, row, 1, summary.ciloLabel);
+  writeWrappedText(worksheet, row, 2, summary.ciloDescription || "—");
+  writeCount(worksheet, row, 3, summary.questionRefs.length);
+  // Distinct respondents belong to the CILO, so each per-scale row repeats the
+  // canonical count rather than a per-scale one that would double count.
+  writeCount(worksheet, row, 4, summary.distinctResponseCount);
+  writeCount(worksheet, row, 5, figures.ratingCount);
+  writeDistributionCounts(worksheet, row, columns.countStart, figures.categories, scaleValues);
+  writeText(worksheet, row, columns.scalesColumn, figures.scaleLabel);
+  writeMean(worksheet, row, columns.fullMeanColumn, figures.mean);
+  writeText(worksheet, row, columns.displayMeanColumn, displayMean(figures.mean) ?? "—");
+  writeText(
+    worksheet,
+    row,
+    columns.interpretationColumn,
+    mixed ? "Reported per scale identity" : attainmentStatusLabel(summary.attainment)
+  );
+  writeStatus(
+    worksheet,
+    row,
+    columns.cqiColumn,
+    mixed ? "Unclassified" : (summary.attainment.cqi ?? "Unclassified"),
+    mixed ? null : summary.attainment.cqi
+  );
+}
+
+/** Which scale identity this row reports, or that none resolved. */
+function scaleIdentityLabel(
+  summary: ReportClassGroupModel["ciloSummaries"][number],
+  scaleGroup: ReportClassGroupModel["ciloSummaries"][number]["scaleGroups"][number] | null
+): string {
+  if (scaleGroup) return scaleGroup.scaleLabel;
+  return summary.scaleGroups.length === 0 ? "Unresolved scale" : "Mixed";
+}
+
 function writeCiloSummaries(
   worksheet: ExcelJS.Worksheet,
   startRow: number,
@@ -365,48 +462,21 @@ function writeCiloSummaries(
   const headerRow = row;
   row = writeHeaderRow(worksheet, row, headers);
   const firstDataRow = row;
-  model.ciloSummaries.forEach((summary, index) => {
-    writeText(worksheet, row, 1, summary.ciloLabel);
-    writeWrappedText(worksheet, row, 2, summary.ciloDescription || "—");
-    writeCount(worksheet, row, 3, summary.questionRefs.length);
-    writeCount(worksheet, row, 4, summary.distinctResponseCount);
-    writeCount(worksheet, row, 5, summary.validCount);
-    // A CILO's distribution is per scale identity; incompatible scales are
-    // reported side by side and never blended into one count row.
-    if (summary.scaleGroups.length <= 1) {
-      writeDistributionCounts(
-        worksheet,
-        row,
-        countStart,
-        summary.scaleGroups[0]?.categories ?? [],
-        scaleValues
-      );
-    } else {
-      scaleValues.forEach((_, index) =>
-        writeUnavailable(worksheet, row, countStart + index, "Mixed")
-      );
-    }
-    writeText(
-      worksheet,
-      row,
-      scalesColumn,
-      summary.scaleGroups.length === 0
-        ? "Unresolved scale"
-        : summary.scaleGroups.map((group) => group.scaleLabel).join(" | ")
-    );
-    writeMean(worksheet, row, fullMeanColumn, summary.mean);
-    writeText(worksheet, row, displayMeanColumn, displayMean(summary.mean) ?? "—");
-    writeText(worksheet, row, interpretationColumn, attainmentStatusLabel(summary.attainment));
-    writeStatus(
-      worksheet,
-      row,
-      cqiColumn,
-      summary.attainment.cqi ?? "Unclassified",
-      summary.attainment.cqi
-    );
-    bandRow(worksheet, row, headers.length, index % 2 === 1);
+  // A mixed-scale CILO keeps no combined mean, so each of its scale identities
+  // is printed as its own row rather than hidden behind one "Mixed" row.
+  const columns = {
+    countStart,
+    scalesColumn,
+    fullMeanColumn,
+    displayMeanColumn,
+    interpretationColumn,
+    cqiColumn,
+  };
+  for (const entry of ciloSummaryRows(model)) {
+    writeCiloSummaryRow(worksheet, row, entry, columns, scaleValues);
+    bandRow(worksheet, row, headers.length, row % 2 === 0);
     row += 1;
-  });
+  }
   outlineTable(worksheet, headerRow, row - 1, headers.length);
   applyFilter(worksheet, headerRow, firstDataRow, row - 1, headers.length);
   return row + 1;
@@ -762,6 +832,7 @@ function writePoSummarySheet(
     { text: "Descriptor" },
     { text: "Count" },
     { text: "Percentage" },
+    { text: "Scale group valid ratings" },
     { text: "Scale group mean" },
   ];
   const distributionHeaderRow = row;
@@ -776,7 +847,10 @@ function writePoSummarySheet(
         writeText(worksheet, row, 4, category.label ?? String(category.value));
         writeCount(worksheet, row, 5, category.count);
         writePercent(worksheet, row, 6, category.percentage);
-        writeMean(worksheet, row, 7, outcome.meanRating);
+        // The mean and denominator belong to this scale identity, never to the
+        // pooled Program Outcome mean that may span incompatible scales.
+        writeCount(worksheet, row, 7, distributionCount(distribution.categories));
+        writeMean(worksheet, row, 8, distributionMean(distribution.categories));
         row += 1;
       }
     }

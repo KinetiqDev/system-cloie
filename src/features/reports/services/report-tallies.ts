@@ -250,7 +250,7 @@ export function buildClassGroupRatingRows(
 /** Current CILO mappings and frozen direct bindings that one answer reaches. */
 function outcomeBindingsFor(
   row: OutcomeItemRatingRow,
-  directBinding: ReportDirectPoBinding | undefined
+  questionDirectBindings: ReportDirectPoBinding[]
 ): {
   outcomeMappings: OutcomeEvidenceRow["outcomeMappings"];
   directBindings: OutcomeEvidenceRow["directBindings"];
@@ -263,16 +263,15 @@ function outcomeBindingsFor(
         manifestation: mapping.manifestation,
       }))
     : [];
-  const directBindings = directBinding
-    ? [
-        {
-          outcomeId: directBinding.poId ?? `snapshot:${directBinding.poCode}`,
-          code: directBinding.poCode,
-          name: directBinding.poDescription,
-          questionPrompt: directBinding.questionPrompt,
-        },
-      ]
-    : [];
+  // One published question may be bound to several Program Outcomes. Every
+  // binding receives the answer, exactly as the Analytics PO read does; keeping
+  // only the last would silently drop PO evidence from the export.
+  const directBindings = questionDirectBindings.map((binding) => ({
+    outcomeId: binding.poId ?? `snapshot:${binding.poCode}`,
+    code: binding.poCode,
+    name: binding.poDescription,
+    questionPrompt: binding.questionPrompt,
+  }));
   return { outcomeMappings, directBindings };
 }
 
@@ -285,16 +284,15 @@ export function buildOutcomeEvidenceRows(
   }));
   const evidenceRows: OutcomeEvidenceRow[] = [];
   for (const { group, rows } of ratedModels) {
-    const directByQuestionKey = new Map(
-      group.directPoBindings.map((binding) => [
-        encodeQuestionKey(binding.sectionKey, binding.itemKey),
-        binding,
-      ])
-    );
+    const directByQuestionKey = new Map<string, ReportDirectPoBinding[]>();
+    for (const binding of group.directPoBindings) {
+      const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
+      directByQuestionKey.set(key, [...(directByQuestionKey.get(key) ?? []), binding]);
+    }
     for (const row of rows) {
       const { outcomeMappings, directBindings } = outcomeBindingsFor(
         row,
-        directByQuestionKey.get(encodeQuestionKey(row.sectionKey, row.itemKey))
+        directByQuestionKey.get(encodeQuestionKey(row.sectionKey, row.itemKey)) ?? []
       );
       if (!row.cilo && outcomeMappings.length === 0 && directBindings.length === 0) continue;
       const cilo = row.cilo;
@@ -409,7 +407,9 @@ function tallyQuestions(group: ReportCourseGroup, metrics: QuestionTallyInputs["
       sectionTitle: sectionKey,
       itemKey,
       prompt: metrics.get(questionKey)?.prompt ?? itemKey,
-      applicability: "required",
+      // The snapshot does not enumerate it, so applicability is unknown and no
+      // missing count may be claimed.
+      applicability: "unknown",
     });
     knownKeys.add(questionKey);
   }
@@ -497,6 +497,8 @@ function buildQuestionTallies(
 type CiloSummaryContext = {
   ciloId: string | null;
   ciloLabel: string;
+  /** Frozen publication description, kept when no valid answer produced a metric. */
+  ciloDescription: string;
   mappings: ReportCiloMapping[];
   questionKeys: Set<string>;
 };
@@ -530,9 +532,15 @@ function ciloSummaryContexts(group: ReportCourseGroup): CiloSummaryContext[] {
   ];
   const ciloLabels = resolveCiloLabels(group.cilosSnapshot, orderedCiloIds);
   const questionKeys = questionKeysByCiloId(group);
+  const frozenDescriptions = new Map(
+    group.ciloBindings
+      .filter((binding) => binding.ciloId !== null)
+      .map((binding) => [binding.ciloId as string, binding.ciloDescription])
+  );
   const contexts: CiloSummaryContext[] = orderedCiloIds.map((ciloId) => ({
     ciloId,
     ciloLabel: ciloLabels.get(ciloId) ?? "CILO",
+    ciloDescription: frozenDescriptions.get(ciloId) ?? "",
     mappings: [],
     questionKeys: questionKeys.get(ciloId) ?? new Set<string>(),
   }));
@@ -544,6 +552,7 @@ function ciloSummaryContexts(group: ReportCourseGroup): CiloSummaryContext[] {
     contexts.push({
       ciloId: null,
       ciloLabel: binding.ciloLabel,
+      ciloDescription: binding.ciloDescription,
       mappings: [],
       questionKeys: new Set([encodeQuestionKey(binding.sectionKey, binding.itemKey)]),
     });
@@ -579,12 +588,6 @@ function ciloQuestionRefs(
     }));
 }
 
-/** The one metric that carries a mean, or null when scales are mixed or absent. */
-function ciloSingleScaleMetric(metric: CiloMetric | null) {
-  if (!metric) return null;
-  return metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : (metric.quantitative ?? null);
-}
-
 /** Deterministic interpretation of one CILO's pooled ratings. */
 function ciloAttainment(metric: CiloMetric | null) {
   if (!metric) return classifyOutcomeMean(null, null);
@@ -606,17 +609,18 @@ function ciloSummaryFor(
   context: CiloSummaryContext
 ): ReportCiloSummary {
   const scaleGroups = ciloScaleGroups(metric);
-  const singleScaleMetric = ciloSingleScaleMetric(metric);
 
   return {
     ciloId: context.ciloId,
     ciloLabel: context.ciloLabel,
-    ciloDescription: metric?.description ?? "",
+    ciloDescription: metric?.description ?? context.ciloDescription,
     mappings: context.mappings,
     questionRefs: ciloQuestionRefs(group, context.questionKeys),
     scaleGroups,
     validCount: scaleGroups.reduce((sum, groupMetric) => sum + groupMetric.ratingCount, 0),
-    distinctResponseCount: singleScaleMetric?.responseCount ?? 0,
+    // The canonical response count is independent of whether one combined mean
+    // exists, so a mixed-scale CILO never reports zero respondents.
+    distinctResponseCount: metric?.evidenceSummary.responseCount ?? 0,
     mean: metric?.quantitative?.mean ?? null,
     attainment: ciloAttainment(metric),
   };

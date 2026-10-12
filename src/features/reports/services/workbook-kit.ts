@@ -332,6 +332,30 @@ function thinBorder() {
   return { top: side, left: side, bottom: side, right: side };
 }
 
+/**
+ * Count behind one printed scale-group distribution: the sum of its option
+ * counts. Printed next to the mean so the row reconciles with itself.
+ */
+export function distributionCount(
+  categories: ReadonlyArray<{ value: number; count: number }>
+): number {
+  return categories.reduce((sum, category) => sum + category.count, 0);
+}
+
+/**
+ * Mean of one printed scale-group distribution: `Σ (value × count) / Σ count`,
+ * taken from the option counts on the same row rather than from a pooled
+ * outcome mean that may span several incompatible scales.
+ */
+export function distributionMean(
+  categories: ReadonlyArray<{ value: number; count: number }>
+): number | null {
+  const count = distributionCount(categories);
+  if (count === 0) return null;
+  const sum = categories.reduce((total, category) => total + category.value * category.count, 0);
+  return sum / count;
+}
+
 /** Display helper: two decimals for a mean, or the neutral unavailable label. */
 export function displayMean(mean: number | null): string | null {
   return mean === null ? null : mean.toFixed(2);

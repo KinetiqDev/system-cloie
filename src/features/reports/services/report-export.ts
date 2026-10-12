@@ -52,16 +52,29 @@ function analyticsFilters(filters: ReportExportFilters): AnalyticsFilterState {
   return state;
 }
 
-function countSubmittedResponses(evidence: ReportEvidence): number {
+/** Evidence groups one export kind actually writes into its file. */
+function evidenceGroupsFor(evidence: ReportEvidence, kind: ReportExportKind) {
+  // The course workbook prints course worksheets only; the Program Outcome
+  // workbook and the raw CSV cover both sources.
+  return kind === "COURSE_WORKBOOK"
+    ? evidence.courseGroups
+    : [...evidence.courseGroups, ...evidence.centralGroups];
+}
+
+type ReportEvidenceGroup =
+  | ReportEvidence["courseGroups"][number]
+  | ReportEvidence["centralGroups"][number];
+
+function countSubmittedResponses(groups: ReportEvidenceGroup[]): number {
   const ids = new Set<string>();
-  for (const group of [...evidence.courseGroups, ...evidence.centralGroups]) {
+  for (const group of groups) {
     for (const response of group.responses) ids.add(response.responseId);
   }
   return ids.size;
 }
 
-function countRatingItems(evidence: ReportEvidence): number {
-  return [...evidence.courseGroups, ...evidence.centralGroups].reduce(
+function countRatingItems(groups: ReportEvidenceGroup[]): number {
+  return groups.reduce(
     (total, group) =>
       total + group.responses.reduce((sum, response) => sum + response.answers.length, 0),
     0
@@ -74,7 +87,9 @@ function slugPeriod(evidence: ReportEvidence): string {
 
 function courseExportEmptyReason(evidence: ReportEvidence): ReportExportEmptyReason | null {
   if (evidence.courseGroups.length === 0) return "no-course-assignments";
-  if (countRatingItems(evidence) === 0) return "no-course-submissions";
+  // Only course evidence can satisfy a course workbook; program-wide answers
+  // must not stand in for it.
+  if (countRatingItems(evidence.courseGroups) === 0) return "no-course-submissions";
   return null;
 }
 
@@ -106,8 +121,9 @@ export async function buildProgramHeadReportExport(
   const built = await buildExportBytes(programId, request.kind, request.filters, evidence);
   if (!built.ok) return built;
 
-  const submittedResponseCount = countSubmittedResponses(evidence);
-  const ratingItemCount = countRatingItems(evidence);
+  const releasedGroups = evidenceGroupsFor(evidence, request.kind);
+  const submittedResponseCount = countSubmittedResponses(releasedGroups);
+  const ratingItemCount = countRatingItems(releasedGroups);
   try {
     await recordReportExport({
       actorId: contextResult.data.userId,
@@ -191,8 +207,7 @@ async function buildExportBytes(
     };
   }
 
-  const { csv } = await buildRawQuantitativeCsv(evidence);
-  const rowCount = csv.split("\r\n").length - 2;
+  const { csv, rowCount } = await buildRawQuantitativeCsv(evidence);
   if (rowCount <= 0) {
     return {
       ok: false,
