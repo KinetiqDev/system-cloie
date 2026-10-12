@@ -27,7 +27,6 @@ describe("Explicit Dean program evidence reader", () => {
     "PROGRAM_HEAD",
     "FACULTY",
     "GEN_ED_COORDINATOR",
-    "SECRETARY",
     "STUDENT",
     "ALUMNI",
     "INDUSTRY_PARTNER",
@@ -37,6 +36,18 @@ describe("Explicit Dean program evidence reader", () => {
     expect(await getProgramHeadOutcomes("program-bsed", defaultFilters, "dean")).toBeNull();
     expect(prismaMock.program.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.quantitativeResponseItem.findMany).not.toHaveBeenCalled();
+  });
+  // The Secretary shares the Dean's program evidence surface. The proof is
+  // that authorization no longer short-circuits before the program lookup.
+  it("admits the Secretary to program evidence", async () => {
+    vi.clearAllMocks();
+    authMock.mockResolvedValue({ activeRole: "SECRETARY" });
+    prismaMock.program.findUnique.mockResolvedValue(bsedContext.data.selectedProgram);
+    prismaMock.academicTermInstance.findMany.mockResolvedValue([]);
+    prismaMock.quantitativeResponseItem.findMany.mockResolvedValue([]);
+    prismaMock.evaluationAssignment.count.mockResolvedValue(0);
+    prismaMock.response.count.mockResolvedValue(0);
+    expect(await getProgramHeadOutcomes("program-bsed", defaultFilters, "dean")).not.toBeNull();
   });
   it("keeps both the owning program and evaluation predicates on direct reads", async () => {
     vi.clearAllMocks();

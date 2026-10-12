@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import DeanAnalyticsPage from "@/app/(app)/dean/analytics/page";
+import { CollegeAnalyticsPage } from "@/features/analytics/components/college-analytics-page";
+import { COLLEGE_OVERSIGHT_ROUTES } from "@/lib/constants/college-oversight";
 import { DeanEvidenceView } from "@/features/analytics/components/dean-evidence-view";
 import { DeanAiInsight } from "@/features/analytics/components/dean-ai-insight";
 const { read, action } = vi.hoisted(() => ({ read: vi.fn(), action: vi.fn() }));
@@ -32,13 +33,20 @@ const college = {
     closedIncomplete: 0,
   },
 };
+/** Each route is a thin wrapper; the shared page owns every behavior below. */
+const analyticsPage = async (searchParams: Record<string, string | undefined>) =>
+  CollegeAnalyticsPage({
+    searchParams: Promise.resolve(searchParams),
+    routes: COLLEGE_OVERSIGHT_ROUTES.DEAN,
+  });
+
 describe("Dean analytics route and evidence views", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     read.mockResolvedValue({ kind: "college", college, invalidProgram: false });
   });
   it("renders no-evidence state and native filters without inventing a score", async () => {
-    render(await DeanAnalyticsPage({ searchParams: Promise.resolve({}) }));
+    render(await analyticsPage({}));
     expect(screen.getByRole("heading", { name: "Analytics" })).toBeVisible();
     expect(screen.getByLabelText("Academic period")).toBeVisible();
     expect(screen.getByText(/No evaluations match this view/)).toBeVisible();
@@ -46,14 +54,10 @@ describe("Dean analytics route and evidence views", () => {
   });
   it("denies direct route data when unauthorized", async () => {
     read.mockResolvedValue(null);
-    await expect(DeanAnalyticsPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
-      "NOT_FOUND"
-    );
+    await expect(analyticsPage({})).rejects.toThrow("NOT_FOUND");
   });
   it("canonicalizes manipulated unknown filter keys", async () => {
-    await expect(
-      DeanAnalyticsPage({ searchParams: Promise.resolve({ role: "DEAN" }) })
-    ).rejects.toThrow("REDIRECT:/dean/analytics");
+    await expect(analyticsPage({ role: "DEAN" })).rejects.toThrow("REDIRECT:/dean/analytics");
   });
   it("handles missing program evidence", () => {
     render(
@@ -89,6 +93,38 @@ describe("Dean analytics route and evidence views", () => {
     );
     expect(screen.getByText(/ILOs are not classified as attainment/)).toBeVisible();
   });
+  it("keeps a Secretary's filters and links on Secretary routes", async () => {
+    const { container } = render(
+      await CollegeAnalyticsPage({
+        searchParams: Promise.resolve({}),
+        routes: COLLEGE_OVERSIGHT_ROUTES.SECRETARY,
+      })
+    );
+    // An unnamed <form> is not a landmark, so read the action off the DOM.
+    expect(container.querySelector("form")).toHaveAttribute("action", "/secretary/analytics");
+    expect(screen.getByRole("link", { name: "College overview" })).toHaveAttribute(
+      "href",
+      "/secretary/analytics"
+    );
+    expect(screen.getByRole("link", { name: "Program Outcomes" })).toHaveAttribute(
+      "href",
+      "/secretary/analytics?view=outcomes"
+    );
+  });
+
+  it("resets filters to the reader's own route", async () => {
+    render(
+      await CollegeAnalyticsPage({
+        searchParams: Promise.resolve({}),
+        routes: COLLEGE_OVERSIGHT_ROUTES.SECRETARY,
+      })
+    );
+    expect(screen.getByRole("link", { name: "Reset" })).toHaveAttribute(
+      "href",
+      "/secretary/analytics"
+    );
+  });
+
   it("keeps AI optional and does not call a provider on mount", () => {
     render(<DeanAiInsight filters={{ view: "college" }} />);
     expect(screen.getByRole("button", { name: "Interpret current evidence" })).toBeEnabled();

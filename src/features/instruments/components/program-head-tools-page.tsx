@@ -167,23 +167,18 @@ export function ProgramHeadToolsPage({
 
       <EvaluationToolsTabs
         initialTab={initialTab}
-        action={(activeTab) =>
-          activeTab === "templates" ? (
-            <Button
-              render={<Link href={buildProgramHeadNewToolPath(program.id)} />}
-              className="shrink-0"
-            >
-              <Plus className="size-4" data-icon="inline-start" />
-              Create New Template
-            </Button>
-          ) : null
-        }
         viewControl={
           <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />
         }
         templates={
           <TemplateCollection
             view={view}
+            actions={
+              <Button render={<Link href={buildProgramHeadNewToolPath(program.id)} />}>
+                <Plus className="size-4" data-icon="inline-start" />
+                Create New Template
+              </Button>
+            }
             sections={[
               {
                 heading: "Program Templates",
@@ -224,10 +219,16 @@ export function ProgramHeadToolsPage({
             ]}
             empty={
               <div className="border-border rounded-xl border-2 border-dashed py-16 text-center">
-                <p className="text-muted-foreground">
-                  No templates found. Create your first template or import from institutional
-                  baselines.
-                </p>
+                <div className="mx-auto flex max-w-sm flex-col items-center gap-4">
+                  <p className="text-muted-foreground text-balance">
+                    No templates found. Create your first template or import from institutional
+                    baselines.
+                  </p>
+                  <Button render={<Link href={buildProgramHeadNewToolPath(program.id)} />}>
+                    <Plus className="size-4" data-icon="inline-start" />
+                    Create New Template
+                  </Button>
+                </div>
               </div>
             }
           />

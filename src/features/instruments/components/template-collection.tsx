@@ -84,10 +84,16 @@ function templateTypeLabel(item: TemplateCollectionItem): string {
 type TemplateCollectionProps = {
   view: ToolsViewMode;
   sections: TemplateSection[];
-  /** Rendered when no section contains items. */
+  /** Rendered when no section contains items; replaces the toolbar, so it must carry its own action. */
   empty: ReactNode;
   /** List/Card view toggle or toolbar control rendered in the toolbar. */
   viewControl?: ReactNode;
+  /**
+   * The list's own create action, rendered under the search line and aligned to
+   * its right edge. Placing it here keeps it beside the collection it adds to
+   * rather than stranded in the page header.
+   */
+  actions?: ReactNode;
 };
 
 // ---------------------------------------------------------------------------
@@ -161,6 +167,7 @@ export function TemplateCollection({
   sections,
   empty,
   viewControl,
+  actions,
 }: TemplateCollectionProps) {
   const filledSections = sections.filter((section) => section.items.length > 0);
   const singleSection = filledSections.length === 1 ? filledSections[0] : null;
@@ -252,6 +259,7 @@ export function TemplateCollection({
         }}
         facets={appliedChips}
         onClearAll={clearAllFacets}
+        actions={actions}
         resultSummary={
           <p className="text-muted-foreground text-xs tabular-nums">
             {totalVisible === totalItems ? (

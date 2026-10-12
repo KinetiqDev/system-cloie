@@ -35,11 +35,14 @@ export function parseDeanAnalyticsFilters(
   }
   return parsed;
 }
-export function deanAnalyticsUrl(filters: Partial<DeanAnalyticsFilters>): string {
+export function deanAnalyticsUrl(
+  filters: Partial<DeanAnalyticsFilters>,
+  basePath = "/dean/analytics"
+): string {
   const params = new URLSearchParams();
   for (const key of ["view", "programId", "termInstanceId", "source", "evaluationId"] as const) {
     const value = filters[key];
     if (value && !(key === "view" && value === "college")) params.set(key, value);
   }
-  return `/dean/analytics${params.size ? `?${params}` : ""}`;
+  return `${basePath}${params.size ? `?${params}` : ""}`;
 }

@@ -6,12 +6,14 @@ const m = vi.hoisted(() => ({
   po: { updateMany: vi.fn(), findUnique: vi.fn() },
   audit: { create: vi.fn() },
   program: { findMany: vi.fn() },
+  institutionalOutcome: { findMany: vi.fn() },
   transaction: vi.fn(),
 }));
 vi.mock("@/features/auth/services/resolve-auth-session", () => ({ resolveAuthSession: m.session }));
 vi.mock("@/lib/db/prisma", () => ({
   prisma: {
     commonProgramOutcome: m.common,
+    institutionalOutcome: m.institutionalOutcome,
     pO: m.po,
     outcomeChange: m.audit,
     program: m.program,
@@ -83,23 +85,35 @@ describe("central Common PO ownership", () => {
     }
   );
 
-  it("lists legacy UNCLASSIFIED program POs for claiming in the central read", async () => {
+  it("lists every classification of program POs so the catalog shows the whole college", async () => {
     m.session.mockResolvedValue({ userId: "editor", activeRole: "DEAN" });
     const { readCentralOutcomeAdministration } =
       await import("@/features/outcomes/services/manage-central-outcomes");
     const { prisma } = await import("@/lib/db/prisma");
     vi.mocked(prisma.program.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.commonProgramOutcome.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.institutionalOutcome.findMany).mockResolvedValue([] as never);
     await readCentralOutcomeAdministration();
-    expect(vi.mocked(prisma.program.findMany).mock.calls[0]?.[0]).toMatchObject({
-      select: expect.objectContaining({
-        pos: expect.objectContaining({
-          where: {
-            classification: { in: ["COMMON", "INSTITUTION_SPECIFIC", "UNCLASSIFIED"] },
-          },
-        }),
-      }),
-    });
+    // No classification filter: Core/Professional POs are read-only here but
+    // still belong in the college-wide catalog, and UNCLASSIFIED rows must
+    // stay visible so a Secretary or Dean can claim them.
+    const query = vi.mocked(prisma.program.findMany).mock.calls[0]?.[0];
+    expect(query?.select).toMatchObject({ pos: { orderBy: [{ order: "asc" }, { code: "asc" }] } });
+    expect((query?.select as { pos: { where?: unknown } }).pos.where).toBeUndefined();
+    expect(query).toMatchObject({ where: { is_active: true } });
+  });
+
+  it("reads the ILO catalog the General Education Coordinator owns", async () => {
+    m.session.mockResolvedValue({ userId: "editor", activeRole: "SECRETARY" });
+    const { readCentralOutcomeAdministration } =
+      await import("@/features/outcomes/services/manage-central-outcomes");
+    const { prisma } = await import("@/lib/db/prisma");
+    vi.mocked(prisma.program.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.commonProgramOutcome.findMany).mockResolvedValue([] as never);
+    vi.mocked(prisma.institutionalOutcome.findMany).mockResolvedValue([] as never);
+    const result = await readCentralOutcomeAdministration();
+    expect(result.success).toBe(true);
+    expect(vi.mocked(prisma.institutionalOutcome.findMany)).toHaveBeenCalled();
   });
 
   it("rejects a central correction after another editor changes the statement", async () => {

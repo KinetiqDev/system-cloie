@@ -31,12 +31,23 @@ describe("navigation helpers", () => {
     );
   });
 
-  it("omits Learning Outcomes from Secretary navigation", () => {
-    const secretaryNav = getMainNavByRoles([ROLES.SECRETARY]);
-    expect(secretaryNav.map((item) => item.href)).not.toContain("/secretary/learning-outcomes");
-    expect(getMobileNavByRoles([ROLES.SECRETARY]).map((item) => item.href)).not.toContain(
+  it("gives the Secretary the shared oversight views, on desktop and mobile", () => {
+    const hrefs = getMainNavByRoles([ROLES.SECRETARY]).map((item) => item.href);
+    expect(hrefs).toContain("/secretary/learning-outcomes");
+    expect(hrefs).toContain("/secretary/analytics");
+    expect(getMobileNavByRoles([ROLES.SECRETARY]).map((item) => item.href)).toContain(
       "/secretary/learning-outcomes"
     );
+  });
+
+  it("no longer offers a separate Common / Institution-specific POs page", () => {
+    const hrefs = getMainNavByRoles([ROLES.SECRETARY]).map((item) => item.href);
+    expect(hrefs.some((href) => href.includes("common-outcomes"))).toBe(false);
+    expect(
+      getDeanNavGroups()
+        .flatMap((group) => group.items)
+        .some((item) => item.href.includes("common-outcomes"))
+    ).toBe(false);
   });
 
   it("omits Curricula from Secretary and Program Head navigation", () => {

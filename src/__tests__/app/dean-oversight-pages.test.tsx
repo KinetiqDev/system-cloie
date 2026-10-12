@@ -6,9 +6,22 @@ import { renderToReadableStream } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DeanDashboardPage, { DeanDashboardContent } from "@/features/dean/components/dashboard-page";
 import { DeanDashboardLoading } from "@/features/dean/components/dean-oversight-loading";
-import DeanLearningOutcomesPage, {
+import {
   LearningOutcomesContent,
+  LearningOutcomesViewTabs,
+  ReadinessView,
+  resolveLearningOutcomesTab,
 } from "@/features/dean/components/learning-outcomes-page";
+import { COLLEGE_OVERSIGHT_ROUTES } from "@/lib/constants/college-oversight";
+
+/** The readiness tab as the Dean route renders it, resolved like the server would. */
+async function DeanLearningOutcomesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  return ReadinessView({ params: await searchParams, routes: COLLEGE_OVERSIGHT_ROUTES.DEAN });
+}
 
 const { listDeanEligiblePeriodsMock, getDeanLearningOutcomesMock, getDeanDashboardMock } =
   vi.hoisted(() => ({
@@ -35,6 +48,12 @@ vi.mock("@/features/dean/services/dean-read-model", () => ({
 }));
 vi.mock("@/features/dean/services/read-dean-learning-outcomes", () => ({
   getDeanLearningOutcomes: getDeanLearningOutcomesMock,
+}));
+vi.mock("@/features/outcomes/services/manage-central-outcomes", () => ({
+  readCentralOutcomeAdministration: vi.fn(() => new Promise(() => undefined)),
+}));
+vi.mock("@/features/outcomes/components/central-outcomes-catalog", () => ({
+  CentralOutcomesCatalog: () => null,
 }));
 vi.mock("@/features/dean/services/read-dean-dashboard", () => ({
   getDeanDashboard: getDeanDashboardMock,
@@ -244,11 +263,11 @@ describe("Dean oversight pages", () => {
     ).not.toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /Incomplete typed mappings/ })).toHaveAttribute(
       "href",
-      `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}&risk=incomplete-mappings`
+      `/dean/college-oversight/learning-outcomes?tab=readiness&period=${PERIOD_ID}&risk=incomplete-mappings`
     );
     expect(await screen.findByRole("link", { name: "Computer Science" })).toHaveAttribute(
       "href",
-      `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}&program=${PROGRAM_ID}`
+      `/dean/college-oversight/learning-outcomes?tab=readiness&period=${PERIOD_ID}&program=${PROGRAM_ID}`
     );
     expect((await screen.findAllByText("67% coverage")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("Needs attention")).length).toBeGreaterThan(0);
@@ -292,7 +311,7 @@ describe("Dean oversight pages", () => {
         }),
       })
     );
-    expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Academic Program overview" })).toBeInTheDocument();
     expect(screen.getByText("Risk: Incomplete mappings")).toBeInTheDocument();
     cleanup();
     render(
@@ -407,7 +426,7 @@ describe("Dean oversight pages", () => {
       })
     );
 
-    expect(screen.getByRole("heading", { name: "Learning Outcomes" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Academic Period")).toBeInTheDocument();
     expect(screen.getByLabelText("Loading Learning Outcomes")).toBeInTheDocument();
   });
 
@@ -424,7 +443,7 @@ describe("Dean oversight pages", () => {
       "NEXT_REDIRECT"
     );
     expect(redirectMock).toHaveBeenCalledWith(
-      `/dean/college-oversight/learning-outcomes?period=${PERIOD_ID}`
+      `/dean/college-oversight/learning-outcomes?tab=readiness&period=${PERIOD_ID}`
     );
     expect(listDeanEligiblePeriodsMock).toHaveBeenCalledTimes(1);
   });
@@ -456,5 +475,39 @@ describe("Dean oversight pages", () => {
       })
     ).rejects.toThrow("NOT_FOUND");
     expect(getDeanLearningOutcomesMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{}, "catalog"],
+    [{ tab: "readiness" }, "readiness"],
+    [{ period: PERIOD_ID }, "readiness"],
+    [{ risk: "missing-cilos" }, "readiness"],
+    [{ program: PROGRAM_ID }, "readiness"],
+    [{ tab: "catalog", period: PERIOD_ID }, "catalog"],
+  ])("resolves %o to the %s tab", (query, expected) => {
+    expect(resolveLearningOutcomesTab(query)).toBe(expected);
+  });
+
+  it("marks the active view and keeps both views bookmarkable under the role route", () => {
+    render(<LearningOutcomesViewTabs tab="catalog" routes={COLLEGE_OVERSIGHT_ROUTES.SECRETARY} />);
+    expect(screen.getByRole("link", { current: "page" })).toHaveTextContent("Outcome catalog");
+    expect(screen.getByRole("link", { name: "Outcome catalog" })).toHaveAttribute(
+      "href",
+      "/secretary/learning-outcomes"
+    );
+    expect(screen.getByRole("link", { name: "Mapping readiness" })).toHaveAttribute(
+      "href",
+      "/secretary/learning-outcomes?tab=readiness"
+    );
+  });
+
+  it("keeps a Secretary on Secretary routes when readiness redirects", async () => {
+    listDeanEligiblePeriodsMock.mockResolvedValue([period]);
+    await expect(
+      ReadinessView({ params: { risk: "not-ready" }, routes: COLLEGE_OVERSIGHT_ROUTES.SECRETARY })
+    ).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirectMock).toHaveBeenCalledWith(
+      `/secretary/learning-outcomes?tab=readiness&period=${PERIOD_ID}&risk=not-ready`
+    );
   });
 });

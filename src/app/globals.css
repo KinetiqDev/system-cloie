@@ -218,6 +218,17 @@
   --color-classification-institution-fg: var(--classification-institution-fg);
   --color-classification-institution-border: var(--classification-institution-border);
 
+  /* ---------- CILO Manifestation Categories ---------- */
+  --color-manifestation-learning-bg: var(--manifestation-learning-bg);
+  --color-manifestation-learning-fg: var(--manifestation-learning-fg);
+  --color-manifestation-learning-border: var(--manifestation-learning-border);
+  --color-manifestation-practice-bg: var(--manifestation-practice-bg);
+  --color-manifestation-practice-fg: var(--manifestation-practice-fg);
+  --color-manifestation-practice-border: var(--manifestation-practice-border);
+  --color-manifestation-opportunity-bg: var(--manifestation-opportunity-bg);
+  --color-manifestation-opportunity-fg: var(--manifestation-opportunity-fg);
+  --color-manifestation-opportunity-border: var(--manifestation-opportunity-border);
+
   /* ---------- Shadows ---------- */
   --shadow-sm: var(--shadow-sm);
   --shadow-dropdown: var(--shadow-dropdown);

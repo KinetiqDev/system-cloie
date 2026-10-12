@@ -49,7 +49,6 @@ describe("Dean college analytics", () => {
     "PROGRAM_HEAD",
     "FACULTY",
     "GEN_ED_COORDINATOR",
-    "SECRETARY",
     "STUDENT",
     "ALUMNI",
     "INDUSTRY_PARTNER",
@@ -58,6 +57,12 @@ describe("Dean college analytics", () => {
     expect(await getDeanCollegeAnalytics({ view: "college" })).toBeNull();
     for (const model of Object.values(db))
       for (const fn of Object.values(model)) expect(fn).not.toHaveBeenCalled();
+  });
+
+  // The Secretary shares the Dean's college analytics surface.
+  it("admits the Secretary", async () => {
+    auth.mockResolvedValue({ activeRole: "SECRETARY" });
+    expect(await getDeanCollegeAnalytics({ view: "college" })).not.toBeNull();
   });
   it("uses historical opportunities, not current eligibility, and zero is unavailable", () => {
     expect(summarizeDeanParticipation([]).rate).toBeNull();

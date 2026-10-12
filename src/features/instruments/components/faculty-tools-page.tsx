@@ -138,20 +138,18 @@ export function FacultyToolsPage({
 
       <EvaluationToolsTabs
         initialTab={initialTab}
-        action={(activeTab) =>
-          activeTab === "templates" ? (
-            <Button className="shrink-0" render={<Link href="/faculty/tools/new" />}>
-              <Plus className="size-4" data-icon="inline-start" />
-              Create New Template
-            </Button>
-          ) : null
-        }
         viewControl={
           <ToolsViewSelector label="Evaluation tools" value={view} onValueChange={selectView} />
         }
         templates={
           <TemplateCollection
             view={view}
+            actions={
+              <Button render={<Link href="/faculty/tools/new" />}>
+                <Plus className="size-4" data-icon="inline-start" />
+                Create New Template
+              </Button>
+            }
             sections={[
               {
                 heading: "My Templates",
@@ -181,12 +179,16 @@ export function FacultyToolsPage({
             ]}
             empty={
               <Card>
-                <CardContent className="py-12 text-center">
-                  <FileText className="text-muted-foreground mx-auto mb-4 size-10" />
-                  <p className="text-muted-foreground text-sm">
+                <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+                  <FileText className="text-muted-foreground size-10" aria-hidden="true" />
+                  <p className="text-muted-foreground max-w-sm text-sm text-balance">
                     No templates with faculty access are available yet. Contact your Program Head to
-                    enable faculty access on evaluation templates.
+                    enable faculty access on evaluation templates, or start one of your own.
                   </p>
+                  <Button render={<Link href="/faculty/tools/new" />}>
+                    <Plus className="size-4" data-icon="inline-start" />
+                    Create New Template
+                  </Button>
                 </CardContent>
               </Card>
             }

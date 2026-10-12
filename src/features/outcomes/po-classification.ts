@@ -33,6 +33,42 @@ export function matchesPOCategory(
   );
 }
 
+export const PO_CATEGORY_TABS = [
+  "ALL",
+  "COMMON",
+  "CORE",
+  "PROFESSIONAL",
+  "OTHER",
+] as const satisfies readonly POCategoryFilter[];
+
+export const PO_CATEGORY_TAB_LABELS: Record<POCategoryFilter, string> = {
+  ALL: "All",
+  COMMON: PO_CLASSIFICATION_LABELS.COMMON,
+  CORE: PO_CLASSIFICATION_LABELS.CORE,
+  PROFESSIONAL: PO_CLASSIFICATION_LABELS.PROFESSIONAL,
+  OTHER: "Other",
+};
+
+/** One pass over the catalog, so tab counts never re-filter it per tab per render. */
+export function countByCategory(
+  pos: ReadonlyArray<{ classification: POClassification }>
+): Record<POCategoryFilter, number> {
+  const counts: Record<POCategoryFilter, number> = {
+    ALL: pos.length,
+    COMMON: 0,
+    CORE: 0,
+    PROFESSIONAL: 0,
+    OTHER: 0,
+  };
+  for (const po of pos) {
+    for (const category of PO_CATEGORY_TABS) {
+      if (category !== "ALL" && matchesPOCategory(po.classification, category))
+        counts[category] += 1;
+    }
+  }
+  return counts;
+}
+
 export function isAdministrativeCategory(
   value: string
 ): value is "COMMON" | "INSTITUTION_SPECIFIC" {

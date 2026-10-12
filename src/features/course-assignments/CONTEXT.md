@@ -21,7 +21,7 @@ All Coordinators share the single college-wide General Education scope (`course.
 _Avoid_: Coordinator portfolio assignment, fake General Education Program
 
 
-**Resolved** (transfer-ilo-catalog-to-gen-ed-coordinator / ADR 0018): Institutional Learning Outcome catalog ownership is `GEN_ED_COORDINATOR` college-wide (CRUD/reorder/archive/restore; `SECRETARY` no access, `/secretary/learning-outcomes/**` redirects). Course Catalog and Assignments adds no ILO catalog mutation path.
+**Resolved** (transfer-ilo-catalog-to-gen-ed-coordinator / ADR 0018): Institutional Learning Outcome catalog ownership is `GEN_ED_COORDINATOR` college-wide (CRUD/reorder/archive/restore; `DEAN` and `SECRETARY` read-only). Course Catalog and Assignments adds no ILO catalog mutation path.
 _Avoid_: Secretary ILO write, Coordinator Professional ILO scope
 
 

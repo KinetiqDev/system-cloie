@@ -104,6 +104,18 @@ describe("ManagementToolsPage", () => {
     expect(screen.getByText(/No baseline templates yet/i)).toBeInTheDocument();
   });
 
+  test("keeps a working create action on the empty state", () => {
+    render(<ManagementToolsPage templates={[]} basePath="/secretary/instruments" />);
+
+    // The toolbar is replaced by the empty state, so the list action has to
+    // move into it; otherwise the only path to a first template disappears.
+    expect(screen.getAllByText("Create Template")).toHaveLength(1);
+    expect(screen.getByText("Create Template")).toHaveAttribute(
+      "href",
+      "/secretary/instruments/new"
+    );
+  });
+
   test("keeps the delete confirmation open when deletion fails", async () => {
     const dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
     const mockActions = {

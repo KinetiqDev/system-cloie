@@ -40,14 +40,25 @@ describe("listDeanEligiblePeriods authorization seam", () => {
     expect(listAcademicPeriodSummariesMock).not.toHaveBeenCalled();
   });
 
-  it("rejects non-Dean active roles before invoking the persistent cache", async () => {
-    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.SECRETARY });
+  it("rejects roles outside college oversight before invoking the persistent cache", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.FACULTY });
 
     await expect(listDeanEligiblePeriods()).rejects.toMatchObject({
       name: "DeanReadModelUnauthorizedError",
-      message: "College Dean access required.",
+      message: "College Dean or Secretary access required.",
     });
     expect(listAcademicPeriodSummariesMock).not.toHaveBeenCalled();
+  });
+
+  it("admits the Secretary, who shares the Dean's oversight read model", async () => {
+    resolveAuthSessionMock.mockResolvedValue({ activeRole: ROLES.SECRETARY });
+    listAcademicPeriodSummariesMock.mockResolvedValue([
+      { id: "period-1", label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
+    ]);
+
+    await expect(listDeanEligiblePeriods()).resolves.toEqual([
+      { id: "period-1", label: "2025-2026 — 1st Semester — 1st Term", status: "ACTIVE" },
+    ]);
   });
 
   it("invokes the shared projection only after Dean authorization", async () => {

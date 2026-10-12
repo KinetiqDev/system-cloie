@@ -136,7 +136,7 @@ export function DeanDashboardContent({ result }: { result: DeanReadState<DeanDas
           {risks.map((risk) => (
             <Link
               key={risk.key}
-              href={`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(activePeriod.id)}&risk=${risk.key}`}
+              href={`/dean/college-oversight/learning-outcomes?tab=readiness&period=${encodeURIComponent(activePeriod.id)}&risk=${risk.key}`}
               className="group ring-foreground/10 hover:bg-muted/50 focus-visible:ring-ring rounded-xl ring-1 transition-colors focus-visible:ring-3 focus-visible:outline-none"
             >
               <Card className="h-full ring-0 transition-transform group-active:translate-y-px">
@@ -277,7 +277,7 @@ function MatrixRow({ program, periodId }: { program: MatrixProgram; periodId: st
       <th scope="row" className="px-4 py-4 font-medium">
         <Link
           className="focus-visible:ring-ring rounded-md underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
-          href={`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(periodId)}&program=${encodeURIComponent(program.id)}`}
+          href={`/dean/college-oversight/learning-outcomes?tab=readiness&period=${encodeURIComponent(periodId)}&program=${encodeURIComponent(program.id)}`}
         >
           {program.name}
         </Link>
@@ -311,7 +311,7 @@ function MatrixCard({ program, periodId }: { program: MatrixProgram; periodId: s
           <Coverage rate={rate} ready={program.readyContexts} active={program.activeContexts} />
         </div>
         <Link
-          href={`/dean/college-oversight/learning-outcomes?period=${encodeURIComponent(periodId)}&program=${encodeURIComponent(program.id)}`}
+          href={`/dean/college-oversight/learning-outcomes?tab=readiness&period=${encodeURIComponent(periodId)}&program=${encodeURIComponent(program.id)}`}
           className="focus-visible:ring-ring text-link mt-4 inline-flex min-h-11 items-center rounded-md font-medium underline-offset-4 hover:underline focus-visible:ring-3 focus-visible:outline-none"
         >
           View {program.name} Learning Outcomes

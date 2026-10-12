@@ -5,16 +5,18 @@ import { deanAnalyticsUrl, parseDeanAnalyticsFilters } from "../services/dean-an
 export function DeanAnalyticsFilterForm({
   children,
   scopeKey,
+  basePath = "/dean/analytics",
 }: {
   children: ReactNode;
   scopeKey: string;
+  basePath?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
     <form
       key={scopeKey}
-      action="/dean/analytics"
+      action={basePath}
       aria-busy={pending}
       className="bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-4"
       onSubmit={(event) => {
@@ -23,7 +25,7 @@ export function DeanAnalyticsFilterForm({
         const filters = parseDeanAnalyticsFilters(
           Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, String(value)]))
         );
-        startTransition(() => router.push(deanAnalyticsUrl(filters)));
+        startTransition(() => router.push(deanAnalyticsUrl(filters, basePath)));
       }}
     >
       {children}

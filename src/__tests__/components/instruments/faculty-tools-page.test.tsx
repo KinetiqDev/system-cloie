@@ -196,11 +196,8 @@ describe("FacultyToolsPage", () => {
 
     const assertRightAlignedViewSelector = () => {
       const viewToolbar = screen.getByRole("toolbar", { name: "Evaluation tools view" });
-      expect(viewToolbar.parentElement).toHaveClass("shrink-0");
-      expect(viewToolbar.parentElement?.parentElement).toHaveClass(
-        "justify-between",
-        "sm:justify-end"
-      );
+      expect(viewToolbar.parentElement).toHaveClass("ml-auto", "shrink-0");
+      expect(viewToolbar.parentElement?.parentElement).toHaveClass("justify-between");
     };
 
     assertRightAlignedViewSelector();
