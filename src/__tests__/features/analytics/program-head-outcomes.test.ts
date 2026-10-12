@@ -355,6 +355,15 @@ describe("getProgramHeadOutcomes", () => {
             scaleLabel: "1–5 (5-point)",
             meanRating: 5,
             ratingCount: 1,
+            // Per-option counts of the same scale identity, so a reporting
+            // surface can print the distribution without re-aggregating rows.
+            categories: [
+              { value: 1, label: "1", count: 0, percentage: 0 },
+              { value: 2, label: "2", count: 0, percentage: 0 },
+              { value: 3, label: "3", count: 0, percentage: 0 },
+              { value: 4, label: "4", count: 0, percentage: 0 },
+              { value: 5, label: "5", count: 1, percentage: 1 },
+            ],
           },
         ],
       },

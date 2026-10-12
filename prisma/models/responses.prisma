@@ -8,6 +8,13 @@ enum ResponseStatus {
   SUBMITTED
 }
 
+/// One export shape a Program Head report download can produce.
+enum ReportExportKind {
+  COURSE_WORKBOOK
+  PROGRAM_OUTCOME_WORKBOOK
+  RAW_QUANTITATIVE_CSV
+}
+
 model Response {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   assignment_id   String         @unique @db.Uuid
@@ -43,6 +50,34 @@ model QuantitativeResponseItem {
 
   @@map("quantitative_response_items")
   @@index([response_id])
+}
+
+/// Server-only audit record of one evidence export download.
+///
+/// Named-response report exports are confidential, so every download records
+/// the exporting actor, the Program and filters it applied, and the size of
+/// the submitted evidence it released. Only aggregate counts are stored here:
+/// no respondent identity, response row, or rating value.
+model ReportExportAudit {
+  id                     String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actor_id               String            @db.Uuid
+  program_id             String            @db.Uuid
+  export_kind            ReportExportKind
+  identified             Boolean           @default(true)
+  school_year_id         String?           @db.Uuid
+  semester               AcademicSemester?
+  term_instance_id       String?           @db.Uuid
+  year_level             YearLevel?
+  submitted_response_count Int            @default(0)
+  rating_item_count      Int               @default(0)
+  created_at             DateTime          @default(now())
+
+  actor   User    @relation(fields: [actor_id], references: [id], onDelete: Restrict)
+  program Program @relation(fields: [program_id], references: [id], onDelete: Restrict)
+
+  @@map("report_export_audits")
+  @@index([actor_id])
+  @@index([program_id])
 }
 
 model QualitativeResponseItem {

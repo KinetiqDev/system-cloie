@@ -12,6 +12,7 @@ const {
   feedbackMock,
   resolveProgramHeadContextMock,
   generateInsightActionMock,
+  reportYearLevelsMock,
 } = vi.hoisted(() => ({
   notFoundMock: vi.fn(() => {
     throw new Error("NOT_FOUND");
@@ -27,6 +28,7 @@ const {
   feedbackMock: vi.fn(),
   resolveProgramHeadContextMock: vi.fn(),
   generateInsightActionMock: vi.fn(),
+  reportYearLevelsMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -47,6 +49,9 @@ vi.mock("@/lib/actions/program-head-analytics-actions", () => ({
 }));
 vi.mock("@/features/auth/services/resolve-program-head-context", () => ({
   resolveProgramHeadContext: resolveProgramHeadContextMock,
+}));
+vi.mock("@/features/reports/services/report-evidence", () => ({
+  listProgramHeadReportYearLevels: reportYearLevelsMock,
 }));
 
 const bsedOverview = {
@@ -128,6 +133,7 @@ const bsedContext = {
 describe("selected Program insights routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    reportYearLevelsMock.mockResolvedValue([{ value: "FIRST_YEAR", label: "1st Year" }]);
     analyticsMock.mockResolvedValue(bsedOverview);
     analyticsFrameMock.mockResolvedValue({
       scope: bsedOverview.scope,
@@ -781,7 +787,7 @@ describe("selected Program insights routes", () => {
     expect(analyticsMock).not.toHaveBeenCalled();
   });
 
-  it("labels the reports placeholder with the selected Program only", async () => {
+  it("offers the three named-response exports for the selected Program only", async () => {
     const Page = await loadReportsPage();
     const page = await Page({ params: Promise.resolve({ programId: "program-bsed" }) });
 
@@ -791,9 +797,14 @@ describe("selected Program insights routes", () => {
     expect(
       screen.getByText(/Reports are scoped to the selected BSED Program only/)
     ).toBeInTheDocument();
-    expect(screen.getByText("Course-bound CILO summary")).toBeInTheDocument();
-    expect(screen.getByText("Stakeholder deployment completion")).toBeInTheDocument();
-    expect(screen.getByText("Program outcome attainment digest")).toBeInTheDocument();
+    // Named-response exports are restricted access, so the page says so before
+    // any download and names each export separately.
+    expect(screen.getByText("Confidential: these reports name respondents")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export course workbook/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Export Program Outcome report/ })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Export raw quantitative CSV/ })).toBeInTheDocument();
     expect(screen.queryByText(/BEED/)).not.toBeInTheDocument();
   });
 
@@ -809,12 +820,23 @@ describe("selected Program insights routes", () => {
     );
   });
 
-  it("does not read analytics while opening reports", async () => {
+  it("reads period options but no analytics evidence while opening reports", async () => {
     const Page = await loadReportsPage();
 
     await Page({ params: Promise.resolve({ programId: "program-bsed" }) });
 
+    // The page needs the academic period catalog for its filters, never the
+    // analytics evidence reads behind the Outcomes, Trends, or Breakdowns tabs.
+    expect(analyticsFrameMock).toHaveBeenCalledWith(
+      "program-bsed",
+      { tab: "outcomes" },
+      "program-head"
+    );
     expect(analyticsMock).not.toHaveBeenCalled();
+    expect(outcomesMock).not.toHaveBeenCalled();
+    expect(trendsMock).not.toHaveBeenCalled();
+    expect(breakdownsMock).not.toHaveBeenCalled();
+    expect(feedbackMock).not.toHaveBeenCalled();
   });
 });
 
