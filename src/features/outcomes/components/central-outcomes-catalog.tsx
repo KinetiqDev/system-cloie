@@ -906,8 +906,11 @@ function OutcomeReviewDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  // A save already in flight cannot be abandoned: dismissing the review here
+  // would reopen the retained editor and the late response would then discard
+  // whatever the author starts typing. Back is disabled for the same reason.
   return (
-    <ResponsiveDialog open={!!review} onOpenChange={(open) => !open && onClose()}>
+    <ResponsiveDialog open={!!review} onOpenChange={(open) => !open && !pending && onClose()}>
       <ResponsiveDialogContent>
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>Review outcome change</ResponsiveDialogTitle>
@@ -986,8 +989,16 @@ export function CentralOutcomesCatalog({ data }: { data: CentralOutcomeAdministr
   }
   function save() {
     if (!review) return;
+    const token = ++writeToken.current;
     startTransition(async () => {
       const result = await commitCentralOutcomeAction(review, true);
+      if (token !== writeToken.current) {
+        // The review was dismissed while the write was in flight, so the
+        // editor is open again and the author may already be correcting. The
+        // write still committed, so refresh — but never clear what they typed.
+        router.refresh();
+        return;
+      }
       if (!result.success) {
         setError(result.error);
         return;

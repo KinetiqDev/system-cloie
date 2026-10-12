@@ -469,6 +469,37 @@ describe("CentralOutcomesCatalog", () => {
     expect(screen.getByLabelText("Common PO code")).toBeInTheDocument();
   });
 
+  it("does not let an in-flight save be abandoned into a reopened editor", async () => {
+    let resolveCommit: (() => void) | undefined;
+    commitMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCommit = () => resolve({ success: true, data: { id: "common-1" } });
+        })
+    );
+    renderCatalog();
+
+    await click(screen.getByRole("button", { name: "Add Common PO" }));
+    fireEvent.change(screen.getByLabelText("Common PO code"), { target: { value: "CPO-9" } });
+    fireEvent.change(screen.getByLabelText("Approved statement"), {
+      target: { value: "Act ethically." },
+    });
+    await click(screen.getByRole("button", { name: "Review new Common PO" }));
+    await click(screen.getByRole("button", { name: "Confirm change" }));
+
+    // Greptile "Save discards reopened edits": while the write is in flight the
+    // review cannot be dismissed, so the editor never reopens to be clobbered.
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    expect(screen.queryByLabelText("Common PO code")).not.toBeInTheDocument();
+
+    await act(async () => {
+      resolveCommit?.();
+    });
+
+    await waitFor(() => expect(routerRefreshMock).toHaveBeenCalled());
+    expect(screen.queryByLabelText("Common PO code")).not.toBeInTheDocument();
+  });
+
   it("clears the restored draft when a different outcome is opened", async () => {
     renderCatalog();
 
