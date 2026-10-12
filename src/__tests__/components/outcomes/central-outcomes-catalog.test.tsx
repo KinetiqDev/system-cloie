@@ -393,4 +393,97 @@ describe("CentralOutcomesCatalog", () => {
     expect(screen.queryByRole("button", { name: /Add PO to/ })).not.toBeInTheDocument();
     expect(screen.getByText("No matching Program Outcomes")).toBeInTheDocument();
   });
+
+  it("restores the authored draft when the manager goes back from the review", async () => {
+    renderCatalog();
+
+    await click(screen.getByRole("button", { name: "Add Common PO" }));
+    fireEvent.change(screen.getByLabelText("Common PO code"), { target: { value: "CPO-9" } });
+    fireEvent.change(screen.getByLabelText("Approved statement"), {
+      target: { value: "Act ethically." },
+    });
+    await click(screen.getByRole("button", { name: "Review new Common PO" }));
+    await click(screen.getByRole("button", { name: "Back" }));
+
+    // Greptile #2: Back returns to the populated editor instead of an empty
+    // form, so a correction does not cost a retype.
+    expect(screen.getByLabelText("Common PO code")).toHaveValue("CPO-9");
+    expect(screen.getByLabelText("Approved statement")).toHaveValue("Act ethically.");
+  });
+
+  it("restores the program classification, code and statement when going back", async () => {
+    renderCatalog();
+
+    // ADR 0040: a legacy row opens as Institution-specific, so the statement
+    // field is the author's own text and is part of the restored draft.
+    await click(programRow("PO-3").getByRole("button", { name: "Classify PO-3" }));
+    fireEvent.change(screen.getByLabelText("Program-local PO code"), {
+      target: { value: "PO-3B" },
+    });
+    fireEvent.change(screen.getByLabelText("Program outcome statement"), {
+      target: { value: "Restated legacy outcome." },
+    });
+    await click(screen.getByRole("button", { name: "Review program PO" }));
+    await click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByLabelText("Program-local PO code")).toHaveValue("PO-3B");
+    expect(screen.getByLabelText("Program outcome statement")).toHaveValue(
+      "Restated legacy outcome."
+    );
+  });
+
+  it("ignores a review response that lands after the review was cancelled", async () => {
+    let resolveReview: (() => void) | undefined;
+    reviewMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveReview = () =>
+            resolve({
+              success: true,
+              data: {
+                input: { kind: "COMMON_PO", action: "archive", id: "common-1" },
+                before: { code: "CPO-1", is_active: true },
+                after: { code: "CPO-1", is_active: false },
+                freshnessToken: "{}",
+                signature: "sig",
+              },
+            });
+        })
+    );
+    renderCatalog();
+
+    await click(screen.getByRole("button", { name: "Add Common PO" }));
+    fireEvent.change(screen.getByLabelText("Common PO code"), { target: { value: "CPO-9" } });
+    await click(screen.getByRole("button", { name: "Review new Common PO" }));
+
+    // Greptile #3: the author cancels before the response arrives, then opens a
+    // different editor. The late response must not confirm either one.
+    await click(screen.getByRole("button", { name: "Cancel" }));
+    await click(screen.getByRole("button", { name: "Add Common PO" }));
+
+    await act(async () => {
+      resolveReview?.();
+    });
+
+    expect(screen.queryByRole("button", { name: "Confirm change" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Common PO code")).toBeInTheDocument();
+  });
+
+  it("clears the restored draft when a different outcome is opened", async () => {
+    renderCatalog();
+
+    await click(screen.getByRole("button", { name: "Add Common PO" }));
+    fireEvent.change(screen.getByLabelText("Common PO code"), { target: { value: "CPO-9" } });
+    fireEvent.change(screen.getByLabelText("Approved statement"), {
+      target: { value: "Act ethically." },
+    });
+    await click(screen.getByRole("button", { name: "Review new Common PO" }));
+    await click(screen.getByRole("button", { name: "Back" }));
+    await click(screen.getByRole("button", { name: "Cancel" }));
+
+    await click(catalogRow("CPO-1").getByRole("button", { name: "Archive" }));
+
+    // A fresh editor must never inherit another row's draft.
+    expect(screen.getByRole("button", { name: "Confirm change" })).toBeInTheDocument();
+  });
 });

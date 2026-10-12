@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUp, Edit, Layers, Plus, RotateCcw, Trash2 } from "lucide-react";
 import type { CentralOutcomeAdministration } from "../services/manage-central-outcomes";
@@ -31,7 +31,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -59,6 +59,35 @@ type Prepare = (value: unknown) => void;
 type Editor =
   | { kind: "common"; item: CommonOutcome | null }
   | { kind: "po"; program: Program; item: ProgramOutcome | null };
+
+// The reviewed payload doubles as the editor draft: taking Back from the
+// review dialog restores exactly what the author typed, so a correction does
+// not cost a retype. `description` is only the author's own text for the
+// fields where they can type one, which is the only place it is restored.
+type EditorDraft = {
+  code?: string;
+  description?: string;
+  sourceRef?: string;
+  classification?: AdministrativeClassification;
+  commonOutcomeId?: string;
+};
+
+function toEditorDraft(value: unknown): EditorDraft {
+  if (!value || typeof value !== "object") return {};
+  const row = value as Record<string, unknown>;
+  const text = (key: string) => (typeof row[key] === "string" ? row[key] : undefined);
+  const classification = row.classification;
+  return {
+    code: text("code"),
+    description: text("description"),
+    sourceRef: text("sourceRef"),
+    classification:
+      classification === "COMMON" || classification === "INSTITUTION_SPECIFIC"
+        ? classification
+        : undefined,
+    commonOutcomeId: text("commonOutcomeId") ?? undefined,
+  };
+}
 
 const ALL_PROGRAMS = "ALL";
 
@@ -254,6 +283,95 @@ function ProgramOutcomeRow({
   );
 }
 
+function ProgramOutcomePanel({
+  programs,
+  programId,
+  category,
+  pending,
+  onPrepare,
+  onEdit,
+}: {
+  programs: Program[];
+  programId: string;
+  category: POCategoryFilter;
+  pending: boolean;
+  onPrepare: Prepare;
+  onEdit: (program: Program, item: ProgramOutcome | null) => void;
+}) {
+  const scoped =
+    programId === ALL_PROGRAMS ? programs : programs.filter((program) => program.id === programId);
+  const groups = scoped
+    .map((program) => ({
+      program,
+      pos: program.pos.filter((po) => matchesPOCategory(po.classification, category)),
+    }))
+    .filter((group) => category === "ALL" || group.pos.length > 0);
+
+  if (groups.length === 0) {
+    return (
+      <Empty className="border">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Layers aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>No matching Program Outcomes</EmptyTitle>
+          <EmptyDescription>Choose another program or classification.</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {groups.map(({ program, pos }) => (
+        <Disclosure
+          key={`${program.id}:${scoped.length === 1}`}
+          open={scoped.length === 1 || undefined}
+          className="bg-card rounded-xl border"
+        >
+          <DisclosureTrigger variant="card" className="px-4 py-3">
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-title-md break-words">
+                {program.code} · {program.name}
+              </span>
+              <span className="text-caption text-text-secondary font-normal tabular-nums">
+                {program.pos.length} {program.pos.length === 1 ? "PO" : "POs"}
+                {category !== "ALL" && ` · ${pos.length} ${PO_CATEGORY_TAB_LABELS[category]}`}
+              </span>
+            </span>
+          </DisclosureTrigger>
+          <DisclosureContent className="border-t p-0">
+            {pos.length === 0 ? (
+              <p className="text-body-sm text-text-secondary px-4 py-3">
+                No Program Outcomes recorded for this program.
+              </p>
+            ) : (
+              <ul className="flex flex-col divide-y">
+                {pos.map((item) => (
+                  <ProgramOutcomeRow
+                    key={item.id}
+                    item={item}
+                    programId={program.id}
+                    pending={pending}
+                    onEdit={() => onEdit(program, item)}
+                    onPrepare={onPrepare}
+                  />
+                ))}
+              </ul>
+            )}
+            <div className="border-t px-2 py-2">
+              <Button variant="ghost" size="sm" onClick={() => onEdit(program, null)}>
+                <Plus data-icon="inline-start" aria-hidden="true" />
+                Add PO to {program.code}
+              </Button>
+            </div>
+          </DisclosureContent>
+        </Disclosure>
+      ))}
+    </div>
+  );
+}
+
 function ProgramOutcomesSection({
   programs,
   pending,
@@ -267,15 +385,12 @@ function ProgramOutcomesSection({
 }) {
   const [programId, setProgramId] = useState(ALL_PROGRAMS);
   const [category, setCategory] = useState<POCategoryFilter>("ALL");
-  const scoped =
-    programId === ALL_PROGRAMS ? programs : programs.filter((program) => program.id === programId);
-  const counts = countByCategory(scoped.flatMap((program) => program.pos));
-  const groups = scoped
-    .map((program) => ({
-      program,
-      pos: program.pos.filter((po) => matchesPOCategory(po.classification, category)),
-    }))
-    .filter((group) => category === "ALL" || group.pos.length > 0);
+  const counts = countByCategory(
+    (programId === ALL_PROGRAMS
+      ? programs
+      : programs.filter((program) => program.id === programId)
+    ).flatMap((program) => program.pos)
+  );
   const selectedProgram = programs.find((program) => program.id === programId);
 
   return (
@@ -285,30 +400,37 @@ function ProgramOutcomesSection({
         title="Program Outcomes"
         description="Every PO of every active program. You manage Common adoptions and Institution-specific POs, and classify legacy rows. Program Heads manage Core and Professional POs."
       />
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <Field className="w-full lg:max-w-xs">
-          <FieldLabel htmlFor="po-program-filter">Program</FieldLabel>
-          <Select value={programId} onValueChange={(value) => setProgramId(value ?? ALL_PROGRAMS)}>
-            <SelectTrigger id="po-program-filter" className="w-full">
-              <SelectValue>
-                {selectedProgram
-                  ? `${selectedProgram.code} · ${selectedProgram.name}`
-                  : "All programs"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={ALL_PROGRAMS}>All programs</SelectItem>
-                {programs.map((program) => (
-                  <SelectItem key={program.id} value={program.id}>
-                    {program.code} · {program.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Tabs value={category} onValueChange={(value) => setCategory(value as POCategoryFilter)}>
+      <Tabs
+        value={category}
+        onValueChange={(value) => setCategory(value as POCategoryFilter)}
+        className="flex flex-col gap-4"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <Field className="w-full lg:max-w-xs">
+            <FieldLabel htmlFor="po-program-filter">Program</FieldLabel>
+            <Select
+              value={programId}
+              onValueChange={(value) => setProgramId(value ?? ALL_PROGRAMS)}
+            >
+              <SelectTrigger id="po-program-filter" className="w-full">
+                <SelectValue>
+                  {selectedProgram
+                    ? `${selectedProgram.code} · ${selectedProgram.name}`
+                    : "All programs"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={ALL_PROGRAMS}>All programs</SelectItem>
+                  {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>
+                      {program.code} · {program.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
           <TabsList variant="line" aria-label="PO classification" className="w-full lg:w-auto">
             {PO_CATEGORY_TABS.map((value) => (
               <TabsTrigger key={value} value={value}>
@@ -316,67 +438,20 @@ function ProgramOutcomesSection({
               </TabsTrigger>
             ))}
           </TabsList>
-        </Tabs>
-      </div>
-      {groups.length === 0 ? (
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Layers aria-hidden="true" />
-            </EmptyMedia>
-            <EmptyTitle>No matching Program Outcomes</EmptyTitle>
-            <EmptyDescription>Choose another program or classification.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {groups.map(({ program, pos }) => (
-            <Disclosure
-              key={`${program.id}:${scoped.length === 1}`}
-              open={scoped.length === 1 || undefined}
-              className="bg-card rounded-xl border"
-            >
-              <DisclosureTrigger variant="card" className="px-4 py-3">
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-title-md break-words">
-                    {program.code} · {program.name}
-                  </span>
-                  <span className="text-caption text-text-secondary font-normal tabular-nums">
-                    {program.pos.length} {program.pos.length === 1 ? "PO" : "POs"}
-                    {category !== "ALL" && ` · ${pos.length} ${PO_CATEGORY_TAB_LABELS[category]}`}
-                  </span>
-                </span>
-              </DisclosureTrigger>
-              <DisclosureContent className="border-t p-0">
-                {pos.length === 0 ? (
-                  <p className="text-body-sm text-text-secondary px-4 py-3">
-                    No Program Outcomes recorded for this program.
-                  </p>
-                ) : (
-                  <ul className="flex flex-col divide-y">
-                    {pos.map((item) => (
-                      <ProgramOutcomeRow
-                        key={item.id}
-                        item={item}
-                        programId={program.id}
-                        pending={pending}
-                        onEdit={() => onEdit(program, item)}
-                        onPrepare={onPrepare}
-                      />
-                    ))}
-                  </ul>
-                )}
-                <div className="border-t px-2 py-2">
-                  <Button variant="ghost" size="sm" onClick={() => onEdit(program, null)}>
-                    <Plus data-icon="inline-start" aria-hidden="true" />
-                    Add PO to {program.code}
-                  </Button>
-                </div>
-              </DisclosureContent>
-            </Disclosure>
-          ))}
         </div>
-      )}
+        {PO_CATEGORY_TABS.map((value) => (
+          <TabsContent key={value} value={value}>
+            <ProgramOutcomePanel
+              programs={programs}
+              programId={programId}
+              category={value}
+              pending={pending}
+              onPrepare={onPrepare}
+              onEdit={onEdit}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
     </section>
   );
 }
@@ -415,12 +490,14 @@ function InstitutionalOutcomesSection({
 
 function CommonOutcomeForm({
   item,
+  draft,
   pending,
   error,
   onPrepare,
   onCancel,
 }: {
   item: CommonOutcome | null;
+  draft: EditorDraft | null;
   pending: boolean;
   error: string | null;
   onPrepare: Prepare;
@@ -446,14 +523,20 @@ function CommonOutcomeForm({
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="common-code">Common PO code</FieldLabel>
-            <Input id="common-code" name="code" defaultValue={item?.code} required maxLength={20} />
+            <Input
+              id="common-code"
+              name="code"
+              defaultValue={draft ? draft.code : item?.code}
+              required
+              maxLength={20}
+            />
           </Field>
           <Field>
             <FieldLabel htmlFor="common-description">Approved statement</FieldLabel>
             <Textarea
               id="common-description"
               name="description"
-              defaultValue={item?.description}
+              defaultValue={draft ? draft.description : item?.description}
               required
               minLength={3}
               maxLength={1000}
@@ -464,16 +547,12 @@ function CommonOutcomeForm({
             <Input
               id="common-source"
               name="sourceRef"
-              defaultValue={item?.source_ref ?? ""}
+              defaultValue={draft ? draft.sourceRef : (item?.source_ref ?? "")}
               maxLength={1000}
             />
             <FieldDescription>Optional. Where the approved wording comes from.</FieldDescription>
           </Field>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <FormErrorAlert error={error} />
         </FieldGroup>
       </ResponsiveDialogBody>
       <ResponsiveDialogFooter>
@@ -488,9 +567,153 @@ function CommonOutcomeForm({
   );
 }
 
+// A legacy UNCLASSIFIED row loads as Institution-specific so the reviewer
+// authors a real statement; it never arrives pre-linked to a Common PO.
+function initialClassification(item: ProgramOutcome | null): AdministrativeClassification {
+  return item?.classification === "INSTITUTION_SPECIFIC" || item?.classification === "UNCLASSIFIED"
+    ? "INSTITUTION_SPECIFIC"
+    : "COMMON";
+}
+
+// Seeds the controlled fields and the code default from the restored draft,
+// falling back to the stored outcome when the author is not returning from a
+// review.
+function seedProgramOutcomeForm(item: ProgramOutcome | null, draft: EditorDraft | null) {
+  return {
+    classification: draft?.classification ?? initialClassification(item),
+    commonId: draft?.commonOutcomeId ?? item?.common_outcome_id ?? "",
+    code: draft ? draft.code : item?.code,
+  };
+}
+
+function ClassificationField({
+  value,
+  onChange,
+}: {
+  value: AdministrativeClassification;
+  onChange: (value: AdministrativeClassification) => void;
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor="admin-po-category">Classification</FieldLabel>
+      <Select
+        value={value}
+        onValueChange={(next) => {
+          if (next === "COMMON" || next === "INSTITUTION_SPECIFIC") onChange(next);
+        }}
+      >
+        <SelectTrigger id="admin-po-category" className="w-full">
+          <SelectValue>
+            {value === "COMMON" ? "Common to all Schools" : "Institution-specific"}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectItem value="COMMON">Common to all Schools</SelectItem>
+            <SelectItem value="INSTITUTION_SPECIFIC">Institution-specific</SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+function CommonReferenceField({
+  commonId,
+  activeCommon,
+  selected,
+  onChange,
+}: {
+  commonId: string;
+  activeCommon: CommonOutcome[];
+  selected: CommonOutcome | undefined;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor="admin-common-reference">Shared Common PO</FieldLabel>
+      <Select value={commonId || null} onValueChange={(value) => onChange(value ?? "")}>
+        <SelectTrigger id="admin-common-reference" className="w-full">
+          <SelectValue>{selected?.code ?? "Select a Common PO"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {activeCommon.map((row) => (
+              <SelectItem key={row.id} value={row.id}>
+                {row.code} · {row.description}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {selected && <FieldDescription>{selected.description}</FieldDescription>}
+    </Field>
+  );
+}
+
+function InstitutionStatementField({
+  item,
+  draft,
+}: {
+  item: ProgramOutcome | null;
+  draft: EditorDraft | null;
+}) {
+  return (
+    <Field>
+      <FieldLabel htmlFor="admin-local-description">Program outcome statement</FieldLabel>
+      <Textarea
+        id="admin-local-description"
+        name="description"
+        required
+        minLength={3}
+        maxLength={1000}
+        defaultValue={draft ? draft.description : item?.description}
+      />
+    </Field>
+  );
+}
+
+function FormErrorAlert({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
+  );
+}
+
+function programOutcomePayload({
+  program,
+  item,
+  classification,
+  commonId,
+  selected,
+  fields,
+}: {
+  program: Program;
+  item: ProgramOutcome | null;
+  classification: AdministrativeClassification;
+  commonId: string;
+  selected: CommonOutcome | undefined;
+  fields: FormData;
+}) {
+  const isCommon = classification === "COMMON";
+  return {
+    kind: "PO",
+    action: item ? "update" : "create",
+    ...(item ? { id: item.id } : {}),
+    programId: program.id,
+    code: fields.get("code"),
+    description: isCommon ? selected?.description : fields.get("description"),
+    classification,
+    commonOutcomeId: isCommon ? commonId : null,
+  };
+}
+
 function ProgramOutcomeForm({
   program,
   item,
+  draft,
   common,
   pending,
   error,
@@ -499,84 +722,49 @@ function ProgramOutcomeForm({
 }: {
   program: Program;
   item: ProgramOutcome | null;
+  draft: EditorDraft | null;
   common: CommonOutcome[];
   pending: boolean;
   error: string | null;
   onPrepare: Prepare;
   onCancel: () => void;
 }) {
-  // A legacy UNCLASSIFIED row loads as Institution-specific so the reviewer
-  // authors a real statement; it never arrives pre-linked to a Common PO.
+  const seeded = seedProgramOutcomeForm(item, draft);
   const [classification, setClassification] = useState<AdministrativeClassification>(
-    item?.classification === "INSTITUTION_SPECIFIC" || item?.classification === "UNCLASSIFIED"
-      ? "INSTITUTION_SPECIFIC"
-      : "COMMON"
+    seeded.classification
   );
-  const [commonId, setCommonId] = useState(item?.common_outcome_id ?? "");
+  const [commonId, setCommonId] = useState(seeded.commonId);
   const selected = common.find((row) => row.id === commonId);
   const activeCommon = common.filter((row) => row.is_active);
+  const isCommon = classification === "COMMON";
+
   return (
     <form
       className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
-        const fields = new FormData(event.currentTarget);
-        onPrepare({
-          kind: "PO",
-          action: item ? "update" : "create",
-          ...(item ? { id: item.id } : {}),
-          programId: program.id,
-          code: fields.get("code"),
-          description:
-            classification === "COMMON" ? selected?.description : fields.get("description"),
-          classification,
-          commonOutcomeId: classification === "COMMON" ? commonId : null,
-        });
+        onPrepare(
+          programOutcomePayload({
+            program,
+            item,
+            classification,
+            commonId,
+            selected,
+            fields: new FormData(event.currentTarget),
+          })
+        );
       }}
     >
       <ResponsiveDialogBody>
         <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="admin-po-category">Classification</FieldLabel>
-            <Select
-              value={classification}
-              onValueChange={(value) => {
-                if (value === "COMMON" || value === "INSTITUTION_SPECIFIC")
-                  setClassification(value);
-              }}
-            >
-              <SelectTrigger id="admin-po-category" className="w-full">
-                <SelectValue>
-                  {classification === "COMMON" ? "Common to all Schools" : "Institution-specific"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="COMMON">Common to all Schools</SelectItem>
-                  <SelectItem value="INSTITUTION_SPECIFIC">Institution-specific</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-          {classification === "COMMON" && (
-            <Field>
-              <FieldLabel htmlFor="admin-common-reference">Shared Common PO</FieldLabel>
-              <Select value={commonId || null} onValueChange={(value) => setCommonId(value ?? "")}>
-                <SelectTrigger id="admin-common-reference" className="w-full">
-                  <SelectValue>{selected?.code ?? "Select a Common PO"}</SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {activeCommon.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.code} · {row.description}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {selected && <FieldDescription>{selected.description}</FieldDescription>}
-            </Field>
+          <ClassificationField value={classification} onChange={setClassification} />
+          {isCommon && (
+            <CommonReferenceField
+              commonId={commonId}
+              activeCommon={activeCommon}
+              selected={selected}
+              onChange={setCommonId}
+            />
           )}
           <Field>
             <FieldLabel htmlFor="admin-local-code">Program-local PO code</FieldLabel>
@@ -585,27 +773,11 @@ function ProgramOutcomeForm({
               name="code"
               required
               maxLength={20}
-              defaultValue={item?.code}
+              defaultValue={seeded.code}
             />
           </Field>
-          {classification === "INSTITUTION_SPECIFIC" && (
-            <Field>
-              <FieldLabel htmlFor="admin-local-description">Program outcome statement</FieldLabel>
-              <Textarea
-                id="admin-local-description"
-                name="description"
-                required
-                minLength={3}
-                maxLength={1000}
-                defaultValue={item?.description}
-              />
-            </Field>
-          )}
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          {!isCommon && <InstitutionStatementField item={item} draft={draft} />}
+          <FormErrorAlert error={error} />
         </FieldGroup>
       </ResponsiveDialogBody>
       <ResponsiveDialogFooter>
@@ -620,8 +792,22 @@ function ProgramOutcomeForm({
   );
 }
 
-function OutcomeEditorDialog({
+function editorTitle(editor: Editor | null): string {
+  if (!editor) return "";
+  if (editor.kind === "common") return editor.item ? `Edit ${editor.item.code}` : "Add Common PO";
+  return editor.item
+    ? `Edit ${editor.item.code} · ${editor.program.code}`
+    : `Add PO to ${editor.program.code}`;
+}
+
+const EDITOR_DESCRIPTION: Record<Editor["kind"], string> = {
+  common: "You will review the exact change before it is saved.",
+  po: "Common adoptions reuse the shared statement. You will review the exact change before it is saved.",
+};
+
+function OutcomeEditorForm({
   editor,
+  draft,
   common,
   pending,
   error,
@@ -629,53 +815,79 @@ function OutcomeEditorDialog({
   onClose,
 }: {
   editor: Editor | null;
+  draft: EditorDraft | null;
   common: CommonOutcome[];
   pending: boolean;
   error: string | null;
   onPrepare: Prepare;
   onClose: () => void;
 }) {
-  const title =
-    editor?.kind === "common"
-      ? editor.item
-        ? `Edit ${editor.item.code}`
-        : "Add Common PO"
-      : editor?.item
-        ? `Edit ${editor.item.code} · ${editor.program.code}`
-        : `Add PO to ${editor?.program.code ?? ""}`;
+  if (editor?.kind === "common") {
+    return (
+      <CommonOutcomeForm
+        key={editor.item?.id ?? "new"}
+        item={editor.item}
+        draft={draft}
+        pending={pending}
+        error={error}
+        onPrepare={onPrepare}
+        onCancel={onClose}
+      />
+    );
+  }
+  if (editor?.kind === "po") {
+    return (
+      <ProgramOutcomeForm
+        key={`${editor.program.id}:${editor.item?.id ?? "new"}`}
+        program={editor.program}
+        item={editor.item}
+        draft={draft}
+        common={common}
+        pending={pending}
+        error={error}
+        onPrepare={onPrepare}
+        onCancel={onClose}
+      />
+    );
+  }
+  return null;
+}
+
+function OutcomeEditorDialog({
+  editor,
+  draft,
+  common,
+  pending,
+  error,
+  onPrepare,
+  onClose,
+}: {
+  editor: Editor | null;
+  draft: EditorDraft | null;
+  common: CommonOutcome[];
+  pending: boolean;
+  error: string | null;
+  onPrepare: Prepare;
+  onClose: () => void;
+}) {
   return (
     <ResponsiveDialog open={!!editor} onOpenChange={(open) => !open && onClose()}>
       <ResponsiveDialogContent>
         <ResponsiveDialogHeader>
-          <ResponsiveDialogTitle>{title}</ResponsiveDialogTitle>
+          <ResponsiveDialogTitle>{editorTitle(editor)}</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            {editor?.kind === "common"
-              ? "You will review the exact change before it is saved."
-              : "Common adoptions reuse the shared statement. You will review the exact change before it is saved."}
+            {editor ? EDITOR_DESCRIPTION[editor.kind] : ""}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        {editor?.kind === "common" && (
-          <CommonOutcomeForm
-            key={editor.item?.id ?? "new"}
-            item={editor.item}
-            pending={pending}
-            error={error}
-            onPrepare={onPrepare}
-            onCancel={onClose}
-          />
-        )}
-        {editor?.kind === "po" && (
-          <ProgramOutcomeForm
-            key={`${editor.program.id}:${editor.item?.id ?? "new"}`}
-            program={editor.program}
-            item={editor.item}
-            common={common}
-            pending={pending}
-            error={error}
-            onPrepare={onPrepare}
-            onCancel={onClose}
-          />
-        )}
+        <OutcomeEditorForm
+          editor={editor}
+          draft={draft}
+          common={common}
+          pending={pending}
+          error={error}
+          onPrepare={onPrepare}
+          onClose={onClose}
+        />
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );
@@ -754,13 +966,20 @@ export function CentralOutcomesCatalog({ data }: { data: CentralOutcomeAdministr
   const [error, setError] = useState<string | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [review, setReview] = useState<OutcomeWriteReview | null>(null);
+  const [draft, setDraft] = useState<EditorDraft | null>(null);
+  // Each reviewed write carries a token; closing an editor or a review
+  // invalidates it, so a late response can never resurrect a cancelled review
+  // or close a replacement editor.
+  const writeToken = useRef(0);
 
   function prepare(value: unknown) {
     setError(null);
+    const token = ++writeToken.current;
     startTransition(async () => {
       const result = await reviewCentralOutcomeAction(value);
+      if (token !== writeToken.current) return;
       if (result.success) {
-        setEditor(null);
+        setDraft(toEditorDraft(value));
         setReview(result.data);
       } else setError(result.error);
     });
@@ -774,11 +993,26 @@ export function CentralOutcomesCatalog({ data }: { data: CentralOutcomeAdministr
         return;
       }
       setReview(null);
+      setEditor(null);
+      setDraft(null);
       router.refresh();
     });
   }
+  function openEditor(next: Editor) {
+    writeToken.current++;
+    setError(null);
+    setDraft(null);
+    setEditor(next);
+  }
   function closeEditor() {
+    writeToken.current++;
     setEditor(null);
+    setDraft(null);
+    setError(null);
+  }
+  function closeReview() {
+    writeToken.current++;
+    setReview(null);
     setError(null);
   }
   return (
@@ -792,23 +1026,18 @@ export function CentralOutcomesCatalog({ data }: { data: CentralOutcomeAdministr
         common={data.common}
         pending={pending}
         onPrepare={prepare}
-        onEdit={(item) => {
-          setError(null);
-          setEditor({ kind: "common", item });
-        }}
+        onEdit={(item) => openEditor({ kind: "common", item })}
       />
       <ProgramOutcomesSection
         programs={data.programs}
         pending={pending}
         onPrepare={prepare}
-        onEdit={(program, item) => {
-          setError(null);
-          setEditor({ kind: "po", program, item });
-        }}
+        onEdit={(program, item) => openEditor({ kind: "po", program, item })}
       />
       <InstitutionalOutcomesSection outcomes={data.institutional} />
       <OutcomeEditorDialog
-        editor={editor}
+        editor={review ? null : editor}
+        draft={review ? null : draft}
         common={data.common}
         pending={pending}
         error={error}
@@ -819,10 +1048,7 @@ export function CentralOutcomesCatalog({ data }: { data: CentralOutcomeAdministr
         review={review}
         error={error}
         pending={pending}
-        onClose={() => {
-          setReview(null);
-          setError(null);
-        }}
+        onClose={closeReview}
         onConfirm={save}
       />
     </div>
