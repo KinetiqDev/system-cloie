@@ -423,7 +423,7 @@ function writeRawResponseBlock(
     startRow,
     `F. Raw response records — ${group.evaluationName} — ${group.instrumentLabel}`
   );
-  row = writeNote(
+  writeNote(
     worksheet,
     row,
     "One row per submitted response. Cells hold the respondent's original numeric answer; a blank cell means the question was not answered."
@@ -543,7 +543,7 @@ function writeCourseWorksheet(
   row = writeNote(worksheet, row, SCOPE_NOTICE);
   row = writeNote(worksheet, row, PROPOSED_POLICY_NOTICE);
   row = writeNote(worksheet, row, CURRENT_MAPPING_DISCLOSURE);
-  row = writeNote(worksheet, row, YEAR_LEVEL_NOTICE);
+  writeNote(worksheet, row, YEAR_LEVEL_NOTICE);
 
   freezeHeadingRows(worksheet, 5);
   applyPrintSetup(worksheet, 5);
@@ -750,7 +750,7 @@ function writePoSummarySheet(
 
   if (outcomes.length === 0) {
     row += 1;
-    row = writeNote(worksheet, row, "No mapped Program Outcome evidence exists in this scope.");
+    writeNote(worksheet, row, "No mapped Program Outcome evidence exists in this scope.");
   }
 
   row += 1;

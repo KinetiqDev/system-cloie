@@ -178,7 +178,7 @@ function writeOverviewSheet(
   row = writeNote(worksheet, row, SCOPE_NOTICE);
   row = writeNote(worksheet, row, PROPOSED_POLICY_NOTICE);
   row = writeNote(worksheet, row, CURRENT_MAPPING_DISCLOSURE);
-  row = writeNote(
+  writeNote(
     worksheet,
     row,
     outcomes.manyToManyDisclosure
@@ -282,14 +282,10 @@ function writePoSummarySheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookInpu
   applyFilter(worksheet, headerRow, firstDataRow, row - 1, headers.length);
   if (outcomes.outcomes.length === 0) {
     row += 1;
-    row = writeNote(
-      worksheet,
-      row,
-      "No course-bound Program Outcome evidence exists in this scope."
-    );
+    writeNote(worksheet, row, "No course-bound Program Outcome evidence exists in this scope.");
   }
   row += 1;
-  row = writeNote(
+  writeNote(
     worksheet,
     row,
     "A Program Outcome whose ratings span incompatible scale identities has no single mean; each identity keeps its own mean, counts, and distribution on the PO Rating Tallies sheet."
@@ -323,7 +319,7 @@ function writeClassificationSheet(worksheet: ExcelJS.Worksheet, input: PoWorkboo
     { text: `Academic period: ${evidence.period.label}` },
   ]);
   row += 1;
-  row = writeNote(
+  writeNote(
     worksheet,
     row,
     "Classification is read from the Program Outcome record itself and is never inferred from its code. Persisted codes, including legacy GO-era codes, are printed unchanged."
@@ -548,7 +544,7 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   outlineTable(worksheet, rowStart, row - 1, totalColumns);
   applyFilter(worksheet, rowStart, firstDataRow, row - 1, totalColumns);
   if (firstDataRow === row) {
-    row = writeNote(worksheet, row + 1, "No Program Outcome rating evidence exists in this scope.");
+    writeNote(worksheet, row + 1, "No Program Outcome rating evidence exists in this scope.");
   }
   freezeHeadingRows(worksheet, 6);
   applyPrintSetup(worksheet, 6);
@@ -642,11 +638,7 @@ function writeContributionsSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   outlineTable(worksheet, headerRow, row - 1, headers.length);
   applyFilter(worksheet, headerRow, firstDataRow, row - 1, headers.length);
   if (firstDataRow === row) {
-    row = writeNote(
-      worksheet,
-      row + 1,
-      "No course-bound contribution evidence exists in this scope."
-    );
+    writeNote(worksheet, row + 1, "No course-bound contribution evidence exists in this scope.");
   }
   freezeHeadingRows(worksheet, 5);
   applyPrintSetup(worksheet, 5);
@@ -725,7 +717,7 @@ function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookIn
     { text: CONFIDENTIALITY_NOTICE, size: 9, color: "FF7F1D1D" },
   ]);
   row += 1;
-  row = writeNote(
+  writeNote(
     worksheet,
     row,
     "Evidence sources are kept separate because they use different instruments and respondent populations. Course-bound student evidence is reported on the PO Summary sheet and is never combined with the rows below."
@@ -801,15 +793,11 @@ function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookIn
   outlineTable(worksheet, rowStart, row - 1, 15);
   applyFilter(worksheet, rowStart, firstDataRow, row - 1, 15);
   if (firstDataRow === row) {
-    row = writeNote(
-      worksheet,
-      row + 1,
-      "No program-wide Program Outcome evidence exists in this scope."
-    );
+    writeNote(worksheet, row + 1, "No program-wide Program Outcome evidence exists in this scope.");
   }
 
   row += 1;
-  row = writeDeploymentParticipationTable(worksheet, row, evidence.centralGroups);
+  writeDeploymentParticipationTable(worksheet, row, evidence.centralGroups);
 
   freezeHeadingRows(worksheet, 6);
   applyPrintSetup(worksheet, 6);
