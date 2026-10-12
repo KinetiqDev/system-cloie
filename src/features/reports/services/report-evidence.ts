@@ -20,6 +20,7 @@ import {
   resolveSnapshotNullableText,
   resolveSnapshotText,
 } from "@/features/evaluations/services/course-info-snapshot";
+import { resolveCiloLabels } from "@/features/analytics/aggregators/cilo";
 import { resolveProgramHeadContext } from "@/features/auth/services/resolve-program-head-context";
 import { prisma } from "@/lib/db/prisma";
 import type { AnalyticsFilterState } from "@/features/analytics/services/program-head-analytics-state";
@@ -461,6 +462,12 @@ function toCourseGroup(row: CourseGroupRow, responses: ReportResponseRow[]): Rep
   // evaluation keeps reporting the faculty member, section, and year level it
   // was published for — the same rule Response Review prints.
   const courseInfo = parseCourseInfoSnapshot(row.course_info_snapshot);
+  const ciloLabels = resolveCiloLabels(
+    row.cilos_snapshot,
+    row.cilo_question_bindings
+      .map((binding) => binding.cilo_id)
+      .filter((value): value is string => value !== null)
+  );
   const yearLevel = (resolveSnapshotText(courseInfo, "yearLevel", assignment.year_level) ??
     assignment.year_level) as YearLevel;
 
@@ -491,7 +498,12 @@ function toCourseGroup(row: CourseGroupRow, responses: ReportResponseRow[]): Rep
       sectionKey: binding.section_key,
       itemKey: binding.item_key,
       ciloId: binding.cilo_id,
-      ciloLabel: binding.cilo_description_snapshot,
+      // Analytics labels a CILO from the publication-time CILO snapshot
+      // ("CILO 1"); the description snapshot carries prose. Keeping the two
+      // distinct is what makes an export match the live report.
+      ciloLabel:
+        (binding.cilo_id ? ciloLabels.get(binding.cilo_id) : undefined) ??
+        binding.cilo_description_snapshot,
       ciloDescription: binding.cilo_description_snapshot,
       questionPrompt: binding.question_prompt_snapshot,
     })),

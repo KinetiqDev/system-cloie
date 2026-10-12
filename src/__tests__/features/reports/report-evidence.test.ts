@@ -166,6 +166,30 @@ describe("report evidence read", () => {
     expect(group.submissions).toHaveLength(2);
   });
 
+  it("labels a CILO from the publication snapshot and keeps the prose as its description", async () => {
+    // Publication fills the description snapshot with prose; the frozen CILO
+    // snapshot carries the label Analytics prints.
+    prismaMock.courseBoundEvaluation.findMany.mockResolvedValue([
+      evaluationRow({
+        cilos_snapshot: [{ id: "cilo-1", label: "CILO 1" }],
+        cilo_question_bindings: [
+          {
+            section_key: "s",
+            item_key: "q1",
+            cilo_id: "cilo-1",
+            cilo_description_snapshot: "Explain technical concepts clearly",
+            question_prompt_snapshot: "I explained technical ideas clearly.",
+          },
+        ],
+      }),
+    ]);
+    const evidence = await readProgramHeadReportEvidence("prog-bsit", {});
+    expect(evidence!.courseGroups[0].ciloBindings[0]).toMatchObject({
+      ciloLabel: "CILO 1",
+      ciloDescription: "Explain technical concepts clearly",
+    });
+  });
+
   it("attributes faculty from the live assignment when a legacy snapshot never recorded one", async () => {
     // The seeded publication snapshots predate the facultyName field and carry
     // only course and Program context, so they make no faculty claim at all.

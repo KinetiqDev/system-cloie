@@ -799,7 +799,9 @@ function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookIn
   outlineTable(worksheet, rowStart, row - 1, 15);
   applyFilter(worksheet, rowStart, firstDataRow, row - 1, 15);
   if (firstDataRow === row) {
-    writeNote(worksheet, row + 1, "No program-wide Program Outcome evidence exists in this scope.");
+    // The note takes its own row so the next table heading cannot overwrite it.
+    writeNote(worksheet, row, "No program-wide Program Outcome evidence exists in this scope.");
+    row += 1;
   }
 
   row += 1;

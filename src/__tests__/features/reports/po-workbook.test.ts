@@ -341,6 +341,29 @@ describe("Program Outcome report workbook", () => {
     expect(numericCell(sheet.getCell(studentRow, 7))).toBe(1);
   });
 
+  it("keeps the empty-scope note clear of the next table heading", async () => {
+    // Course-bound evidence exists, Central PO evidence does not.
+    const workbook = await loadWorkbook(
+      await buildPoWorkbook({
+        evidence: reportEvidenceFixture(),
+        outcomes: { ...outcomesDto(), programWideOutcomes: [] },
+        generatedAt: GENERATED_AT,
+        exportedBy: "Program Head, Test",
+      })
+    );
+    const sheet = workbook.getWorksheet("Program-wide Evidence")!;
+    const text = sheetText(sheet);
+    expect(text).toContain("No program-wide Program Outcome evidence exists in this scope.");
+    // The note and the following section heading must not share one row.
+    const noteRow = findRow(
+      sheet,
+      "No program-wide Program Outcome evidence exists in this scope."
+    );
+    const headingRow = findRow(sheet, "Deployment participation");
+    expect(noteRow).toBeGreaterThan(0);
+    expect(headingRow).toBeGreaterThan(noteRow);
+  });
+
   it("documents denominators, contribution rules, and source separation", async () => {
     const workbook = await loadWorkbook(await buildWorkbook());
     const text = sheetText(workbook.getWorksheet("Data Dictionary")!);
