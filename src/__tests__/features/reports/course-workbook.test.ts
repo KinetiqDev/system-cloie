@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Worksheet } from "exceljs";
 import { buildCiloMetrics, buildQuestionMetrics } from "@/features/analytics/aggregators/cilo";
 import {
   aggregateOutcomeEvidence,
@@ -48,11 +49,7 @@ async function buildWorkbook() {
 }
 
 /** Header row of a table identified by its first two column labels. */
-function tableHeader(
-  worksheet: import("exceljs").Worksheet,
-  first: string,
-  second: string
-): number {
+function tableHeader(worksheet: Worksheet, first: string, second: string): number {
   const row = findRowByValues(worksheet, { 1: first, 2: second });
   expect(row, `header row for ${first} / ${second}`).toBeGreaterThan(0);
   return row;
@@ -459,19 +456,37 @@ describe("course evaluation workbook", () => {
 });
 
 /** The second class group's question-tally header, stacked below the first. */
-function afternoonHeaderRow(sheet: import("exceljs").Worksheet): number {
-  const headers = dataRowsAfter(sheet, tableHeader(sheet, "CILO", "Question prompt"));
-  expect(headers).toHaveLength(5);
-  // The next tally header sits after the class-group 2 heading.
-  let rowNumber = tableHeader(sheet, "CILO", "Question prompt") + 6;
+function afternoonHeaderRow(sheet: Worksheet): number {
+  const firstHeaderRow = tableHeader(sheet, "CILO", "Question prompt");
+  // The next tally header sits below the class-group 2 heading.
+  let rowNumber = firstHeaderRow + 1;
   while (!isTallyHeader(sheet, rowNumber)) rowNumber += 1;
   return rowNumber;
 }
 
-function isTallyHeader(sheet: import("exceljs").Worksheet, rowNumber: number): boolean {
+function isTallyHeader(sheet: Worksheet, rowNumber: number): boolean {
   return (
     cellValue(sheet.getCell(rowNumber, 1)) === "CILO" &&
     cellValue(sheet.getCell(rowNumber, 2)) === "Question prompt"
+  );
+}
+
+/** One exported tally must equal the canonical metric behind the same question. */
+function expectQuestionTallyParity(
+  tally: ReturnType<typeof buildClassGroupModel>["questions"][number],
+  metric: ReturnType<typeof buildQuestionMetrics>[number]["quantitative"]
+): void {
+  if (!metric) {
+    // A question the canonical aggregator never saw keeps zero counts; its
+    // printed option row comes from the snapshot scale, not from a metric.
+    expect(tally.validCount).toBe(0);
+    return;
+  }
+  expect(tally.validCount).toBe(metric.ratingCount);
+  expect(tally.mean).toBe(metric.mean);
+  expect(tally.distinctResponseCount).toBe(metric.responseCount);
+  expect(tally.categories.map((category) => category.count)).toEqual(
+    metric.distribution.map((category) => category.count)
   );
 }
 
@@ -486,16 +501,7 @@ describe("course workbook parity with the analytics aggregators", () => {
 
     for (const tally of model.questions) {
       const metric = canonical.get(`${tally.question.sectionKey}/${tally.question.itemKey}`);
-      if (!metric) {
-        expect(tally.validCount).toBe(0);
-        continue;
-      }
-      expect(tally.validCount).toBe(metric.quantitative?.ratingCount ?? 0);
-      expect(tally.mean).toBe(metric.quantitative?.mean ?? null);
-      expect(tally.distinctResponseCount).toBe(metric.quantitative?.responseCount ?? 0);
-      expect(tally.categories.map((category) => category.count)).toEqual(
-        (metric.quantitative?.distribution ?? []).map((category) => category.count)
-      );
+      expectQuestionTallyParity(tally, metric?.quantitative ?? null);
     }
   });
 

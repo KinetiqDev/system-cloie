@@ -4,11 +4,13 @@ import { listSnapshotQuantitativeItems } from "@/features/analytics/services/sna
 import { formatDateTime } from "@/lib/utils/date-format";
 import {
   REPORT_EVIDENCE_SOURCE_LABELS,
+  type ReportCiloMapping,
+  type ReportCiloQuestionBinding,
+  type ReportDirectPoBinding,
   REPORT_MANIFESTATION_LABELS,
   REPORT_NAME_UNAVAILABLE,
   REPORT_STAKEHOLDER_LABELS,
   reportCentralSourceLabel,
-  type ReportCiloMapping,
   type ReportCourseGroup,
   type ReportCentralGroup,
   type ReportEvidence,
@@ -79,7 +81,7 @@ function csvField(value: string | number | null): string {
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-export function toCsvRow(fields: ReadonlyArray<string | number | null>): string {
+function toCsvRow(fields: ReadonlyArray<string | number | null>): string {
   return fields.map(csvField).join(",");
 }
 
@@ -125,6 +127,110 @@ function descriptorOf(
   return { scaleLabel: reportScaleLabel(scale), descriptor: descriptor?.label ?? "" };
 }
 
+/** Question alignment for one answered course question. */
+type CourseQuestionAlignment = {
+  ciloLabel: string;
+  ciloDescription: string;
+  poCodes: string;
+  poDescriptions: string;
+  poClassifications: string;
+  manifestations: string;
+  directPoCodes: string;
+  directPoDescriptions: string;
+  directPoClassifications: string;
+  prompt: string;
+};
+
+/** Frozen direct question-to-PO bindings published for one question. */
+function directBindingsFor(group: ReportCourseGroup, questionKey: string) {
+  return group.directPoBindings.filter(
+    (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
+  );
+}
+
+function joinMapped(values: string[]): string {
+  return values.join(" | ");
+}
+
+/** The publication-time CILO binding of one answered question, if any. */
+function ciloBindingFor(group: ReportCourseGroup, questionKey: string) {
+  return (
+    group.ciloBindings.find(
+      (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
+    ) ?? null
+  );
+}
+
+/** Current Program Outcome mappings reached through a question's CILO. */
+function mappingsFor(evidence: ReportEvidence, ciloId: string | null): ReportCiloMapping[] {
+  return ciloId ? (evidence.ciloMappings.get(ciloId) ?? []) : [];
+}
+
+/** Columns describing the CILO's current Program Outcome mappings. */
+function ciloMappingColumns(
+  mappings: ReportCiloMapping[]
+): Pick<
+  CourseQuestionAlignment,
+  "poCodes" | "poDescriptions" | "poClassifications" | "manifestations"
+> {
+  return {
+    poCodes: joinMapped(mappings.map((mapping) => mapping.poCode)),
+    poDescriptions: joinMapped(mappings.map((mapping) => mapping.poDescription)),
+    poClassifications: joinMapped(mappings.map((mapping) => mapping.classificationLabel)),
+    manifestations: joinMapped(
+      mappings.map((mapping) =>
+        mapping.manifestation ? REPORT_MANIFESTATION_LABELS[mapping.manifestation] : ""
+      )
+    ),
+  };
+}
+
+/** Columns describing the frozen direct question-to-Program Outcome bindings. */
+function directBindingColumns(
+  evidence: ReportEvidence,
+  directBindings: ReportDirectPoBinding[]
+): Pick<
+  CourseQuestionAlignment,
+  "directPoCodes" | "directPoDescriptions" | "directPoClassifications"
+> {
+  return {
+    directPoCodes: joinMapped(directBindings.map((binding) => binding.poCode)),
+    directPoDescriptions: joinMapped(directBindings.map((binding) => binding.poDescription)),
+    directPoClassifications: joinMapped(
+      directBindings.map((binding) => directClassification(evidence, binding.poId, binding.poCode))
+    ),
+  };
+}
+
+/** CILO identity and its prompt for one answered question, with empty defaults. */
+function ciloColumnsFor(ciloBinding: ReportCiloQuestionBinding | null, fallbackPrompt: string) {
+  if (!ciloBinding) return { ciloLabel: "", ciloDescription: "", prompt: fallbackPrompt };
+  return {
+    ciloLabel: ciloBinding.ciloLabel,
+    ciloDescription: ciloBinding.ciloDescription,
+    prompt: ciloBinding.questionPrompt || fallbackPrompt,
+  };
+}
+
+/**
+ * Current CILO mappings, frozen direct bindings, and the publication prompt of
+ * one answered course question. Program-wide rows carry no CILO columns, which
+ * is why this stays course-only.
+ */
+function courseQuestionAlignment(
+  evidence: ReportEvidence,
+  group: ReportCourseGroup,
+  questionKey: string,
+  prompts: Map<string, string>
+): CourseQuestionAlignment {
+  const ciloBinding = ciloBindingFor(group, questionKey);
+  return {
+    ...ciloColumnsFor(ciloBinding, prompts.get(questionKey) ?? ""),
+    ...ciloMappingColumns(mappingsFor(evidence, ciloBinding?.ciloId ?? null)),
+    ...directBindingColumns(evidence, directBindingsFor(group, questionKey)),
+  };
+}
+
 function courseRow(
   evidence: ReportEvidence,
   group: ReportCourseGroup,
@@ -133,15 +239,7 @@ function courseRow(
   prompts: Map<string, string>
 ): Array<string | number | null> {
   const questionKey = encodeQuestionKey(answer.sectionKey, answer.itemKey);
-  const ciloBinding = group.ciloBindings.find(
-    (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
-  );
-  const mappings: ReportCiloMapping[] = ciloBinding?.ciloId
-    ? (evidence.ciloMappings.get(ciloBinding.ciloId) ?? [])
-    : [];
-  const directBindings = group.directPoBindings.filter(
-    (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
-  );
+  const alignment = courseQuestionAlignment(evidence, group, questionKey, prompts);
   const { scaleLabel, descriptor } = descriptorOf(
     group.structureSnapshot,
     answer.sectionKey,
@@ -171,24 +269,18 @@ function courseRow(
     group.section,
     instrumentName,
     instrumentVersion,
-    ciloBinding?.ciloLabel ?? "",
-    ciloBinding?.ciloDescription ?? "",
-    mappings.map((mapping) => mapping.poCode).join(" | "),
-    mappings.map((mapping) => mapping.poDescription).join(" | "),
-    mappings.map((mapping) => mapping.classificationLabel).join(" | "),
-    mappings
-      .map((mapping) =>
-        mapping.manifestation ? REPORT_MANIFESTATION_LABELS[mapping.manifestation] : ""
-      )
-      .join(" | "),
-    directBindings.map((binding) => binding.poCode).join(" | "),
-    directBindings.map((binding) => binding.poDescription).join(" | "),
-    directBindings
-      .map((binding) => directClassification(evidence, binding.poId, binding.poCode))
-      .join(" | "),
+    alignment.ciloLabel,
+    alignment.ciloDescription,
+    alignment.poCodes,
+    alignment.poDescriptions,
+    alignment.poClassifications,
+    alignment.manifestations,
+    alignment.directPoCodes,
+    alignment.directPoDescriptions,
+    alignment.directPoClassifications,
     answer.sectionKey,
     answer.itemKey,
-    ciloBinding?.questionPrompt ?? prompts.get(questionKey) ?? answer.itemKey,
+    alignment.prompt || answer.itemKey,
     scaleLabel,
     answer.ratingValue,
     descriptor,

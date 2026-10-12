@@ -17,50 +17,69 @@ import { GROUP_IT101_MORNING, reportEvidenceFixture } from "./report-fixture";
 type CsvRow = Record<string, string>;
 
 /** Minimal RFC 4180 parser: quoted fields, doubled quotes, CRLF or LF rows. */
-export function parseCsv(text: string): CsvRow[] {
+/** One quoted field, starting at its opening quote. Doubled quotes are literals. */
+function readQuotedField(text: string, start: number): { value: string; nextIndex: number } {
+  let value = "";
+  let index = start + 1;
+  while (index < text.length) {
+    const char = text[index];
+    if (char !== '"') {
+      // A quoted field may legitimately contain separators and newlines.
+      value += char;
+      index += 1;
+      continue;
+    }
+    if (text[index + 1] === '"') {
+      value += '"';
+      index += 2;
+      continue;
+    }
+    return { value, nextIndex: index + 1 };
+  }
+  return { value, nextIndex: index };
+}
+
+/** Split RFC 4180 text into rows and fields. */
+function parseCsvCells(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
-  let quoted = false;
-  for (let index = 0; index < text.length; index += 1) {
+  let index = 0;
+
+  while (index < text.length) {
     const char = text[index];
-    if (quoted) {
-      if (char === '"') {
-        if (text[index + 1] === '"') {
-          field += '"';
-          index += 1;
-        } else {
-          quoted = false;
-        }
-      } else {
-        field += char;
-      }
-      continue;
-    }
     if (char === '"') {
-      quoted = true;
+      const quoted = readQuotedField(text, index);
+      field += quoted.value;
+      index = quoted.nextIndex;
       continue;
     }
     if (char === ",") {
       row.push(field);
       field = "";
+      index += 1;
       continue;
     }
-    if (char === "\r") continue;
+    if (char === "\r") {
+      index += 1;
+      continue;
+    }
     if (char === "\n") {
-      row.push(field);
-      rows.push(row);
+      rows.push([...row, field]);
       row = [];
       field = "";
+      index += 1;
       continue;
     }
     field += char;
+    index += 1;
   }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  const [header, ...body] = rows;
+  if (field.length > 0 || row.length > 0) rows.push([...row, field]);
+  return rows;
+}
+
+export function parseCsv(text: string): CsvRow[] {
+  const [header, ...body] = parseCsvCells(text);
   return body.map((cells) =>
     Object.fromEntries((header ?? []).map((name, index) => [name, cells[index] ?? ""]))
   );

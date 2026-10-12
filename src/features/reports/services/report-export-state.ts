@@ -90,7 +90,7 @@ export function reportExportContentType(kind: ReportExportKind): string {
   return kind === "RAW_QUANTITATIVE_CSV" ? "text/csv; charset=utf-8" : REPORT_XLSX_CONTENT_TYPE;
 }
 
-export const REPORT_XLSX_CONTENT_TYPE =
+const REPORT_XLSX_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 /**

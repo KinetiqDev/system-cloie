@@ -146,24 +146,3 @@ export const PO_DICTIONARY_ROWS: ReadonlyArray<readonly [string, string]> = [
   ],
   ["Snapshots and exclusions", "Excluded rating counts are printed, never silently dropped."],
 ];
-
-export const RAW_CSV_DICTIONARY_ROWS: ReadonlyArray<readonly [string, string]> = [
-  [
-    "Row grain",
-    "One row is one original submitted quantitative answer item. Unanswered questions produce no row.",
-  ],
-  [
-    "Ordering",
-    "Academic period, then course code, faculty member, section, evaluation, respondent name, then section and item key. The order is stable across exports of the same scope.",
-  ],
-  ["Answered rating value", "The respondent's original numeric answer, unmodified."],
-  [
-    "Rating descriptor",
-    "The label the frozen instrument snapshot gives the answered value on that question's scale.",
-  ],
-  ["Scaling", "Rating counts must equal valid rating counts in the workbook of the same scope."],
-  [
-    "Formula safety",
-    "Text values beginning with =, +, -, or @ are prefixed so a spreadsheet reads them as text.",
-  ],
-];

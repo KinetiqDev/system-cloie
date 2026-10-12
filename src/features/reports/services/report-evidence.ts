@@ -152,7 +152,7 @@ type SubmittedResponseRow = Prisma.ResponseGetPayload<{
 }>;
 
 /** One term instance resolved into the period columns and labels an export prints. */
-export function toReportTermInstance(
+function toReportTermInstance(
   instance: Prisma.AcademicTermInstanceGetPayload<{ select: typeof TERM_INSTANCE_SELECT }>
 ): ReportTermInstance {
   const option = buildPeriodOptions([instance]).termInstances[0];
@@ -240,7 +240,7 @@ export async function listProgramHeadReportYearLevels(
  * manifestation are kept: the canonical PO evidence path counts them, so
  * dropping them here would make an export disagree with Analytics.
  */
-export async function readCiloMappings(
+async function readCiloMappings(
   programId: string,
   ciloIds: string[]
 ): Promise<Map<string, ReportCiloMapping[]>> {

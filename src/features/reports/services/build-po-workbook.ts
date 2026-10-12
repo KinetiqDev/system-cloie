@@ -10,6 +10,7 @@ import {
   REPORT_STAKEHOLDER_LABELS,
   reportCentralSourceLabel,
   REPORT_EVIDENCE_SOURCE_LABELS,
+  type ReportCentralGroup,
   type ReportEvidence,
 } from "../types";
 import {
@@ -59,7 +60,7 @@ import {
 // an export and the live Outcomes view can never disagree.
 // ---------------------------------------------------------------------------
 
-export type PoWorkbookInput = {
+type PoWorkbookInput = {
   evidence: ReportEvidence;
   outcomes: ProgramHeadOutcomesDTO;
   generatedAt: Date;
@@ -445,34 +446,71 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   const firstDataRow = row;
   const totalColumns = headers.length + 1;
 
+  const writeRow = (
+    cells: {
+      poCode: string;
+      classification: string;
+      poName: string;
+      source: string;
+      scaleLabel: string;
+      value: number;
+      descriptor: string;
+      count: number;
+      percentage: number;
+      validCount: number;
+      excludedCount: number | null;
+      mean: number | null;
+      displayMean: string | null;
+      interpretation: string;
+      cqi: string | null;
+    },
+    writeRowNumber: number
+  ) => {
+    writeText(worksheet, writeRowNumber, 1, cells.poCode);
+    writeText(worksheet, writeRowNumber, 2, cells.classification);
+    writeWrappedText(worksheet, writeRowNumber, 3, cells.poName);
+    writeText(worksheet, writeRowNumber, 4, cells.source);
+    writeText(worksheet, writeRowNumber, 5, cells.scaleLabel);
+    writeCount(worksheet, writeRowNumber, 6, cells.value);
+    writeText(worksheet, writeRowNumber, 7, cells.descriptor);
+    writeCount(worksheet, writeRowNumber, 8, cells.count);
+    writePercent(worksheet, writeRowNumber, 9, cells.percentage);
+    writeCount(worksheet, writeRowNumber, 10, cells.validCount);
+    if (cells.excludedCount === null) {
+      // Program-wide rows carry no excluded count; a neutral cell says so
+      // rather than printing a zero that no aggregation produced.
+      writeUnavailable(worksheet, writeRowNumber, 11, "Not reported");
+    } else {
+      writeCount(worksheet, writeRowNumber, 11, cells.excludedCount);
+    }
+    writeMean(worksheet, writeRowNumber, 12, cells.mean);
+    writeText(worksheet, writeRowNumber, 13, cells.displayMean ?? "—");
+    writeText(worksheet, writeRowNumber, 14, cells.interpretation);
+    writeStatus(worksheet, writeRowNumber, totalColumns, cells.cqi ?? "Unclassified", cells.cqi);
+  };
+
   for (const outcome of outcomes.outcomes) {
     for (const distribution of outcome.distributions) {
       for (const category of distribution.categories) {
-        writeText(worksheet, row, 1, outcome.code);
-        writeText(
-          worksheet,
-          row,
-          2,
-          classificationOf(classifications, outcome.outcomeId, outcome.code)
-        );
-        writeWrappedText(worksheet, row, 3, outcome.name);
-        writeText(worksheet, row, 4, REPORT_EVIDENCE_SOURCE_LABELS.COURSE_STUDENT);
-        writeText(worksheet, row, 5, reportScaleLabelFromCategories(distribution.categories));
-        writeCount(worksheet, row, 6, category.value);
-        writeText(worksheet, row, 7, category.label ?? String(category.value));
-        writeCount(worksheet, row, 8, category.count);
-        writePercent(worksheet, row, 9, category.percentage);
-        writeCount(worksheet, row, 10, outcome.ratingCount);
-        writeCount(worksheet, row, 11, outcome.excludedRatingCount);
-        writeMean(worksheet, row, 12, outcome.meanRating);
-        writeText(worksheet, row, 13, displayMean(outcome.meanRating) ?? "—");
-        writeText(worksheet, row, 14, attainmentStatusLabel(poAttainment(outcome)));
-        writeStatus(
-          worksheet,
-          row,
-          totalColumns,
-          poAttainment(outcome).cqi ?? "Unclassified",
-          poAttainment(outcome).cqi
+        writeRow(
+          {
+            poCode: outcome.code,
+            classification: classificationOf(classifications, outcome.outcomeId, outcome.code),
+            poName: outcome.name,
+            source: REPORT_EVIDENCE_SOURCE_LABELS.COURSE_STUDENT,
+            scaleLabel: reportScaleLabelFromCategories(distribution.categories),
+            value: category.value,
+            descriptor: category.label ?? String(category.value),
+            count: category.count,
+            percentage: category.percentage,
+            validCount: outcome.ratingCount,
+            excludedCount: outcome.excludedRatingCount,
+            mean: outcome.meanRating,
+            displayMean: displayMean(outcome.meanRating),
+            interpretation: attainmentStatusLabel(poAttainment(outcome)),
+            cqi: poAttainment(outcome).cqi,
+          },
+          row
         );
         row += 1;
       }
@@ -482,31 +520,25 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   for (const outcome of outcomes.programWideOutcomes) {
     for (const group of outcome.scaleGroups) {
       for (const category of group.categories) {
-        writeText(worksheet, row, 1, outcome.code);
-        writeText(worksheet, row, 2, classifications.get(outcome.poId) ?? "Not available");
-        writeWrappedText(worksheet, row, 3, outcome.name);
-        writeText(
-          worksheet,
-          row,
-          4,
-          REPORT_EVIDENCE_SOURCE_LABELS[reportCentralSourceLabel(outcome.stakeholder)]
-        );
-        writeText(worksheet, row, 5, reportScaleLabelFromCategories(group.categories));
-        writeCount(worksheet, row, 6, category.value);
-        writeText(worksheet, row, 7, category.label);
-        writeCount(worksheet, row, 8, category.count);
-        writePercent(worksheet, row, 9, category.percentage);
-        writeCount(worksheet, row, 10, outcome.ratingCount);
-        writeUnavailable(worksheet, row, 11, "Not reported");
-        writeMean(worksheet, row, 12, outcome.meanRating);
-        writeText(worksheet, row, 13, displayMean(outcome.meanRating) ?? "—");
-        writeText(worksheet, row, 14, attainmentStatusLabel(poAttainment(outcome)));
-        writeStatus(
-          worksheet,
-          row,
-          totalColumns,
-          poAttainment(outcome).cqi ?? "Unclassified",
-          poAttainment(outcome).cqi
+        writeRow(
+          {
+            poCode: outcome.code,
+            classification: classificationOf(classifications, outcome.poId, outcome.code),
+            poName: outcome.name,
+            source: REPORT_EVIDENCE_SOURCE_LABELS[reportCentralSourceLabel(outcome.stakeholder)],
+            scaleLabel: reportScaleLabelFromCategories(group.categories),
+            value: category.value,
+            descriptor: category.label,
+            count: category.count,
+            percentage: category.percentage,
+            validCount: outcome.ratingCount,
+            excludedCount: null,
+            mean: outcome.meanRating,
+            displayMean: displayMean(outcome.meanRating),
+            interpretation: attainmentStatusLabel(poAttainment(outcome)),
+            cqi: poAttainment(outcome).cqi,
+          },
+          row
         );
         row += 1;
       }
@@ -520,6 +552,43 @@ function writeRatingTalliesSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   }
   freezeHeadingRows(worksheet, 6);
   applyPrintSetup(worksheet, 6);
+}
+
+/** Manifestation printed as a readable label, never as a weight. */
+function manifestationLabel(manifestation: string | null): string {
+  return manifestation ? manifestation.charAt(0) + manifestation.slice(1).toLowerCase() : "—";
+}
+
+/** One contributor row: which Program Outcome it reached and how it got there. */
+function writeContributionRow(
+  worksheet: ExcelJS.Worksheet,
+  row: number,
+  outcome: ProgramHeadOutcomesDTO["outcomes"][number],
+  contributor: ProgramHeadOutcomesDTO["outcomes"][number]["contributors"][number]
+): void {
+  const isCilo = contributor.kind === "CILO";
+  writeText(worksheet, row, 1, outcome.code);
+  writeWrappedText(worksheet, row, 2, outcome.name);
+  writeText(worksheet, row, 3, isCilo ? "CILO mapping" : "Direct question binding");
+  writeText(worksheet, row, 4, contributor.course?.code ?? "—");
+  writeWrappedText(
+    worksheet,
+    row,
+    5,
+    isCilo ? `${contributor.ciloCode} — ${contributor.ciloDescription}` : contributor.questionPrompt
+  );
+  writeText(worksheet, row, 6, isCilo ? manifestationLabel(contributor.manifestation) : "—");
+  writeCount(worksheet, row, 7, contributor.ratingCount);
+  writeMean(worksheet, row, 8, contributor.meanRating);
+  writeText(worksheet, row, 9, displayMean(contributor.meanRating) ?? "—");
+  writeText(
+    worksheet,
+    row,
+    10,
+    isCilo
+      ? "Course-bound CILO question binding"
+      : `${contributor.deploymentName} · question binding`
+  );
 }
 
 function writeContributionsSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookInput): void {
@@ -564,38 +633,7 @@ function writeContributionsSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   let index = 0;
   for (const outcome of outcomes.outcomes) {
     for (const contributor of outcome.contributors) {
-      const isCilo = contributor.kind === "CILO";
-      writeText(worksheet, row, 1, outcome.code);
-      writeWrappedText(worksheet, row, 2, outcome.name);
-      writeText(worksheet, row, 3, isCilo ? "CILO mapping" : "Direct question binding");
-      writeText(worksheet, row, 4, contributor.course?.code ?? "—");
-      writeWrappedText(
-        worksheet,
-        row,
-        5,
-        isCilo
-          ? `${contributor.ciloCode} — ${contributor.ciloDescription}`
-          : contributor.questionPrompt
-      );
-      writeText(
-        worksheet,
-        row,
-        6,
-        isCilo && contributor.manifestation
-          ? contributor.manifestation.charAt(0) + contributor.manifestation.slice(1).toLowerCase()
-          : "—"
-      );
-      writeCount(worksheet, row, 7, contributor.ratingCount);
-      writeMean(worksheet, row, 8, contributor.meanRating);
-      writeText(worksheet, row, 9, displayMean(contributor.meanRating) ?? "—");
-      writeText(
-        worksheet,
-        row,
-        10,
-        isCilo
-          ? "Course-bound CILO question binding"
-          : `${contributor.deploymentName} · question binding`
-      );
+      writeContributionRow(worksheet, row, outcome, contributor);
       bandRow(worksheet, row, headers.length, index % 2 === 1);
       index += 1;
       row += 1;
@@ -612,6 +650,51 @@ function writeContributionsSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbook
   }
   freezeHeadingRows(worksheet, 5);
   applyPrintSetup(worksheet, 5);
+}
+
+/** Per-deployment participation, each Central deployment under its respondent category. */
+function writeDeploymentParticipationTable(
+  worksheet: ExcelJS.Worksheet,
+  startRow: number,
+  groups: ReportCentralGroup[]
+): number {
+  let row = writeSectionHeading(worksheet, startRow, "Deployment participation");
+  const headers: HeaderCell[] = [
+    { text: "Deployment" },
+    { text: "Respondent category" },
+    { text: "Status" },
+    { text: "Instrument version" },
+    { text: "Assigned respondents" },
+    { text: "Submitted responses" },
+    { text: "Response rate" },
+  ];
+  const headerRow = row;
+  row = writeHeaderRow(worksheet, row, headers);
+  const firstDataRow = row;
+  for (const group of groups) {
+    const participation = buildParticipationSummary(
+      group.submissions.map((submission) => ({
+        respondentId: submission.respondentId,
+        stakeholder: group.targetStakeholder,
+        responseStatus: submission.responseStatus,
+      }))
+    );
+    writeText(worksheet, row, 1, group.deploymentName);
+    writeText(worksheet, row, 2, REPORT_STAKEHOLDER_LABELS[group.targetStakeholder]);
+    writeText(worksheet, row, 3, group.deploymentStatus);
+    writeText(worksheet, row, 4, group.instrumentLabel);
+    writeCount(worksheet, row, 5, participation.assigned);
+    writeCount(worksheet, row, 6, participation.submitted);
+    if (participation.completionRate === null) {
+      writeUnavailable(worksheet, row, 7, "Unavailable");
+    } else {
+      writePercent(worksheet, row, 7, participation.completionRate);
+    }
+    row += 1;
+  }
+  outlineTable(worksheet, headerRow, row - 1, headers.length);
+  applyFilter(worksheet, headerRow, firstDataRow, row - 1, headers.length);
+  return row;
 }
 
 function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookInput): void {
@@ -668,14 +751,16 @@ function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookIn
     { text: "Deployment context", wrap: true },
   ]);
   const firstDataRow = row;
+  /** Deployment participation per Central deployment, resolved with its category. */
   const deploymentsByStakeholder = new Map<string, string[]>();
   for (const group of evidence.centralGroups) {
-    const key = REPORT_STAKEHOLDER_LABELS[group.targetStakeholder];
-    deploymentsByStakeholder.set(key, [
-      ...(deploymentsByStakeholder.get(key) ?? []),
+    const category = REPORT_STAKEHOLDER_LABELS[group.targetStakeholder];
+    deploymentsByStakeholder.set(category, [
+      ...(deploymentsByStakeholder.get(category) ?? []),
       `${group.deploymentName} (${group.deploymentStatus}, assigned ${group.assignedRespondentCount}, submitted ${group.responses.length})`,
     ]);
   }
+
   for (const outcome of outcomes.programWideOutcomes) {
     const category = REPORT_STAKEHOLDER_LABELS[outcome.stakeholder];
     for (const group of outcome.scaleGroups) {
@@ -724,48 +809,8 @@ function writeProgramWideSheet(worksheet: ExcelJS.Worksheet, input: PoWorkbookIn
   }
 
   row += 1;
-  row = writeSectionHeading(worksheet, row, "Deployment participation");
-  const participationHeaders: HeaderCell[] = [
-    { text: "Deployment" },
-    { text: "Respondent category" },
-    { text: "Status" },
-    { text: "Instrument version" },
-    { text: "Assigned respondents" },
-    { text: "Submitted responses" },
-    { text: "Response rate" },
-  ];
-  const participationHeaderRow = row;
-  row = writeHeaderRow(worksheet, row, participationHeaders);
-  const participationFirstRow = row;
-  for (const group of evidence.centralGroups) {
-    const participation = buildParticipationSummary(
-      group.submissions.map((submission) => ({
-        respondentId: submission.respondentId,
-        stakeholder: group.targetStakeholder,
-        responseStatus: submission.responseStatus,
-      }))
-    );
-    writeText(worksheet, row, 1, group.deploymentName);
-    writeText(worksheet, row, 2, REPORT_STAKEHOLDER_LABELS[group.targetStakeholder]);
-    writeText(worksheet, row, 3, group.deploymentStatus);
-    writeText(worksheet, row, 4, group.instrumentLabel);
-    writeCount(worksheet, row, 5, participation.assigned);
-    writeCount(worksheet, row, 6, participation.submitted);
-    if (participation.completionRate === null) {
-      writeUnavailable(worksheet, row, 7, "Unavailable");
-    } else {
-      writePercent(worksheet, row, 7, participation.completionRate);
-    }
-    row += 1;
-  }
-  outlineTable(worksheet, participationHeaderRow, row - 1, participationHeaders.length);
-  applyFilter(
-    worksheet,
-    participationHeaderRow,
-    participationFirstRow,
-    row - 1,
-    participationHeaders.length
-  );
+  row = writeDeploymentParticipationTable(worksheet, row, evidence.centralGroups);
+
   freezeHeadingRows(worksheet, 6);
   applyPrintSetup(worksheet, 6);
 }

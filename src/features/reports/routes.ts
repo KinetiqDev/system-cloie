@@ -10,8 +10,3 @@
 export function buildReportExportPath(programId: string): string {
   return `/api/program-head/programs/${encodeURIComponent(programId)}/reports/export`;
 }
-
-/** Program Head Reports page for one Program. */
-export function buildProgramHeadReportsPath(programId: string): string {
-  return `/program-head/programs/${encodeURIComponent(programId)}/reports`;
-}

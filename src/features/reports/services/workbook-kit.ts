@@ -11,7 +11,7 @@ import type { Cell, CellValue, Worksheet } from "exceljs";
 // ---------------------------------------------------------------------------
 
 /** Print-safe palette derived from the canonical status tokens. */
-export const REPORT_COLORS = {
+const REPORT_COLORS = {
   ink: "FF17233A",
   mutedInk: "FF4A5568",
   headerFill: "FF1F3A5F",
@@ -42,7 +42,7 @@ export function safeSpreadsheetText(value: string): string {
 }
 
 /** Any cell value, with string values neutralized against formula injection. */
-export function safeCellValue(value: string | number | null | undefined): CellValue | null {
+function safeCellValue(value: string | number | null | undefined): CellValue | null {
   if (value === null || value === undefined) return null;
   return typeof value === "string" ? safeSpreadsheetText(value) : value;
 }
@@ -68,7 +68,7 @@ export function safeSheetName(preferred: string, taken: Set<string>): string {
 }
 
 /** Column widths for one worksheet, applied once per column. */
-export type ColumnWidth = { width: number };
+type ColumnWidth = { width: number };
 
 export function setColumnWidths(worksheet: Worksheet, widths: ColumnWidth[]): void {
   widths.forEach((entry, index) => {

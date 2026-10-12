@@ -63,6 +63,59 @@ const EXPORT_TARGETS: ExportTarget[] = [
   },
 ];
 
+/** The staged academic scope the client submits; the server rebuilds it anyway. */
+type ExportScope = {
+  schoolYear: string;
+  semester: string;
+  termInstanceId: string;
+  yearLevel: string;
+};
+
+function exportQuery(target: ExportTarget, scope: ExportScope): URLSearchParams {
+  const params = new URLSearchParams({ kind: target.kind });
+  if (scope.schoolYear !== ALL) params.set("schoolYearId", scope.schoolYear);
+  if (scope.semester !== ALL) params.set("semester", scope.semester);
+  if (scope.termInstanceId !== ALL) params.set("termInstanceId", scope.termInstanceId);
+  // The year-level control narrows course evidence only, so program-wide
+  // exports never send it.
+  if (target.supportsYearLevel && scope.yearLevel !== ALL) {
+    params.set("yearLevel", scope.yearLevel);
+  }
+  return params;
+}
+
+/** Server refusals arrive as typed JSON; an empty scope reads as "no data". */
+async function refusalStatus(target: ExportTarget, response: Response): Promise<Status> {
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+    reason?: string;
+  } | null;
+  const message = body?.error ?? "The report could not be generated.";
+  return body?.reason
+    ? { state: "empty", kind: target.kind, message }
+    : { state: "failed", kind: target.kind, message };
+}
+
+/** Server-provided attachment name, with a neutral fallback. */
+function downloadName(response: Response): string {
+  return (
+    /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ??
+    "system-cloie-report"
+  );
+}
+
+async function saveDownload(response: Response): Promise<void> {
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = downloadName(response);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 type Props = {
   programId: string;
   programLabel: string;
@@ -85,16 +138,160 @@ type Status =
       message: string;
     };
 
+/** Readable restatement of the staged period, for the scope card and its screenshot. */
+function resolveScopeLabel(scope: {
+  termInstance: { label: string } | undefined;
+  schoolYearLabel: string;
+  semesterLabel: string;
+}): string {
+  if (scope.termInstance) return scope.termInstance.label;
+  return [
+    scope.schoolYearLabel === "All academic years" ? null : scope.schoolYearLabel,
+    scope.semesterLabel === "All semesters" ? null : scope.semesterLabel,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** Staged academic scope: the period controls plus the course-evidence year level. */
+type ScopeControls = {
+  scope: ExportScope;
+  scopeLabel: string;
+  schoolYears: Array<{ value: string; label: string }>;
+  semesters: ProgramHeadAnalyticsPeriodOptions["semesters"];
+  termOptions: Array<{ value: string; label: string }>;
+  yearLevels: Array<{ value: string; label: string }>;
+  onSchoolYearChange: (value: string) => void;
+  onSemesterChange: (value: string) => void;
+  onTermChange: (value: string) => void;
+  onYearLevelChange: (value: string) => void;
+};
+
+/**
+ * Scope card. Each period control is a labeled select that works on touch, and
+ * the current scope is restated in text so a screenshot of the page is
+ * self-explanatory.
+ */
+function ExportScopeCard({
+  programLabel,
+  scope,
+  scopeLabel,
+  schoolYears,
+  semesters,
+  termOptions,
+  yearLevels,
+  onSchoolYearChange,
+  onSemesterChange,
+  onTermChange,
+  onYearLevelChange,
+}: ScopeControls & { programLabel: string }) {
+  const ids = {
+    schoolYear: useId(),
+    semester: useId(),
+    term: useId(),
+    yearLevel: useId(),
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Export scope</CardTitle>
+        <CardDescription>
+          {programLabel} reports carry respondent names. Choose the academic scope to export; the
+          server re-checks authorization and Program scope for every download.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <FilterSelect
+            id={ids.schoolYear}
+            label="Academic year"
+            value={scope.schoolYear}
+            onValueChange={onSchoolYearChange}
+            blankLabel="All academic years"
+            options={schoolYears}
+          />
+          <FilterSelect
+            id={ids.semester}
+            label="Semester"
+            value={scope.semester}
+            onValueChange={onSemesterChange}
+            blankLabel="All semesters"
+            options={semesters}
+          />
+          <FilterSelect
+            id={ids.term}
+            label="Term"
+            value={scope.termInstanceId}
+            onValueChange={onTermChange}
+            blankLabel="All terms"
+            options={termOptions}
+          />
+          <FilterSelect
+            id={ids.yearLevel}
+            label="Year level (course evidence)"
+            value={scope.yearLevel}
+            onValueChange={onYearLevelChange}
+            blankLabel="All year levels"
+            options={yearLevels}
+            hint="Applies to the course workbook and raw CSV. Program-wide evidence is filtered by academic period only."
+          />
+        </div>
+        <p className="text-body-sm text-muted-foreground mt-4 text-pretty">
+          Current scope: {scopeLabel || "All academic periods"} ·{" "}
+          {yearLevelLabel(yearLevels, scope.yearLevel)}.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function yearLevelLabel(
+  yearLevels: Array<{ value: string; label: string }>,
+  value: string
+): string {
+  if (value === ALL) return "all year levels";
+  return yearLevels.find((level) => level.value === value)?.label ?? value;
+}
+
+/** One export, named and described on its own card. */
+function ExportTargetCard({
+  target,
+  working,
+  busy,
+  onExport,
+}: {
+  target: ExportTarget;
+  working: boolean;
+  busy: boolean;
+  onExport: (target: ExportTarget) => void;
+}) {
+  const Icon = target.icon;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Icon aria-hidden="true" className="size-4" />
+          {target.title}
+        </CardTitle>
+        <CardDescription>{target.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button onClick={() => onExport(target)} disabled={busy} className="w-full sm:w-auto">
+          {working ? <Spinner aria-hidden="true" /> : <Download aria-hidden="true" />}
+          {working ? "Preparing report…" : target.title}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProgramHeadReportExports({
   programId,
   programLabel,
   periodOptions,
   yearLevels,
 }: Props) {
-  const schoolYearId = useId();
-  const semesterId = useId();
-  const termId = useId();
-  const yearLevelId = useId();
   const statusId = useId();
 
   const [schoolYear, setSchoolYear] = useState<string>(ALL);
@@ -103,7 +300,10 @@ export function ProgramHeadReportExports({
   const [yearLevel, setYearLevel] = useState<string>(ALL);
   const [status, setStatus] = useState<Status>({ state: "idle" });
 
-  const schoolYears = useMemo(() => periodOptions.schoolYears ?? [], [periodOptions.schoolYears]);
+  const schoolYears = useMemo(
+    () => (periodOptions.schoolYears ?? []).map((year) => ({ value: year.id, label: year.label })),
+    [periodOptions.schoolYears]
+  );
   const termInstances = useMemo(
     () => periodOptions.termInstances ?? [],
     [periodOptions.termInstances]
@@ -119,69 +319,45 @@ export function ProgramHeadReportExports({
       .map((instance) => ({ value: instance.semester, label: instance.semesterLabel }));
   }, [periodOptions, schoolYear, termInstances]);
 
+  const semesterOptions = useMemo(
+    () => semesters.map((option) => ({ value: option.value, label: option.label })),
+    [semesters]
+  );
   const termOptions = useMemo(
     () =>
-      termInstances.filter(
-        (instance) =>
-          (schoolYear === ALL || instance.schoolYearId === schoolYear) &&
-          (semester === ALL || instance.semester === semester)
-      ),
+      termInstances
+        .filter(
+          (instance) =>
+            (schoolYear === ALL || instance.schoolYearId === schoolYear) &&
+            (semester === ALL || instance.semester === semester)
+        )
+        .map((instance) => ({ value: instance.id, label: instance.label })),
     [termInstances, schoolYear, semester]
   );
 
-  const selectedTerm = termInstances.find((instance) => instance.id === termInstanceId);
-  const selectedYear =
-    schoolYears.find((year) => year.id === schoolYear)?.label ?? "All academic years";
-  const selectedSemester =
-    semesters.find((option) => option.value === semester)?.label ?? "All semesters";
-  const scopeLabel = selectedTerm
-    ? selectedTerm.label
-    : [
-        selectedYear === "All academic years" ? null : selectedYear,
-        selectedSemester === "All semesters" ? null : selectedSemester,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+  const scopeLabel = resolveScopeLabel({
+    termInstance: termInstances.find((instance) => instance.id === termInstanceId),
+    schoolYearLabel:
+      schoolYears.find((year) => year.value === schoolYear)?.label ?? "All academic years",
+    semesterLabel:
+      semesterOptions.find((option) => option.value === semester)?.label ?? "All semesters",
+  });
+
+  const scope: ExportScope = { schoolYear, semester, termInstanceId, yearLevel };
 
   async function runExport(target: ExportTarget) {
     setStatus({ state: "working", kind: target.kind });
-    const params = new URLSearchParams({ kind: target.kind });
-    if (schoolYear !== ALL) params.set("schoolYearId", schoolYear);
-    if (semester !== ALL) params.set("semester", semester);
-    if (termInstanceId !== ALL) params.set("termInstanceId", termInstanceId);
-    if (target.supportsYearLevel && yearLevel !== ALL) params.set("yearLevel", yearLevel);
-
     try {
-      const response = await fetch(`${buildReportExportPath(programId)}?${params.toString()}`, {
-        method: "GET",
-        credentials: "same-origin",
-      });
+      const response = await fetch(
+        `${buildReportExportPath(programId)}?${exportQuery(target, scope).toString()}`,
+        { method: "GET", credentials: "same-origin" }
+      );
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          error?: string;
-          reason?: string;
-        } | null;
-        const message = body?.error ?? "The report could not be generated.";
-        setStatus(
-          body?.reason
-            ? { state: "empty", kind: target.kind, message }
-            : { state: "failed", kind: target.kind, message }
-        );
+        setStatus(await refusalStatus(target, response));
         return;
       }
-      const filename =
-        /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ??
-        "system-cloie-report";
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      setStatus({ state: "done", kind: target.kind, filename });
+      await saveDownload(response);
+      setStatus({ state: "done", kind: target.kind, filename: downloadName(response) });
     } catch {
       setStatus({
         state: "failed",
@@ -193,99 +369,37 @@ export function ProgramHeadReportExports({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Export scope</CardTitle>
-          <CardDescription>
-            {programLabel} reports carry respondent names. Choose the academic scope to export; the
-            server re-checks authorization and Program scope for every download.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <FilterSelect
-              id={schoolYearId}
-              label="Academic year"
-              value={schoolYear}
-              onValueChange={(value) => {
-                setSchoolYear(value);
-                setSemester(ALL);
-                setTermInstanceId(ALL);
-              }}
-              blankLabel="All academic years"
-              options={schoolYears.map((year) => ({
-                value: year.id,
-                label: year.label,
-              }))}
-            />
-            <FilterSelect
-              id={semesterId}
-              label="Semester"
-              value={semester}
-              onValueChange={(value) => {
-                setSemester(value);
-                setTermInstanceId(ALL);
-              }}
-              blankLabel="All semesters"
-              options={semesters}
-            />
-            <FilterSelect
-              id={termId}
-              label="Term"
-              value={termInstanceId}
-              onValueChange={setTermInstanceId}
-              blankLabel="All terms"
-              options={termOptions.map((instance) => ({
-                value: instance.id,
-                label: instance.label,
-              }))}
-            />
-            <FilterSelect
-              id={yearLevelId}
-              label="Year level (course evidence)"
-              value={yearLevel}
-              onValueChange={setYearLevel}
-              blankLabel="All year levels"
-              options={yearLevels}
-              hint="Applies to the course workbook and raw CSV. Program-wide evidence is filtered by academic period only."
-            />
-          </div>
-          <p className="text-body-sm text-muted-foreground mt-4 text-pretty">
-            Current scope: {scopeLabel || "All academic periods"} ·{" "}
-            {yearLevel === ALL
-              ? "all year levels"
-              : (yearLevels.find((level) => level.value === yearLevel)?.label ?? yearLevel)}
-            .
-          </p>
-        </CardContent>
-      </Card>
+      <ExportScopeCard
+        programLabel={programLabel}
+        scope={scope}
+        scopeLabel={scopeLabel}
+        schoolYears={schoolYears}
+        semesters={semesterOptions}
+        termOptions={termOptions}
+        yearLevels={yearLevels}
+        onSchoolYearChange={(value) => {
+          setSchoolYear(value);
+          setSemester(ALL);
+          setTermInstanceId(ALL);
+        }}
+        onSemesterChange={(value) => {
+          setSemester(value);
+          setTermInstanceId(ALL);
+        }}
+        onTermChange={setTermInstanceId}
+        onYearLevelChange={setYearLevel}
+      />
 
       <div className="grid gap-4">
-        {EXPORT_TARGETS.map((target) => {
-          const Icon = target.icon;
-          const working = status.state === "working" && status.kind === target.kind;
-          return (
-            <Card key={target.kind}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon aria-hidden="true" className="size-4" />
-                  {target.title}
-                </CardTitle>
-                <CardDescription>{target.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => runExport(target)}
-                  disabled={status.state === "working"}
-                  className="w-full sm:w-auto"
-                >
-                  {working ? <Spinner aria-hidden="true" /> : <Download aria-hidden="true" />}
-                  {working ? "Preparing report…" : target.title}
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {EXPORT_TARGETS.map((target) => (
+          <ExportTargetCard
+            key={target.kind}
+            target={target}
+            working={status.state === "working" && status.kind === target.kind}
+            busy={status.state === "working"}
+            onExport={runExport}
+          />
+        ))}
       </div>
 
       <p

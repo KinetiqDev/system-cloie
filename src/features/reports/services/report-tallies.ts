@@ -20,10 +20,11 @@ import { TargetStakeholder } from "@prisma/client";
 import { listSnapshotQuantitativeItems } from "@/features/analytics/services/snapshot-structure";
 import type { OutcomeAttainment } from "@/features/analytics/aggregators/outcome-attainment";
 import type {
-  ReportCourseGroup,
   ReportCiloMapping,
+  ReportCiloQuestionBinding,
+  ReportCourseGroup,
+  ReportDirectPoBinding,
   ReportQuestion,
-  ReportResponseRow,
 } from "../types";
 import { ATTAINMENT_STATUS_LABELS } from "../types";
 
@@ -54,7 +55,7 @@ export function reportScaleLabel(scale: ScaleIdentity | null): string {
 }
 
 /** Per-option tally plus the mean, count, and interpretation of one question. */
-export type ReportQuestionTally = {
+type ReportQuestionTally = {
   question: ReportQuestion;
   ciloLabel: string | null;
   directPoCodes: string[];
@@ -72,7 +73,7 @@ export type ReportQuestionTally = {
 };
 
 /** One CILO's pooled evidence inside one class group. */
-export type ReportCiloSummary = {
+type ReportCiloSummary = {
   ciloId: string | null;
   ciloLabel: string;
   ciloDescription: string;
@@ -91,7 +92,7 @@ export type ReportCiloSummary = {
 };
 
 /** One respondent row of a raw-response grid. */
-export type ReportRawResponseRow = {
+type ReportRawResponseRow = {
   responseId: string;
   respondentId: string;
   respondentName: string;
@@ -113,6 +114,116 @@ export type ReportClassGroupModel = {
   rawRows: ReportRawResponseRow[];
 };
 
+/** Question-resolution context for one class group, built once and reused per answer. */
+type ClassGroupQuestionContext = {
+  prompts: Map<string, string>;
+  ciloByQuestionKey: Map<string, ReportCiloQuestionBinding>;
+  directPoByQuestionKey: Map<string, ReportDirectPoBinding>;
+  ciloLabels: Map<string, string>;
+};
+
+/** Publication-time CILO labels for the class group's ordered CILO ids. */
+function classGroupCiloLabels(group: ReportCourseGroup): Map<string, string> {
+  const orderedCiloIds = [
+    ...new Set(
+      group.ciloBindings
+        .map((binding) => binding.ciloId)
+        .filter((value): value is string => value !== null)
+    ),
+  ];
+  return resolveCiloLabels(group.cilosSnapshot, orderedCiloIds);
+}
+
+function buildClassGroupQuestionContext(group: ReportCourseGroup): ClassGroupQuestionContext {
+  const directPoByQuestionKey = new Map<string, ReportDirectPoBinding>();
+  for (const binding of group.directPoBindings) {
+    const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
+    // One question may carry several frozen direct bindings; keep them all.
+    directPoByQuestionKey.set(key, {
+      ...binding,
+      poCode: [...(directPoByQuestionKey.get(key)?.poCode.split(" | ") ?? []), binding.poCode]
+        .filter(Boolean)
+        .join(" | "),
+    });
+  }
+  return {
+    prompts: new Map(
+      listSnapshotQuantitativeItems(group.structureSnapshot).map((question) => [
+        encodeQuestionKey(question.sectionKey, question.itemKey),
+        question.prompt,
+      ])
+    ),
+    ciloByQuestionKey: new Map(
+      group.ciloBindings.map((binding) => [
+        encodeQuestionKey(binding.sectionKey, binding.itemKey),
+        binding,
+      ])
+    ),
+    directPoByQuestionKey,
+    ciloLabels: classGroupCiloLabels(group),
+  };
+}
+
+/** Frozen direct-binding PO mappings for one answered question. */
+function directPoMappingsFor(
+  context: ClassGroupQuestionContext,
+  evaluationId: string,
+  questionKey: string
+): CiloGoMapping[] {
+  const binding = context.directPoByQuestionKey.get(questionKey);
+  if (!binding) return [];
+  return binding.poCode
+    .split(" | ")
+    .filter(Boolean)
+    .map((poCode: string) => ({
+      poId: `frozen:${evaluationId}:${poCode}`,
+      poCode,
+      poDescription: binding.poDescription.split(" | ")[0] ?? "",
+      manifestation: null,
+    }));
+}
+
+/** CILO identity for one answered question, or null when nothing is bound. */
+function ciloFor(
+  context: ClassGroupQuestionContext,
+  questionKey: string
+): OutcomeItemRatingRow["cilo"] {
+  const binding = context.ciloByQuestionKey.get(questionKey);
+  if (!binding) return null;
+  const ciloId = binding.ciloId;
+  return {
+    id: ciloId ?? `binding:${questionKey}`,
+    label: ciloId ? (context.ciloLabels.get(ciloId) ?? binding.ciloLabel) : binding.ciloLabel,
+    description: binding.ciloDescription,
+  };
+}
+
+/** One submitted answer in the canonical aggregator shape. */
+function toRatingRow(
+  group: ReportCourseGroup,
+  context: ClassGroupQuestionContext,
+  mappings: Map<string, ReportCiloMapping[]>,
+  responseId: string,
+  answer: { sectionKey: string; itemKey: string; ratingValue: number }
+): OutcomeItemRatingRow {
+  const questionKey = encodeQuestionKey(answer.sectionKey, answer.itemKey);
+  const ciloBinding = context.ciloByQuestionKey.get(questionKey);
+  const poMappings = ciloBinding?.ciloId ? (mappings.get(ciloBinding.ciloId) ?? []) : [];
+  const directPoMappings = directPoMappingsFor(context, group.evaluationId, questionKey);
+  return {
+    sectionKey: answer.sectionKey,
+    itemKey: answer.itemKey,
+    prompt: ciloBinding?.questionPrompt ?? context.prompts.get(questionKey) ?? answer.itemKey,
+    ratingValue: answer.ratingValue,
+    responseId,
+    scale: resolveItemScaleIdentity(group.structureSnapshot, answer.sectionKey, answer.itemKey),
+    cilo: ciloFor(context, questionKey),
+    evaluationId: group.evaluationId,
+    poMappings,
+    ...(directPoMappings.length > 0 ? { directPoMappings } : {}),
+  };
+}
+
 /**
  * Rating rows for one class group in the canonical aggregator shape. Out-of-scale
  * and unresolvable ratings are included so the aggregators exclude them exactly
@@ -122,77 +233,12 @@ export function buildClassGroupRatingRows(
   group: ReportCourseGroup,
   mappings: Map<string, ReportCiloMapping[]>
 ): OutcomeItemRatingRow[] {
-  const orderedCiloIds = [
-    ...new Set(
-      group.ciloBindings
-        .map((binding) => binding.ciloId)
-        .filter((value): value is string => value !== null)
-    ),
-  ];
-  const ciloLabels = resolveCiloLabels(group.cilosSnapshot, orderedCiloIds);
-  const promptByQuestionKey = new Map(
-    listSnapshotQuantitativeItems(group.structureSnapshot).map((question) => [
-      encodeQuestionKey(question.sectionKey, question.itemKey),
-      question.prompt,
-    ])
+  const context = buildClassGroupQuestionContext(group);
+  return group.responses.flatMap((response) =>
+    response.answers.map((answer) =>
+      toRatingRow(group, context, mappings, response.responseId, answer)
+    )
   );
-  const ciloByQuestionKey = new Map(
-    group.ciloBindings.map((binding) => [
-      encodeQuestionKey(binding.sectionKey, binding.itemKey),
-      binding,
-    ])
-  );
-  const directByQuestionKey = new Map<string, string[]>();
-  for (const binding of group.directPoBindings) {
-    const key = encodeQuestionKey(binding.sectionKey, binding.itemKey);
-    directByQuestionKey.set(key, [...(directByQuestionKey.get(key) ?? []), binding.poCode]);
-  }
-
-  const rows: OutcomeItemRatingRow[] = [];
-  for (const response of group.responses) {
-    for (const answer of response.answers) {
-      const questionKey = encodeQuestionKey(answer.sectionKey, answer.itemKey);
-      const ciloBinding = ciloByQuestionKey.get(questionKey);
-      const ciloId = ciloBinding?.ciloId ?? null;
-      const poMappings: CiloGoMapping[] = ciloId ? (mappings.get(ciloId) ?? []) : [];
-      const directPoMappings: CiloGoMapping[] = (directByQuestionKey.get(questionKey) ?? []).map(
-        (poCode) => ({
-          poId: `frozen:${group.evaluationId}:${poCode}`,
-          poCode,
-          poDescription:
-            group.directPoBindings.find(
-              (binding) =>
-                poCode === binding.poCode &&
-                binding.sectionKey === answer.sectionKey &&
-                binding.itemKey === answer.itemKey
-            )?.poDescription ?? "",
-          manifestation: null,
-        })
-      );
-      rows.push({
-        sectionKey: answer.sectionKey,
-        itemKey: answer.itemKey,
-        prompt:
-          ciloBinding?.questionPrompt ?? promptByQuestionKey.get(questionKey) ?? answer.itemKey,
-        ratingValue: answer.ratingValue,
-        responseId: response.responseId,
-        scale: resolveItemScaleIdentity(group.structureSnapshot, answer.sectionKey, answer.itemKey),
-        cilo: ciloBinding
-          ? {
-              id: ciloId ?? `binding:${encodeQuestionKey(answer.sectionKey, answer.itemKey)}`,
-              label: ciloId
-                ? (ciloLabels.get(ciloId) ?? ciloBinding.ciloLabel)
-                : ciloBinding.ciloLabel,
-              description: ciloBinding.ciloDescription,
-            }
-          : null,
-        evaluationId: group.evaluationId,
-        poMappings,
-        ...(directPoMappings.length > 0 ? { directPoMappings } : {}),
-      });
-    }
-  }
-  return rows;
 }
 
 /**
@@ -201,6 +247,35 @@ export function buildClassGroupRatingRows(
  * once per (response, evaluation, question, PO); manifestation stays a
  * descriptive label and never a weight.
  */
+/** Current CILO mappings and frozen direct bindings that one answer reaches. */
+function outcomeBindingsFor(
+  row: OutcomeItemRatingRow,
+  directBinding: ReportDirectPoBinding | undefined
+): {
+  outcomeMappings: OutcomeEvidenceRow["outcomeMappings"];
+  directBindings: OutcomeEvidenceRow["directBindings"];
+} {
+  const outcomeMappings = row.cilo
+    ? row.poMappings.map((mapping) => ({
+        outcomeId: mapping.poId,
+        code: mapping.poCode,
+        name: mapping.poDescription,
+        manifestation: mapping.manifestation,
+      }))
+    : [];
+  const directBindings = directBinding
+    ? [
+        {
+          outcomeId: directBinding.poId ?? `snapshot:${directBinding.poCode}`,
+          code: directBinding.poCode,
+          name: directBinding.poDescription,
+          questionPrompt: directBinding.questionPrompt,
+        },
+      ]
+    : [];
+  return { outcomeMappings, directBindings };
+}
+
 export function buildOutcomeEvidenceRows(
   models: Array<{ group: ReportCourseGroup; rows?: OutcomeItemRatingRow[] }>
 ): OutcomeEvidenceRow[] {
@@ -217,28 +292,12 @@ export function buildOutcomeEvidenceRows(
       ])
     );
     for (const row of rows) {
-      const questionKey = encodeQuestionKey(row.sectionKey, row.itemKey);
+      const { outcomeMappings, directBindings } = outcomeBindingsFor(
+        row,
+        directByQuestionKey.get(encodeQuestionKey(row.sectionKey, row.itemKey))
+      );
+      if (!row.cilo && outcomeMappings.length === 0 && directBindings.length === 0) continue;
       const cilo = row.cilo;
-      const outcomeMappings = cilo
-        ? row.poMappings.map((mapping) => ({
-            outcomeId: mapping.poId,
-            code: mapping.poCode,
-            name: mapping.poDescription,
-            manifestation: mapping.manifestation,
-          }))
-        : [];
-      const directBinding = directByQuestionKey.get(questionKey);
-      const directBindings = directBinding
-        ? [
-            {
-              outcomeId: directBinding.poId ?? `snapshot:${directBinding.poCode}`,
-              code: directBinding.poCode,
-              name: directBinding.poDescription,
-              questionPrompt: directBinding.questionPrompt,
-            },
-          ]
-        : [];
-      if ((!cilo || outcomeMappings.length === 0) && directBindings.length === 0) continue;
 
       evidenceRows.push({
         ratingValue: row.ratingValue,
@@ -269,7 +328,7 @@ export function buildOutcomeEvidenceRows(
 }
 
 /** Rating sum derived from the authoritative per-option distribution. */
-export function ratingSumOf(distribution: QuantitativeMetric["distribution"]): number {
+function ratingSumOf(distribution: QuantitativeMetric["distribution"]): number {
   return distribution.reduce((sum, category) => sum + category.value * category.count, 0);
 }
 
@@ -315,13 +374,101 @@ function scaleOfMetric(metric: QuantitativeMetric): ScaleIdentity | null {
   return metric.scale;
 }
 
+/** Metric lookup and answered-row counts, keyed by canonical question key. */
+type QuestionTallyInputs = {
+  metrics: Map<string, ReturnType<typeof buildQuestionMetrics>[number]>;
+  answeredRows: Map<string, number>;
+  questions: ReportQuestion[];
+};
+
+function countAnsweredRows(rows: OutcomeItemRatingRow[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = encodeQuestionKey(row.sectionKey, row.itemKey);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /**
- * Per-question tallies for one class group. Questions are enumerated from the
- * frozen structure snapshot, so a question nobody answered still appears with
- * its zero counts, and a blank answer counts as missing only where the snapshot
- * defines the question's applicability.
+ * Every applicable question of the class group: the frozen snapshot enumerates
+ * them (so a question nobody answered still appears with zero counts), and a
+ * bound question the snapshot does not enumerate is appended with its unknown
+ * applicability.
  */
-export function buildQuestionTallies(
+function tallyQuestions(group: ReportCourseGroup, metrics: QuestionTallyInputs["metrics"]) {
+  const questions = listSnapshotQuantitativeItems(group.structureSnapshot);
+  const knownKeys = new Set(
+    questions.map((question) => encodeQuestionKey(question.sectionKey, question.itemKey))
+  );
+  for (const questionKey of metrics.keys()) {
+    if (knownKeys.has(questionKey)) continue;
+    const [sectionKey, itemKey] = decodeQuestionKeyForLabel(questionKey);
+    questions.push({
+      sectionKey,
+      sectionTitle: sectionKey,
+      itemKey,
+      prompt: metrics.get(questionKey)?.prompt ?? itemKey,
+      applicability: "required",
+    });
+    knownKeys.add(questionKey);
+  }
+  return questions;
+}
+
+/** Direct question-to-PO codes published for one question. */
+function directPoCodesFor(group: ReportCourseGroup, questionKey: string): string[] {
+  return [
+    ...new Set(
+      group.directPoBindings
+        .filter((binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey)
+        .map((binding) => binding.poCode)
+    ),
+  ];
+}
+
+/** One question's printed tally row. */
+function questionTallyFor(
+  group: ReportCourseGroup,
+  inputs: QuestionTallyInputs,
+  question: ReportQuestion
+): ReportQuestionTally {
+  const questionKey = encodeQuestionKey(question.sectionKey, question.itemKey);
+  const scale = resolveItemScaleIdentity(
+    group.structureSnapshot,
+    question.sectionKey,
+    question.itemKey
+  );
+  const metric = inputs.metrics.get(questionKey);
+  const singleScaleMetric = metric?.quantitative ?? emptyMetric(scale);
+  const answeredRowCount = inputs.answeredRows.get(questionKey) ?? 0;
+  const ciloBinding = group.ciloBindings.find(
+    (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
+  );
+  const missingCount =
+    question.applicability === "required"
+      ? Math.max(0, group.responses.length - answeredRowCount)
+      : null;
+
+  return {
+    question,
+    ciloLabel:
+      ciloBinding?.ciloLabel ??
+      (metric && metric.binding.type === "CILO" ? metric.binding.ciloLabel : null),
+    directPoCodes: directPoCodesFor(group, questionKey),
+    scaleLabel: reportScaleLabel(scale),
+    categories: singleScaleMetric.distribution,
+    validCount: singleScaleMetric.ratingCount,
+    excludedCount: Math.max(0, answeredRowCount - singleScaleMetric.ratingCount),
+    missingCount,
+    ratingSum: ratingSumOf(singleScaleMetric.distribution),
+    mean: singleScaleMetric.mean,
+    distinctResponseCount: singleScaleMetric.responseCount,
+    attainment: classifyMetric(singleScaleMetric, scale),
+  };
+}
+
+function buildQuestionTallies(
   group: ReportCourseGroup,
   rows: OutcomeItemRatingRow[]
 ): ReportQuestionTally[] {
@@ -331,95 +478,49 @@ export function buildQuestionTallies(
       metric,
     ])
   );
-  const questions = listSnapshotQuantitativeItems(group.structureSnapshot);
-  const knownQuestionKeys = new Set(
-    questions.map((question) => encodeQuestionKey(question.sectionKey, question.itemKey))
-  );
-  // A bound question the frozen snapshot does not enumerate still belongs in the
-  // tally; its applicability is simply unknown, so no missing count is printed.
-  for (const questionKey of metrics.keys()) {
-    if (knownQuestionKeys.has(questionKey)) continue;
-    const [sectionKey, itemKey] = decodeQuestionKeyForLabel(questionKey);
-    questions.push({
-      sectionKey,
-      sectionTitle: sectionKey,
-      itemKey,
-      prompt: metrics.get(questionKey)?.prompt ?? itemKey,
-      applicability: "required",
-    });
-    knownQuestionKeys.add(questionKey);
-  }
+  const inputs: QuestionTallyInputs = {
+    metrics,
+    answeredRows: countAnsweredRows(rows),
+    questions: tallyQuestions(group, metrics),
+  };
 
-  const rowCountByQuestionKey = new Map<string, number>();
-  for (const row of rows) {
-    const key = encodeQuestionKey(row.sectionKey, row.itemKey);
-    rowCountByQuestionKey.set(key, (rowCountByQuestionKey.get(key) ?? 0) + 1);
-  }
-
-  const tallies: ReportQuestionTally[] = [];
-  for (const question of questions) {
-    const questionKey = encodeQuestionKey(question.sectionKey, question.itemKey);
-    const scale = resolveItemScaleIdentity(
-      group.structureSnapshot,
-      question.sectionKey,
-      question.itemKey
+  return inputs.questions
+    .map((question) => questionTallyFor(group, inputs, question))
+    .sort(
+      (left, right) =>
+        left.question.sectionKey.localeCompare(right.question.sectionKey) ||
+        left.question.itemKey.localeCompare(right.question.itemKey)
     );
-    const metric = metrics.get(questionKey);
-    const singleScaleMetric = metric?.quantitative ?? emptyMetric(scale);
-    const categories = singleScaleMetric.distribution;
-    const validCount = singleScaleMetric.ratingCount;
-    const answeredRowCount = rowCountByQuestionKey.get(questionKey) ?? 0;
-    const ciloBinding = group.ciloBindings.find(
-      (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
-    );
-    const directPoCodes = [
-      ...new Set(
-        group.directPoBindings
-          .filter(
-            (binding) => encodeQuestionKey(binding.sectionKey, binding.itemKey) === questionKey
-          )
-          .map((binding) => binding.poCode)
-      ),
-    ];
+}
 
-    tallies.push({
-      question,
-      ciloLabel:
-        ciloBinding?.ciloLabel ??
-        (metric && metric.binding.type === "CILO" ? metric.binding.ciloLabel : null),
-      directPoCodes,
-      scaleLabel: reportScaleLabel(scale),
-      categories,
-      validCount,
-      excludedCount: Math.max(0, answeredRowCount - validCount),
-      missingCount:
-        question.applicability === "required"
-          ? Math.max(0, group.responses.length - answeredRowCount)
-          : null,
-      ratingSum: ratingSumOf(categories),
-      mean: singleScaleMetric.mean,
-      distinctResponseCount: singleScaleMetric.responseCount,
-      attainment: classifyMetric(singleScaleMetric, scale),
-    });
+/** One CILO's evidence context inside a class group. */
+type CiloSummaryContext = {
+  ciloId: string | null;
+  ciloLabel: string;
+  mappings: ReportCiloMapping[];
+  questionKeys: Set<string>;
+};
+
+type CiloMetric = ReturnType<typeof buildCiloMetrics>[number];
+
+/** Question keys that evidence each CILO of the class group. */
+function questionKeysByCiloId(group: ReportCourseGroup): Map<string, Set<string>> {
+  const keys = new Map<string, Set<string>>();
+  for (const binding of group.ciloBindings) {
+    if (!binding.ciloId) continue;
+    const existing = keys.get(binding.ciloId) ?? new Set<string>();
+    existing.add(encodeQuestionKey(binding.sectionKey, binding.itemKey));
+    keys.set(binding.ciloId, existing);
   }
-  return tallies.sort(
-    (left, right) =>
-      left.question.sectionKey.localeCompare(right.question.sectionKey) ||
-      left.question.itemKey.localeCompare(right.question.itemKey)
-  );
+  return keys;
 }
 
 /**
- * CILO summaries for one class group. A CILO nobody rated validly keeps its row
- * with zero counts and an explicit no-evidence status rather than disappearing.
+ * Every CILO the class group published, in publication order, then any binding
+ * whose CILO record is gone (archived or deleted), which keeps its own row
+ * instead of pooling under another CILO.
  */
-export function buildCiloSummaries(
-  group: ReportCourseGroup,
-  rows: OutcomeItemRatingRow[],
-  mappings: Map<string, ReportCiloMapping[]>
-): ReportCiloSummary[] {
-  const metrics = buildCiloMetrics(rows);
-  const metricByCiloId = new Map(metrics.map((metric) => [metric.ciloId, metric]));
+function ciloSummaryContexts(group: ReportCourseGroup): CiloSummaryContext[] {
   const orderedCiloIds = [
     ...new Set(
       group.ciloBindings
@@ -428,55 +529,31 @@ export function buildCiloSummaries(
     ),
   ];
   const ciloLabels = resolveCiloLabels(group.cilosSnapshot, orderedCiloIds);
-  const questionKeysByCiloId = new Map<string, Set<string>>();
-  for (const binding of group.ciloBindings) {
-    if (!binding.ciloId) continue;
-    const keys = questionKeysByCiloId.get(binding.ciloId) ?? new Set<string>();
-    keys.add(encodeQuestionKey(binding.sectionKey, binding.itemKey));
-    questionKeysByCiloId.set(binding.ciloId, keys);
-  }
+  const questionKeys = questionKeysByCiloId(group);
+  const contexts: CiloSummaryContext[] = orderedCiloIds.map((ciloId) => ({
+    ciloId,
+    ciloLabel: ciloLabels.get(ciloId) ?? "CILO",
+    mappings: [],
+    questionKeys: questionKeys.get(ciloId) ?? new Set<string>(),
+  }));
 
-  const summaries: ReportCiloSummary[] = [];
-  const seen = new Set<string>();
-  for (const ciloId of orderedCiloIds) {
-    seen.add(ciloId);
-    summaries.push(
-      ciloSummaryFor(group, ciloId, metricByCiloId.get(ciloId) ?? null, {
-        ciloLabel: ciloLabels.get(ciloId) ?? "CILO",
-        mappings: mappings.get(ciloId) ?? [],
-        questionKeys: questionKeysByCiloId.get(ciloId) ?? new Set<string>(),
-      })
-    );
-  }
-  // A binding whose CILO record is gone (archived or deleted) keeps its own row
-  // instead of pooling under another CILO.
+  const seen = new Set<string>(orderedCiloIds);
   for (const binding of group.ciloBindings) {
     if (binding.ciloId || seen.has(binding.ciloLabel)) continue;
-    const ciloKey = `label:${binding.ciloLabel}`;
-    if (seen.has(ciloKey)) continue;
-    seen.add(ciloKey);
-    summaries.push(
-      ciloSummaryFor(group, null, null, {
-        ciloLabel: binding.ciloLabel,
-        mappings: [],
-        questionKeys: new Set([encodeQuestionKey(binding.sectionKey, binding.itemKey)]),
-      })
-    );
+    seen.add(binding.ciloLabel);
+    contexts.push({
+      ciloId: null,
+      ciloLabel: binding.ciloLabel,
+      mappings: [],
+      questionKeys: new Set([encodeQuestionKey(binding.sectionKey, binding.itemKey)]),
+    });
   }
-  return summaries.sort(
-    (left, right) =>
-      left.ciloLabel.localeCompare(right.ciloLabel) ||
-      left.ciloDescription.localeCompare(right.ciloDescription)
-  );
+  return contexts;
 }
 
-function ciloSummaryFor(
-  group: ReportCourseGroup,
-  ciloId: string | null,
-  metric: ReturnType<typeof buildCiloMetrics>[number] | null,
-  context: { ciloLabel: string; mappings: ReportCiloMapping[]; questionKeys: Set<string> }
-): ReportCiloSummary {
-  const scaleGroups = metric
+/** Per-scale-group projection of one CILO's pooled ratings. */
+function ciloScaleGroups(metric: CiloMetric | null): ReportCiloSummary["scaleGroups"] {
+  return metric
     ? metric.scaleGroups.map((groupMetric) => ({
         scaleLabel: reportScaleLabel(scaleOfMetric(groupMetric)),
         mean: groupMetric.mean,
@@ -484,44 +561,99 @@ function ciloSummaryFor(
         categories: groupMetric.distribution,
       }))
     : [];
-  const validCount = scaleGroups.reduce((sum, groupMetric) => sum + groupMetric.ratingCount, 0);
-  const singleScaleMetric =
-    metric && metric.scaleGroups.length === 1
-      ? metric.scaleGroups[0]
-      : (metric?.quantitative ?? null);
-  const questionRefs = listSnapshotQuantitativeItems(group.structureSnapshot)
+}
+
+/** Snapshot questions that evidence one CILO, in snapshot order. */
+function ciloQuestionRefs(
+  group: ReportCourseGroup,
+  questionKeys: Set<string>
+): ReportCiloSummary["questionRefs"] {
+  return listSnapshotQuantitativeItems(group.structureSnapshot)
     .filter((question) =>
-      context.questionKeys.has(encodeQuestionKey(question.sectionKey, question.itemKey))
+      questionKeys.has(encodeQuestionKey(question.sectionKey, question.itemKey))
     )
     .map((question) => ({
       sectionKey: question.sectionKey,
       itemKey: question.itemKey,
       prompt: question.prompt,
     }));
+}
+
+/** The one metric that carries a mean, or null when scales are mixed or absent. */
+function ciloSingleScaleMetric(metric: CiloMetric | null) {
+  if (!metric) return null;
+  return metric.scaleGroups.length === 1 ? metric.scaleGroups[0] : (metric.quantitative ?? null);
+}
+
+/** Deterministic interpretation of one CILO's pooled ratings. */
+function ciloAttainment(metric: CiloMetric | null) {
+  if (!metric) return classifyOutcomeMean(null, null);
+  return classifyScaleGroups(
+    metric.scaleGroups.map((groupMetric) => ({
+      scale: groupMetric.scale,
+      metric: groupMetric,
+    }))
+  );
+}
+
+/**
+ * One CILO summary row. A CILO nobody rated validly keeps zero counts and an
+ * explicit no-evidence status rather than disappearing from the report.
+ */
+function ciloSummaryFor(
+  group: ReportCourseGroup,
+  metric: CiloMetric | null,
+  context: CiloSummaryContext
+): ReportCiloSummary {
+  const scaleGroups = ciloScaleGroups(metric);
+  const singleScaleMetric = ciloSingleScaleMetric(metric);
 
   return {
-    ciloId,
+    ciloId: context.ciloId,
     ciloLabel: context.ciloLabel,
     ciloDescription: metric?.description ?? "",
     mappings: context.mappings,
-    questionRefs,
+    questionRefs: ciloQuestionRefs(group, context.questionKeys),
     scaleGroups,
-    validCount,
+    validCount: scaleGroups.reduce((sum, groupMetric) => sum + groupMetric.ratingCount, 0),
     distinctResponseCount: singleScaleMetric?.responseCount ?? 0,
     mean: metric?.quantitative?.mean ?? null,
-    attainment: metric
-      ? classifyScaleGroups(
-          metric.scaleGroups.map((groupMetric) => ({
-            scale: groupMetric.scale,
-            metric: groupMetric,
-          }))
-        )
-      : classifyOutcomeMean(null, null),
+    attainment: ciloAttainment(metric),
   };
 }
 
+/**
+ * CILO summaries for one class group. Pooled raw ratings, never a mean of
+ * question means; a CILO nobody rated validly still appears with zero counts.
+ */
+function buildCiloSummaries(
+  group: ReportCourseGroup,
+  rows: OutcomeItemRatingRow[],
+  mappings: Map<string, ReportCiloMapping[]>
+): ReportCiloSummary[] {
+  const metricByCiloId = new Map(buildCiloMetrics(rows).map((metric) => [metric.ciloId, metric]));
+
+  return ciloSummaryContexts(group)
+    .map((context) => ({
+      ...context,
+      mappings: context.ciloId ? (mappings.get(context.ciloId) ?? []) : [],
+    }))
+    .map((context) =>
+      ciloSummaryFor(
+        group,
+        context.ciloId ? (metricByCiloId.get(context.ciloId) ?? null) : null,
+        context
+      )
+    )
+    .sort(
+      (left, right) =>
+        left.ciloLabel.localeCompare(right.ciloLabel) ||
+        left.ciloDescription.localeCompare(right.ciloDescription)
+    );
+}
+
 /** Raw-response grid rows for one class group, one row per submitted response. */
-export function buildRawResponseRows(group: ReportCourseGroup): ReportRawResponseRow[] {
+function buildRawResponseRows(group: ReportCourseGroup): ReportRawResponseRow[] {
   return group.responses.map((response) => ({
     responseId: response.responseId,
     respondentId: response.respondentId,
@@ -585,11 +717,6 @@ export function attainmentStatusLabel(attainment: OutcomeAttainment): string {
   if (attainment.status === "mixed-scales") return ATTAINMENT_STATUS_LABELS.mixedScales;
   if (attainment.status === "unsupported-scale") return ATTAINMENT_STATUS_LABELS.unsupportedScale;
   return attainment.interpretation ?? ATTAINMENT_STATUS_LABELS.noEvidence;
-}
-
-/** Every submitted response across the supplied class groups. */
-export function submittedResponsesOf(groups: ReportCourseGroup[]): ReportResponseRow[] {
-  return groups.flatMap((group) => group.responses);
 }
 
 /**

@@ -58,7 +58,7 @@ import {
 // faculty members or two sections of one course are never merged.
 // ---------------------------------------------------------------------------
 
-export type CourseWorkbookInput = {
+type CourseWorkbookInput = {
   evidence: ReportEvidence;
   generatedAt: Date;
   exportedBy: string;

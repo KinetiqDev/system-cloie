@@ -25,14 +25,14 @@ import {
 // export kind, scope, and aggregate counts are.
 // ---------------------------------------------------------------------------
 
-export type ReportExportEmptyReason =
+type ReportExportEmptyReason =
   | "no-course-assignments"
   | "no-course-submissions"
   | "no-course-evidence"
   | "no-outcome-evidence"
   | "no-rating-items";
 
-export type ReportExportResult =
+type ReportExportResult =
   | {
       ok: true;
       filename: string;

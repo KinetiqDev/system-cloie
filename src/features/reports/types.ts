@@ -3,7 +3,6 @@ import type {
   AcademicTerm,
   CILOMappingManifestation,
   DeploymentStatus,
-  DeploymentType,
   POClassification,
   ResponseStatus,
   StudentSection,
@@ -11,10 +10,8 @@ import type {
   YearLevel,
 } from "@prisma/client";
 import { TargetStakeholder as Stakeholder } from "@prisma/client";
-import type { OutcomeItemRatingRow } from "@/features/analytics/aggregators/cilo";
 import type { CiloGoMapping } from "@/features/analytics/aggregators/types";
 import type { SnapshotItemApplicability } from "@/features/analytics/services/snapshot-structure";
-import type { OutcomeAttainment } from "@/features/analytics/aggregators/outcome-attainment";
 
 // ---------------------------------------------------------------------------
 // Program Head report-export read model
@@ -172,23 +169,8 @@ export type ReportEvidence = {
   centralGroups: ReportCentralGroup[];
 };
 
-/**
- * Rating rows shaped for the canonical CILO and question aggregators. The
- * builders reuse `buildCiloMetrics` / `buildQuestionMetrics` unchanged, so an
- * export mean is the same number the Analytics and Response Review surfaces
- * show for the equivalent scope.
- */
-export type ReportRatingRow = OutcomeItemRatingRow & {
-  cilo?: OutcomeItemRatingRow["cilo"];
-  directPoMappings?: CiloGoMapping[];
-};
-
 /** Canonical evidence-source key shared with the Analytics dashboards. */
-export type ReportEvidenceSource =
-  | "COURSE_STUDENT"
-  | "CENTRAL_STUDENT"
-  | "ALUMNI"
-  | "INDUSTRY_PARTNER";
+type ReportEvidenceSource = "COURSE_STUDENT" | "CENTRAL_STUDENT" | "ALUMNI" | "INDUSTRY_PARTNER";
 
 export const REPORT_EVIDENCE_SOURCE_LABELS: Record<ReportEvidenceSource, string> = {
   COURSE_STUDENT: "Course-bound student",
@@ -216,15 +198,6 @@ export const REPORT_MANIFESTATION_LABELS: Record<CILOMappingManifestation, strin
   OPPORTUNITY: "Opportunity",
 };
 
-/** A status cell: the label plus the canonical attainment CQI classification. */
-export type ReportAttainmentStatus = {
-  interpretation: string | null;
-  cqi: string | null;
-  status: string;
-  isIndirect: boolean | null;
-  attainment: OutcomeAttainment | null;
-};
-
 export const ATTAINMENT_STATUS_LABELS = {
   noEvidence: "No evidence",
   unsupportedScale: "Unclassified — unsupported scale",
@@ -245,6 +218,3 @@ export const REPORT_EXPORT_LABELS: Record<ReportExportKind, string> = {
 
 /** Respondent account names are confidential but must never be invented. */
 export const REPORT_NAME_UNAVAILABLE = "Name unavailable";
-
-/** Deployment type of one evidence row, kept explicit in the raw export. */
-export type ReportDeploymentKind = Extract<DeploymentType, "COURSE_BOUND" | "CENTRAL">;

@@ -35,7 +35,7 @@ export function isSnapshotSection(value: unknown): value is SnapshotSection {
  */
 export type SnapshotItemApplicability = "required" | "optional";
 
-export type SnapshotQuantitativeItem = {
+type SnapshotQuantitativeItem = {
   sectionKey: string;
   sectionTitle: string;
   itemKey: string;
